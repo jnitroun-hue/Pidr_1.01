@@ -103,13 +103,17 @@ export async function POST(req: NextRequest) {
     console.log('🔐 Авторизация пользователя...');
 
     if (!JWT_SECRET) {
+      console.error('❌ JWT_SECRET не настроен');
       return NextResponse.json({ 
         success: false, 
         message: 'Сервер не настроен' 
       }, { status: 500 });
     }
 
-    const { telegramId, username, firstName, lastName, photoUrl } = await req.json();
+    const requestBody = await req.json();
+    console.log('📥 Получены данные:', requestBody);
+    
+    const { telegramId, username, firstName, lastName, photoUrl } = requestBody;
 
     if (!telegramId || !username) {
       return NextResponse.json({ 

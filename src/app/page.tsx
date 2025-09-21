@@ -14,7 +14,7 @@ function HomeWithParams() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
-  const { telegramUser, telegramId } = useTelegram();
+  const { user: telegramUser, isReady } = useTelegram();
   const router = useRouter();
 
   useEffect(() => {
@@ -62,13 +62,18 @@ function HomeWithParams() {
         }
 
         // Если нет сессии, авторизуемся через Telegram
-        if (telegramId && telegramUser) {
+        if (isReady && telegramUser) {
           console.log('📱 Telegram WebApp данные получены, создаем пользователя...');
-          await createUserThroughDatabase(telegramUser, telegramId);
-        } else {
-          console.log('⏳ Ожидаем данные Telegram WebApp...');
+          console.log('👤 Telegram User:', telegramUser);
+          await createUserThroughDatabase(telegramUser);
+        } else if (!isReady) {
+          console.log('⏳ Ожидаем инициализацию Telegram WebApp...');
           // Повторная попытка через 1 секунду
           setTimeout(initializePlayer, 1000);
+        } else {
+          console.log('❌ Telegram WebApp данные недоступны');
+          setError('Запустите приложение через Telegram бота');
+          setLoading(false);
         }
 
       } catch (error) {
@@ -78,16 +83,18 @@ function HomeWithParams() {
       }
     };
     
-    const createUserThroughDatabase = async (telegramUser: any, telegramId: string) => {
+    const createUserThroughDatabase = async (telegramUser: any) => {
       console.log('🌐 Создание/авторизация пользователя в БД...');
       
       const authData = {
-        telegramId: telegramId,
-        username: telegramUser?.username || `user_${telegramId}`,
+        telegramId: String(telegramUser.id),
+        username: telegramUser?.username || `user_${telegramUser.id}`,
         firstName: telegramUser?.first_name || 'Игрок',
         lastName: telegramUser?.last_name || '',
         photoUrl: telegramUser?.photo_url || null
       };
+      
+      console.log('📤 Отправляем данные:', authData);
       
       try {
         const response = await fetch('/api/auth', {
@@ -113,7 +120,7 @@ function HomeWithParams() {
             username: data.user.username,
             firstName: data.user.firstName || data.user.username,
             lastName: data.user.lastName || '',
-            telegramId: data.user.telegramId || telegramId,
+            telegramId: data.user.telegramId || String(telegramUser.id),
             coins: data.user.coins || 1000,
             rating: data.user.rating || 0,
             gamesPlayed: data.user.gamesPlayed || 0,
@@ -139,7 +146,7 @@ function HomeWithParams() {
     };
 
     initializePlayer();
-  }, [telegramId, telegramUser]);
+  }, [isReady, telegramUser]);
 
   const handleLogout = async () => {
     try {
