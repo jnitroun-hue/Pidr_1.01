@@ -149,21 +149,22 @@ export class WalletService {
     // В реальном проекте здесь будет интеграция с TON SDK
     // Пока возвращаем мок-хэш
     await new Promise(resolve => setTimeout(resolve, 2000)); // Имитация задержки
-    return 'ton_mock_hash_' + Date.now();
+    // В продакшене здесь должен быть реальный хеш транзакции
+    throw new Error('TON transaction not implemented in production');
   }
 
   // Отправить SOL
   private async sendSOL(amount: number, recipientAddress: string): Promise<string> {
     // В реальном проекте здесь будет интеграция с Solana Web3.js
     await new Promise(resolve => setTimeout(resolve, 2000));
-    return 'sol_mock_hash_' + Date.now();
+    throw new Error('SOL transaction not implemented in production');
   }
 
   // Отправить ETH
   private async sendETH(amount: number, recipientAddress: string): Promise<string> {
     // В реальном проекте здесь будет интеграция с ethers.js
     await new Promise(resolve => setTimeout(resolve, 2000));
-    return 'eth_mock_hash_' + Date.now();
+    throw new Error('ETH transaction not implemented in production');
   }
 
   // Обменять криптовалюту на игровые монеты
