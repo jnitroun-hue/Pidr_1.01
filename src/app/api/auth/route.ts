@@ -265,6 +265,13 @@ export async function POST(req: NextRequest) {
     });
 
     console.log('✅ JWT токен создан и установлен в cookie');
+    console.log('🔑 Токен (первые 50 символов):', token.substring(0, 50) + '...');
+    console.log('🍪 Cookie настройки:', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 30 * 24 * 60 * 60
+    });
 
     return response;
 
