@@ -70,15 +70,14 @@ export default function TablesListPage() {
 
   const handleCreateRoom = async () => {
     try {
-      const token = localStorage.getItem('auth_token') || 'no-auth-token';
       console.log('🏗️ Создаем комнату:', newRoomData);
 
       const response = await fetch('/api/rooms', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
+        credentials: 'include', // Токен передается через HTTP-only cookies
         body: JSON.stringify({
           action: 'create',
           roomName: newRoomData.name,

@@ -198,18 +198,13 @@ export default function ProperMultiplayer({ onBack }: ProperMultiplayerProps) {
     setError(null);
     
     try {
-      // ИСПРАВЛЕНО: Используем основную базу данных вместо fallback API
-      const token = localStorage.getItem('auth_token');
-      if (!token) {
-        throw new Error('Не найден токен авторизации');
-      }
-
+      // Токен автоматически передается через HTTP-only cookies
       const response = await fetch('/api/rooms', {
         method: 'POST',
         headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` // ИСПРАВЛЕНО: добавили токен
+          'Content-Type': 'application/json'
         },
+        credentials: 'include', // Важно для передачи cookies
         body: JSON.stringify({
           action: 'create', // ИСПРАВЛЕНО: добавили action
           roomName: createData.name,

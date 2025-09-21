@@ -7,9 +7,11 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 function getUserIdFromRequest(req: NextRequest): string | null {
   if (!JWT_SECRET) return null;
-  const auth = req.headers.get('authorization');
-  if (!auth) return null;
-  const token = auth.replace('Bearer ', '');
+  
+  // Читаем токен из HTTP-only cookies
+  const token = req.cookies.get('auth_token')?.value;
+  if (!token) return null;
+  
   try {
     const payload = jwt.verify(token, JWT_SECRET) as any;
     return payload.userId;
