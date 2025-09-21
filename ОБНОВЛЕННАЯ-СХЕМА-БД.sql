@@ -166,14 +166,61 @@ ALTER TABLE _pidr_user_achievements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE _pidr_user_settings ENABLE ROW LEVEL SECURITY;
 
 -- Политики доступа (пока открытые для разработки)
-CREATE POLICY "Enable all for all users" ON _pidr_users FOR ALL USING (true);
-CREATE POLICY "Enable all for all users" ON _pidr_rooms FOR ALL USING (true);
-CREATE POLICY "Enable all for all users" ON _pidr_room_players FOR ALL USING (true);
-CREATE POLICY "Enable all for all users" ON _pidr_games FOR ALL USING (true);
-CREATE POLICY "Enable all for all users" ON _pidr_game_results FOR ALL USING (true);
-CREATE POLICY "Enable all for all users" ON _pidr_coin_transactions FOR ALL USING (true);
-CREATE POLICY "Enable all for all users" ON _pidr_hd_wallets FOR ALL USING (true);
-CREATE POLICY "Enable all for all users" ON _pidr_friends FOR ALL USING (true);
-CREATE POLICY "Enable all for all users" ON _pidr_achievements FOR ALL USING (true);
-CREATE POLICY "Enable all for all users" ON _pidr_user_achievements FOR ALL USING (true);
-CREATE POLICY "Enable all for all users" ON _pidr_user_settings FOR ALL USING (true);
+-- Создаем политики только если они не существуют
+DO $$ 
+BEGIN
+    -- Политика для _pidr_users
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = '_pidr_users' AND policyname = 'Enable all for all users') THEN
+        CREATE POLICY "Enable all for all users" ON _pidr_users FOR ALL USING (true);
+    END IF;
+    
+    -- Политика для _pidr_rooms
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = '_pidr_rooms' AND policyname = 'Enable all for all users') THEN
+        CREATE POLICY "Enable all for all users" ON _pidr_rooms FOR ALL USING (true);
+    END IF;
+    
+    -- Политика для _pidr_room_players
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = '_pidr_room_players' AND policyname = 'Enable all for all users') THEN
+        CREATE POLICY "Enable all for all users" ON _pidr_room_players FOR ALL USING (true);
+    END IF;
+    
+    -- Политика для _pidr_games
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = '_pidr_games' AND policyname = 'Enable all for all users') THEN
+        CREATE POLICY "Enable all for all users" ON _pidr_games FOR ALL USING (true);
+    END IF;
+    
+    -- Политика для _pidr_game_results
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = '_pidr_game_results' AND policyname = 'Enable all for all users') THEN
+        CREATE POLICY "Enable all for all users" ON _pidr_game_results FOR ALL USING (true);
+    END IF;
+    
+    -- Политика для _pidr_coin_transactions
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = '_pidr_coin_transactions' AND policyname = 'Enable all for all users') THEN
+        CREATE POLICY "Enable all for all users" ON _pidr_coin_transactions FOR ALL USING (true);
+    END IF;
+    
+    -- Политика для _pidr_hd_wallets
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = '_pidr_hd_wallets' AND policyname = 'Enable all for all users') THEN
+        CREATE POLICY "Enable all for all users" ON _pidr_hd_wallets FOR ALL USING (true);
+    END IF;
+    
+    -- Политика для _pidr_friends
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = '_pidr_friends' AND policyname = 'Enable all for all users') THEN
+        CREATE POLICY "Enable all for all users" ON _pidr_friends FOR ALL USING (true);
+    END IF;
+    
+    -- Политика для _pidr_achievements
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = '_pidr_achievements' AND policyname = 'Enable all for all users') THEN
+        CREATE POLICY "Enable all for all users" ON _pidr_achievements FOR ALL USING (true);
+    END IF;
+    
+    -- Политика для _pidr_user_achievements
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = '_pidr_user_achievements' AND policyname = 'Enable all for all users') THEN
+        CREATE POLICY "Enable all for all users" ON _pidr_user_achievements FOR ALL USING (true);
+    END IF;
+    
+    -- Политика для _pidr_user_settings
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = '_pidr_user_settings' AND policyname = 'Enable all for all users') THEN
+        CREATE POLICY "Enable all for all users" ON _pidr_user_settings FOR ALL USING (true);
+    END IF;
+END $$;
