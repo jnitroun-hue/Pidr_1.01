@@ -1,7 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
+// Публичные переменные (для клиентской стороны)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
+
+// Серверные переменные (только для API routes)
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 // Проверяем переменные только в рантайме, не при сборке
 let supabaseClient: any = null;
@@ -51,4 +55,28 @@ function getSupabaseClient() {
   return supabaseClient;
 }
 
-export const supabase = getSupabaseClient(); 
+// Публичный клиент (для обычных операций с RLS)
+export const supabase = getSupabaseClient();
+
+// Админский клиент (для серверных операций, минует RLS)
+let supabaseAdminClient: any = null;
+
+export function getSupabaseAdmin() {
+  if (!supabaseAdminClient && typeof window === 'undefined') {
+    // Только на сервере
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('❌ Missing Supabase admin credentials');
+      return null;
+    }
+
+    console.log('🔧 Creating Supabase admin client');
+    supabaseAdminClient = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+  }
+
+  return supabaseAdminClient;
+} 
