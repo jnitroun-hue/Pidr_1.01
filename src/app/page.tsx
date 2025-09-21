@@ -87,12 +87,11 @@ function HomeWithParams() {
       console.log('🌐 Авторизация через БД...');
       
       const authData = {
-        type: 'telegram',
-        id: telegramId,
-        username: telegramUser?.username || '',
-        first_name: telegramUser?.first_name || 'Игрок',
-        last_name: telegramUser?.last_name || '',
-        photo_url: telegramUser?.photo_url || null
+        telegramId: telegramId,
+        username: telegramUser?.username || `user_${telegramId}`,
+        firstName: telegramUser?.first_name || 'Игрок',
+        lastName: telegramUser?.last_name || '',
+        photoUrl: telegramUser?.photo_url || null
       };
       
       try {
