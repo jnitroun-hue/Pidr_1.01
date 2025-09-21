@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P.I.D.R. - Ожидание игроков</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/wait-players.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <div class="background-effects">
+        <!-- Частицы будут добавлены через JavaScript -->
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>P.I.D.R.</h1>
+            <p>Ожидание игроков за столом...</p>
+        </header>
+        <main>
+            <div class="game-table-container">
+                <div class="game-table">
+                    <div class="table-light"></div>
+                    <div class="table-glow"></div>
+                </div>
+                <div class="players-slots">
+                    <!-- Слоты для игроков будут добавлены динамически -->
+                </div>
+            </div>
+            
+            <div class="players-info">
+                <div class="connected-players">
+                    <h3>Подключенные игроки</h3>
+                    <div class="players-list">
+                        <!-- Список игроков будет добавлен динамически -->
+                    </div>
+                </div>
+                <div class="waiting-status">
+                    <div class="spinner">
+                        <div class="spinner-inner"></div>
+                    </div>
+                    <div class="waiting-title">
+                        <span class="connected-players">0/4</span> игроков готовы
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button class="game-btn add-bot-btn" onclick="addBot()">
+                    <span class="btn-icon">🤖</span>
+                    Добавить бота
+                </button>
+                <button class="game-btn start-game-btn" onclick="startGame()" disabled>
+                    <span class="btn-icon">🎮</span>
+                    Начать игру
+                </button>
+            </div>
+        </main>
+        <footer>
+            <p>© 2025 P.I.D.R.</p>
+        </footer>
+    </div>
+    <script src="js/wait-players.js"></script>
+</body>
+</html> 

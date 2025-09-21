@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>P.I.D.R. - Кошелек</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/game-ui.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <!-- Шапка -->
+    <header class="game-header">
+        <button class="game-back-button" onclick="history.back()">
+            <i class="fas fa-arrow-left"></i>
+            <span>Назад</span>
+        </button>
+        <h1>Кошелек</h1>
+        <div style="width: 24px;"></div>
+    </header>
+
+    <div class="game-container">
+        <!-- Баланс -->
+        <div class="game-card" style="text-align: center; padding: 30px;">
+            <div style="font-size: 14px; color: var(--game-text-secondary); margin-bottom: 10px;">
+                Текущий баланс
+            </div>
+            <div style="font-size: 48px; font-weight: 600; color: var(--game-gold); display: flex; align-items: center; justify-content: center; gap: 10px;">
+                <i class="fas fa-coins"></i>
+                <span>1000</span>
+            </div>
+            <button class="game-button" style="margin-top: 20px;">
+                <i class="fas fa-plus"></i>
+                Пополнить
+            </button>
+        </div>
+
+        <!-- История транзакций -->
+        <h2 class="game-section-title">История транзакций</h2>
+        <div class="game-card">
+            <div class="transaction-item">
+                <div class="transaction-icon" style="background: var(--game-gradient-accent);">
+                    <i class="fas fa-shopping-cart"></i>
+                </div>
+                <div style="flex: 1;">
+                    <div style="font-weight: 600;">Покупка скина</div>
+                    <div style="color: var(--game-text-secondary); font-size: 14px;">2 часа назад</div>
+                </div>
+                <div style="color: var(--game-red); font-weight: 600;">
+                    -500
+                    <i class="fas fa-coins" style="margin-left: 5px; color: var(--game-gold);"></i>
+                </div>
+            </div>
+
+            <div class="transaction-item">
+                <div class="transaction-icon" style="background: var(--game-gradient-gold);">
+                    <i class="fas fa-gift"></i>
+                </div>
+                <div style="flex: 1;">
+                    <div style="font-weight: 600;">Бонус за победу</div>
+                    <div style="color: var(--game-text-secondary); font-size: 14px;">5 часов назад</div>
+                </div>
+                <div style="color: var(--game-green); font-weight: 600;">
+                    +100
+                    <i class="fas fa-coins" style="margin-left: 5px; color: var(--game-gold);"></i>
+                </div>
+            </div>
+
+            <div class="transaction-item">
+                <div class="transaction-icon" style="background: var(--game-gradient-primary);">
+                    <i class="fas fa-star"></i>
+                </div>
+                <div style="flex: 1;">
+                    <div style="font-weight: 600;">Достижение разблокировано</div>
+                    <div style="color: var(--game-text-secondary); font-size: 14px;">1 день назад</div>
+                </div>
+                <div style="color: var(--game-green); font-weight: 600;">
+                    +250
+                    <i class="fas fa-coins" style="margin-left: 5px; color: var(--game-gold);"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Способы пополнения -->
+        <h2 class="game-section-title">Способы пополнения</h2>
+        <div class="game-grid">
+            <div class="game-card payment-method">
+                <i class="fab fa-telegram" style="color: var(--game-blue);"></i>
+                <h3>Telegram Premium</h3>
+                <p>Получите +500 монет</p>
+                <button class="game-button">Активировать</button>
+            </div>
+
+            <div class="game-card payment-method">
+                <i class="fas fa-gift" style="color: var(--game-gold);"></i>
+                <h3>Промокод</h3>
+                <p>Введите промокод</p>
+                <div class="game-form-group" style="margin-bottom: 10px;">
+                    <input type="text" class="game-input" placeholder="PIDR2024">
+                </div>
+                <button class="game-button">Применить</button>
+            </div>
+
+            <div class="game-card payment-method">
+                <i class="fas fa-share-alt" style="color: var(--game-green);"></i>
+                <h3>Поделиться</h3>
+                <p>+100 монет за приглашение</p>
+                <button class="game-button">Пригласить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Нижняя навигация -->
+    <nav class="game-nav">
+        <a href="index.html" class="game-nav-item">
+            <i class="fas fa-gamepad"></i>
+            <span>Меню</span>
+        </a>
+        <a href="friends.html" class="game-nav-item">
+            <i class="fas fa-users"></i>
+            <span>Друзья</span>
+        </a>
+        <a href="profile.html" class="game-nav-item">
+            <i class="fas fa-user"></i>
+            <span>Профиль</span>
+        </a>
+        <a href="wallet.html" class="game-nav-item active">
+            <i class="fas fa-wallet"></i>
+            <span>Кошелек</span>
+        </a>
+        <a href="rules.html" class="game-nav-item">
+            <i class="fas fa-book"></i>
+            <span>Правила</span>
+        </a>
+    </nav>
+
+    <script src="js/webapp.js"></script>
+
+    <style>
+    .transaction-item {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        padding: 15px 0;
+        border-bottom: 1px solid var(--game-bg-secondary);
+    }
+
+    .transaction-item:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+
+    .transaction-item:first-child {
+        padding-top: 0;
+    }
+
+    .transaction-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: var(--game-radius-md);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+    }
+
+    .payment-method {
+        text-align: center;
+        padding: 20px;
+    }
+
+    .payment-method i {
+        font-size: 32px;
+        margin-bottom: 15px;
+    }
+
+    .payment-method h3 {
+        margin: 0 0 5px 0;
+    }
+
+    .payment-method p {
+        color: var(--game-text-secondary);
+        margin: 0 0 15px 0;
+        font-size: 14px;
+    }
+
+    .game-section-title {
+        margin: 30px 0 20px;
+        font-size: 20px;
+        font-weight: 600;
+    }
+    </style>
+</body>
+</html> 

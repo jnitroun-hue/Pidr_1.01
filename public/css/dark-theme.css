@@ -1,0 +1,112 @@
+/* Dark Theme Styles */
+body.dark-theme {
+    --background-color: #1a1a1a;
+    --text-color: #ffffff;
+    --text-light: #a0a0a0;
+    --white: #2a2a2a;
+    --primary-color: #3390ec;
+    --primary-dark: #1a4a7a;
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Dark Theme Specific Overrides */
+body.dark-theme .card,
+body.dark-theme .shop-item,
+body.dark-theme .settings-section,
+body.dark-theme .activity-list,
+body.dark-theme .achievement-card {
+    background: var(--white);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+body.dark-theme .shop-category,
+body.dark-theme .settings-select {
+    background: var(--white);
+    color: var(--text-color);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+body.dark-theme .shop-category.active {
+    background: var(--primary-color);
+    color: #ffffff;
+}
+
+body.dark-theme .toggle-slider {
+    background-color: #4a4a4a;
+}
+
+body.dark-theme .settings-button {
+    background: var(--primary-color);
+}
+
+body.dark-theme .settings-button:hover {
+    background: var(--primary-dark);
+}
+
+body.dark-theme .settings-button.danger {
+    background-color: #dc3545;
+}
+
+body.dark-theme .settings-button.danger:hover {
+    background-color: #c82333;
+}
+
+body.dark-theme .bottom-nav {
+    background: var(--white);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+body.dark-theme .nav-item {
+    color: var(--text-light);
+}
+
+body.dark-theme .nav-item.active {
+    color: var(--primary-color);
+}
+
+/* Dark Theme Gradients */
+body.dark-theme .profile-header,
+body.dark-theme .shop-header,
+body.dark-theme .settings-header {
+    background: linear-gradient(135deg, #1a1a1a 0%, var(--primary-color) 100%);
+}
+
+/* Dark Theme Input Fields */
+body.dark-theme input[type="text"],
+body.dark-theme input[type="number"],
+body.dark-theme select {
+    background: var(--white);
+    color: var(--text-color);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+body.dark-theme input[type="text"]:focus,
+body.dark-theme input[type="number"]:focus,
+body.dark-theme select:focus {
+    border-color: var(--primary-color);
+}
+
+/* Dark Theme Scrollbar */
+body.dark-theme::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+body.dark-theme::-webkit-scrollbar-track {
+    background: var(--background-color);
+}
+
+body.dark-theme::-webkit-scrollbar-thumb {
+    background: #4a4a4a;
+    border-radius: 4px;
+}
+
+body.dark-theme::-webkit-scrollbar-thumb:hover {
+    background: #5a5a5a;
+}
+
+/* Dark Theme Transitions */
+body.dark-theme,
+body.dark-theme * {
+    transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+} 

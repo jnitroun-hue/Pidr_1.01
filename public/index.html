@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>P.I.D.R. - Главное меню</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/game-ui.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <!-- Шапка -->
+    <header class="game-header">
+        <button class="game-back-button" id="backButton">
+            <i class="fas fa-arrow-left"></i>
+            <span>Назад</span>
+        </button>
+        <h1>P.I.D.R.</h1>
+        <div style="width: 24px;"></div>
+    </header>
+
+    <div class="game-container">
+        <!-- Баланс -->
+        <div class="game-card" style="background: var(--game-gradient-gold); border-color: var(--game-gold);">
+            <div class="game-stat-value" style="color: var(--game-bg-primary); font-size: 42px;">1000</div>
+            <div class="game-stat-label" style="color: var(--game-bg-primary);">Монет</div>
+        </div>
+
+        <!-- Быстрые действия -->
+        <h2 class="game-stat-label" style="margin: 30px 0 20px;">Быстрые действия</h2>
+        <div class="game-stats">
+            <a href="game-setup.html" class="game-card">
+                <div class="game-stat-value" style="color: var(--game-accent);">
+                    <i class="fas fa-play"></i>
+                </div>
+                <div class="game-stat-label">Играть</div>
+            </a>
+            <a href="#" class="game-card" id="inviteFriends">
+                <div class="game-stat-value" style="color: var(--game-accent);">
+                    <i class="fas fa-user-plus"></i>
+                </div>
+                <div class="game-stat-label">Пригласить</div>
+            </a>
+            <a href="shop.html" class="game-card">
+                <div class="game-stat-value" style="color: var(--game-accent);">
+                    <i class="fas fa-store"></i>
+                </div>
+                <div class="game-stat-label">Магазин</div>
+            </a>
+        </div>
+
+        <!-- Статистика -->
+        <h2 class="game-stat-label" style="margin: 30px 0 20px;">Статистика</h2>
+        <div class="game-stats">
+            <div class="game-stat-card">
+                <div class="game-stat-value">42</div>
+                <div class="game-stat-label">Игр сыграно</div>
+            </div>
+            <div class="game-stat-card">
+                <div class="game-stat-value">65%</div>
+                <div class="game-stat-label">Процент побед</div>
+            </div>
+            <div class="game-stat-card">
+                <div class="game-stat-value">1234</div>
+                <div class="game-stat-label">Рейтинг</div>
+            </div>
+        </div>
+
+        <!-- История игр -->
+        <h2 class="game-stat-label" style="margin: 30px 0 20px;">История игр</h2>
+        <div class="game-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <div style="font-weight: 600;">Игра #42</div>
+                <div class="game-button" style="padding: 4px 12px; background: var(--game-gradient-accent);">
+                    Победа
+                </div>
+            </div>
+            <div style="color: var(--game-green); display: flex; align-items: center; gap: 8px;">
+                <i class="fas fa-plus"></i>
+                <span>25 очков</span>
+            </div>
+        </div>
+        <div class="game-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <div style="font-weight: 600;">Игра #41</div>
+                <div class="game-button" style="padding: 4px 12px; background: var(--game-gradient-primary);">
+                    Поражение
+                </div>
+            </div>
+            <div style="color: var(--game-red); display: flex; align-items: center; gap: 8px;">
+                <i class="fas fa-minus"></i>
+                <span>15 очков</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Нижняя навигация -->
+    <nav class="game-nav">
+        <a href="index.html" class="game-nav-item active">
+            <i class="fas fa-gamepad"></i>
+            <span>Меню</span>
+        </a>
+        <a href="friends.html" class="game-nav-item">
+            <i class="fas fa-users"></i>
+            <span>Друзья</span>
+        </a>
+        <a href="profile.html" class="game-nav-item">
+            <i class="fas fa-user"></i>
+            <span>Профиль</span>
+        </a>
+        <a href="wallet.html" class="game-nav-item">
+            <i class="fas fa-wallet"></i>
+            <span>Кошелек</span>
+        </a>
+        <a href="rules.html" class="game-nav-item">
+            <i class="fas fa-book"></i>
+            <span>Правила</span>
+        </a>
+    </nav>
+
+    <script src="js/webapp.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/auth.js"></script>
+</body>
+</html> 

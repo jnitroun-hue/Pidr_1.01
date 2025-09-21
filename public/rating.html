@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>P.I.D.R. - Рейтинг</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --tg-theme-bg-color: #1E2329;
+            --tg-theme-text-color: #FFFFFF;
+            --tg-theme-hint-color: #7D7D7D;
+            --tg-theme-link-color: #5288C1;
+            --accent-color: #FFD700;
+            --neon-text-color: #ffd700;
+            --neon-border-color: #08f;
+        }
+
+        body {
+            background-color: var(--tg-theme-bg-color);
+            color: var(--tg-theme-text-color);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.05);
+            position: relative;
+        }
+
+        .back-btn {
+            background: none;
+            border: none;
+            color: var(--tg-theme-text-color);
+            padding: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            font-size: 20px;
+        }
+
+        .header-title {
+            text-align: center;
+            flex-grow: 1;
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+            color: #ffd700;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+
+        .container {
+            padding: 16px;
+            max-width: 800px;
+            margin: 0 auto;
+            padding-bottom: 70px;
+        }
+
+        .rating-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            border: 1px solid rgba(255, 215, 0, 0.2);
+        }
+
+        .rating-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .rating-value {
+            font-size: 48px;
+            font-weight: bold;
+            color: var(--accent-color);
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+            margin-right: 20px;
+        }
+
+        .rating-info {
+            flex-grow: 1;
+        }
+
+        .rating-label {
+            font-size: 14px;
+            color: var(--tg-theme-hint-color);
+            margin-bottom: 4px;
+        }
+
+        .rating-progress {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .rating-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #FFD700, #FFA500);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .rating-milestones {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 4px;
+            font-size: 12px;
+            color: var(--tg-theme-hint-color);
+        }
+
+        .history-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin: 24px 0 16px;
+            color: var(--accent-color);
+        }
+
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .history-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .history-date {
+            font-size: 14px;
+            color: var(--tg-theme-hint-color);
+        }
+
+        .history-result {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .history-points {
+            font-weight: 600;
+        }
+
+        .history-points.win {
+            color: #4CAF50;
+        }
+
+        .history-points.lose {
+            color: #F44336;
+        }
+
+        .rank-badge {
+            background: rgba(255, 215, 0, 0.1);
+            border: 1px solid var(--accent-color);
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 14px;
+            color: var(--accent-color);
+            margin-top: 8px;
+            display: inline-block;
+        }
+
+        /* Нижняя навигация */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--tg-theme-bg-color);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0;
+            z-index: 1000;
+        }
+
+        .nav-item {
+            color: var(--tg-theme-hint-color);
+            text-decoration: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-item i {
+            font-size: 20px;
+        }
+
+        .nav-item.active {
+            color: var(--accent-color);
+        }
+
+        .nav-item:hover {
+            color: var(--accent-color);
+            transform: translateY(-2px);
+        }
+
+        @keyframes glow {
+            from {
+                text-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px var(--neon-text-color),
+                           0 0 40px var(--neon-text-color), 0 0 50px var(--neon-text-color),
+                           0 0 60px var(--neon-text-color), 0 0 70px var(--neon-text-color);
+            }
+            to {
+                text-shadow: 0 0 20px #fff, 0 0 30px #ff4da6, 0 0 40px #ff4da6,
+                           0 0 50px #ff4da6, 0 0 60px #ff4da6, 0 0 70px #ff4da6,
+                           0 0 80px #ff4da6;
+            }
+        }
+    </style>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <div class="header">
+        <button class="back-btn" onclick="window.history.back()">
+            <i class="fas fa-arrow-left"></i>
+        </button>
+        <h1 class="header-title">Рейтинг игрока</h1>
+    </div>
+
+    <div class="container">
+        <div class="rating-card">
+            <div class="rating-header">
+                <div class="rating-value">2350</div>
+                <div class="rating-info">
+                    <div class="rating-label">Текущий рейтинг</div>
+                    <div class="rank-badge">
+                        <i class="fas fa-trophy"></i>
+                        Золотой игрок
+                    </div>
+                    <div class="rating-progress">
+                        <div class="rating-bar" style="width: 23.5%"></div>
+                    </div>
+                    <div class="rating-milestones">
+                        <span>0</span>
+                        <span>2500</span>
+                        <span>5000</span>
+                        <span>7500</span>
+                        <span>10000</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h2 class="history-title">История игр</h2>
+        <div class="history-list">
+            <div class="history-item">
+                <div class="history-info">
+                    <div>Рейтинговая игра</div>
+                    <div class="history-date">24 марта 2024, 15:30</div>
+                </div>
+                <div class="history-result">
+                    <div class="history-points win">+25</div>
+                    <i class="fas fa-arrow-up" style="color: #4CAF50"></i>
+                </div>
+            </div>
+            <div class="history-item">
+                <div class="history-info">
+                    <div>Рейтинговая игра</div>
+                    <div class="history-date">24 марта 2024, 14:15</div>
+                </div>
+                <div class="history-result">
+                    <div class="history-points lose">-15</div>
+                    <i class="fas fa-arrow-down" style="color: #F44336"></i>
+                </div>
+            </div>
+            <div class="history-item">
+                <div class="history-info">
+                    <div>Рейтинговая игра</div>
+                    <div class="history-date">24 марта 2024, 12:45</div>
+                </div>
+                <div class="history-result">
+                    <div class="history-points win">+30</div>
+                    <i class="fas fa-arrow-up" style="color: #4CAF50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Нижняя навигация -->
+    <nav class="bottom-nav">
+        <a href="index.html" class="nav-item">
+            <i class="fas fa-home"></i>
+            <span>Главная</span>
+        </a>
+        <a href="rating.html" class="nav-item active">
+            <i class="fas fa-trophy"></i>
+            <span>Рейтинг</span>
+        </a>
+        <a href="profile.html" class="nav-item">
+            <i class="fas fa-user"></i>
+            <span>Профиль</span>
+        </a>
+        <a href="#" class="nav-item">
+            <i class="fas fa-cog"></i>
+            <span>Настройки</span>
+        </a>
+    </nav>
+
+    <script src="js/rating.js"></script>
+</body>
+</html> 

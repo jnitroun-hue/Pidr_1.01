@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Проверка обновлений...</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/check-wait.css">
+    <style>
+        body { background: linear-gradient(135deg, #1a4a7a 0%, #3390ec 100%); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>P.I.D.R.</h1>
+            <p>Проверяем обновления...</p>
+        </header>
+        <main>
+            <div class="card-wait-animation">
+                <div class="card-stack" id="card-stack"></div>
+                <div class="wait-text">Проверяем наличие обновлений...</div>
+            </div>
+        </main>
+        <footer>
+            <p>© 2025 P.I.D.R.</p>
+            <div id="card-loader" class="card-loader"></div>
+        </footer>
+    </div>
+    <script src="js/check-wait.js"></script>
+    <script>
+    window.addEventListener('DOMContentLoaded', () => {
+        let progress = 0;
+        const waitText = document.querySelector('.wait-text');
+        const params = new URLSearchParams(window.location.search);
+        const username = params.get('username');
+        let tgLoginBtn = null;
+        function updateProgress() {
+            progress += Math.random() * 20;
+            if (progress > 100) progress = 100;
+            waitText.textContent = `Проверяем... ${Math.floor(progress)}%`;
+            if (progress >= 100) {
+                // Проверка Telegram-авторизации
+                fetch('/auth/telegram/check', { credentials: 'include' })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success && data.user) {
+                            localStorage.setItem('user', JSON.stringify(data.user));
+                            window.location.replace('/index.html');
+                        } else if (data.username) {
+                            waitText.innerHTML = `Пользователь <b>@${data.username}</b> не зарегистрирован.<br>Пожалуйста, войдите через Telegram.`;
+                        } else if (data.telegramAvailable) {
+                            waitText.innerHTML = `Пользователь Telegram не найден в базе.<br><button id='tgCreateBtn' style='margin-top:18px;padding:12px 24px;font-size:1.1em;background:#2196f3;color:#fff;border:none;border-radius:8px;cursor:pointer;'>Войти с этого Telegram</button>`;
+                            tgLoginBtn = document.getElementById('tgCreateBtn');
+                            tgLoginBtn.onclick = async () => {
+                                tgLoginBtn.disabled = true;
+                                tgLoginBtn.textContent = 'Входим...';
+                                // Запрос на сервер для создания/авторизации
+                                const res = await fetch('/auth/telegram/force-login', { method: 'POST', credentials: 'include' });
+                                const json = await res.json();
+                                if (json.success && json.user) {
+                                    localStorage.setItem('user', JSON.stringify(json.user));
+                                    window.location.replace('/index.html');
+                                } else {
+                                    waitText.textContent = 'Ошибка авторизации через Telegram!';
+                                }
+                            };
+                        } else {
+                            waitText.textContent = 'Ошибка авторизации через Telegram!';
+                        }
+                    })
+                    .catch(() => {
+                        waitText.textContent = 'Ошибка соединения!';
+                    });
+            } else {
+                setTimeout(updateProgress, 400);
+            }
+        }
+        updateProgress();
+    });
+    </script>
+</body>
+</html> 

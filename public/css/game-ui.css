@@ -1,0 +1,392 @@
+/* Game UI - Основные переменные */
+:root {
+    /* Цветовая схема в стиле игры */
+    --game-bg-primary: #0a1929;
+    --game-bg-secondary: #162a3d;
+    --game-accent: #ff4b4b;
+    --game-accent-hover: #ff6b6b;
+    --game-gold: #ffd700;
+    --game-blue: #4b69ff;
+    --game-green: #66bb6a;
+    --game-red: #ff4b4b;
+    
+    /* Текстовые цвета */
+    --game-text-primary: #ffffff;
+    --game-text-secondary: #9e9e9e;
+    --game-text-accent: #ff4b4b;
+    
+    /* Градиенты */
+    --game-gradient-primary: linear-gradient(135deg, #162a3d 0%, #0a1929 100%);
+    --game-gradient-accent: linear-gradient(135deg, #ff4b4b 0%, #ff6b6b 100%);
+    --game-gradient-gold: linear-gradient(135deg, #ffd700 0%, #ffb900 100%);
+    --game-gradient-header: linear-gradient(180deg, rgba(10,25,41,0.95) 0%, rgba(10,25,41,0.85) 100%);
+    --game-gradient-background: linear-gradient(135deg, #0a1929 0%, #1a3f5c 50%, #0a1929 100%);
+    
+    /* Тени */
+    --game-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
+    --game-shadow-md: 0 4px 8px rgba(0, 0, 0, 0.4);
+    --game-shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.5);
+    --game-shadow-accent: 0 4px 12px rgba(255, 75, 75, 0.3);
+    
+    /* Скругления */
+    --game-radius-sm: 4px;
+    --game-radius-md: 8px;
+    --game-radius-lg: 12px;
+    
+    /* Анимации */
+    --game-transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Базовые стили */
+body {
+    background: var(--game-gradient-background);
+    background-attachment: fixed;
+    color: var(--game-text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    padding-bottom: 70px;
+}
+
+/* Шапка */
+.game-header {
+    background: var(--game-gradient-header);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    padding: 16px 20px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 2px solid var(--game-accent);
+}
+
+.game-header h1 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    background: var(--game-gradient-gold);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.game-back-button {
+    background: rgba(255, 75, 75, 0.1);
+    border: 1px solid var(--game-accent);
+    color: var(--game-text-primary);
+    padding: 8px 12px;
+    border-radius: var(--game-radius-sm);
+    cursor: pointer;
+    transition: var(--game-transition);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.game-back-button:hover {
+    background: var(--game-accent);
+    transform: translateY(-2px);
+}
+
+/* Основной контейнер */
+.game-container {
+    max-width: 1200px;
+    margin: 80px auto 0;
+    padding: 20px;
+}
+
+/* Карточки */
+.game-card {
+    background: var(--game-bg-secondary);
+    border: 2px solid var(--game-accent);
+    border-radius: var(--game-radius-md);
+    padding: 20px;
+    margin-bottom: 20px;
+    transition: var(--game-transition);
+    position: relative;
+    overflow: hidden;
+}
+
+.game-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--game-shadow-accent);
+}
+
+.game-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--game-gradient-accent);
+    opacity: 0;
+    transition: var(--game-transition);
+}
+
+.game-card:hover::before {
+    opacity: 1;
+}
+
+/* Кнопки */
+.game-button {
+    background: var(--game-gradient-accent);
+    color: var(--game-text-primary);
+    border: none;
+    padding: 12px 24px;
+    border-radius: var(--game-radius-md);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: var(--game-transition);
+    position: relative;
+    overflow: hidden;
+}
+
+.game-button:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--game-shadow-accent);
+}
+
+.game-button::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+    transform: rotate(45deg);
+    animation: button-shine 2s infinite;
+}
+
+/* Нижняя навигация */
+.game-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--game-gradient-header);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    display: flex;
+    justify-content: space-around;
+    padding: 12px 0;
+    border-top: 2px solid var(--game-accent);
+    z-index: 1000;
+}
+
+.game-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-decoration: none;
+    color: var(--game-text-secondary);
+    transition: var(--game-transition);
+    padding: 8px 16px;
+    border-radius: var(--game-radius-md);
+    position: relative;
+}
+
+.game-nav-item.active {
+    color: var(--game-accent);
+}
+
+.game-nav-item.active::before {
+    content: '';
+    position: absolute;
+    bottom: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 2px;
+    background: var(--game-accent);
+}
+
+.game-nav-item i {
+    font-size: 24px;
+    margin-bottom: 4px;
+    transition: var(--game-transition);
+}
+
+.game-nav-item span {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.game-nav-item:hover {
+    color: var(--game-accent);
+    transform: translateY(-2px);
+}
+
+/* Анимации */
+@keyframes button-shine {
+    0% {
+        transform: translateX(-100%) rotate(45deg);
+    }
+    100% {
+        transform: translateX(100%) rotate(45deg);
+    }
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .game-container {
+        padding: 15px;
+    }
+    
+    .game-header h1 {
+        font-size: 20px;
+    }
+    
+    .game-nav-item {
+        padding: 8px;
+    }
+    
+    .game-nav-item i {
+        font-size: 20px;
+    }
+    
+    .game-nav-item span {
+        font-size: 10px;
+    }
+}
+
+/* Дополнительные компоненты */
+.game-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin: 20px 0;
+}
+
+.game-stat-card {
+    background: var(--game-bg-secondary);
+    border: 2px solid var(--game-blue);
+    border-radius: var(--game-radius-md);
+    padding: 20px;
+    text-align: center;
+    transition: var(--game-transition);
+}
+
+.game-stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 12px rgba(75, 105, 255, 0.3);
+}
+
+.game-stat-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--game-blue);
+    margin-bottom: 8px;
+}
+
+.game-stat-label {
+    font-size: 14px;
+    color: var(--game-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Таблица рейтинга */
+.game-leaderboard {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+}
+
+.game-leaderboard th,
+.game-leaderboard td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.game-leaderboard th {
+    color: var(--game-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+}
+
+.game-leaderboard tr:hover {
+    background: rgba(255,255,255,0.05);
+}
+
+/* Формы */
+.game-form-group {
+    margin-bottom: 20px;
+}
+
+.game-label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--game-text-secondary);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.game-input {
+    width: 100%;
+    padding: 12px;
+    background: var(--game-bg-secondary);
+    border: 2px solid var(--game-accent);
+    border-radius: var(--game-radius-md);
+    color: var(--game-text-primary);
+    transition: var(--game-transition);
+}
+
+.game-input:focus {
+    outline: none;
+    border-color: var(--game-accent-hover);
+    box-shadow: var(--game-shadow-accent);
+}
+
+/* Уведомления */
+.game-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 15px 25px;
+    background: var(--game-gradient-accent);
+    color: var(--game-text-primary);
+    border-radius: var(--game-radius-md);
+    box-shadow: var(--game-shadow-lg);
+    transform: translateX(120%);
+    transition: var(--game-transition);
+    z-index: 1100;
+}
+
+.game-notification.show {
+    transform: translateX(0);
+}
+
+/* Загрузчик */
+.game-loader {
+    display: inline-block;
+    width: 30px;
+    height: 30px;
+    border: 3px solid var(--game-accent);
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+} 

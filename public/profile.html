@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>P.I.D.R. - Профиль</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/game-ui.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <!-- Шапка -->
+    <header class="game-header">
+        <button class="game-back-button" onclick="history.back()">
+            <i class="fas fa-arrow-left"></i>
+            <span>Назад</span>
+        </button>
+        <h1>Профиль</h1>
+        <div style="width: 24px;"></div>
+    </header>
+
+    <div class="game-container">
+        <!-- Профиль игрока -->
+        <div class="game-card" style="text-align: center; padding: 30px;">
+            <img id="userAvatar" src="img/default-avatar.png" alt="Аватар" 
+                 style="width: 120px; height: 120px; border-radius: 60px; margin-bottom: 20px; border: 3px solid var(--game-accent);">
+            <h2 id="userName" style="margin: 0 0 10px; font-size: 24px;">Игрок</h2>
+            <p id="userStatus" style="color: var(--game-text-secondary); margin: 0;">Онлайн</p>
+        </div>
+
+        <!-- Статистика игрока -->
+        <h2 class="game-stat-label" style="margin: 30px 0 20px;">Статистика</h2>
+        <div class="game-stats">
+            <div class="game-stat-card">
+                <div class="game-stat-value">1234</div>
+                <div class="game-stat-label">Рейтинг</div>
+            </div>
+            <div class="game-stat-card">
+                <div class="game-stat-value">42</div>
+                <div class="game-stat-label">Игр сыграно</div>
+            </div>
+            <div class="game-stat-card">
+                <div class="game-stat-value">65%</div>
+                <div class="game-stat-label">Процент побед</div>
+            </div>
+        </div>
+
+        <!-- Достижения -->
+        <h2 class="game-stat-label" style="margin: 30px 0 20px;">Достижения</h2>
+        <div class="game-stats">
+            <div class="game-card">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <i class="fas fa-trophy" style="font-size: 24px; color: var(--game-gold);"></i>
+                    <div>
+                        <div style="font-weight: 600;">Первая победа</div>
+                        <div style="color: var(--game-text-secondary); font-size: 14px;">Выиграйте свою первую игру</div>
+                    </div>
+                </div>
+            </div>
+            <div class="game-card">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <i class="fas fa-medal" style="font-size: 24px; color: var(--game-blue);"></i>
+                    <div>
+                        <div style="font-weight: 600;">Ветеран</div>
+                        <div style="color: var(--game-text-secondary); font-size: 14px;">Сыграйте 100 игр</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- История игр -->
+        <h2 class="game-stat-label" style="margin: 30px 0 20px;">Последние игры</h2>
+        <div class="game-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <div style="font-weight: 600;">Игра #42</div>
+                <div class="game-button" style="padding: 4px 12px; background: var(--game-gradient-accent);">
+                    Победа
+                </div>
+            </div>
+            <div style="color: var(--game-green); display: flex; align-items: center; gap: 8px;">
+                <i class="fas fa-plus"></i>
+                <span>25 очков</span>
+            </div>
+        </div>
+        <div class="game-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <div style="font-weight: 600;">Игра #41</div>
+                <div class="game-button" style="padding: 4px 12px; background: var(--game-gradient-primary);">
+                    Поражение
+                </div>
+            </div>
+            <div style="color: var(--game-red); display: flex; align-items: center; gap: 8px;">
+                <i class="fas fa-minus"></i>
+                <span>15 очков</span>
+            </div>
+        </div>
+
+        <!-- Настройки -->
+        <h2 class="game-stat-label" style="margin: 30px 0 20px;">Настройки</h2>
+        <div class="game-card">
+            <div class="game-form-group">
+                <label class="game-label">Имя пользователя</label>
+                <input type="text" class="game-input" value="Игрок" placeholder="Введите имя">
+            </div>
+            <div class="game-form-group">
+                <label class="game-label">Уведомления</label>
+                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                    <button class="game-button">Включить</button>
+                    <button class="game-button" style="background: var(--game-gradient-primary);">Выключить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Нижняя навигация -->
+    <nav class="game-nav">
+        <a href="index.html" class="game-nav-item">
+            <i class="fas fa-gamepad"></i>
+            <span>Меню</span>
+        </a>
+        <a href="friends.html" class="game-nav-item">
+            <i class="fas fa-users"></i>
+            <span>Друзья</span>
+        </a>
+        <a href="profile.html" class="game-nav-item active">
+            <i class="fas fa-user"></i>
+            <span>Профиль</span>
+        </a>
+        <a href="wallet.html" class="game-nav-item">
+            <i class="fas fa-wallet"></i>
+            <span>Кошелек</span>
+        </a>
+        <a href="rules.html" class="game-nav-item">
+            <i class="fas fa-book"></i>
+            <span>Правила</span>
+        </a>
+    </nav>
+
+    <script src="js/webapp.js"></script>
+    <script src="js/profile.js"></script>
+</body>
+</html> 

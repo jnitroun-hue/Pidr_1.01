@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>P.I.D.R. - Настройка игры</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/game-setup.css">
+    <style>
+        .tables-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            padding: 16px;
+        }
+
+        .table-option {
+            aspect-ratio: 1;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .table-option:hover .table-oval {
+            transform: scale(0.85) scaleX(1.5);
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+        }
+
+        .table-option.active {
+            background: rgba(255, 215, 0, 0.2);
+            border: 2px solid #FFD700;
+        }
+
+        .table-option.active .table-oval {
+            transform: scale(0.85) scaleX(1.5);
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.4);
+        }
+
+        .table-option:not(.active):hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .table-visual {
+            width: 80%;
+            height: 80%;
+            position: relative;
+            margin-bottom: 8px;
+        }
+
+        .table-oval {
+            width: 100%;
+            height: 100%;
+            background: #FFD700;
+            border-radius: 50%;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform: scale(0.8) scaleX(1.5);
+            font-size: 24px;
+            font-weight: bold;
+            color: #1E2329;
+        }
+
+        .check-icon {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            width: 30px;
+            height: 30px;
+            background: #FFD700;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transform: scale(0);
+            transition: all 0.3s ease;
+        }
+
+        .check-icon i {
+            color: #1E2329;
+            font-size: 16px;
+        }
+
+        .table-option.active .check-icon {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .table-count {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .player-seats {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        .player-seat {
+            width: 20px;
+            height: 20px;
+            background: #1E2329;
+            border: 2px solid #FFD700;
+            border-radius: 50%;
+            position: absolute;
+            transform: translate(-50%, -50%);
+        }
+
+        /* Позиции для игроков на столах */
+        .seats-4 .player-seat:nth-child(1) { top: 0; left: 50%; }
+        .seats-4 .player-seat:nth-child(2) { top: 50%; right: 0; transform: translate(50%, -50%); }
+        .seats-4 .player-seat:nth-child(3) { bottom: 0; left: 50%; transform: translate(-50%, 50%); }
+        .seats-4 .player-seat:nth-child(4) { top: 50%; left: 0; transform: translate(-50%, -50%); }
+
+        .seats-5 .player-seat:nth-child(1) { top: 10%; left: 50%; }
+        .seats-5 .player-seat:nth-child(2) { top: 30%; right: 10%; }
+        .seats-5 .player-seat:nth-child(3) { bottom: 30%; right: 10%; }
+        .seats-5 .player-seat:nth-child(4) { bottom: 10%; left: 50%; transform: translate(-50%, 50%); }
+        .seats-5 .player-seat:nth-child(5) { top: 50%; left: 10%; transform: translate(-50%, -50%); }
+
+        .seats-6 .player-seat:nth-child(1) { top: 10%; left: 50%; }
+        .seats-6 .player-seat:nth-child(2) { top: 25%; right: 10%; }
+        .seats-6 .player-seat:nth-child(3) { bottom: 25%; right: 10%; }
+        .seats-6 .player-seat:nth-child(4) { bottom: 10%; left: 50%; transform: translate(-50%, 50%); }
+        .seats-6 .player-seat:nth-child(5) { bottom: 25%; left: 10%; }
+        .seats-6 .player-seat:nth-child(6) { top: 25%; left: 10%; }
+
+        .seats-7 .player-seat:nth-child(1) { top: 0; left: 50%; }
+        .seats-7 .player-seat:nth-child(2) { top: 15%; right: 15%; }
+        .seats-7 .player-seat:nth-child(3) { top: 50%; right: 0; transform: translate(50%, -50%); }
+        .seats-7 .player-seat:nth-child(4) { bottom: 15%; right: 15%; }
+        .seats-7 .player-seat:nth-child(5) { bottom: 0; left: 50%; transform: translate(-50%, 50%); }
+        .seats-7 .player-seat:nth-child(6) { bottom: 15%; left: 15%; }
+        .seats-7 .player-seat:nth-child(7) { top: 15%; left: 15%; }
+
+        .seats-8 .player-seat:nth-child(1) { top: 0; left: 50%; }
+        .seats-8 .player-seat:nth-child(2) { top: 15%; right: 15%; }
+        .seats-8 .player-seat:nth-child(3) { top: 50%; right: 0; transform: translate(50%, -50%); }
+        .seats-8 .player-seat:nth-child(4) { bottom: 15%; right: 15%; }
+        .seats-8 .player-seat:nth-child(5) { bottom: 0; left: 50%; transform: translate(-50%, 50%); }
+        .seats-8 .player-seat:nth-child(6) { bottom: 15%; left: 15%; }
+        .seats-8 .player-seat:nth-child(7) { top: 50%; left: 0; transform: translate(-50%, -50%); }
+        .seats-8 .player-seat:nth-child(8) { top: 15%; left: 15%; }
+
+        .seats-9 .player-seat:nth-child(1) { top: 0; left: 50%; }
+        .seats-9 .player-seat:nth-child(2) { top: 10%; right: 20%; }
+        .seats-9 .player-seat:nth-child(3) { top: 40%; right: 5%; }
+        .seats-9 .player-seat:nth-child(4) { bottom: 40%; right: 5%; }
+        .seats-9 .player-seat:nth-child(5) { bottom: 0; left: 50%; transform: translate(-50%, 50%); }
+        .seats-9 .player-seat:nth-child(6) { bottom: 40%; left: 5%; }
+        .seats-9 .player-seat:nth-child(7) { top: 40%; left: 5%; }
+        .seats-9 .player-seat:nth-child(8) { top: 10%; left: 20%; }
+        .seats-9 .player-seat:nth-child(9) { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+        @media (max-width: 600px) {
+            .tables-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+                padding: 12px;
+            }
+
+            .table-count {
+                font-size: 14px;
+            }
+        }
+    </style>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body style="background: #1E2329;">
+    <!-- Шапка -->
+    <header class="header">
+        <button class="btn-circle" onclick="window.Telegram.WebApp.close()">
+            <i class="fas fa-arrow-left"></i>
+        </button>
+        <h1 class="section-title">Настройка игры</h1>
+        <div style="width: 32px;"></div>
+    </header>
+
+    <div class="container">
+        <!-- Количество игроков -->
+        <div class="setup-section">
+            <h2 class="section-subtitle">Выберите стол</h2>
+            <div class="tables-grid">
+                <!-- Столы на 4-9 игроков -->
+                <div class="table-option" data-players="4">
+                    <div class="table-visual">
+                        <div class="table-oval">4</div>
+                        <div class="check-icon"><i class="fas fa-check"></i></div>
+                    </div>
+                    <div class="table-count">4 игрока</div>
+                </div>
+
+                <div class="table-option" data-players="5">
+                    <div class="table-visual">
+                        <div class="table-oval">5</div>
+                        <div class="check-icon"><i class="fas fa-check"></i></div>
+                    </div>
+                    <div class="table-count">5 игроков</div>
+                </div>
+
+                <div class="table-option" data-players="6">
+                    <div class="table-visual">
+                        <div class="table-oval">6</div>
+                        <div class="check-icon"><i class="fas fa-check"></i></div>
+                    </div>
+                    <div class="table-count">6 игроков</div>
+                </div>
+
+                <div class="table-option" data-players="7">
+                    <div class="table-visual">
+                        <div class="table-oval">7</div>
+                        <div class="check-icon"><i class="fas fa-check"></i></div>
+                    </div>
+                    <div class="table-count">7 игроков</div>
+                </div>
+
+                <div class="table-option" data-players="8">
+                    <div class="table-visual">
+                        <div class="table-oval">8</div>
+                        <div class="check-icon"><i class="fas fa-check"></i></div>
+                    </div>
+                    <div class="table-count">8 игроков</div>
+                </div>
+
+                <div class="table-option" data-players="9">
+                    <div class="table-visual">
+                        <div class="table-oval">9</div>
+                        <div class="check-icon"><i class="fas fa-check"></i></div>
+                    </div>
+                    <div class="table-count">9 игроков</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Режимы игры -->
+        <div class="setup-section">
+            <h2 class="section-subtitle">Режим игры</h2>
+            <div class="game-modes">
+                <div class="mode-card active" data-mode="classic">
+                    <i class="fas fa-chess"></i>
+                    <span>Классический</span>
+                </div>
+                <div class="mode-card" data-mode="quick">
+                    <i class="fas fa-bolt"></i>
+                    <span>Быстрый</span>
+                </div>
+                <div class="mode-card" data-mode="custom">
+                    <i class="fas fa-cog"></i>
+                    <span>Свой</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Дополнительные настройки -->
+        <div class="setup-section">
+            <h2 class="section-subtitle">Дополнительные настройки</h2>
+            <div class="settings-list">
+                <div class="setting-item">
+                    <label class="setting-label">
+                        <span>Добавить ботов</span>
+                        <div class="toggle">
+                            <input type="checkbox" id="aiOpponent">
+                            <span class="toggle-slider"></span>
+                        </div>
+                    </label>
+                </div>
+                <div class="setting-item">
+                    <label class="setting-label">
+                        <span>Режим тестирования с ИИ</span>
+                        <div class="toggle">
+                            <input type="checkbox" id="testMode">
+                            <span class="toggle-slider"></span>
+                        </div>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Кнопки создания и присоединения к столу -->
+        <div class="setup-controls">
+            <button class="create-table-btn" type="button" onclick="createTable()">
+                <i class="fas fa-plus"></i>
+                Создать стол
+            </button>
+            <button class="join-table-btn" type="button" onclick="openTablesList()">
+                <i class="fas fa-sign-in-alt"></i>
+                Присоединиться
+            </button>
+        </div>
+    </div>
+
+    <!-- Нижняя навигация -->
+    <nav class="bottom-nav">
+        <a href="index.html" class="nav-item">
+            <i class="fas fa-home"></i>
+            <span>Главная</span>
+        </a>
+        <a href="rating.html" class="nav-item">
+            <i class="fas fa-trophy"></i>
+            <span>Рейтинг</span>
+        </a>
+        <a href="profile.html" class="nav-item">
+            <i class="fas fa-user"></i>
+            <span>Профиль</span>
+        </a>
+        <a href="#" class="nav-item">
+            <i class="fas fa-cog"></i>
+            <span>Настройки</span>
+        </a>
+    </nav>
+
+    <script src="js/game-setup.js"></script>
+</body>
+</html> 

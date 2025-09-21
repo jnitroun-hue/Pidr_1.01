@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>P.I.D.R. - Друзья</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/game-ui.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <!-- Шапка -->
+    <header class="game-header">
+        <button class="game-back-button" onclick="history.back()">
+            <i class="fas fa-arrow-left"></i>
+            <span>Назад</span>
+        </button>
+        <h1>Друзья</h1>
+        <button class="game-button" style="padding: 8px;">
+            <i class="fas fa-user-plus"></i>
+        </button>
+    </header>
+
+    <div class="game-container">
+        <!-- Поиск -->
+        <div class="game-search">
+            <i class="fas fa-search"></i>
+            <input type="text" placeholder="Поиск друзей..." class="game-input">
+        </div>
+
+        <!-- Онлайн -->
+        <h2 class="game-section-title">Онлайн</h2>
+        <div class="game-card">
+            <div class="friend-item">
+                <img src="img/default-avatar.png" alt="Аватар" class="friend-avatar">
+                <div style="flex: 1;">
+                    <div style="font-weight: 600;">Игрок #1</div>
+                    <div style="color: var(--game-green); font-size: 14px;">В игре</div>
+                </div>
+                <button class="game-button">
+                    Играть
+                </button>
+            </div>
+
+            <div class="friend-item">
+                <img src="img/default-avatar.png" alt="Аватар" class="friend-avatar">
+                <div style="flex: 1;">
+                    <div style="font-weight: 600;">Игрок #2</div>
+                    <div style="color: var(--game-text-secondary); font-size: 14px;">В сети</div>
+                </div>
+                <button class="game-button">
+                    Играть
+                </button>
+            </div>
+        </div>
+
+        <!-- Все друзья -->
+        <h2 class="game-section-title">Все друзья</h2>
+        <div class="game-card">
+            <div class="friend-item">
+                <img src="img/default-avatar.png" alt="Аватар" class="friend-avatar">
+                <div style="flex: 1;">
+                    <div style="font-weight: 600;">Игрок #3</div>
+                    <div style="color: var(--game-text-secondary); font-size: 14px;">Был(а) 2 часа назад</div>
+                </div>
+                <button class="game-button" style="background: var(--game-gradient-primary);">
+                    Профиль
+                </button>
+            </div>
+
+            <div class="friend-item">
+                <img src="img/default-avatar.png" alt="Аватар" class="friend-avatar">
+                <div style="flex: 1;">
+                    <div style="font-weight: 600;">Игрок #4</div>
+                    <div style="color: var(--game-text-secondary); font-size: 14px;">Был(а) вчера</div>
+                </div>
+                <button class="game-button" style="background: var(--game-gradient-primary);">
+                    Профиль
+                </button>
+            </div>
+        </div>
+
+        <!-- Запросы в друзья -->
+        <h2 class="game-section-title">Запросы в друзья</h2>
+        <div class="game-card">
+            <div class="friend-item">
+                <img src="img/default-avatar.png" alt="Аватар" class="friend-avatar">
+                <div style="flex: 1;">
+                    <div style="font-weight: 600;">Игрок #5</div>
+                    <div style="color: var(--game-text-secondary); font-size: 14px;">Хочет добавить вас в друзья</div>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button class="game-button">
+                        <i class="fas fa-check"></i>
+                    </button>
+                    <button class="game-button" style="background: var(--game-gradient-primary);">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Рекомендации -->
+        <h2 class="game-section-title">Возможные друзья</h2>
+        <div class="game-grid">
+            <div class="game-card friend-suggestion">
+                <img src="img/default-avatar.png" alt="Аватар" class="friend-avatar-large">
+                <h3>Игрок #6</h3>
+                <p style="color: var(--game-text-secondary);">3 общих друга</p>
+                <button class="game-button" style="width: 100%;">
+                    Добавить
+                </button>
+            </div>
+
+            <div class="game-card friend-suggestion">
+                <img src="img/default-avatar.png" alt="Аватар" class="friend-avatar-large">
+                <h3>Игрок #7</h3>
+                <p style="color: var(--game-text-secondary);">1 общий друг</p>
+                <button class="game-button" style="width: 100%;">
+                    Добавить
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Нижняя навигация -->
+    <nav class="game-nav">
+        <a href="index.html" class="game-nav-item">
+            <i class="fas fa-gamepad"></i>
+            <span>Меню</span>
+        </a>
+        <a href="friends.html" class="game-nav-item active">
+            <i class="fas fa-users"></i>
+            <span>Друзья</span>
+        </a>
+        <a href="profile.html" class="game-nav-item">
+            <i class="fas fa-user"></i>
+            <span>Профиль</span>
+        </a>
+        <a href="wallet.html" class="game-nav-item">
+            <i class="fas fa-wallet"></i>
+            <span>Кошелек</span>
+        </a>
+        <a href="rules.html" class="game-nav-item">
+            <i class="fas fa-book"></i>
+            <span>Правила</span>
+        </a>
+    </nav>
+
+    <script src="js/webapp.js"></script>
+
+    <style>
+    .game-search {
+        position: relative;
+        margin-bottom: 20px;
+    }
+
+    .game-search i {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--game-text-secondary);
+    }
+
+    .game-search .game-input {
+        padding-left: 45px;
+    }
+
+    .friend-item {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        padding: 15px 0;
+        border-bottom: 1px solid var(--game-bg-secondary);
+    }
+
+    .friend-item:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+
+    .friend-item:first-child {
+        padding-top: 0;
+    }
+
+    .friend-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 24px;
+        object-fit: cover;
+    }
+
+    .friend-avatar-large {
+        width: 80px;
+        height: 80px;
+        border-radius: 40px;
+        object-fit: cover;
+        margin-bottom: 15px;
+    }
+
+    .friend-suggestion {
+        text-align: center;
+        padding: 20px;
+    }
+
+    .friend-suggestion h3 {
+        margin: 0 0 5px 0;
+    }
+
+    .friend-suggestion p {
+        margin: 0 0 15px 0;
+        font-size: 14px;
+    }
+
+    .game-section-title {
+        margin: 30px 0 20px;
+        font-size: 20px;
+        font-weight: 600;
+    }
+    </style>
+</body>
+</html> 

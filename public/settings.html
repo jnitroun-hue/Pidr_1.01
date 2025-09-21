@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P.I.D.R. - Настройки</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/settings.css">
+    <link rel="stylesheet" href="css/dark-theme.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="js/theme.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="settings-header">
+            <h1>Настройки</h1>
+        </div>
+
+        <div class="settings-section">
+            <h2 class="settings-section-title">Внешний вид</h2>
+            <div class="settings-list">
+                <div class="settings-item">
+                    <div class="settings-item-label">
+                        <div class="settings-item-icon">
+                            <i class="fas fa-moon"></i>
+                        </div>
+                        <div>
+                            <div class="settings-item-text">Темная тема</div>
+                            <div class="settings-item-description">Изменить цветовую схему приложения</div>
+                        </div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="darkThemeToggle">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="settings-item">
+                    <div class="settings-item-label">
+                        <div class="settings-item-icon">
+                            <i class="fas fa-palette"></i>
+                        </div>
+                        <div>
+                            <div class="settings-item-text">Цветовая схема</div>
+                            <div class="settings-item-description">Выберите основной цвет интерфейса</div>
+                        </div>
+                    </div>
+                    <select class="settings-select" id="colorScheme">
+                        <option value="blue">Синий</option>
+                        <option value="green">Зеленый</option>
+                        <option value="purple">Фиолетовый</option>
+                        <option value="orange">Оранжевый</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h2 class="settings-section-title">Игровой процесс</h2>
+            <div class="settings-list">
+                <div class="settings-item">
+                    <div class="settings-item-label">
+                        <div class="settings-item-icon">
+                            <i class="fas fa-volume-up"></i>
+                        </div>
+                        <div>
+                            <div class="settings-item-text">Звуковые эффекты</div>
+                            <div class="settings-item-description">Включить звуки в игре</div>
+                        </div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="soundToggle" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="settings-item">
+                    <div class="settings-item-label">
+                        <div class="settings-item-icon">
+                            <i class="fas fa-bell"></i>
+                        </div>
+                        <div>
+                            <div class="settings-item-text">Уведомления</div>
+                            <div class="settings-item-description">Получать уведомления о ходе игры</div>
+                        </div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="notificationsToggle" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h2 class="settings-section-title">Аккаунт</h2>
+            <div class="settings-list">
+                <div class="settings-item">
+                    <div class="settings-item-label">
+                        <div class="settings-item-icon">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div>
+                            <div class="settings-item-text">Изменить никнейм</div>
+                            <div class="settings-item-description">Текущий никнейм: Игрок #1</div>
+                        </div>
+                    </div>
+                    <button class="settings-button">Изменить</button>
+                </div>
+                <div class="settings-item">
+                    <div class="settings-item-label">
+                        <div class="settings-item-icon">
+                            <i class="fas fa-trash"></i>
+                        </div>
+                        <div>
+                            <div class="settings-item-text">Удалить аккаунт</div>
+                            <div class="settings-item-description">Это действие нельзя отменить</div>
+                        </div>
+                    </div>
+                    <button class="settings-button danger">Удалить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <nav class="bottom-nav">
+        <a href="profile.html" class="nav-item">
+            <i class="fas fa-user nav-icon"></i>
+            <span>Профиль</span>
+        </a>
+        <a href="shop.html" class="nav-item">
+            <i class="fas fa-store nav-icon"></i>
+            <span>Магазин</span>
+        </a>
+        <a href="game.html" class="nav-item">
+            <i class="fas fa-gamepad nav-icon"></i>
+            <span>Игра</span>
+        </a>
+        <a href="settings.html" class="nav-item active">
+            <i class="fas fa-cog nav-icon"></i>
+            <span>Настройки</span>
+        </a>
+    </nav>
+
+    <script>
+        // Инициализация Telegram WebApp
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        // Обработчики для переключателей
+        document.getElementById('darkThemeToggle').addEventListener('change', function(e) {
+            // Здесь будет логика переключения темы
+            document.body.classList.toggle('dark-theme');
+        });
+
+        document.getElementById('colorScheme').addEventListener('change', function(e) {
+            // Здесь будет логика изменения цветовой схемы
+            const selectedColor = e.target.value;
+            // Применить выбранную цветовую схему
+        });
+
+        // Обработчики для кнопок
+        document.querySelectorAll('.settings-button').forEach(button => {
+            button.addEventListener('click', function() {
+                if (this.classList.contains('danger')) {
+                    // Показать подтверждение перед удалением аккаунта
+                    tg.showConfirm('Вы уверены, что хотите удалить аккаунт? Это действие нельзя отменить.');
+                } else {
+                    // Показать диалог изменения никнейма
+                    tg.showPopup({
+                        title: 'Изменить никнейм',
+                        message: 'Введите новый никнейм:',
+                        buttons: [
+                            {id: 'cancel', text: 'Отмена'},
+                            {id: 'save', text: 'Сохранить'}
+                        ]
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html> 
