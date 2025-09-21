@@ -100,13 +100,28 @@ export async function GET(req: NextRequest) {
 // POST /api/auth - Авторизация пользователя
 export async function POST(req: NextRequest) {
   try {
-    console.log('🔐 Авторизация пользователя...');
+    console.log('🔐 POST /api/auth - Авторизация пользователя...');
+    
+    // Проверяем переменные окружения
+    console.log('🔍 Проверка переменных окружения:');
+    console.log('- JWT_SECRET:', !!JWT_SECRET ? 'ЕСТЬ' : '❌ НЕТ');
+    console.log('- SESSION_SECRET:', !!SESSION_SECRET ? 'ЕСТЬ' : '❌ НЕТ');
+    console.log('- SUPABASE_URL:', process.env.SUPABASE_URL ? 'ЕСТЬ' : '❌ НЕТ');
+    console.log('- SUPABASE_ANON_KEY:', process.env.SUPABASE_ANON_KEY ? 'ЕСТЬ' : '❌ НЕТ');
 
     if (!JWT_SECRET) {
       console.error('❌ JWT_SECRET не настроен');
       return NextResponse.json({ 
         success: false, 
-        message: 'Сервер не настроен' 
+        message: 'JWT_SECRET не настроен на сервере' 
+      }, { status: 500 });
+    }
+
+    if (!SESSION_SECRET) {
+      console.error('❌ SESSION_SECRET не настроен');
+      return NextResponse.json({ 
+        success: false, 
+        message: 'SESSION_SECRET не настроен на сервере' 
       }, { status: 500 });
     }
 
@@ -125,11 +140,14 @@ export async function POST(req: NextRequest) {
     console.log('👤 Авторизация пользователя:', { telegramId, username });
 
     // Ищем существующего пользователя
+    console.log('🔍 Ищем пользователя в БД по telegram_id:', telegramId);
     let { data: existingUser, error: findError } = await supabase
       .from('_pidr_users')
       .select('*')
       .eq('telegram_id', telegramId)
       .single();
+      
+    console.log('📊 Результат поиска пользователя:', { user: !!existingUser, error: findError?.message });
 
     let user = existingUser;
 
@@ -137,24 +155,30 @@ export async function POST(req: NextRequest) {
       // Создаем нового пользователя
       console.log('👤 Создаем нового пользователя...');
       
+      const newUserData = {
+        telegram_id: telegramId,
+        username: username,
+        first_name: firstName || username,
+        last_name: lastName || '',
+        photo_url: photoUrl || null,
+        coins: 1000, // Стартовые монеты
+        rating: 0,
+        games_played: 0,
+        games_won: 0,
+        status: 'online',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      console.log('💾 Создаем пользователя с данными:', newUserData);
+      
       const { data: newUser, error: createError } = await supabase
         .from('_pidr_users')
-        .insert([{
-          telegram_id: telegramId,
-          username: username,
-          first_name: firstName || username,
-          last_name: lastName || '',
-          photo_url: photoUrl || null,
-          coins: 1000, // Стартовые монеты
-          rating: 0,
-          games_played: 0,
-          games_won: 0,
-          status: 'online',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }])
+        .insert([newUserData])
         .select()
         .single();
+        
+      console.log('✅ Результат создания пользователя:', { user: !!newUser, error: createError?.message });
 
       if (createError) {
         console.error('❌ Ошибка создания пользователя:', createError);
@@ -239,10 +263,15 @@ export async function POST(req: NextRequest) {
     return response;
 
   } catch (error: any) {
-    console.error('❌ Ошибка авторизации:', error);
+    console.error('❌ КРИТИЧЕСКАЯ ОШИБКА API авторизации:');
+    console.error('- Тип ошибки:', typeof error);
+    console.error('- Сообщение:', error?.message);
+    console.error('- Стек:', error?.stack);
+    console.error('- Полный объект:', error);
+    
     return NextResponse.json({ 
       success: false, 
-      message: 'Ошибка сервера' 
+      message: `Внутренняя ошибка сервера: ${error?.message || 'Неизвестная ошибка'}` 
     }, { status: 500 });
   }
 }
