@@ -122,13 +122,19 @@ export async function GET(req: NextRequest) {
 
 // POST /api/wallet/hd-addresses - Сгенерировать новый адрес для конкретной монеты
 export async function POST(req: NextRequest) {
-  const userId = getUserIdFromRequest(req);
-  if (!userId) {
-    return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-  }
-
   try {
-    const { coin } = await req.json();
+    const { coin, userId: providedUserId } = await req.json();
+    
+    // Пытаемся получить userId из токена или используем предоставленный
+    let userId = getUserIdFromRequest(req);
+    if (!userId && providedUserId) {
+      userId = providedUserId;
+      console.log('🔧 Используем предоставленный userId для демо-платежа');
+    }
+    
+    if (!userId) {
+      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+    }
 
     if (!coin) {
       return NextResponse.json({ 
@@ -142,16 +148,25 @@ export async function POST(req: NextRequest) {
     // Проверяем, есть ли уже адрес для этой монеты
     const { data: existingAddress } = await supabase
       .from('_pidr_hd_wallets')
-      .select('id')
+      .select('*')
       .eq('user_id', userId)
       .eq('coin', coin)
       .single();
 
     if (existingAddress) {
+      console.log(`✅ Найден существующий ${coin} адрес для пользователя`);
       return NextResponse.json({ 
-        success: false, 
-        message: `Адрес для ${coin} уже существует` 
-      }, { status: 400 });
+        success: true, 
+        address: existingAddress.address,
+        existing: true,
+        details: {
+          coin: existingAddress.coin,
+          address: existingAddress.address,
+          derivationPath: existingAddress.derivation_path,
+          index: existingAddress.address_index,
+          createdAt: existingAddress.created_at
+        }
+      });
     }
 
     // Генерируем новый адрес

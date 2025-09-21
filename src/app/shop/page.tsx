@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Palette, Wand2, Zap, Gift, Coins, ShoppingBag, Star, Crown, Flame, Wallet } from 'lucide-react';
 import BottomNav from '../../components/BottomNav';
 import WalletManager from '../../components/WalletManager';
+import CryptoPayment from '../../components/CryptoPayment';
 
 export default function ShopPage() {
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -200,7 +201,10 @@ export default function ShopPage() {
             transition={{ duration: 0.5, delay: 0.2 }}
             style={{ padding: '0 20px', marginBottom: '100px' }}
           >
-            <WalletManager showExchange={true} onCoinsAdded={(amount) => setCoins(prev => prev + amount)} />
+            <CryptoPayment onCoinsAdded={(amount) => setCoins(prev => prev + amount)} />
+            <div style={{ marginTop: '40px' }}>
+              <WalletManager showExchange={true} onCoinsAdded={(amount) => setCoins(prev => prev + amount)} />
+            </div>
           </motion.div>
         )}
 
