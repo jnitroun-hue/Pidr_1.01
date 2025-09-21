@@ -160,7 +160,7 @@ export async function POST(req: NextRequest) {
         username: username,
         first_name: firstName || username,
         last_name: lastName || '',
-        photo_url: photoUrl || null,
+        avatar_url: photoUrl || null,
         coins: 1000, // Стартовые монеты
         rating: 0,
         games_played: 0,
@@ -200,7 +200,7 @@ export async function POST(req: NextRequest) {
           username: username,
           first_name: firstName || existingUser.first_name,
           last_name: lastName || existingUser.last_name,
-          photo_url: photoUrl || existingUser.photo_url,
+          avatar_url: photoUrl || existingUser.avatar_url,
           last_seen: new Date().toISOString(),
           status: 'online',
           updated_at: new Date().toISOString()
