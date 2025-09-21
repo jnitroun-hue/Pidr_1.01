@@ -204,68 +204,112 @@ function HomeWithParams() {
     }
   };
 
-  // Показываем загрузку с красивыми картами
+  // Показываем загрузку в стиле игры
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 flex items-center justify-center overflow-hidden">
-        <div className="text-center relative">
-          {/* Анимированные карты */}
-          <div className="relative mb-8">
-            <div className="flex justify-center items-center space-x-4 mb-6">
-              {['10', 'J', 'Q', 'K', 'A'].map((card, index) => (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900 relative overflow-hidden">
+        {/* Фоновые элементы */}
+        <div className="absolute inset-0">
+          {/* Анимированные частицы */}
+          {[...Array(20)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute w-2 h-2 bg-white/20 rounded-full animate-pulse"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                animationDelay: `${Math.random() * 2}s`,
+                animationDuration: `${2 + Math.random() * 3}s`,
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Основной контент */}
+        <div className="relative z-10 flex items-center justify-center min-h-screen">
+          <div className="text-center px-6">
+            {/* Логотип/Иконка игры */}
+            <div className="mb-8 relative">
+              <div className="w-32 h-32 mx-auto bg-gradient-to-br from-purple-500 to-indigo-600 rounded-3xl flex items-center justify-center shadow-2xl transform rotate-3 hover:rotate-0 transition-transform duration-500">
+                <div className="text-6xl font-black text-white">P</div>
+              </div>
+              
+              {/* Светящийся эффект */}
+              <div className="absolute inset-0 w-32 h-32 mx-auto bg-gradient-to-br from-purple-500/50 to-indigo-600/50 rounded-3xl blur-xl animate-pulse"></div>
+            </div>
+
+            {/* Название игры */}
+            <h1 className="text-6xl font-black mb-2 bg-gradient-to-r from-purple-400 via-pink-400 to-indigo-400 bg-clip-text text-transparent">
+              P.I.D.R.
+            </h1>
+            <p className="text-2xl text-gray-300 mb-8 font-light">Game</p>
+
+            {/* Анимированные карты */}
+            <div className="flex justify-center items-center space-x-3 mb-8">
+              {['♠', '♥', '♦', '♣'].map((suit, index) => (
                 <div
-                  key={card}
-                  className="w-16 h-24 bg-gradient-to-br from-red-600 to-red-800 rounded-lg shadow-2xl flex items-center justify-center text-white font-bold text-xl border-2 border-red-400 transform transition-all duration-1000"
+                  key={suit}
+                  className="w-12 h-16 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg flex items-center justify-center text-2xl transform transition-all duration-1000"
                   style={{
                     animationDelay: `${index * 0.2}s`,
-                    animation: `float 2s ease-in-out infinite ${index * 0.2}s, shimmer 3s ease-in-out infinite ${index * 0.3}s`,
-                    boxShadow: '0 0 20px rgba(239, 68, 68, 0.5)',
+                    animation: `cardFloat 3s ease-in-out infinite ${index * 0.5}s`,
+                    color: suit === '♥' || suit === '♦' ? '#ef4444' : '#ffffff',
                   }}
                 >
-                  {card}
+                  {suit}
                 </div>
               ))}
             </div>
-            
-            {/* Переливающийся эффект */}
-            <div 
-              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
-              style={{ animation: 'shimmer 2s infinite' }}
-            ></div>
-          </div>
 
-          {/* Заголовок */}
-          <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-red-400 via-yellow-400 to-red-400 bg-clip-text text-transparent animate-pulse">
-            P.I.D.R. Game
-          </h1>
-          
-          {/* Загрузка */}
-          <div className="flex items-center justify-center space-x-2 mb-4">
-            <div className="w-2 h-2 bg-red-400 rounded-full animate-bounce"></div>
-            <div className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-            <div className="w-2 h-2 bg-red-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-          </div>
-          
-          <p className="text-xl text-gray-300 animate-pulse">Загрузка...</p>
-          <p className="text-sm text-gray-400 mt-2">Авторизация через Telegram</p>
+            {/* Прогресс загрузки */}
+            <div className="w-64 mx-auto mb-6">
+              <div className="bg-white/10 rounded-full h-2 backdrop-blur-sm">
+                <div 
+                  className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full animate-pulse"
+                  style={{ 
+                    width: '60%',
+                    animation: 'loadingProgress 2s ease-in-out infinite'
+                  }}
+                ></div>
+              </div>
+            </div>
 
-          {/* Стили для анимаций */}
-          <style jsx>{`
-            @keyframes shimmer {
-              0% { transform: translateX(-100%); }
-              100% { transform: translateX(100%); }
-            }
-            
-            @keyframes float {
-              0%, 100% { 
-                transform: translateY(0px) rotate(${Math.random() * 10 - 5}deg); 
-              }
-              50% { 
-                transform: translateY(-10px) rotate(${Math.random() * 10 - 5}deg); 
-              }
-            }
-          `}</style>
+            {/* Текст загрузки */}
+            <div className="space-y-2">
+              <p className="text-xl text-white/90 font-medium animate-pulse">Загрузка игры...</p>
+              <p className="text-sm text-white/60">Инициализация Telegram WebApp</p>
+            </div>
+
+            {/* Анимированные точки */}
+            <div className="flex justify-center space-x-1 mt-4">
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"
+                  style={{ animationDelay: `${i * 0.2}s` }}
+                ></div>
+              ))}
+            </div>
+          </div>
         </div>
+
+        {/* Стили для анимаций */}
+        <style jsx>{`
+          @keyframes cardFloat {
+            0%, 100% { 
+              transform: translateY(0px) rotate(0deg); 
+            }
+            50% { 
+              transform: translateY(-10px) rotate(5deg); 
+            }
+          }
+          
+          @keyframes loadingProgress {
+            0% { width: 20%; }
+            50% { width: 80%; }
+            100% { width: 60%; }
+          }
+        `}</style>
       </div>
     );
   }

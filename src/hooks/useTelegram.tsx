@@ -50,8 +50,24 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
             document.documentElement.classList.add('dark')
           }
         } else {
-          // Для разработки без Telegram
-          setIsReady(true)
+          // Для разработки без Telegram - создаем тестового пользователя
+          console.log('🧪 Режим разработки: создаем тестового пользователя');
+          const mockWebApp = {
+            initDataUnsafe: {
+              user: {
+                id: 123456789,
+                first_name: 'Test',
+                last_name: 'User',
+                username: 'testuser',
+                language_code: 'ru'
+              }
+            },
+            ready: () => {},
+            expand: () => {},
+            colorScheme: 'dark'
+          };
+          setWebApp(mockWebApp as any);
+          setIsReady(true);
         }
       } catch (error) {
         console.warn('Failed to initialize Telegram WebApp:', error)
