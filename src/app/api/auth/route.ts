@@ -5,6 +5,7 @@ import { cookies } from 'next/headers';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const SESSION_SECRET = process.env.SESSION_SECRET;
+const NEXTAUTH_URL = process.env.NEXTAUTH_URL || process.env.VERCEL_URL;
 
 // GET /api/auth - Проверка активной сессии
 export async function GET(req: NextRequest) {
@@ -256,12 +257,14 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    // Устанавливаем HTTP-only cookie
+    // Устанавливаем HTTP-only cookie с правильными настройками для Vercel
     response.cookies.set('auth_token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 30 * 24 * 60 * 60 // 30 дней
+      secure: true, // Всегда true для HTTPS
+      sameSite: 'none', // Для Telegram WebApp нужно 'none'
+      path: '/',
+      maxAge: 30 * 24 * 60 * 60, // 30 дней
+      domain: process.env.NODE_ENV === 'production' ? undefined : undefined // Автоопределение домена
     });
 
     console.log('✅ JWT токен создан и установлен в cookie');
