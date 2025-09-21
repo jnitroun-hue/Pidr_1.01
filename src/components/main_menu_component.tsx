@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Play, User, Star, Book, Wallet, UserPlus, Store, Menu, Link, Users, Plus } from 'lucide-react'
+import { Play, User, Book, Store, Users } from 'lucide-react'
 import { useGameStore } from '../store/gameStore'
 import { useTelegram } from '../hooks/useTelegram'
 import { useWalletStore } from '../store/walletStore'
@@ -14,7 +14,7 @@ const tokens = [
 ]
 
 interface MainMenuProps {
-  onNavigate: (page: 'game' | 'multiplayer' | 'new-room' | 'invite' | 'shop' | 'profile' | 'rules' | 'menu') => void
+  onNavigate: (page: 'game' | 'multiplayer' | 'shop' | 'profile' | 'rules' | 'menu') => void
   balance?: number
 }
 
@@ -87,14 +87,6 @@ export default function MainMenu({ onNavigate }: MainMenuProps) {
           <button onClick={() => onNavigate('multiplayer')} className="menu-action-card multiplayer-card">
             <Users className="menu-action-icon" />
             <span className="menu-action-label">ОНЛАЙН</span>
-          </button>
-          <button onClick={() => onNavigate('new-room')} className="menu-action-card new-room-card">
-            <Plus className="menu-action-icon" />
-            <span className="menu-action-label">НОВАЯ КОМНАТА</span>
-          </button>
-          <button onClick={() => onNavigate('invite')} className="menu-action-card">
-            <UserPlus className="menu-action-icon" />
-            <span className="menu-action-label">ПРИГЛАСИТЬ</span>
           </button>
           <button onClick={() => onNavigate('shop')} className="menu-action-card">
             <Store className="menu-action-icon" />
