@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
         const { HDWalletService } = await import('../../../../lib/wallets/hd-wallet-service');
         const walletService = new HDWalletService();
         
-        const supportedCoins = ['TON', 'BTC', 'ETH', 'USDT_TRC20', 'SOL'];
+        const supportedCoins = ['USDT', 'TON', 'BTC', 'ETH', 'SOL'];
         const newAddresses = [];
 
         for (const coin of supportedCoins) {

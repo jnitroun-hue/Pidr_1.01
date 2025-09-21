@@ -6,7 +6,7 @@ export async function GET(req: NextRequest) {
     console.log('🧪 Тестируем HD кошельки...');
 
     const testUserId = 'test_user_hd_' + Date.now();
-    const supportedCoins = ['TON', 'BTC', 'ETH', 'USDT_TRC20', 'SOL'];
+    const supportedCoins = ['USDT', 'TON', 'BTC', 'ETH', 'SOL'];
     const results: any[] = [];
 
     for (const coin of supportedCoins) {
@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    const coinsToTest = coins || ['TON', 'ETH', 'SOL'];
+    const coinsToTest = coins || ['USDT', 'TON', 'ETH', 'SOL'];
     console.log(`🧪 Тестируем HD кошельки для пользователя ${userId}, монеты: ${coinsToTest.join(', ')}`);
 
     const results: any[] = [];

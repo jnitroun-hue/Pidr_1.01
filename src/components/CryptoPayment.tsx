@@ -35,11 +35,20 @@ export default function CryptoPayment({ onCoinsAdded }: CryptoPaymentProps) {
 
   const cryptocurrencies: CryptoCurrency[] = [
     {
+      symbol: 'USDT',
+      name: 'Tether USD',
+      icon: '💵',
+      color: '#26a17b',
+      rate: 150, // 1 USDT = 150 игровых монет (базовая валюта)
+      minAmount: 1,
+      decimals: 6
+    },
+    {
       symbol: 'TON',
       name: 'Toncoin',
       icon: '💎',
       color: '#0088ff',
-      rate: 1000, // 1 TON = 1000 игровых монет
+      rate: 750, // ~$5 * 150 = 750 монет
       minAmount: 0.1,
       decimals: 9
     },
@@ -48,7 +57,7 @@ export default function CryptoPayment({ onCoinsAdded }: CryptoPaymentProps) {
       name: 'Ethereum',
       icon: '🦄',
       color: '#627eea',
-      rate: 50000, // 1 ETH = 50000 игровых монет
+      rate: 375000, // ~$2500 * 150 = 375000 монет
       minAmount: 0.001,
       decimals: 18
     },
@@ -57,7 +66,7 @@ export default function CryptoPayment({ onCoinsAdded }: CryptoPaymentProps) {
       name: 'Solana',
       icon: '⚡',
       color: '#9945ff',
-      rate: 5000, // 1 SOL = 5000 игровых монет
+      rate: 30000, // ~$200 * 150 = 30000 монет
       minAmount: 0.01,
       decimals: 9
     }
@@ -97,6 +106,7 @@ export default function CryptoPayment({ onCoinsAdded }: CryptoPaymentProps) {
     
     // Fallback адреса для демо
     const fallbackAddresses = {
+      USDT: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
       TON: 'EQBvW8Z5huBkMJYdnfAEM5JqTNkuWX3diqYENkWsIL0XggGG',
       ETH: '0x742d35Cc6639C0532fba96b9f8b1B8F4D3c8b3a1',
       SOL: '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgHPv'
@@ -124,11 +134,42 @@ export default function CryptoPayment({ onCoinsAdded }: CryptoPaymentProps) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handlePaymentComplete = () => {
-    if (selectedPackage) {
-      const totalCoins = selectedPackage.coins + selectedPackage.bonus;
-      onCoinsAdded(totalCoins);
-      setPaymentStep('success');
+  const handlePaymentComplete = async () => {
+    if (selectedPackage && selectedCrypto) {
+      try {
+        const totalCoins = selectedPackage.coins + selectedPackage.bonus;
+        
+        // Отправляем запрос на добавление монет в БД
+        const response = await fetch('/api/shop/add-coins', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            amount: totalCoins,
+            cryptoCurrency: selectedCrypto.symbol,
+            cryptoAmount: paymentAmount,
+            packageName: selectedPackage.name,
+            transactionHash: 'demo_' + Date.now() // Демо хеш
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            onCoinsAdded(totalCoins);
+            setPaymentStep('success');
+            
+            // Уведомляем о обновлении баланса
+            window.dispatchEvent(new CustomEvent('coinsUpdated', {
+              detail: { newBalance: data.newBalance }
+            }));
+          } else {
+            console.error('Ошибка добавления монет:', data.message);
+          }
+        }
+      } catch (error) {
+        console.error('Ошибка обработки платежа:', error);
+      }
     }
   };
 

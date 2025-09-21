@@ -20,18 +20,33 @@ export default function ShopPage() {
   ];
 
   useEffect(() => {
+    // Загружаем текущий баланс из БД через API
+    const loadUserBalance = async () => {
+      try {
+        const response = await fetch('/api/auth', {
+          method: 'GET',
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.user) {
+            setCoins(data.user.coins || 0);
+          }
+        }
+      } catch (error) {
+        console.error('Ошибка загрузки баланса:', error);
+      }
+    };
+
+    loadUserBalance();
+
     // Слушаем обновления баланса монет
     const handleCoinsUpdate = (event: CustomEvent) => {
       setCoins(event.detail.newBalance);
     };
 
     window.addEventListener('coinsUpdated', handleCoinsUpdate as EventListener);
-    
-    // Загружаем текущий баланс из localStorage
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    if (user.coins) {
-      setCoins(user.coins);
-    }
 
     return () => {
       window.removeEventListener('coinsUpdated', handleCoinsUpdate as EventListener);
@@ -65,10 +80,32 @@ export default function ShopPage() {
     return shopItems[selectedCategory as keyof typeof shopItems] || [];
   };
 
-  const handlePurchase = (itemId: string, price: number) => {
+  const handlePurchase = async (itemId: string, price: number) => {
     if (coins >= price && !purchasedItems.includes(itemId)) {
-      setCoins(prev => prev - price);
-      setPurchasedItems(prev => [...prev, itemId]);
+      try {
+        // Обновляем баланс в БД
+        const response = await fetch('/api/shop/purchase', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ itemId, price })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setCoins(data.newBalance);
+            setPurchasedItems(prev => [...prev, itemId]);
+            
+            // Уведомляем о покупке
+            window.dispatchEvent(new CustomEvent('coinsUpdated', {
+              detail: { newBalance: data.newBalance }
+            }));
+          }
+        }
+      } catch (error) {
+        console.error('Ошибка покупки:', error);
+      }
     }
   };
 
