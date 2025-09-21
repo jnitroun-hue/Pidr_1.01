@@ -319,17 +319,19 @@ export default function UltraPremiumShop() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black flex items-center justify-center">
-        <div className="text-center space-y-8">
-          <div className="relative">
-            <div className="w-20 h-20 border-4 border-purple-500/30 rounded-full animate-spin">
-              <div className="absolute top-0 left-1/2 w-4 h-4 bg-purple-500 rounded-full transform -translate-x-1/2"></div>
+      <div className="main-menu-container">
+        <div className="main-menu-inner">
+          <div className="text-center space-y-8" style={{ marginTop: '200px' }}>
+            <div className="relative">
+              <div className="w-20 h-20 border-4 border-purple-500/30 rounded-full animate-spin mx-auto">
+                <div className="absolute top-0 left-1/2 w-4 h-4 bg-purple-500 rounded-full transform -translate-x-1/2"></div>
+              </div>
+              <ShoppingBag className="absolute inset-0 m-auto w-8 h-8 text-purple-400" />
             </div>
-            <ShoppingBag className="absolute inset-0 m-auto w-8 h-8 text-purple-400" />
-          </div>
-          <div>
-            <h2 className="text-3xl font-bold text-white mb-2">Loading Premium Store</h2>
-            <p className="text-gray-400">Preparing exclusive content...</p>
+            <div>
+              <h2 className="text-3xl font-bold text-white mb-2">Загрузка магазина</h2>
+              <p className="text-gray-400">Подготавливаем эксклюзивные товары...</p>
+            </div>
           </div>
         </div>
       </div>
@@ -337,284 +339,223 @@ export default function UltraPremiumShop() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black text-white">
-      {/* Ultra Premium Header */}
-      <div className="sticky top-0 z-50 backdrop-blur-xl bg-black/30 border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => window.history.back()}
-              className="flex items-center space-x-3 px-6 py-3 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-all duration-300 group"
-            >
-              <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-              <span className="font-semibold">Back</span>
-            </button>
-            
-            <div className="text-center">
-              <h1 className="text-4xl font-black bg-gradient-to-r from-white via-purple-200 to-pink-200 bg-clip-text text-transparent">
-                Premium Store
-              </h1>
-              <p className="text-sm text-gray-400 mt-1">Exclusive items for elite players</p>
-            </div>
-            
-            <div className="flex items-center space-x-4 px-6 py-3 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 rounded-2xl border border-yellow-500/20">
-              <Coins className="w-6 h-6 text-yellow-400" />
-              <span className="text-2xl font-bold text-yellow-400">{coins.toLocaleString()}</span>
-            </div>
+    <div className="main-menu-container">
+      <div className="main-menu-inner">
+        {/* Header */}
+        <div className="menu-header">
+          <button onClick={() => window.history.back()} className="px-3 py-1 rounded-lg border border-red-400 text-red-200 font-semibold text-base hover:bg-red-400/10 transition-all">
+            <ArrowLeft className="inline w-4 h-4 mr-1" />
+            Назад
+          </button>
+          <span className="menu-title">МАГАЗИН</span>
+          <div className="shop-balance">
+            <Coins className="balance-icon" />
+            <span className="balance-amount">{coins.toLocaleString()}</span>
           </div>
         </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Premium Categories */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-12">
-          {categories.map((category) => {
-            const Icon = category.icon;
-            const isActive = selectedCategory === category.id;
-            
-            return (
-              <motion.button
-                key={category.id}
-                onClick={() => setSelectedCategory(category.id)}
-                whileHover={{ scale: 1.05, y: -2 }}
-                whileTap={{ scale: 0.95 }}
-                className={`relative p-6 rounded-3xl border transition-all duration-500 overflow-hidden group ${
-                  isActive
-                    ? `bg-gradient-to-br ${category.color} border-white/20 shadow-2xl`
-                    : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
-                }`}
-              >
-                {/* Background Pattern */}
-                <div className="absolute inset-0 opacity-10">
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
-                </div>
-                
-                <div className="relative z-10 text-center space-y-3">
-                  <div className={`mx-auto w-12 h-12 rounded-2xl flex items-center justify-center ${
-                    isActive ? 'bg-white/20' : 'bg-white/10'
-                  }`}>
-                    <Icon className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-lg">{category.name}</h3>
-                    <p className="text-xs text-white/70">{category.description}</p>
-                  </div>
-                </div>
-                
-                {isActive && (
-                  <motion.div
-                    layoutId="activeCategory"
-                    className="absolute inset-0 rounded-3xl bg-gradient-to-br from-white/10 to-transparent"
-                  />
-                )}
-              </motion.button>
-            );
-          })}
+        {/* Shop Categories */}
+        <div className="shop-categories">
+          <div className="categories-grid">
+            {categories.map((category) => {
+              const Icon = category.icon;
+              const isActive = selectedCategory === category.id;
+              
+              return (
+                <motion.button
+                  key={category.id}
+                  onClick={() => setSelectedCategory(category.id)}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className={`category-btn ${isActive ? 'active' : ''}`}
+                >
+                  <Icon className="category-icon" />
+                  <span className="category-name">{category.name}</span>
+                </motion.button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Content Area */}
-        {selectedCategory === 'crypto' ? (
-          /* Crypto Packages */
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-            {cryptoPackages.map((pkg, index) => (
-              <motion.div
-                key={pkg.id}
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                whileHover={{ scale: 1.02, y: -5 }}
-                className={`relative p-8 rounded-3xl bg-gradient-to-br ${pkg.color} shadow-2xl border border-white/20 overflow-hidden group cursor-pointer`}
-              >
-                {/* Badges */}
-                {pkg.popular && (
-                  <div className="absolute -top-3 -right-3 bg-red-500 text-white px-4 py-2 rounded-full text-sm font-bold animate-pulse">
-                    POPULAR
-                  </div>
-                )}
-                {pkg.bestValue && (
-                  <div className="absolute -top-3 -right-3 bg-green-500 text-white px-4 py-2 rounded-full text-sm font-bold">
-                    BEST VALUE
-                  </div>
-                )}
-                
-                {/* Background Effects */}
-                <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                
-                <div className="relative z-10 text-center space-y-6">
-                  <div className="text-6xl animate-bounce">{pkg.icon}</div>
+        {/* Special Offers Section */}
+        {selectedCategory === 'crypto' && (
+          <div className="special-offers-section">
+            <div className="offers-title">
+              <Sparkles className="offers-icon" />
+              <span>СПЕЦИАЛЬНЫЕ ПРЕДЛОЖЕНИЯ</span>
+            </div>
+            <div className="offers-grid">
+              {cryptoPackages.map((pkg, index) => (
+                <motion.div
+                  key={pkg.id}
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  whileHover={{ scale: 1.02 }}
+                  className={`offer-card ${pkg.popular ? 'featured' : ''}`}
+                >
+                  {pkg.popular && (
+                    <div className="offer-badge">ПОПУЛЯРНЫЙ</div>
+                  )}
+                  {pkg.bestValue && (
+                    <div className="offer-badge">ЛУЧШАЯ ЦЕНА</div>
+                  )}
                   
-                  <div>
-                    <h3 className="text-2xl font-bold text-white mb-2">{pkg.name}</h3>
-                    <p className="text-white/80 text-sm">{pkg.description}</p>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="text-4xl font-black text-white">
-                      {pkg.coins.toLocaleString()}
+                  <div className="offer-header">
+                    <div className="offer-icon-container">
+                      <span className="offer-icon">{pkg.icon}</span>
                     </div>
-                    <div className="text-sm text-white/80">Premium Coins</div>
+                    <div className="offer-info">
+                      <h3 className="offer-name">{pkg.name}</h3>
+                      <p className="offer-description">{pkg.description}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="offer-pricing">
+                    <div className="current-price">
+                      <Coins className="price-icon" />
+                      <span>{pkg.coins.toLocaleString()}</span>
+                    </div>
+                    <div className="text-2xl font-bold text-white">${pkg.price}</div>
                   </div>
                   
                   {pkg.bonus && (
-                    <div className="bg-green-400/20 border border-green-400/30 text-green-300 px-4 py-2 rounded-full text-sm font-bold">
-                      +{pkg.bonus}% BONUS
+                    <div style={{ 
+                      background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(22, 163, 74, 0.1) 100%)',
+                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                      color: '#22c55e',
+                      padding: '8px 16px',
+                      borderRadius: '12px',
+                      fontSize: '0.8rem',
+                      fontWeight: '700',
+                      textAlign: 'center' as const,
+                      margin: '16px 0'
+                    }}>
+                      +{pkg.bonus}% БОНУС
                     </div>
                   )}
                   
-                  <div className="space-y-4">
-                    <div className="text-3xl font-bold text-white">${pkg.price}</div>
-                    <button className="w-full bg-white/20 hover:bg-white/30 text-white font-bold py-4 px-6 rounded-2xl transition-all duration-300 backdrop-blur-sm border border-white/30 group-hover:scale-105">
-                      Purchase Now
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        ) : (
-          /* Premium Items Grid */
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-            <AnimatePresence>
-              {filteredItems.map((item, index) => {
-                const rarity = getRarityConfig(item.rarity);
-                const isOwned = purchasedItems.includes(item.id);
-                const isHovered = hoveredItem === item.id;
-                
-                return (
-                  <motion.div
-                    key={item.id}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    transition={{ delay: index * 0.1 }}
-                    whileHover={{ scale: 1.02, y: -8 }}
-                    onHoverStart={() => setHoveredItem(item.id)}
-                    onHoverEnd={() => setHoveredItem(null)}
-                    className={`relative p-8 rounded-3xl ${rarity.bg} ${rarity.glow} border-2 ${rarity.border} overflow-hidden group cursor-pointer transition-all duration-500`}
-                  >
-                    {/* Premium Badges */}
-                    <div className="absolute top-4 left-4 flex flex-col space-y-2 z-20">
-                      {item.new && (
-                        <span className="bg-green-500 text-white px-3 py-1 rounded-full text-xs font-bold animate-pulse">
-                          NEW
-                        </span>
-                      )}
-                      {item.popular && (
-                        <span className="bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold">
-                          POPULAR
-                        </span>
-                      )}
-                      {item.limitedTime && (
-                        <span className="bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold animate-bounce">
-                          LIMITED
-                        </span>
-                      )}
-                      {item.discount && (
-                        <span className="bg-purple-500 text-white px-3 py-1 rounded-full text-xs font-bold">
-                          -{item.discount}%
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Rarity Badge */}
-                    <div className={`absolute top-4 right-4 ${rarity.text} text-xs font-bold uppercase tracking-wider z-20`}>
-                      {item.rarity}
-                    </div>
-
-                    {/* Background Effects */}
-                    <div className={`absolute inset-0 bg-gradient-to-br ${rarity.gradient} opacity-0 group-hover:opacity-20 transition-opacity duration-500`}></div>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-
-                    {/* Item Preview */}
-                    <div className="relative z-10 space-y-6">
-                      <div className="w-full h-40 bg-black/20 rounded-2xl border border-white/10 flex items-center justify-center group-hover:border-white/30 transition-all duration-500">
-                        <div className="text-6xl group-hover:scale-110 transition-transform duration-500">
-                          {item.category === 'skins' ? '🎨' : 
-                           item.category === 'effects' ? '✨' : 
-                           item.category === 'boosters' ? '⚡' : 
-                           item.category === 'bundles' ? '🎁' : '💎'}
-                        </div>
-                      </div>
-
-                      <div className="space-y-4">
-                        <div>
-                          <h3 className="text-2xl font-bold text-white group-hover:text-purple-200 transition-colors duration-300">
-                            {item.name}
-                          </h3>
-                          <p className="text-gray-400 text-sm leading-relaxed mt-2">
-                            {item.description}
-                          </p>
-                        </div>
-
-                        {/* Price Section */}
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            <Coins className="text-yellow-400 w-6 h-6" />
-                            <div className="flex items-center space-x-2">
-                              <span className="text-2xl font-bold text-yellow-400">
-                                {item.price.toLocaleString()}
-                              </span>
-                              {item.originalPrice && (
-                                <span className="text-lg text-gray-500 line-through">
-                                  {item.originalPrice.toLocaleString()}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Action Button */}
-                        {isOwned ? (
-                          <button
-                            disabled
-                            className="w-full bg-green-500/20 text-green-300 font-bold py-4 px-6 rounded-2xl cursor-not-allowed border border-green-500/30 flex items-center justify-center space-x-2"
-                          >
-                            <Shield className="w-5 h-5" />
-                            <span>Owned</span>
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handlePurchase(item.id, item.price)}
-                            disabled={coins < item.price}
-                            className={`w-full font-bold py-4 px-6 rounded-2xl transition-all duration-300 flex items-center justify-center space-x-2 ${
-                              coins >= item.price
-                                ? `bg-gradient-to-r ${rarity.gradient} hover:scale-105 text-white shadow-lg hover:shadow-xl`
-                                : 'bg-gray-600/30 text-gray-500 cursor-not-allowed border border-gray-600/50'
-                            }`}
-                          >
-                            {coins >= item.price ? (
-                              <>
-                                <span>Purchase</span>
-                                <ArrowLeft className="w-4 h-4 rotate-180" />
-                              </>
-                            ) : (
-                              <>
-                                <span>Insufficient Coins</span>
-                              </>
-                            )}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Hover Effects */}
-                    {isHovered && (
-                      <>
-                        <div className="absolute -top-2 -left-2 w-4 h-4 bg-white/30 rounded-full animate-ping"></div>
-                        <div className="absolute -top-2 -right-2 w-4 h-4 bg-white/30 rounded-full animate-ping" style={{ animationDelay: '0.5s' }}></div>
-                        <div className="absolute -bottom-2 -left-2 w-4 h-4 bg-white/30 rounded-full animate-ping" style={{ animationDelay: '1s' }}></div>
-                        <div className="absolute -bottom-2 -right-2 w-4 h-4 bg-white/30 rounded-full animate-ping" style={{ animationDelay: '1.5s' }}></div>
-                      </>
-                    )}
-                  </motion.div>
-                );
-              })}
-            </AnimatePresence>
+                  <button className="offer-btn">
+                    Купить сейчас
+                  </button>
+                </motion.div>
+              ))}
+            </div>
           </div>
         )}
+
+        {/* Shop Items Section */}
+        {selectedCategory !== 'crypto' && (
+          <div className="shop-items-section">
+            <div className="shop-items-grid">
+              <AnimatePresence>
+                {filteredItems.map((item, index) => {
+                  const isOwned = purchasedItems.includes(item.id);
+                  
+                  return (
+                    <motion.div
+                      key={item.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ delay: index * 0.1 }}
+                      whileHover={{ y: -5 }}
+                      className={`shop-item-card ${item.rarity} ${isOwned ? 'purchased' : ''}`}
+                    >
+                      {/* Item Header */}
+                      <div className="item-header">
+                        <div className={`item-icon-container ${item.rarity}`} style={{
+                          background: item.rarity === 'legendary' ? 'linear-gradient(135deg, #ffd700, #f59e0b)' :
+                                     item.rarity === 'epic' ? 'linear-gradient(135deg, #a855f7, #7c3aed)' :
+                                     item.rarity === 'rare' ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' :
+                                     item.rarity === 'mythic' ? 'linear-gradient(135deg, #ec4899, #be185d)' :
+                                     'linear-gradient(135deg, #22c55e, #16a34a)'
+                        }}>
+                          <div className="item-icon">
+                            {item.category === 'skins' ? '🎨' : 
+                             item.category === 'effects' ? '✨' : 
+                             item.category === 'boosters' ? '⚡' : 
+                             item.category === 'bundles' ? '🎁' : '💎'}
+                          </div>
+                        </div>
+                        <div className={`rarity-badge ${item.rarity}`}>
+                          {item.rarity.toUpperCase()}
+                        </div>
+                      </div>
+
+                      {/* Item Content */}
+                      <div className="item-content">
+                        <h3 className="item-name">{item.name}</h3>
+                        <p className="item-description">{item.description}</p>
+                        
+                        <div className="item-footer">
+                          <div className="item-price">
+                            <Coins className="price-icon" />
+                            <span className="price-value">{item.price.toLocaleString()}</span>
+                            {item.originalPrice && (
+                              <span className="text-sm text-gray-500 line-through ml-2">
+                                {item.originalPrice.toLocaleString()}
+                              </span>
+                            )}
+                          </div>
+                          
+                          {isOwned ? (
+                            <button className="purchase-btn purchased">
+                              Куплено
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handlePurchase(item.id, item.price)}
+                              disabled={coins < item.price}
+                              className={`purchase-btn ${coins >= item.price ? 'available' : 'disabled'}`}
+                            >
+                              {coins >= item.price ? 'Купить' : 'Недостаточно'}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Purchased Overlay */}
+                      {isOwned && (
+                        <div className="purchased-overlay">
+                          <Shield className="purchased-icon" />
+                        </div>
+                      )}
+
+                      {/* Item Badges */}
+                      {(item.new || item.popular || item.limitedTime || item.discount) && (
+                        <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
+                          {item.new && (
+                            <span className="bg-green-500 text-white px-2 py-1 rounded-md text-xs font-bold">
+                              НОВОЕ
+                            </span>
+                          )}
+                          {item.popular && (
+                            <span className="bg-red-500 text-white px-2 py-1 rounded-md text-xs font-bold">
+                              ТОП
+                            </span>
+                          )}
+                          {item.limitedTime && (
+                            <span className="bg-orange-500 text-white px-2 py-1 rounded-md text-xs font-bold">
+                              ЛИМИТ
+                            </span>
+                          )}
+                          {item.discount && (
+                            <span className="bg-purple-500 text-white px-2 py-1 rounded-md text-xs font-bold">
+                              -{item.discount}%
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
+            </div>
+          </div>
+        )}
+        <BottomNav />
       </div>
-      
-      <BottomNav />
     </div>
   );
 }
