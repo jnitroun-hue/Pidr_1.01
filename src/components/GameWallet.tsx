@@ -62,7 +62,6 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
   // Загружаем данные пользователя и транзакции
   useEffect(() => {
     loadUserData();
-    ensureAuthToken(); // Убеждаемся что токен есть
     loadTransactions();
     loadHDAddresses();
     
