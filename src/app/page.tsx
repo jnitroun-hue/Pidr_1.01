@@ -62,17 +62,60 @@ function HomeWithParams() {
         }
 
         // Если нет сессии, авторизуемся через Telegram
-        if (isReady && telegramUser) {
-          console.log('📱 Telegram WebApp данные получены, создаем пользователя...');
-          console.log('👤 Telegram User:', telegramUser);
-          await createUserThroughDatabase(telegramUser);
-        } else if (!isReady) {
+        console.log('🔍 Состояние Telegram:', { 
+          isReady, 
+          hasTelegramUser: !!telegramUser, 
+          telegramUserId: telegramUser?.id 
+        });
+
+        if (!isReady) {
           console.log('⏳ Ожидаем инициализацию Telegram WebApp...');
-          // Повторная попытка через 1 секунду
-          setTimeout(initializePlayer, 1000);
+          
+          // Ограничиваем количество попыток
+          const attempts = parseInt(sessionStorage.getItem('auth_attempts') || '0');
+          if (attempts < 15) { // Увеличиваем до 15 попыток
+            sessionStorage.setItem('auth_attempts', (attempts + 1).toString());
+            setTimeout(initializePlayer, 1000);
+          } else {
+            console.log('❌ Превышено количество попыток ожидания WebApp');
+            setError('Telegram WebApp не готов. Попробуйте перезапустить бота.');
+            setLoading(false);
+          }
+          return;
+        }
+
+        if (telegramUser && telegramUser.id) {
+          console.log('📱 Telegram WebApp данные получены, создаем пользователя...');
+          console.log('👤 Telegram User:', {
+            id: telegramUser.id,
+            username: telegramUser.username,
+            first_name: telegramUser.first_name
+          });
+          
+          // Сбрасываем счетчик попыток
+          sessionStorage.removeItem('auth_attempts');
+          
+          await createUserThroughDatabase(telegramUser);
         } else {
-          console.log('❌ Telegram WebApp данные недоступны');
-          setError('Запустите приложение через Telegram бота');
+          console.log('❌ Telegram WebApp готов, но данные пользователя недоступны');
+          console.log('📊 telegramUser полный объект:', telegramUser);
+          
+          // Попробуем получить данные из window.Telegram
+          if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp) {
+            const tgWebApp = (window as any).Telegram.WebApp;
+            console.log('🔍 Проверяем window.Telegram.WebApp:', {
+              initDataUnsafe: tgWebApp.initDataUnsafe,
+              user: tgWebApp.initDataUnsafe?.user
+            });
+            
+            if (tgWebApp.initDataUnsafe?.user) {
+              console.log('✅ Найдены данные в window.Telegram.WebApp');
+              await createUserThroughDatabase(tgWebApp.initDataUnsafe.user);
+              return;
+            }
+          }
+          
+          setError('Не удалось получить данные пользователя из Telegram. Попробуйте перезапустить бота.');
           setLoading(false);
         }
 
@@ -161,14 +204,67 @@ function HomeWithParams() {
     }
   };
 
-  // Показываем загрузку
+  // Показываем загрузку с красивыми картами
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white mx-auto mb-4"></div>
-          <h2 className="text-2xl font-bold text-white mb-2">P.I.D.R. Game</h2>
-          <p className="text-blue-200">Инициализация игры...</p>
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 flex items-center justify-center overflow-hidden">
+        <div className="text-center relative">
+          {/* Анимированные карты */}
+          <div className="relative mb-8">
+            <div className="flex justify-center items-center space-x-4 mb-6">
+              {['10', 'J', 'Q', 'K', 'A'].map((card, index) => (
+                <div
+                  key={card}
+                  className="w-16 h-24 bg-gradient-to-br from-red-600 to-red-800 rounded-lg shadow-2xl flex items-center justify-center text-white font-bold text-xl border-2 border-red-400 transform transition-all duration-1000"
+                  style={{
+                    animationDelay: `${index * 0.2}s`,
+                    animation: `float 2s ease-in-out infinite ${index * 0.2}s, shimmer 3s ease-in-out infinite ${index * 0.3}s`,
+                    boxShadow: '0 0 20px rgba(239, 68, 68, 0.5)',
+                  }}
+                >
+                  {card}
+                </div>
+              ))}
+            </div>
+            
+            {/* Переливающийся эффект */}
+            <div 
+              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+              style={{ animation: 'shimmer 2s infinite' }}
+            ></div>
+          </div>
+
+          {/* Заголовок */}
+          <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-red-400 via-yellow-400 to-red-400 bg-clip-text text-transparent animate-pulse">
+            P.I.D.R. Game
+          </h1>
+          
+          {/* Загрузка */}
+          <div className="flex items-center justify-center space-x-2 mb-4">
+            <div className="w-2 h-2 bg-red-400 rounded-full animate-bounce"></div>
+            <div className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+            <div className="w-2 h-2 bg-red-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+          </div>
+          
+          <p className="text-xl text-gray-300 animate-pulse">Загрузка...</p>
+          <p className="text-sm text-gray-400 mt-2">Авторизация через Telegram</p>
+
+          {/* Стили для анимаций */}
+          <style jsx>{`
+            @keyframes shimmer {
+              0% { transform: translateX(-100%); }
+              100% { transform: translateX(100%); }
+            }
+            
+            @keyframes float {
+              0%, 100% { 
+                transform: translateY(0px) rotate(${Math.random() * 10 - 5}deg); 
+              }
+              50% { 
+                transform: translateY(-10px) rotate(${Math.random() * 10 - 5}deg); 
+              }
+            }
+          `}</style>
         </div>
       </div>
     );
