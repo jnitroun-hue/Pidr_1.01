@@ -87,32 +87,46 @@ export default function CryptoPayment({ onCoinsAdded }: CryptoPaymentProps) {
 
   const generatePaymentAddress = async (crypto: CryptoCurrency, userId: string) => {
     try {
-      const response = await fetch('/api/wallet/hd-addresses', {
+      // Получаем уникальный прокси-адрес для пользователя
+      const response = await fetch('/api/wallet/proxy-addresses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ 
           coin: crypto.symbol,
-          userId: userId || 'temp_user'
+          userId: userId || 'demo_user'
         })
       });
       
       const data = await response.json();
       if (data.success && data.address) {
+        console.log(`✅ Получен прокси-адрес ${crypto.symbol}: ${data.address}`);
         return data.address;
       }
     } catch (error) {
-      console.error('Ошибка генерации адреса:', error);
+      console.error('Ошибка генерации прокси-адреса:', error);
     }
     
-    // Fallback адреса для демо
-    const fallbackAddresses = {
-      USDT: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
-      TON: 'EQBvW8Z5huBkMJYdnfAEM5JqTNkuWX3diqYENkWsIL0XggGG',
-      ETH: '0x742d35Cc6639C0532fba96b9f8b1B8F4D3c8b3a1',
-      SOL: '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgHPv'
-    };
+    // Fallback - генерируем прокси-адрес на клиенте
+    return generateClientSideProxyAddress(userId || 'demo_user', crypto.symbol);
+  };
+
+  const generateClientSideProxyAddress = (userId: string, coin: string): string => {
+    // Простая генерация на клиенте для демо
+    const seed = btoa(`${userId}_${coin}_pidr_2024`);
     
-    return fallbackAddresses[crypto.symbol as keyof typeof fallbackAddresses];
+    switch (coin) {
+      case 'USDT':
+        return 'T' + seed.substring(0, 33).replace(/[^A-Za-z0-9]/g, '0');
+      case 'TON':
+        return 'EQ' + seed.substring(0, 46).replace(/[^A-Za-z0-9]/g, '0');
+      case 'ETH':
+        return '0x' + seed.substring(0, 40).replace(/[^A-Fa-f0-9]/g, '0');
+      case 'SOL':
+        return seed.substring(0, 44).replace(/[^A-Za-z0-9]/g, '1');
+      default:
+        return seed.substring(0, 34);
+    }
   };
 
   const handlePackageSelect = async (coinPackage: CoinPackage, crypto: CryptoCurrency) => {
