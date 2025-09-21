@@ -80,8 +80,8 @@ export default function CryptoPayment({ onCoinsAdded }: CryptoPaymentProps) {
     { id: 'ultimate', name: 'Ультимат', coins: 50000, bonus: 12500 }
   ];
 
-  const calculateCryptoAmount = (package: CoinPackage, crypto: CryptoCurrency) => {
-    const totalCoins = package.coins + package.bonus;
+  const calculateCryptoAmount = (coinPackage: CoinPackage, crypto: CryptoCurrency) => {
+    const totalCoins = coinPackage.coins + coinPackage.bonus;
     return (totalCoins / crypto.rate).toFixed(crypto.decimals === 18 ? 6 : 4);
   };
 
@@ -115,12 +115,12 @@ export default function CryptoPayment({ onCoinsAdded }: CryptoPaymentProps) {
     return fallbackAddresses[crypto.symbol as keyof typeof fallbackAddresses];
   };
 
-  const handlePackageSelect = async (package: CoinPackage, crypto: CryptoCurrency) => {
-    setSelectedPackage(package);
+  const handlePackageSelect = async (coinPackage: CoinPackage, crypto: CryptoCurrency) => {
+    setSelectedPackage(coinPackage);
     setSelectedCrypto(crypto);
     setPaymentStep('payment');
     
-    const amount = calculateCryptoAmount(package, crypto);
+    const amount = calculateCryptoAmount(coinPackage, crypto);
     setPaymentAmount(amount);
     
     // Генерируем адрес для платежа
@@ -304,37 +304,37 @@ export default function CryptoPayment({ onCoinsAdded }: CryptoPaymentProps) {
       </div>
 
       <div className="packages-grid">
-        {coinPackages.map((package, index) => (
+        {coinPackages.map((coinPackage, index) => (
           <motion.div
-            key={package.id}
-            className={`package-card ${package.popular ? 'popular' : ''}`}
+            key={coinPackage.id}
+            className={`package-card ${coinPackage.popular ? 'popular' : ''}`}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: index * 0.1 }}
             whileHover={{ scale: 1.02, y: -2 }}
           >
-            {package.popular && (
+            {coinPackage.popular && (
               <div className="popular-badge">
                 Популярный
               </div>
             )}
             
             <div className="package-header">
-              <h4 className="package-name">{package.name}</h4>
+              <h4 className="package-name">{coinPackage.name}</h4>
               <div className="package-coins">
                 <Coins className="w-5 h-5" />
-                <span className="coins-amount">{package.coins.toLocaleString()}</span>
+                <span className="coins-amount">{coinPackage.coins.toLocaleString()}</span>
               </div>
-              {package.bonus > 0 && (
+              {coinPackage.bonus > 0 && (
                 <div className="package-bonus">
                   <Zap className="w-4 h-4" />
-                  <span>+{package.bonus.toLocaleString()} бонус</span>
+                  <span>+{coinPackage.bonus.toLocaleString()} бонус</span>
                 </div>
               )}
             </div>
 
             <div className="package-total">
-              Итого: {(package.coins + package.bonus).toLocaleString()} монет
+              Итого: {(coinPackage.coins + coinPackage.bonus).toLocaleString()} монет
             </div>
 
             <div className="crypto-options">
@@ -343,7 +343,7 @@ export default function CryptoPayment({ onCoinsAdded }: CryptoPaymentProps) {
                   key={crypto.symbol}
                   className="crypto-option"
                   style={{ '--crypto-color': crypto.color } as React.CSSProperties}
-                  onClick={() => handlePackageSelect(package, crypto)}
+                  onClick={() => handlePackageSelect(coinPackage, crypto)}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
@@ -351,7 +351,7 @@ export default function CryptoPayment({ onCoinsAdded }: CryptoPaymentProps) {
                   <div className="crypto-info">
                     <span className="crypto-symbol">{crypto.symbol}</span>
                     <span className="crypto-amount">
-                      {calculateCryptoAmount(package, crypto)}
+                      {calculateCryptoAmount(coinPackage, crypto)}
                     </span>
                   </div>
                   <ArrowRight className="w-4 h-4 arrow-icon" />
