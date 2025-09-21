@@ -5,6 +5,7 @@ import { Play, User, Book, Store, Users } from 'lucide-react'
 import { useGameStore } from '../store/gameStore'
 import { useTelegram } from '../hooks/useTelegram'
 import { useWalletStore } from '../store/walletStore'
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 const tokens = [
@@ -14,13 +15,14 @@ const tokens = [
 ]
 
 interface MainMenuProps {
-  onNavigate: (page: 'game' | 'multiplayer' | 'shop' | 'profile' | 'rules' | 'menu') => void
-  balance?: number
+  user?: any
+  onLogout?: () => void
 }
 
-export default function MainMenu({ onNavigate }: MainMenuProps) {
+export default function MainMenu({ user, onLogout }: MainMenuProps) {
   const { startGame, stats } = useGameStore()
   const { hapticFeedback } = useTelegram()
+  const router = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)
   const { 
     tonAddress, tonBalance, isTonConnected,
@@ -80,19 +82,19 @@ export default function MainMenu({ onNavigate }: MainMenuProps) {
         {/* Быстрые действия */}
         <div className="menu-actions-title">БЫСТРЫЕ ДЕЙСТВИЯ</div>
         <div className="menu-actions-grid">
-          <button onClick={() => onNavigate('game')} className="menu-action-card">
+          <button onClick={() => router.push('/game')} className="menu-action-card">
             <Play className="menu-action-icon" />
             <span className="menu-action-label">ИГРАТЬ</span>
           </button>
-          <button onClick={() => onNavigate('multiplayer')} className="menu-action-card multiplayer-card">
+          <button onClick={() => router.push('/multiplayer')} className="menu-action-card multiplayer-card">
             <Users className="menu-action-icon" />
             <span className="menu-action-label">ОНЛАЙН</span>
           </button>
-          <button onClick={() => onNavigate('shop')} className="menu-action-card">
+          <button onClick={() => router.push('/shop')} className="menu-action-card">
             <Store className="menu-action-icon" />
             <span className="menu-action-label">МАГАЗИН</span>
           </button>
-          <button onClick={() => onNavigate('profile')} className="menu-action-card">
+          <button onClick={() => router.push('/profile')} className="menu-action-card">
             <User className="menu-action-icon" />
             <span className="menu-action-label">ПРОФИЛЬ</span>
           </button>
@@ -100,7 +102,7 @@ export default function MainMenu({ onNavigate }: MainMenuProps) {
 
         {/* Кнопка Правила игры */}
         <div className="rules-section">
-          <button onClick={() => onNavigate('rules')} className="rules-button">
+          <button onClick={() => router.push('/rules')} className="rules-button">
             <Book className="rules-icon" />
             <span className="rules-label">ПРАВИЛА ИГРЫ</span>
           </button>
