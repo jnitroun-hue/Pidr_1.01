@@ -355,8 +355,13 @@ export default function UltraPremiumShop() {
         </div>
 
         {/* Shop Categories */}
-        <div className="shop-categories">
-          <div className="categories-grid">
+        <div style={{ width: '100%', margin: '20px 0' }}>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: '10px',
+            padding: '0 20px'
+          }}>
             {categories.map((category) => {
               const Icon = category.icon;
               const isActive = selectedCategory === category.id;
@@ -364,13 +369,47 @@ export default function UltraPremiumShop() {
               return (
                 <motion.button
                   key={category.id}
-                  onClick={() => setSelectedCategory(category.id)}
+                  onClick={() => {
+                    console.log('Выбрана категория:', category.id);
+                    setSelectedCategory(category.id);
+                  }}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className={`category-btn ${isActive ? 'active' : ''}`}
+                  style={{
+                    background: isActive ? 
+                      'linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.8) 100%)' : 
+                      'linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.6) 100%)',
+                    border: '1px solid',
+                    borderColor: isActive ? 'rgba(255, 215, 0, 0.6)' : 'rgba(34, 197, 94, 0.3)',
+                    borderRadius: '12px',
+                    boxShadow: isActive ? 
+                      '0 8px 32px rgba(0, 0, 0, 0.3), 0 0 20px rgba(255, 215, 0, 0.2)' : 
+                      '0 4px 20px rgba(0, 0, 0, 0.2)',
+                    backdropFilter: 'blur(10px)',
+                    padding: '12px 8px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '6px',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    color: 'white'
+                  }}
                 >
-                  <Icon className="category-icon" />
-                  <span className="category-name">{category.name}</span>
+                  <Icon style={{ 
+                    fontSize: '1.2rem', 
+                    color: isActive ? '#ffd700' : '#22c55e',
+                    transition: 'all 0.3s ease'
+                  }} />
+                  <span style={{ 
+                    color: isActive ? '#ffd700' : '#e2e8f0',
+                    fontSize: '0.7rem', 
+                    fontWeight: '600', 
+                    letterSpacing: '0.5px',
+                    transition: 'color 0.3s ease'
+                  }}>
+                    {category.name}
+                  </span>
                 </motion.button>
               );
             })}

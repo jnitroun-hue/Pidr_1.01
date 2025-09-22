@@ -82,19 +82,67 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
         {/* Быстрые действия */}
         <div className="menu-actions-title">БЫСТРЫЕ ДЕЙСТВИЯ</div>
         <div className="menu-actions-grid">
-          <button onClick={() => router.push('/game')} className="menu-action-card">
+          <button 
+            onClick={() => {
+              console.log('Кнопка ИГРАТЬ нажата');
+              hapticFeedback('medium');
+              try {
+                router.push('/game');
+              } catch (error) {
+                console.error('Ошибка навигации к игре:', error);
+                window.location.href = '/game';
+              }
+            }} 
+            className="menu-action-card"
+          >
             <Play className="menu-action-icon" />
             <span className="menu-action-label">ИГРАТЬ</span>
           </button>
-          <button onClick={() => router.push('/multiplayer')} className="menu-action-card multiplayer-card">
+          <button 
+            onClick={() => {
+              console.log('Кнопка ОНЛАЙН нажата');
+              hapticFeedback('medium');
+              try {
+                router.push('/multiplayer');
+              } catch (error) {
+                console.error('Ошибка навигации к мультиплееру:', error);
+                window.location.href = '/multiplayer';
+              }
+            }} 
+            className="menu-action-card multiplayer-card"
+          >
             <Users className="menu-action-icon" />
             <span className="menu-action-label">ОНЛАЙН</span>
           </button>
-          <button onClick={() => router.push('/shop')} className="menu-action-card">
+          <button 
+            onClick={() => {
+              console.log('Кнопка МАГАЗИН нажата');
+              hapticFeedback('medium');
+              try {
+                router.push('/shop');
+              } catch (error) {
+                console.error('Ошибка навигации к магазину:', error);
+                window.location.href = '/shop';
+              }
+            }} 
+            className="menu-action-card"
+          >
             <Store className="menu-action-icon" />
             <span className="menu-action-label">МАГАЗИН</span>
           </button>
-          <button onClick={() => router.push('/profile')} className="menu-action-card">
+          <button 
+            onClick={() => {
+              console.log('Кнопка ПРОФИЛЬ нажата');
+              hapticFeedback('medium');
+              try {
+                router.push('/profile');
+              } catch (error) {
+                console.error('Ошибка навигации к профилю:', error);
+                window.location.href = '/profile';
+              }
+            }} 
+            className="menu-action-card"
+          >
             <User className="menu-action-icon" />
             <span className="menu-action-label">ПРОФИЛЬ</span>
           </button>
@@ -102,7 +150,19 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
 
         {/* Кнопка Правила игры */}
         <div className="rules-section">
-          <button onClick={() => router.push('/rules')} className="rules-button">
+          <button 
+            onClick={() => {
+              console.log('Кнопка ПРАВИЛА нажата');
+              hapticFeedback('medium');
+              try {
+                router.push('/rules');
+              } catch (error) {
+                console.error('Ошибка навигации к правилам:', error);
+                window.location.href = '/rules';
+              }
+            }} 
+            className="rules-button"
+          >
             <Book className="rules-icon" />
             <span className="rules-label">ПРАВИЛА ИГРЫ</span>
           </button>
