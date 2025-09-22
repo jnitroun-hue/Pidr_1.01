@@ -92,48 +92,82 @@ export default function CardLoadingScreen({
       {/* Контейнер для карт и загрузки */}
       <div className="relative z-10 flex flex-col items-center">
         
-        {/* Карты в центре */}
-        <div className="relative mb-12">
-          <div className="grid grid-cols-5 gap-4 p-8">
-            {cards.map((card, index) => (
+        {/* Карты в центре - ПРОФЕССИОНАЛЬНЫЙ ВИД */}
+        <div className="relative mb-12 flex items-center justify-center">
+          <div className="relative">
+            {/* Основная колода карт */}
+            <div className="relative w-24 h-36">
+              {/* Стопка карт (создаем эффект колоды) */}
+              {[...Array(8)].map((_, i) => (
+                <div
+                  key={i}
+                  className="absolute bg-white rounded-lg shadow-xl border border-gray-300"
+                  style={{
+                    width: '96px',
+                    height: '144px',
+                    left: `${i * 2}px`,
+                    top: `${i * -2}px`,
+                    zIndex: 10 - i,
+                    background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                    transform: `rotate(${(i - 4) * 2}deg)`,
+                    animation: `cardFloat ${2 + i * 0.2}s ease-in-out infinite alternate`
+                  }}
+                >
+                  {/* Рубашка карты */}
+                  <div className="w-full h-full p-2 flex items-center justify-center">
+                    <div className="w-full h-full bg-gradient-to-br from-blue-600 to-purple-700 rounded-md flex items-center justify-center relative overflow-hidden">
+                      {/* Узор на рубашке */}
+                      <div className="absolute inset-0 opacity-20">
+                        <div className="w-full h-full" style={{
+                          backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.1) 10px, rgba(255,255,255,0.1) 20px)`
+                        }}></div>
+                      </div>
+                      <div className="text-white font-bold text-lg opacity-80">P.I.D.R.</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Разлетающиеся карты */}
+            {CARD_VALUES.slice(0, 5).map((value, index) => (
               <div
-                key={card.id}
-                className={`relative w-16 h-24 bg-white rounded-lg shadow-2xl border-2 border-gray-300 
-                           flex flex-col items-center justify-center transform transition-all duration-1000
-                           ${cardsAnimating ? 'animate-card-shimmer hover:scale-110' : ''}
-                           hover:shadow-blue-500/50 hover:border-blue-400/50`}
+                key={`flying-${value}`}
+                className="absolute bg-white rounded-lg shadow-2xl border border-gray-300 w-20 h-28 flex flex-col items-center justify-center"
                 style={{
-                  animationDelay: `${index * 100}ms`,
-                  background: `linear-gradient(135deg, 
-                    rgba(255,255,255,0.95) 0%, 
-                    rgba(240,248,255,0.95) 50%, 
-                    rgba(255,255,255,0.95) 100%)`,
-                  backdropFilter: 'blur(10px)'
+                  left: `${120 + Math.cos((index * 2 * Math.PI) / 5) * 80}px`,
+                  top: `${20 + Math.sin((index * 2 * Math.PI) / 5) * 60}px`,
+                  transform: `rotate(${(index - 2) * 15}deg)`,
+                  animation: `cardFly ${3 + index * 0.3}s ease-in-out infinite`,
+                  animationDelay: `${index * 0.5}s`,
+                  zIndex: 20 + index
                 }}
               >
-                {/* Переливающаяся рамка */}
-                <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 opacity-0 animate-border-glow"></div>
-                
-                {/* Значение карты сверху слева */}
-                <div className={`absolute top-1 left-1 text-xs font-bold ${SUIT_COLORS[card.suit as keyof typeof SUIT_COLORS]}`}>
-                  <div>{card.value}</div>
-                  <div className="text-lg leading-none">{card.suit}</div>
+                {/* Значение карты */}
+                <div className="text-red-600 font-bold text-sm">
+                  <div>{value}</div>
+                  <div className="text-base">♥</div>
                 </div>
-                
-                {/* Большой символ масти в центре */}
-                <div className={`text-3xl font-bold ${SUIT_COLORS[card.suit as keyof typeof SUIT_COLORS]} opacity-80`}>
-                  {card.suit}
+                <div className="text-2xl text-red-600 font-bold">♥</div>
+                <div className="text-red-600 font-bold text-sm transform rotate-180">
+                  <div>{value}</div>
+                  <div className="text-base">♥</div>
                 </div>
-                
-                {/* Значение карты снизу справа (перевернуто) */}
-                <div className={`absolute bottom-1 right-1 text-xs font-bold transform rotate-180 ${SUIT_COLORS[card.suit as keyof typeof SUIT_COLORS]}`}>
-                  <div>{card.value}</div>
-                  <div className="text-lg leading-none">{card.suit}</div>
-                </div>
-                
-                {/* Блик на карте */}
-                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent rounded-lg opacity-0 animate-card-glint"></div>
               </div>
+            ))}
+
+            {/* Блестящие эффекты */}
+            {[...Array(12)].map((_, i) => (
+              <div
+                key={`sparkle-${i}`}
+                className="absolute w-2 h-2 bg-yellow-400 rounded-full animate-ping"
+                style={{
+                  left: `${Math.random() * 300}px`,
+                  top: `${Math.random() * 200}px`,
+                  animationDelay: `${Math.random() * 2}s`,
+                  animationDuration: `${1 + Math.random()}s`
+                }}
+              />
             ))}
           </div>
         </div>
@@ -243,6 +277,22 @@ export default function CardLoadingScreen({
         
         .animate-spin-slow {
           animation: spin-slow 20s linear infinite;
+        }
+        
+        @keyframes cardFloat {
+          0%, 100% { transform: translateY(0px) rotate(var(--rotation, 0deg)); }
+          50% { transform: translateY(-10px) rotate(var(--rotation, 0deg)); }
+        }
+        
+        @keyframes cardFly {
+          0%, 100% { 
+            transform: translateY(0px) rotate(var(--rotation, 0deg)) scale(1); 
+            opacity: 0.8;
+          }
+          50% { 
+            transform: translateY(-20px) rotate(var(--rotation, 0deg)) scale(1.1); 
+            opacity: 1;
+          }
         }
       `}</style>
     </div>

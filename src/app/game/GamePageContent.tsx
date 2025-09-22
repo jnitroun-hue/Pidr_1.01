@@ -713,7 +713,7 @@ function GamePageContentComponent({
           {/* Кнопки игры */}
           <div className={styles.gameButtons}>
             <button onClick={handleStartGame} className={styles.startButton}>
-              🎮 Играть
+              🎮 Начать игру
             </button>
             
             <button 

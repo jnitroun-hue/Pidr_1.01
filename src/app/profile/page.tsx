@@ -24,6 +24,116 @@ export default function ProfilePage() {
 
   const [avatarUrl, setAvatarUrl] = useState('😎');
   const [activeSection, setActiveSection] = useState('stats'); // 'stats', 'achievements', 'wallet'
+  const [showModal, setShowModal] = useState<'skins' | 'effects' | 'bonuses' | null>(null);
+  const [selectedSkin, setSelectedSkin] = useState('classic');
+  const [selectedEffect, setSelectedEffect] = useState('none');
+
+  // Скины для карт
+  const cardSkins = [
+    {
+      id: 'classic',
+      name: 'Классический',
+      description: 'Стандартные карты',
+      preview: '🂡',
+      price: 0,
+      unlocked: true,
+      rarity: 'common'
+    },
+    {
+      id: 'royal',
+      name: 'Королевский',
+      description: 'Элегантные золотые карты',
+      preview: '👑',
+      price: 500,
+      unlocked: false,
+      rarity: 'rare'
+    },
+    {
+      id: 'neon',
+      name: 'Неоновый',
+      description: 'Светящиеся карты в стиле киберпанк',
+      preview: '⚡',
+      price: 750,
+      unlocked: false,
+      rarity: 'epic'
+    },
+    {
+      id: 'cosmic',
+      name: 'Космический',
+      description: 'Карты с эффектом звездного неба',
+      preview: '🌌',
+      price: 1000,
+      unlocked: false,
+      rarity: 'legendary'
+    }
+  ];
+
+  // Эффекты для игры
+  const gameEffects = [
+    {
+      id: 'none',
+      name: 'Без эффектов',
+      description: 'Стандартная игра',
+      preview: '🎴',
+      price: 0,
+      unlocked: true
+    },
+    {
+      id: 'particles',
+      name: 'Частицы',
+      description: 'Красивые частицы при ходах',
+      preview: '✨',
+      price: 200,
+      unlocked: false
+    },
+    {
+      id: 'lightning',
+      name: 'Молнии',
+      description: 'Эффект молний при победе',
+      preview: '⚡',
+      price: 350,
+      unlocked: false
+    },
+    {
+      id: 'fire',
+      name: 'Огонь',
+      description: 'Огненные эффекты при взятии карт',
+      preview: '🔥',
+      price: 500,
+      unlocked: false
+    }
+  ];
+
+  // Бонусы
+  const bonuses = [
+    {
+      id: 'daily',
+      name: 'Ежедневный бонус',
+      description: 'Получайте монеты каждый день',
+      reward: '50-200 монет',
+      icon: '📅',
+      available: true,
+      cooldown: '22:30:15'
+    },
+    {
+      id: 'referral',
+      name: 'Реферальная система',
+      description: 'Приглашайте друзей и получайте бонусы',
+      reward: '100 монет за друга',
+      icon: '👥',
+      available: true,
+      referrals: 3
+    },
+    {
+      id: 'rank_up',
+      name: 'Повышение ранга',
+      description: 'Бонусы за достижение новых рангов',
+      reward: '500-2000 монет',
+      icon: '🏆',
+      available: false,
+      nextRank: 'Серебро'
+    }
+  ];
 
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -190,6 +300,7 @@ export default function ProfilePage() {
             width: '100%'
           }}>
             <motion.button
+              onClick={() => setShowModal('skins')}
               whileHover={{ scale: 1.05, y: -2 }}
               whileTap={{ scale: 0.95 }}
               style={{
@@ -230,6 +341,7 @@ export default function ProfilePage() {
             </motion.button>
 
             <motion.button
+              onClick={() => setShowModal('effects')}
               whileHover={{ scale: 1.05, y: -2 }}
               whileTap={{ scale: 0.95 }}
               style={{
@@ -270,6 +382,7 @@ export default function ProfilePage() {
             </motion.button>
 
             <motion.button
+              onClick={() => setShowModal('bonuses')}
               whileHover={{ scale: 1.05, y: -2 }}
               whileTap={{ scale: 0.95 }}
               style={{
@@ -488,6 +601,347 @@ export default function ProfilePage() {
 
         <BottomNav />
       </div>
+
+      {/* Модальные окна */}
+      {showModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.8)',
+          backdropFilter: 'blur(10px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '20px'
+        }}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8, y: 50 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8, y: 50 }}
+            style={{
+              background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
+              borderRadius: '24px',
+              padding: '24px',
+              maxWidth: '500px',
+              width: '100%',
+              maxHeight: '80vh',
+              overflowY: 'auto',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)'
+            }}
+          >
+            {/* Заголовок модального окна */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '20px'
+            }}>
+              <h3 style={{
+                color: '#e2e8f0',
+                fontSize: '1.5rem',
+                fontWeight: '700',
+                margin: 0
+              }}>
+                {showModal === 'skins' && '🎨 СКИНЫ КАРТ'}
+                {showModal === 'effects' && '✨ ИГРОВЫЕ ЭФФЕКТЫ'}
+                {showModal === 'bonuses' && '🎁 БОНУСЫ'}
+              </h3>
+              <button
+                onClick={() => setShowModal(null)}
+                style={{
+                  background: 'rgba(239, 68, 68, 0.8)',
+                  border: '1px solid rgba(239, 68, 68, 0.4)',
+                  borderRadius: '12px',
+                  color: '#e2e8f0',
+                  padding: '8px 16px',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  fontSize: '0.9rem',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(239, 68, 68, 1)';
+                  e.currentTarget.style.transform = 'scale(1.05)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(239, 68, 68, 0.8)';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+              >
+                <ArrowLeft style={{ width: '16px', height: '16px', marginRight: '4px' }} />
+                Назад
+              </button>
+            </div>
+
+            {/* Содержимое модального окна */}
+            {showModal === 'skins' && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                {cardSkins.map((skin) => (
+                  <motion.div
+                    key={skin.id}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => skin.unlocked && setSelectedSkin(skin.id)}
+                    style={{
+                      background: selectedSkin === skin.id 
+                        ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.8) 0%, rgba(22, 163, 74, 0.6) 100%)'
+                        : skin.unlocked 
+                          ? 'linear-gradient(135deg, rgba(71, 85, 105, 0.8) 0%, rgba(51, 65, 85, 0.6) 100%)'
+                          : 'linear-gradient(135deg, rgba(55, 65, 81, 0.6) 0%, rgba(31, 41, 55, 0.4) 100%)',
+                      border: selectedSkin === skin.id 
+                        ? '2px solid rgba(34, 197, 94, 0.8)' 
+                        : '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '16px',
+                      padding: '16px',
+                      cursor: skin.unlocked ? 'pointer' : 'not-allowed',
+                      opacity: skin.unlocked ? 1 : 0.6,
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    {/* Индикатор редкости */}
+                    <div style={{
+                      position: 'absolute',
+                      top: '8px',
+                      right: '8px',
+                      padding: '4px 8px',
+                      borderRadius: '8px',
+                      fontSize: '0.7rem',
+                      fontWeight: '600',
+                      background: skin.rarity === 'legendary' ? 'linear-gradient(135deg, #fbbf24, #f59e0b)' :
+                                 skin.rarity === 'epic' ? 'linear-gradient(135deg, #a855f7, #9333ea)' :
+                                 skin.rarity === 'rare' ? 'linear-gradient(135deg, #3b82f6, #2563eb)' :
+                                 'linear-gradient(135deg, #6b7280, #4b5563)',
+                      color: '#fff'
+                    }}>
+                      {skin.rarity === 'legendary' ? 'ЛЕГЕНДА' :
+                       skin.rarity === 'epic' ? 'ЭПИК' :
+                       skin.rarity === 'rare' ? 'РЕДКИЙ' : 'ОБЫЧНЫЙ'}
+                    </div>
+
+                    <div style={{ textAlign: 'center', marginTop: '20px' }}>
+                      <div style={{ fontSize: '3rem', marginBottom: '12px' }}>{skin.preview}</div>
+                      <h4 style={{ color: '#e2e8f0', fontSize: '1.1rem', fontWeight: '600', margin: '0 0 8px 0' }}>
+                        {skin.name}
+                      </h4>
+                      <p style={{ color: '#94a3b8', fontSize: '0.9rem', margin: '0 0 12px 0' }}>
+                        {skin.description}
+                      </p>
+                      
+                      {skin.unlocked ? (
+                        selectedSkin === skin.id ? (
+                          <div style={{
+                            background: 'rgba(34, 197, 94, 0.8)',
+                            color: '#fff',
+                            padding: '8px 16px',
+                            borderRadius: '12px',
+                            fontSize: '0.8rem',
+                            fontWeight: '600'
+                          }}>
+                            ✅ ВЫБРАН
+                          </div>
+                        ) : (
+                          <div style={{
+                            background: 'rgba(59, 130, 246, 0.8)',
+                            color: '#fff',
+                            padding: '8px 16px',
+                            borderRadius: '12px',
+                            fontSize: '0.8rem',
+                            fontWeight: '600'
+                          }}>
+                            👆 ВЫБРАТЬ
+                          </div>
+                        )
+                      ) : (
+                        <div style={{
+                          background: 'rgba(239, 68, 68, 0.8)',
+                          color: '#fff',
+                          padding: '8px 16px',
+                          borderRadius: '12px',
+                          fontSize: '0.8rem',
+                          fontWeight: '600'
+                        }}>
+                          🔒 {skin.price} монет
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+
+            {showModal === 'effects' && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                {gameEffects.map((effect) => (
+                  <motion.div
+                    key={effect.id}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => effect.unlocked && setSelectedEffect(effect.id)}
+                    style={{
+                      background: selectedEffect === effect.id 
+                        ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.8) 0%, rgba(22, 163, 74, 0.6) 100%)'
+                        : effect.unlocked 
+                          ? 'linear-gradient(135deg, rgba(71, 85, 105, 0.8) 0%, rgba(51, 65, 85, 0.6) 100%)'
+                          : 'linear-gradient(135deg, rgba(55, 65, 81, 0.6) 0%, rgba(31, 41, 55, 0.4) 100%)',
+                      border: selectedEffect === effect.id 
+                        ? '2px solid rgba(34, 197, 94, 0.8)' 
+                        : '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '16px',
+                      padding: '16px',
+                      cursor: effect.unlocked ? 'pointer' : 'not-allowed',
+                      opacity: effect.unlocked ? 1 : 0.6,
+                      textAlign: 'center'
+                    }}
+                  >
+                    <div style={{ fontSize: '3rem', marginBottom: '12px' }}>{effect.preview}</div>
+                    <h4 style={{ color: '#e2e8f0', fontSize: '1.1rem', fontWeight: '600', margin: '0 0 8px 0' }}>
+                      {effect.name}
+                    </h4>
+                    <p style={{ color: '#94a3b8', fontSize: '0.9rem', margin: '0 0 12px 0' }}>
+                      {effect.description}
+                    </p>
+                    
+                    {effect.unlocked ? (
+                      selectedEffect === effect.id ? (
+                        <div style={{
+                          background: 'rgba(34, 197, 94, 0.8)',
+                          color: '#fff',
+                          padding: '8px 16px',
+                          borderRadius: '12px',
+                          fontSize: '0.8rem',
+                          fontWeight: '600'
+                        }}>
+                          ✅ АКТИВЕН
+                        </div>
+                      ) : (
+                        <div style={{
+                          background: 'rgba(59, 130, 246, 0.8)',
+                          color: '#fff',
+                          padding: '8px 16px',
+                          borderRadius: '12px',
+                          fontSize: '0.8rem',
+                          fontWeight: '600'
+                        }}>
+                          👆 ВЫБРАТЬ
+                        </div>
+                      )
+                    ) : (
+                      <div style={{
+                        background: 'rgba(239, 68, 68, 0.8)',
+                        color: '#fff',
+                        padding: '8px 16px',
+                        borderRadius: '12px',
+                        fontSize: '0.8rem',
+                        fontWeight: '600'
+                      }}>
+                        🔒 {effect.price} монет
+                      </div>
+                    )}
+                  </motion.div>
+                ))}
+              </div>
+            )}
+
+            {showModal === 'bonuses' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {bonuses.map((bonus) => (
+                  <motion.div
+                    key={bonus.id}
+                    whileHover={{ scale: 1.02 }}
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(71, 85, 105, 0.8) 0%, rgba(51, 65, 85, 0.6) 100%)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '16px',
+                      padding: '20px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '16px'
+                    }}
+                  >
+                    <div style={{ fontSize: '3rem' }}>{bonus.icon}</div>
+                    <div style={{ flex: 1 }}>
+                      <h4 style={{ color: '#e2e8f0', fontSize: '1.2rem', fontWeight: '600', margin: '0 0 8px 0' }}>
+                        {bonus.name}
+                      </h4>
+                      <p style={{ color: '#94a3b8', fontSize: '0.9rem', margin: '0 0 8px 0' }}>
+                        {bonus.description}
+                      </p>
+                      <div style={{ color: '#fbbf24', fontSize: '0.9rem', fontWeight: '600' }}>
+                        💰 {bonus.reward}
+                      </div>
+                      
+                      {bonus.id === 'daily' && bonus.available && (
+                        <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginTop: '8px' }}>
+                          ⏰ Следующий бонус через: {bonus.cooldown}
+                        </div>
+                      )}
+                      
+                      {bonus.id === 'referral' && (
+                        <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginTop: '8px' }}>
+                          👥 Приглашено друзей: {bonus.referrals}
+                        </div>
+                      )}
+                      
+                      {bonus.id === 'rank_up' && !bonus.available && (
+                        <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginTop: '8px' }}>
+                          🎯 Следующий ранг: {bonus.nextRank}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      {bonus.available ? (
+                        <button
+                          style={{
+                            background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.8) 0%, rgba(22, 163, 74, 0.6) 100%)',
+                            border: '1px solid rgba(34, 197, 94, 0.4)',
+                            borderRadius: '12px',
+                            color: '#fff',
+                            padding: '12px 20px',
+                            cursor: 'pointer',
+                            fontWeight: '600',
+                            fontSize: '0.9rem',
+                            transition: 'all 0.3s ease'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'scale(1.05)';
+                            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(34, 197, 94, 1) 0%, rgba(22, 163, 74, 0.8) 100%)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'scale(1)';
+                            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(34, 197, 94, 0.8) 0%, rgba(22, 163, 74, 0.6) 100%)';
+                          }}
+                        >
+                          {bonus.id === 'daily' ? '🎁 ПОЛУЧИТЬ' : 
+                           bonus.id === 'referral' ? '👥 ПРИГЛАСИТЬ' : 
+                           '🏆 ПОЛУЧИТЬ'}
+                        </button>
+                      ) : (
+                        <div style={{
+                          background: 'rgba(55, 65, 81, 0.6)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: '12px',
+                          color: '#94a3b8',
+                          padding: '12px 20px',
+                          fontWeight: '600',
+                          fontSize: '0.9rem'
+                        }}>
+                          🔒 НЕДОСТУПНО
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 } 

@@ -198,6 +198,13 @@ export default function ProperMultiplayer({ onBack }: ProperMultiplayerProps) {
     setError(null);
     
     try {
+      console.log('🏠 Создаем комнату:', createData);
+      
+      // Проверяем авторизацию пользователя
+      if (!user?.id) {
+        throw new Error('Пользователь не авторизован');
+      }
+      
       // Токен автоматически передается через HTTP-only cookies
       const response = await fetch('/api/rooms', {
         method: 'POST',
@@ -214,7 +221,16 @@ export default function ProperMultiplayer({ onBack }: ProperMultiplayerProps) {
         }),
       });
 
+      console.log('📡 Ответ сервера на создание комнаты:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Ошибка HTTP при создании комнаты:', response.status, errorText);
+        throw new Error(`Ошибка сервера: ${response.status} ${response.statusText}`);
+      }
+      
       const result = await response.json();
+      console.log('📋 Результат создания комнаты:', result);
       
       if (result.success) {
         console.log('✅ Room created:', result.room);
