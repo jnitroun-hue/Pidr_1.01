@@ -2,9 +2,23 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { User } from '../types/game';
+// Интерфейс пользователя
+interface User {
+  id: string;
+  username: string;
+  firstName?: string;
+  lastName?: string;
+  telegramId?: string;
+  coins: number;
+  rating: number;
+  gamesPlayed: number;
+  gamesWon: number;
+  photoUrl?: string;
+}
 import { useTelegram } from '../hooks/useTelegram';
 import NeonMainMenu from '../components/main_menu_component';
+import CardLoadingScreen from '../components/CardLoadingScreen';
+import { useLanguage } from '../components/LanguageSwitcher';
 
 /**
  * P.I.D.R. Game - Автоматическая авторизация через Telegram WebApp
@@ -13,8 +27,10 @@ import NeonMainMenu from '../components/main_menu_component';
 function HomeWithParams() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showMainMenu, setShowMainMenu] = useState(false);
   const [error, setError] = useState<string>('');
   const { user: telegramUser, isReady } = useTelegram();
+  const { language } = useLanguage();
   const router = useRouter();
 
   useEffect(() => {
@@ -55,7 +71,10 @@ function HomeWithParams() {
             };
             
             setUser(existingUser);
-            setLoading(false);
+            setTimeout(() => {
+              setLoading(false);
+              setTimeout(() => setShowMainMenu(true), 100);
+            }, 1500);
             console.log('🚀 ДОБРО ПОЖАЛОВАТЬ ОБРАТНО В P.I.D.R.!');
             return;
           }
@@ -172,7 +191,10 @@ function HomeWithParams() {
           };
           
           setUser(newUser);
-          setLoading(false);
+          setTimeout(() => {
+            setLoading(false);
+            setTimeout(() => setShowMainMenu(true), 100);
+          }, 2000);
           
           console.log('🎉 ДОБРО ПОЖАЛОВАТЬ В P.I.D.R. GAME!');
           console.log(`💰 Ваш баланс: ${newUser.coins} монет`);
@@ -220,8 +242,19 @@ function HomeWithParams() {
     }
   };
 
-  // Показываем профессиональную заставку загрузки
+  // Показываем экран загрузки с картами
   if (loading) {
+    return (
+      <CardLoadingScreen 
+        language={language}
+        onLoadingComplete={() => setShowMainMenu(true)}
+        duration={user ? 1500 : 2500}
+      />
+    );
+  }
+
+  // Показываем профессиональную заставку загрузки (старая версия - оставляем как fallback)
+  if (false) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900 relative overflow-hidden flex items-center justify-center">
         {/* Фоновые элементы */}
@@ -383,7 +416,7 @@ function HomeWithParams() {
   }
 
   // Показываем главное меню игры
-  if (user) {
+  if (user && showMainMenu) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
         <NeonMainMenu 

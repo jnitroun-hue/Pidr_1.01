@@ -7,6 +7,8 @@ import { useTelegram } from '../hooks/useTelegram'
 import { useWalletStore } from '../store/walletStore'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import LanguageSwitcher, { useLanguage } from './LanguageSwitcher'
+import { useTranslations } from '../lib/i18n/translations'
 
 const tokens = [
   { name: 'TON', symbol: 'TON', color: '#0088ff' },
@@ -24,6 +26,8 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
   const { hapticFeedback } = useTelegram()
   const router = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)
+  const { language, changeLanguage } = useLanguage()
+  const t = useTranslations(language)
   const { 
     tonAddress, tonBalance, isTonConnected,
     solanaAddress, solanaBalance, isSolanaConnected,
@@ -74,13 +78,21 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
       <div className="main-menu-inner">
         {/* Верхний бар */}
         <div className="menu-header" style={{ position: 'relative' }}>
-          <button onClick={() => window.history.back()} className="px-3 py-1 rounded-lg border border-red-400 text-red-200 font-semibold text-base hover:bg-red-400/10 transition-all">Назад</button>
-          <span className="menu-title">P.I.D.R.</span>
-          <div style={{ width: '60px' }}></div> {/* Placeholder для симметрии */}
+          <button onClick={() => window.history.back()} className="px-3 py-1 rounded-lg border border-red-400 text-red-200 font-semibold text-base hover:bg-red-400/10 transition-all">
+            {t.common.back}
+          </button>
+          <span className="menu-title">{t.mainMenu.title}</span>
+          <LanguageSwitcher 
+            currentLanguage={language}
+            onLanguageChange={changeLanguage}
+            className="ml-2"
+          />
         </div>
         
         {/* Быстрые действия */}
-        <div className="menu-actions-title">БЫСТРЫЕ ДЕЙСТВИЯ</div>
+        <div className="menu-actions-title">
+          {language === 'ru' ? 'БЫСТРЫЕ ДЕЙСТВИЯ' : 'QUICK ACTIONS'}
+        </div>
         <div className="menu-actions-grid">
           <button 
             onClick={() => {
@@ -96,7 +108,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
             className="menu-action-card"
           >
             <Play className="menu-action-icon" />
-            <span className="menu-action-label">ИГРАТЬ</span>
+            <span className="menu-action-label">{t.mainMenu.play.toUpperCase()}</span>
           </button>
           <button 
             onClick={() => {
@@ -112,7 +124,9 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
             className="menu-action-card multiplayer-card"
           >
             <Users className="menu-action-icon" />
-            <span className="menu-action-label">ОНЛАЙН</span>
+            <span className="menu-action-label">
+              {language === 'ru' ? 'ОНЛАЙН' : 'ONLINE'}
+            </span>
           </button>
           <button 
             onClick={() => {
