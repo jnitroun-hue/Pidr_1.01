@@ -92,12 +92,12 @@ function HomeWithParams() {
           
           // Ограничиваем количество попыток
           const attempts = parseInt(sessionStorage.getItem('auth_attempts') || '0');
-          if (attempts < 15) { // Увеличиваем до 15 попыток
+          if (attempts < 5) { // Уменьшаем попытки для быстрого fallback
             sessionStorage.setItem('auth_attempts', (attempts + 1).toString());
             setTimeout(initializePlayer, 1000);
           } else {
-            console.log('❌ Превышено количество попыток ожидания WebApp');
-            setError('Telegram WebApp не готов. Попробуйте перезапустить бота.');
+            console.log('❌ Telegram WebApp не инициализировался');
+            setError('Не удалось подключиться к Telegram. Попробуйте перезапустить бота.');
             setLoading(false);
           }
           return;

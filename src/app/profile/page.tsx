@@ -23,10 +23,22 @@ export default function ProfilePage() {
   const [user, setUser] = useState<any>(null);
 
   const [avatarUrl, setAvatarUrl] = useState('😎');
+
+  // Загружаем данные пользователя при инициализации
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      const parsedUser = JSON.parse(userData);
+      setUser(parsedUser);
+      setUserCoins(parsedUser.coins || 1000);
+      console.log('👤 Пользователь загружен:', parsedUser.username, 'Баланс:', parsedUser.coins);
+    }
+  }, []);
   const [activeSection, setActiveSection] = useState('stats'); // 'stats', 'achievements', 'wallet'
   const [showModal, setShowModal] = useState<'skins' | 'effects' | 'bonuses' | null>(null);
   const [selectedSkin, setSelectedSkin] = useState('classic');
   const [selectedEffect, setSelectedEffect] = useState('none');
+  const [userCoins, setUserCoins] = useState(1000); // Начальный баланс
 
   // Скины для карт
   const cardSkins = [
@@ -135,6 +147,68 @@ export default function ProfilePage() {
     }
   ];
 
+  // Обработка получения бонусов
+  const handleBonusClick = async (bonusId: string) => {
+    console.log('🎁 Получение бонуса:', bonusId);
+    
+    try {
+      let bonusAmount = 0;
+      
+      switch (bonusId) {
+        case 'daily':
+          bonusAmount = Math.floor(Math.random() * 150) + 50; // 50-200 монет
+          console.log(`🎁 Ежедневный бонус: +${bonusAmount} монет`);
+          break;
+          
+        case 'referral':
+          bonusAmount = 100; // Фиксированный бонус за реферала
+          console.log(`👥 Реферальный бонус: +${bonusAmount} монет`);
+          break;
+          
+        case 'rank_up':
+          bonusAmount = Math.floor(Math.random() * 1500) + 500; // 500-2000 монет
+          console.log(`🏆 Бонус за ранг: +${bonusAmount} монет`);
+          break;
+          
+        default:
+          console.log('❌ Неизвестный тип бонуса');
+          return;
+      }
+      
+      // Обновляем баланс локально
+      const newBalance = userCoins + bonusAmount;
+      setUserCoins(newBalance);
+      
+      // Сохраняем в localStorage
+      localStorage.setItem('user_coins', newBalance.toString());
+      
+      // Обновляем данные пользователя в localStorage
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        const user = JSON.parse(userData);
+        user.coins = newBalance;
+        localStorage.setItem('user', JSON.stringify(user));
+        localStorage.setItem('current_user', JSON.stringify(user));
+      }
+      
+      // Отправляем событие обновления баланса
+      window.dispatchEvent(new CustomEvent('coinsUpdated', { 
+        detail: { coins: newBalance } 
+      }));
+      
+      // Показываем уведомление
+      alert(`🎉 Получено ${bonusAmount} монет! Новый баланс: ${newBalance}`);
+      
+      // Обновляем статус бонуса (делаем недоступным)
+      // В реальном приложении это должно сохраняться на сервере
+      console.log(`✅ Бонус "${bonusId}" получен успешно`);
+      
+    } catch (error) {
+      console.error('❌ Ошибка получения бонуса:', error);
+      alert('Ошибка при получении бонуса. Попробуйте позже.');
+    }
+  };
+
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -232,8 +306,19 @@ export default function ProfilePage() {
               <span className="profile-avatar-emoji">{avatarUrl}</span>
             )}
           </div>
-          <h2 className="profile-name">Игрок</h2>
+          <h2 className="profile-name">{user?.username || 'Игрок'}</h2>
           <p className="profile-status">🟢 Онлайн</p>
+          <div style={{
+            background: 'linear-gradient(135deg, #fbbf24, #f59e0b)',
+            padding: '8px 16px',
+            borderRadius: '12px',
+            margin: '12px 0',
+            textAlign: 'center',
+            fontWeight: '600',
+            color: '#1f2937'
+          }}>
+            💰 {userCoins.toLocaleString()} монет
+          </div>
           
           {/* Avatar and Friends Buttons */}
           <div className="profile-buttons">
@@ -897,6 +982,7 @@ export default function ProfilePage() {
                     <div>
                       {bonus.available ? (
                         <button
+                          onClick={() => handleBonusClick(bonus.id)}
                           style={{
                             background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.8) 0%, rgba(22, 163, 74, 0.6) 100%)',
                             border: '1px solid rgba(34, 197, 94, 0.4)',

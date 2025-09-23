@@ -99,10 +99,18 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
               console.log('Кнопка ИГРАТЬ нажата');
               hapticFeedback('medium');
               try {
-                router.push('/game');
+                // Сначала запускаем игру, потом переходим
+                console.log('🎮 Запускаем игру перед переходом...');
+                startGame('single', 5);
+                
+                // Небольшая задержка для инициализации
+                setTimeout(() => {
+                  router.push('/game');
+                }, 100);
               } catch (error) {
-                console.error('Ошибка навигации к игре:', error);
-                window.location.href = '/game';
+                console.error('Ошибка запуска игры:', error);
+                // Fallback - просто переходим на страницу
+                router.push('/game');
               }
             }} 
             className="menu-action-card"

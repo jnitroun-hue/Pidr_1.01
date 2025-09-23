@@ -92,175 +92,83 @@ export default function CardLoadingScreen({
       {/* Контейнер для карт и загрузки */}
       <div className="relative z-10 flex flex-col items-center">
         
-        {/* ПРОФЕССИОНАЛЬНЫЙ ПОКЕРНЫЙ СТОЛ */}
+        {/* КРАСИВАЯ МОБИЛЬНАЯ ЗАГРУЗКА */}
         <div className="relative mb-12 flex items-center justify-center">
-          {/* Покерный стол */}
-          <div 
-            className="relative w-96 h-64 rounded-full shadow-2xl"
-            style={{
-              background: 'radial-gradient(ellipse at center, #1e7e34 0%, #155724 50%, #0d4b14 100%)',
-              border: '8px solid #8b4513',
-              boxShadow: 'inset 0 0 50px rgba(0,0,0,0.3), 0 20px 40px rgba(0,0,0,0.4)'
-            }}
-          >
-            {/* Фетровая текстура */}
-            <div className="absolute inset-0 rounded-full opacity-30" style={{
-              backgroundImage: `radial-gradient(circle at 25% 25%, transparent 20%, rgba(255,255,255,0.1) 21%, rgba(255,255,255,0.1) 25%, transparent 26%), 
-                               radial-gradient(circle at 75% 75%, transparent 20%, rgba(255,255,255,0.1) 21%, rgba(255,255,255,0.1) 25%, transparent 26%)`
-            }}></div>
-
-            {/* Центральный логотип */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center">
-                <div className="text-6xl mb-2 animate-pulse">♠️</div>
-                <div className="text-white font-bold text-2xl opacity-80 tracking-wider">P.I.D.R.</div>
-                <div className="text-yellow-400 font-semibold text-sm tracking-widest">POKER GAME</div>
-              </div>
+          {/* Центральный логотип */}
+          <div className="text-center">
+            {/* Основной логотип */}
+            <div className="relative mb-8">
+              <div className="text-8xl mb-4 animate-bounce">🃏</div>
+              <h1 className="text-4xl font-bold text-white mb-2 tracking-wider">P.I.D.R.</h1>
+              <p className="text-xl text-blue-300 font-semibold tracking-widest">POKER GAME</p>
             </div>
 
-            {/* Позиции игроков с картами */}
-            {[0, 1, 2, 3, 4, 5].map((position) => {
-              const angle = (position * 60) * Math.PI / 180;
-              const x = Math.cos(angle) * 140;
-              const y = Math.sin(angle) * 90;
-              
-              return (
+            {/* Анимированные карты */}
+            <div className="relative w-64 h-32 mx-auto mb-8">
+              {/* Стопка карт */}
+              {[0, 1, 2, 3, 4].map((i) => (
                 <div
-                  key={position}
-                  className="absolute"
+                  key={i}
+                  className="absolute bg-white rounded-lg shadow-xl border border-gray-200"
                   style={{
-                    left: `calc(50% + ${x}px - 20px)`,
-                    top: `calc(50% + ${y}px - 15px)`,
-                    animation: `playerGlow ${2 + position * 0.3}s ease-in-out infinite alternate`
+                    width: '60px',
+                    height: '84px',
+                    left: `calc(50% - 30px + ${i * 8}px)`,
+                    top: `calc(50% - 42px - ${i * 2}px)`,
+                    zIndex: 5 - i,
+                    transform: `rotate(${(i - 2) * 3}deg)`,
+                    animation: `cardFloat ${2 + i * 0.3}s ease-in-out infinite alternate`,
+                    animationDelay: `${i * 0.2}s`
                   }}
                 >
-                  {/* Две карты игрока */}
-                  <div className="relative flex gap-1">
-                    {[0, 1].map((cardIndex) => (
-                      <div
-                        key={cardIndex}
-                        className="w-8 h-12 bg-white rounded border shadow-lg"
-                        style={{
-                          background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
-                          transform: `rotate(${(cardIndex - 0.5) * 10 + (position - 2.5) * 5}deg)`,
-                          animation: `cardDeal ${1.5 + position * 0.2}s ease-out ${position * 0.3}s both`
-                        }}
-                      >
-                        {/* Рубашка карты */}
-                        <div className="w-full h-full p-1 flex items-center justify-center">
-                          <div className="w-full h-full bg-gradient-to-br from-red-700 to-red-900 rounded-sm flex items-center justify-center relative overflow-hidden">
-                            {/* Узор */}
-                            <div className="absolute inset-0 opacity-30">
-                              <div className="w-full h-full" style={{
-                                backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(255,255,255,0.1) 2px, rgba(255,255,255,0.1) 4px)`
-                              }}></div>
-                            </div>
-                            <div className="text-white font-bold text-xs">♠</div>
-                          </div>
-                        </div>
+                  {/* Рубашка карты */}
+                  <div className="w-full h-full p-2 flex items-center justify-center">
+                    <div className="w-full h-full bg-gradient-to-br from-blue-600 to-purple-700 rounded-md flex items-center justify-center relative overflow-hidden">
+                      {/* Узор на рубашке */}
+                      <div className="absolute inset-0 opacity-30">
+                        <div className="w-full h-full" style={{
+                          backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.2) 4px, rgba(255,255,255,0.2) 8px)`
+                        }}></div>
                       </div>
-                    ))}
-                  </div>
-
-                  {/* Фишки игрока */}
-                  <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 flex gap-1">
-                    {[0, 1, 2].map((chip) => (
-                      <div
-                        key={chip}
-                        className="w-4 h-4 rounded-full shadow-sm"
-                        style={{
-                          background: chip === 0 ? 'linear-gradient(135deg, #dc2626, #991b1b)' :
-                                     chip === 1 ? 'linear-gradient(135deg, #2563eb, #1d4ed8)' :
-                                     'linear-gradient(135deg, #16a34a, #15803d)',
-                          animation: `chipStack ${1 + chip * 0.2}s ease-out ${position * 0.2 + chip * 0.1}s both`
-                        }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-
-            {/* Центральные общие карты (флоп) */}
-            <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 flex gap-2">
-              {['A', 'K', 'Q', 'J', '10'].map((value, index) => (
-                <div
-                  key={value}
-                  className="w-10 h-14 bg-white rounded shadow-xl border"
-                  style={{
-                    animation: `communityCard ${1 + index * 0.2}s ease-out ${1 + index * 0.3}s both`,
-                    transform: `rotate(${(index - 2) * 2}deg)`
-                  }}
-                >
-                  {/* Лицевая сторона карты */}
-                  <div className="w-full h-full p-1 flex flex-col items-center justify-between">
-                    <div className="text-red-600 font-bold text-xs">
-                      <div>{value}</div>
-                      <div className="text-sm">♥</div>
-                    </div>
-                    <div className="text-red-600 font-bold text-lg">♥</div>
-                    <div className="text-red-600 font-bold text-xs transform rotate-180">
-                      <div>{value}</div>
-                      <div className="text-sm">♥</div>
+                      <div className="text-white font-bold text-sm">♠</div>
                     </div>
                   </div>
                 </div>
               ))}
+
+              {/* Разлетающиеся фишки */}
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={`chip-${i}`}
+                  className="absolute w-8 h-8 rounded-full shadow-lg"
+                  style={{
+                    left: `${20 + i * 80}px`,
+                    top: '10px',
+                    background: i === 0 ? 'linear-gradient(135deg, #dc2626, #991b1b)' :
+                               i === 1 ? 'linear-gradient(135deg, #2563eb, #1d4ed8)' :
+                               'linear-gradient(135deg, #16a34a, #15803d)',
+                    animation: `chipFloat ${1.5 + i * 0.2}s ease-in-out infinite`,
+                    animationDelay: `${i * 0.4}s`,
+                    zIndex: 10
+                  }}
+                />
+              ))}
             </div>
 
-            {/* Банк в центре */}
-            <div className="absolute top-12 left-1/2 transform -translate-x-1/2">
-              <div className="flex flex-col items-center">
-                <div className="flex gap-1 mb-2">
-                  {[0, 1, 2, 3, 4].map((chip) => (
-                    <div
-                      key={chip}
-                      className="w-6 h-6 rounded-full shadow-lg"
-                      style={{
-                        background: chip % 2 === 0 ? 
-                          'linear-gradient(135deg, #fbbf24, #f59e0b)' : 
-                          'linear-gradient(135deg, #8b5cf6, #7c3aed)',
-                        animation: `potChip ${1.5 + chip * 0.1}s ease-out ${2 + chip * 0.2}s both`,
-                        zIndex: chip
-                      }}
-                    />
-                  ))}
-                </div>
-                <div className="text-yellow-400 font-bold text-sm animate-pulse">POT</div>
-              </div>
-            </div>
-
-            {/* Дилер батон */}
-            <div 
-              className="absolute w-8 h-8 bg-white rounded-full shadow-xl border-2 border-yellow-400 flex items-center justify-center"
-              style={{
-                right: '20px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                animation: 'dealerButton 3s ease-in-out infinite'
-              }}
-            >
-              <div className="text-yellow-600 font-bold text-xs">D</div>
-            </div>
+            {/* Блестящие эффекты */}
+            {[...Array(6)].map((_, i) => (
+              <div
+                key={`sparkle-${i}`}
+                className="absolute w-2 h-2 bg-yellow-400 rounded-full animate-ping"
+                style={{
+                  left: `${Math.random() * 200 + 50}px`,
+                  top: `${Math.random() * 100 + 50}px`,
+                  animationDelay: `${Math.random() * 2}s`,
+                  animationDuration: `${1 + Math.random()}s`
+                }}
+              />
+            ))}
           </div>
-
-          {/* Летающие фишки вокруг стола */}
-          {[...Array(8)].map((_, i) => (
-            <div
-              key={`flying-chip-${i}`}
-              className="absolute w-8 h-8 rounded-full shadow-2xl"
-              style={{
-                left: `${200 + Math.cos((i * 45) * Math.PI / 180) * 250}px`,
-                top: `${150 + Math.sin((i * 45) * Math.PI / 180) * 150}px`,
-                background: i % 3 === 0 ? 'linear-gradient(135deg, #dc2626, #991b1b)' :
-                           i % 3 === 1 ? 'linear-gradient(135deg, #2563eb, #1d4ed8)' :
-                           'linear-gradient(135deg, #16a34a, #15803d)',
-                animation: `flyingChip ${3 + i * 0.2}s ease-in-out infinite`,
-                animationDelay: `${i * 0.5}s`,
-                zIndex: 100 + i
-              }}
-            />
-          ))}
         </div>
 
         {/* Текст загрузки */}
@@ -368,96 +276,18 @@ export default function CardLoadingScreen({
           animation: spin-slow 20s linear infinite;
         }
         
-        @keyframes playerGlow {
-          0% { box-shadow: 0 0 10px rgba(59, 130, 246, 0.3); }
-          100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.6), 0 0 30px rgba(59, 130, 246, 0.3); }
+        @keyframes cardFloat {
+          0%, 100% { transform: translateY(0px) rotate(var(--rotation, 0deg)); }
+          50% { transform: translateY(-8px) rotate(var(--rotation, 0deg)); }
         }
         
-        @keyframes cardDeal {
-          0% { 
-            transform: translateX(-200px) translateY(-100px) rotate(180deg) scale(0.5);
-            opacity: 0;
-          }
-          50% {
-            opacity: 1;
-          }
-          100% { 
-            transform: translateX(0) translateY(0) rotate(var(--final-rotation, 0deg)) scale(1);
-            opacity: 1;
-          }
-        }
-        
-        @keyframes communityCard {
-          0% { 
-            transform: translateY(-50px) rotate(180deg) scale(0);
-            opacity: 0;
-          }
-          50% {
-            transform: translateY(-25px) rotate(90deg) scale(0.8);
-            opacity: 0.7;
-          }
-          100% { 
-            transform: translateY(0) rotate(var(--final-rotation, 0deg)) scale(1);
-            opacity: 1;
-          }
-        }
-        
-        @keyframes chipStack {
-          0% { 
-            transform: translateY(50px) scale(0);
-            opacity: 0;
-          }
-          70% {
-            transform: translateY(-5px) scale(1.1);
-            opacity: 1;
-          }
-          100% { 
-            transform: translateY(0) scale(1);
-            opacity: 1;
-          }
-        }
-        
-        @keyframes potChip {
-          0% { 
-            transform: scale(0) rotate(0deg);
-            opacity: 0;
-          }
-          50% {
-            transform: scale(1.2) rotate(180deg);
-            opacity: 0.8;
-          }
-          100% { 
-            transform: scale(1) rotate(360deg);
-            opacity: 1;
-          }
-        }
-        
-        @keyframes dealerButton {
+        @keyframes chipFloat {
           0%, 100% { 
-            transform: translateY(-50%) scale(1) rotate(0deg);
-            box-shadow: 0 4px 15px rgba(251, 191, 36, 0.3);
-          }
-          50% { 
-            transform: translateY(-50%) scale(1.1) rotate(180deg);
-            box-shadow: 0 6px 25px rgba(251, 191, 36, 0.5);
-          }
-        }
-        
-        @keyframes flyingChip {
-          0%, 100% { 
-            transform: translateY(0px) rotate(0deg) scale(1);
-            opacity: 0.8;
-          }
-          25% { 
-            transform: translateY(-15px) rotate(90deg) scale(1.1);
-            opacity: 1;
-          }
-          50% { 
-            transform: translateY(-5px) rotate(180deg) scale(0.9);
+            transform: translateY(0px) scale(1);
             opacity: 0.9;
           }
-          75% { 
-            transform: translateY(-20px) rotate(270deg) scale(1.05);
+          50% { 
+            transform: translateY(-12px) scale(1.1);
             opacity: 1;
           }
         }
