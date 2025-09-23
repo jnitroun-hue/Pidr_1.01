@@ -682,7 +682,7 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
         </div>
 
         <div className="wallet-id">
-          <span>ID кошелька: #{user?.id?.slice(-8) || 'XXXXXXXX'}</span>
+          <span>ID кошелька: #{user?.id ? String(user.id).slice(-8) : 'XXXXXXXX'}</span>
         </div>
       </motion.div>
 
