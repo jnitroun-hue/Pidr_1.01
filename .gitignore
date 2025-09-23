@@ -9,6 +9,11 @@
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
+# SQL files - не деплоим схемы в git
+*.sql
+NEW_TABLES_DEPLOY.sql
+*-schema.sql
+*DEPLOY*.sql
 
 # testing
 /coverage

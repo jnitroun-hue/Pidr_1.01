@@ -24,15 +24,75 @@ export default function ProfilePage() {
 
   const [avatarUrl, setAvatarUrl] = useState('😎');
 
-  // Загружаем данные пользователя при инициализации
+  // ✅ ИСПРАВЛЕНО: Загружаем данные пользователя из Supabase
   useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      const parsedUser = JSON.parse(userData);
-      setUser(parsedUser);
-      setUserCoins(parsedUser.coins || 1000);
-      console.log('👤 Пользователь загружен:', parsedUser.username, 'Баланс:', parsedUser.coins);
-    }
+    const loadUserData = async () => {
+      try {
+        console.log('👤 Загружаем данные пользователя из базы...');
+        
+        // Сначала берем базовые данные из localStorage
+        const userData = localStorage.getItem('user');
+        if (userData) {
+          const parsedUser = JSON.parse(userData);
+          setUser(parsedUser);
+          console.log('👤 Базовые данные пользователя загружены:', parsedUser.username);
+        }
+        
+        // Затем загружаем актуальный баланс из базы
+        const response = await fetch('/api/user/balance', {
+          method: 'GET',
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success) {
+            const { balance, user: userInfo } = result.data;
+            console.log('💰 Актуальный баланс из базы:', balance);
+            
+            setUserCoins(balance);
+            
+            // Обновляем пользователя с актуальными данными
+            if (userInfo) {
+              setUser(prev => ({
+                ...prev,
+                ...userInfo,
+                coins: balance
+              }));
+              
+              // Синхронизируем localStorage с актуальными данными
+              const updatedUser = { ...JSON.parse(userData || '{}'), coins: balance };
+              localStorage.setItem('user', JSON.stringify(updatedUser));
+            }
+          } else {
+            console.warn('⚠️ Не удалось загрузить баланс:', result.message);
+            // Используем баланс из localStorage как fallback
+            if (userData) {
+              const parsedUser = JSON.parse(userData);
+              setUserCoins(parsedUser.coins || 1000);
+            }
+          }
+        } else {
+          console.warn('⚠️ API баланса недоступен, используем локальные данные');
+          if (userData) {
+            const parsedUser = JSON.parse(userData);
+            setUserCoins(parsedUser.coins || 1000);
+          }
+        }
+        
+      } catch (error) {
+        console.error('❌ Ошибка загрузки данных пользователя:', error);
+        // Fallback к localStorage
+        const userData = localStorage.getItem('user');
+        if (userData) {
+          const parsedUser = JSON.parse(userData);
+          setUser(parsedUser);
+          setUserCoins(parsedUser.coins || 1000);
+        }
+      }
+    };
+    
+    loadUserData();
   }, []);
   const [activeSection, setActiveSection] = useState('stats'); // 'stats', 'achievements', 'wallet'
   const [showModal, setShowModal] = useState<'skins' | 'effects' | 'bonuses' | null>(null);
@@ -147,65 +207,75 @@ export default function ProfilePage() {
     }
   ];
 
-  // Обработка получения бонусов
+  // ✅ ИСПРАВЛЕНО: Обработка получения бонусов через Supabase API
   const handleBonusClick = async (bonusId: string) => {
-    console.log('🎁 Получение бонуса:', bonusId);
+    console.log('🎁 Получение бонуса через API:', bonusId);
     
     try {
-      let bonusAmount = 0;
-      
-      switch (bonusId) {
-        case 'daily':
-          bonusAmount = Math.floor(Math.random() * 150) + 50; // 50-200 монет
-          console.log(`🎁 Ежедневный бонус: +${bonusAmount} монет`);
-          break;
-          
-        case 'referral':
-          bonusAmount = 100; // Фиксированный бонус за реферала
-          console.log(`👥 Реферальный бонус: +${bonusAmount} монет`);
-          break;
-          
-        case 'rank_up':
-          bonusAmount = Math.floor(Math.random() * 1500) + 500; // 500-2000 монет
-          console.log(`🏆 Бонус за ранг: +${bonusAmount} монет`);
-          break;
-          
-        default:
-          console.log('❌ Неизвестный тип бонуса');
-          return;
+      // Получаем токен авторизации
+      const token = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('auth_token='))
+        ?.split('=')[1];
+        
+      if (!token) {
+        alert('❌ Ошибка авторизации. Перезапустите приложение.');
+        return;
       }
       
-      // Обновляем баланс локально
-      const newBalance = userCoins + bonusAmount;
-      setUserCoins(newBalance);
+      console.log('🔑 Отправляем запрос на получение бонуса...');
       
-      // Сохраняем в localStorage
-      localStorage.setItem('user_coins', newBalance.toString());
+      // Отправляем запрос на API
+      const response = await fetch('/api/bonus', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // Включаем cookies
+        body: JSON.stringify({
+          bonusType: bonusId
+        })
+      });
       
-      // Обновляем данные пользователя в localStorage
-      const userData = localStorage.getItem('user');
-      if (userData) {
-        const user = JSON.parse(userData);
-        user.coins = newBalance;
-        localStorage.setItem('user', JSON.stringify(user));
-        localStorage.setItem('current_user', JSON.stringify(user));
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.message || 'Ошибка сервера');
       }
       
-      // Отправляем событие обновления баланса
-      window.dispatchEvent(new CustomEvent('coinsUpdated', { 
-        detail: { coins: newBalance } 
-      }));
+      if (result.success) {
+        const { bonusAmount, newBalance, description } = result.data;
+        
+        console.log(`✅ Бонус получен: +${bonusAmount} монет`);
+        
+        // Обновляем локальный баланс для UI
+        setUserCoins(newBalance);
+        
+        // Обновляем данные пользователя в localStorage (только для UI)
+        const userData = localStorage.getItem('user');
+        if (userData) {
+          const user = JSON.parse(userData);
+          user.coins = newBalance;
+          localStorage.setItem('user', JSON.stringify(user));
+        }
+        
+        // Отправляем событие обновления баланса
+        window.dispatchEvent(new CustomEvent('coinsUpdated', { 
+          detail: { coins: newBalance } 
+        }));
+        
+        // Показываем уведомление
+        alert(`🎉 ${description}!\nПолучено: ${bonusAmount} монет\nНовый баланс: ${newBalance.toLocaleString()}`);
+        
+        console.log(`✅ Бонус "${bonusId}" успешно получен через API`);
+        
+      } else {
+        throw new Error(result.message || 'Неизвестная ошибка');
+      }
       
-      // Показываем уведомление
-      alert(`🎉 Получено ${bonusAmount} монет! Новый баланс: ${newBalance}`);
-      
-      // Обновляем статус бонуса (делаем недоступным)
-      // В реальном приложении это должно сохраняться на сервере
-      console.log(`✅ Бонус "${bonusId}" получен успешно`);
-      
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Ошибка получения бонуса:', error);
-      alert('Ошибка при получении бонуса. Попробуйте позже.');
+      alert(`❌ Ошибка: ${error.message || 'Не удалось получить бонус'}`);
     }
   };
 

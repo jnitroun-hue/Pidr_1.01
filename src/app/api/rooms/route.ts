@@ -1,24 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '../../../lib/supabase';
-import jwt from 'jsonwebtoken';
 import { checkRateLimit, getRateLimitId } from '../../../lib/ratelimit';
-
-const JWT_SECRET = process.env.JWT_SECRET;
-
-function getUserIdFromRequest(req: NextRequest): string | null {
-  if (!JWT_SECRET) return null;
-  
-  // Читаем токен из HTTP-only cookies
-  const token = req.cookies.get('auth_token')?.value;
-  if (!token) return null;
-  
-  try {
-    const payload = jwt.verify(token, JWT_SECRET) as any;
-    return payload.userId;
-  } catch {
-    return null;
-  }
-}
+import { getUserIdFromRequest, requireAuth } from '../../../lib/auth-utils';
 
 function generateRoomCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -227,10 +210,15 @@ async function getAuthenticatedRooms(req: NextRequest) {
 
 // POST /api/rooms - Создать комнату или присоединиться к комнате
 export async function POST(req: NextRequest) {
-  const userId = getUserIdFromRequest(req);
-  if (!userId) {
-    return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+  console.log('🏠 POST /api/rooms - Обработка запроса...');
+  
+  const auth = requireAuth(req);
+  if (auth.error) {
+    console.error('❌ Ошибка авторизации:', auth.error);
+    return NextResponse.json({ success: false, message: auth.error }, { status: 401 });
   }
+  
+  const userId = auth.userId;
 
   // Rate limiting
   const id = getRateLimitId(req);
@@ -277,28 +265,47 @@ export async function POST(req: NextRequest) {
         }, { status: 400 });
       }
 
-      // Проверяем, не участвует ли пользователь в другой комнате
-      const { data: existingPlayer } = await supabase
+      // ✅ ИСПРАВЛЕНО: Более точная проверка участия в других комнатах
+      console.log('🔍 Проверяем участие пользователя в других комнатах...');
+      
+      const { data: existingParticipation, error: participationError } = await supabase
         .from('_pidr_room_players')
         .select(`
           id,
           room_id,
-          _pidr_rooms (
-            id, name, status
+          position,
+          is_ready,
+          _pidr_rooms!inner(
+            id,
+            name,
+            status,
+            room_code
           )
         `)
         .eq('user_id', userId)
-        .single();
+        .in('_pidr_rooms.status', ['waiting', 'playing']);
 
-      if (existingPlayer?._pidr_rooms) {
-        const room = existingPlayer._pidr_rooms as any;
-        if (room.status === 'waiting' || room.status === 'playing') {
-          return NextResponse.json({ 
-            success: false, 
-            message: `Вы уже участвуете в комнате "${room.name}". Покиньте её сначала.` 
-          }, { status: 400 });
-        }
+      if (participationError) {
+        console.error('❌ Ошибка проверки участия:', participationError);
       }
+
+      if (existingParticipation && existingParticipation.length > 0) {
+        const activeRooms = existingParticipation.map(p => ({
+          name: p._pidr_rooms?.name || 'Неизвестная комната',
+          code: p._pidr_rooms?.room_code || 'UNKNOWN',
+          status: p._pidr_rooms?.status || 'unknown'
+        }));
+        
+        console.log('⚠️ Пользователь уже участвует в комнатах:', activeRooms);
+        
+        return NextResponse.json({ 
+          success: false, 
+          message: `Вы уже участвуете в комнате "${activeRooms[0].name}" (${activeRooms[0].code}). Покиньте её сначала.`,
+          activeRooms
+        }, { status: 400 });
+      }
+      
+      console.log('✅ Пользователь не участвует в других комнатах');
 
       // Создаем комнату
       const { data: room, error: roomError } = await supabase

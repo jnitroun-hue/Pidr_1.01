@@ -95,13 +95,13 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
         </div>
         <div className="menu-actions-grid">
           <button 
-            onClick={() => {
-              console.log('Кнопка ИГРАТЬ нажата');
-              hapticFeedback('medium');
-              try {
-                // Сначала запускаем игру, потом переходим
-                console.log('🎮 Запускаем игру перед переходом...');
-                startGame('single', 5);
+         onClick={() => {
+           console.log('Кнопка ИГРАТЬ нажата');
+           hapticFeedback('medium');
+           try {
+             // Сначала запускаем игру, потом переходим
+             console.log('🎮 Запускаем игру перед переходом...');
+             startGame('single', 9);
                 
                 // Небольшая задержка для инициализации
                 setTimeout(() => {
