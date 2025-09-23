@@ -190,13 +190,11 @@ export default function CardLoadingScreen({
             
             {/* Прогресс */}
             <div 
-              className="relative h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 
-                         transition-all duration-300 ease-out rounded-full"
+              className="relative h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 transition-all duration-300 ease-out rounded-full"
               style={{ width: `${progress}%` }}
             >
               {/* Блик на прогресс баре */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent 
-                             animate-shimmer rounded-full"></div>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer rounded-full"></div>
             </div>
           </div>
           
