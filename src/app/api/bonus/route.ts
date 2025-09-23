@@ -49,12 +49,39 @@ export async function POST(req: NextRequest) {
     
     switch (bonusType) {
       case 'daily':
+        // ✅ ПРОВЕРЯЕМ ЕЖЕДНЕВНЫЙ ТАЙМЕР
+        const today = new Date().toDateString();
+        const { data: dailyBonusToday } = await supabase
+          .from('_pidr_transactions')
+          .select('created_at')
+          .eq('user_id', userId)
+          .eq('type', 'bonus')
+          .eq('bonus_type', 'daily')
+          .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+        
+        if (dailyBonusToday) {
+          const lastBonusDate = new Date(dailyBonusToday.created_at).toDateString();
+          if (lastBonusDate === today) {
+            const nextBonusTime = new Date(new Date(dailyBonusToday.created_at).getTime() + 24 * 60 * 60 * 1000);
+            const hoursLeft = Math.ceil((nextBonusTime.getTime() - Date.now()) / (1000 * 60 * 60));
+            
+            console.log('⏰ Ежедневный бонус уже получен сегодня');
+            return NextResponse.json({ 
+              success: false, 
+              message: `Ежедневный бонус уже получен! Следующий через ${hoursLeft} часов.`,
+              data: { 
+                cooldownUntil: nextBonusTime,
+                hoursLeft 
+              }
+            }, { status: 400 });
+          }
+        }
+        
         bonusAmount = Math.floor(Math.random() * 150) + 50; // 50-200 монет
         bonusDescription = 'Ежедневный бонус';
-        
-        // TODO: Проверить, не получал ли пользователь уже сегодня
-        // const today = new Date().toDateString();
-        // Здесь должна быть проверка в таблице транзакций
         break;
         
       case 'referral':

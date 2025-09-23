@@ -319,21 +319,212 @@ export default function UltraPremiumShop() {
 
   if (loading) {
     return (
-      <div className="main-menu-container">
-        <div className="main-menu-inner">
-          <div className="text-center space-y-8" style={{ marginTop: '200px' }}>
-            <div className="relative">
-              <div className="w-20 h-20 border-4 border-purple-500/30 rounded-full animate-spin mx-auto">
-                <div className="absolute top-0 left-1/2 w-4 h-4 bg-purple-500 rounded-full transform -translate-x-1/2"></div>
-              </div>
-              <ShoppingBag className="absolute inset-0 m-auto w-8 h-8 text-purple-400" />
+      <div className="shop-loading-screen">
+        <div className="loading-content">
+          {/* Иконка магазина */}
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+            className="shop-logo-container"
+          >
+            <div className="shop-logo-circle">
+              <ShoppingBag className="shop-logo-icon" />
             </div>
-            <div>
-              <h2 className="text-3xl font-bold text-white mb-2">Загрузка магазина</h2>
-              <p className="text-gray-400">Подготавливаем эксклюзивные товары...</p>
+          </motion.div>
+
+          {/* Название */}
+          <motion.h1
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="shop-title"
+          >
+            МАГАЗИН
+          </motion.h1>
+
+          {/* Прогресс бар */}
+          <motion.div
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: "100%", opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            className="shop-progress-container"
+          >
+            <div className="shop-progress-track">
+              <div 
+                className="shop-progress-fill"
+                style={{ width: '75%' }}
+              />
             </div>
-          </div>
+            <span className="shop-progress-text">75%</span>
+          </motion.div>
+
+          {/* Загрузочный текст */}
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.6 }}
+            className="shop-loading-message"
+          >
+            Загрузка магазина...
+          </motion.p>
         </div>
+
+        <style jsx>{`
+          .shop-loading-screen {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+          }
+
+          .loading-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 2rem;
+            max-width: 400px;
+            width: 100%;
+          }
+
+          .shop-logo-container {
+            margin-bottom: 2rem;
+          }
+
+          .shop-logo-circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 
+              0 20px 25px -5px rgba(0, 0, 0, 0.1),
+              0 10px 10px -5px rgba(0, 0, 0, 0.04),
+              0 0 0 1px rgba(124, 58, 237, 0.1);
+            position: relative;
+            overflow: hidden;
+          }
+
+          .shop-logo-circle::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%);
+            animation: shimmer 2s ease-in-out infinite;
+          }
+
+          .shop-logo-icon {
+            width: 2rem;
+            height: 2rem;
+            color: white;
+            z-index: 1;
+            position: relative;
+          }
+
+          .shop-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: white;
+            margin: 0 0 3rem 0;
+            letter-spacing: 0.1em;
+            background: linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+          }
+
+          .shop-progress-container {
+            width: 100%;
+            margin-bottom: 1.5rem;
+          }
+
+          .shop-progress-track {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 0.75rem;
+            position: relative;
+          }
+
+          .shop-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #7c3aed 0%, #5b21b6 100%);
+            border-radius: 2px;
+            transition: width 0.3s ease-out;
+            position: relative;
+            overflow: hidden;
+          }
+
+          .shop-progress-fill::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%);
+            animation: progressShimmer 1.5s ease-in-out infinite;
+          }
+
+          .shop-progress-text {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.7);
+            font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', monospace;
+          }
+
+          .shop-loading-message {
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.6);
+            margin: 0;
+            font-weight: 500;
+          }
+
+          @keyframes shimmer {
+            0% {
+              transform: translateX(-100%) rotate(45deg);
+            }
+            100% {
+              transform: translateX(200%) rotate(45deg);
+            }
+          }
+
+          @keyframes progressShimmer {
+            0% {
+              transform: translateX(-100%);
+            }
+            100% {
+              transform: translateX(100%);
+            }
+          }
+
+          /* Адаптивность */
+          @media (max-width: 480px) {
+            .loading-content {
+              padding: 1.5rem;
+            }
+            
+            .shop-logo-circle {
+              width: 64px;
+              height: 64px;
+            }
+            
+            .shop-logo-icon {
+              width: 1.5rem;
+              height: 1.5rem;
+            }
+            
+            .shop-title {
+              font-size: 2rem;
+              margin-bottom: 2rem;
+            }
+          }
+        `}</style>
       </div>
     );
   }

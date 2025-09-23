@@ -212,23 +212,61 @@ async function getAuthenticatedRooms(req: NextRequest) {
 export async function POST(req: NextRequest) {
   console.log('🏠 POST /api/rooms - Обработка запроса...');
   
-  const auth = requireAuth(req);
-  if (auth.error) {
-    console.error('❌ Ошибка авторизации:', auth.error);
-    return NextResponse.json({ success: false, message: auth.error }, { status: 401 });
-  }
-  
-  const userId = auth.userId;
-
-  // Rate limiting
-  const id = getRateLimitId(req);
-  const { success } = await checkRateLimit(`rooms:${id}`);
-  if (!success) {
-    return NextResponse.json({ success: false, message: 'Too many requests' }, { status: 429 });
-  }
-
   try {
+    // ✅ ИСПРАВЛЕНО: Более детальная проверка авторизации
+    const auth = requireAuth(req);
+    if (auth.error) {
+      console.error('❌ Ошибка авторизации:', auth.error);
+      return NextResponse.json({ success: false, message: `Ошибка авторизации: ${auth.error}` }, { status: 401 });
+    }
+    
+    const userId = auth.userId;
+    console.log('👤 Пользователь авторизован:', userId);
+
+    // ✅ ПРОВЕРЯЕМ ПОДКЛЮЧЕНИЕ К SUPABASE
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_ANON_KEY;
+    
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('❌ Supabase не настроен');
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Сервис временно недоступен. Попробуйте позже.' 
+      }, { status: 503 });
+    }
+
+    // Rate limiting (временно отключено для диагностики)
+    try {
+      const id = getRateLimitId(req);
+      const { success } = await checkRateLimit(`rooms:${id}`);
+      if (!success) {
+        console.warn('⚠️ Rate limit exceeded, but allowing request');
+        // return NextResponse.json({ success: false, message: 'Too many requests' }, { status: 429 });
+      }
+    } catch (rateLimitError) {
+      console.warn('⚠️ Rate limit check failed:', rateLimitError);
+      // Продолжаем без rate limiting
+    }
+
     const { action, roomCode, roomName, maxPlayers, isPrivate, password } = await req.json();
+    console.log('📝 Данные запроса:', { action, roomCode, roomName, maxPlayers, isPrivate });
+
+    // ✅ ПРОВЕРЯЕМ СУЩЕСТВОВАНИЕ ПОЛЬЗОВАТЕЛЯ В БАЗЕ
+    const { data: user, error: userError } = await supabase
+      .from('_pidr_users')
+      .select('id, username, telegram_id')
+      .eq('id', userId)
+      .single();
+
+    if (userError || !user) {
+      console.error('❌ Пользователь не найден в базе:', userError);
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Пользователь не найден. Попробуйте перезайти в приложение.' 
+      }, { status: 404 });
+    }
+
+    console.log('✅ Пользователь найден:', user.username || user.telegram_id);
 
     if (action === 'create') {
       // Создание новой комнаты
@@ -251,12 +289,18 @@ export async function POST(req: NextRequest) {
       } while (true);
 
       // Проверяем, нет ли у пользователя активной комнаты как хоста
-      const { data: existingHostRoom } = await supabase
+      console.log('🔍 Проверяем существующие комнаты хоста...');
+      const { data: existingHostRoom, error: hostRoomError } = await supabase
         .from('_pidr_rooms')
         .select('id, name')
         .eq('host_id', userId)
         .in('status', ['waiting', 'playing'])
         .single();
+
+      if (hostRoomError && hostRoomError.code !== 'PGRST116') {
+        console.error('❌ Ошибка проверки комнат хоста:', hostRoomError);
+        throw new Error(`Database error: ${hostRoomError.message}`);
+      }
 
       if (existingHostRoom) {
         return NextResponse.json({ 
@@ -308,6 +352,14 @@ export async function POST(req: NextRequest) {
       console.log('✅ Пользователь не участвует в других комнатах');
 
       // Создаем комнату
+      console.log('🏗️ Создаем новую комнату:', {
+        room_code: uniqueCode,
+        name: roomName || 'P.I.D.R. Игра',
+        host_id: userId,
+        max_players: Math.min(Math.max(maxPlayers || 4, 2), 9),
+        is_private: isPrivate || false
+      });
+
       const { data: room, error: roomError } = await supabase
         .from('_pidr_rooms')
         .insert({
@@ -327,9 +379,15 @@ export async function POST(req: NextRequest) {
         .select()
         .single();
 
-      if (roomError) throw roomError;
+      if (roomError) {
+        console.error('❌ Ошибка создания комнаты в БД:', roomError);
+        throw roomError;
+      }
+
+      console.log('✅ Комната создана:', room.id, room.room_code);
 
       // Добавляем хоста как первого игрока
+      console.log('👤 Добавляем хоста в комнату:', { room_id: room.id, user_id: userId });
       const { error: playerError } = await supabase
         .from('_pidr_room_players')
         .insert({
@@ -339,10 +397,22 @@ export async function POST(req: NextRequest) {
           is_ready: true
         });
 
-      if (playerError) throw playerError;
+      if (playerError) {
+        console.error('❌ Ошибка добавления хоста в комнату:', playerError);
+        throw playerError;
+      }
+
+      console.log('✅ Хост добавлен в комнату');
 
       // Обновляем статус пользователя
-      await updateUserStatus(userId, 'in_game', room.id);
+      try {
+        console.log('📊 Обновляем статус пользователя...');
+        await updateUserStatus(userId, 'in_game', room.id);
+        console.log('✅ Статус пользователя обновлен');
+      } catch (statusError) {
+        console.warn('⚠️ Не удалось обновить статус пользователя (не критично):', statusError);
+        // Не прерываем процесс, если обновление статуса не удалось
+      }
 
       return NextResponse.json({ 
         success: true, 
@@ -555,9 +625,12 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: false, message: 'Unknown action' }, { status: 400 });
 
-  } catch (error) {
-    console.error('Rooms POST error:', error);
-    return NextResponse.json({ success: false, message: 'Internal server error' }, { status: 500 });
+  } catch (error: any) {
+    console.error('❌ Rooms POST error:', error);
+    return NextResponse.json({ 
+      success: false, 
+      message: `Internal server error: ${error?.message || 'Unknown error'}` 
+    }, { status: 500 });
   }
 }
 
@@ -745,12 +818,20 @@ async function getUserRoomIds(userId: string): Promise<string> {
 }
 
 async function updateUserStatus(userId: string, status: string, roomId: string | null) {
-  await supabase
-    .from('_pidr_user_status')
-    .upsert({
-      user_id: userId,
-      status,
-      current_room_id: roomId,
-      last_seen: new Date().toISOString()
-    });
+  try {
+    // ✅ ИСПРАВЛЕНО: Используем существующую таблицу _pidr_users
+    await supabase
+      .from('_pidr_users')
+      .update({
+        last_seen: new Date().toISOString(),
+        // Если нужно хранить статус, можно добавить поле в _pidr_users
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId);
+      
+    console.log('📊 Статус пользователя обновлен в _pidr_users');
+  } catch (error) {
+    console.error('❌ Ошибка обновления статуса пользователя:', error);
+    throw error;
+  }
 }

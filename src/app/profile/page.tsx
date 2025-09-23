@@ -5,6 +5,56 @@ import { ArrowLeft, Trophy, Medal, Users, User, Star, Award, Target, Camera, Upl
 import BottomNav from '../../components/BottomNav';
 import GameWallet from '../../components/GameWallet';
 
+// Компонент таймера для бонусов
+function BonusCooldownTimer({ bonus, onCooldownEnd }: { bonus: any; onCooldownEnd: () => void }) {
+  const [timeLeft, setTimeLeft] = useState('');
+
+  useEffect(() => {
+    if (!bonus.cooldownUntil) {
+      setTimeLeft('🔒 НЕДОСТУПНО');
+      return;
+    }
+
+    const updateTimer = () => {
+      const now = new Date().getTime();
+      const cooldownTime = new Date(bonus.cooldownUntil).getTime();
+      const difference = cooldownTime - now;
+
+      if (difference <= 0) {
+        setTimeLeft('');
+        onCooldownEnd();
+        return;
+      }
+
+      const hours = Math.floor(difference / (1000 * 60 * 60));
+      const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+
+      setTimeLeft(`⏰ ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+
+    return () => clearInterval(interval);
+  }, [bonus.cooldownUntil, onCooldownEnd]);
+
+  return (
+    <div style={{
+      background: 'rgba(55, 65, 81, 0.6)',
+      border: '1px solid rgba(255, 255, 255, 0.1)',
+      borderRadius: '12px',
+      color: '#94a3b8',
+      padding: '12px 20px',
+      fontWeight: '600',
+      fontSize: '0.9rem',
+      fontFamily: 'monospace'
+    }}>
+      {timeLeft || '🔒 НЕДОСТУПНО'}
+    </div>
+  );
+}
+
 export default function ProfilePage() {
   const [stats, setStats] = useState({
     rating: 0,
@@ -24,7 +74,7 @@ export default function ProfilePage() {
 
   const [avatarUrl, setAvatarUrl] = useState('😎');
 
-  // ✅ ИСПРАВЛЕНО: Загружаем данные пользователя из Supabase
+  // ✅ ИСПРАВЛЕНО: Загружаем данные пользователя и бонусы из Supabase
   useEffect(() => {
     const loadUserData = async () => {
       try {
@@ -91,8 +141,29 @@ export default function ProfilePage() {
         }
       }
     };
+
+    const loadBonuses = async () => {
+      try {
+        console.log('🎁 Загружаем доступные бонусы...');
+        const response = await fetch('/api/bonus', {
+          method: 'GET',
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.bonuses) {
+            console.log('✅ Бонусы загружены:', result.bonuses);
+            setBonuses(result.bonuses);
+          }
+        }
+      } catch (error) {
+        console.warn('⚠️ Не удалось загрузить бонусы:', error);
+      }
+    };
     
     loadUserData();
+    loadBonuses();
   }, []);
   const [activeSection, setActiveSection] = useState('stats'); // 'stats', 'achievements', 'wallet'
   const [showModal, setShowModal] = useState<'skins' | 'effects' | 'bonuses' | null>(null);
@@ -177,7 +248,7 @@ export default function ProfilePage() {
   ];
 
   // Бонусы
-  const bonuses = [
+  const [bonuses, setBonuses] = useState([
     {
       id: 'daily',
       name: 'Ежедневный бонус',
@@ -185,7 +256,8 @@ export default function ProfilePage() {
       reward: '50-200 монет',
       icon: '📅',
       available: true,
-      cooldown: '22:30:15'
+      cooldown: null,
+      cooldownUntil: null
     },
     {
       id: 'referral',
@@ -194,7 +266,7 @@ export default function ProfilePage() {
       reward: '100 монет за друга',
       icon: '👥',
       available: true,
-      referrals: 3
+      referrals: 0
     },
     {
       id: 'rank_up',
@@ -205,7 +277,7 @@ export default function ProfilePage() {
       available: false,
       nextRank: 'Серебро'
     }
-  ];
+  ]);
 
   // ✅ ИСПРАВЛЕНО: Обработка получения бонусов через Supabase API
   const handleBonusClick = async (bonusId: string) => {
@@ -240,6 +312,14 @@ export default function ProfilePage() {
       const result = await response.json();
       
       if (!response.ok) {
+        // Если это ошибка таймера, обновляем статус бонуса
+        if (result.data?.cooldownUntil) {
+          setBonuses(prev => prev.map(bonus => 
+            bonus.id === bonusId 
+              ? { ...bonus, available: false, cooldownUntil: result.data.cooldownUntil }
+              : bonus
+          ));
+        }
         throw new Error(result.message || 'Ошибка сервера');
       }
       
@@ -257,6 +337,16 @@ export default function ProfilePage() {
           const user = JSON.parse(userData);
           user.coins = newBalance;
           localStorage.setItem('user', JSON.stringify(user));
+        }
+
+        // ✅ ОБНОВЛЯЕМ СТАТУС БОНУСА
+        if (bonusId === 'daily') {
+          const nextBonusTime = new Date(Date.now() + 24 * 60 * 60 * 1000);
+          setBonuses(prev => prev.map(bonus => 
+            bonus.id === bonusId 
+              ? { ...bonus, available: false, cooldownUntil: nextBonusTime }
+              : bonus
+          ));
         }
         
         // Отправляем событие обновления баланса
@@ -1078,17 +1168,14 @@ export default function ProfilePage() {
                            '🏆 ПОЛУЧИТЬ'}
                         </button>
                       ) : (
-                        <div style={{
-                          background: 'rgba(55, 65, 81, 0.6)',
-                          border: '1px solid rgba(255, 255, 255, 0.1)',
-                          borderRadius: '12px',
-                          color: '#94a3b8',
-                          padding: '12px 20px',
-                          fontWeight: '600',
-                          fontSize: '0.9rem'
-                        }}>
-                          🔒 НЕДОСТУПНО
-                        </div>
+                        <BonusCooldownTimer 
+                          bonus={bonus}
+                          onCooldownEnd={() => {
+                            setBonuses(prev => prev.map(b => 
+                              b.id === bonus.id ? { ...b, available: true } : b
+                            ));
+                          }}
+                        />
                       )}
                     </div>
                   </motion.div>
