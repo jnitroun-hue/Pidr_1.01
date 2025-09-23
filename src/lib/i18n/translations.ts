@@ -139,11 +139,11 @@ export const translations: Record<Language, Translations> = {
       copied: 'Скопировано'
     },
     loading: {
-      initializing: 'Инициализация игры...',
-      connecting: 'Подключение к серверу...',
-      loadingGame: 'Загрузка игровых данных...',
-      preparingCards: 'Подготовка карт...',
-      almostReady: 'Почти готово...'
+      initializing: 'Тасуем колоду...',
+      connecting: 'Подготавливаем покерный стол...',
+      loadingGame: 'Раздаем карты игрокам...',
+      preparingCards: 'Размещаем фишки...',
+      almostReady: 'Добро пожаловать за стол!'
     }
   },
   en: {
@@ -203,11 +203,11 @@ export const translations: Record<Language, Translations> = {
       copied: 'Copied'
     },
     loading: {
-      initializing: 'Initializing game...',
-      connecting: 'Connecting to server...',
-      loadingGame: 'Loading game data...',
-      preparingCards: 'Preparing cards...',
-      almostReady: 'Almost ready...'
+      initializing: 'Shuffling deck...',
+      connecting: 'Preparing poker table...',
+      loadingGame: 'Dealing cards to players...',
+      preparingCards: 'Placing chips...',
+      almostReady: 'Welcome to the table!'
     }
   }
 };
