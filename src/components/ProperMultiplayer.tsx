@@ -329,17 +329,16 @@ export default function ProperMultiplayer({ onBack }: ProperMultiplayerProps) {
     
     try {
       // ИСПРАВЛЕНО: Присоединение через основную базу данных
-      const token = localStorage.getItem('auth_token');
-      if (!token) {
-        throw new Error('Не найден токен авторизации');
+      if (!user?.id) {
+        throw new Error('Пользователь не авторизован');
       }
 
       const response = await fetch('/api/rooms', {
         method: 'POST',
         headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
+        credentials: 'include', // Используем HTTP-only cookies
         body: JSON.stringify({
           action: 'join',
           roomCode: roomCode.toUpperCase(),

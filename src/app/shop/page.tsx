@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Coins, Star, Sparkles, Zap, Gift, Crown, Palette, Wand2, ShoppingBag, Wallet, Plus, TrendingUp, Award, Flame, Diamond, Shield } from 'lucide-react';
 import BottomNav from '../../components/BottomNav';
+import { useLanguage } from '../../components/LanguageSwitcher';
+import { useTranslations } from '../../lib/i18n/translations';
 
 interface ShopItem {
   id: string;
@@ -35,6 +37,9 @@ interface CryptoPackage {
 }
 
 export default function UltraPremiumShop() {
+  const { language } = useLanguage();
+  const t = useTranslations(language);
+  
   const [selectedCategory, setSelectedCategory] = useState('featured');
   const [coins, setCoins] = useState(1500);
   const [loading, setLoading] = useState(true);
@@ -45,42 +50,42 @@ export default function UltraPremiumShop() {
   const categories = [
     { 
       id: 'featured', 
-      name: 'Featured', 
+      name: t.shop.featured, 
       icon: Star, 
       color: 'from-yellow-400 via-orange-400 to-red-500',
       description: 'Handpicked exclusives'
     },
     { 
       id: 'skins', 
-      name: 'Skins', 
+      name: t.shop.skins, 
       icon: Palette, 
       color: 'from-purple-400 via-pink-400 to-rose-500',
       description: 'Visual masterpieces'
     },
     { 
       id: 'effects', 
-      name: 'Effects', 
+      name: t.shop.effects, 
       icon: Wand2, 
       color: 'from-blue-400 via-cyan-400 to-teal-500',
       description: 'Magical powers'
     },
     { 
       id: 'boosters', 
-      name: 'Boosters', 
+      name: t.shop.boosters, 
       icon: Zap, 
       color: 'from-green-400 via-emerald-400 to-lime-500',
       description: 'Performance enhancers'
     },
     { 
       id: 'bundles', 
-      name: 'Bundles', 
+      name: t.shop.bundles, 
       icon: Gift, 
       color: 'from-indigo-400 via-purple-400 to-pink-500',
       description: 'Value collections'
     },
     { 
       id: 'crypto', 
-      name: 'Currency', 
+      name: t.shop.crypto, 
       icon: Wallet, 
       color: 'from-amber-400 via-yellow-400 to-orange-500',
       description: 'Premium coins'
@@ -666,7 +671,7 @@ export default function UltraPremiumShop() {
                   )}
                   
                   <button className="offer-btn">
-                    Купить сейчас
+                    {t.shop.buy}
                   </button>
                 </motion.div>
               ))}
@@ -731,7 +736,7 @@ export default function UltraPremiumShop() {
                           
                           {isOwned ? (
                             <button className="purchase-btn purchased">
-                              Куплено
+                              {t.shop.purchased}
                             </button>
                           ) : (
                             <button
@@ -739,7 +744,7 @@ export default function UltraPremiumShop() {
                               disabled={coins < item.price}
                               className={`purchase-btn ${coins >= item.price ? 'available' : 'disabled'}`}
                             >
-                              {coins >= item.price ? 'Купить' : 'Недостаточно'}
+                              {coins >= item.price ? t.shop.buy : t.shop.insufficient}
                             </button>
                           )}
                         </div>

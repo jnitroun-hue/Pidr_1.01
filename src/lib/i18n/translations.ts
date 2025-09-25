@@ -70,6 +70,43 @@ export interface Translations {
     mandatory: string;
     penaltySystem: string;
     visualGuides: string;
+    // Detailed rule descriptions
+    gameDescription: string;
+    playersCount: string;
+    goalDescription: string;
+    cardsDescription: string;
+    hierarchyDescription: string;
+    specialRuleDescription: string;
+    suitsDescription: string;
+    stage1Description: string;
+    stage1Moves: string;
+    stage1Beat: string;
+    stage1Suits: string;
+    stage1Transition: string;
+    stage2Description: string;
+    stage2SpadesRule: string;
+    stage2Moves: string;
+    stage2Beat: string;
+    stage2Transition: string;
+    stage3Description: string;
+    stage3FoolRules: string;
+    stage3Moves: string;
+    stage3Beat: string;
+    stage3Algorithm: string;
+    oneCardDescription: string;
+    oneCardRule: string;
+    strategyDescription: string;
+    strategyTips: string;
+    suitNames: {
+      spades: string;
+      hearts: string;
+      diamonds: string;
+      clubs: string;
+    };
+    algorithmStage2: string;
+    trump: string;
+    important: string;
+    noThrowing: string;
   };
   
   // Кошелек
@@ -95,6 +132,57 @@ export interface Translations {
     purchase: string;
     success: string;
     error: string;
+    // Categories
+    featured: string;
+    skins: string;
+    effects: string;
+    boosters: string;
+    bundles: string;
+    crypto: string;
+    themes: string;
+    cards: string;
+    avatars: string;
+    // Items
+    darkTheme: string;
+    neonTheme: string;
+    retroTheme: string;
+    goldenCard: string;
+    rainbowCard: string;
+    crystalCard: string;
+    crownAvatar: string;
+    fireAvatar: string;
+    starAvatar: string;
+    coinBooster: string;
+    expBooster: string;
+    // Descriptions
+    darkThemeDesc: string;
+    neonThemeDesc: string;
+    retroThemeDesc: string;
+    goldenCardDesc: string;
+    rainbowCardDesc: string;
+    crystalCardDesc: string;
+    crownAvatarDesc: string;
+    fireAvatarDesc: string;
+    starAvatarDesc: string;
+    coinBoosterDesc: string;
+    expBoosterDesc: string;
+    // Actions
+    buy: string;
+    purchased: string;
+    notEnoughCoins: string;
+    insufficient: string;
+    duration: string;
+    // Rarity
+    common: string;
+    rare: string;
+    epic: string;
+    legendary: string;
+    mythic: string;
+    // Badges
+    new: string;
+    popular: string;
+    limitedTime: string;
+    discount: string;
   };
   
   // Общие
@@ -182,7 +270,44 @@ export const translations: Record<Language, Translations> = {
       algorithmTitle: 'Алгоритм',
       mandatory: 'ОБЯЗАТЕЛЬНОЕ ОБЪЯВЛЕНИЕ',
       penaltySystem: 'ШТРАФНАЯ СИСТЕМА',
-      visualGuides: 'ВИЗУАЛЬНЫЕ ПОДСКАЗКИ'
+      visualGuides: 'ВИЗУАЛЬНЫЕ ПОДСКАЗКИ',
+      // Detailed rule descriptions
+      gameDescription: 'P.I.D.R. - это увлекательная карточная игра на основе классического "Дурака" с уникальными механиками и стадиями.',
+      playersCount: '4-9 человек',
+      goalDescription: 'Избавиться от всех карт первым',
+      cardsDescription: 'Стандартная колода 52 карты',
+      hierarchyDescription: 'От младшей к старшей:',
+      specialRuleDescription: 'Двойка (2) может побить только Туз (A)',
+      suitsDescription: 'В первой стадии масти не важны. Во второй стадии действует правило: "Пики только Пикями!"',
+      stage1Description: 'Простые правила',
+      stage1Moves: 'Только верхней (открытой) картой',
+      stage1Beat: 'Карта должна быть на 1 ранг выше',
+      stage1Suits: 'Не важны в первой стадии',
+      stage1Transition: 'Переход во вторую стадию когда у игрока остается 1 карта',
+      stage2Description: 'Правила "Дурака"',
+      stage2SpadesRule: '"Пики только Пикями!" - пики можно бить только пиками',
+      stage2Moves: 'Можно ходить любыми картами с руки',
+      stage2Beat: 'Бить по правилам "Дурака" + масти важны',
+      stage2Transition: 'Переход в третью стадию когда открываются "пеньки"',
+      stage3Description: 'Открытие "пеньков"',
+      stage3FoolRules: 'Все правила "Дурака" + можно использовать закрытые карты',
+      stage3Moves: 'Ходы любыми доступными картами',
+      stage3Beat: 'Полные правила "Дурака" с мастями',
+      stage3Algorithm: 'Алгоритм определения очередности хода',
+      oneCardDescription: 'Когда у игрока остается одна карта, он должен объявить "ОДНА КАРТА!"',
+      oneCardRule: 'Если не объявил - штраф: берет дополнительную карту из колоды',
+      strategyDescription: 'Основные стратегические принципы игры в P.I.D.R.',
+      strategyTips: 'Следите за картами противников, планируйте переходы между стадиями, используйте особенности каждой стадии',
+      algorithmStage2: 'Алгоритм битья P.I.D.R.:',
+      trump: 'Козырь',
+      important: 'ВАЖНО',
+      noThrowing: 'Никакого подкидывания карт нет!',
+      suitNames: {
+        spades: 'Пики',
+        hearts: 'Червы',
+        diamonds: 'Бубны',
+        clubs: 'Трефы'
+      }
     },
     wallet: {
       balance: 'Баланс',
@@ -203,7 +328,58 @@ export const translations: Record<Language, Translations> = {
       total: 'Итого',
       purchase: 'Купить',
       success: 'Покупка успешна',
-      error: 'Ошибка покупки'
+      error: 'Ошибка покупки',
+      // Categories
+      featured: 'Рекомендуемые',
+      skins: 'Скины',
+      effects: 'Эффекты',
+      boosters: 'Бустеры',
+      bundles: 'Наборы',
+      crypto: 'Криптопакеты',
+      themes: 'Темы',
+      cards: 'Карты',
+      avatars: 'Аватары',
+      // Items
+      darkTheme: 'Темная тема',
+      neonTheme: 'Неоновая тема',
+      retroTheme: 'Ретро тема',
+      goldenCard: 'Золотая карта',
+      rainbowCard: 'Радужная карта',
+      crystalCard: 'Кристальная карта',
+      crownAvatar: 'Аватар с короной',
+      fireAvatar: 'Огненный аватар',
+      starAvatar: 'Звездный аватар',
+      coinBooster: 'Бустер монет',
+      expBooster: 'Бустер опыта',
+      // Descriptions
+      darkThemeDesc: 'Стильная темная тема для комфортной игры',
+      neonThemeDesc: 'Яркая неоновая тема с эффектами',
+      retroThemeDesc: 'Винтажная тема в стиле 80-х',
+      goldenCardDesc: 'Эксклюзивная золотая карта',
+      rainbowCardDesc: 'Переливающаяся всеми цветами карта',
+      crystalCardDesc: 'Прозрачная карта с кристаллическим эффектом',
+      crownAvatarDesc: 'Королевский аватар',
+      fireAvatarDesc: 'Пылающий аватар',
+      starAvatarDesc: 'Сияющий звездный аватар',
+      coinBoosterDesc: 'Удваивает получение монет на 24 часа',
+      expBoosterDesc: 'Увеличивает получение опыта в 1.5 раза на 12 часов',
+      // Actions
+      buy: 'Купить',
+      purchased: 'Куплено',
+      notEnoughCoins: 'Недостаточно монет',
+      insufficient: 'Недостаточно',
+      duration: 'Длительность',
+      // Rarity
+      common: 'Обычный',
+      rare: 'Редкий',
+      epic: 'Эпический',
+      legendary: 'Легендарный',
+      mythic: 'Мифический',
+      // Badges
+      new: 'Новинка',
+      popular: 'Популярное',
+      limitedTime: 'Ограниченное время',
+      discount: 'Скидка'
     },
     common: {
       loading: 'Загрузка...',
@@ -285,7 +461,44 @@ export const translations: Record<Language, Translations> = {
       algorithmTitle: 'Algorithm',
       mandatory: 'MANDATORY DECLARATION',
       penaltySystem: 'PENALTY SYSTEM',
-      visualGuides: 'VISUAL GUIDES'
+      visualGuides: 'VISUAL GUIDES',
+      // Detailed rule descriptions
+      gameDescription: 'P.I.D.R. is an exciting card game based on the classic "Fool" with unique mechanics and stages.',
+      playersCount: '4-9 people',
+      goalDescription: 'Get rid of all cards first',
+      cardsDescription: 'Standard 52-card deck',
+      hierarchyDescription: 'From lowest to highest:',
+      specialRuleDescription: 'Two (2) can only beat Ace (A)',
+      suitsDescription: 'In the first stage, suits don\'t matter. In the second stage, the rule applies: "Spades only with Spades!"',
+      stage1Description: 'Simple rules',
+      stage1Moves: 'Only with the top (open) card',
+      stage1Beat: 'Card must be 1 rank higher',
+      stage1Suits: 'Not important in the first stage',
+      stage1Transition: 'Transition to the second stage when player has 1 card left',
+      stage2Description: '"Fool" rules',
+      stage2SpadesRule: '"Spades only with Spades!" - spades can only be beaten by spades',
+      stage2Moves: 'Can move with any cards from hand',
+      stage2Beat: 'Beat according to "Fool" rules + suits matter',
+      stage2Transition: 'Transition to third stage when "stumps" are revealed',
+      stage3Description: 'Opening "stumps"',
+      stage3FoolRules: 'All "Fool" rules + can use hidden cards',
+      stage3Moves: 'Moves with any available cards',
+      stage3Beat: 'Full "Fool" rules with suits',
+      stage3Algorithm: 'Algorithm for determining turn order',
+      oneCardDescription: 'When a player has one card left, they must declare "ONE CARD!"',
+      oneCardRule: 'If not declared - penalty: takes an additional card from the deck',
+      strategyDescription: 'Basic strategic principles of P.I.D.R. gameplay',
+      strategyTips: 'Watch opponents\' cards, plan transitions between stages, use the features of each stage',
+      algorithmStage2: 'P.I.D.R. beating algorithm:',
+      trump: 'Trump',
+      important: 'IMPORTANT',
+      noThrowing: 'No card throwing allowed!',
+      suitNames: {
+        spades: 'Spades',
+        hearts: 'Hearts',
+        diamonds: 'Diamonds',
+        clubs: 'Clubs'
+      }
     },
     wallet: {
       balance: 'Balance',
@@ -306,7 +519,58 @@ export const translations: Record<Language, Translations> = {
       total: 'Total',
       purchase: 'Purchase',
       success: 'Purchase successful',
-      error: 'Purchase error'
+      error: 'Purchase error',
+      // Categories
+      featured: 'Featured',
+      skins: 'Skins',
+      effects: 'Effects',
+      boosters: 'Boosters',
+      bundles: 'Bundles',
+      crypto: 'Crypto Packages',
+      themes: 'Themes',
+      cards: 'Cards',
+      avatars: 'Avatars',
+      // Items
+      darkTheme: 'Dark Theme',
+      neonTheme: 'Neon Theme',
+      retroTheme: 'Retro Theme',
+      goldenCard: 'Golden Card',
+      rainbowCard: 'Rainbow Card',
+      crystalCard: 'Crystal Card',
+      crownAvatar: 'Crown Avatar',
+      fireAvatar: 'Fire Avatar',
+      starAvatar: 'Star Avatar',
+      coinBooster: 'Coin Booster',
+      expBooster: 'EXP Booster',
+      // Descriptions
+      darkThemeDesc: 'Stylish dark theme for comfortable gameplay',
+      neonThemeDesc: 'Bright neon theme with effects',
+      retroThemeDesc: 'Vintage 80s style theme',
+      goldenCardDesc: 'Exclusive golden card',
+      rainbowCardDesc: 'Card shimmering with all colors',
+      crystalCardDesc: 'Transparent card with crystalline effect',
+      crownAvatarDesc: 'Royal avatar',
+      fireAvatarDesc: 'Flaming avatar',
+      starAvatarDesc: 'Shining star avatar',
+      coinBoosterDesc: 'Doubles coin earnings for 24 hours',
+      expBoosterDesc: 'Increases EXP gain by 1.5x for 12 hours',
+      // Actions
+      buy: 'Buy',
+      purchased: 'Purchased',
+      notEnoughCoins: 'Not enough coins',
+      insufficient: 'Insufficient',
+      duration: 'Duration',
+      // Rarity
+      common: 'Common',
+      rare: 'Rare',
+      epic: 'Epic',
+      legendary: 'Legendary',
+      mythic: 'Mythic',
+      // Badges
+      new: 'New',
+      popular: 'Popular',
+      limitedTime: 'Limited Time',
+      discount: 'Discount'
     },
     common: {
       loading: 'Loading...',

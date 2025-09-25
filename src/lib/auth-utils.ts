@@ -4,7 +4,7 @@
  */
 
 import { NextRequest } from 'next/server';
-import jwt from 'jsonwebtoken';
+import * as jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 

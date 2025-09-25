@@ -85,24 +85,24 @@ export default function RulesPage() {
               <div className="rule-card">
                 <div className="rule-header">
                   <GamepadIcon className="rule-icon" />
-                  <h3 className="rule-title">ОБЗОР ИГРЫ</h3>
+                  <h3 className="rule-title">{t.rules.gameOverview}</h3>
                 </div>
                 <div className="rule-content">
                   <p className="rule-description">
-                    <strong>P.I.D.R.</strong> - это увлекательная карточная игра на основе классического &quot;Дурака&quot; с уникальными механиками и стадиями.
+                    {t.rules.gameDescription}
                   </p>
                   <div className="rule-points">
                     <div className="rule-point">
                       <Users className="point-icon" />
-                      <span><strong>Игроки:</strong> 4-9 человек</span>
+                      <span><strong>{t.rules.players}:</strong> {t.rules.playersCount}</span>
                     </div>
                     <div className="rule-point">
                       <Target className="point-icon" />
-                      <span><strong>Цель:</strong> Избавиться от всех карт первым</span>
+                      <span><strong>{t.rules.goal}:</strong> {t.rules.goalDescription}</span>
                     </div>
                     <div className="rule-point">
                       <Star className="point-icon" />
-                      <span><strong>Карты:</strong> Стандартная колода 52 карты</span>
+                      <span><strong>{t.rules.cards}:</strong> {t.rules.cardsDescription}</span>
                     </div>
                   </div>
                 </div>
@@ -112,10 +112,10 @@ export default function RulesPage() {
               <div className="rule-card">
                 <div className="rule-header">
                   <Crown className="rule-icon" />
-                  <h3 className="rule-title">ИЕРАРХИЯ КАРТ</h3>
+                  <h3 className="rule-title">{t.rules.cardHierarchy}</h3>
                 </div>
                 <div className="rule-content">
-                  <p className="rule-description">От младшей к старшей:</p>
+                  <p className="rule-description">{t.rules.hierarchyDescription}</p>
                   <div className="card-hierarchy">
                     {cardRanks.map((rank, index) => (
                       <span key={rank} className={`hierarchy-card ${rank === 'A' ? 'trump' : ''}`}>
@@ -126,7 +126,7 @@ export default function RulesPage() {
                   <div className="rule-points">
                     <div className="rule-point">
                       <AlertTriangle className="point-icon" />
-                      <span><strong>Особое правило:</strong> Двойка (2) может побить только Туз (A)</span>
+                      <span><strong>{t.rules.specialRule}:</strong> {t.rules.specialRuleDescription}</span>
                     </div>
                   </div>
                 </div>
@@ -136,12 +136,12 @@ export default function RulesPage() {
               <div className="rule-card">
                 <div className="rule-header">
                   <Shield className="rule-icon" />
-                  <h3 className="rule-title">МАСТИ</h3>
+                  <h3 className="rule-title">{t.rules.suits}</h3>
                 </div>
                 <div className="rule-content">
                   <div className="suits-grid">
                     {suits.map((suit, index) => {
-                      const suitNames = ['Пики', 'Червы', 'Бубны', 'Трефы'];
+                      const suitNames = [t.rules.suitNames.spades, t.rules.suitNames.hearts, t.rules.suitNames.diamonds, t.rules.suitNames.clubs];
                       return (
                         <div key={suit} className="suit-card">
                           <span className="suit-symbol">{suit}</span>
@@ -151,7 +151,7 @@ export default function RulesPage() {
                     })}
                   </div>
                   <p className="rule-description">
-                    В первой стадии масти не важны. Во второй стадии действует правило: <strong>&quot;Пики только Пикями!&quot;</strong>
+                    {t.rules.suitsDescription}
                   </p>
                 </div>
               </div>
@@ -164,31 +164,31 @@ export default function RulesPage() {
               <div className="rule-card stage-1">
                 <div className="rule-header">
                   <div className="stage-number">1</div>
-                  <h3 className="rule-title">ПЕРВАЯ СТАДИЯ</h3>
+                  <h3 className="rule-title">{t.rules.stage1}</h3>
                 </div>
                 <div className="rule-content">
-                  <h4 className="stage-subtitle">Простые правила</h4>
+                  <h4 className="stage-subtitle">{t.rules.stage1Description}</h4>
                   <div className="rule-points">
                     <div className="rule-point">
-                      <span><strong>Ходы:</strong> Только верхней (открытой) картой</span>
+                      <span><strong>{t.rules.moves}:</strong> {t.rules.stage1Moves}</span>
                     </div>
                     <div className="rule-point">
-                      <span><strong>Бить карты:</strong> Карта должна быть на 1 ранг выше</span>
+                      <span><strong>{t.rules.beatCards}:</strong> {t.rules.stage1Beat}</span>
                     </div>
                     <div className="rule-point">
-                      <span><strong>Масти:</strong> Не важны в первой стадии</span>
+                      <span><strong>{t.rules.suits}:</strong> {t.rules.stage1Suits}</span>
                     </div>
                     <div className="rule-point">
-                      <span><strong>Переход:</strong> Когда заканчивается колода по середине стола</span>
+                      <span><strong>{t.rules.transition}:</strong> {t.rules.stage1Transition}</span>
                     </div>
                   </div>
                   <div className="algorithm-box">
-                    <h5 className="algorithm-title">Алгоритм хода:</h5>
+                    <h5 className="algorithm-title">{t.rules.algorithm}:</h5>
                     <ol className="algorithm-steps">
-                      <li>Выберите верхнюю карту</li>
-                      <li>Проверьте: ранг &gt; ранг последней карты на столе</li>
-                      <li>Если да - положите карту на карту соперника</li>
-                      <li>Если нет - возьмите карту из колоды</li>
+                      <li>{language === 'ru' ? 'Выберите верхнюю карту' : 'Choose the top card'}</li>
+                      <li>{language === 'ru' ? 'Проверьте: ранг > ранг последней карты на столе' : 'Check: rank > rank of the last card on the table'}</li>
+                      <li>{language === 'ru' ? 'Если да - положите карту на карту соперника' : 'If yes - put the card on the opponent\'s card'}</li>
+                      <li>{language === 'ru' ? 'Если нет - возьмите карту из колоды' : 'If no - take a card from the deck'}</li>
                     </ol>
                   </div>
                 </div>
@@ -198,39 +198,39 @@ export default function RulesPage() {
               <div className="rule-card stage-2">
                 <div className="rule-header">
                   <div className="stage-number">2</div>
-                  <h3 className="rule-title">ВТОРАЯ СТАДИЯ</h3>
+                  <h3 className="rule-title">{t.rules.stage2}</h3>
                 </div>
                 <div className="rule-content">
-                  <h4 className="stage-subtitle">Правила &quot;Дурака&quot;</h4>
+                  <h4 className="stage-subtitle">{t.rules.stage2Description}</h4>
                   <div className="rule-points">
                     <div className="rule-point">
-                      <span><strong>Ходы:</strong> Любой картой из руки</span>
+                      <span><strong>{t.rules.moves}:</strong> {t.rules.stage2Moves}</span>
                     </div>
                     <div className="rule-point">
-                      <span><strong>Масти:</strong> Действует правило мастей</span>
+                      <span><strong>{t.rules.suits}:</strong> {t.rules.stage2Beat}</span>
                     </div>
                     <div className="rule-point">
-                      <span><strong>Козырь:</strong> Последняя масть, кроме пики</span>
+                      <span><strong>{language === 'ru' ? 'Козырь:' : 'Trump:'}:</strong> {language === 'ru' ? 'Последняя масть, кроме пики' : 'Last suit, except spades'}</span>
                     </div>
                     <div className="rule-point">
-                      <span><strong>Пики только Пикями!</strong></span>
+                      <span><strong>{t.rules.stage2SpadesRule}</strong></span>
                     </div>
                     <div className="rule-point" style={{ color: '#ff4444', fontWeight: 'bold' }}>
                       <AlertTriangle className="point-icon" style={{ color: '#ff4444' }} />
-                      <span><strong>⚠️ &quot;ОДНА КАРТА!&quot;:</strong> ОБЯЗАТЕЛЬНО объявлять за 5 сек!</span>
+                      <span><strong>⚠️ "{t.rules.oneCard}":</strong> {t.rules.mandatory} {language === 'ru' ? 'за 5 сек!' : 'within 5 seconds!'}</span>
                     </div>
                   </div>
                   <div className="algorithm-box">
-                    <h5 className="algorithm-title">Алгоритм битья P.I.D.R.:</h5>
+                    <h5 className="algorithm-title">{t.rules.algorithmStage2}</h5>
                     <ol className="algorithm-steps">
-                      <li>Атакующий кладет карту на стол</li>
-                      <li>Защищающийся может:</li>
-                      <li className="sub-step">• Побить картой старше той же масти</li>
-                      <li className="sub-step">• Побить козырем (если атака не козырная)</li>
-                      <li className="sub-step">• Взять нижнюю карту со стола</li>
-                      <li><strong>Если побил:</strong> Ход переходит следующему игроку</li>
-                      <li><strong>Следующий игрок:</strong> Пытается побить верхнюю карту</li>
-                      <li style={{ color: '#ff4444', fontWeight: 'bold' }}><strong>ВАЖНО:</strong> Никакого подкидывания карт нет!</li>
+                      <li>{language === 'ru' ? 'Атакующий кладет карту на стол' : 'Attacker places card on table'}</li>
+                      <li>{language === 'ru' ? 'Защищающийся может:' : 'Defender can:'}</li>
+                      <li className="sub-step">• {language === 'ru' ? 'Побить картой старше той же масти' : 'Beat with higher card of same suit'}</li>
+                      <li className="sub-step">• {language === 'ru' ? 'Побить козырем (если атака не козырная)' : 'Beat with trump (if attack is not trump)'}</li>
+                      <li className="sub-step">• {language === 'ru' ? 'Взять нижнюю карту со стола' : 'Take bottom card from table'}</li>
+                      <li><strong>{language === 'ru' ? 'Если побил:' : 'If beaten:'}</strong> {language === 'ru' ? 'Ход переходит следующему игроку' : 'Turn passes to next player'}</li>
+                      <li><strong>{language === 'ru' ? 'Следующий игрок:' : 'Next player:'}</strong> {language === 'ru' ? 'Пытается побить верхнюю карту' : 'Tries to beat top card'}</li>
+                      <li style={{ color: '#ff4444', fontWeight: 'bold' }}><strong>{t.rules.important}:</strong> {t.rules.noThrowing}</li>
                     </ol>
                   </div>
                 </div>
@@ -240,26 +240,26 @@ export default function RulesPage() {
               <div className="rule-card stage-3">
                 <div className="rule-header">
                   <div className="stage-number">3</div>
-                  <h3 className="rule-title">ТРЕТЬЯ СТАДИЯ</h3>
+                  <h3 className="rule-title">{t.rules.stage3}</h3>
                 </div>
                 <div className="rule-content">
-                  <h4 className="stage-subtitle">Открытие пеньков</h4>
+                  <h4 className="stage-subtitle">{t.rules.stage3Description}</h4>
                   <div className="rule-points">
                     <div className="rule-point">
-                      <span><strong>Условие:</strong> Когда во 2-й стадии нет открытых карт с 1-й стадии</span>
+                      <span><strong>{language === 'ru' ? 'Условие:' : 'Condition:'}:</strong> {language === 'ru' ? 'Когда во 2-й стадии нет открытых карт с 1-й стадии' : 'When there are no open cards from stage 1 in stage 2'}</span>
                     </div>
                     <div className="rule-point">
-                      <span><strong>Особенности:</strong> Игрок открывает пеньки и играет ими</span>
+                      <span><strong>{language === 'ru' ? 'Особенности:' : 'Features:'}:</strong> {language === 'ru' ? 'Игрок открывает пеньки и играет ими' : 'Player reveals stumps and plays with them'}</span>
                     </div>
                     <div className="rule-point" style={{ color: '#ff4444', fontWeight: 'bold' }}>
                       <AlertTriangle className="point-icon" style={{ color: '#ff4444' }} />
-                      <span><strong>⚠️ &quot;ОДНА КАРТА!&quot;:</strong> ОБЯЗАТЕЛЬНО объявлять при 1 пеньке!</span>
+                      <span><strong>⚠️ "{t.rules.oneCard}":</strong> {t.rules.mandatory} {language === 'ru' ? 'при 1 пеньке!' : 'with 1 stump!'}</span>
                     </div>
                     <div className="rule-point">
-                      <span><strong>Победа:</strong> Побеждает тот, кто первый остался без карт</span>
+                      <span><strong>{language === 'ru' ? 'Победа:' : 'Victory:'}:</strong> {language === 'ru' ? 'Побеждает тот, кто первый остался без карт' : 'Winner is the first to run out of cards'}</span>
                     </div>
                     <div className="rule-point">
-                      <span><strong>Поражение:</strong> Проигравший - если у всех закончились карты, а у данного игрока еще есть</span>
+                      <span><strong>{language === 'ru' ? 'Поражение:' : 'Defeat:'}:</strong> {language === 'ru' ? 'Проигравший - если у всех закончились карты, а у данного игрока еще есть' : 'Loser - if everyone else is out of cards but this player still has some'}</span>
                     </div>
                   </div>
                 </div>
@@ -273,24 +273,24 @@ export default function RulesPage() {
               <div className="rule-card" style={{ border: '2px solid #ff4444', background: 'linear-gradient(135deg, rgba(255, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.05) 100%)' }}>
                 <div className="rule-header">
                   <AlertTriangle className="rule-icon" style={{ color: '#ff4444' }} />
-                  <h3 className="rule-title" style={{ color: '#ff4444' }}>СИСТЕМА &quot;ОДНА КАРТА!&quot; И ШТРАФОВ</h3>
+                  <h3 className="rule-title" style={{ color: '#ff4444' }}>{language === 'ru' ? 'СИСТЕМА "ОДНА КАРТА!" И ШТРАФОВ' : 'ONE CARD! SYSTEM AND PENALTIES'}</h3>
                 </div>
                 <div className="rule-content">
                   <p className="rule-description" style={{ color: '#ff6666', fontSize: '16px', fontWeight: 'bold' }}>
-                    ⚠️ Ключевая механика P.I.D.R.! Когда у игрока остается 1 открытая карта - он ОБЯЗАН объявить это!
+                    ⚠️ {t.rules.oneCardDescription}
                   </p>
                   <div className="rule-points">
                     <div className="rule-point">
                       <Clock className="point-icon" style={{ color: '#ff4444' }} />
-                      <span><strong>Автотаймер:</strong> Система запускает 5-секундный отсчет</span>
+                      <span><strong>{language === 'ru' ? 'Автотаймер:' : 'Auto-timer:'}:</strong> {language === 'ru' ? 'Система запускает 5-секундный отсчет' : 'System starts 5-second countdown'}</span>
                     </div>
                     <div className="rule-point">
                       <Search className="point-icon" style={{ color: '#6366f1' }} />
-                      <span><strong>Поймать:</strong> Другие могут проверить забывчивого игрока</span>
+                      <span><strong>{language === 'ru' ? 'Поймать:' : 'Catch:'}:</strong> {language === 'ru' ? 'Другие могут проверить забывчивого игрока' : 'Others can check forgetful player'}</span>
                     </div>
                     <div className="rule-point">
                       <Coins className="point-icon" style={{ color: '#dc2626' }} />
-                      <span><strong>Штраф:</strong> ВСЕ скидывают забывчивому плохие карты!</span>
+                      <span><strong>{language === 'ru' ? 'Штраф:' : 'Penalty:'}:</strong> {language === 'ru' ? 'ВСЕ скидывают забывчивому плохие карты!' : 'ALL players throw bad cards to the forgetful one!'}</span>
                     </div>
                   </div>
                 </div>
@@ -300,7 +300,7 @@ export default function RulesPage() {
               <div className="rule-card">
                 <div className="rule-header">
                   <Clock className="rule-icon" />
-                  <h3 className="rule-title">ОБЯЗАТЕЛЬНОЕ ОБЪЯВЛЕНИЕ</h3>
+                  <h3 className="rule-title">{t.rules.mandatory}</h3>
                 </div>
                 <div className="rule-content">
                   <div className="algorithm-box">
@@ -326,7 +326,7 @@ export default function RulesPage() {
               <div className="rule-card">
                 <div className="rule-header">
                   <Coins className="rule-icon" />
-                  <h3 className="rule-title">ШТРАФНАЯ СИСТЕМА</h3>
+                  <h3 className="rule-title">{t.rules.penaltySystem}</h3>
                 </div>
                 <div className="rule-content">
                   <div className="algorithm-box">
@@ -381,7 +381,7 @@ export default function RulesPage() {
               <div className="rule-card algorithm">
                 <div className="rule-header">
                   <Brain className="rule-icon" />
-                  <h3 className="rule-title">АЛГОРИТМЫ ХОДОВ</h3>
+                  <h3 className="rule-title">{language === 'ru' ? 'АЛГОРИТМЫ ХОДОВ' : 'MOVE ALGORITHMS'}</h3>
                 </div>
                 <div className="rule-content">
                   <div className="algorithm-box">

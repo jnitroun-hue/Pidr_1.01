@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useLanguage } from '../components/LanguageSwitcher';
+import { useTranslations } from '../lib/i18n/translations';
 
 interface ShopItem {
   id: string;
@@ -11,25 +13,28 @@ interface ShopItem {
 }
 
 const Shop = () => {
+  const { language } = useLanguage();
+  const t = useTranslations(language);
+  
   const [coins, setCoins] = useState<number>(100);
   const [purchasedItems, setPurchasedItems] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<'themes' | 'cards' | 'avatars' | 'boosters'>('themes');
 
   const shopItems: Record<'themes' | 'cards' | 'avatars' | 'boosters', ShopItem[]> = {
     themes: [
-      { id: 'dark-theme', name: 'Темная тема', description: 'Стильная темная тема для комфортной игры', price: 50, icon: '🌙', type: 'theme' },
-      { id: 'neon-theme', name: 'Неоновая тема', description: 'Яркая неоновая тема с эффектами', price: 75, icon: '🌈', type: 'theme' },
-      { id: 'retro-theme', name: 'Ретро тема', description: 'Винтажная тема в стиле 80-х', price: 60, icon: '📼', type: 'theme' }
+      { id: 'dark-theme', name: t.shop.darkTheme, description: t.shop.darkThemeDesc, price: 50, icon: '🌙', type: 'theme' },
+      { id: 'neon-theme', name: t.shop.neonTheme, description: t.shop.neonThemeDesc, price: 75, icon: '🌈', type: 'theme' },
+      { id: 'retro-theme', name: t.shop.retroTheme, description: t.shop.retroThemeDesc, price: 60, icon: '📼', type: 'theme' }
     ],
     cards: [
-      { id: 'golden-card', name: 'Золотая карта', description: 'Эксклюзивная золотая карта', price: 100, icon: '🏆', type: 'card' },
-      { id: 'rainbow-card', name: 'Радужная карта', description: 'Переливающаяся всеми цветами карта', price: 150, icon: '🌟', type: 'card' },
-      { id: 'crystal-card', name: 'Кристальная карта', description: 'Прозрачная карта с кристаллическим эффектом', price: 120, icon: '💎', type: 'card' }
+      { id: 'golden-card', name: t.shop.goldenCard, description: t.shop.goldenCardDesc, price: 100, icon: '🏆', type: 'card' },
+      { id: 'rainbow-card', name: t.shop.rainbowCard, description: t.shop.rainbowCardDesc, price: 150, icon: '🌟', type: 'card' },
+      { id: 'crystal-card', name: t.shop.crystalCard, description: t.shop.crystalCardDesc, price: 120, icon: '💎', type: 'card' }
     ],
     avatars: [
-      { id: 'crown-avatar', name: 'Аватар с короной', description: 'Королевский аватар', price: 80, icon: '👑', type: 'avatar' },
-      { id: 'fire-avatar', name: 'Огненный аватар', description: 'Пылающий аватар', price: 90, icon: '🔥', type: 'avatar' },
-      { id: 'star-avatar', name: 'Звездный аватар', description: 'Сияющий звездный аватар', price: 70, icon: '⭐', type: 'avatar' }
+      { id: 'crown-avatar', name: t.shop.crownAvatar, description: t.shop.crownAvatarDesc, price: 80, icon: '👑', type: 'avatar' },
+      { id: 'fire-avatar', name: t.shop.fireAvatar, description: t.shop.fireAvatarDesc, price: 90, icon: '🔥', type: 'avatar' },
+      { id: 'star-avatar', name: t.shop.starAvatar, description: t.shop.starAvatarDesc, price: 70, icon: '⭐', type: 'avatar' }
     ],
     boosters: [
       { id: 'coin-booster', name: 'Удвоитель монет', description: 'Удваивает получаемые монеты на 1 час', price: 30, icon: '💰', type: 'booster', duration: '1 час' },
@@ -39,10 +44,10 @@ const Shop = () => {
   };
 
   const categories = [
-    { id: 'themes', name: 'Темы', icon: '🎨' },
-    { id: 'cards', name: 'Карты', icon: '🃏' },
-    { id: 'avatars', name: 'Аватары', icon: '👤' },
-    { id: 'boosters', name: 'Бустеры', icon: '🚀' }
+    { id: 'themes', name: t.shop.themes, icon: '🎨' },
+    { id: 'cards', name: t.shop.cards, icon: '🃏' },
+    { id: 'avatars', name: t.shop.avatars, icon: '👤' },
+    { id: 'boosters', name: t.shop.boosters, icon: '🚀' }
   ];
 
   useEffect(() => {
@@ -67,7 +72,7 @@ const Shop = () => {
       // Показать уведомление об успешной покупке
       showNotification(`${item.name} приобретен!`, 'success');
     } else if (coins < item.price) {
-      showNotification('Недостаточно монет!', 'error');
+      showNotification(t.shop.notEnoughCoins, 'error');
     } else {
       showNotification('Предмет уже приобретен!', 'info');
     }
@@ -129,7 +134,7 @@ const Shop = () => {
               <h3 className="item-name">{item.name}</h3>
               <p className="item-description">{item.description}</p>
               {item.duration && (
-                <span className="item-duration">Длительность: {item.duration}</span>
+                <span className="item-duration">{t.shop.duration}: {item.duration}</span>
               )}
               <div className="item-footer">
                 <span className="item-price">
@@ -144,8 +149,8 @@ const Shop = () => {
                   onClick={() => handlePurchase(item)}
                   disabled={purchasedItems.includes(item.id) || coins < item.price}
                 >
-                  {purchasedItems.includes(item.id) ? 'Куплено' : 
-                   coins < item.price ? 'Недостаточно монет' : 'Купить'}
+                  {purchasedItems.includes(item.id) ? t.shop.purchased : 
+                   coins < item.price ? t.shop.notEnoughCoins : t.shop.buy}
                 </button>
               </div>
             </div>
