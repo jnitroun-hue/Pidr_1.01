@@ -257,24 +257,21 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    // Устанавливаем HTTP-only cookie с правильными настройками для Vercel
-    response.cookies.set('auth_token', token, {
+    // Устанавливаем HTTP-only cookie с правильными настройками для Telegram WebApp
+    const cookieSettings = {
       httpOnly: true,
-      secure: true, // Всегда true для HTTPS
-      sameSite: 'none', // Для Telegram WebApp нужно 'none'
+      secure: true, // Всегда true для HTTPS (обязательно для sameSite: 'none')
+      sameSite: 'none' as const, // Для Telegram WebApp нужно 'none'
       path: '/',
       maxAge: 30 * 24 * 60 * 60, // 30 дней
-      domain: process.env.NODE_ENV === 'production' ? undefined : undefined // Автоопределение домена
-    });
+      domain: undefined // Автоопределение домена
+    };
+    
+    response.cookies.set('auth_token', token, cookieSettings);
 
     console.log('✅ JWT токен создан и установлен в cookie');
     console.log('🔑 Токен (первые 50 символов):', token.substring(0, 50) + '...');
-    console.log('🍪 Cookie настройки:', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 30 * 24 * 60 * 60
-    });
+    console.log('🍪 Cookie настройки:', cookieSettings);
 
     return response;
 

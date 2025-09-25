@@ -284,26 +284,15 @@ export default function ProfilePage() {
     console.log('🎁 Получение бонуса через API:', bonusId);
     
     try {
-      // Получаем токен авторизации
-      const token = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('auth_token='))
-        ?.split('=')[1];
-        
-      if (!token) {
-        alert('❌ Ошибка авторизации. Перезапустите приложение.');
-        return;
-      }
-      
       console.log('🔑 Отправляем запрос на получение бонуса...');
       
-      // Отправляем запрос на API
+      // Отправляем запрос на API - токен передается автоматически через HttpOnly cookies
       const response = await fetch('/api/bonus', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include', // Включаем cookies
+        credentials: 'include', // Включаем cookies (КРИТИЧНО для HttpOnly cookies)
         body: JSON.stringify({
           bonusType: bonusId
         })

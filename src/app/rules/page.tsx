@@ -3,15 +3,20 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Book, Users, Star, Crown, AlertTriangle, ListOrdered, Target, Shield, Brain, GamepadIcon, Clock, Search, Coins, Eye } from 'lucide-react';
 import BottomNav from '../../components/BottomNav';
+import { useLanguage } from '../../components/LanguageSwitcher';
+import { useTranslations } from '../../lib/i18n/translations';
+import LanguageSwitcher from '../../components/LanguageSwitcher';
 
 export default function RulesPage() {
   const [activeSection, setActiveSection] = useState('basics');
+  const { language, changeLanguage } = useLanguage();
+  const t = useTranslations(language);
 
   const sections = [
-    { id: 'basics', name: 'ОСНОВЫ', icon: Book },
-    { id: 'stages', name: 'СТАДИИ', icon: ListOrdered },
-    { id: 'onecard', name: 'ОДНА КАРТА!', icon: AlertTriangle },
-    { id: 'strategy', name: 'СТРАТЕГИЯ', icon: Brain },
+    { id: 'basics', name: t.rules.basics, icon: Book },
+    { id: 'stages', name: t.rules.stages, icon: ListOrdered },
+    { id: 'onecard', name: t.rules.oneCard, icon: AlertTriangle },
+    { id: 'strategy', name: t.rules.strategy, icon: Brain },
   ];
 
   const cardRanks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
@@ -24,10 +29,14 @@ export default function RulesPage() {
         <div className="menu-header">
           <button onClick={() => window.history.back()} className="px-3 py-1 rounded-lg border border-red-400 text-red-200 font-semibold text-base hover:bg-red-400/10 transition-all">
             <ArrowLeft className="inline w-4 h-4 mr-1" />
-            Назад
+            {t.common.back}
           </button>
-          <span className="menu-title">ПРАВИЛА ИГРЫ</span>
-          <div className="w-6"></div>
+          <span className="menu-title">{t.rules.title}</span>
+          <LanguageSwitcher 
+            currentLanguage={language}
+            onLanguageChange={changeLanguage}
+            className="ml-2"
+          />
         </div>
         {/* Section Navigation */}
         <motion.div 

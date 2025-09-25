@@ -13,6 +13,8 @@ import { useGameStore } from '@/store/gameStore';
 import { AIPlayer, AIDifficulty } from '@/lib/game/ai-player';
 import MultiplayerGame from '@/components/MultiplayerGame';
 import WinnerScreen from '@/components/WinnerScreen';
+import { useLanguage } from '../../components/LanguageSwitcher';
+import { useTranslations } from '../../lib/i18n/translations';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useTelegram } from '@/hooks/useTelegram';
 
@@ -71,23 +73,46 @@ const getTableDimensions = () => {
   };
 };
 
-// ФИКСИРОВАННЫЕ позиции игроков (настроено пользователем через DevTools)
+// НОВАЯ МАТЕМАТИЧЕСКИ ПРАВИЛЬНАЯ система позиционирования игроков
 const getCirclePosition = (index: number, totalPlayers: number): { top: string; left: string } => {
-  // Ваши точные позиции ПО ЧАСОВОЙ СТРЕЛКЕ (снизу слева → вправо → вверх → влево)
-  const fixedPositions = [
-    { left: '-52.4997%', top: '119.7888%' },    // Игрок 1 (снизу слева) - НАЧАЛО
-    { left: '10.9545%', top: '125.0384%' },     // Игрок 2 (снизу центр)
-    { left: '75.0455%', top: '121.0384%' },     // Игрок 3 (снизу справа)
-    { left: '110.5003%', top: '49.7888%' },     // Игрок 4 (справа центр)
-    { left: '114.6837%', top: '-39.1274%' },    // Игрок 5 (сверху справа)
-    { left: '65.6382%', top: '-89.6818%' },     // Игрок 6 (сверху центр-права)
-    { left: '5%', top: '-79.2089%' },           // Игрок 7 (сверху центр-лева)
-    { left: '-57.3618%', top: '-49.6818%' },    // Игрок 8 (сверху слева)
-    { left: '-68%', top: '35%' },               // Игрок 9 (слева центр) - ВАША КОРРЕКТИРОВКА
-  ];
+  // Пользователь всегда снизу по центру (позиция 0)
+  if (index === 0) {
+    return { left: '50%', top: '85%' };
+  }
   
-  // Возвращаем вашу точную позицию или дефолтную для дополнительных игроков
-  return fixedPositions[index] || { left: '50%', top: '50%' };
+  // Для остальных игроков используем математическое распределение по эллипсу
+  const actualIndex = index - 1; // Исключаем пользователя
+  const remainingPlayers = totalPlayers - 1;
+  
+  // Параметры эллипса (адаптированы под овальный стол)
+  const centerX = 50; // Центр по X (%)
+  const centerY = 45; // Центр по Y (%) - немного выше для лучшего баланса
+  const radiusX = 45; // Радиус по X (%)
+  const radiusY = 35; // Радиус по Y (%)
+  
+  // Углы распределяются равномерно, начиная с верха и идя по часовой стрелке
+  // Оставляем место внизу для пользователя
+  const startAngle = -Math.PI / 2; // Начинаем сверху
+  const endAngle = Math.PI / 2; // Заканчиваем внизу справа
+  const angleRange = Math.PI; // Полукруг сверху
+  
+  let angle;
+  if (remainingPlayers === 1) {
+    // Если только 1 противник - ставим сверху
+    angle = -Math.PI / 2;
+  } else {
+    // Равномерно распределяем по полукругу сверху
+    angle = startAngle + (actualIndex * angleRange) / Math.max(1, remainingPlayers - 1);
+  }
+  
+  // Вычисляем позицию на эллипсе
+  const x = centerX + radiusX * Math.cos(angle);
+  const y = centerY + radiusY * Math.sin(angle);
+  
+  return {
+    left: `${Math.max(5, Math.min(95, x))}%`, // Ограничиваем в пределах экрана
+    top: `${Math.max(5, Math.min(80, y))}%`   // Не заходим в зону пользователя
+  };
 };
 
 function getFirstPlayerIdx(players: Player[]): number {
@@ -115,6 +140,8 @@ function GamePageContentComponent({
   onGameEnd 
 }: GamePageContentProps) {
   const { user } = useTelegram();
+  const { language } = useLanguage();
+  const t = useTranslations(language);
   
   const { 
     isGameActive, gameStage, turnPhase, stage2TurnPhase,
@@ -964,7 +991,7 @@ function GamePageContentComponent({
                       position: 'absolute',
                       left: position.left,
                       top: position.top,
-                      transform: `translate(-50%, -50%) scale(0.85)`, // Фиксированный масштаб как в DevTools
+                      transform: `translate(-50%, -50%) scale(0.9)`, // Увеличен для лучшей видимости
                     }}
                   >
                     {/* СООБЩЕНИЕ НАД ИГРОКОМ */}
@@ -1085,10 +1112,11 @@ function GamePageContentComponent({
                             transition={{ duration: 0.3 }}
                           >
                             {p.penki.map((penkiCard, pi) => {
-                              // Определяем направление для пеньков тоже
+                              // УЛУЧШЕННОЕ направление для пеньков
                               const playerPosition = getCirclePosition(playerIndex, players.length);
                               const isLeftSide = parseFloat(playerPosition.left) < 50;
-                              const penkiOffset = isLeftSide ? pi * 10 : -pi * 10;
+                              // Увеличиваем расстояние между пеньками
+                              const penkiOffset = isLeftSide ? pi * 15 : -pi * 15;
                               
                               return (
                               <motion.div
@@ -1110,8 +1138,8 @@ function GamePageContentComponent({
                                 <Image
                                   src="/img/cards/back.png"
                                   alt="penki"
-                                  width={screenInfo.isSmallMobile ? 33 : screenInfo.isMobile ? 42 : 52} /* Увеличено в 1.5 раза */
-                                  height={screenInfo.isSmallMobile ? 48 : screenInfo.isMobile ? 60 : 75} /* Увеличено в 1.5 раза */
+                                  width={screenInfo.isSmallMobile ? 28 : screenInfo.isMobile ? 35 : 45} /* Оптимизировано для лучшего размещения */
+                                  height={screenInfo.isSmallMobile ? 40 : screenInfo.isMobile ? 50 : 65} /* Оптимизировано для лучшего размещения */
                                   style={{ 
                                     borderRadius: '8px',
                                     opacity: 0.8
@@ -1135,10 +1163,11 @@ function GamePageContentComponent({
                             if (p.id === currentPlayerId && showHintsForUser) {
                               console.log(`🎯 [GamePageContent] Карта ${ci} игрока ${p.name}: isTopCard = ${isTopCard}, visibleCards.length = ${visibleCards.length}`);
                             }
-                            // Определяем направление стекинга карт в зависимости от позиции игрока
+                            // УЛУЧШЕННОЕ направление стекинга карт в зависимости от позиции игрока
                             const playerPosition = getCirclePosition(playerIndex, players.length);
                             const isLeftSide = parseFloat(playerPosition.left) < 50; // Левая половина экрана
-                            const spacing = screenInfo.isSmallMobile ? 12 : screenInfo.isMobile ? 13 : 15;
+                            // Увеличиваем расстояние между картами для лучшей видимости
+                            const spacing = screenInfo.isSmallMobile ? 18 : screenInfo.isMobile ? 22 : 28;
                             const cardOffset = isLeftSide ? ci * spacing : -ci * spacing;
                             
                             return (
@@ -1184,9 +1213,9 @@ function GamePageContentComponent({
                                   style={{ 
                                     cursor: (isClickableTarget || isClickableOwnCard) && isTopCard ? 'pointer' : 'default',
                                     transform: (isClickableTarget || isClickableOwnCard) && isTopCard ? 'scale(1.02)' : 'scale(1)',
-                                    // Во 2-й стадии карты ботов имеют размер закрытых карт
-                                    width: (gameStage === 2 && p.isBot) ? 60 : (card.open ? 82 : 60), // Увеличено в 1.5 раза
-                                    height: (gameStage === 2 && p.isBot) ? 87 : (card.open ? 120 : 87) // Увеличено в 1.5 раза
+                                    // ОПТИМИЗИРОВАННЫЕ размеры карт для лучшего позиционирования
+                                    width: (gameStage === 2 && p.isBot) ? 50 : (card.open ? 65 : 50), // Уменьшено для лучшего размещения
+                                    height: (gameStage === 2 && p.isBot) ? 72 : (card.open ? 94 : 72) // Уменьшено для лучшего размещения
                                   }}
                                   onClick={() => {
                                     if (showHintsForUser) {
@@ -1228,20 +1257,20 @@ function GamePageContentComponent({
                                       (card.open ? 'card' : 'back')
                                     }
                                     width={
-                                      // Во 2-й стадии карты ботов всегда как закрытые по размеру
+                                      // ОПТИМИЗИРОВАННЫЕ размеры для лучшего позиционирования
                                       (gameStage === 2 && p.isBot) ?
-                                        (screenInfo.isSmallMobile ? 37 : screenInfo.isMobile ? 45 : 60) :
+                                        (screenInfo.isSmallMobile ? 32 : screenInfo.isMobile ? 40 : 50) :
                                       card.open ? 
-                                        (screenInfo.isSmallMobile ? 52 : screenInfo.isMobile ? 60 : 82) : // Увеличено в 1.5 раза
-                                        (screenInfo.isSmallMobile ? 37 : screenInfo.isMobile ? 45 : 60) // Увеличено в 1.5 раза
+                                        (screenInfo.isSmallMobile ? 42 : screenInfo.isMobile ? 52 : 65) : // Уменьшено для лучшего размещения
+                                        (screenInfo.isSmallMobile ? 32 : screenInfo.isMobile ? 40 : 50) // Уменьшено для лучшего размещения
                                     }
                                     height={
-                                      // Во 2-й стадии карты ботов всегда как закрытые по размеру
+                                      // ОПТИМИЗИРОВАННЫЕ размеры для лучшего позиционирования
                                       (gameStage === 2 && p.isBot) ?
-                                        (screenInfo.isSmallMobile ? 52 : screenInfo.isMobile ? 63 : 87) :
+                                        (screenInfo.isSmallMobile ? 46 : screenInfo.isMobile ? 58 : 72) :
                                       card.open ? 
-                                        (screenInfo.isSmallMobile ? 75 : screenInfo.isMobile ? 87 : 120) : // Увеличено в 1.5 раза
-                                        (screenInfo.isSmallMobile ? 52 : screenInfo.isMobile ? 63 : 87) // Увеличено в 1.5 раза
+                                        (screenInfo.isSmallMobile ? 60 : screenInfo.isMobile ? 75 : 94) : // Уменьшено для лучшего размещения
+                                        (screenInfo.isSmallMobile ? 46 : screenInfo.isMobile ? 58 : 72) // Уменьшено для лучшего размещения
                                     }
                                     draggable={false}
                                     style={{
@@ -1507,17 +1536,17 @@ function GamePageContentComponent({
                   <div className={styles.coinsIcon}>🪙</div>
                   <div className={styles.coinsInfo}>
                     <div className={styles.coinsAmount}>{gameCoins.toLocaleString()}</div>
-                    <div className={styles.coinsLabel}>Монет</div>
+                    <div className={styles.coinsLabel}>{t.game.coins}</div>
                   </div>
                 </div>
                 
                 <div className={styles.menuDivider}></div>
                 
                 <button onClick={() => window.history.back()} className={styles.menuItem}>
-                  ← Назад
+                  ← {t.game.back}
                 </button>
                 <button onClick={() => window.location.reload()} className={styles.menuItem}>
-                  🔄 Обновить
+                  🔄 {t.game.refresh}
                 </button>
                 <button onClick={() => {
                   endGame();
@@ -1525,7 +1554,7 @@ function GamePageContentComponent({
                     onGameEnd();
                   }
                 }} className={styles.menuItem}>
-                  🚫 Закончить игру
+                  🚫 {t.game.endGame}
                 </button>
               </div>
             </div>

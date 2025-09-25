@@ -450,55 +450,49 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
     try {
       setLoading(true);
       
-      const userData = localStorage.getItem('user');
-      if (!userData) {
-        alert('Пользователь не найден');
-        return;
-      }
+      console.log('🎁 Получение ежедневного бонуса через новый API...');
       
-      const currentUser = JSON.parse(userData);
-      
-      // Проверяем, получал ли пользователь бонус сегодня
-      const lastBonus = localStorage.getItem('lastDailyBonus');
-      const today = new Date().toDateString();
-      
-      if (lastBonus === today) {
-        alert('Ежедневный бонус уже получен сегодня! Приходите завтра!');
-        return;
-      }
-      
-      // Создаем транзакцию бонуса
-      const response = await fetch('/api/pidr-db', {
+      // Используем новый API для получения бонусов
+      const response = await fetch('/api/bonus', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json' 
+        },
+        credentials: 'include', // Включаем cookies для авторизации
         body: JSON.stringify({
-          action: 'create_transaction',
-          userId: currentUser.telegramId || currentUser.id,
-          amount: 100,
-          transactionType: 'bonus',
-          description: 'Ежедневный бонус'
+          bonusType: 'daily'
         })
       });
 
       const result = await response.json();
       
+      if (!response.ok) {
+        // Обработка ошибок (например, таймер не истек)
+        throw new Error(result.message || 'Ошибка получения бонуса');
+      }
+      
       if (result.success) {
-        const newBalance = result.newBalance;
+        const newBalance = result.data.newBalance;
+        const bonusAmount = result.data.bonusAmount;
+        
         setBalance(newBalance);
         
         // Обновляем данные в localStorage
-        currentUser.coins = newBalance;
-        localStorage.setItem('user', JSON.stringify(currentUser));
-        localStorage.setItem('lastDailyBonus', today);
+        const userData = localStorage.getItem('user');
+        if (userData) {
+          const currentUser = JSON.parse(userData);
+          currentUser.coins = newBalance;
+          localStorage.setItem('user', JSON.stringify(currentUser));
+        }
         
         onBalanceUpdate?.(newBalance);
         
         // Перезагружаем транзакции
         loadTransactions();
         
-        alert('🎉 Получен ежедневный бонус +100 монет!');
+        alert(`🎉 ${result.message || `Получен ежедневный бонус +${bonusAmount} монет!`}`);
       } else {
-        throw new Error(result.error || 'Ошибка получения бонуса');
+        throw new Error(result.message || 'Ошибка получения бонуса');
       }
       
     } catch (error) {

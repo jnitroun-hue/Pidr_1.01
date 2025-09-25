@@ -8,9 +8,9 @@ import { useWalletStore } from '../store/walletStore';
 import CryptoExchange from './CryptoExchange';
 
 const walletIcons = {
-  'TON': { icon: FaBitcoin, color: '#0088ff' },
-  'SOL': { icon: SiSolana, color: '#9945ff' },
-  'ETH': { icon: FaEthereum, color: '#627eea' },
+  'TON': { icon: FaBitcoin, color: '#0088ff', symbol: 'TON', name: 'TON' },
+  'SOL': { icon: SiSolana, color: '#9945ff', symbol: 'SOL', name: 'SOL' },
+  'ETH': { icon: FaEthereum, color: '#627eea', symbol: 'ETH', name: 'ETH' },
 };
 
 interface WalletManagerProps {
@@ -32,6 +32,54 @@ export default function WalletManager({ showExchange = true, onCoinsAdded }: Wal
   } = useWalletStore();
 
   const [activeTab, setActiveTab] = useState(showExchange ? 'exchange' : 'wallets');
+  const [cryptoPrices, setCryptoPrices] = useState<Record<string, number>>({
+    TON: 0,
+    SOL: 0,
+    ETH: 0
+  });
+
+  // Функция загрузки курсов валют
+  const loadCryptoPrices = async () => {
+    try {
+      console.log('💰 Загрузка курсов криптовалют...');
+      
+      // Используем публичный API CoinGecko для получения курсов
+      const response = await fetch(
+        'https://api.coingecko.com/api/v3/simple/price?ids=the-open-network,solana,ethereum&vs_currencies=usd',
+        { 
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json'
+          }
+        }
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        setCryptoPrices({
+          TON: data['the-open-network']?.usd || 0,
+          SOL: data['solana']?.usd || 0,
+          ETH: data['ethereum']?.usd || 0
+        });
+        console.log('✅ Курсы валют загружены:', data);
+      } else {
+        console.warn('⚠️ Не удалось загрузить курсы валют, используем заглушки');
+        setCryptoPrices({
+          TON: 5.2,
+          SOL: 140,
+          ETH: 2400
+        });
+      }
+    } catch (error) {
+      console.warn('⚠️ Ошибка загрузки курсов валют:', error);
+      // Используем примерные курсы как fallback
+      setCryptoPrices({
+        TON: 5.2,
+        SOL: 140,
+        ETH: 2400
+      });
+    }
+  };
 
   useEffect(() => {
     // Загружаем транзакции пользователя
@@ -41,32 +89,46 @@ export default function WalletManager({ showExchange = true, onCoinsAdded }: Wal
     if (user.id) {
       loadUserTransactions(user.id);
     }
+    
+    // Загружаем курсы валют
+    loadCryptoPrices();
+    
+    // Обновляем курсы каждые 5 минут
+    const priceInterval = setInterval(loadCryptoPrices, 5 * 60 * 1000);
+    
+    return () => clearInterval(priceInterval);
   }, [loadUserTransactions]);
 
   const wallets = [
     {
       name: 'TON',
+      symbol: 'TON',
       address: tonAddress,
       balance: tonBalance,
       isConnected: isTonConnected,
       connect: connectTonWallet,
       disconnect: disconnectTonWallet,
+      price: cryptoPrices.TON,
     },
     {
-      name: 'Solana',
+      name: 'SOL',
+      symbol: 'SOL', 
       address: solanaAddress,
       balance: solanaBalance,
       isConnected: isSolanaConnected,
       connect: connectSolanaWallet,
       disconnect: disconnectSolanaWallet,
+      price: cryptoPrices.SOL,
     },
     {
-      name: 'Ethereum',
+      name: 'ETH',
+      symbol: 'ETH',
       address: ethereumAddress,
       balance: ethereumBalance,
       isConnected: isEthereumConnected,
       connect: connectEthereumWallet,
       disconnect: disconnectEthereumWallet,
+      price: cryptoPrices.ETH,
     },
   ];
 
@@ -187,22 +249,45 @@ export default function WalletManager({ showExchange = true, onCoinsAdded }: Wal
                     </Box>
                     
                     <VStack align="start" gap={1}>
-                      <Text fontSize="lg" fontWeight="600" color="#e2e8f0">
-                        {wallet.name}
-                      </Text>
+                      <HStack>
+                        <Text fontSize="lg" fontWeight="600" color="#e2e8f0">
+                          {wallet.symbol}
+                        </Text>
+                        {wallet.price > 0 && (
+                          <Text fontSize="sm" color="#94a3b8" fontWeight="500">
+                            ${wallet.price.toFixed(2)}
+                          </Text>
+                        )}
+                      </HStack>
                       {wallet.isConnected ? (
                         <VStack align="start" gap={0}>
                           <Text fontSize="sm" color="#22c55e" fontWeight="600">
                             ✅ Подключен
                           </Text>
                           {wallet.address && (
-                            <Text fontSize="xs" color="#94a3b8" fontFamily="mono">
+                            <Text 
+                              fontSize="xs" 
+                              color="#e2e8f0" 
+                              fontFamily="mono"
+                              bg="rgba(30, 41, 59, 0.6)"
+                              px={2}
+                              py={1}
+                              borderRadius="6px"
+                              border="1px solid rgba(100, 116, 139, 0.3)"
+                            >
                               {wallet.address.slice(0, 8)}...{wallet.address.slice(-6)}
                             </Text>
                           )}
-                          <Text fontSize="sm" color="#ffd700" fontWeight="600">
-                            {wallet.balance.toFixed(4)} {wallet.name === 'Solana' ? 'SOL' : wallet.name}
-                          </Text>
+                          <HStack>
+                            <Text fontSize="sm" color="#ffd700" fontWeight="600">
+                              {wallet.balance.toFixed(4)} {wallet.symbol}
+                            </Text>
+                            {wallet.price > 0 && wallet.balance > 0 && (
+                              <Text fontSize="xs" color="#94a3b8">
+                                ≈ ${(wallet.balance * wallet.price).toFixed(2)}
+                              </Text>
+                            )}
+                          </HStack>
                         </VStack>
                       ) : (
                         <Text fontSize="sm" color="#94a3b8">

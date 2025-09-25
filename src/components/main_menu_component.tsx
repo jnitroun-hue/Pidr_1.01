@@ -91,7 +91,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
         
         {/* Быстрые действия */}
         <div className="menu-actions-title">
-          {language === 'ru' ? 'БЫСТРЫЕ ДЕЙСТВИЯ' : 'QUICK ACTIONS'}
+          {t.mainMenu.quickActions}
         </div>
         <div className="menu-actions-grid">
           <button 
@@ -133,7 +133,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
           >
             <Users className="menu-action-icon" />
             <span className="menu-action-label">
-              {language === 'ru' ? 'ОНЛАЙН' : 'ONLINE'}
+              {t.mainMenu.online}
             </span>
           </button>
           <button 
@@ -150,7 +150,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
             className="menu-action-card"
           >
             <Store className="menu-action-icon" />
-            <span className="menu-action-label">МАГАЗИН</span>
+            <span className="menu-action-label">{t.mainMenu.shop}</span>
           </button>
           <button 
             onClick={() => {
@@ -166,7 +166,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
             className="menu-action-card"
           >
             <User className="menu-action-icon" />
-            <span className="menu-action-label">ПРОФИЛЬ</span>
+            <span className="menu-action-label">{t.mainMenu.profile}</span>
           </button>
         </div>
 
@@ -186,7 +186,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
             className="rules-button"
           >
             <Book className="rules-icon" />
-            <span className="rules-label">ПРАВИЛА ИГРЫ</span>
+            <span className="rules-label">{t.mainMenu.rules}</span>
           </button>
         </div>
 

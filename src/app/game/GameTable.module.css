@@ -207,15 +207,16 @@
 
 /* Удалена анимация tableGlow - слишком отвлекает */
 
-/* Правильное позиционирование игроков */
+/* УЛУЧШЕННОЕ позиционирование игроков для 4-9 игроков */
 .playerSeat {
   position: absolute;
-  width: 85px;
+  width: 120px; /* Увеличено для лучшей видимости */
   display: flex;
   flex-direction: column;
   align-items: center;
   z-index: 3;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translate(-50%, -50%); /* Центрируем по координатам */
 }
 
 /* Изменяем порядок: аватар сверху, карты снизу */
