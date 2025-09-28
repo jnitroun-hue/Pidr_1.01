@@ -468,6 +468,10 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
       
       if (!response.ok) {
         // Обработка ошибок (например, таймер не истек)
+        if (response.status === 400 && result.data?.hoursLeft) {
+          alert(`⏰ Ежедневный бонус уже получен!\n\nСледующий бонус через: ${result.data.hoursLeft} ч.\n\nПоследний бонус: +${result.data.lastBonusAmount || 0} монет`);
+          return;
+        }
         throw new Error(result.message || 'Ошибка получения бонуса');
       }
       
@@ -490,7 +494,7 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
         // Перезагружаем транзакции
         loadTransactions();
         
-        alert(`🎉 ${result.message || `Получен ежедневный бонус +${bonusAmount} монет!`}`);
+        alert(`🎉 ${result.message || `Получен ежедневный бонус +${bonusAmount} монет!`}\n\n💡 Если вас пригласил друг, он получит бонус +500 монет!`);
       } else {
         throw new Error(result.message || 'Ошибка получения бонуса');
       }

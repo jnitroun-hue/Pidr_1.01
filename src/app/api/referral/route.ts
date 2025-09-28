@@ -85,45 +85,67 @@ export async function POST(request: NextRequest) {
     // TODO: Проверить токен и получить user_id
     const userId = 'mock-user-id'; // Заменить на реальную проверку токена
     
-    if (action === 'use_referral') {
-      // Использовать реферальный код при регистрации
-      if (!referralCode) {
-        return NextResponse.json({ error: 'Referral code is required' }, { status: 400 });
-      }
+    if (action === 'create_referral_link') {
+      // Создать реферальную связь при регистрации
+      const { referrerId } = body;
       
-      // Проверяем что пользователь еще не использовал реферальный код
-      const { data: existingReferral } = await supabase
-        .from('referrals')
-        .select('id')
-        .eq('referred_id', userId)
-        .single();
-      
-      if (existingReferral) {
+      if (!referralCode || !referrerId) {
         return NextResponse.json({ 
-          error: 'Вы уже использовали реферальный код',
+          error: 'Referral code and referrer ID are required',
           success: false 
-        });
+        }, { status: 400 });
       }
       
-      // Используем stored procedure для обработки реферального бонуса
+      // Используем новую функцию для создания реферальной связи
       const { data, error } = await supabase
-        .rpc('process_referral_bonus', {
-          referrer_code: referralCode,
-          new_user_id: userId
+        .rpc('create_referral_link', {
+          p_referrer_id: referrerId,
+          p_referred_id: userId,
+          p_referral_code: referralCode
         });
       
-      if (error || !data) {
-        console.error('Error processing referral bonus:', error);
+      if (error) {
+        console.error('❌ Ошибка создания реферальной связи:', error);
         return NextResponse.json({ 
-          error: 'Неверный реферальный код или код уже использован',
+          error: 'Ошибка создания реферальной связи',
           success: false 
-        });
+        }, { status: 500 });
+      }
+      
+      const result = data as any;
+      
+      if (!result.success) {
+        return NextResponse.json({ 
+          error: result.error,
+          success: false 
+        }, { status: 400 });
       }
       
       return NextResponse.json({ 
-        message: 'Реферальный бонус успешно начислен!',
-        coinsEarned: 100,
-        success: true 
+        message: 'Реферальная связь создана! Бонус будет начислен рефереру когда вы получите первый ежедневный бонус.',
+        success: true,
+        referralId: result.referral_id
+      });
+    }
+    
+    if (action === 'get_stats') {
+      // Получить статистику рефералов
+      const { data, error } = await supabase
+        .rpc('get_referral_stats', {
+          p_user_id: userId
+        });
+      
+      if (error) {
+        console.error('❌ Ошибка получения статистики рефералов:', error);
+        return NextResponse.json({ 
+          error: 'Ошибка получения статистики',
+          success: false 
+        }, { status: 500 });
+      }
+      
+      return NextResponse.json({ 
+        success: true,
+        stats: data
       });
     }
     

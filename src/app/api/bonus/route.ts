@@ -49,44 +49,59 @@ export async function POST(req: NextRequest) {
     
     switch (bonusType) {
       case 'daily':
-        // ✅ ПРОВЕРЯЕМ ЕЖЕДНЕВНЫЙ ТАЙМЕР
-        const today = new Date().toDateString();
-        const { data: dailyBonusToday } = await supabase
+        // ✅ СТРОГАЯ ПРОВЕРКА ЕЖЕДНЕВНОГО БОНУСА
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+        
+        console.log(`🔍 Проверяем ежедневный бонус для ${userId} за ${todayStart.toISOString()}`);
+        
+        const { data: dailyBonusToday, error: dailyError } = await supabase
           .from('_pidr_transactions')
-          .select('created_at')
+          .select('id, created_at, amount')
           .eq('user_id', userId)
           .eq('type', 'bonus')
           .eq('bonus_type', 'daily')
-          .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+          .gte('created_at', todayStart.toISOString())
+          .lt('created_at', todayEnd.toISOString())
           .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
+          .limit(1);
         
-        if (dailyBonusToday) {
-          const lastBonusDate = new Date(dailyBonusToday.created_at).toDateString();
-          if (lastBonusDate === today) {
-            const nextBonusTime = new Date(new Date(dailyBonusToday.created_at).getTime() + 24 * 60 * 60 * 1000);
-            const hoursLeft = Math.ceil((nextBonusTime.getTime() - Date.now()) / (1000 * 60 * 60));
-            
-            console.log('⏰ Ежедневный бонус уже получен сегодня');
-            return NextResponse.json({ 
-              success: false, 
-              message: `Ежедневный бонус уже получен! Следующий через ${hoursLeft} часов.`,
-              data: { 
-                cooldownUntil: nextBonusTime,
-                hoursLeft 
-              }
-            }, { status: 400 });
-          }
+        if (dailyError) {
+          console.error('❌ Ошибка проверки ежедневного бонуса:', dailyError);
+        }
+        
+        if (dailyBonusToday && dailyBonusToday.length > 0) {
+          const lastBonus = dailyBonusToday[0];
+          const nextBonusTime = new Date(todayEnd.getTime());
+          const hoursLeft = Math.ceil((nextBonusTime.getTime() - now.getTime()) / (1000 * 60 * 60));
+          
+          console.log(`⏰ Ежедневный бонус уже получен сегодня в ${lastBonus.created_at}`);
+          return NextResponse.json({ 
+            success: false, 
+            message: `Ежедневный бонус уже получен! Следующий через ${hoursLeft} ч.`,
+            data: { 
+              cooldownUntil: nextBonusTime,
+              hoursLeft,
+              lastBonusAmount: lastBonus.amount,
+              lastBonusTime: lastBonus.created_at
+            }
+          }, { status: 400 });
         }
         
         bonusAmount = Math.floor(Math.random() * 150) + 50; // 50-200 монет
         bonusDescription = 'Ежедневный бонус';
+        console.log(`✅ Ежедневный бонус доступен: ${bonusAmount} монет`);
         break;
         
       case 'referral':
-        bonusAmount = 100; // Фиксированный бонус за реферала
-        bonusDescription = 'Бонус за приглашение друга';
+        // ❌ РЕФЕРАЛЫ НЕ ДОЛЖНЫ ВЫДАВАТЬСЯ НАПРЯМУЮ ЧЕРЕЗ ЭТОТ API
+        // Рефералы обрабатываются автоматически через stored procedure
+        console.log('❌ Попытка получить реферальный бонус напрямую');
+        return NextResponse.json({ 
+          success: false, 
+          message: 'Реферальные бонусы начисляются автоматически при выполнении условий' 
+        }, { status: 400 });
         break;
         
       case 'rank_up':
@@ -207,10 +222,11 @@ export async function GET(req: NextRequest) {
         id: 'referral',
         name: 'Реферальная система',
         description: 'Приглашайте друзей и получайте бонусы',
-        reward: '100 монет за друга',
+        reward: '500 монет за активного друга',
         icon: '👥',
-        available: true,
-        referrals: 0 // TODO: подсчитать из базы
+        available: false, // Не доступен для ручного получения
+        referrals: 0, // TODO: подсчитать из базы
+        note: 'Бонус начисляется автоматически когда приглашенный друг получает первый ежедневный бонус'
       },
       {
         id: 'rank_up',
