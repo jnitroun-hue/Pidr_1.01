@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePathname, useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { useGameStore } from '../store/gameStore';
 
 interface NavItem {
   id: string;
@@ -16,7 +17,7 @@ interface NavItem {
 const TelegramBottomNav: React.FC = () => {
   const pathname = usePathname();
   const router = useRouter();
-  const [balance, setBalance] = useState(12345.6789);
+  const { gameCoins } = useGameStore(); // Используем реальный баланс из gameStore
   const [isVisible, setIsVisible] = useState(true);
 
   const navItems: NavItem[] = [
@@ -56,10 +57,7 @@ const TelegramBottomNav: React.FC = () => {
   };
 
   const formatBalance = (value: number) => {
-    return value.toLocaleString('ru-RU', { 
-      minimumFractionDigits: 2, 
-      maximumFractionDigits: 2 
-    });
+    return value.toLocaleString('ru-RU');
   };
 
   return (
@@ -114,13 +112,8 @@ const TelegramBottomNav: React.FC = () => {
                   border: '1px solid rgba(255, 215, 0, 0.5)'
                 }}
               >
-                <Image 
-                  src="/img/ton-icon.svg" 
-                  alt="TON" 
-                  width={20} 
-                  height={20}
-                />
-                <span>{formatBalance(balance)}</span>
+                🪙
+                <span>{formatBalance(gameCoins)} монет</span>
               </div>
             </motion.div>
           )}

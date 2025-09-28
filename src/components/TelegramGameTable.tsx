@@ -212,18 +212,53 @@ const TelegramGameTable: React.FC<TelegramGameTableProps> = ({
 
           {/* Center Play Area */}
           <div className="tg-center-area">
-            {/* Deck */}
+            {/* Deck - УМЕНЬШЕННЫЙ размер */}
             <motion.div
               className="tg-deck-stack"
               onClick={handleDeckClick}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              style={{
+                width: '50px', // Уменьшено с 85px до 50px
+                height: '70px', // Уменьшено с 119px до 70px
+              }}
             >
-              <div className="tg-deck-card"></div>
+              <div 
+                className="tg-deck-card"
+                style={{
+                  width: '50px',
+                  height: '70px',
+                }}
+              >
+                {deckCount > 0 && (
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '-20px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    background: 'rgba(0, 0, 0, 0.8)',
+                    color: 'white',
+                    padding: '2px 6px',
+                    borderRadius: '8px',
+                    fontSize: '10px',
+                    fontWeight: 'bold',
+                    minWidth: '20px',
+                    textAlign: 'center'
+                  }}>
+                    {deckCount}
+                  </div>
+                )}
+              </div>
             </motion.div>
 
-            {/* Played Cards Area */}
-            <div className="tg-played-area">
+            {/* Played Cards Area - УМЕНЬШЕННЫЙ размер */}
+            <div 
+              className="tg-played-area"
+              style={{
+                width: '60px', // Уменьшено с 127px до 60px
+                height: '70px', // Уменьшено с 95px до 70px
+              }}
+            >
               <AnimatePresence>
                 {playedCards.map((card, index) => (
                   <motion.div
@@ -247,14 +282,18 @@ const TelegramGameTable: React.FC<TelegramGameTableProps> = ({
                     style={{
                       position: 'absolute',
                       zIndex: index + 1,
-                      transform: `translate(${Math.random() * 20 - 10}px, ${Math.random() * 20 - 10}px)`
+                      transform: `translate(${Math.random() * 10 - 5}px, ${Math.random() * 10 - 5}px)` // Уменьшенное смещение
                     }}
                   >
                     <img 
-                      src={`/cards/${card.suit}_${card.rank}.png`} 
+                      src={`/img/cards/${card.suit}_${card.rank}.png`} 
                       alt={`${card.rank} of ${card.suit}`}
                       className="tg-card-image"
-                      style={{ width: '60px', height: '84px', borderRadius: '6px' }}
+                      style={{ 
+                        width: '40px', // Уменьшено с 60px до 40px
+                        height: '56px', // Уменьшено с 84px до 56px
+                        borderRadius: '4px' 
+                      }}
                     />
                   </motion.div>
                 ))}

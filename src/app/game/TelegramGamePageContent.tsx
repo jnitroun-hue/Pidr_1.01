@@ -3,171 +3,170 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import TelegramGameTable from '../../components/TelegramGameTable';
-import { Player, Card } from '../../types/game';
+import { useGameStore } from '../../store/gameStore';
+import { useTelegramWebApp } from '../../hooks/useTelegramWebApp';
+import { Card as StoreCard } from '../../store/gameStore';
 import '../../styles/telegram-optimized.css';
 
-// Mock data for demonstration
-const createMockPlayer = (id: string, name: string, isUser: boolean = false): Player => ({
-  id,
-  name,
-  hand: generateRandomHand(Math.floor(Math.random() * 7) + 3),
-  isUser,
-  avatar: isUser ? '/avatars/player.png' : `/avatars/bot-${Math.floor(Math.random() * 5) + 1}.png`,
-  coins: Math.floor(Math.random() * 1000) + 100,
-  status: Math.random() > 0.7 ? 'thinking' : 'ready'
+// Адаптер для конвертации карт из gameStore в формат компонента
+const convertStoreCardToGameCard = (storeCard: StoreCard) => ({
+  suit: storeCard.suit || 'hearts',
+  rank: storeCard.rank?.toString() || '2'
 });
 
-const generateRandomHand = (count: number): Card[] => {
-  const suits = ['hearts', 'diamonds', 'clubs', 'spades'];
-  const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
-  const hand: Card[] = [];
-  
-  for (let i = 0; i < count; i++) {
-    hand.push({
-      suit: suits[Math.floor(Math.random() * suits.length)],
-      rank: ranks[Math.floor(Math.random() * ranks.length)]
-    });
-  }
-  
-  return hand;
-};
+// Адаптер для конвертации игроков из gameStore в формат компонента  
+const convertStorePlayerToGamePlayer = (storePlayer: any, index: number) => ({
+  id: storePlayer.id,
+  name: storePlayer.name,
+  hand: storePlayer.cards?.filter((c: StoreCard) => c.open).map(convertStoreCardToGameCard) || [],
+  isUser: storePlayer.isUser || false,
+  avatar: storePlayer.avatar,
+  coins: 0, // Используем gameCoins из store отдельно
+  status: storePlayer.isBot ? 'ready' : 'thinking'
+});
 
 const TelegramGamePageContent: React.FC = () => {
   const searchParams = useSearchParams();
-  const [gameState, setGameState] = useState({
-    players: [] as Player[],
-    currentPlayerId: null as string | null,
-    gameStage: 1 as 1 | 2 | 3,
-    playedCards: [] as Card[],
-    deckCount: 36,
-    selectedCardIndex: null as number | null
-  });
+  
+  // Получаем состояние из реального gameStore
+  const { 
+    isGameActive, 
+    gameStage, 
+    players, 
+    currentPlayerId, 
+    deck, 
+    tableStack,
+    selectedHandCard,
+    gameCoins,
+    trumpSuit,
+    stage2TurnPhase,
+    // Методы
+    startGame,
+    makeMove,
+    selectHandCard,
+    playSelectedCard,
+    takeTableCards,
+    onDeckClick,
+    declareOneCard,
+    askHowManyCards,
+    showNotification
+  } = useGameStore();
 
-  // Initialize game
+  const { hapticFeedback, mainButton, backButton, utils } = useTelegramWebApp();
+  const [selectedCardIndex, setSelectedCardIndex] = useState<number | null>(null);
+
+  // Конвертируем данные из gameStore в формат компонента
+  const gameData = {
+    players: players.map(convertStorePlayerToGamePlayer),
+    currentPlayerId,
+    gameStage: gameStage as 1 | 2 | 3,
+    playedCards: tableStack?.map(convertStoreCardToGameCard) || [],
+    deckCount: deck.length,
+    selectedCardIndex
+  };
+
+  // Инициализация игры при первом запуске
   useEffect(() => {
-    const playerCount = parseInt(searchParams.get('players') || '4');
-    const players: Player[] = [
-      createMockPlayer('user', 'Вы', true),
-      ...Array.from({ length: playerCount - 1 }, (_, i) => 
-        createMockPlayer(`bot-${i + 1}`, `Игрок ${i + 1}`)
-      )
-    ];
-
-    setGameState(prev => ({
-      ...prev,
-      players,
-      currentPlayerId: 'user'
-    }));
-  }, [searchParams]);
+    if (!isGameActive && players.length === 0) {
+      const playerCount = parseInt(searchParams.get('players') || '4');
+      startGame('single', playerCount);
+    }
+  }, [isGameActive, players.length, searchParams, startGame]);
 
   // Initialize Telegram WebApp
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
-      const tg = window.Telegram.WebApp;
-      
-      // Configure WebApp
-      tg.ready();
-      tg.expand();
-      tg.enableClosingConfirmation();
-      
-      // Set theme
-      tg.setHeaderColor('#17212b');
-      tg.setBackgroundColor('#17212b');
-      
-      // Handle back button
-      tg.BackButton.onClick(() => {
-        window.history.back();
-      });
-      tg.BackButton.show();
+    utils.setHeaderColor('#17212b');
+    utils.setBackgroundColor('#17212b');
+    utils.expand();
+    
+    // Handle back button
+    backButton.show(() => {
+      window.history.back();
+    });
 
-      // Cleanup
-      return () => {
-        tg.BackButton.hide();
-        tg.disableClosingConfirmation();
-      };
-    }
-  }, []);
+    return () => {
+      backButton.hide();
+    };
+  }, [utils, backButton]);
 
-  // Game logic handlers
+  // Game logic handlers - используем реальные методы из gameStore
   const handleCardSelect = useCallback((index: number) => {
-    setGameState(prev => ({
-      ...prev,
-      selectedCardIndex: index === -1 ? null : index
-    }));
-  }, []);
+    hapticFeedback.light();
+    setSelectedCardIndex(index === -1 ? null : index);
+    
+    // Если есть выбранная карта в руке, используем её
+    const currentPlayer = players.find(p => p.isUser);
+    if (currentPlayer && index >= 0 && index < currentPlayer.cards.length) {
+      const card = currentPlayer.cards[index];
+      if (card.open) {
+        selectHandCard(card);
+      }
+    }
+  }, [hapticFeedback, selectHandCard, players]);
 
   const handleCardPlay = useCallback((index: number) => {
-    const player = gameState.players.find(p => p.isUser);
-    if (!player || index < 0 || index >= player.hand.length) return;
-
-    const playedCard = player.hand[index];
+    const currentPlayer = players.find(p => p.isUser);
+    if (!currentPlayer || !currentPlayer.isUser) return;
     
-    setGameState(prev => ({
-      ...prev,
-      players: prev.players.map(p => 
-        p.isUser 
-          ? { ...p, hand: p.hand.filter((_, i) => i !== index) }
-          : p
-      ),
-      playedCards: [...prev.playedCards, playedCard],
-      selectedCardIndex: null,
-      currentPlayerId: getNextPlayerId(prev.players, prev.currentPlayerId || '')
-    }));
-  }, [gameState.players]);
+    hapticFeedback.medium();
+    
+    // Используем реальную игровую логику
+    if (gameStage === 1) {
+      // В первой стадии используем makeMove
+      const card = currentPlayer.cards[index];
+      if (card) {
+        makeMove(card.id);
+      }
+    } else if (gameStage === 2 || gameStage === 3) {
+      // Во второй и третьей стадиях играем выбранную карту
+      playSelectedCard();
+    }
+    
+    setSelectedCardIndex(null);
+  }, [hapticFeedback, players, gameStage, makeMove, playSelectedCard]);
 
   const handleDeckClick = useCallback(() => {
-    const newCard = generateRandomHand(1)[0];
-    
-    setGameState(prev => ({
-      ...prev,
-      players: prev.players.map(p => 
-        p.isUser 
-          ? { ...p, hand: [...p.hand, newCard] }
-          : p
-      ),
-      deckCount: Math.max(0, prev.deckCount - 1),
-      currentPlayerId: getNextPlayerId(prev.players, prev.currentPlayerId || '')
-    }));
-  }, []);
+    hapticFeedback.medium();
+    onDeckClick();
+  }, [hapticFeedback, onDeckClick]);
 
   const handlePassTurn = useCallback(() => {
-    setGameState(prev => ({
-      ...prev,
-      currentPlayerId: getNextPlayerId(prev.players, prev.currentPlayerId || ''),
-      selectedCardIndex: null
-    }));
-  }, []);
+    hapticFeedback.light();
+    // Логика пропуска хода зависит от стадии игры
+    if (gameStage === 2 && tableStack && tableStack.length > 0) {
+      takeTableCards(); // Во второй стадии "пас" = взять карты
+    }
+  }, [hapticFeedback, gameStage, tableStack, takeTableCards]);
 
   const handleDeclareOneCard = useCallback(() => {
-    // Handle "UNO" declaration
-    console.log('Объявлена последняя карта!');
-  }, []);
+    const currentPlayer = players.find(p => p.isUser);
+    if (currentPlayer) {
+      hapticFeedback.heavy();
+      declareOneCard(currentPlayer.id);
+    }
+  }, [hapticFeedback, players, declareOneCard]);
 
-  // Helper functions
-  const getNextPlayerId = (players: Player[], currentId: string): string => {
-    const currentIndex = players.findIndex(p => p.id === currentId);
-    const nextIndex = (currentIndex + 1) % players.length;
-    return players[nextIndex].id;
-  };
-
-  const canPlayCard = useCallback((card: Card, index: number): boolean => {
-    // Simple rule: can always play if it's your turn
-    const isPlayerTurn = gameState.currentPlayerId === 'user';
+  const canPlayCard = useCallback((card: any, index: number): boolean => {
+    const currentPlayer = players.find(p => p.isUser);
+    if (!currentPlayer || currentPlayer.id !== currentPlayerId) return false;
     
-    if (!isPlayerTurn) return false;
-    
-    // Add more complex game rules here
-    if (gameState.playedCards.length === 0) return true;
-    
-    const lastCard = gameState.playedCards[gameState.playedCards.length - 1];
-    return card.suit === lastCard.suit || card.rank === lastCard.rank;
-  }, [gameState.currentPlayerId, gameState.playedCards]);
+    // Проверяем по стадиям игры
+    if (gameStage === 1) {
+      return true; // В первой стадии можно играть любой картой
+    } else if (gameStage === 2) {
+      return stage2TurnPhase === 'selecting_card'; // Во второй стадии только в фазе выбора
+    } else {
+      return currentPlayer.cards[index]?.open || false; // В третьей только открытыми
+    }
+  }, [players, currentPlayerId, gameStage, stage2TurnPhase]);
 
   const handlePlayerClick = useCallback((playerId: string) => {
+    hapticFeedback.light();
     console.log('Clicked player:', playerId);
-  }, []);
+    // Можно добавить логику взаимодействия с игроками
+  }, [hapticFeedback]);
 
-  if (gameState.players.length === 0) {
+  if (!isGameActive || gameData.players.length === 0) {
     return (
       <div style={{
         display: 'flex',
@@ -178,8 +177,27 @@ const TelegramGamePageContent: React.FC = () => {
         color: 'var(--tg-theme-text-color)'
       }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '24px', marginBottom: '16px' }}>🎮</div>
-          <div>Загрузка игры...</div>
+          <div style={{ fontSize: '32px', marginBottom: '16px' }}>🎮</div>
+          <div style={{ fontSize: '18px', fontWeight: '600' }}>Загрузка P.I.D.R. игры...</div>
+          <div style={{ fontSize: '14px', opacity: 0.7, marginTop: '8px' }}>
+            Подготавливаем карты для Telegram WebApp
+          </div>
+          {/* Показываем баланс во время загрузки */}
+          <div style={{
+            marginTop: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            background: 'linear-gradient(135deg, var(--game-gold) 0%, #f5a623 100%)',
+            color: '#0f172a',
+            padding: '8px 16px',
+            borderRadius: '20px',
+            fontSize: '14px',
+            fontWeight: '700'
+          }}>
+            🪙 {gameCoins.toLocaleString()} монет
+          </div>
         </div>
       </div>
     );
@@ -187,12 +205,12 @@ const TelegramGamePageContent: React.FC = () => {
 
   return (
     <TelegramGameTable
-      players={gameState.players}
-      currentPlayerId={gameState.currentPlayerId}
-      gameStage={gameState.gameStage}
-      playedCards={gameState.playedCards}
-      deckCount={gameState.deckCount}
-      selectedCardIndex={gameState.selectedCardIndex}
+      players={gameData.players}
+      currentPlayerId={gameData.currentPlayerId}
+      gameStage={gameData.gameStage}
+      playedCards={gameData.playedCards}
+      deckCount={gameData.deckCount}
+      selectedCardIndex={gameData.selectedCardIndex}
       onPlayerClick={handlePlayerClick}
       onCardSelect={handleCardSelect}
       onCardPlay={handleCardPlay}
