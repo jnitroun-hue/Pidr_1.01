@@ -1723,6 +1723,19 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
           flex: 1;
           font-family: monospace;
           font-size: 12px;
+          background: rgba(30, 41, 59, 0.8);
+          color: #e2e8f0;
+          border: 1px solid rgba(99, 102, 241, 0.3);
+          border-radius: 8px;
+          padding: 12px 16px;
+          outline: none;
+          min-height: 44px; /* Минимальная высота для мобильных */
+          word-break: break-all;
+        }
+        
+        .address-container input:focus {
+          border-color: rgba(99, 102, 241, 0.6);
+          box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
         }
 
         .copy-btn {
@@ -1921,6 +1934,53 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
         @keyframes spin {
           0% { transform: translateY(-50%) rotate(0deg); }
           100% { transform: translateY(-50%) rotate(360deg); }
+        }
+        
+        /* 📱 УЛУЧШЕННАЯ МОБИЛЬНАЯ АДАПТАЦИЯ */
+        @media (max-width: 768px) {
+          .modal-inner {
+            padding: 16px;
+            max-height: 85vh;
+            overflow-y: auto;
+          }
+          
+          .address-container {
+            flex-direction: column;
+            gap: 12px;
+          }
+          
+          .address-container input {
+            font-size: 14px !important;
+            padding: 16px !important;
+            min-height: 48px !important;
+            line-height: 1.4;
+            width: 100%;
+            box-sizing: border-box;
+          }
+          
+          .copy-btn {
+            width: 100% !important;
+            min-height: 48px !important;
+            font-size: 16px !important;
+            padding: 16px !important;
+          }
+          
+          .crypto-selector {
+            font-size: 16px;
+            padding: 16px;
+          }
+          
+          .modal-content {
+            margin: 10px;
+            max-width: calc(100vw - 20px);
+          }
+        }
+        
+        @media (max-width: 480px) {
+          .address-container input {
+            font-size: 13px !important;
+            padding: 14px !important;
+          }
         }
       `}</style>
     </div>

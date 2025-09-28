@@ -81,7 +81,7 @@ export default function ProperMultiplayer({ onBack }: ProperMultiplayerProps) {
         setSharedRooms(storedRooms);
         
         // Пробуем получить серверные комнаты
-        const response = await fetch('/api/rooms/list');
+        const response = await fetch('/api/rooms?type=public');
         if (response.ok) {
           const data = await response.json();
           if (data.success) {
@@ -235,14 +235,15 @@ export default function ProperMultiplayer({ onBack }: ProperMultiplayerProps) {
       if (result.success) {
         console.log('✅ Room created:', result.room);
         
-        // Добавляем созданную комнату в список
+        // ИСПРАВЛЕНО: Более надежная обработка ответа API
+        const roomData = result.room;
         const newRoom: Room = {
-          id: result.room.roomId,
-          code: result.room.roomCode,
-          name: result.room.name,
-          host: result.room.host,
+          id: roomData.id || roomData.roomId || `room_${Date.now()}`,
+          code: roomData.room_code || roomData.roomCode || roomData.code,
+          name: roomData.name || createData.name,
+          host: user?.username || user?.firstName || 'Host',
           players: 1, // Создатель уже в комнате
-          maxPlayers: result.room.maxPlayers,
+          maxPlayers: roomData.max_players || roomData.maxPlayers || createData.maxPlayers,
           gameMode: createData.gameMode,
           hasPassword: createData.hasPassword,
           isPrivate: createData.isPrivate,

@@ -1086,12 +1086,15 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  transform: translate(-120px, -50%); /* Слева от колоды */
-  z-index: 15;
+  transform: translate(-150px, -50%); /* Дальше от колоды и игроков */
+  z-index: 5; /* Ниже игроков */
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
+  
+  /* Убираем из зоны игроков на прямоугольном столе */
+  max-width: 80px;
 }
 
 .revealedCard {
