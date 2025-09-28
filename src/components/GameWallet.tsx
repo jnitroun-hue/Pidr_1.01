@@ -620,19 +620,12 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
         return existingAddress.address;
       }
 
-      // 🔥 ИСПОЛЬЗУЕМ НОВЫЙ UNIFIED MASTER WALLET API
-      console.log(`🔄 Генерируем адрес через Unified Master Wallet API для ${crypto}...`);
+      // 🔥 ИСПОЛЬЗУЕМ MASTER АДРЕС НАПРЯМУЮ (без HD деривации)
+      console.log(`🔄 Получаем Master адрес для ${crypto}...`);
       
-      const response = await fetch('/api/wallet/unified', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json' 
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          network: crypto.toUpperCase(),
-          userId: userId
-        })
+      const response = await fetch(`/api/wallet/unified?action=get_master_address&network=${crypto.toUpperCase()}`, {
+        method: 'GET',
+        credentials: 'include'
       });
 
       const result = await response.json();
@@ -641,22 +634,25 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
         throw new Error(result.message || 'Ошибка API');
       }
       
-      if (result.success && result.address?.address) {
+      if (result.success && result.address) {
         const newAddress = {
-          id: `unified-${crypto}-${userId}`,
+          id: `master-${crypto}-${userId}`,
           coin: crypto.toUpperCase(),
-          address: result.address.address,
-          memo: result.paymentDetails?.memo || '',
-          note: `Unified Wallet адрес для ${crypto}`,
+          address: result.address,
+          memo: result.memo || '',
+          note: `Master адрес для ${crypto} (${result.memo ? 'с memo' : 'без memo'})`,
           isActive: true,
           createdAt: new Date().toISOString()
         };
         
         // Добавляем в локальный массив
         setMasterAddresses(prev => [...prev, newAddress]);
-        console.log(`✅ Unified адрес создан для ${crypto}:`, result.address.address);
+        console.log(`✅ Master адрес получен для ${crypto}:`, result.address);
+        if (result.memo) {
+          console.log(`📝 Memo для ${crypto}:`, result.memo);
+        }
         
-        return result.address.address;
+        return result.address;
       } else {
         throw new Error(result.message || 'Не удалось получить адрес');
       }

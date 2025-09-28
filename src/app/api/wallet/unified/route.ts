@@ -104,6 +104,32 @@ export async function GET(req: NextRequest) {
         });
       }
 
+      case 'get_master_address': {
+        const network = url.searchParams.get('network') as SupportedNetwork;
+        if (!network || !SUPPORTED_NETWORKS[network]) {
+          return NextResponse.json({
+            success: false,
+            message: 'Параметр network обязателен и должен быть поддерживаемой сетью'
+          }, { status: 400 });
+        }
+
+        try {
+          const masterAddress = masterWallet.getMasterAddressForDeposit(network);
+          return NextResponse.json({
+            success: true,
+            network,
+            address: masterAddress.address,
+            memo: masterAddress.memo,
+            message: `Master адрес ${network} для депозитов`
+          });
+        } catch (error: any) {
+          return NextResponse.json({
+            success: false,
+            message: error.message
+          }, { status: 404 });
+        }
+      }
+
       default:
         return NextResponse.json({
           success: false,

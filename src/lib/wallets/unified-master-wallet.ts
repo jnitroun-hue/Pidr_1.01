@@ -197,7 +197,10 @@ export class UnifiedMasterWallet {
       `MASTER_${network}_ADDRESS`,
       `${network}_MASTER_ADDRESS`,
       `MASTER_${network}_WALLET`,
-      `${network}_MASTER_WALLET`
+      `${network}_MASTER_WALLET`,
+      // Дополнительные варианты для совместимости с Vercel
+      `MASTER_${network.replace('_', '')}_WALLET`, // MASTER_USDT_TRC20 -> MASTER_USDTTRC20_WALLET
+      `${network.replace('_', '')}_MASTER_WALLET`   // USDT_TRC20 -> USDTTRC20_MASTER_WALLET
     ];
 
     for (const envVar of envVars) {
@@ -227,7 +230,23 @@ export class UnifiedMasterWallet {
   }
 
   /**
-   * 🎯 Генерация уникального адреса для пользователя
+   * 🏦 Получение Master адреса для пополнения (БЕЗ HD деривации)
+   */
+  getMasterAddressForDeposit(network: SupportedNetwork): { address: string; memo?: string } {
+    const masterWallet = this.masterWallets.get(network);
+    if (!masterWallet) {
+      throw new Error(`Master кошелек для сети ${network} не настроен`);
+    }
+
+    // Возвращаем именно Master адрес, а не генерируем новый
+    return {
+      address: masterWallet.address,
+      memo: network === 'TON' ? 'PIDR_DEPOSIT' : undefined // Memo для идентификации депозитов
+    };
+  }
+
+  /**
+   * 🎯 Генерация уникального адреса для пользователя (для совместимости)
    */
   async generateUserAddress(userId: string, network: SupportedNetwork): Promise<UserWalletAddress> {
     console.log(`🎯 Генерация ${network} адреса для пользователя ${userId}`);
@@ -244,18 +263,13 @@ export class UnifiedMasterWallet {
       throw new Error(`Master кошелек для сети ${network} не настроен`);
     }
 
+    // 🔥 ИСПРАВЛЕНИЕ: Используем Master адрес напрямую для депозитов
     let userAddress: string;
     let derivationIndex: number | undefined;
 
-    if (masterWallet.xpub) {
-      // HD кошелек - генерируем через деривацию
-      const result = await this.generateHDAddress(userId, network, masterWallet);
-      userAddress = result.address;
-      derivationIndex = result.index;
-    } else {
-      // Прокси адрес - генерируем детерминистично
-      userAddress = this.generateProxyAddress(userId, network);
-    }
+    // Для депозитов используем Master адрес с memo
+    userAddress = masterWallet.address;
+    derivationIndex = undefined; // Не используем HD деривацию для депозитов
 
     // Создаем запись в БД
     const walletAddress: UserWalletAddress = {

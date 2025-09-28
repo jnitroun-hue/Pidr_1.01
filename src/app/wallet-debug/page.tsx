@@ -33,36 +33,27 @@ export default function WalletDebugPage() {
   };
 
   const generateAddress = async (network: string) => {
-    if (!user?.id) {
-      alert('Нет ID пользователя');
-      return;
-    }
-
     setLoading(true);
     try {
-      console.log(`🔄 Генерируем адрес для ${network}...`);
+      console.log(`🔄 Получаем Master адрес для ${network}...`);
       
-      const response = await fetch('/api/wallet/unified', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          network: network,
-          userId: user.id
-        })
-      });
-
+      const response = await fetch(`/api/wallet/unified?action=get_master_address&network=${network}`);
       const result = await response.json();
-      console.log(`📝 Результат для ${network}:`, result);
+      console.log(`📝 Master адрес для ${network}:`, result);
 
       if (result.success) {
-        setAddresses(prev => [...prev, { network, ...result.address }]);
-        alert(`✅ Адрес ${network} создан: ${result.address.address}`);
+        setAddresses(prev => [...prev, { 
+          network, 
+          address: result.address, 
+          memo: result.memo,
+          type: 'Master адрес'
+        }]);
+        alert(`✅ Master адрес ${network}: ${result.address}${result.memo ? `\nMemo: ${result.memo}` : ''}`);
       } else {
         alert(`❌ Ошибка: ${result.message}`);
       }
     } catch (error) {
-      console.error(`❌ Ошибка генерации ${network}:`, error);
+      console.error(`❌ Ошибка получения ${network}:`, error);
       alert(`❌ Ошибка: ${error}`);
     } finally {
       setLoading(false);
@@ -137,19 +128,32 @@ export default function WalletDebugPage() {
 
       {addresses.length > 0 && (
         <div style={{ padding: '15px', background: '#fff3cd', borderRadius: '8px' }}>
-          <h3>📋 Сгенерированные адреса</h3>
+          <h3>📋 Master адреса для депозитов</h3>
           {addresses.map((addr, index) => (
             <div key={index} style={{ marginBottom: '10px', padding: '10px', background: 'white', borderRadius: '5px' }}>
-              <p><strong>{addr.network}:</strong></p>
+              <p><strong>{addr.network} ({addr.type}):</strong></p>
               <p style={{ fontFamily: 'monospace', fontSize: '12px', wordBreak: 'break-all' }}>
                 {addr.address}
               </p>
+              {addr.memo && (
+                <p style={{ color: '#007bff', fontSize: '12px' }}>
+                  <strong>Memo:</strong> {addr.memo}
+                </p>
+              )}
               <button
                 onClick={() => navigator.clipboard?.writeText(addr.address)}
-                style={{ padding: '5px 10px', fontSize: '12px' }}
+                style={{ padding: '5px 10px', fontSize: '12px', marginRight: '5px' }}
               >
-                📋 Копировать
+                📋 Копировать адрес
               </button>
+              {addr.memo && (
+                <button
+                  onClick={() => navigator.clipboard?.writeText(addr.memo)}
+                  style={{ padding: '5px 10px', fontSize: '12px' }}
+                >
+                  📝 Копировать memo
+                </button>
+              )}
             </div>
           ))}
         </div>
