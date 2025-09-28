@@ -63,10 +63,24 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
 
   // Загружаем данные пользователя и транзакции
   useEffect(() => {
+    console.log('🔄 GameWallet: инициализация компонента', { user: !!user, userId: user?.id });
     loadUserData();
     loadTransactions();
     loadMasterAddresses();
     checkBonusStatus(); // Проверяем статус бонуса
+    
+    // Диагностика кошельков
+    if (user?.id) {
+      console.log('🔍 GameWallet: проверяем доступность API кошельков...');
+      fetch('/api/wallet/unified?action=validate_config')
+        .then(res => res.json())
+        .then(data => {
+          console.log('🏦 GameWallet: конфигурация кошельков:', data);
+        })
+        .catch(err => {
+          console.error('❌ GameWallet: ошибка проверки конфигурации:', err);
+        });
+    }
     
     // Запрашиваем разрешение на уведомления
     if (window.Notification && Notification.permission === 'default') {
@@ -580,43 +594,98 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
     return bonusAvailable;
   };
 
-  // Генерация HD адреса для пополнения
+  // 🔥 ИСПРАВЛЕННАЯ генерация адреса через Unified Master Wallet API
   const generateDepositAddress = async (crypto: string, userId: string): Promise<string> => {
-    if (!userId) return 'Ошибка: нет ID пользователя';
+    console.log(`🎯 generateDepositAddress вызвана для ${crypto}, userId: ${userId}`);
+    
+    if (!userId) {
+      console.log('❌ generateDepositAddress: нет userId');
+      return 'Ошибка: нет ID пользователя';
+    }
 
     try {
       setIsGeneratingAddress(true);
+      console.log(`🔄 generateDepositAddress: начинаем генерацию для ${crypto}`);
       
       // Сначала проверяем, есть ли уже адрес для этой монеты
       let existingAddress = masterAddresses.find(addr => addr.coin === crypto.toUpperCase());
+      console.log(`🔍 generateDepositAddress: проверяем существующие адреса`, { 
+        crypto: crypto.toUpperCase(), 
+        masterAddresses: masterAddresses.length,
+        existingAddress: !!existingAddress 
+      });
       
       if (existingAddress) {
-        console.log(`✅ Используем существующий мастер адрес для ${crypto}:`, existingAddress.address);
+        console.log(`✅ generateDepositAddress: используем существующий адрес для ${crypto}:`, existingAddress.address);
         return existingAddress.address;
       }
 
-      // Генерируем новый мастер адрес
-      console.log(`🔄 Генерируем новый мастер адрес для ${crypto}...`);
+      // 🔥 ИСПОЛЬЗУЕМ НОВЫЙ UNIFIED MASTER WALLET API
+      console.log(`🔄 Генерируем адрес через Unified Master Wallet API для ${crypto}...`);
       
-      const paymentInfo = masterWalletService.getPaymentAddress(userId, crypto.toUpperCase());
-      const newAddress = {
-        id: `master-${crypto}-${userId}`,
-        coin: crypto.toUpperCase(),
-        address: paymentInfo.address,
-        memo: paymentInfo.memo,
-        note: paymentInfo.note,
-        isActive: true,
-        createdAt: new Date().toISOString()
-      };
+      const response = await fetch('/api/wallet/unified', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json' 
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          network: crypto.toUpperCase(),
+          userId: userId
+        })
+      });
+
+      const result = await response.json();
       
-      // Добавляем в локальный массив
-      setMasterAddresses(prev => [...prev, newAddress]);
-      console.log(`✅ Мастер адрес создан для ${crypto}:`, paymentInfo.address);
+      if (!response.ok) {
+        throw new Error(result.message || 'Ошибка API');
+      }
       
-      return paymentInfo.address;
+      if (result.success && result.address?.address) {
+        const newAddress = {
+          id: `unified-${crypto}-${userId}`,
+          coin: crypto.toUpperCase(),
+          address: result.address.address,
+          memo: result.paymentDetails?.memo || '',
+          note: `Unified Wallet адрес для ${crypto}`,
+          isActive: true,
+          createdAt: new Date().toISOString()
+        };
+        
+        // Добавляем в локальный массив
+        setMasterAddresses(prev => [...prev, newAddress]);
+        console.log(`✅ Unified адрес создан для ${crypto}:`, result.address.address);
+        
+        return result.address.address;
+      } else {
+        throw new Error(result.message || 'Не удалось получить адрес');
+      }
     } catch (error) {
-      console.error(`❌ Ошибка генерации мастер адреса для ${crypto}:`, error);
-      return `Ошибка: ${error}`;
+      console.error(`❌ Ошибка генерации адреса для ${crypto}:`, error);
+      
+      // FALLBACK: Используем старый MasterWalletService
+      try {
+        console.log(`🔄 Fallback: используем MasterWalletService для ${crypto}...`);
+        const paymentInfo = masterWalletService.getPaymentAddress(userId, crypto.toUpperCase());
+        
+        const fallbackAddress = {
+          id: `fallback-${crypto}-${userId}`,
+          coin: crypto.toUpperCase(),
+          address: paymentInfo.address,
+          memo: paymentInfo.memo,
+          note: paymentInfo.note,
+          isActive: true,
+          createdAt: new Date().toISOString()
+        };
+        
+        setMasterAddresses(prev => [...prev, fallbackAddress]);
+        console.log(`✅ Fallback адрес создан для ${crypto}:`, paymentInfo.address);
+        
+        return paymentInfo.address;
+      } catch (fallbackError) {
+        console.error(`❌ Fallback также не сработал:`, fallbackError);
+        return `Ошибка: ${error}`;
+      }
     } finally {
       setIsGeneratingAddress(false);
     }
@@ -1881,14 +1950,19 @@ function HDAddressDisplay({ crypto = 'TON', userId = '', generateAddress, isGene
   }, [crypto, userId, generateAddress]);
 
   const loadAddress = async () => {
-    if (!generateAddress || !userId) return;
+    if (!generateAddress || !userId) {
+      console.log('❌ HDAddressDisplay: отсутствуют параметры', { generateAddress: !!generateAddress, userId });
+      return;
+    }
     
+    console.log(`🔄 HDAddressDisplay: загружаем адрес для ${crypto}, userId: ${userId}`);
     setIsLoading(true);
     try {
       const addr = await generateAddress(crypto, userId);
+      console.log(`✅ HDAddressDisplay: получен адрес для ${crypto}:`, addr);
       setAddress(addr);
     } catch (error) {
-      console.error('Ошибка загрузки HD адреса:', error);
+      console.error('❌ HDAddressDisplay: ошибка загрузки адреса:', error);
       setAddress('Ошибка генерации адреса');
     } finally {
       setIsLoading(false);

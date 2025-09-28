@@ -13,27 +13,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import { masterWallet, SupportedNetwork, SUPPORTED_NETWORKS } from '../../../../lib/wallets/unified-master-wallet';
 import { supabase } from '../../../../lib/supabase';
 
-// 🔐 Получение userId из запроса
+// 🔐 Получение userId из запроса (исправлено)
 function getUserIdFromRequest(req: NextRequest): string | null {
-  // Из headers (если есть авторизация)
-  const authHeader = req.headers.get('authorization');
-  if (authHeader) {
-    // Здесь должна быть логика извлечения userId из JWT
-    // Пока возвращаем тестовый ID
+  const JWT_SECRET = process.env.JWT_SECRET;
+  if (!JWT_SECRET) return null;
+  
+  const token = req.cookies.get('auth_token')?.value;
+  if (!token) return null;
+  
+  try {
+    const jwt = require('jsonwebtoken');
+    const payload = jwt.verify(token, JWT_SECRET) as any;
+    return payload.userId;
+  } catch {
+    return null;
   }
-  
-  // Из query параметров (для тестирования)
-  const url = new URL(req.url);
-  const userId = url.searchParams.get('userId');
-  if (userId) return userId;
-  
-  // Из cookies (если есть сессия)
-  const sessionCookie = req.cookies.get('pidr_session');
-  if (sessionCookie) {
-    // Здесь должна быть логика извлечения userId из сессии
-  }
-  
-  return null;
 }
 
 /**
