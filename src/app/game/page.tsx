@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense } from 'react';
-import TelegramGamePageContent from './TelegramGamePageContent';
+import GamePageContent from './GamePageContent';
 
 export default function GamePage() {
   return (
@@ -24,7 +24,7 @@ export default function GamePage() {
         </div>
       </div>
     }>
-      <TelegramGamePageContent />
+      <GamePageContent />
     </Suspense>
   );
 } 
