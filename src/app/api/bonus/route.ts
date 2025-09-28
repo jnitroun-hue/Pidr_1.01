@@ -56,6 +56,9 @@ export async function POST(req: NextRequest) {
         
         console.log(`🔍 Проверяем ежедневный бонус для ${userId} за ${todayStart.toISOString()}`);
         
+        // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Используем уникальную комбинацию user_id + date для проверки
+        const todayKey = `${userId}_${todayStart.getTime()}`; // Уникальный ключ на день
+        
         const { data: dailyBonusToday, error: dailyError } = await supabase
           .from('_pidr_transactions')
           .select('id, created_at, amount')
@@ -71,12 +74,22 @@ export async function POST(req: NextRequest) {
           console.error('❌ Ошибка проверки ежедневного бонуса:', dailyError);
         }
         
-        if (dailyBonusToday && dailyBonusToday.length > 0) {
-          const lastBonus = dailyBonusToday[0];
+        // ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА: Ищем транзакции по описанию с сегодняшней датой
+        const { data: bonusByDescription } = await supabase
+          .from('_pidr_transactions')
+          .select('id, created_at, amount, description')
+          .eq('user_id', userId)
+          .eq('type', 'bonus')
+          .like('description', `%${todayStart.toDateString()}%`)
+          .limit(1);
+        
+        if ((dailyBonusToday && dailyBonusToday.length > 0) || (bonusByDescription && bonusByDescription.length > 0)) {
+          const lastBonus = dailyBonusToday?.[0] || bonusByDescription?.[0];
           const nextBonusTime = new Date(todayEnd.getTime());
           const hoursLeft = Math.ceil((nextBonusTime.getTime() - now.getTime()) / (1000 * 60 * 60));
           
           console.log(`⏰ Ежедневный бонус уже получен сегодня в ${lastBonus.created_at}`);
+          console.log(`📝 Найденная транзакция:`, lastBonus);
           return NextResponse.json({ 
             success: false, 
             message: `Ежедневный бонус уже получен! Следующий через ${hoursLeft} ч.`,
@@ -90,7 +103,7 @@ export async function POST(req: NextRequest) {
         }
         
         bonusAmount = Math.floor(Math.random() * 150) + 50; // 50-200 монет
-        bonusDescription = 'Ежедневный бонус';
+        bonusDescription = `Ежедневный бонус ${todayStart.toDateString()}`; // Добавляем дату в описание
         console.log(`✅ Ежедневный бонус доступен: ${bonusAmount} монет`);
         break;
         
