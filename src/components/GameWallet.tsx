@@ -58,6 +58,7 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
   const [masterAddresses, setMasterAddresses] = useState<any[]>([]);
   const [isGeneratingAddress, setIsGeneratingAddress] = useState(false);
   const [isMonitoringPayments, setIsMonitoringPayments] = useState(false);
+  const [bonusAvailable, setBonusAvailable] = useState(true); // Состояние доступности бонуса
   const masterWalletService = new MasterWalletService();
 
   // Загружаем данные пользователя и транзакции
@@ -65,6 +66,7 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
     loadUserData();
     loadTransactions();
     loadMasterAddresses();
+    checkBonusStatus(); // Проверяем статус бонуса
     
     // Запрашиваем разрешение на уведомления
     if (window.Notification && Notification.permission === 'default') {
@@ -480,6 +482,7 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
         const bonusAmount = result.data.bonusAmount;
         
         setBalance(newBalance);
+        setBonusAvailable(false); // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Отключаем бонус после получения
         
         // Обновляем данные в localStorage
         const userData = localStorage.getItem('user');
@@ -552,10 +555,29 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
     }
   };
 
+  // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Проверяем статус бонуса через API
+  const checkBonusStatus = async () => {
+    try {
+      const response = await fetch('/api/bonus', {
+        method: 'GET',
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        const dailyBonus = result.bonuses?.find((b: any) => b.id === 'daily');
+        setBonusAvailable(dailyBonus?.available || false);
+      }
+    } catch (error) {
+      console.error('Ошибка проверки статуса бонуса:', error);
+      setBonusAvailable(false); // По умолчанию недоступен при ошибке
+    }
+  };
+
   const checkBonusAvailability = () => {
-    const lastBonus = localStorage.getItem('lastDailyBonus');
-    const today = new Date().toDateString();
-    return lastBonus !== today;
+    // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Не полагаемся только на localStorage
+    // Проверяем состояние бонуса через API при каждой проверке
+    return bonusAvailable;
   };
 
   // Генерация HD адреса для пополнения

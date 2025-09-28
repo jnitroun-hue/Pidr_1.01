@@ -151,7 +151,11 @@ export class UnifiedMasterWallet {
    * 🏦 Инициализация Master кошельков из переменных окружения
    */
   private async initializeMasterWallets(): Promise<void> {
-    console.log('🏦 Инициализация Master кошельков...');
+    const isBuildTime = process.env.NODE_ENV === 'production' && process.env.VERCEL_ENV === undefined;
+    
+    if (!isBuildTime) {
+      console.log('🏦 Инициализация Master кошельков...');
+    }
 
     for (const [network, config] of Object.entries(SUPPORTED_NETWORKS)) {
       const envAddress = this.getEnvAddress(network as SupportedNetwork);
@@ -169,13 +173,20 @@ export class UnifiedMasterWallet {
         };
 
         this.masterWallets.set(network as SupportedNetwork, masterConfig);
-        console.log(`✅ ${network} Master кошелек загружен: ${envAddress || envXpub}`);
+        if (!isBuildTime) {
+          console.log(`✅ ${network} Master кошелек загружен: ${envAddress || envXpub}`);
+        }
       } else {
-        console.warn(`⚠️ ${network} Master кошелек не настроен`);
+        // Показываем предупреждения только для критичных кошельков во время сборки
+        if (!isBuildTime || ['BTC', 'ETH', 'TON', 'SOL'].includes(network)) {
+          console.warn(`⚠️ ${network} Master кошелек не настроен`);
+        }
       }
     }
 
-    console.log(`🏦 Загружено ${this.masterWallets.size} Master кошельков`);
+    if (!isBuildTime) {
+      console.log(`🏦 Загружено ${this.masterWallets.size} Master кошельков`);
+    }
   }
 
   /**

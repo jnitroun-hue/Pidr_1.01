@@ -73,8 +73,55 @@ const getTableDimensions = () => {
   };
 };
 
-// НОВАЯ МАТЕМАТИЧЕСКИ ПРАВИЛЬНАЯ система позиционирования игроков
+// 🔥 НОВАЯ СИСТЕМА ПРЯМОУГОЛЬНОГО СТОЛА ДЛЯ 9 ИГРОКОВ (3-2-3-1)
+const getRectanglePosition = (index: number, totalPlayers: number): { top: string; left: string } => {
+  // ПОЗИЦИЯ 0: Главный игрок снизу по центру
+  if (index === 0) {
+    return { left: '50%', top: '85%' };
+  }
+  
+  // Для 9 игроков: расположение 3-2-3-1 (слева-сверху-справа-снизу)
+  const positions = [
+    // Позиция 0: Главный игрок (снизу по центру) - уже обработана выше
+    
+    // ЛЕВАЯ СТОРОНА (3 игрока): позиции 1, 2, 3
+    { left: '15%', top: '25%' }, // Позиция 1: левый верхний
+    { left: '15%', top: '50%' }, // Позиция 2: левый центральный  
+    { left: '15%', top: '75%' }, // Позиция 3: левый нижний
+    
+    // ВЕРХНЯЯ СТОРОНА (2 игрока): позиции 4, 5
+    { left: '35%', top: '15%' }, // Позиция 4: верхний левый
+    { left: '65%', top: '15%' }, // Позиция 5: верхний правый
+    
+    // ПРАВАЯ СТОРОНА (3 игрока): позиции 6, 7, 8
+    { left: '85%', top: '25%' }, // Позиция 6: правый верхний
+    { left: '85%', top: '50%' }, // Позиция 7: правый центральный
+    { left: '85%', top: '75%' }, // Позиция 8: правый нижний
+  ];
+  
+  // Возвращаем позицию для индекса (индекс 1-8 для позиций 1-8)
+  if (index >= 1 && index <= 8) {
+    return positions[index - 1];
+  }
+  
+  // Fallback для дополнительных игроков (если больше 9)
+  const fallbackAngle = (2 * Math.PI * (index - 9)) / Math.max(1, totalPlayers - 9);
+  const fallbackX = 50 + 40 * Math.cos(fallbackAngle);
+  const fallbackY = 50 + 30 * Math.sin(fallbackAngle);
+  
+  return {
+    left: `${Math.max(10, Math.min(90, fallbackX))}%`,
+    top: `${Math.max(10, Math.min(90, fallbackY))}%`
+  };
+};
+
+// LEGACY ФУНКЦИЯ (для обратной совместимости)
 const getCirclePosition = (index: number, totalPlayers: number): { top: string; left: string } => {
+  // Используем новую прямоугольную систему
+  return getRectanglePosition(index, totalPlayers);
+  
+  /*
+  // СТАРАЯ ОВАЛЬНАЯ СИСТЕМА (закомментирована)
   // Пользователь всегда снизу по центру (позиция 0)
   if (index === 0) {
     return { left: '50%', top: '85%' };
@@ -95,24 +142,9 @@ const getCirclePosition = (index: number, totalPlayers: number): { top: string; 
   const startAngle = -Math.PI / 2; // Начинаем сверху
   const endAngle = Math.PI / 2; // Заканчиваем внизу справа
   const angleRange = Math.PI; // Полукруг сверху
+  */
   
-  let angle;
-  if (remainingPlayers === 1) {
-    // Если только 1 противник - ставим сверху
-    angle = -Math.PI / 2;
-  } else {
-    // Равномерно распределяем по полукругу сверху
-    angle = startAngle + (actualIndex * angleRange) / Math.max(1, remainingPlayers - 1);
-  }
-  
-  // Вычисляем позицию на эллипсе
-  const x = centerX + radiusX * Math.cos(angle);
-  const y = centerY + radiusY * Math.sin(angle);
-  
-  return {
-    left: `${Math.max(5, Math.min(95, x))}%`, // Ограничиваем в пределах экрана
-    top: `${Math.max(5, Math.min(80, y))}%`   // Не заходим в зону пользователя
-  };
+  // УДАЛЕН СТАРЫЙ КОД - используется только новая прямоугольная система
 };
 
 function getFirstPlayerIdx(players: Player[]): number {
@@ -794,13 +826,17 @@ function GamePageContentComponent({
         </div>
       ) : (
         <div className={styles.gameArea}>
-          <div className={styles.tableBg}>
+          {/* 🔥 НОВЫЙ ПРЯМОУГОЛЬНЫЙ СТОЛ */}
+          <div className={styles.rectangularTable}>
             <div 
               className={styles.tableCenter} 
               style={{ 
-                transform: `translate(-50%, -50%)`,
-                width: `${getTableDimensions().width}px`,
-                height: `${getTableDimensions().height}px`
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: '100%',
+                height: '100%'
               }}
             >
               

@@ -35,6 +35,61 @@
   bottom: 0;
 }
 
+/* 🔥 НОВЫЙ ПРЯМОУГОЛЬНЫЙ ИГРОВОЙ СТОЛ */
+.rectangularTable {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 70vw;
+  height: 50vh;
+  max-width: 800px;
+  max-height: 500px;
+  min-width: 300px; /* Уменьшен для мобильных */
+  min-height: 200px; /* Уменьшен для мобильных */
+  
+  /* Прямоугольный стол с закругленными углами */
+  background: 
+    linear-gradient(135deg, rgba(34, 139, 34, 0.9) 0%, rgba(0, 100, 0, 0.8) 50%, rgba(34, 139, 34, 0.9) 100%),
+    radial-gradient(ellipse at center, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+  border: 4px solid rgba(255, 215, 0, 0.6);
+  border-radius: 24px;
+  box-shadow: 
+    0 0 40px rgba(255, 215, 0, 0.3),
+    inset 0 0 60px rgba(255, 255, 255, 0.05),
+    0 8px 32px rgba(0, 0, 0, 0.4);
+  
+  /* Текстура стола */
+  background-image: 
+    radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.02) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.02) 0%, transparent 50%);
+  
+  z-index: 10;
+}
+
+/* Адаптивность прямоугольного стола */
+@media (max-width: 768px) {
+  .rectangularTable {
+    width: 85vw;
+    height: 60vh;
+    min-width: 280px;
+    min-height: 180px;
+    border-radius: 16px;
+    border-width: 3px;
+  }
+}
+
+@media (max-width: 480px) {
+  .rectangularTable {
+    width: 90vw;
+    height: 65vh;
+    min-width: 250px;
+    min-height: 160px;
+    border-radius: 12px;
+    border-width: 2px;
+  }
+}
+
 /* Заголовок игры */
 .gameHeader {
   position: fixed;
@@ -207,16 +262,23 @@
 
 /* Удалена анимация tableGlow - слишком отвлекает */
 
-/* УЛУЧШЕННОЕ позиционирование игроков для 4-9 игроков */
+/* 🔥 ОБНОВЛЕННЫЕ СТИЛИ ИГРОКОВ ДЛЯ ПРЯМОУГОЛЬНОГО СТОЛА */
 .playerSeat {
   position: absolute;
-  width: 120px; /* Увеличено для лучшей видимости */
+  width: 140px; /* Увеличено для лучшей видимости на прямоугольном столе */
   display: flex;
   flex-direction: column;
   align-items: center;
-  z-index: 3;
+  z-index: 100; /* Увеличен для лучшей видимости */
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   transform: translate(-50%, -50%); /* Центрируем по координатам */
+  
+  /* Улучшенная видимость на прямоугольном столе */
+  background: rgba(15, 23, 42, 0.1);
+  border-radius: 16px;
+  padding: 10px;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 215, 0, 0.1);
 }
 
 /* Изменяем порядок: аватар сверху, карты снизу */
