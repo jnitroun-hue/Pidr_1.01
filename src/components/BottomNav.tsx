@@ -20,6 +20,11 @@ export default function BottomNav() {
   const pathname = usePathname();
   const isMainMenu = pathname === '/' || pathname === '/main';
   const [open, setOpen] = useState(false);
+  
+  // Скрываем BottomNav в игре и мультиплеере
+  if (pathname === '/game' || pathname === '/multiplayer') {
+    return null;
+  }
 
   const handleWalletClick = () => {
     setOpen(true);
