@@ -3,9 +3,10 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import BottomNav from '../../components/BottomNav';
 import styles from './GameTable.module.css';
-import { tableCanvasGenerator } from '@/lib/image-generation/table-generator';
-import { avatarCanvasGenerator } from '@/lib/image-generation/avatar-generator';
-import { gameAnimationSystem } from '@/lib/animations/game-animations';
+// Динамические импорты для избежания SSR ошибок
+// import { tableCanvasGenerator } from '@/lib/image-generation/table-generator';
+// import { avatarCanvasGenerator } from '@/lib/image-generation/avatar-generator';
+// import { gameAnimationSystem } from '@/lib/animations/game-animations';
 import { getPremiumTable } from '@/utils/generatePremiumTable';
 import { useDragAndDrop } from '@/hooks/useDragAndDrop';
 import TableSelector from '@/components/TableSelector';
@@ -815,6 +816,9 @@ function GamePageContentComponent({
     setIsGeneratingTable(true);
     try {
       console.log(`🎲 Генерируем ${style} стол...`);
+      
+      // Динамический импорт
+      const { tableCanvasGenerator } = await import('@/lib/image-generation/table-generator');
       const tableImage = await tableCanvasGenerator.generatePremiumTable(800, 500, style);
       setGeneratedTableImage(tableImage);
       console.log('✅ Премиум стол сгенерирован!');
@@ -854,6 +858,9 @@ function GamePageContentComponent({
     try {
       console.log('🎨 Генерируем аватары для всех игроков...');
       const avatars: {[playerId: string]: string} = {};
+      
+      // Динамический импорт
+      const { avatarCanvasGenerator } = await import('@/lib/image-generation/avatar-generator');
       
       for (const player of players) {
         if (player.isBot) {

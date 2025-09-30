@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { GameTable, TableShopCategory, TablePurchaseResult } from '@/types/tables';
 import { GAME_TABLES, SHOP_CATEGORIES, getTablesByCategory, calculateTablePrice } from '@/data/tables';
-import { tableCanvasGenerator } from '@/lib/image-generation/table-generator';
+// Динамический импорт для избежания SSR ошибок
+// import { tableCanvasGenerator } from '@/lib/image-generation/table-generator';
 
 /**
  * 🛍️ TABLE SHOP
@@ -25,33 +26,51 @@ export default function TableShopPage() {
   // Генерация превью столов
   useEffect(() => {
     const generateTablePreviews = async () => {
+      // Проверяем, что мы в браузере
+      if (typeof window === 'undefined') return;
+      
       setIsGenerating(true);
       const images: {[key: string]: string} = {};
       
-      for (const table of currentTables) {
-        if (!tableImages[table.id]) {
-          try {
-            const imageUrl = await tableCanvasGenerator.generatePremiumTable(
-              400, 250, table.style as any
-            );
-            images[table.id] = imageUrl;
-          } catch (error) {
-            console.error(`Ошибка генерации превью для ${table.id}:`, error);
+      try {
+        // Динамический импорт генератора
+        const { tableCanvasGenerator } = await import('@/lib/image-generation/table-generator');
+        
+        for (const table of currentTables) {
+          if (!tableImages[table.id]) {
+            try {
+              const imageUrl = await tableCanvasGenerator.generatePremiumTable(
+                400, 250, table.style as any
+              );
+              images[table.id] = imageUrl;
+            } catch (error) {
+              console.error(`Ошибка генерации превью для ${table.id}:`, error);
+            }
           }
         }
+      } catch (error) {
+        console.error('Ошибка импорта генератора:', error);
       }
       
       setTableImages(prev => ({ ...prev, ...images }));
       setIsGenerating(false);
     };
 
-    if (currentTables.length > 0) {
+    if (currentTables.length > 0 && typeof window !== 'undefined') {
       generateTablePreviews();
     }
   }, [selectedCategory, currentTables]);
 
   // Покупка стола
   const handlePurchaseTable = async (table: GameTable): Promise<TablePurchaseResult> => {
+    // Проверяем, что мы в браузере
+    if (typeof window === 'undefined') {
+      return {
+        success: false,
+        message: 'Функция доступна только в браузере'
+      };
+    }
+
     // Проверяем требования
     if (table.requirements?.level && table.requirements.level > 1) {
       return {
@@ -112,7 +131,9 @@ export default function TableShopPage() {
   const handleEquipTable = (tableId: string) => {
     setEquippedTable(tableId);
     // Здесь можно добавить сохранение в localStorage или API
-    localStorage.setItem('equippedTable', tableId);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('equippedTable', tableId);
+    }
   };
 
   // Проверка доступности стола

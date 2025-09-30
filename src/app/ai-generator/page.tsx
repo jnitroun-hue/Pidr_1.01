@@ -161,6 +161,11 @@ export default function AIGeneratorPage() {
       return;
     }
 
+    if (typeof window === 'undefined') {
+      alert('Функция доступна только в браузере');
+      return;
+    }
+
     setIsGenerating(true);
     try {
       console.log(`🎨 Генерируем изображение: "${prompt}"`);

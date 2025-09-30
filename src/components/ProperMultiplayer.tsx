@@ -241,7 +241,7 @@ export default function ProperMultiplayer({ onBack }: ProperMultiplayerProps) {
           id: roomData.id || roomData.roomId || `room_${Date.now()}`,
           code: roomData.room_code || roomData.roomCode || roomData.code,
           name: roomData.name || createData.name,
-          host: user?.username || user?.firstName || 'Host',
+          host: user?.username || user?.first_name || 'Host',
           players: 1, // Создатель уже в комнате
           maxPlayers: roomData.max_players || roomData.maxPlayers || createData.maxPlayers,
           gameMode: createData.gameMode,
@@ -284,7 +284,7 @@ export default function ProperMultiplayer({ onBack }: ProperMultiplayerProps) {
         });
         
         // Создаем данные для комнаты ожидания
-        const roomData = {
+        const waitingRoomData = {
           id: result.room.roomId,
           code: result.room.roomCode,
           name: result.room.name,
@@ -310,7 +310,7 @@ export default function ProperMultiplayer({ onBack }: ProperMultiplayerProps) {
           }
         };
 
-        setCurrentRoom(roomData);
+        setCurrentRoom(waitingRoomData);
         setView('waiting');
       } else {
         throw new Error(result.error || 'Не удалось создать комнату');
@@ -353,7 +353,7 @@ export default function ProperMultiplayer({ onBack }: ProperMultiplayerProps) {
         console.log('✅ Successfully joined room:', result.room);
         
         // Создаем данные для комнаты ожидания (из базы данных)
-        const roomData = {
+        const dbRoomData = {
           id: result.room.id,
           code: result.room.roomCode,
           name: result.room.name,
@@ -382,7 +382,7 @@ export default function ProperMultiplayer({ onBack }: ProperMultiplayerProps) {
         };
 
         console.log('✅ Joined database room:', result.room);
-        setCurrentRoom(roomData);
+        setCurrentRoom(dbRoomData);
         setView('waiting');
         return;
       } else {
@@ -412,7 +412,7 @@ export default function ProperMultiplayer({ onBack }: ProperMultiplayerProps) {
         }
       
         // Создаем данные для комнаты ожидания (общая комната)
-        const roomData = {
+        const sharedRoomData = {
           id: sharedRoom.id,
           code: sharedRoom.code,
           name: sharedRoom.name,
@@ -449,7 +449,7 @@ export default function ProperMultiplayer({ onBack }: ProperMultiplayerProps) {
         };
 
         console.log('✅ Joined shared room (fallback):', sharedRoom.code);
-        setCurrentRoom(roomData);
+        setCurrentRoom(sharedRoomData);
         setView('waiting');
         
       } catch (fallbackError: any) {
