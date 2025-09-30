@@ -6,7 +6,7 @@ import styles from './GameTable.module.css';
 // Генераторы перенесены в отдельный проект pidr_generators
 import { getPremiumTable } from '@/utils/generatePremiumTable';
 import { useDragAndDrop } from '@/hooks/useDragAndDrop';
-import TableSelector from '@/components/TableSelector';
+// TableSelector удален - выбор стола больше не нужен
 import type { Player, Card } from '../../types/game';
 import type { Card as StoreCard } from '../../store/gameStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -265,10 +265,7 @@ function GamePageContentComponent({
   const [playerAvatars, setPlayerAvatars] = useState<{[playerId: string]: string}>({});
   const [isGeneratingAvatars, setIsGeneratingAvatars] = useState(false);
 
-  // 🎲 Состояния для выбора стола
-  const [showTableSelector, setShowTableSelector] = useState(false);
-  const [currentTableId, setCurrentTableId] = useState('classic-green');
-  const [userId] = useState('user123'); // Mock user ID
+  // Выбор стола удален - используем только роскошный SVG стол
   
   // Обновляем состояние мультиплеера при изменении пропсов
   useEffect(() => {
@@ -834,25 +831,7 @@ function GamePageContentComponent({
     }
   };
 
-  // 🎲 Обработчик смены стола
-  const handleTableChange = async (tableId: string) => {
-    setCurrentTableId(tableId);
-    
-    // Получаем данные нового стола и генерируем его
-    try {
-      const response = await fetch(`/api/tables?action=list`);
-      const data = await response.json();
-      
-      if (data.success) {
-        const newTable = data.tables.find((t: any) => t.id === tableId);
-        if (newTable) {
-          await generatePremiumTable(newTable.style);
-        }
-      }
-    } catch (error) {
-      console.error('Error changing table:', error);
-    }
-  };
+  // Функция смены стола удалена - используем только роскошный SVG стол
 
   // 👥 Генерация аватаров для всех игроков
   const generatePlayersAvatars = async () => {
@@ -996,21 +975,6 @@ function GamePageContentComponent({
         </div>
       ) : (
         <div className={styles.gameArea}>
-          {/* 🎲 Кнопка выбора стола */}
-          <div style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 100 }}>
-            <button
-              onClick={() => setShowTableSelector(true)}
-              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow-lg"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                fontSize: '14px'
-              }}
-            >
-              🎲 Выбрать стол
-            </button>
-          </div>
 
           {/* 🔥 НОВЫЙ ПРЯМОУГОЛЬНЫЙ СТОЛ */}
           <div 
@@ -1833,14 +1797,6 @@ function GamePageContentComponent({
         />
       )}
 
-      {/* 🎲 Селектор столов */}
-      <TableSelector
-        userId={userId}
-        currentTableId={currentTableId}
-        onTableChange={handleTableChange}
-        isOpen={showTableSelector}
-        onClose={() => setShowTableSelector(false)}
-      />
     </div>
   );
 }

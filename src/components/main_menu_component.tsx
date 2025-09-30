@@ -119,21 +119,6 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
             <span className="menu-action-label">{t.mainMenu.play.toUpperCase()}</span>
           </button>
           
-          <button 
-            onClick={() => {
-              console.log('Кнопка МАГАЗИН СТОЛОВ нажата');
-              hapticFeedback('medium');
-              router.push('/table-shop');
-            }}
-            className="menu-action-card"
-            style={{ 
-              background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-              borderColor: '#8b5cf6'
-            }}
-          >
-            <Store className="menu-action-icon" />
-            <span className="menu-action-label">🎲 СТОЛЫ</span>
-          </button>
 
           <button 
             onClick={() => {
