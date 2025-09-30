@@ -45,6 +45,10 @@ yarn-error.log*
 .cursor/
 .cursor/*
 
+# generated assets (AI-generated images)
+generated-assets/
+generated-assets/*
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
