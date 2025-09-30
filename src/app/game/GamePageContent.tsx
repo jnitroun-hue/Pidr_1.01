@@ -3,10 +3,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import BottomNav from '../../components/BottomNav';
 import styles from './GameTable.module.css';
-// Динамические импорты для избежания SSR ошибок
-// import { tableCanvasGenerator } from '@/lib/image-generation/table-generator';
-// import { avatarCanvasGenerator } from '@/lib/image-generation/avatar-generator';
-// import { gameAnimationSystem } from '@/lib/animations/game-animations';
+// Генераторы перенесены в отдельный проект pidr_generators
 import { getPremiumTable } from '@/utils/generatePremiumTable';
 import { useDragAndDrop } from '@/hooks/useDragAndDrop';
 import TableSelector from '@/components/TableSelector';
@@ -43,6 +40,10 @@ const CARD_BACK = 'back.png';
 
 // Рассчитываем размеры и позицию стола
 const getTableDimensions = () => {
+  if (typeof window === 'undefined') {
+    return { vw: 1024, vh: 768, isMobile: false, isSmallMobile: false };
+  }
+  
   const vw = Math.min(window.innerWidth, document.documentElement.clientWidth);
   const vh = Math.min(window.innerHeight, document.documentElement.clientHeight);
   
@@ -366,6 +367,8 @@ function GamePageContentComponent({
   
   useEffect(() => {
     const updateScreenInfo = () => {
+      if (typeof window === 'undefined') return;
+      
       const vw = Math.min(window.innerWidth, document.documentElement.clientWidth);
       const vh = Math.min(window.innerHeight, document.documentElement.clientHeight);
       const isMobile = vw <= 768;
@@ -374,8 +377,8 @@ function GamePageContentComponent({
       const isLandscape = vw > vh;
       
       // Особая проверка для iPhone
-      const isIPhone = /iPhone|iPod/.test(navigator.userAgent);
-      const isAndroid = /Android/.test(navigator.userAgent);
+      const isIPhone = typeof navigator !== 'undefined' && /iPhone|iPod/.test(navigator.userAgent);
+      const isAndroid = typeof navigator !== 'undefined' && /Android/.test(navigator.userAgent);
       
       // Определяем safe areas для iOS и Android
       const safeAreaTop = 
@@ -409,25 +412,27 @@ function GamePageContentComponent({
     updateScreenInfo();
     
     // Слушатели для всех изменений
-    window.addEventListener('resize', updateScreenInfo);
-    window.addEventListener('orientationchange', updateScreenInfo);
-    
-    // Дополнительная проверка после изменения ориентации (Android)
-    let orientationTimeout: NodeJS.Timeout;
-    const handleOrientationChange = () => {
-      clearTimeout(orientationTimeout);
-      orientationTimeout = setTimeout(updateScreenInfo, 500);
-    };
-    
-    window.addEventListener('orientationchange', handleOrientationChange);
-    
-    // Очистка
-    return () => {
-      window.removeEventListener('resize', updateScreenInfo);
-      window.removeEventListener('orientationchange', updateScreenInfo);
-      window.removeEventListener('orientationchange', handleOrientationChange);
-      clearTimeout(orientationTimeout);
-    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', updateScreenInfo);
+      window.addEventListener('orientationchange', updateScreenInfo);
+      
+      // Дополнительная проверка после изменения ориентации (Android)
+      let orientationTimeout: NodeJS.Timeout;
+      const handleOrientationChange = () => {
+        clearTimeout(orientationTimeout);
+        orientationTimeout = setTimeout(updateScreenInfo, 500);
+      };
+      
+      window.addEventListener('orientationchange', handleOrientationChange);
+      
+      // Очистка
+      return () => {
+        window.removeEventListener('resize', updateScreenInfo);
+        window.removeEventListener('orientationchange', updateScreenInfo);
+        window.removeEventListener('orientationchange', handleOrientationChange);
+        clearTimeout(orientationTimeout);
+      };
+    }
   }, []);
 
   // Инициализация ИИ игроков
@@ -815,13 +820,12 @@ function GamePageContentComponent({
     
     setIsGeneratingTable(true);
     try {
-      console.log(`🎲 Генерируем ${style} стол...`);
+      console.log(`🎲 Используем статичный ${style} стол...`);
       
-      // Динамический импорт
-      const { tableCanvasGenerator } = await import('@/lib/image-generation/table-generator');
-      const tableImage = await tableCanvasGenerator.generatePremiumTable(800, 500, style);
+      // Генерация перенесена в отдельный проект pidr_generators
+      const tableImage = await getPremiumTable();
       setGeneratedTableImage(tableImage);
-      console.log('✅ Премиум стол сгенерирован!');
+      console.log('✅ Статичный стол загружен!');
       
     } catch (error) {
       console.error('❌ Ошибка генерации стола:', error);
@@ -856,23 +860,18 @@ function GamePageContentComponent({
     
     setIsGeneratingAvatars(true);
     try {
-      console.log('🎨 Генерируем аватары для всех игроков...');
+      console.log('🎨 Используем стандартные аватары...');
       const avatars: {[playerId: string]: string} = {};
       
-      // Динамический импорт
-      const { avatarCanvasGenerator } = await import('@/lib/image-generation/avatar-generator');
-      
+      // Генерация аватаров перенесена в отдельный проект pidr_generators
+      // Используем стандартные аватары
       for (const player of players) {
-        if (player.isBot) {
-          avatars[player.id] = await avatarCanvasGenerator.generateBotAvatar(player.name);
-        } else {
-          avatars[player.id] = await avatarCanvasGenerator.generatePlayerAvatar(player.name, 'classic');
-        }
-        await new Promise(resolve => setTimeout(resolve, 100));
+        avatars[player.id] = '/images/default-avatar.png'; // Заглушка
+        await new Promise(resolve => setTimeout(resolve, 50));
       }
       
       setPlayerAvatars(avatars);
-      console.log('✅ Аватары сгенерированы для всех игроков!');
+      console.log('✅ Стандартные аватары загружены!');
       
     } catch (error) {
       console.error('❌ Ошибка генерации аватаров:', error);
@@ -906,7 +905,7 @@ function GamePageContentComponent({
             Игра не запущена. Вернитесь в главное меню и настройте игру.
           </p>
           <button
-            onClick={() => window.history.back()}
+            onClick={() => typeof window !== 'undefined' && window.history.back()}
             style={{
               background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
               color: '#fff',
@@ -1782,10 +1781,10 @@ function GamePageContentComponent({
                 
                 <div className={styles.menuDivider}></div>
                 
-                <button onClick={() => window.history.back()} className={styles.menuItem}>
+                <button onClick={() => typeof window !== 'undefined' && window.history.back()} className={styles.menuItem}>
                   ← {t.game.back}
                 </button>
-                <button onClick={() => window.location.reload()} className={styles.menuItem}>
+                <button onClick={() => typeof window !== 'undefined' && window.location.reload()} className={styles.menuItem}>
                   🔄 {t.game.refresh}
                 </button>
                 <button onClick={() => {

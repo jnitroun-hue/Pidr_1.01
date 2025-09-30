@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { GameTable } from '@/types/tables';
 import { getTableById } from '@/data/tables';
-import { tableCanvasGenerator } from '@/lib/image-generation/table-generator';
+// Генерация столов перенесена в отдельный проект pidr_generators
 
 /**
  * 🎲 TABLE SELECTOR COMPONENT
@@ -62,9 +62,9 @@ export default function TableSelector({
           const table = getTableById(tableId);
           if (table) {
             try {
-              const imageUrl = await tableCanvasGenerator.generatePremiumTable(
-                300, 200, table.style as any
-              );
+              // Генерация перенесена в отдельный проект pidr_generators
+              // Используем статичное изображение или заглушку
+              const imageUrl = table.imageUrl || '/images/luxury-table.svg';
               images[tableId] = imageUrl;
             } catch (error) {
               console.error(`Error generating preview for ${tableId}:`, error);

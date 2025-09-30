@@ -33,15 +33,14 @@ export default function TableShopPage() {
       const images: {[key: string]: string} = {};
       
       try {
-        // Динамический импорт генератора
-        const { tableCanvasGenerator } = await import('@/lib/image-generation/table-generator');
+        // Генерация перенесена в отдельный проект pidr_generators
+        // Используем статичные превью
         
         for (const table of currentTables) {
           if (!tableImages[table.id]) {
             try {
-              const imageUrl = await tableCanvasGenerator.generatePremiumTable(
-                400, 250, table.style as any
-              );
+              // Используем статичное изображение или заглушку
+              const imageUrl = table.imageUrl || '/images/table-placeholder.png';
               images[table.id] = imageUrl;
             } catch (error) {
               console.error(`Ошибка генерации превью для ${table.id}:`, error);
