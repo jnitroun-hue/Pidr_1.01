@@ -262,35 +262,69 @@
 
 /* Удалена анимация tableGlow - слишком отвлекает */
 
-/* 🔥 ОБНОВЛЕННЫЕ СТИЛИ ИГРОКОВ ДЛЯ ПРЯМОУГОЛЬНОГО СТОЛА */
+/* 🎯 СТИЛИ ИГРОКОВ ДЛЯ ПРЯМОУГОЛЬНОГО СТОЛА */
 .playerSeat {
   position: absolute;
-  width: 140px; /* Увеличено для лучшей видимости на прямоугольном столе */
+  width: 120px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  z-index: 100; /* Увеличен для лучшей видимости */
+  z-index: 50;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  transform: translate(-50%, -50%); /* Центрируем по координатам */
+  transform: translate(-50%, -50%);
   
-  /* Улучшенная видимость на прямоугольном столе */
-  background: rgba(15, 23, 42, 0.1);
+  /* Современный дизайн места игрока */
+  background: 
+    linear-gradient(145deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.2) 100%),
+    radial-gradient(circle at center, rgba(255, 215, 0, 0.1) 0%, transparent 70%);
+  border: 2px solid rgba(255, 215, 0, 0.5);
   border-radius: 16px;
-  padding: 10px;
-  backdrop-filter: blur(4px);
-  border: 1px solid rgba(255, 215, 0, 0.1);
+  padding: 10px 8px;
+  backdrop-filter: blur(8px);
+  
+  /* Тень и эффекты */
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
-/* Изменяем порядок: аватар сверху, карты снизу */
+/* Структура: аватар → карты → имя */
 .playerSeat .avatarWrap {
-  order: -1; /* Ставим аватар перед всем остальным */
-  margin-bottom: 8px; /* Отступ от карт */
-  z-index: 10; /* Поверх карт */
+  order: -1;
+  margin-bottom: 8px;
+  z-index: 10;
   position: relative;
 }
 
+/* Эффект при наведении */
 .playerSeat:hover {
-  transform: scale(1.05);
+  transform: translate(-50%, -50%) scale(1.08) translateY(-2px);
+  border-color: rgba(255, 215, 0, 0.8);
+  box-shadow: 
+    0 8px 30px rgba(0, 0, 0, 0.4),
+    0 0 20px rgba(255, 215, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+/* Анимация активного игрока */
+.playerSeat.activePlayer {
+  border-color: rgba(0, 255, 136, 0.8);
+  background: 
+    linear-gradient(145deg, rgba(0, 255, 136, 0.1) 0%, rgba(0, 0, 0, 0.2) 100%);
+  animation: activePlayerPulse 2s infinite;
+}
+
+@keyframes activePlayerPulse {
+  0%, 100% {
+    box-shadow: 
+      0 4px 20px rgba(0, 0, 0, 0.3),
+      0 0 15px rgba(0, 255, 136, 0.4);
+  }
+  50% {
+    box-shadow: 
+      0 6px 25px rgba(0, 0, 0, 0.4),
+      0 0 25px rgba(0, 255, 136, 0.6);
+  }
 }
 
 /* Компактный контейнер для аватара и имени */

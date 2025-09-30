@@ -3,7 +3,12 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import BottomNav from '../../components/BottomNav';
 import styles from './GameTable.module.css';
+import { tableCanvasGenerator } from '@/lib/image-generation/table-generator';
+import { avatarCanvasGenerator } from '@/lib/image-generation/avatar-generator';
+import { gameAnimationSystem } from '@/lib/animations/game-animations';
+import { getPremiumTable } from '@/utils/generatePremiumTable';
 import { useDragAndDrop } from '@/hooks/useDragAndDrop';
+import TableSelector from '@/components/TableSelector';
 import type { Player, Card } from '../../types/game';
 import type { Card as StoreCard } from '../../store/gameStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -73,30 +78,70 @@ const getTableDimensions = () => {
   };
 };
 
-// 🔥 НОВАЯ СИСТЕМА ПРЯМОУГОЛЬНОГО СТОЛА ДЛЯ 9 ИГРОКОВ (3-2-3-1)
-const getRectanglePosition = (index: number, totalPlayers: number): { top: string; left: string } => {
+// 🎯 УЛУЧШЕННАЯ СИСТЕМА ПРЯМОУГОЛЬНОГО СТОЛА ДЛЯ 9 ИГРОКОВ
+const getRectanglePosition = (index: number, totalPlayers: number): { 
+  top: string; 
+  left: string; 
+  cardDirection: 'horizontal' | 'vertical';
+  cardOffset: { x: number; y: number };
+} => {
   // ПОЗИЦИЯ 0: Главный игрок снизу по центру
   if (index === 0) {
-    return { left: '50%', top: '85%' };
+    return { 
+      left: '50%', 
+      top: '85%',
+      cardDirection: 'horizontal',
+      cardOffset: { x: 0, y: -40 } // Карты выше игрока
+    };
   }
   
-  // Для 9 игроков: расположение 3-2-3-1 (слева-сверху-справа-снизу)
+  // Для 9 игроков: расположение 3-2-3-1 с учетом направления карт
   const positions = [
-    // Позиция 0: Главный игрок (снизу по центру) - уже обработана выше
-    
     // ЛЕВАЯ СТОРОНА (3 игрока): позиции 1, 2, 3
-    { left: '15%', top: '25%' }, // Позиция 1: левый верхний
-    { left: '15%', top: '50%' }, // Позиция 2: левый центральный  
-    { left: '15%', top: '75%' }, // Позиция 3: левый нижний
+    { 
+      left: '8%', top: '20%', 
+      cardDirection: 'vertical' as const,
+      cardOffset: { x: 60, y: 0 } // Карты справа от игрока
+    },
+    { 
+      left: '8%', top: '50%', 
+      cardDirection: 'vertical' as const,
+      cardOffset: { x: 60, y: 0 }
+    },
+    { 
+      left: '8%', top: '80%', 
+      cardDirection: 'vertical' as const,
+      cardOffset: { x: 60, y: 0 }
+    },
     
     // ВЕРХНЯЯ СТОРОНА (2 игрока): позиции 4, 5
-    { left: '35%', top: '15%' }, // Позиция 4: верхний левый
-    { left: '65%', top: '15%' }, // Позиция 5: верхний правый
+    { 
+      left: '30%', top: '8%', 
+      cardDirection: 'horizontal' as const,
+      cardOffset: { x: 0, y: 60 } // Карты ниже игрока
+    },
+    { 
+      left: '70%', top: '8%', 
+      cardDirection: 'horizontal' as const,
+      cardOffset: { x: 0, y: 60 }
+    },
     
     // ПРАВАЯ СТОРОНА (3 игрока): позиции 6, 7, 8
-    { left: '85%', top: '25%' }, // Позиция 6: правый верхний
-    { left: '85%', top: '50%' }, // Позиция 7: правый центральный
-    { left: '85%', top: '75%' }, // Позиция 8: правый нижний
+    { 
+      left: '92%', top: '20%', 
+      cardDirection: 'vertical' as const,
+      cardOffset: { x: -60, y: 0 } // Карты слева от игрока
+    },
+    { 
+      left: '92%', top: '50%', 
+      cardDirection: 'vertical' as const,
+      cardOffset: { x: -60, y: 0 }
+    },
+    { 
+      left: '92%', top: '80%', 
+      cardDirection: 'vertical' as const,
+      cardOffset: { x: -60, y: 0 }
+    },
   ];
   
   // Возвращаем позицию для индекса (индекс 1-8 для позиций 1-8)
@@ -111,7 +156,9 @@ const getRectanglePosition = (index: number, totalPlayers: number): { top: strin
   
   return {
     left: `${Math.max(10, Math.min(90, fallbackX))}%`,
-    top: `${Math.max(10, Math.min(90, fallbackY))}%`
+    top: `${Math.max(10, Math.min(90, fallbackY))}%`,
+    cardDirection: 'horizontal' as const,
+    cardOffset: { x: 0, y: -30 }
   };
 };
 
@@ -209,6 +256,17 @@ function GamePageContentComponent({
     code: multiplayerData.roomCode,
     isHost: multiplayerData.isHost
   } : null);
+
+  // 🎨 Состояния для генерации контента
+  const [generatedTableImage, setGeneratedTableImage] = useState<string | null>(null);
+  const [isGeneratingTable, setIsGeneratingTable] = useState(false);
+  const [playerAvatars, setPlayerAvatars] = useState<{[playerId: string]: string}>({});
+  const [isGeneratingAvatars, setIsGeneratingAvatars] = useState(false);
+
+  // 🎲 Состояния для выбора стола
+  const [showTableSelector, setShowTableSelector] = useState(false);
+  const [currentTableId, setCurrentTableId] = useState('classic-green');
+  const [userId] = useState('user123'); // Mock user ID
   
   // Обновляем состояние мультиплеера при изменении пропсов
   useEffect(() => {
@@ -610,6 +668,47 @@ function GamePageContentComponent({
     }
   }, [gameInitialized, isGameActive, players.length, gameStage, currentPlayerId, turnPhase, stage2TurnPhase, showNotification]);
 
+  // 🎲 Загружаем экипированный стол пользователя
+  useEffect(() => {
+    const fetchEquippedTable = async () => {
+      try {
+        const response = await fetch(`/api/tables?action=equipped&userId=${userId}`);
+        const data = await response.json();
+        
+        if (data.success && data.equippedTable) {
+          setCurrentTableId(data.equippedTable.id);
+          // Генерируем стол с соответствующим стилем
+          await generatePremiumTable(data.equippedTable.style);
+        } else {
+          // Генерируем дефолтный стол
+          await generatePremiumTable('luxury');
+        }
+      } catch (error) {
+        console.error('Error fetching equipped table:', error);
+        // Генерируем дефолтный стол при ошибке
+        await generatePremiumTable('luxury');
+      }
+    };
+
+    if (typeof window !== 'undefined' && userId) {
+      fetchEquippedTable();
+    }
+  }, [userId]);
+
+  // Автоматическая генерация стола при инициализации
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !generatedTableImage && !isGeneratingTable) {
+      generatePremiumTable('luxury');
+    }
+  }, [generatedTableImage, isGeneratingTable]);
+
+  // Автоматическая генерация аватаров при появлении игроков
+  useEffect(() => {
+    if (players.length > 0 && Object.keys(playerAvatars).length === 0 && !isGeneratingAvatars) {
+      generatePlayersAvatars();
+    }
+  }, [players.length, playerAvatars, isGeneratingAvatars]);
+
   // Эффект для автоматической раздачи карт при старте игры
   useEffect(() => {
     if (isGameActive && !dealt) {
@@ -628,6 +727,7 @@ function GamePageContentComponent({
   
   // НОВЫЙ STATE для сообщений над игроками
   const [playerMessages, setPlayerMessages] = useState<{[playerId: string]: {text: string; type: 'info' | 'warning' | 'success' | 'error'; timestamp: number}}>({});
+  
 
   // Показать сообщение над конкретным игроком
   const showPlayerMessage = (playerId: string, text: string, type: 'info' | 'warning' | 'success' | 'error' = 'info', duration: number = 3000) => {
@@ -708,7 +808,71 @@ function GamePageContentComponent({
     }
   };
 
+  // 🎨 Генерация премиум стола
+  const generatePremiumTable = async (style: 'luxury' | 'neon' | 'classic' = 'luxury') => {
+    if (typeof window === 'undefined') return;
+    
+    setIsGeneratingTable(true);
+    try {
+      console.log(`🎲 Генерируем ${style} стол...`);
+      const tableImage = await tableCanvasGenerator.generatePremiumTable(800, 500, style);
+      setGeneratedTableImage(tableImage);
+      console.log('✅ Премиум стол сгенерирован!');
+      
+    } catch (error) {
+      console.error('❌ Ошибка генерации стола:', error);
+    } finally {
+      setIsGeneratingTable(false);
+    }
+  };
 
+  // 🎲 Обработчик смены стола
+  const handleTableChange = async (tableId: string) => {
+    setCurrentTableId(tableId);
+    
+    // Получаем данные нового стола и генерируем его
+    try {
+      const response = await fetch(`/api/tables?action=list`);
+      const data = await response.json();
+      
+      if (data.success) {
+        const newTable = data.tables.find((t: any) => t.id === tableId);
+        if (newTable) {
+          await generatePremiumTable(newTable.style);
+        }
+      }
+    } catch (error) {
+      console.error('Error changing table:', error);
+    }
+  };
+
+  // 👥 Генерация аватаров для всех игроков
+  const generatePlayersAvatars = async () => {
+    if (typeof window === 'undefined' || players.length === 0) return;
+    
+    setIsGeneratingAvatars(true);
+    try {
+      console.log('🎨 Генерируем аватары для всех игроков...');
+      const avatars: {[playerId: string]: string} = {};
+      
+      for (const player of players) {
+        if (player.isBot) {
+          avatars[player.id] = await avatarCanvasGenerator.generateBotAvatar(player.name);
+        } else {
+          avatars[player.id] = await avatarCanvasGenerator.generatePlayerAvatar(player.name, 'classic');
+        }
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
+      setPlayerAvatars(avatars);
+      console.log('✅ Аватары сгенерированы для всех игроков!');
+      
+    } catch (error) {
+      console.error('❌ Ошибка генерации аватаров:', error);
+    } finally {
+      setIsGeneratingAvatars(false);
+    }
+  };
 
   const canDrawCard = turnPhase === 'deck_card_revealed' && currentTurnPlayer?.id === currentPlayerId;
   const canClickDeck = turnPhase === 'showing_deck_hint' && currentTurnPlayer?.id === currentPlayerId;
@@ -826,8 +990,32 @@ function GamePageContentComponent({
         </div>
       ) : (
         <div className={styles.gameArea}>
+          {/* 🎲 Кнопка выбора стола */}
+          <div style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 100 }}>
+            <button
+              onClick={() => setShowTableSelector(true)}
+              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow-lg"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: '14px'
+              }}
+            >
+              🎲 Выбрать стол
+            </button>
+          </div>
+
           {/* 🔥 НОВЫЙ ПРЯМОУГОЛЬНЫЙ СТОЛ */}
-          <div className={styles.rectangularTable}>
+          <div 
+            className={styles.rectangularTable}
+            style={{
+              backgroundImage: generatedTableImage ? `url(${generatedTableImage})` : undefined,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat'
+            }}
+          >
             <div 
               className={styles.tableCenter} 
               style={{ 
@@ -1065,15 +1253,15 @@ function GamePageContentComponent({
                     {/* Аватар и имя по центру */}
                     <div className={styles.avatarWrap}>
                       <div className={styles.avatarContainer}>
-                        {p.avatar && p.avatar.startsWith('data:') ? (
-                          // SVG аватар
+                        {(playerAvatars[p.id] || (p.avatar && p.avatar.startsWith('data:'))) ? (
+                          // Сгенерированный или SVG аватар
                           <div 
                             className={styles.avatar}
                             style={{ 
                               width: screenInfo.isVerySmallMobile ? 26 : screenInfo.isSmallMobile ? 28 : screenInfo.isMobile ? 32 : 40,
                               height: screenInfo.isVerySmallMobile ? 26 : screenInfo.isSmallMobile ? 28 : screenInfo.isMobile ? 32 : 40,
                               borderRadius: '50%',
-                              backgroundImage: `url(${p.avatar})`,
+                              backgroundImage: `url(${playerAvatars[p.id] || p.avatar})`,
                               backgroundSize: 'cover',
                               border: isCurrentPlayer ? '2px solid #ffd700' : '1px solid rgba(255,255,255,0.2)',
                               boxShadow: isCurrentPlayer ? '0 0 10px #ffd700' : 'none'
@@ -1199,12 +1387,21 @@ function GamePageContentComponent({
                             if (p.id === currentPlayerId && showHintsForUser) {
                               console.log(`🎯 [GamePageContent] Карта ${ci} игрока ${p.name}: isTopCard = ${isTopCard}, visibleCards.length = ${visibleCards.length}`);
                             }
-                            // УЛУЧШЕННОЕ направление стекинга карт в зависимости от позиции игрока
-                            const playerPosition = getCirclePosition(playerIndex, players.length);
-                            const isLeftSide = parseFloat(playerPosition.left) < 50; // Левая половина экрана
-                            // Увеличиваем расстояние между картами для лучшей видимости
-                            const spacing = screenInfo.isSmallMobile ? 18 : screenInfo.isMobile ? 22 : 28;
-                            const cardOffset = isLeftSide ? ci * spacing : -ci * spacing;
+                            // 🎯 УЛУЧШЕННАЯ СИСТЕМА ПОЗИЦИОНИРОВАНИЯ КАРТ
+                            const playerPositionData = getRectanglePosition(playerIndex, players.length);
+                            const baseSpacing = screenInfo.isSmallMobile ? 12 : screenInfo.isMobile ? 16 : 20;
+                            
+                            // Позиционирование карт в зависимости от направления
+                            let cardTransform = '';
+                            if (playerPositionData.cardDirection === 'horizontal') {
+                              // Горизонтальное расположение карт
+                              const cardOffset = (ci - (p.cards.length - 1) / 2) * baseSpacing;
+                              cardTransform = `translateX(${cardOffset}px) translateY(${playerPositionData.cardOffset.y}px)`;
+                            } else {
+                              // Вертикальное расположение карт
+                              const cardOffset = (ci - (p.cards.length - 1) / 2) * (baseSpacing * 0.8);
+                              cardTransform = `translateY(${cardOffset}px) translateX(${playerPositionData.cardOffset.x}px)`;
+                            }
                             
                             return (
                               <motion.div
@@ -1236,7 +1433,7 @@ function GamePageContentComponent({
                                 }}
                                 style={{ 
                                   position: 'absolute',
-                                  left: `${cardOffset}px`,
+                                  transform: cardTransform,
                                   zIndex: ci + 10 // Поверх пеньков
                                 }}
                               >
@@ -1629,6 +1826,15 @@ function GamePageContentComponent({
           }}
         />
       )}
+
+      {/* 🎲 Селектор столов */}
+      <TableSelector
+        userId={userId}
+        currentTableId={currentTableId}
+        onTableChange={handleTableChange}
+        isOpen={showTableSelector}
+        onClose={() => setShowTableSelector(false)}
+      />
     </div>
   );
 }
