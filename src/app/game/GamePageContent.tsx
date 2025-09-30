@@ -671,32 +671,8 @@ function GamePageContentComponent({
     }
   }, [gameInitialized, isGameActive, players.length, gameStage, currentPlayerId, turnPhase, stage2TurnPhase, showNotification]);
 
-  // 🎲 Загружаем экипированный стол пользователя
-  useEffect(() => {
-    const fetchEquippedTable = async () => {
-      try {
-        const response = await fetch(`/api/tables?action=equipped&userId=${userId}`);
-        const data = await response.json();
-        
-        if (data.success && data.equippedTable) {
-          setCurrentTableId(data.equippedTable.id);
-          // Генерируем стол с соответствующим стилем
-          await generatePremiumTable(data.equippedTable.style);
-        } else {
-          // Генерируем дефолтный стол
-          await generatePremiumTable('luxury');
-        }
-      } catch (error) {
-        console.error('Error fetching equipped table:', error);
-        // Генерируем дефолтный стол при ошибке
-        await generatePremiumTable('luxury');
-      }
-    };
-
-    if (typeof window !== 'undefined' && userId) {
-      fetchEquippedTable();
-    }
-  }, [userId]);
+  // 🎲 Используем роскошный SVG стол (экипированный стол удален)
+  // Функциональность выбора стола удалена - используем только luxury SVG table
 
   // Автоматическая генерация стола при инициализации
   useEffect(() => {
@@ -865,7 +841,22 @@ function GamePageContentComponent({
   
   // УДАЛЕНО: Логика canBeatTopCard и shouldShowTakeButton - кнопка "Взять карту" теперь постоянная во 2-й стадии
 
-  // Показываем заглушку если игра не активна
+  // Автоматически запускаем игру если она не активна
+  useEffect(() => {
+    if (!isGameActive && !gameInitialized) {
+      console.log('🎮 [AUTO-START] Автоматически запускаем игру...');
+      if (isMultiplayer && multiplayerData) {
+        // Для мультиплеера
+        startGame('multiplayer', playerCount);
+      } else {
+        // Для одиночной игры
+        startGame('single', playerCount);
+      }
+      setGameInitialized(true);
+    }
+  }, [isGameActive, gameInitialized, isMultiplayer, multiplayerData, playerCount, startGame]);
+
+  // Показываем загрузку если игра инициализируется
   if (!isGameActive) {
     return (
       <div className={styles.gameContainer}>
@@ -879,12 +870,25 @@ function GamePageContentComponent({
           textAlign: 'center',
           padding: '20px'
         }}>
-          <h2 style={{ marginBottom: '20px', fontSize: '24px' }}>P.I.D.R. Game</h2>
+          <h2 style={{ marginBottom: '20px', fontSize: '24px' }}>🎮 P.I.D.R. Game</h2>
           <p style={{ marginBottom: '30px', opacity: 0.7 }}>
-            Игра не запущена. Вернитесь в главное меню и настройте игру.
+            Запускаем игру...
           </p>
+          <div style={{
+            width: '40px',
+            height: '40px',
+            border: '4px solid rgba(99, 102, 241, 0.3)',
+            borderTop: '4px solid #6366f1',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 20px'
+          }}></div>
           <button
-            onClick={() => typeof window !== 'undefined' && window.history.back()}
+            onClick={() => {
+              console.log('🎮 Принудительный запуск игры...');
+              startGame('single', playerCount);
+              setGameInitialized(true);
+            }}
             style={{
               background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
               color: '#fff',
@@ -893,6 +897,22 @@ function GamePageContentComponent({
               padding: '12px 24px',
               fontSize: '16px',
               fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              marginBottom: '10px'
+            }}
+          >
+            🚀 Запустить игру
+          </button>
+          <button
+            onClick={() => typeof window !== 'undefined' && window.history.back()}
+            style={{
+              background: 'rgba(255, 255, 255, 0.1)',
+              color: '#e2e8f0',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              borderRadius: '12px',
+              padding: '8px 16px',
+              fontSize: '14px',
               cursor: 'pointer',
               transition: 'all 0.3s ease'
             }}
