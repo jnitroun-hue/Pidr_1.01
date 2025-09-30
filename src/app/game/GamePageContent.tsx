@@ -966,7 +966,7 @@ function GamePageContentComponent({
             <label>Количество игроков: {playerCount}</label>
             <input
               type="range"
-              min="3"
+              min="4"
               max="9"
               value={playerCount}
               onChange={(e) => setPlayerCount(Number(e.target.value))}
@@ -1506,7 +1506,6 @@ function GamePageContentComponent({
             </div>
           </div>
 
-          {/* Контейнер карт игрока внизу - только во 2-й и 3-й стадиях И ТОЛЬКО для человека */}
           {isGameActive && humanPlayer && humanPlayer.cards.length > 0 && gameStage >= 2 && (
             <div className={styles.playerHand}>
               <div className={styles.handTitle}>
@@ -1774,41 +1773,10 @@ function GamePageContentComponent({
               </div>
             </div>
           </div>
-          </div> {/* Закрывающий тег для rectangularTable */}
         </div>
       )}
 
-      {/* Мультиплеер компонент */}
-      {isMultiplayer && multiplayerRoom && (
-        <MultiplayerGame
-          roomId={multiplayerRoom.id}
-          roomCode={multiplayerRoom.code}
-          isHost={multiplayerRoom.isHost}
-          onGameStateUpdate={(gameState) => {
-            console.log('🔄 [Multiplayer] Получено обновление состояния:', gameState);
-            // Здесь можно обновить локальное состояние игры
-          }}
-        />
-      )}
-
       <BottomNav />
-      
-      {/* Экран победителя */}
-      {winner && (
-        <WinnerScreen
-          winner={winner}
-          isVisible={showWinnerScreen}
-          onClose={() => {
-            setShowWinnerScreen(false);
-            setWinner(null);
-          }}
-          onPlayAgain={() => {
-            setShowWinnerScreen(false);
-            setWinner(null);
-            handleStartGame();
-          }}
-        />
-      )}
 
     </div>
   );
