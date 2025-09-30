@@ -924,6 +924,8 @@ function GamePageContentComponent({
     );
   }
 
+  // Основной рендер игры
+
   return (
     <div className={styles.gameContainer}>
       {/* Информация о козыре - только со 2-й стадии рядом с бургер меню */}
@@ -1006,19 +1008,9 @@ function GamePageContentComponent({
               backgroundRepeat: 'no-repeat'
             }}
           >
-            <div 
-              className={styles.tableCenter} 
-              style={{ 
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                width: '100%',
-                height: '100%'
-              }}
-            >
-              
-              {/* Открытая карта из колоды (слева от колоды) */}
+            {/* Старый div с tableCenter удален - используем только SVG фон */}
+            
+            {/* Открытая карта из колоды (слева от колоды) */}
               {revealedDeckCard && (
                 <div className={styles.revealedCardContainer}>
                   <div className={styles.revealedCard}>
@@ -1782,6 +1774,7 @@ function GamePageContentComponent({
               </div>
             </div>
           </div>
+          </div> {/* Закрывающий тег для rectangularTable */}
         </div>
       )}
 

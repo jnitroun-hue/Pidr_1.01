@@ -635,9 +635,11 @@ export const useGameStore = create<GameState>()(
         
         console.log(`🔄 [nextTurn] Запускаем processPlayerTurn для ${nextPlayer.name}`);
         
-        // Проверяем переход к 3-й стадии для игрока который получает ход
+        // ИСПРАВЛЕНО: Проверяем активацию пеньков для ВСЕХ игроков при переходе хода
         if (gameStage === 2) {
-          get().checkStage3Transition(nextPlayerId);
+          players.forEach(player => {
+            get().checkStage3Transition(player.id);
+          });
         }
         
         // ДОБАВЛЕНО: Проверяем условия победы после каждого хода
@@ -1682,8 +1684,10 @@ export const useGameStore = create<GameState>()(
             
             get().showNotification(`🏁 ${reasonText}! ${newTableStack.length} карт в биту`, 'success', 3000);
             
-            // Проверяем переход в 3-ю стадию
-            get().checkStage3Transition(currentPlayerId);
+            // ИСПРАВЛЕНО: Проверяем активацию пеньков для ВСЕХ игроков
+            players.forEach(player => {
+              get().checkStage3Transition(player.id);
+            });
             // Проверяем условия победы
             get().checkVictoryCondition();
             // Проверяем статус "одна карта"
@@ -1695,8 +1699,10 @@ export const useGameStore = create<GameState>()(
           }
            
            // ОБЫЧНОЕ ПРОДОЛЖЕНИЕ КРУГА
-           // Проверяем переход в 3-ю стадию
-           get().checkStage3Transition(currentPlayerId);
+           // ИСПРАВЛЕНО: Проверяем активацию пеньков для ВСЕХ игроков
+           players.forEach(player => {
+             get().checkStage3Transition(player.id);
+           });
            // Проверяем условия победы
            get().checkVictoryCondition();
            // Проверяем статус "одна карта"
@@ -1797,8 +1803,10 @@ export const useGameStore = create<GameState>()(
              get().showNotification('Стол очищен! Новый раунд', 'info', 3000);
            }
            
-           // Проверяем переход в 3-ю стадию
-           get().checkStage3Transition(currentPlayerId);
+           // ИСПРАВЛЕНО: Проверяем активацию пеньков для ВСЕХ игроков
+           players.forEach(player => {
+             get().checkStage3Transition(player.id);
+           });
            
            // Проверяем условия победы
            get().checkVictoryCondition();
@@ -2330,6 +2338,11 @@ export const useGameStore = create<GameState>()(
                const finalPlayers = get().players;
                const finalTarget = finalPlayers.find(p => p.id === pendingPenalty.targetPlayerId);
                console.log(`💸 [contributePenaltyCard] ИТОГО: ${finalTarget?.name} имеет ${finalTarget?.cards.length} карт (${finalTarget?.cards.filter(c => c.open).length} открытых)`);
+               
+               // ИСПРАВЛЕНО: Проверяем активацию пеньков для ВСЕХ игроков после штрафа
+               finalPlayers.forEach(player => {
+                 get().checkStage3Transition(player.id);
+               });
                
                get().checkOneCardStatus();
                
