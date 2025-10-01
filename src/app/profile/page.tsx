@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Trophy, Medal, Users, User, Star, Award, Target, Camera, Upload, Wallet, Palette, Sparkles, Gift } from 'lucide-react';
-import BottomNav from '../../components/BottomNav';
 import GameWallet from '../../components/GameWallet';
 
 // Компонент таймера для бонусов
@@ -248,7 +247,18 @@ export default function ProfilePage() {
   ];
 
   // Бонусы
-  const [bonuses, setBonuses] = useState([
+  const [bonuses, setBonuses] = useState<Array<{
+    id: string;
+    name: string;
+    description: string;
+    reward: string;
+    icon: string;
+    available: boolean;
+    cooldown?: null;
+    cooldownUntil?: Date | null;
+    referrals?: number;
+    nextRank?: string;
+  }>>([
     {
       id: 'daily',
       name: 'Ежедневный бонус',
@@ -833,7 +843,6 @@ export default function ProfilePage() {
           </motion.div>
         )}
 
-        <BottomNav />
       </div>
 
       {/* Модальные окна */}
