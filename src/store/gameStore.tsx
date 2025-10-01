@@ -1017,20 +1017,36 @@ export const useGameStore = create<GameState>()(
         const { deck, gameStage, lastPlayerToDrawCard, players } = get();
         if (gameStage !== 1 || deck.length > 0) return;
         
-
+        console.log(`🎯 [checkStage1End] ✅ 1-я стадия завершена! Переход во 2-ю стадию...`);
         
         // Определяем козырь второй стадии
         const trumpSuit = get().determineTrumpSuit();
 
+        console.log(`🎯 [checkStage1End] Козырь определен: ${trumpSuit || 'НЕТ'}`);
         
         // Определяем стартового игрока (последний взявший карту)
         const startingPlayerId = lastPlayerToDrawCard || players[0].id;
 
+        console.log(`🎯 [checkStage1End] Стартовый игрок: ${players.find(p => p.id === startingPlayerId)?.name}`);
         
         // Обновляем текущего игрока и переводим всех во 2-ю стадию
+        // ИСПРАВЛЕНО: Открываем пеньки для тех у кого нет открытых карт
         players.forEach(p => {
           p.isCurrentPlayer = p.id === startingPlayerId;
           p.playerStage = 2; // Все переходят во 2-ю стадию
+          
+          // КРИТИЧЕСКИ ВАЖНО: Если у игрока нет открытых карт - открываем пеньки СРАЗУ!
+          const hasOpenCards = p.cards.some(c => c.open);
+          if (!hasOpenCards && p.penki.length > 0) {
+            console.log(`🃏 [checkStage1End] ⚠️ У игрока ${p.name} нет открытых карт - открываем пеньки СРАЗУ!`);
+            const activatedPenki = p.penki.map(card => ({
+              ...card,
+              open: true
+            }));
+            p.cards = [...p.cards, ...activatedPenki];
+            p.penki = [];
+            console.log(`🃏 [checkStage1End] ✅ Пеньки игрока ${p.name} открыты:`, p.cards.map(c => c.image));
+          }
         });
         
         set({ 
