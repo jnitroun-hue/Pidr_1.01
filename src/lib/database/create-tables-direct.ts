@@ -42,7 +42,7 @@ export async function createTablesDirectly(): Promise<{ success: boolean; messag
           status VARCHAR(20) DEFAULT 'waiting',
           is_private BOOLEAN DEFAULT false,
           password VARCHAR(255),
-          game_settings JSONB DEFAULT '{"gameMode":"casual","maxRounds":10,"timePerTurn":60,"allowSpectators":true}'::jsonb,
+          game_settings JSONB DEFAULT '{"gameMode":"casual","timePerTurn":30,"maxPlayers":9,"allowSpectators":true,"deckType":"36cards","penalties":true,"botDifficulty":"medium"}'::jsonb,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
