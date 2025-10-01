@@ -214,6 +214,91 @@ function GamePageContentComponent({
     declareOneCard, askHowManyCards, contributePenaltyCard, cancelPenalty
   } = useGameStore();
 
+  // ИСПРАВЛЕНО: Получаем данные пользователя из Supabase БД
+  const [userData, setUserData] = useState<{
+    coins: number;
+    avatar?: string;
+    username?: string;
+    telegramId?: string;
+  } | null>(null);
+  const [isLoadingUserData, setIsLoadingUserData] = useState(true);
+
+  // Загружаем данные пользователя из Supabase БД через API
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        setIsLoadingUserData(true);
+        
+        const response = await fetch('/api/auth', {
+          method: 'GET',
+          credentials: 'include', // Важно для cookies
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+        
+        if (!response.ok) {
+          console.error('❌ Ошибка получения данных пользователя:', response.status);
+          setUserData({ coins: 0, username: 'Игрок' });
+          return;
+        }
+        
+        const result = await response.json();
+        
+        if (result.success && result.user) {
+          console.log('✅ Данные пользователя загружены из БД:', result.user);
+          setUserData({
+            coins: result.user.coins || 0,
+            avatar: result.user.avatar_url || '', // Из БД
+            username: result.user.username || result.user.firstName || 'Игрок',
+            telegramId: result.user.telegramId
+          });
+        } else {
+          console.error('❌ Пользователь не авторизован');
+          setUserData({ coins: 0, username: 'Игрок' });
+        }
+      } catch (error) {
+        console.error('❌ Ошибка загрузки данных пользователя:', error);
+        setUserData({ coins: 0, username: 'Игрок' });
+      } finally {
+        setIsLoadingUserData(false);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
+  // Обновляем данные пользователя периодически (для обновления монет)
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      if (!userData) return;
+      
+      try {
+        const response = await fetch('/api/user/balance', {
+          method: 'GET',
+          credentials: 'include',
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data) {
+            setUserData(prev => prev ? { 
+              ...prev, 
+              coins: result.data.balance 
+            } : { 
+              coins: result.data.balance, 
+              username: 'Игрок' 
+            });
+          }
+        }
+      } catch (error) {
+        console.error('❌ Ошибка обновления баланса:', error);
+      }
+    }, 30000); // Обновляем каждые 30 секунд
+
+    return () => clearInterval(interval);
+  }, [userData]);
+
   // Мониторинг tableStack убран - система работает корректно
 
   const [playerCount, setPlayerCount] = useState(initialPlayerCount);
@@ -675,7 +760,10 @@ function GamePageContentComponent({
 
   // Запуск игры
   const handleStartGame = () => {
-    startGame('multiplayer', playerCount);
+    startGame('multiplayer', playerCount, null, {
+      avatar: userData?.avatar,
+      username: userData?.username
+    });
     setDealt(false);
     setGameInitialized(true);
   };
@@ -821,18 +909,24 @@ function GamePageContentComponent({
 
   // Автоматически запускаем игру если она не активна
   useEffect(() => {
-    if (!isGameActive && !gameInitialized) {
+    if (!isGameActive && !gameInitialized && userData) { // Ждем загрузки данных пользователя
       console.log('🎮 [AUTO-START] Автоматически запускаем игру...');
       if (isMultiplayer && multiplayerData) {
         // Для мультиплеера
-        startGame('multiplayer', playerCount);
+        startGame('multiplayer', playerCount, null, {
+          avatar: userData.avatar,
+          username: userData.username
+        });
       } else {
         // Для одиночной игры
-        startGame('single', playerCount);
+        startGame('single', playerCount, null, {
+          avatar: userData.avatar,
+          username: userData.username
+        });
       }
       setGameInitialized(true);
     }
-  }, [isGameActive, gameInitialized, isMultiplayer, multiplayerData, playerCount, startGame]);
+  }, [isGameActive, gameInitialized, isMultiplayer, multiplayerData, playerCount, startGame, userData]);
 
   // Показываем загрузку если игра инициализируется
   if (!isGameActive) {
@@ -864,7 +958,10 @@ function GamePageContentComponent({
           <button
             onClick={() => {
               console.log('🎮 Принудительный запуск игры...');
-              startGame('single', playerCount);
+              startGame('single', playerCount, null, {
+                avatar: userData?.avatar,
+                username: userData?.username
+              });
               setGameInitialized(true);
             }}
             style={{
@@ -1736,7 +1833,7 @@ function GamePageContentComponent({
                 <div className={styles.menuCoinsBalance}>
                   <div className={styles.coinsIcon}>🪙</div>
                   <div className={styles.coinsInfo}>
-                    <div className={styles.coinsAmount}>{gameCoins.toLocaleString()}</div>
+                    <div className={styles.coinsAmount}>{(userData?.coins || 0).toLocaleString()}</div>
                     <div className={styles.coinsLabel}>{t.game.coins}</div>
                   </div>
                 </div>

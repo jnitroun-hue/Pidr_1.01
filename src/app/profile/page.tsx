@@ -73,71 +73,83 @@ export default function ProfilePage() {
 
   const [avatarUrl, setAvatarUrl] = useState('😎');
 
-  // ✅ ИСПРАВЛЕНО: Загружаем данные пользователя и бонусы из Supabase
+  // ✅ ИСПРАВЛЕНО: Загружаем ВСЕ данные пользователя из Supabase БД
   useEffect(() => {
     const loadUserData = async () => {
       try {
-        console.log('👤 Загружаем данные пользователя из базы...');
+        console.log('👤 Загружаем данные пользователя из Supabase БД...');
         
-        // Сначала берем базовые данные из localStorage
-        const userData = localStorage.getItem('user');
-        if (userData) {
-          const parsedUser = JSON.parse(userData);
-          setUser(parsedUser);
-          console.log('👤 Базовые данные пользователя загружены:', parsedUser.username);
+        // Получаем данные пользователя из API (Supabase)
+        const response = await fetch('/api/auth', {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+        
+        if (!response.ok) {
+          console.error('❌ Ошибка получения данных пользователя:', response.status);
+          return;
         }
         
-        // Затем загружаем актуальный баланс из базы
-        const response = await fetch('/api/user/balance', {
+        const result = await response.json();
+        
+        if (result.success && result.user) {
+          console.log('✅ Данные пользователя загружены из БД:', result.user);
+          
+          const userData = {
+            id: result.user.id,
+            username: result.user.username,
+            firstName: result.user.firstName,
+            lastName: result.user.lastName,
+            telegramId: result.user.telegramId,
+            coins: result.user.coins,
+            rating: result.user.rating,
+            gamesPlayed: result.user.gamesPlayed,
+            gamesWon: result.user.gamesWon,
+            status: result.user.status,
+            avatar_url: result.user.avatar_url
+          };
+          
+          setUser(userData);
+          setAvatarUrl(userData.avatar_url || '😎');
+          
+          // Обновляем статистику
+          setStats(prev => ({
+            ...prev,
+            rating: userData.rating || 0,
+            gamesPlayed: userData.gamesPlayed || 0,
+            wins: userData.gamesWon || 0,
+            losses: Math.max(0, (userData.gamesPlayed || 0) - (userData.gamesWon || 0)),
+            winRate: userData.gamesPlayed > 0 
+              ? Math.round(((userData.gamesWon || 0) / userData.gamesPlayed) * 100) 
+              : 0
+          }));
+          
+          console.log('✅ Статистика обновлена из БД');
+        } else {
+          console.error('❌ Пользователь не авторизован');
+        }
+        
+        // Загружаем актуальный баланс
+        const balanceResponse = await fetch('/api/user/balance', {
           method: 'GET',
           credentials: 'include'
         });
         
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success) {
-            const { balance, user: userInfo } = result.data;
-            console.log('💰 Актуальный баланс из базы:', balance);
+        if (balanceResponse.ok) {
+          const balanceResult = await balanceResponse.json();
+          if (balanceResult.success) {
+            const { balance } = balanceResult.data;
+            console.log('💰 Актуальный баланс из БД:', balance);
             
-            setUserCoins(balance);
-            
-            // Обновляем пользователя с актуальными данными
-            if (userInfo) {
-              setUser((prev: any) => ({
-                ...prev,
-                ...userInfo,
-                coins: balance
-              }));
-              
-              // Синхронизируем localStorage с актуальными данными
-              const updatedUser = { ...JSON.parse(userData || '{}'), coins: balance };
-              localStorage.setItem('user', JSON.stringify(updatedUser));
-            }
-          } else {
-            console.warn('⚠️ Не удалось загрузить баланс:', result.message);
-            // Используем баланс из localStorage как fallback
-            if (userData) {
-              const parsedUser = JSON.parse(userData);
-              setUserCoins(parsedUser.coins || 1000);
-            }
-          }
-        } else {
-          console.warn('⚠️ API баланса недоступен, используем локальные данные');
-          if (userData) {
-            const parsedUser = JSON.parse(userData);
-            setUserCoins(parsedUser.coins || 1000);
+            setUser((prev: any) => prev ? { ...prev, coins: balance } : null);
           }
         }
         
       } catch (error) {
         console.error('❌ Ошибка загрузки данных пользователя:', error);
-        // Fallback к localStorage
-        const userData = localStorage.getItem('user');
-        if (userData) {
-          const parsedUser = JSON.parse(userData);
-          setUser(parsedUser);
-          setUserCoins(parsedUser.coins || 1000);
-        }
       }
     };
 
@@ -168,7 +180,6 @@ export default function ProfilePage() {
   const [showModal, setShowModal] = useState<'skins' | 'effects' | 'bonuses' | null>(null);
   const [selectedSkin, setSelectedSkin] = useState('classic');
   const [selectedEffect, setSelectedEffect] = useState('none');
-  const [userCoins, setUserCoins] = useState(1000); // Начальный баланс
 
   // Скины для карт
   const cardSkins = [
@@ -328,15 +339,7 @@ export default function ProfilePage() {
         console.log(`✅ Бонус получен: +${bonusAmount} монет`);
         
         // Обновляем локальный баланс для UI
-        setUserCoins(newBalance);
-        
-        // Обновляем данные пользователя в localStorage (только для UI)
-        const userData = localStorage.getItem('user');
-        if (userData) {
-          const user = JSON.parse(userData);
-          user.coins = newBalance;
-          localStorage.setItem('user', JSON.stringify(user));
-        }
+        setUser((prev: any) => prev ? { ...prev, coins: newBalance } : null);
 
         // ✅ ОБНОВЛЯЕМ СТАТУС БОНУСА
         if (bonusId === 'daily') {
@@ -368,7 +371,7 @@ export default function ProfilePage() {
     }
   };
 
-  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       // Проверяем размер файла (максимум 5MB)
@@ -385,56 +388,52 @@ export default function ProfilePage() {
 
       // Создаем URL для предварительного просмотра
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         const result = e.target?.result as string;
         setAvatarUrl(result);
-        // Сохраняем в localStorage (в будущем будет загрузка на сервер и сохранение в БД)
-        localStorage.setItem('userAvatar', result);
+        
+        try {
+          // Сохраняем аватар в Supabase БД через API
+          console.log('💾 Сохраняем аватар в БД...');
+          
+          const response = await fetch('/api/user/avatar', {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              avatar_url: result
+            })
+          });
+          
+          if (response.ok) {
+            const updateResult = await response.json();
+            if (updateResult.success) {
+              console.log('✅ Аватар сохранен в БД');
+              // Обновляем локальное состояние
+              setUser((prev: any) => prev ? { ...prev, avatar_url: result } : null);
+            } else {
+              console.error('❌ Ошибка сохранения аватара:', updateResult.message);
+            }
+          } else {
+            console.error('❌ Ошибка API при сохранении аватара:', response.status);
+          }
+        } catch (error) {
+          console.error('❌ Ошибка сохранения аватара:', error);
+        }
       };
       reader.readAsDataURL(file);
     }
   };
 
-  // Загружаем сохраненный аватар и данные пользователя при инициализации
-  useEffect(() => {
-    const savedAvatar = localStorage.getItem('userAvatar');
-    if (savedAvatar) {
-      setAvatarUrl(savedAvatar);
-    }
-    
-    // Загружаем данные пользователя
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      try {
-        const parsedUser = JSON.parse(userData);
-        setUser(parsedUser);
-        setStats(prev => ({
-          ...prev,
-          rating: parsedUser.rating || 0,
-          gamesPlayed: parsedUser.gamesPlayed || 0,
-          wins: parsedUser.gamesWon || 0,
-          losses: Math.max(0, (parsedUser.gamesPlayed || 0) - (parsedUser.gamesWon || 0)),
-          winRate: parsedUser.gamesPlayed > 0 
-            ? Math.round(((parsedUser.gamesWon || 0) / parsedUser.gamesPlayed) * 100) 
-            : 0
-        }));
-      } catch (error) {
-        console.error('Ошибка загрузки данных пользователя:', error);
-      }
-    }
-  }, []);
+  // Данные пользователя загружаются через useEffect выше
   
   const handleBalanceUpdate = (newBalance: number) => {
-    // Обновляем баланс в localStorage и в состоянии пользователя
+    // Обновляем баланс в состоянии пользователя (БД обновляется через API)
     if (user) {
       const updatedUser = { ...user, coins: newBalance };
       setUser(updatedUser);
-      localStorage.setItem('user', JSON.stringify(updatedUser));
-      
-      // Диспатчим событие для обновления в других компонентах
-      window.dispatchEvent(new CustomEvent('coinsUpdated', { 
-        detail: { coins: newBalance } 
-      }));
     }
   };
 
@@ -476,7 +475,7 @@ export default function ProfilePage() {
             fontWeight: '600',
             color: '#1f2937'
           }}>
-            💰 {userCoins.toLocaleString()} монет
+            💰 {(user?.coins || 0).toLocaleString()} монет
           </div>
           
           {/* Avatar and Friends Buttons */}

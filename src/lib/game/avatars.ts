@@ -104,19 +104,35 @@ export interface PlayerInfo {
   difficulty?: 'easy' | 'medium' | 'hard';
 }
 
-// Создание игроков для игры
-export function createPlayers(count: number, userPosition: number = 0): PlayerInfo[] {
+// Создание игроков для игры с поддержкой реального аватара пользователя
+export function createPlayers(
+  count: number, 
+  userPosition: number = 0, 
+  userAvatar?: string, 
+  userName?: string
+): PlayerInfo[] {
   const names = generatePlayerNames(count, true);
   const players: PlayerInfo[] = [];
   
   for (let i = 0; i < count; i++) {
     const isUser = i === userPosition;
-    const name = isUser ? 'Вы' : names[i] || `Игрок ${i + 1}`;
+    let name: string;
+    let avatar: string;
+    
+    if (isUser) {
+      // Используем реальные данные пользователя из БД
+      name = userName || 'Вы';
+      avatar = userAvatar || generateAvatar(name, i);
+    } else {
+      // Генерируем ботов
+      name = names[i] || `Игрок ${i + 1}`;
+      avatar = generateAvatar(name, i);
+    }
     
     players.push({
       id: i,
       name,
-      avatar: generateAvatar(name, i),
+      avatar,
       isBot: !isUser,
       difficulty: isUser ? undefined : ['easy', 'medium', 'hard'][Math.floor(Math.random() * 3)] as 'easy' | 'medium' | 'hard'
     });

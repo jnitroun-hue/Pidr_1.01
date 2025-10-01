@@ -119,7 +119,7 @@ interface GameState {
   } | null
   
   // Действия игры
-  startGame: (mode: 'single' | 'multiplayer', playersCount?: number, multiplayerConfig?: any) => void
+  startGame: (mode: 'single' | 'multiplayer', playersCount?: number, multiplayerConfig?: any, userInfo?: { avatar?: string; username?: string }) => void
   endGame: () => void
   playCard: (cardId: string) => void
   drawCard: () => void
@@ -309,7 +309,7 @@ export const useGameStore = create<GameState>()(
       notification: null,
       
       // Игровые действия
-      startGame: (mode, playersCount = 2, multiplayerConfig = null) => {
+      startGame: (mode, playersCount = 2, multiplayerConfig = null, userInfo = undefined) => {
         console.log('🎮 [GameStore] startGame вызван с параметрами:', { mode, playersCount, multiplayerConfig });
         
         try {
@@ -352,9 +352,15 @@ export const useGameStore = create<GameState>()(
         const players: Player[] = []
         const cardsPerPlayer = 3;
         
-        // ИСПРАВЛЕНО: Создаем игроков с аватарами и ботами
+        // ИСПРАВЛЕНО: Создаем игроков с реальными данными пользователя из Supabase БД
         console.log('🎮 [GameStore] Создаем игроков...');
-        const playerInfos = createPlayers(playersCount, 0); // 0 - позиция пользователя
+        
+        const userAvatar = userInfo?.avatar || '';
+        const userName = userInfo?.username || 'Вы';
+        
+        console.log('🎮 [GameStore] Данные пользователя:', { userAvatar, userName });
+        
+        const playerInfos = createPlayers(playersCount, 0, userAvatar, userName);
         console.log('🎮 [GameStore] Игроки созданы:', playerInfos);
         
         for (let i = 0; i < playersCount; i++) {
