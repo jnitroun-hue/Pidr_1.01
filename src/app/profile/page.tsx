@@ -103,7 +103,7 @@ export default function ProfilePage() {
             
             // Обновляем пользователя с актуальными данными
             if (userInfo) {
-              setUser(prev => ({
+              setUser((prev: any) => ({
                 ...prev,
                 ...userInfo,
                 coins: balance
