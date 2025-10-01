@@ -220,7 +220,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: `Ошибка авторизации: ${auth.error}` }, { status: 401 });
     }
     
-    const userId = auth.userId;
+    // После проверки auth.error, userId гарантированно существует
+    const userId = auth.userId as string;
     console.log('👤 Пользователь авторизован:', userId);
 
     // ✅ ПРОВЕРЯЕМ ПОДКЛЮЧЕНИЕ К SUPABASE
@@ -334,7 +335,7 @@ export async function POST(req: NextRequest) {
       }
 
       if (existingParticipation && existingParticipation.length > 0) {
-        const activeRooms = existingParticipation.map(p => ({
+        const activeRooms = existingParticipation.map((p: any) => ({
           name: p._pidr_rooms?.name || 'Неизвестная комната',
           code: p._pidr_rooms?.room_code || 'UNKNOWN',
           status: p._pidr_rooms?.status || 'unknown'
@@ -360,6 +361,7 @@ export async function POST(req: NextRequest) {
         is_private: isPrivate || false
       });
 
+      // ИСПРАВЛЕНО: Убираем game_settings до применения миграции в Supabase
       const { data: room, error: roomError } = await supabase
         .from('_pidr_rooms')
         .insert({
@@ -369,12 +371,8 @@ export async function POST(req: NextRequest) {
           max_players: Math.min(Math.max(maxPlayers || 4, 2), 9),
           current_players: 1,
           is_private: isPrivate || false,
-          password: password || null,
-          game_settings: {
-            cardDeck: 'standard52',
-            timeLimit: 30,
-            allowSpectators: true
-          }
+          password: password || null
+          // game_settings временно убрано - нужно применить миграцию в Supabase Dashboard
         })
         .select()
         .single();
@@ -407,8 +405,10 @@ export async function POST(req: NextRequest) {
       // Обновляем статус пользователя
       try {
         console.log('📊 Обновляем статус пользователя...');
-        await updateUserStatus(userId, 'in_game', room.id);
-        console.log('✅ Статус пользователя обновлен');
+        if (room?.id && userId) {
+          await updateUserStatus(userId, 'in_game', room.id.toString());
+          console.log('✅ Статус пользователя обновлен');
+        }
       } catch (statusError) {
         console.warn('⚠️ Не удалось обновить статус пользователя (не критично):', statusError);
         // Не прерываем процесс, если обновление статуса не удалось
@@ -610,7 +610,9 @@ export async function POST(req: NextRequest) {
       if (updateError) throw updateError;
 
       // Обновляем статус пользователя
-      await updateUserStatus(userId, 'in_game', room.id);
+      if (room?.id && userId) {
+        await updateUserStatus(userId, 'in_game', room.id.toString());
+      }
 
       return NextResponse.json({ 
         success: true, 

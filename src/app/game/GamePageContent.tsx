@@ -79,85 +79,64 @@ const getTableDimensions = () => {
   };
 };
 
-// 🎯 УЛУЧШЕННАЯ СИСТЕМА ПРЯМОУГОЛЬНОГО СТОЛА ДЛЯ 9 ИГРОКОВ
+// 🎯 РАССАДКА ИГРОКОВ ПО ЧАСОВОЙ СТРЕЛКЕ ДЛЯ ВЕРТИКАЛЬНОГО СТОЛА
 const getRectanglePosition = (index: number, totalPlayers: number): { 
   top: string; 
   left: string; 
   cardDirection: 'horizontal' | 'vertical';
   cardOffset: { x: number; y: number };
 } => {
-  // ПОЗИЦИЯ 0: Главный игрок снизу по центру
+  // ПОЗИЦИЯ 0: Главный игрок ВНИЗУ ПО ЦЕНТРУ
   if (index === 0) {
     return { 
       left: '50%', 
-      top: '85%',
+      top: '92%', // Самый низ
       cardDirection: 'horizontal',
-      cardOffset: { x: 0, y: -40 } // Карты выше игрока
+      cardOffset: { x: 0, y: -40 }
     };
   }
   
-  // Для 9 игроков: расположение 3-2-3-1 с учетом направления карт
+  // РАССАДКА ПО ЧАСОВОЙ СТРЕЛКЕ от позиции игрока (снизу):
+  // 1 → слева внизу
+  // 2 → слева по центру
+  // 3 → слева вверху
+  // 4 → сверху слева
+  // 5 → сверху по центру
+  // 6 → сверху справа
+  // 7 → справа вверху
+  // 8 → справа по центру
+  // 9 → справа внизу
+  
   const positions = [
-    // ЛЕВАЯ СТОРОНА (3 игрока): позиции 1, 2, 3
-    { 
-      left: '8%', top: '20%', 
-      cardDirection: 'vertical' as const,
-      cardOffset: { x: 60, y: 0 } // Карты справа от игрока
-    },
-    { 
-      left: '8%', top: '50%', 
-      cardDirection: 'vertical' as const,
-      cardOffset: { x: 60, y: 0 }
-    },
-    { 
-      left: '8%', top: '80%', 
-      cardDirection: 'vertical' as const,
-      cardOffset: { x: 60, y: 0 }
-    },
+    // ЛЕВАЯ СТОРОНА - ПО ЧАСОВОЙ СНИЗУ ВВЕРХ
+    { left: '5%', top: '75%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 } }, // 1: слева внизу
+    { left: '5%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 } }, // 2: слева центр
+    { left: '5%', top: '25%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 } }, // 3: слева вверху
     
-    // ВЕРХНЯЯ СТОРОНА (2 игрока): позиции 4, 5
-    { 
-      left: '30%', top: '8%', 
-      cardDirection: 'horizontal' as const,
-      cardOffset: { x: 0, y: 60 } // Карты ниже игрока
-    },
-    { 
-      left: '70%', top: '8%', 
-      cardDirection: 'horizontal' as const,
-      cardOffset: { x: 0, y: 60 }
-    },
+    // ВЕРХ - ПО ЧАСОВОЙ СЛЕВА НАПРАВО
+    { left: '25%', top: '5%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 55 } }, // 4: сверху слева
+    { left: '50%', top: '5%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 55 } }, // 5: сверху центр
+    { left: '75%', top: '5%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 55 } }, // 6: сверху справа
     
-    // ПРАВАЯ СТОРОНА (3 игрока): позиции 6, 7, 8
-    { 
-      left: '92%', top: '20%', 
-      cardDirection: 'vertical' as const,
-      cardOffset: { x: -60, y: 0 } // Карты слева от игрока
-    },
-    { 
-      left: '92%', top: '50%', 
-      cardDirection: 'vertical' as const,
-      cardOffset: { x: -60, y: 0 }
-    },
-    { 
-      left: '92%', top: '80%', 
-      cardDirection: 'vertical' as const,
-      cardOffset: { x: -60, y: 0 }
-    },
+    // ПРАВАЯ СТОРОНА - ПО ЧАСОВОЙ СВЕРХУ ВНИЗ
+    { left: '95%', top: '25%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 } }, // 7: справа вверху
+    { left: '95%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 } }, // 8: справа центр
+    { left: '95%', top: '75%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 } }, // 9: справа внизу
   ];
   
-  // Возвращаем позицию для индекса (индекс 1-8 для позиций 1-8)
-  if (index >= 1 && index <= 8) {
+  // Возвращаем позицию для индекса
+  if (index >= 1 && index <= 9) {
     return positions[index - 1];
   }
   
-  // Fallback для дополнительных игроков (если больше 9)
-  const fallbackAngle = (2 * Math.PI * (index - 9)) / Math.max(1, totalPlayers - 9);
-  const fallbackX = 50 + 40 * Math.cos(fallbackAngle);
-  const fallbackY = 50 + 30 * Math.sin(fallbackAngle);
+  // Fallback для дополнительных игроков
+  const fallbackAngle = (2 * Math.PI * (index - 1)) / totalPlayers;
+  const fallbackX = 50 + 42 * Math.cos(fallbackAngle - Math.PI / 2);
+  const fallbackY = 50 + 42 * Math.sin(fallbackAngle - Math.PI / 2);
   
   return {
-    left: `${Math.max(10, Math.min(90, fallbackX))}%`,
-    top: `${Math.max(10, Math.min(90, fallbackY))}%`,
+    left: `${Math.max(5, Math.min(95, fallbackX))}%`,
+    top: `${Math.max(5, Math.min(95, fallbackY))}%`,
     cardDirection: 'horizontal' as const,
     cardOffset: { x: 0, y: -30 }
   };

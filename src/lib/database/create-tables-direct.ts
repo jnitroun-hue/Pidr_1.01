@@ -42,6 +42,7 @@ export async function createTablesDirectly(): Promise<{ success: boolean; messag
           status VARCHAR(20) DEFAULT 'waiting',
           is_private BOOLEAN DEFAULT false,
           password VARCHAR(255),
+          game_settings JSONB DEFAULT '{"gameMode":"casual","maxRounds":10,"timePerTurn":60,"allowSpectators":true}'::jsonb,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );

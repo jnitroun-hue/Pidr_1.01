@@ -1930,79 +1930,82 @@ export const useGameStore = create<GameState>()(
            }, 100);
          },
          
-         // Проверка условий победы и поражения с усиленной диагностикой
+         // ИСПРАВЛЕННАЯ ПРОВЕРКА УСЛОВИЙ ПОБЕДЫ - НЕ ЗАВЕРШАЕТ ИГРУ РАНО!
          checkVictoryCondition: () => {
-           const { players, isGameActive } = get();
+           const { players, isGameActive, gameStage } = get();
            
-           // ИСПРАВЛЕНО: Проверяем что игра активна
+           // ЗАЩИТА: Игра не активна
            if (!isGameActive) {
-             console.log(`🏆 [checkVictoryCondition] ⚠️ Игра не активна - пропускаем проверку`);
+             console.log(`🏆 [checkVictoryCondition] ⚠️ Игра не активна - пропускаем`);
              return;
            }
            
-           // ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА: Не завершаем игру если она только началась
+           // ЗАЩИТА: Нет игроков
            if (players.length === 0) {
-             console.log(`🏆 [checkVictoryCondition] ⚠️ Нет игроков - пропускаем проверку`);
+             console.log(`🏆 [checkVictoryCondition] ⚠️ Нет игроков - пропускаем`);
              return;
            }
            
-           const { gameStage } = get();
-           
-           // КРИТИЧЕСКИ ВАЖНО: Не завершаем игру в первой стадии (раскладка карт)
+           // КРИТИЧЕСКИ ВАЖНО: В 1-й стадии победа НЕВОЗМОЖНА!
            if (gameStage === 1) {
-             console.log(`🏆 [checkVictoryCondition] ⚠️ Первая стадия (раскладка) - победа невозможна, пропускаем проверку`);
+             console.log(`🏆 [checkVictoryCondition] ⚠️ 1-я стадия - победа невозможна`);
              return;
            }
            
-           console.log(`🏆 [checkVictoryCondition] ===== ДЕТАЛЬНАЯ ДИАГНОСТИКА ИГРОКОВ =====`);
+           console.log(`🏆 [checkVictoryCondition] ===== ПРОВЕРКА УСЛОВИЙ ПОБЕДЫ =====`);
+           console.log(`🏆 [checkVictoryCondition] Стадия: ${gameStage}, Игроков: ${players.length}`);
            
-           // 1. Ищем игроков без карт (ни открытых, ни пеньков) - ПОБЕДИТЕЛИ
+           // Анализируем КАЖДОГО игрока
            const winners: Player[] = [];
-           const playersWithCards: Player[] = [];
+           const playersInGame: Player[] = [];
            
            players.forEach(player => {
-             const openCardsCount = player.cards.filter(c => c.open).length;
-             const closedCardsCount = player.cards.filter(c => !c.open).length;
-             const penkiCount = player.penki.length;
-             const totalCards = player.cards.length + player.penki.length;
+             const openCards = player.cards.filter(c => c.open).length;
+             const closedCards = player.cards.filter(c => !c.open).length;
+             const penki = player.penki.length;
+             const total = player.cards.length + player.penki.length;
              
-             console.log(`🏆 [checkVictoryCondition] Игрок ${player.name}:`);
-             console.log(`🏆 [checkVictoryCondition] - Открытые карты: ${openCardsCount}`);
-             console.log(`🏆 [checkVictoryCondition] - Закрытые карты: ${closedCardsCount}`);
-             console.log(`🏆 [checkVictoryCondition] - Пеньки: ${penkiCount}`);
-             console.log(`🏆 [checkVictoryCondition] - ВСЕГО карт: ${totalCards}`);
-             console.log(`🏆 [checkVictoryCondition] - Карты игрока:`, player.cards.map(c => `${c.image}(${c.open ? 'open' : 'closed'})`));
-             console.log(`🏆 [checkVictoryCondition] - Пеньки игрока:`, player.penki.map(c => c.image));
+             console.log(`🏆 [checkVictoryCondition] ${player.name}:`);
+             console.log(`   - Открытые: ${openCards}, Закрытые: ${closedCards}, Пеньки: ${penki}`);
+             console.log(`   - ВСЕГО: ${total} карт`);
              
-             // ИСПРАВЛЕНО: Игрок побеждает только если у него НЕТ карт вообще
-             if (totalCards === 0) {
-               console.log(`🏆 [checkVictoryCondition] ✅ ${player.name} - ПОБЕДИТЕЛЬ (нет карт)!`);
+             // ПОБЕДИТЕЛЬ = НЕТ КАРТ ВООБЩЕ (ни открытых, ни закрытых, ни пеньков)
+             if (total === 0) {
+               console.log(`   ✅ ПОБЕДИТЕЛЬ!`);
                winners.push(player);
              } else {
-               console.log(`🏆 [checkVictoryCondition] ⏳ ${player.name} - еще играет (${totalCards} карт)`);
-               playersWithCards.push(player);
+               console.log(`   ⏳ Играет (${total} карт)`);
+               playersInGame.push(player);
              }
            });
            
-           console.log(`🏆 [checkVictoryCondition] ===== ИТОГИ ПРОВЕРКИ =====`);
-           console.log(`🏆 [checkVictoryCondition] - Победители: ${winners.map(w => w.name).join(', ') || 'НЕТ'}`);
-           console.log(`🏆 [checkVictoryCondition] - Игроки с картами: ${playersWithCards.map(p => `${p.name}(${p.cards.length + p.penki.length})`).join(', ')}`);
+           console.log(`🏆 [checkVictoryCondition] ===== ИТОГИ =====`);
+           console.log(`🏆 Победители: ${winners.length} - ${winners.map(w => w.name).join(', ')}`);
+           console.log(`🏆 В игре: ${playersInGame.length} - ${playersInGame.map(p => `${p.name}(${p.cards.length + p.penki.length})`).join(', ')}`);
            
-           // 2. ИСПРАВЛЕНО: Завершаем игру только если есть РЕАЛЬНЫЙ победитель
-           if (winners.length === 1 && playersWithCards.length >= 1) {
-             const winner = winners[0];
-             const isUserWinner = winner.isUser;
+           // УСЛОВИЯ ЗАВЕРШЕНИЯ ИГРЫ:
+           // 1. Есть ХОТЯ БЫ ОДИН победитель (без карт)
+           // 2. Остальные игроки ЕЩЁ играют (есть карты)
+           if (winners.length >= 1 && playersInGame.length >= 1) {
+             const winner = winners[0]; // Первый кто избавился от карт
+             const isUserWinner = winner.isUser || false;
              
-             console.log(`🎉 [checkVictoryCondition] ИГРА ЗАВЕРШЕНА! Победитель: ${winner.name}`);
+             console.log(`🎉 [checkVictoryCondition] 🏆 ИГРА ЗАВЕРШЕНА!`);
+             console.log(`🎉 Победитель: ${winner.name} (пользователь: ${isUserWinner})`);
              
              get().showNotification(`🎉 ПОБЕДИТЕЛЬ: ${winner.name}!`, 'success', 8000);
              
-             // Определяем проигравшего если остался только один с картами
-             if (playersWithCards.length === 1) {
-               const loser = playersWithCards[0];
-               const totalCardsLeft = loser.cards.length + loser.penki.length;
+             // Находим проигравшего (последний с картами)
+             if (playersInGame.length === 1) {
+               const loser = playersInGame[0];
+               const cardsLeft = loser.cards.length + loser.penki.length;
+               console.log(`💸 Проигравший: ${loser.name} (${cardsLeft} карт)`);
                setTimeout(() => {
-                 get().showNotification(`💸 ПРОИГРАВШИЙ: ${loser.name} (осталось ${totalCardsLeft} карт)`, 'error', 8000);
+                 get().showNotification(
+                   `💸 ПРОИГРАВШИЙ: ${loser.name} (${cardsLeft} карт)`, 
+                   'error', 
+                   8000
+                 );
                }, 2000);
              }
              
@@ -2062,7 +2065,7 @@ export const useGameStore = create<GameState>()(
              get().showNotification('Критическая ошибка игры - все игроки без карт!', 'error', 5000);
            }
            else {
-             console.log(`⚠️ [checkVictoryCondition] Неожиданная ситуация: ${winners.length} победителей, ${playersWithCards.length} игроков с картами`);
+             console.log(`⚠️ [checkVictoryCondition] Неожиданная ситуация: ${winners.length} победителей, ${playersInGame.length} игроков с картами`);
            }
          },
          
