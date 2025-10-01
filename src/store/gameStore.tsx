@@ -1983,31 +1983,35 @@ export const useGameStore = create<GameState>()(
            console.log(`🏆 Победители: ${winners.length} - ${winners.map(w => w.name).join(', ')}`);
            console.log(`🏆 В игре: ${playersInGame.length} - ${playersInGame.map(p => `${p.name}(${p.cards.length + p.penki.length})`).join(', ')}`);
            
-           // УСЛОВИЯ ЗАВЕРШЕНИЯ ИГРЫ:
-           // 1. Есть ХОТЯ БЫ ОДИН победитель (без карт)
-           // 2. Остальные игроки ЕЩЁ играют (есть карты)
-           if (winners.length >= 1 && playersInGame.length >= 1) {
-             const winner = winners[0]; // Первый кто избавился от карт
-             const isUserWinner = winner.isUser || false;
-             
-             console.log(`🎉 [checkVictoryCondition] 🏆 ИГРА ЗАВЕРШЕНА!`);
-             console.log(`🎉 Победитель: ${winner.name} (пользователь: ${isUserWinner})`);
-             
-             get().showNotification(`🎉 ПОБЕДИТЕЛЬ: ${winner.name}!`, 'success', 8000);
-             
-             // Находим проигравшего (последний с картами)
-             if (playersInGame.length === 1) {
-               const loser = playersInGame[0];
-               const cardsLeft = loser.cards.length + loser.penki.length;
-               console.log(`💸 Проигравший: ${loser.name} (${cardsLeft} карт)`);
-               setTimeout(() => {
-                 get().showNotification(
-                   `💸 ПРОИГРАВШИЙ: ${loser.name} (${cardsLeft} карт)`, 
-                   'error', 
-                   8000
-                 );
-               }, 2000);
-             }
+          // ИСПРАВЛЕНО: УСЛОВИЯ ЗАВЕРШЕНИЯ ИГРЫ
+          // Игра завершается если есть ХОТЯ БЫ ОДИН победитель (без карт)
+          if (winners.length >= 1) {
+            const winner = winners[0]; // Первый кто избавился от карт
+            const isUserWinner = winner.isUser || false;
+            
+            console.log(`🎉 [checkVictoryCondition] 🏆 ИГРА ЗАВЕРШЕНА!`);
+            console.log(`🎉 Победитель: ${winner.name} (пользователь: ${isUserWinner})`);
+            
+            // ВСЕГДА показываем уведомление о победе
+            get().showNotification(`🎉 ПОБЕДИТЕЛЬ: ${winner.name}!`, 'success', 8000);
+            
+            // Если есть игроки с картами - они проигравшие
+            if (playersInGame.length >= 1) {
+              const losers = playersInGame.sort((a, b) => (b.cards.length + b.penki.length) - (a.cards.length + a.penki.length));
+              const mainLoser = losers[0]; // Игрок с наибольшим количеством карт
+              const cardsLeft = mainLoser.cards.length + mainLoser.penki.length;
+              
+              console.log(`💸 Главный проигравший: ${mainLoser.name} (${cardsLeft} карт)`);
+              setTimeout(() => {
+                get().showNotification(
+                  `💸 ПРОИГРАВШИЙ: ${mainLoser.name} (${cardsLeft} карт)`, 
+                  'error', 
+                  8000
+                );
+              }, 2000);
+            } else {
+              console.log(`🎯 Все игроки закончили одновременно`);
+            }
              
              // Обновляем статистику
              const { stats } = get();
