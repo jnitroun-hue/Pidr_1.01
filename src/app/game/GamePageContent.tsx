@@ -1140,7 +1140,7 @@ function GamePageContentComponent({
                             }}
                             animate={{ 
                               opacity: 1, 
-                              scale: Math.max(0.75, 1 - ((tableStack.length - 1 - index) * 0.05)), // ИСПРАВЛЕНО: минимум 75%, меньшее уменьшение
+                              scale: Math.max(0.9, 1 - ((tableStack.length - 1 - index) * 0.02)), // ИСПРАВЛЕНО: минимум 90%, очень маленькое уменьшение
                               y: 0,
                               rotateX: 0,
                               transition: {
@@ -1158,8 +1158,8 @@ function GamePageContentComponent({
                             }}
                             className={`${styles.tableCard} ${index === tableStack.length - 1 ? styles.tableCardTop : ''}`}
                             style={{
-                              left: `${-15 + index * 18}px`, // ИСПРАВЛЕНО: Уменьшенное смещение для лучшего обзора
-                              top: `${-10 + index * 5}px`, // ИСПРАВЛЕНО: Меньшее вертикальное смещение
+                              left: `${-15 + index * 12}px`, // ИСПРАВЛЕНО: Еще меньшее смещение для лучшей видимости всех карт
+                              top: `${-10 + index * 3}px`, // ИСПРАВЛЕНО: Минимальное вертикальное смещение
                               zIndex: 200 + index // Высокий z-index - верхние карты поверх нижних
                             }}
                           >
@@ -1617,6 +1617,17 @@ function GamePageContentComponent({
                     const humanOpenCards = humanPlayer.cards.filter(c => c.open).length;
                     const humanNeedsToDeclaree = oneCardTimers[humanPlayer.id] && !oneCardDeclarations[humanPlayer.id];
                     const someoneHasOneCard = playersWithOneCard.some(playerId => playerId !== humanPlayer.id);
+                    
+                    // ОТЛАДКА: Логируем состояние кнопок
+                    console.log('🔍 [GamePageContent] Состояние кнопок:', {
+                      humanOpenCards,
+                      humanNeedsToDeclaree,
+                      someoneHasOneCard,
+                      playersWithOneCard,
+                      oneCardTimers,
+                      oneCardDeclarations,
+                      pendingPenalty: !!pendingPenalty
+                    });
                     
                     return (
                       <>

@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Trophy, Medal, Users, User, Star, Award, Target, Camera, Upload, Wallet, Palette, Sparkles, Gift } from 'lucide-react';
 import GameWallet from '../../components/GameWallet';
+import { useLanguage } from '../../components/LanguageSwitcher';
+import { useTranslations } from '../../lib/i18n/translations';
 
 // Компонент таймера для бонусов
 function BonusCooldownTimer({ bonus, onCooldownEnd }: { bonus: any; onCooldownEnd: () => void }) {
@@ -55,6 +57,9 @@ function BonusCooldownTimer({ bonus, onCooldownEnd }: { bonus: any; onCooldownEn
 }
 
 export default function ProfilePage() {
+  const { language } = useLanguage();
+  const t = useTranslations(language);
+  
   const [stats, setStats] = useState({
     rating: 0,
     gamesPlayed: 0,
@@ -62,10 +67,10 @@ export default function ProfilePage() {
     losses: 0,
     winRate: 0,
     achievements: [
-      { id: 1, name: 'Первая победа', description: 'Выиграйте свою первую игру', unlocked: false, icon: Trophy },
-      { id: 2, name: 'Ветеран', description: 'Сыграйте 100 игр', unlocked: false, icon: Medal },
-      { id: 3, name: 'Мастер', description: 'Выиграйте 50 игр', unlocked: false, icon: Award },
-      { id: 4, name: 'Легенда', description: 'Достигните рейтинга 2000', unlocked: false, icon: Star }
+      { id: 1, name: t.profile.firstWin, description: t.profile.firstWinDesc, unlocked: false, icon: Trophy },
+      { id: 2, name: t.profile.veteran, description: t.profile.veteranDesc, unlocked: false, icon: Medal },
+      { id: 3, name: t.profile.master, description: t.profile.masterDesc, unlocked: false, icon: Award },
+      { id: 4, name: t.profile.legend, description: t.profile.legendDesc, unlocked: false, icon: Star }
     ]
   });
 
@@ -444,9 +449,9 @@ export default function ProfilePage() {
         <div className="menu-header">
           <button onClick={() => window.history.back()} className="px-3 py-1 rounded-lg border border-red-400 text-red-200 font-semibold text-base hover:bg-red-400/10 transition-all">
             <ArrowLeft className="inline w-4 h-4 mr-1" />
-            Назад
+            {t.profile.back}
           </button>
-          <span className="menu-title">ПРОФИЛЬ</span>
+          <span className="menu-title">{t.profile.title}</span>
           <div className="w-6"></div>
         </div>
 
@@ -465,7 +470,7 @@ export default function ProfilePage() {
             )}
           </div>
           <h2 className="profile-name">{user?.username || 'Игрок'}</h2>
-          <p className="profile-status">🟢 Онлайн</p>
+          <p className="profile-status">🟢 {t.profile.online}</p>
           <div style={{
             background: 'linear-gradient(135deg, #fbbf24, #f59e0b)',
             padding: '8px 16px',
@@ -475,7 +480,7 @@ export default function ProfilePage() {
             fontWeight: '600',
             color: '#1f2937'
           }}>
-            💰 {(user?.coins || 0).toLocaleString()} монет
+            💰 {(user?.coins || 0).toLocaleString()} {t.profile.coins}
           </div>
           
           {/* Avatar and Friends Buttons */}
@@ -507,7 +512,7 @@ export default function ProfilePage() {
                 whileTap={{ scale: 0.95 }}
               >
                 <Camera className="avatar-change-icon" />
-                <span>АВАТАР</span>
+                <span>{t.profile.avatar}</span>
               </motion.label>
             </motion.div>
           </div>

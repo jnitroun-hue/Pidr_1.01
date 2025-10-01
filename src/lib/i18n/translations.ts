@@ -122,6 +122,58 @@ export interface Translations {
     failed: string;
   };
   
+  // Профиль
+  profile: {
+    title: string;
+    back: string;
+    online: string;
+    coins: string;
+    avatar: string;
+    friends: string;
+    statistics: string;
+    achievements: string;
+    wallet: string;
+    skins: string;
+    effects: string;
+    bonuses: string;
+    rating: string;
+    gamesPlayed: string;
+    wins: string;
+    losses: string;
+    winRate: string;
+    // Достижения
+    firstWin: string;
+    firstWinDesc: string;
+    veteran: string;
+    veteranDesc: string;
+    master: string;
+    masterDesc: string;
+    legend: string;
+    legendDesc: string;
+    // Бонусы
+    dailyBonus: string;
+    weeklyBonus: string;
+    monthlyBonus: string;
+    unavailable: string;
+    // Кастомизация
+    customization: string;
+    changeAvatar: string;
+    selectSkin: string;
+    selectEffect: string;
+    classic: string;
+    premium: string;
+    vip: string;
+    none: string;
+    fire: string;
+    ice: string;
+    lightning: string;
+    // Кнопки
+    close: string;
+    apply: string;
+    purchase: string;
+    equipped: string;
+  };
+  
   // Магазин
   shop: {
     title: string;
@@ -238,6 +290,56 @@ export const translations: Record<Language, Translations> = {
       back: 'Назад',
       refresh: 'Обновить',
       endGame: 'Закончить игру'
+    },
+    profile: {
+      title: 'ПРОФИЛЬ',
+      back: 'Назад',
+      online: 'Онлайн',
+      coins: 'монет',
+      avatar: 'АВАТАР',
+      friends: 'ДРУЗЬЯ',
+      statistics: 'СТАТИСТИКА',
+      achievements: 'ДОСТИЖЕНИЯ',
+      wallet: 'КОШЕЛЕК',
+      skins: 'СКИНЫ',
+      effects: 'ЭФФЕКТЫ',
+      bonuses: 'БОНУСЫ',
+      rating: 'Рейтинг',
+      gamesPlayed: 'Игр сыграно',
+      wins: 'Побед',
+      losses: 'Поражений',
+      winRate: 'Процент побед',
+      // Достижения
+      firstWin: 'Первая победа',
+      firstWinDesc: 'Выиграйте свою первую игру',
+      veteran: 'Ветеран',
+      veteranDesc: 'Сыграйте 100 игр',
+      master: 'Мастер',
+      masterDesc: 'Выиграйте 50 игр',
+      legend: 'Легенда',
+      legendDesc: 'Достигните рейтинга 2000',
+      // Бонусы
+      dailyBonus: 'Ежедневный бонус',
+      weeklyBonus: 'Недельный бонус',
+      monthlyBonus: 'Месячный бонус',
+      unavailable: 'НЕДОСТУПНО',
+      // Кастомизация
+      customization: 'КАСТОМИЗАЦИЯ',
+      changeAvatar: 'Сменить аватар',
+      selectSkin: 'Выбрать скин',
+      selectEffect: 'Выбрать эффект',
+      classic: 'Классический',
+      premium: 'Премиум',
+      vip: 'VIP',
+      none: 'Нет',
+      fire: 'Огонь',
+      ice: 'Лед',
+      lightning: 'Молния',
+      // Кнопки
+      close: 'Закрыть',
+      apply: 'Применить',
+      purchase: 'Купить',
+      equipped: 'Экипировано'
     },
     rules: {
       title: 'ПРАВИЛА ИГРЫ',
@@ -429,6 +531,56 @@ export const translations: Record<Language, Translations> = {
       back: 'Back',
       refresh: 'Refresh',
       endGame: 'End Game'
+    },
+    profile: {
+      title: 'PROFILE',
+      back: 'Back',
+      online: 'Online',
+      coins: 'coins',
+      avatar: 'AVATAR',
+      friends: 'FRIENDS',
+      statistics: 'STATISTICS',
+      achievements: 'ACHIEVEMENTS',
+      wallet: 'WALLET',
+      skins: 'SKINS',
+      effects: 'EFFECTS',
+      bonuses: 'BONUSES',
+      rating: 'Rating',
+      gamesPlayed: 'Games Played',
+      wins: 'Wins',
+      losses: 'Losses',
+      winRate: 'Win Rate',
+      // Достижения
+      firstWin: 'First Victory',
+      firstWinDesc: 'Win your first game',
+      veteran: 'Veteran',
+      veteranDesc: 'Play 100 games',
+      master: 'Master',
+      masterDesc: 'Win 50 games',
+      legend: 'Legend',
+      legendDesc: 'Reach rating 2000',
+      // Бонусы
+      dailyBonus: 'Daily Bonus',
+      weeklyBonus: 'Weekly Bonus',
+      monthlyBonus: 'Monthly Bonus',
+      unavailable: 'UNAVAILABLE',
+      // Кастомизация
+      customization: 'CUSTOMIZATION',
+      changeAvatar: 'Change Avatar',
+      selectSkin: 'Select Skin',
+      selectEffect: 'Select Effect',
+      classic: 'Classic',
+      premium: 'Premium',
+      vip: 'VIP',
+      none: 'None',
+      fire: 'Fire',
+      ice: 'Ice',
+      lightning: 'Lightning',
+      // Кнопки
+      close: 'Close',
+      apply: 'Apply',
+      purchase: 'Purchase',
+      equipped: 'Equipped'
     },
     rules: {
       title: 'GAME RULES',
