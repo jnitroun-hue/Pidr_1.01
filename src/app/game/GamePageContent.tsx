@@ -1,7 +1,6 @@
 'use client'
 import { useState, useMemo, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import BottomNav from '../../components/BottomNav';
 import styles from './GameTable.module.css';
 // Генераторы перенесены в отдельный проект pidr_generators
 import { getPremiumTable } from '@/utils/generatePremiumTable';
@@ -924,8 +923,6 @@ function GamePageContentComponent({
     );
   }
 
-  // Основной рендер игры
-
   return (
     <div className={styles.gameContainer}>
       {/* Информация о козыре - только со 2-й стадии рядом с бургер меню */}
@@ -966,7 +963,7 @@ function GamePageContentComponent({
             <label>Количество игроков: {playerCount}</label>
             <input
               type="range"
-              min="4"
+              min="3"
               max="9"
               value={playerCount}
               onChange={(e) => setPlayerCount(Number(e.target.value))}
@@ -1008,9 +1005,19 @@ function GamePageContentComponent({
               backgroundRepeat: 'no-repeat'
             }}
           >
-            {/* Старый div с tableCenter удален - используем только SVG фон */}
-            
-            {/* Открытая карта из колоды (слева от колоды) */}
+            <div 
+              className={styles.tableCenter} 
+              style={{ 
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: '100%',
+                height: '100%'
+              }}
+            >
+              
+              {/* Открытая карта из колоды (слева от колоды) */}
               {revealedDeckCard && (
                 <div className={styles.revealedCardContainer}>
                   <div className={styles.revealedCard}>
@@ -1506,6 +1513,7 @@ function GamePageContentComponent({
             </div>
           </div>
 
+          {/* Контейнер карт игрока внизу - только во 2-й и 3-й стадиях И ТОЛЬКО для человека */}
           {isGameActive && humanPlayer && humanPlayer.cards.length > 0 && gameStage >= 2 && (
             <div className={styles.playerHand}>
               <div className={styles.handTitle}>
@@ -1776,7 +1784,35 @@ function GamePageContentComponent({
         </div>
       )}
 
-      <BottomNav />
+      {/* Мультиплеер компонент */}
+      {isMultiplayer && multiplayerRoom && (
+        <MultiplayerGame
+          roomId={multiplayerRoom.id}
+          roomCode={multiplayerRoom.code}
+          isHost={multiplayerRoom.isHost}
+          onGameStateUpdate={(gameState) => {
+            console.log('🔄 [Multiplayer] Получено обновление состояния:', gameState);
+            // Здесь можно обновить локальное состояние игры
+          }}
+        />
+      )}
+      
+      {/* Экран победителя */}
+      {winner && (
+        <WinnerScreen
+          winner={winner}
+          isVisible={showWinnerScreen}
+          onClose={() => {
+            setShowWinnerScreen(false);
+            setWinner(null);
+          }}
+          onPlayAgain={() => {
+            setShowWinnerScreen(false);
+            setWinner(null);
+            handleStartGame();
+          }}
+        />
+      )}
 
     </div>
   );
