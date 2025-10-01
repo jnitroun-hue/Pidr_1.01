@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Coins, Star, Sparkles, Zap, Gift, Crown, Palette, Wand2, ShoppingBag, Wallet, Plus, TrendingUp, Award, Flame, Diamond, Shield } from 'lucide-react';
-import BottomNav from '../../components/BottomNav';
 import { useLanguage } from '../../components/LanguageSwitcher';
 import { useTranslations } from '../../lib/i18n/translations';
 
@@ -789,7 +788,6 @@ export default function UltraPremiumShop() {
             </div>
           </div>
         )}
-        <BottomNav />
       </div>
     </div>
   );

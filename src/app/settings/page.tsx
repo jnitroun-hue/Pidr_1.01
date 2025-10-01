@@ -2,7 +2,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Moon, Palette, Volume2, Bell, User, Trash2, Shield, Eye, Database, Download, Upload, RefreshCw } from 'lucide-react';
-import BottomNav from '../../components/BottomNav';
 
 export default function SettingsPage() {
   const [darkTheme, setDarkTheme] = useState(true);
@@ -266,7 +265,6 @@ export default function SettingsPage() {
           </div>
         </motion.div>
 
-        <BottomNav />
       </div>
     </div>
   );

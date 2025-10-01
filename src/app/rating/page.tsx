@@ -2,7 +2,6 @@
 import { Box, Flex, Text, Button, Grid, VStack } from '@chakra-ui/react';
 import { motion } from 'framer-motion';
 import { FaArrowLeft, FaTrophy, FaArrowUp, FaArrowDown } from 'react-icons/fa';
-import BottomNav from '../../components/BottomNav';
 
 export default function RatingPage() {
   return (
@@ -73,7 +72,6 @@ export default function RatingPage() {
           </Box>
         </motion.section>
       </Box>
-      <BottomNav />
     </Box>
   );
 } 

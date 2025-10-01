@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, UserPlus, Search, Check, X, User, Users, Gamepad2, Share, Copy } from 'lucide-react';
-import BottomNav from '../../components/BottomNav';
 import { useTelegramShare } from '../../hooks/useTelegramShare';
 
 interface Friend {
@@ -566,7 +565,6 @@ export default function FriendsPage() {
           </div>
         </motion.div>
 
-        <BottomNav />
       </div>
     </div>
   );

@@ -3,7 +3,6 @@ import { Box, Flex, Text, Button, Input, Grid, Image, VStack, HStack, Spinner } 
 import { motion } from 'framer-motion';
 import { FaArrowLeft, FaCoins, FaPlus, FaGift, FaShoppingCart, FaStar, FaTelegram, FaShareAlt, FaWallet, FaLink, FaUnlink, FaEthereum } from 'react-icons/fa';
 import { SiSolana } from 'react-icons/si';
-import BottomNav from '../../components/BottomNav';
 import { useWalletStore } from '../../store/walletStore';
 import { useEffect } from 'react';
 import { tonConnector } from '../../lib/wallets/ton-connector';
@@ -224,7 +223,6 @@ export default function WalletPage() {
             </VStack>
           </Grid>
         </Box>
-        <BottomNav />
       </Flex>
     </Box>
   );

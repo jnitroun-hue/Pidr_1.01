@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Plus, Search, Users, Lock, Unlock, Play, Eye, Crown, Clock, Gamepad2 } from 'lucide-react';
-import BottomNav from '../../components/BottomNav';
 import { CreateRoomModal, JoinRoomModal } from '../../components/RoomModals';
 import { useTelegramShare } from '../../hooks/useTelegramShare';
 import TelegramInvitations from '../../components/TelegramInvitations';
@@ -351,7 +350,6 @@ export default function TablesListPage() {
           </motion.div>
         )}
 
-      <BottomNav />
       </div>
     </div>
   );

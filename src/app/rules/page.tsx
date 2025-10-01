@@ -2,7 +2,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Book, Users, Star, Crown, AlertTriangle, ListOrdered, Target, Shield, Brain, GamepadIcon, Clock, Search, Coins, Eye } from 'lucide-react';
-import BottomNav from '../../components/BottomNav';
 import { useLanguage } from '../../components/LanguageSwitcher';
 import { useTranslations } from '../../lib/i18n/translations';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
@@ -424,7 +423,6 @@ export default function RulesPage() {
           )}
         </motion.div>
 
-        <BottomNav />
       </div>
     </div>
   );
