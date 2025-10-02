@@ -1989,94 +1989,83 @@ export const useGameStore = create<GameState>()(
            console.log(`🏆 Победители: ${winners.length} - ${winners.map(w => w.name).join(', ')}`);
            console.log(`🏆 В игре: ${playersInGame.length} - ${playersInGame.map(p => `${p.name}(${p.cards.length + p.penki.length})`).join(', ')}`);
            
-          // ИСПРАВЛЕНО: УСЛОВИЯ ЗАВЕРШЕНИЯ ИГРЫ
-          // Игра завершается если есть ХОТЯ БЫ ОДИН победитель (без карт)
-          if (winners.length >= 1) {
-            const winner = winners[0]; // Первый кто избавился от карт
-            const isUserWinner = winner.isUser || false;
-            
+          // ✅ ПРАВИЛЬНЫЕ УСЛОВИЯ ЗАВЕРШЕНИЯ ИГРЫ P.I.D.R.
+          // Игра завершается когда остался ТОЛЬКО ОДИН игрок с картами (или ничья)
+          if (playersInGame.length <= 1) {
             console.log(`🎉 [checkVictoryCondition] 🏆 ИГРА ЗАВЕРШЕНА!`);
-            console.log(`🎉 Победитель: ${winner.name} (пользователь: ${isUserWinner})`);
             
-            // ВСЕГДА показываем уведомление о победе
-            get().showNotification(`🎉 ПОБЕДИТЕЛЬ: ${winner.name}!`, 'success', 8000);
-            
-            // Если есть игроки с картами - они проигравшие
-            if (playersInGame.length >= 1) {
-              const losers = playersInGame.sort((a, b) => (b.cards.length + b.penki.length) - (a.cards.length + a.penki.length));
-              const mainLoser = losers[0]; // Игрок с наибольшим количеством карт
-              const cardsLeft = mainLoser.cards.length + mainLoser.penki.length;
+            if (playersInGame.length === 1) {
+              // ОДИН ПРОИГРАВШИЙ, ВСЕ ОСТАЛЬНЫЕ ПОБЕДИТЕЛИ
+              const loser = playersInGame[0];
+              const cardsLeft = loser.cards.length + loser.penki.length;
+              const isUserLoser = loser.isUser || false;
               
-              console.log(`💸 Главный проигравший: ${mainLoser.name} (${cardsLeft} карт)`);
+              console.log(`💸 ПРОИГРАВШИЙ: ${loser.name} (${cardsLeft} карт)`);
+              console.log(`🎉 ПОБЕДИТЕЛИ: ${winners.map(w => w.name).join(', ')}`);
+              
+              // Показываем результат
+              get().showNotification(`💸 ПРОИГРАВШИЙ: ${loser.name} (${cardsLeft} карт)`, 'error', 8000);
+              
               setTimeout(() => {
                 get().showNotification(
-                  `💸 ПРОИГРАВШИЙ: ${mainLoser.name} (${cardsLeft} карт)`, 
-                  'error', 
+                  `🎉 ПОБЕДИТЕЛИ: ${winners.map(w => w.name).join(', ')}!`, 
+                  'success', 
                   8000
                 );
               }, 2000);
-            } else {
-              console.log(`🎯 Все игроки закончили одновременно`);
+              
+              // Обновляем статистику
+              const { stats } = get();
+              const isUserWinner = winners.some(w => w.isUser);
+              
+              set({
+                isGameActive: false,
+                stats: {
+                  ...stats,
+                  gamesPlayed: stats.gamesPlayed + 1,
+                  gamesWon: isUserWinner ? stats.gamesWon + 1 : stats.gamesWon,
+                  totalScore: stats.totalScore + (isUserWinner ? 100 : 0),
+                  bestScore: isUserWinner ? Math.max(stats.bestScore, 100) : stats.bestScore
+                }
+              });
+              
+              setTimeout(() => {
+                get().showNotification(
+                  isUserWinner ? '🎉 Поздравляем с победой!' : '😔 В следующий раз повезет!', 
+                  isUserWinner ? 'success' : 'info',
+                  5000
+                );
+              }, 4000);
+              
+            } else if (playersInGame.length === 0) {
+              // НИЧЬЯ - ВСЕ ОДНОВРЕМЕННО ИЗБАВИЛИСЬ ОТ КАРТ
+              console.log(`🎯 НИЧЬЯ! Все игроки закончили одновременно`);
+              
+              get().showNotification(`🎯 НИЧЬЯ! Все избавились от карт одновременно!`, 'info', 8000);
+              
+              // Обновляем статистику (ничья = половина победы)
+              const { stats } = get();
+              set({
+                isGameActive: false,
+                stats: {
+                  ...stats,
+                  gamesPlayed: stats.gamesPlayed + 1,
+                  gamesWon: stats.gamesWon + 0.5, // Ничья = половина победы
+                  totalScore: stats.totalScore + 50, // Половина очков
+                  bestScore: Math.max(stats.bestScore, 50)
+                }
+              });
+              
+              setTimeout(() => {
+                get().showNotification('🎯 Ничья! Неплохо сыграно!', 'info', 5000);
+              }, 4000);
             }
-             
-             // Обновляем статистику
-             const { stats } = get();
-             set({
-               isGameActive: false,
-               stats: {
-                 ...stats,
-                 gamesPlayed: stats.gamesPlayed + 1,
-                 gamesWon: isUserWinner ? stats.gamesWon + 1 : stats.gamesWon,
-                 totalScore: stats.totalScore + (isUserWinner ? 100 : 0),
-                 bestScore: isUserWinner ? Math.max(stats.bestScore, 100) : stats.bestScore
-               }
-             });
-             
-             setTimeout(() => {
-               get().showNotification(
-                 isUserWinner ? '🎉 Поздравляем с победой!' : '😔 В следующий раз повезет!', 
-                 isUserWinner ? 'success' : 'info',
-                 5000
-               );
-             }, 4000);
-           }
-           // 3. Несколько игроков без карт одновременно - ничья
-           else if (winners.length > 1) {
-             console.log(`🤝 [checkVictoryCondition] НИЧЬЯ! Победители: ${winners.map(w => w.name).join(', ')}`);
-             
-             const winnerNames = winners.map(w => w.name).join(', ');
-             const hasUserWinner = winners.some(w => w.isUser);
-             
-             get().showNotification(`🤝 НИЧЬЯ! Победители: ${winnerNames}`, 'success', 8000);
-             
-             // Обновляем статистику для ничьей
-             const { stats } = get();
-             set({
-               isGameActive: false,
-               stats: {
-                 ...stats,
-                 gamesPlayed: stats.gamesPlayed + 1,
-                 gamesWon: hasUserWinner ? stats.gamesWon + 1 : stats.gamesWon,
-                 totalScore: stats.totalScore + (hasUserWinner ? 50 : 0), // Меньше очков за ничью
-                 bestScore: hasUserWinner ? Math.max(stats.bestScore, 50) : stats.bestScore
-               }
-             });
-           }
-           // 4. ИСПРАВЛЕНО: Никто не выиграл - игра продолжается (НОРМАЛЬНАЯ ситуация)
-           else if (winners.length === 0) {
-             console.log(`⏳ [checkVictoryCondition] ✅ Игра продолжается - никто не выиграл (нормально)`);
-             // Ничего не делаем - игра продолжается нормально
-           }
-           // 5. Критическая ошибка - все игроки без карт
-           else if (winners.length === players.length) {
-             console.error(`🚨 [checkVictoryCondition] КРИТИЧЕСКАЯ ОШИБКА: Все игроки без карт!`);
-             // Аварийное завершение
-             set({ isGameActive: false });
-             get().showNotification('Критическая ошибка игры - все игроки без карт!', 'error', 5000);
-           }
-           else {
-             console.log(`⚠️ [checkVictoryCondition] Неожиданная ситуация: ${winners.length} победителей, ${playersInGame.length} игроков с картами`);
-           }
+            
+            return; // ИГРА ЗАВЕРШЕНА
+          }
+          
+          // Игра продолжается - нормальная ситуация
+          console.log(`⏳ [checkVictoryCondition] ✅ Игра продолжается - ${playersInGame.length} игроков с картами`);
          },
          
          // ===== МЕТОДЫ ДЛЯ СИСТЕМЫ "ОДНА КАРТА!" И ШТРАФОВ =====
