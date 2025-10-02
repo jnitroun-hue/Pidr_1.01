@@ -64,7 +64,7 @@ export const ProperMultiplayer: React.FC = () => {
 
   // Форма создания комнаты
   const [roomName, setRoomName] = useState('');
-  const [maxPlayers, setMaxPlayers] = useState(6);
+  const [maxPlayers, setMaxPlayers] = useState(9); // ДЕФОЛТ 9 ИГРОКОВ!
   const [gameMode, setGameMode] = useState('casual');
   const [hasPassword, setHasPassword] = useState(false);
   const [password, setPassword] = useState('');

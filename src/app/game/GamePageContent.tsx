@@ -216,6 +216,23 @@ function GamePageContentComponent({
   } | null>(null);
   const [isLoadingUserData, setIsLoadingUserData] = useState(true);
 
+  // АВАТАРКИ ИГРОКОВ
+  const [playerAvatars, setPlayerAvatars] = useState<Record<string, string>>({});
+
+  // Заполняем аватарки игроков после создания
+  useEffect(() => {
+    if (players.length > 0) {
+      const avatars: Record<string, string> = {};
+      players.forEach(player => {
+        if (player.avatar) {
+          avatars[player.id] = player.avatar;
+        }
+      });
+      setPlayerAvatars(avatars);
+      console.log('🖼️ Аватарки игроков обновлены:', avatars);
+    }
+  }, [players]);
+
   // Загружаем данные пользователя из Supabase БД через API
   useEffect(() => {
     const fetchUserData = async () => {

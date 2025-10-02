@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
           room_code: roomCode,
           name: name || 'Новая комната',
           host_id: userId,
-          max_players: maxPlayers || 6,
+          max_players: maxPlayers || 9, // МАКСИМУМ 9 ИГРОКОВ!
           current_players: 0, // Начинаем с 0, потом добавим хоста
           status: 'waiting',
           is_private: isPrivate || false,
