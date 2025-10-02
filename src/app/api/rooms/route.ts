@@ -181,7 +181,28 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: false, message: 'Комната не найдена' }, { status: 404 });
       }
 
-      // ДОБАВЛЯЕМ ИГРОКА БЕЗ ПРОВЕРОК ДУБЛИКАТОВ
+      // ПРОВЕРЯЕМ НЕТ ЛИ УЖЕ ЭТОГО ИГРОКА В КОМНАТЕ
+      const { data: existingPlayer } = await supabase
+        .from('_pidr_room_players')
+        .select('id')
+        .eq('room_id', room.id)
+        .eq('user_id', userId)
+        .single();
+
+      if (existingPlayer) {
+        console.log('✅ Игрок уже в комнате, возвращаем успех');
+        return NextResponse.json({ 
+          success: true, 
+          room: {
+            id: room.id,
+            roomCode: room.room_code, // Исправил
+            name: room.name,
+            position: room.current_players
+          }
+        });
+      }
+
+      // ДОБАВЛЯЕМ ИГРОКА ТОЛЬКО ЕСЛИ ЕГО ЕЩЕ НЕТ
       const { error: playerError } = await supabase
         .from('_pidr_room_players')
         .insert({
@@ -210,10 +231,53 @@ export async function POST(req: NextRequest) {
         success: true, 
         room: {
           id: room.id,
-          roomCode,
+          roomCode: room.room_code, // Исправил
           name: room.name,
           position: room.current_players
         }
+      });
+    }
+
+    if (action === 'leave') {
+      // ВЫХОД ИЗ КОМНАТЫ
+      const { roomId } = body;
+      
+      if (!roomId) {
+        return NextResponse.json({ success: false, message: 'ID комнаты обязателен' }, { status: 400 });
+      }
+
+      // УДАЛЯЕМ ИГРОКА ИЗ КОМНАТЫ
+      const { error: leaveError } = await supabase
+        .from('_pidr_room_players')
+        .delete()
+        .eq('room_id', roomId)
+        .eq('user_id', userId);
+
+      if (leaveError) {
+        console.error('❌ Ошибка выхода из комнаты:', leaveError);
+        return NextResponse.json({ 
+          success: false, 
+          message: 'Ошибка выхода из комнаты: ' + leaveError.message 
+        }, { status: 500 });
+      }
+
+      // ОБНОВЛЯЕМ СЧЕТЧИК ИГРОКОВ
+      const { data: room } = await supabase
+        .from('_pidr_rooms')
+        .select('current_players')
+        .eq('id', roomId)
+        .single();
+
+      if (room && room.current_players > 0) {
+        await supabase
+          .from('_pidr_rooms')
+          .update({ current_players: room.current_players - 1 })
+          .eq('id', roomId);
+      }
+
+      return NextResponse.json({ 
+        success: true, 
+        message: 'Вышли из комнаты' 
       });
     }
 
