@@ -235,33 +235,56 @@ export const ProperMultiplayer: React.FC = () => {
         const result = await response.json();
         console.log('✅ Присоединились к комнате:', result.room);
 
+        // ЗАГРУЖАЕМ ВСЕХ ИГРОКОВ В КОМНАТЕ
+        const playersResponse = await fetch(`/api/rooms/${result.room.id}/players`, {
+          method: 'GET',
+          credentials: 'include'
+        });
+
+        let allPlayers = [];
+        if (playersResponse.ok) {
+          const playersData = await playersResponse.json();
+          console.log('✅ Загружены игроки комнаты:', playersData.players);
+          
+          allPlayers = playersData.players.map((player: any) => ({
+            id: player.user_id.toString(),
+            name: player.username || 'Игрок',
+            isHost: player.position === 1, // Хост всегда позиция 1
+            isReady: player.is_ready || player.position === 1, // Хост всегда готов
+            isBot: false,
+            avatar: player.avatar_url,
+            joinedAt: new Date(player.joined_at || Date.now())
+          }));
+        } else {
+          console.error('❌ Не удалось загрузить игроков комнаты');
+          // Fallback - только текущий игрок
+          allPlayers = [{
+            id: user?.id?.toString() || 'player',
+            name: user?.firstName || user?.username || 'Игрок',
+            isHost: result.room.isHost || false,
+            isReady: result.room.isHost || false,
+            isBot: false,
+            avatar: user?.avatar,
+            joinedAt: new Date()
+          }];
+        }
+
          const roomData: RoomData = {
            id: result.room.id.toString(),
            code: result.room.roomCode,
            name: result.room.name,
-           host: 'Хост',
-           hostId: 'host_id',
+           host: allPlayers.find(p => p.isHost)?.name || 'Хост',
+           hostId: allPlayers.find(p => p.isHost)?.id || 'host_id',
            maxPlayers: 6,
-           gameMode: 'casual', // Фиксированное значение
+           gameMode: 'casual',
            hasPassword: false,
            isPrivate: false,
            status: 'waiting',
-          players: [
-            // ТОЛЬКО ОДИН ИГРОК - ТОТ КТО ПРИСОЕДИНИЛСЯ
-            {
-              id: user?.id?.toString() || 'player',
-              name: user?.firstName || user?.username || 'Игрок',
-              isHost: result.room.isHost || false, // ОПРЕДЕЛЯЕМ ПО ОТВЕТУ СЕРВЕРА
-              isReady: result.room.isHost || false, // ХОСТ ГОТОВ, ОБЫЧНЫЙ ИГРОК НЕТ
-              isBot: false,
-              avatar: user?.avatar,
-              joinedAt: new Date()
-            }
-          ],
+           players: allPlayers, // ВСЕ ИГРОКИ ИЗ БД
            settings: {
              autoStart: false,
              allowBots: true,
-             minPlayers: 4 // Изменил на 4
+             minPlayers: 4
            }
          };
 

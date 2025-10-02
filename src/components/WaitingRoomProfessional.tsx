@@ -62,6 +62,15 @@ export default function WaitingRoomProfessional({
   const isHost = roomData.hostId === currentUserId;
   const currentPlayer = roomData.players.find(p => p.id === currentUserId);
   const readyPlayers = roomData.players.filter(p => p.isReady || p.isHost).length;
+  
+  // ОТЛАДКА: Проверяем определение хоста
+  console.log('🔍 [WaitingRoom] Отладка хоста:', {
+    roomHostId: roomData.hostId,
+    currentUserId: currentUserId,
+    isHost: isHost,
+    currentPlayer: currentPlayer,
+    playersInRoom: roomData.players.map(p => ({ id: p.id, name: p.name, isHost: p.isHost }))
+  });
   const canStart = readyPlayers >= localSettings.minPlayers && readyPlayers === roomData.players.length;
 
   // Автостарт при готовности всех игроков
