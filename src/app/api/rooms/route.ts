@@ -248,6 +248,16 @@ export async function POST(req: NextRequest) {
         .eq('id', userId)
         .single();
 
+      // ПОЛУЧАЕМ АКТУАЛЬНОЕ КОЛИЧЕСТВО ИГРОКОВ В КОМНАТЕ
+      const { count: actualPlayerCount } = await supabase
+        .from('_pidr_room_players')
+        .select('*', { count: 'exact', head: true })
+        .eq('room_id', room.id);
+
+      const nextPosition = (actualPlayerCount || 0) + 1;
+
+      console.log(`🎯 Добавляем игрока: actualPlayerCount=${actualPlayerCount}, nextPosition=${nextPosition}`);
+
       // ДОБАВЛЯЕМ ИГРОКА ТОЛЬКО ЕСЛИ ЕГО ЕЩЕ НЕТ
       const { error: playerError } = await supabase
         .from('_pidr_room_players')
@@ -255,7 +265,7 @@ export async function POST(req: NextRequest) {
           room_id: room.id,
           user_id: userId,
           username: userData?.username || 'Игрок',
-          position: room.current_players + 1, // НОВАЯ ПОЗИЦИЯ
+          position: nextPosition, // АКТУАЛЬНАЯ ПОЗИЦИЯ
           is_ready: false
         });
 
@@ -273,15 +283,15 @@ export async function POST(req: NextRequest) {
         .update({ current_players: room.current_players + 1 })
         .eq('id', room.id);
 
-      return NextResponse.json({ 
-        success: true, 
-        room: {
-          id: room.id,
-          roomCode: room.room_code,
-          name: room.name,
-          position: room.current_players + 1 // НОВАЯ ПОЗИЦИЯ
-        }
-      });
+        return NextResponse.json({ 
+          success: true, 
+          room: {
+            id: room.id,
+            roomCode: room.room_code,
+            name: room.name,
+            position: nextPosition // АКТУАЛЬНАЯ ПОЗИЦИЯ
+          }
+        });
     }
 
     if (action === 'leave') {

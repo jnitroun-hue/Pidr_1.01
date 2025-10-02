@@ -6,6 +6,7 @@ export interface RatingReward {
   coins: number; // монеты (0 для проигравших)
   position: number; // место (1-9)
   isWinner: boolean; // в топе или нет
+  ratingChange: number; // изменение рейтинга
 }
 
 // Базовая таблица наград для 9 игроков
@@ -39,7 +40,8 @@ export function calculateRatingRewards(
       experience: 0,
       coins: 0,
       position,
-      isWinner: position <= Math.ceil(totalPlayers / 2)
+      isWinner: position <= Math.ceil(totalPlayers / 2),
+      ratingChange: 0
     };
   }
 
@@ -51,7 +53,8 @@ export function calculateRatingRewards(
     experience: reward.experience,
     coins: reward.coins,
     position,
-    isWinner: reward.isWinner
+    isWinner: reward.isWinner,
+    ratingChange: reward.experience // Рейтинг меняется так же как опыт
   };
 }
 

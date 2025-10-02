@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Проверяем JWT токен в cookies
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const token = cookieStore.get('auth_token')?.value;
     
     console.log('🍪 Cookies проверка:', {

@@ -175,7 +175,7 @@ export const ProperMultiplayer: React.FC = () => {
            id: data.room.id.toString(),
            code: data.room.roomCode,
            name: data.room.name,
-           host: user?.firstName || user?.username || 'Хост',
+           host: user?.first_name || user?.username || 'Хост',
            hostId: user?.id?.toString() || 'host',
            maxPlayers,
            gameMode: gameMode === 'casual' ? 'casual' : 'competitive', // Приводим к нужному типу
@@ -185,7 +185,7 @@ export const ProperMultiplayer: React.FC = () => {
            players: [
              {
                id: user?.id?.toString() || 'host',
-               name: user?.firstName || user?.username || 'Хост',
+               name: user?.first_name || user?.username || 'Хост',
                isHost: true,
                isReady: true,
                isBot: false,
@@ -268,7 +268,7 @@ export const ProperMultiplayer: React.FC = () => {
           // Fallback - только текущий игрок
           allPlayers = [{
             id: user?.id?.toString() || 'player',
-            name: user?.firstName || user?.username || 'Игрок',
+            name: user?.first_name || user?.username || 'Игрок',
             isHost: result.room.isHost || false,
             isReady: result.room.isHost || false,
             isBot: false,
@@ -281,8 +281,8 @@ export const ProperMultiplayer: React.FC = () => {
            id: result.room.id.toString(),
            code: result.room.roomCode,
            name: result.room.name,
-           host: allPlayers.find(p => p.isHost)?.name || 'Хост',
-           hostId: allPlayers.find(p => p.isHost)?.id || 'host_id',
+           host: allPlayers.find((p: any) => p.isHost)?.name || 'Хост',
+           hostId: allPlayers.find((p: any) => p.isHost)?.id || 'host_id',
            maxPlayers: 6,
            gameMode: 'casual',
            hasPassword: false,

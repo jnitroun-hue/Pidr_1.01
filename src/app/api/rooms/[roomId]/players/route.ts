@@ -34,7 +34,7 @@ export async function GET(req: NextRequest, { params }: { params: { roomId: stri
     }
 
     // Форматируем данные игроков (упрощенно)
-    const formattedPlayers = players.map(player => ({
+    const formattedPlayers = players.map((player: any) => ({
       user_id: player.user_id,
       username: player.username || 'Игрок',
       position: player.position,
