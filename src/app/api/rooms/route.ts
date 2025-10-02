@@ -143,13 +143,21 @@ export async function POST(req: NextRequest) {
         .eq('id', userId)
         .single();
 
+      if (!hostData?.username) {
+        console.error('❌ Не удалось получить имя пользователя');
+        return NextResponse.json({ 
+          success: false, 
+          message: 'Ошибка получения данных пользователя' 
+        }, { status: 500 });
+      }
+
       // ДОБАВЛЯЕМ ХОСТА И ОБНОВЛЯЕМ СЧЕТЧИК
       const { error: playerError } = await supabase
         .from('_pidr_room_players')
         .insert({
           room_id: room.id,
           user_id: userId,
-          username: hostData?.username || 'Хост',
+          username: hostData.username, // ТОЛЬКО РЕАЛЬНОЕ ИМЯ!
           position: 1, // ХОСТ ВСЕГДА ПОЗИЦИЯ 1
           is_ready: true
         });
@@ -210,13 +218,18 @@ export async function POST(req: NextRequest) {
 
       if (existingPlayer) {
         console.log('✅ Игрок уже в комнате, возвращаем его позицию');
+        
+        // ПРОВЕРЯЕМ ЯВЛЯЕТСЯ ЛИ ИГРОК ХОСТОМ
+        const isHost = room.host_id === userId;
+        
         return NextResponse.json({ 
           success: true, 
           room: {
             id: room.id,
             roomCode: room.room_code,
             name: room.name,
-            position: existingPlayer.position // ВОЗВРАЩАЕМ РЕАЛЬНУЮ ПОЗИЦИЮ
+            position: existingPlayer.position,
+            isHost: isHost // ДОБАВЛЯЕМ ИНФОРМАЦИЮ О ХОСТЕ
           }
         });
       }

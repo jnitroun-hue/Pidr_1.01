@@ -2,6 +2,7 @@ import React from 'react'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { createPlayers, generateAvatar } from '../lib/game/avatars'
+import { calculateRatingRewards, calculatePlayerPositions } from '../lib/rating/ratingSystem'
 
 export interface Card {
   id: string
@@ -82,6 +83,24 @@ interface GameState {
   oneCardTimers: {[playerId: string]: number} // Таймеры для объявления (timestamp)
   playersWithOneCard: string[] // Игроки у которых 1 карта (для проверки штрафов)
   pendingPenalty: {targetPlayerId: string, contributorsNeeded: string[]} | null // Ожидающий штраф
+  
+  // Система рейтинга и результатов
+  eliminationOrder: string[] // Порядок выбывания игроков (первый = последнее место)
+  isRankedGame: boolean // Рейтинговая игра или нет
+  showVictoryModal: boolean // Показывать ли модальное окно победы
+  victoryData: {
+    position: number;
+    isWinner: boolean;
+    playerName: string;
+    totalPlayers: number;
+    gameMode: 'single' | 'multiplayer';
+    isRanked: boolean;
+    rewards?: {
+      experience: number;
+      coins: number;
+      ratingChange: number;
+    };
+  } | null
   
   // Состояние 2-й стадии (дурак)
   tableStack: Card[] // Стопка карт на столе (нижняя = первая, верхняя = последняя)
@@ -263,6 +282,12 @@ export const useGameStore = create<GameState>()(
       oneCardTimers: {},
       playersWithOneCard: [],
       pendingPenalty: null,
+      
+      // Система рейтинга и результатов
+      eliminationOrder: [],
+      isRankedGame: false,
+      showVictoryModal: false,
+      victoryData: null,
       
       // Состояние 2-й стадии (дурак)
       tableStack: [],
@@ -2014,7 +2039,48 @@ export const useGameStore = create<GameState>()(
                 );
               }, 2000);
               
-              // Обновляем статистику
+              // 🏆 НОВАЯ СИСТЕМА РЕЙТИНГА И КРАСИВОГО ОКНА ПОБЕДЫ
+              const { gameMode, isRankedGame, eliminationOrder } = get();
+              
+              // Добавляем проигравшего в порядок выбывания (последний)
+              const finalEliminationOrder = [...eliminationOrder, loser.id];
+              
+              // Рассчитываем позиции всех игроков
+              const playerPositions = calculatePlayerPositions(players, finalEliminationOrder);
+              
+              // Находим пользователя и показываем ему красивое окно
+              const userPlayer = players.find(p => p.isUser);
+              if (userPlayer) {
+                const userPosition = playerPositions[userPlayer.id];
+                const rewards = calculateRatingRewards(userPosition, players.length, isRankedGame);
+                
+                console.log(`🎯 [checkVictoryCondition] Пользователь: ${userPlayer.name}, место: ${userPosition}, награды:`, rewards);
+                
+                // Сохраняем данные для модального окна
+                set({
+                  showVictoryModal: true,
+                  victoryData: {
+                    position: userPosition,
+                    isWinner: rewards.isWinner,
+                    playerName: userPlayer.name,
+                    totalPlayers: players.length,
+                    gameMode,
+                    isRanked: isRankedGame,
+                    rewards: isRankedGame ? {
+                      experience: rewards.experience,
+                      coins: rewards.coins,
+                      ratingChange: rewards.experience // Рейтинг = опыт
+                    } : undefined
+                  }
+                });
+                
+                // Отправляем награды на сервер (если рейтинговая игра)
+                if (isRankedGame && rewards.coins > 0) {
+                  get().updatePlayerRewards(rewards.experience, rewards.coins);
+                }
+              }
+              
+              // Обновляем статистику (старая система)
               const { stats } = get();
               const isUserWinner = winners.some(w => w.isUser);
               

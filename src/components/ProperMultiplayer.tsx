@@ -246,26 +246,18 @@ export const ProperMultiplayer: React.FC = () => {
            hasPassword: false,
            isPrivate: false,
            status: 'waiting',
-           players: [
-             {
-               id: 'host_id',
-               name: 'Хост',
-               isHost: true,
-               isReady: true,
-               isBot: false,
-               avatar: undefined,
-               joinedAt: new Date()
-             },
-             {
-               id: user?.id?.toString() || 'player',
-               name: user?.firstName || user?.username || 'Игрок',
-               isHost: false,
-               isReady: false,
-               isBot: false,
-               avatar: user?.avatar,
-               joinedAt: new Date()
-             }
-           ],
+          players: [
+            // ТОЛЬКО ОДИН ИГРОК - ТОТ КТО ПРИСОЕДИНИЛСЯ
+            {
+              id: user?.id?.toString() || 'player',
+              name: user?.firstName || user?.username || 'Игрок',
+              isHost: data.room.isHost || false, // ОПРЕДЕЛЯЕМ ПО ОТВЕТУ СЕРВЕРА
+              isReady: data.room.isHost || false, // ХОСТ ГОТОВ, ОБЫЧНЫЙ ИГРОК НЕТ
+              isBot: false,
+              avatar: user?.avatar,
+              joinedAt: new Date()
+            }
+          ],
            settings: {
              autoStart: false,
              allowBots: true,
@@ -288,9 +280,38 @@ export const ProperMultiplayer: React.FC = () => {
   };
 
   // Обработчики для комнаты ожидания
-  const handleLeaveRoom = () => {
-    setCurrentRoom(null);
-    setView('lobby');
+  const handleLeaveRoom = async () => {
+    if (!currentRoom) return;
+    
+    try {
+      setLoading(true);
+      
+      // ОТПРАВЛЯЕМ ЗАПРОС НА ВЫХОД ИЗ КОМНАТЫ
+      const response = await fetch('/api/rooms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          action: 'leave',
+          roomId: currentRoom.id
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        console.log('✅ Успешно вышли из комнаты');
+      } else {
+        console.error('❌ Ошибка выхода:', result.message);
+      }
+    } catch (error) {
+      console.error('❌ Ошибка API выхода:', error);
+    } finally {
+      setLoading(false);
+      // В любом случае возвращаемся в лобби
+      setCurrentRoom(null);
+      setView('lobby');
+    }
   };
 
   const handleStartGame = () => {
