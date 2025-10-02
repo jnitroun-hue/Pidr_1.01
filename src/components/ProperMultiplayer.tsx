@@ -251,8 +251,8 @@ export const ProperMultiplayer: React.FC = () => {
             {
               id: user?.id?.toString() || 'player',
               name: user?.firstName || user?.username || 'Игрок',
-              isHost: data.room.isHost || false, // ОПРЕДЕЛЯЕМ ПО ОТВЕТУ СЕРВЕРА
-              isReady: data.room.isHost || false, // ХОСТ ГОТОВ, ОБЫЧНЫЙ ИГРОК НЕТ
+              isHost: result.room.isHost || false, // ОПРЕДЕЛЯЕМ ПО ОТВЕТУ СЕРВЕРА
+              isReady: result.room.isHost || false, // ХОСТ ГОТОВ, ОБЫЧНЫЙ ИГРОК НЕТ
               isBot: false,
               avatar: user?.avatar,
               joinedAt: new Date()

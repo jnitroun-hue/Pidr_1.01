@@ -144,6 +144,7 @@ interface GameState {
   drawCard: () => void
   nextTurn: () => void
   resetGame: () => void
+  updatePlayerRewards: (experience: number, coins: number) => Promise<void>
   
   // Методы для P.I.D.R игры
   getCardRank: (imageName: string) => number
@@ -622,24 +623,32 @@ export const useGameStore = create<GameState>()(
           const currentPlayerName = players.find(p => p.id === currentPlayerId)?.name || currentPlayerId;
           console.log(`🔄 [nextTurn] Передача хода от ${currentPlayerName}`);
           
-          // ИСПРАВЛЕНО: Находим следующего игрока ПО ЧАСОВОЙ СТРЕЛКЕ
-          const currentIndex = players.findIndex(p => p.id === currentPlayerId)
+          // ИСПРАВЛЕНО: Находим следующего АКТИВНОГО игрока (с картами) ПО ЧАСОВОЙ СТРЕЛКЕ
+          const activePlayers = players.filter(p => p.cards.length > 0); // ТОЛЬКО ИГРОКИ С КАРТАМИ
           
-          if (currentIndex === -1) {
-            console.error(`🔄 [nextTurn] ❌ Текущий игрок не найден в списке игроков`);
+          if (activePlayers.length <= 1) {
+            console.log(`🔄 [nextTurn] ⚠️ Осталось ${activePlayers.length} активных игроков - проверяем победу`);
+            get().checkVictoryCondition();
             return;
           }
           
-          const nextIndex = (currentIndex + 1) % players.length
-          const nextPlayerId = players[nextIndex].id
-          const nextPlayer = players[nextIndex]
+          const currentIndex = activePlayers.findIndex(p => p.id === currentPlayerId)
+          
+          if (currentIndex === -1) {
+            console.error(`🔄 [nextTurn] ❌ Текущий игрок не найден среди активных игроков`);
+            return;
+          }
+          
+          const nextIndex = (currentIndex + 1) % activePlayers.length
+          const nextPlayerId = activePlayers[nextIndex].id
+          const nextPlayer = activePlayers[nextIndex]
           
           if (!nextPlayer) {
             console.error(`🔄 [nextTurn] ❌ Следующий игрок не найден`);
             return;
           }
           
-          console.log(`🔄 [nextTurn] Ход переходит к ${nextPlayer.name} (индекс ${nextIndex}) - ПО ЧАСОВОЙ`);
+          console.log(`🔄 [nextTurn] Ход переходит к ${nextPlayer.name} (индекс ${nextIndex}/${activePlayers.length} активных) - ПО ЧАСОВОЙ`);
           
           // Обновляем текущего игрока
           players.forEach(p => p.isCurrentPlayer = p.id === nextPlayerId)
@@ -704,6 +713,26 @@ export const useGameStore = create<GameState>()(
           lastPlayedCard: null,
           selectedCard: null
         })
+      },
+      
+      // Обновление наград игрока
+      updatePlayerRewards: async (experience: number, coins: number) => {
+        try {
+          const response = await fetch('/api/user/rewards', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ experience, coins })
+          });
+          
+          if (!response.ok) {
+            console.error('❌ Ошибка обновления наград:', response.status);
+          } else {
+            console.log('✅ Награды обновлены:', { experience, coins });
+          }
+        } catch (error) {
+          console.error('❌ Ошибка API наград:', error);
+        }
       },
       
       // Управление картами
@@ -2631,8 +2660,12 @@ export const useGameStore = create<GameState>()(
            const target = players.find(p => p.id === targetPlayerId);
            if (!target) return;
            
-           const openCards = target.cards.filter(c => c.open);
-           if (openCards.length !== 1) return; // Не 1 карта
+           // ИСПРАВЛЕНО: Проверяем ОБЩЕЕ количество карт, а не только открытые!
+           const totalCards = target.cards.length;
+           if (totalCards !== 1) {
+             console.log(`🤖 [scheduleBotAskHowManyCards] У ${target.name} ${totalCards} карт, не 1 - отменяем`);
+             return; // Не 1 карта
+           }
            
            if (oneCardDeclarations[targetPlayerId]) {
              console.log(`🤖 [scheduleBotAskHowManyCards] ${target.name} уже объявил "одну карту", ботам спрашивать не нужно`);
@@ -2641,7 +2674,7 @@ export const useGameStore = create<GameState>()(
            
            const delay = get().calculateAdaptiveDelay();
            
-           console.log(`🤖 [scheduleBotAskHowManyCards] Планируем вопрос ботов к ${target.name} через ${delay}ms`);
+           console.log(`🤖 [scheduleBotAskHowManyCards] Планируем вопрос ботов к ${target.name} через ${delay}ms (у него ${totalCards} карт)`);
            
            setTimeout(() => {
              // Проверяем что цель всё ещё не объявила "одну карту"
