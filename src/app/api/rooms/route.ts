@@ -217,31 +217,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: false, message: 'Комната не найдена' }, { status: 404 });
       }
 
-      // ПРОВЕРЯЕМ НЕТ ЛИ УЖЕ ЭТОГО ИГРОКА В КОМНАТЕ
-      const { data: existingPlayer } = await supabase
-        .from('_pidr_room_players')
-        .select('id, position')
-        .eq('room_id', room.id)
-        .eq('user_id', userId)
-        .single();
-
-      if (existingPlayer) {
-        console.log(`✅ Игрок уже в комнате: position=${existingPlayer.position}, isHost=${room.host_id === userId}`);
-        
-        // ПРОВЕРЯЕМ ЯВЛЯЕТСЯ ЛИ ИГРОК ХОСТОМ
-        const isHost = room.host_id === userId;
-        
-        return NextResponse.json({ 
-          success: true, 
-          room: {
-            id: room.id,
-            roomCode: room.room_code,
-            name: room.name,
-            position: existingPlayer.position,
-            isHost: isHost // ДОБАВЛЯЕМ ИНФОРМАЦИЮ О ХОСТЕ
-          }
-        });
-      }
+      // УБРАНА ДУБЛИРУЮЩАЯ ПРОВЕРКА - логика перенесена ниже
 
       // ПОЛУЧАЕМ РЕАЛЬНОЕ ИМЯ ИГРОКА
       const { data: userData } = await supabase
@@ -272,18 +248,54 @@ export async function POST(req: NextRequest) {
         console.log(`🎯 Добавляем игрока: maxPosition=${maxPosition}, nextPosition=${nextPosition}`);
       }
 
-      // ДОБАВЛЯЕМ ИЛИ ОБНОВЛЯЕМ ИГРОКА (UPSERT)
-      const { error: playerError } = await supabase
+      // ПРОВЕРЯЕМ ЕСТЬ ЛИ УЖЕ ЭТОТ ИГРОК В КОМНАТЕ
+      const { data: existingPlayerCheck } = await supabase
         .from('_pidr_room_players')
-        .upsert({
-          room_id: room.id,
-          user_id: userId,
-          username: userData?.username || 'Игрок',
-          position: nextPosition, // АКТУАЛЬНАЯ ПОЗИЦИЯ
-          is_ready: isNewPlayerHost // ХОСТ СРАЗУ ГОТОВ
-        }, {
-          onConflict: 'room_id,user_id' // КОНФЛИКТ ПО КОМНАТЕ И ПОЛЬЗОВАТЕЛЮ
-        });
+        .select('id, position')
+        .eq('room_id', room.id)
+        .eq('user_id', userId)
+        .single();
+
+      let playerError;
+      let finalPosition = nextPosition;
+      
+      if (existingPlayerCheck) {
+        // ОБНОВЛЯЕМ СУЩЕСТВУЮЩЕГО ИГРОКА
+        console.log(`🔄 Обновляем игрока: старая позиция=${existingPlayerCheck.position}, новая=${nextPosition}`);
+        
+        // Если это хост, оставляем позицию 1, иначе обновляем
+        if (isNewPlayerHost && existingPlayerCheck.position !== 1) {
+          finalPosition = 1;
+          console.log(`👑 Исправляем позицию хоста: ${existingPlayerCheck.position} → 1`);
+        } else {
+          finalPosition = existingPlayerCheck.position; // Оставляем старую позицию
+        }
+        
+        const { error } = await supabase
+          .from('_pidr_room_players')
+          .update({
+            username: userData?.username || 'Игрок',
+            position: finalPosition,
+            is_ready: isNewPlayerHost // ХОСТ СРАЗУ ГОТОВ
+          })
+          .eq('room_id', room.id)
+          .eq('user_id', userId);
+        playerError = error;
+      } else {
+        // ДОБАВЛЯЕМ НОВОГО ИГРОКА
+        console.log(`➕ Добавляем нового игрока с позицией ${nextPosition}`);
+        const { error } = await supabase
+          .from('_pidr_room_players')
+          .insert({
+            room_id: room.id,
+            user_id: userId,
+            username: userData?.username || 'Игрок',
+            position: nextPosition, // АКТУАЛЬНАЯ ПОЗИЦИЯ
+            is_ready: isNewPlayerHost // ХОСТ СРАЗУ ГОТОВ
+          });
+        playerError = error;
+        finalPosition = nextPosition;
+      }
 
       if (playerError) {
         console.error('❌ Ошибка добавления игрока:', playerError);
@@ -305,7 +317,8 @@ export async function POST(req: NextRequest) {
             id: room.id,
             roomCode: room.room_code,
             name: room.name,
-            position: nextPosition // АКТУАЛЬНАЯ ПОЗИЦИЯ
+            position: finalPosition, // ФИНАЛЬНАЯ ПОЗИЦИЯ
+            isHost: isNewPlayerHost
           }
         });
     }
