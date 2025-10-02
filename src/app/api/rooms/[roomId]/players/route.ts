@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '../../../../../lib/supabase';
-import { requireAuth } from '../../../../../lib/auth';
+import { supabase } from '@/lib/supabase';
+import { requireAuth } from '@/lib/auth-utils';
 
 // GET /api/rooms/[roomId]/players - получить всех игроков в комнате
 export async function GET(req: NextRequest, { params }: { params: { roomId: string } }) {
