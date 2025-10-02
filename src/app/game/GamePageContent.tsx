@@ -335,7 +335,7 @@ function GamePageContentComponent({
   // 🎨 Состояния для генерации контента
   const [generatedTableImage, setGeneratedTableImage] = useState<string | null>(null);
   const [isGeneratingTable, setIsGeneratingTable] = useState(false);
-  const [playerAvatars, setPlayerAvatars] = useState<{[playerId: string]: string}>({});
+  // playerAvatars уже объявлен выше на строке 220
   const [isGeneratingAvatars, setIsGeneratingAvatars] = useState(false);
 
   // Выбор стола удален - используем только роскошный SVG стол
