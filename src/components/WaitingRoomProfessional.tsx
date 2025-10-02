@@ -345,9 +345,35 @@ export default function WaitingRoomProfessional({
         {isHost ? (
           <div className="host-actions">
             {localSettings.allowBots && roomData.players.length < roomData.maxPlayers && (
-              <button onClick={handleAddBot} className="add-bot-button">
+              <button 
+                onClick={handleAddBot} 
+                className="add-bot-button"
+                style={{
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  border: 'none',
+                  color: 'white',
+                  padding: '12px 20px',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(16, 185, 129, 0.4)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.3)';
+                }}
+              >
                 <Bot size={20} />
-                Добавить бота
+                🤖 Добавить бота
               </button>
             )}
             

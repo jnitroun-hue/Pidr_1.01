@@ -144,7 +144,7 @@ interface GameState {
   drawCard: () => void
   nextTurn: () => void
   resetGame: () => void
-  updatePlayerRewards: (experience: number, coins: number) => Promise<void>
+  updatePlayerRewards: (experience: number, coins: number, ratingChange?: number) => Promise<void>
   
   // Методы для P.I.D.R игры
   getCardRank: (imageName: string) => number
@@ -716,19 +716,24 @@ export const useGameStore = create<GameState>()(
       },
       
       // Обновление наград игрока
-      updatePlayerRewards: async (experience: number, coins: number) => {
+      updatePlayerRewards: async (experience: number, coins: number, ratingChange?: number) => {
         try {
           const response = await fetch('/api/user/rewards', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify({ experience, coins })
+            body: JSON.stringify({ 
+              experience, 
+              coins, 
+              ratingChange: ratingChange || 0 
+            })
           });
           
           if (!response.ok) {
             console.error('❌ Ошибка обновления наград:', response.status);
           } else {
-            console.log('✅ Награды обновлены:', { experience, coins });
+            const result = await response.json();
+            console.log('✅ Награды обновлены:', result.rewards);
           }
         } catch (error) {
           console.error('❌ Ошибка API наград:', error);
@@ -2132,8 +2137,8 @@ export const useGameStore = create<GameState>()(
                 });
                 
                 // Отправляем награды на сервер (если рейтинговая игра)
-                if (isRankedGame && rewards.coins > 0) {
-                  get().updatePlayerRewards(rewards.experience, rewards.coins);
+                if (isRankedGame) {
+                  get().updatePlayerRewards(rewards.experience, rewards.coins, rewards.ratingChange);
                 }
               }
               
