@@ -975,27 +975,7 @@ export const useGameStore = create<GameState>()(
           // Ходим верхней картой из руки (удаляем ее из стопки)
           cardToMove = currentPlayer.cards.pop();
           
-          // 🏆 ПРОВЕРЯЕМ ПОБЕДУ СРАЗУ ПОСЛЕ ИГРЫ КАРТЫ В 1-Й СТАДИИ!
-          const totalCardsLeft = currentPlayer.cards.length + currentPlayer.penki.length;
-          if (totalCardsLeft === 0) {
-            console.log(`🎉 [makeMove] 🏆 ИГРОК ${currentPlayer.name} ИЗБАВИЛСЯ ОТ ВСЕХ КАРТ!`);
-            
-            // Добавляем игрока в порядок выбывания (первые места)
-            const { eliminationOrder } = get();
-            const newEliminationOrder = [...eliminationOrder];
-            if (!newEliminationOrder.includes(currentPlayer.id)) {
-              newEliminationOrder.unshift(currentPlayer.id); // Добавляем в начало (лучшие места)
-              set({ eliminationOrder: newEliminationOrder });
-            }
-            
-            // Показываем модальное окно победы на 3.5 секунды
-            const position = newEliminationOrder.length; // Место игрока (1-й, 2-й, 3-й...)
-            const positionText = position === 1 ? '1-е место' : position === 2 ? '2-е место' : position === 3 ? '3-е место' : `${position}-е место`;
-            
-            get().showNotification(`🏆 ${currentPlayer.name} - ${positionText}!`, 'success', 3500);
-            
-            console.log(`🏆 [makeMove] ${currentPlayer.name} занял ${position}-е место`);
-          }
+          // В 1-Й СТАДИИ НЕТ ПОБЕДИТЕЛЕЙ! Только раскладка карт!
           
           set({ 
             players: [...players],
@@ -1708,10 +1688,14 @@ export const useGameStore = create<GameState>()(
            
            currentPlayer.cards.splice(cardIndex, 1);
            
-           // 🏆 ПРОВЕРЯЕМ ПОБЕДУ СРАЗУ ПОСЛЕ ИГРЫ КАРТЫ!
-           const totalCardsLeft = currentPlayer.cards.length + currentPlayer.penki.length;
-           if (totalCardsLeft === 0) {
-             console.log(`🎉 [playSelectedCard] 🏆 ИГРОК ${currentPlayer.name} ИЗБАВИЛСЯ ОТ ВСЕХ КАРТ!`);
+           // 🏆 ПРОВЕРЯЕМ ПОБЕДУ ТОЛЬКО ВО 2-Й СТАДИИ КОГДА И КАРТЫ И ПЕНЬКИ ЗАКОНЧИЛИСЬ!
+           const { gameStage } = get();
+           const cardsLeft = currentPlayer.cards.length;
+           const penkiLeft = currentPlayer.penki.length;
+           const totalCardsLeft = cardsLeft + penkiLeft;
+           
+           if (gameStage >= 2 && totalCardsLeft === 0 && cardsLeft === 0 && penkiLeft === 0) {
+             console.log(`🎉 [playSelectedCard] 🏆 ИГРОК ${currentPlayer.name} ИЗБАВИЛСЯ ОТ ВСЕХ КАРТ И ПЕНЬКОВ ВО 2-Й СТАДИИ!`);
              
              // Добавляем игрока в порядок выбывания (первые места)
              const { eliminationOrder } = get();
