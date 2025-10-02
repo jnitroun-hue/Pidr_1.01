@@ -164,6 +164,7 @@ export async function POST(req: NextRequest) {
           password: hasPassword ? password : null,
           game_mode: gameMode || 'casual',
           created_at: new Date().toISOString()
+          // УБРАЛ game_settings пока не исправим БД
         })
         .select()
         .single();
