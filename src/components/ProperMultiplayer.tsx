@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { WaitingRoomProfessional } from './WaitingRoomProfessional';
+import WaitingRoomProfessional from './WaitingRoomProfessional'; // Исправил импорт - default export
 import { roomStorage } from '../utils/roomStorage';
 import styles from './ProperMultiplayer.module.css';
 
@@ -19,25 +19,26 @@ interface Room {
 }
 
 interface RoomData {
-  id: string; // Изменил на string для совместимости с WaitingRoomProfessional
+  id: string;
   code: string;
   name: string;
   host: string;
   hostId: string;
   maxPlayers: number;
-  gameMode: string;
+  gameMode: 'casual' | 'competitive'; // Точно как в WaitingRoomProfessional
   hasPassword: boolean;
   isPrivate: boolean;
-  status: 'waiting' | 'playing';
+  status: 'waiting' | 'starting' | 'playing'; // Добавил 'starting'
   players: Array<{
     id: string;
     name: string;
     isHost: boolean;
     isReady: boolean;
     isBot: boolean;
+    avatar?: string;
     joinedAt: Date;
   }>;
-  settings?: {
+  settings: { // Убрал ? - обязательное поле
     autoStart: boolean;
     allowBots: boolean;
     minPlayers: number;
@@ -162,15 +163,14 @@ export const ProperMultiplayer: React.FC = () => {
         const data = await response.json();
         console.log('✅ Комната создана:', data.room);
 
-         // Создаем данные для комнаты ожидания
          const roomData: RoomData = {
-           id: data.room.id.toString(), // Конвертируем в string
+           id: data.room.id.toString(),
            code: data.room.roomCode,
            name: data.room.name,
            host: user?.first_name || user?.username || 'Хост',
            hostId: user?.id?.toString() || 'host',
            maxPlayers,
-           gameMode,
+           gameMode: gameMode === 'casual' ? 'casual' : 'competitive', // Приводим к нужному типу
            hasPassword,
            isPrivate,
            status: 'waiting',
@@ -181,13 +181,14 @@ export const ProperMultiplayer: React.FC = () => {
                isHost: true,
                isReady: true,
                isBot: false,
+               avatar: user?.avatar,
                joinedAt: new Date()
              }
            ],
            settings: {
              autoStart: false,
              allowBots: true,
-             minPlayers: 2
+             minPlayers: 4 // Изменил на 4 (минимум игроков)
            }
          };
 
@@ -234,15 +235,14 @@ export const ProperMultiplayer: React.FC = () => {
         const result = await response.json();
         console.log('✅ Присоединились к комнате:', result.room);
 
-         // Создаем данные для комнаты ожидания
          const roomData: RoomData = {
-           id: result.room.id.toString(), // Конвертируем в string
+           id: result.room.id.toString(),
            code: result.room.roomCode,
            name: result.room.name,
            host: 'Хост',
            hostId: 'host_id',
            maxPlayers: 6,
-           gameMode: 'casual',
+           gameMode: 'casual', // Фиксированное значение
            hasPassword: false,
            isPrivate: false,
            status: 'waiting',
@@ -253,6 +253,7 @@ export const ProperMultiplayer: React.FC = () => {
                isHost: true,
                isReady: true,
                isBot: false,
+               avatar: undefined,
                joinedAt: new Date()
              },
              {
@@ -261,13 +262,14 @@ export const ProperMultiplayer: React.FC = () => {
                isHost: false,
                isReady: false,
                isBot: false,
+               avatar: user?.avatar,
                joinedAt: new Date()
              }
            ],
            settings: {
              autoStart: false,
              allowBots: true,
-             minPlayers: 2
+             minPlayers: 4 // Изменил на 4
            }
          };
 
