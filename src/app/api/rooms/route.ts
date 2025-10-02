@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
           name: name || 'Новая комната',
           host_id: userId,
           max_players: maxPlayers || 6,
-          current_players: 1, // Сразу 1 - хост
+          current_players: 0, // Начинаем с 0, потом добавим хоста
           status: 'waiting',
           is_private: isPrivate || false,
           password: hasPassword ? password : null,
@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
         }, { status: 500 });
       }
 
-      // ДОБАВЛЯЕМ ХОСТА БЕЗ ПРОВЕРОК
+      // ДОБАВЛЯЕМ ХОСТА И ОБНОВЛЯЕМ СЧЕТЧИК
       const { error: playerError } = await supabase
         .from('_pidr_room_players')
         .insert({
@@ -144,6 +144,12 @@ export async function POST(req: NextRequest) {
           message: 'Ошибка создания комнаты: ' + playerError.message 
         }, { status: 500 });
       }
+
+      // ОБНОВЛЯЕМ СЧЕТЧИК ИГРОКОВ
+      await supabase
+        .from('_pidr_rooms')
+        .update({ current_players: 1 })
+        .eq('id', room.id);
 
       console.log('✅ Комната создана:', roomCode);
       return NextResponse.json({ 
@@ -168,7 +174,7 @@ export async function POST(req: NextRequest) {
       const { data: room, error: roomError } = await supabase
         .from('_pidr_rooms')
         .select('*')
-        .eq('room_code', roomCode.toUpperCase())
+        .eq('room_code', (roomCode || '').toUpperCase())
         .single();
 
       if (roomError || !room) {
