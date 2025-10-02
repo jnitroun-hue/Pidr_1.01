@@ -89,8 +89,35 @@ export const ProperMultiplayer: React.FC = () => {
           fetchRooms();
         }
       }, 5000);
+
+      // Очищаем неактивные комнаты каждые 5 минут
+      const cleanupInterval = setInterval(async () => {
+        try {
+          console.log('🧹 Запуск автоочистки неактивных комнат...');
+          const response = await fetch('/api/admin/cleanup-inactive-rooms', {
+            method: 'POST',
+            credentials: 'include'
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data.deletedCount > 0) {
+              console.log(`✅ Удалено ${data.deletedCount} неактивных комнат`);
+              // Обновляем список комнат после очистки
+              if (view === 'lobby' && !currentRoom) {
+                fetchRooms();
+              }
+            }
+          }
+        } catch (error) {
+          console.error('❌ Ошибка автоочистки комнат:', error);
+        }
+      }, 5 * 60 * 1000); // 5 минут
       
-      return () => clearInterval(interval);
+      return () => {
+        clearInterval(interval);
+        clearInterval(cleanupInterval);
+      };
     }
   }, [view, currentRoom]);
 
