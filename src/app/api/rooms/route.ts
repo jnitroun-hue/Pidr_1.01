@@ -136,14 +136,21 @@ export async function POST(req: NextRequest) {
         }, { status: 500 });
       }
 
+      // ПОЛУЧАЕМ РЕАЛЬНОЕ ИМЯ ХОСТА
+      const { data: hostData } = await supabase
+        .from('_pidr_users')
+        .select('username')
+        .eq('id', userId)
+        .single();
+
       // ДОБАВЛЯЕМ ХОСТА И ОБНОВЛЯЕМ СЧЕТЧИК
       const { error: playerError } = await supabase
         .from('_pidr_room_players')
         .insert({
           room_id: room.id,
           user_id: userId,
-          username: 'Хост',
-          position: 0,
+          username: hostData?.username || 'Хост',
+          position: 1, // ХОСТ ВСЕГДА ПОЗИЦИЯ 1
           is_ready: true
         });
 

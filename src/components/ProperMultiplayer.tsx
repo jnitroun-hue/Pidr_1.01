@@ -320,6 +320,12 @@ export const ProperMultiplayer: React.FC = () => {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
+        <button 
+          className={styles.backButton}
+          onClick={() => typeof window !== 'undefined' && window.history.back()}
+        >
+          ← Назад
+        </button>
         <h1 className={styles.title}>🎮 Мультиплеер P.I.D.R.</h1>
         <p className={styles.subtitle}>Играйте с друзьями онлайн</p>
       </div>

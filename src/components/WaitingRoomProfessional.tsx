@@ -158,6 +158,27 @@ export default function WaitingRoomProfessional({
           <span>Покинуть</span>
         </button>
         
+        {isHost && (
+          <button 
+            onClick={onLeaveRoom} 
+            className="delete-room-button"
+            style={{ 
+              background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+              border: 'none',
+              color: 'white',
+              padding: '8px 16px',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              cursor: 'pointer'
+            }}
+          >
+            <UserX size={20} />
+            <span>Удалить комнату</span>
+          </button>
+        )}
+        
         <div className="room-info">
           <h1 className="room-name">{roomData.name}</h1>
           <div className="room-meta">
