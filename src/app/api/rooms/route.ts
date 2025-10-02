@@ -36,23 +36,35 @@ export async function GET(req: NextRequest) {
 
     console.log('✅ Загружено комнат:', rooms?.length || 0);
 
-    // ПРОСТЕЙШИЙ ФОРМАТ
-    const formattedRooms = (rooms || []).map((room: any) => ({
-      id: room.id,
-      room_code: room.room_code,
-      name: room.name,
-      max_players: room.max_players,
-      current_players: room.current_players,
-      status: room.status,
-      is_private: room.is_private,
-      created_at: room.created_at,
-      users: { username: 'Хост', avatar: null },
-      players: []
+    // ПОЛУЧАЕМ РЕАЛЬНЫЕ ИМЕНА ХОСТОВ
+    const roomsWithHosts = await Promise.all((rooms || []).map(async (room: any) => {
+      // Получаем имя хоста
+      const { data: hostUser } = await supabase
+        .from('_pidr_users')
+        .select('username, avatar_url')
+        .eq('id', room.host_id)
+        .single();
+
+      return {
+        id: room.id,
+        room_code: room.room_code,
+        name: room.name,
+        max_players: room.max_players,
+        current_players: room.current_players,
+        status: room.status,
+        is_private: room.is_private,
+        created_at: room.created_at,
+        users: { 
+          username: hostUser?.username || 'Хост', 
+          avatar: hostUser?.avatar_url || null 
+        },
+        players: []
+      };
     }));
 
     return NextResponse.json({ 
       success: true, 
-      rooms: formattedRooms
+      rooms: roomsWithHosts
     });
 
   } catch (error) {
@@ -184,23 +196,30 @@ export async function POST(req: NextRequest) {
       // ПРОВЕРЯЕМ НЕТ ЛИ УЖЕ ЭТОГО ИГРОКА В КОМНАТЕ
       const { data: existingPlayer } = await supabase
         .from('_pidr_room_players')
-        .select('id')
+        .select('id, position')
         .eq('room_id', room.id)
         .eq('user_id', userId)
         .single();
 
       if (existingPlayer) {
-        console.log('✅ Игрок уже в комнате, возвращаем успех');
+        console.log('✅ Игрок уже в комнате, возвращаем его позицию');
         return NextResponse.json({ 
           success: true, 
           room: {
             id: room.id,
-            roomCode: room.room_code, // Исправил
+            roomCode: room.room_code,
             name: room.name,
-            position: room.current_players
+            position: existingPlayer.position // ВОЗВРАЩАЕМ РЕАЛЬНУЮ ПОЗИЦИЮ
           }
         });
       }
+
+      // ПОЛУЧАЕМ РЕАЛЬНОЕ ИМЯ ИГРОКА
+      const { data: userData } = await supabase
+        .from('_pidr_users')
+        .select('username')
+        .eq('id', userId)
+        .single();
 
       // ДОБАВЛЯЕМ ИГРОКА ТОЛЬКО ЕСЛИ ЕГО ЕЩЕ НЕТ
       const { error: playerError } = await supabase
@@ -208,8 +227,8 @@ export async function POST(req: NextRequest) {
         .insert({
           room_id: room.id,
           user_id: userId,
-          username: 'Игрок',
-          position: room.current_players,
+          username: userData?.username || 'Игрок',
+          position: room.current_players + 1, // НОВАЯ ПОЗИЦИЯ
           is_ready: false
         });
 
@@ -231,9 +250,9 @@ export async function POST(req: NextRequest) {
         success: true, 
         room: {
           id: room.id,
-          roomCode: room.room_code, // Исправил
+          roomCode: room.room_code,
           name: room.name,
-          position: room.current_players
+          position: room.current_players + 1 // НОВАЯ ПОЗИЦИЯ
         }
       });
     }
