@@ -167,7 +167,7 @@ export const ProperMultiplayer: React.FC = () => {
            id: data.room.id.toString(),
            code: data.room.roomCode,
            name: data.room.name,
-           host: user?.first_name || user?.username || 'Хост',
+           host: user?.firstName || user?.username || 'Хост',
            hostId: user?.id?.toString() || 'host',
            maxPlayers,
            gameMode: gameMode === 'casual' ? 'casual' : 'competitive', // Приводим к нужному типу
@@ -177,7 +177,7 @@ export const ProperMultiplayer: React.FC = () => {
            players: [
              {
                id: user?.id?.toString() || 'host',
-               name: user?.first_name || user?.username || 'Хост',
+               name: user?.firstName || user?.username || 'Хост',
                isHost: true,
                isReady: true,
                isBot: false,
@@ -258,7 +258,7 @@ export const ProperMultiplayer: React.FC = () => {
              },
              {
                id: user?.id?.toString() || 'player',
-               name: user?.first_name || user?.username || 'Игрок',
+               name: user?.firstName || user?.username || 'Игрок',
                isHost: false,
                isReady: false,
                isBot: false,
@@ -367,6 +367,9 @@ export const ProperMultiplayer: React.FC = () => {
                   <div key={room.id} className={styles.roomCard}>
                     <div className={styles.roomInfo}>
                       <h4 className={styles.roomName}>{room.name}</h4>
+                      <p className={styles.roomHost}>
+                        👑 Хост: {room.users?.username || 'Неизвестно'}
+                      </p>
                       <p className={styles.roomDetails}>
                         👥 {room.current_players}/{room.max_players} игроков
                       </p>
