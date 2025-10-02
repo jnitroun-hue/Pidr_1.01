@@ -2421,9 +2421,16 @@ export const useGameStore = create<GameState>()(
            // Убираем карту у отдающего
            newPlayers[contributorIndex].cards.splice(cardIndex, 1);
            
-           // ИСПРАВЛЕНО: Штрафные карты передаются в ОТКРЫТОМ виде (ими можно играть)!
-           const penaltyCard = { ...card, open: true };
+           // ПРАВИЛЬНО: Штрафные карты передаются в ЗАКРЫТОМ виде! В руке штрафуемого они станут открытыми.
+           const penaltyCard = { ...card, open: false };
            newPlayers[targetIndex].cards.push(penaltyCard);
+           
+           // ВАЖНО: После добавления штрафной карты, открываем ВСЕ карты в руке штрафуемого
+           newPlayers[targetIndex].cards.forEach(c => {
+             if (!c.open) {
+               c.open = true; // Все карты в руке становятся открытыми
+             }
+           });
            
            console.log(`💸 [contributePenaltyCard] ПОСЛЕ: ${newPlayers[targetIndex].name} имеет ${newPlayers[targetIndex].cards.length} карт (${newPlayers[targetIndex].cards.filter(c => c.open).length} открытых)`);
            console.log(`💸 [contributePenaltyCard] Добавленная карта: ${penaltyCard.image} (open: ${penaltyCard.open})`);
