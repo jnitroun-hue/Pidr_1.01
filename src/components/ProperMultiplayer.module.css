@@ -1,20 +1,21 @@
-/* Профессиональный дизайн мультиплеера */
+/* 🔥 КРУТОЙ ДИЗАЙН МУЛЬТИПЛЕЕРА P.I.D.R. */
 
-.multiplayerContainer {
+.container {
   min-height: 100vh;
   background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
   color: white;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   overflow-x: hidden;
+  padding: 20px;
 }
 
 .header {
-  padding: 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  position: sticky;
-  top: 0;
-  z-index: 100;
+  text-align: center;
+  margin-bottom: 40px;
+  padding: 30px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .headerContent {
@@ -45,12 +46,18 @@
 }
 
 .title {
-  font-size: 24px;
+  font-size: 32px;
   font-weight: 700;
-  background: linear-gradient(135deg, #00d4ff, #5865f2);
+  background: linear-gradient(135deg, #00d4ff, #5865f2, #ffd700);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  margin-bottom: 10px;
+}
+
+.subtitle {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 16px;
 }
 
 .connectionStatus {
@@ -81,18 +88,28 @@
   margin: 0 auto;
 }
 
-.lobbyGrid {
-  display: grid;
-  grid-template-columns: 1fr 400px;
-  gap: 30px;
-  margin-bottom: 30px;
+/* ОШИБКА */
+.error {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid #ef4444;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+  text-align: center;
+  color: #fca5a5;
 }
 
-@media (max-width: 1024px) {
-  .lobbyGrid {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
+/* ЛОББИ */
+.lobby {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.actions {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
 }
 
 .roomsList {
@@ -100,6 +117,32 @@
   border-radius: 20px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   overflow: hidden;
+  padding: 20px;
+}
+
+.sectionTitle {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.loading {
+  text-align: center;
+  padding: 40px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.rooms {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .roomsHeader {
@@ -125,16 +168,43 @@
   overflow-y: auto;
 }
 
+/* КАРТОЧКА КОМНАТЫ */
 .roomCard {
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
   padding: 20px;
-  margin-bottom: 16px;
   transition: all 0.3s ease;
   cursor: pointer;
   position: relative;
   overflow: hidden;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.roomInfo {
+  flex: 1;
+}
+
+.roomName {
+  font-size: 18px;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 8px;
+}
+
+.roomDetails {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.roomCode {
+  color: #00d4ff;
+  font-family: monospace;
+  font-weight: bold;
+  font-size: 12px;
 }
 
 .roomCard::before {
@@ -228,14 +298,13 @@
   text-align: center;
 }
 
-.actionButton {
+/* КНОПКИ */
+.button {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
-  width: 100%;
-  padding: 16px 20px;
-  margin-bottom: 16px;
+  padding: 16px 24px;
   border-radius: 16px;
   font-size: 16px;
   font-weight: 600;
@@ -244,30 +313,51 @@
   border: none;
   position: relative;
   overflow: hidden;
+  min-width: 140px;
 }
 
-.createButton {
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.primary {
   background: linear-gradient(135deg, #5865f2, #7289da);
   color: white;
   box-shadow: 0 8px 25px rgba(88, 101, 242, 0.3);
 }
 
-.createButton:hover {
+.primary:hover:not(:disabled) {
   background: linear-gradient(135deg, #4752c4, #5b6ecd);
   transform: translateY(-3px);
   box-shadow: 0 12px 35px rgba(88, 101, 242, 0.4);
 }
 
-.joinButton {
+.secondary {
   background: linear-gradient(135deg, #00d4ff, #0099cc);
   color: white;
   box-shadow: 0 8px 25px rgba(0, 212, 255, 0.3);
 }
 
-.joinButton:hover {
+.secondary:hover:not(:disabled) {
   background: linear-gradient(135deg, #00b8e6, #0088bb);
   transform: translateY(-3px);
   box-shadow: 0 12px 35px rgba(0, 212, 255, 0.4);
+}
+
+.join {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: white;
+  box-shadow: 0 8px 25px rgba(34, 197, 94, 0.3);
+  padding: 12px 20px;
+  font-size: 14px;
+}
+
+.join:hover:not(:disabled) {
+  background: linear-gradient(135deg, #16a34a, #15803d);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(34, 197, 94, 0.4);
 }
 
 .emptyState {
@@ -293,6 +383,86 @@
   line-height: 1.5;
 }
 
+/* ФОРМЫ */
+.form {
+  max-width: 500px;
+  margin: 0 auto;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 30px;
+}
+
+.formTitle {
+  font-size: 24px;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 30px;
+  color: white;
+}
+
+.field {
+  margin-bottom: 20px;
+}
+
+.label {
+  display: block;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.input, .select {
+  width: 100%;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  color: white;
+  font-size: 16px;
+  transition: all 0.3s ease;
+}
+
+.input:focus, .select:focus {
+  outline: none;
+  border-color: #00d4ff;
+  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+}
+
+.input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.checkboxes {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #00d4ff;
+}
+
+.formActions {
+  display: flex;
+  gap: 16px;
+  margin-top: 30px;
+}
+
+.formActions .button {
+  flex: 1;
+}
+
 /* Анимации */
 @keyframes fadeIn {
   from {
@@ -305,7 +475,7 @@
   }
 }
 
-.roomCard {
+.roomCard, .form {
   animation: fadeIn 0.5s ease-out;
 }
 
