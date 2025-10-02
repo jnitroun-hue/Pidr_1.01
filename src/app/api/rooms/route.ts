@@ -384,13 +384,30 @@ export async function POST(req: NextRequest) {
 
       console.log('✅ Комната создана:', room.id, room.room_code);
 
+      // Получаем данные пользователя для добавления в комнату
+      console.log('👤 Получаем данные пользователя:', userId);
+      const { data: userData, error: userError } = await supabase
+        .from('_pidr_users')
+        .select('username, first_name')
+        .eq('id', userId)
+        .single();
+
+      if (userError || !userData) {
+        console.error('❌ Ошибка получения данных пользователя:', userError);
+        throw new Error('Пользователь не найден');
+      }
+
+      const username = userData.username || userData.first_name || 'Игрок';
+      console.log('👤 Имя пользователя:', username);
+
       // Добавляем хоста как первого игрока
-      console.log('👤 Добавляем хоста в комнату:', { room_id: room.id, user_id: userId });
+      console.log('👤 Добавляем хоста в комнату:', { room_id: room.id, user_id: userId, username });
       const { error: playerError } = await supabase
         .from('_pidr_room_players')
         .insert({
           room_id: room.id,
           user_id: userId,
+          username: username, // ИСПРАВЛЕНО: добавляем username
           position: 0,
           is_ready: true
         });
@@ -482,11 +499,21 @@ export async function POST(req: NextRequest) {
         // ИСПРАВЛЕНО: Хоста НЕТ в списке игроков - добавляем его правильно
         console.log('👑 Добавляем хоста в комнату впервые');
         
+        // Получаем данные пользователя
+        const { data: userData, error: userError } = await supabase
+          .from('_pidr_users')
+          .select('username, first_name')
+          .eq('id', userId)
+          .single();
+
+        const username = userData?.username || userData?.first_name || 'Игрок';
+        
         const { error: hostJoinError } = await supabase
           .from('_pidr_room_players')
           .insert({
             room_id: room.id,
             user_id: userId,
+            username: username, // ИСПРАВЛЕНО: добавляем username
             position: 0, // Хост всегда на позиции 0
             is_ready: true
           });
@@ -589,12 +616,22 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      // Получаем данные пользователя для добавления в комнату
+      const { data: userData, error: userError } = await supabase
+        .from('_pidr_users')
+        .select('username, first_name')
+        .eq('id', userId)
+        .single();
+
+      const username = userData?.username || userData?.first_name || 'Игрок';
+
       // Добавляем игрока в комнату
       const { error: playerError } = await supabase
         .from('_pidr_room_players')
         .insert({
           room_id: room.id,
           user_id: userId,
+          username: username, // ИСПРАВЛЕНО: добавляем username
           position: freePosition,
           is_ready: false
         });
