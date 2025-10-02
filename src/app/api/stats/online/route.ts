@@ -29,11 +29,12 @@ export async function GET(req: NextRequest) {
       }, { status: 500 });
     }
 
-    // 2. Реально активные игроки (последние 5 минут)
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    // 2. Реально активные игроки (последние 5 минут) - московское время
+    const moscowNow = new Date();
+    const fiveMinutesAgo = new Date(moscowNow.getTime() - 5 * 60 * 1000).toISOString();
     const { data: reallyActive, error: activeError } = await supabase
       .from('_pidr_users')
-      .select('id')
+      .select('id, username, last_seen')
       .eq('status', 'online')
       .gte('last_seen', fiveMinutesAgo);
 
@@ -41,11 +42,11 @@ export async function GET(req: NextRequest) {
       console.error('❌ Ошибка получения активных игроков:', activeError);
     }
 
-    // 3. Игроки онлайн за последние 30 минут
-    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+    // 3. Игроки онлайн за последние 30 минут - московское время
+    const thirtyMinutesAgo = new Date(moscowNow.getTime() - 30 * 60 * 1000).toISOString();
     const { data: online30min, error: online30Error } = await supabase
       .from('_pidr_users')
-      .select('id')
+      .select('id, username, last_seen')
       .eq('status', 'online')
       .gte('last_seen', thirtyMinutesAgo);
 
@@ -68,7 +69,29 @@ export async function GET(req: NextRequest) {
       byStatus: statusStats || {},
       reallyActive: reallyActive?.length || 0, // Последние 5 минут
       online30min: online30min?.length || 0,   // Последние 30 минут
-      inRooms: inRooms?.length || 0
+      inRooms: inRooms?.length || 0,
+      moscowTime: new Date().toLocaleString('ru-RU', { 
+        timeZone: 'Europe/Moscow',
+        year: 'numeric',
+        month: '2-digit', 
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      }),
+      activeUsers: reallyActive?.map((user: any) => ({
+        id: user.id,
+        username: user.username,
+        lastSeenMoscow: new Date(user.last_seen).toLocaleString('ru-RU', { 
+          timeZone: 'Europe/Moscow',
+          year: 'numeric',
+          month: '2-digit', 
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit'
+        }),
+        minutesAgo: Math.round((moscowNow.getTime() - new Date(user.last_seen).getTime()) / 60000)
+      })) || []
     };
 
     console.log('✅ Статистика онлайна:', stats);

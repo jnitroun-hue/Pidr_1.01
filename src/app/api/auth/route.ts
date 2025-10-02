@@ -67,11 +67,22 @@ export async function GET(req: NextRequest) {
       }, { status: 404 });
     }
 
-    // Обновляем время последней активности
+    // Обновляем время последней активности (московское время)
+    const moscowTime = new Date().toLocaleString('en-CA', { 
+      timeZone: 'Europe/Moscow',
+      year: 'numeric',
+      month: '2-digit', 
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    }).replace(', ', 'T') + '+03:00';
+
     await supabase
       .from('_pidr_users')
       .update({ 
-        last_seen: new Date().toISOString(),
+        last_seen: moscowTime,
         status: 'online'
       })
       .eq('id', userId);
@@ -146,6 +157,18 @@ export async function POST(req: NextRequest) {
 
     console.log('👤 Авторизация пользователя:', { telegramId, username });
 
+    // Генерируем московское время для всех операций
+    const moscowTime = new Date().toLocaleString('en-CA', { 
+      timeZone: 'Europe/Moscow',
+      year: 'numeric',
+      month: '2-digit', 
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    }).replace(', ', 'T') + '+03:00';
+
     // Ищем существующего пользователя
     console.log('🔍 Ищем пользователя в БД по telegram_id:', telegramId);
     let { data: existingUser, error: findError } = await supabase
@@ -208,7 +231,7 @@ export async function POST(req: NextRequest) {
           first_name: firstName || existingUser.first_name,
           last_name: lastName || existingUser.last_name,
           avatar_url: photoUrl || existingUser.avatar_url,
-          last_seen: new Date().toISOString(),
+          last_seen: moscowTime,
           status: 'online',
           updated_at: new Date().toISOString()
         })
