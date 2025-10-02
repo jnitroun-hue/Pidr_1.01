@@ -29,6 +29,7 @@ interface Room {
   status: 'waiting' | 'playing' | 'full';
   ping: number;
   difficulty: 'easy' | 'medium' | 'hard';
+  users?: { username: string; avatar?: string }; // ДОБАВИЛ ПОЛЕ USERS
 }
 
 const gameModesConfig = {
@@ -98,7 +99,7 @@ export default function ProfessionalMultiplayer({ onBack }: ProfessionalMultipla
     const loadRooms = async () => {
       setLoading(true);
       try {
-        const response = await fetch('/api/rooms');
+        const response = await fetch('/api/rooms?type=public');
         if (response.ok) {
           const data = await response.json();
           if (data.success) {
@@ -526,7 +527,7 @@ export default function ProfessionalMultiplayer({ onBack }: ProfessionalMultipla
                               {room.isPrivate && <EyeOff size={16} className="text-purple-400" />}
                             </div>
                             <div className="text-white/60 text-sm">
-                              Хост: {room.host} • {gameModesConfig[room.gameMode].name}
+                              Хост: {room.users?.username || 'Хост'} • {gameModesConfig[room.gameMode].name}
                             </div>
                             <div className="flex items-center gap-4 mt-1">
                               <div className="text-white/80 text-sm">
