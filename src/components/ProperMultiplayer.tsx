@@ -19,7 +19,7 @@ interface Room {
 }
 
 interface RoomData {
-  id: number;
+  id: string; // Изменил на string для совместимости с WaitingRoomProfessional
   code: string;
   name: string;
   host: string;
@@ -162,34 +162,34 @@ export const ProperMultiplayer: React.FC = () => {
         const data = await response.json();
         console.log('✅ Комната создана:', data.room);
 
-        // Создаем данные для комнаты ожидания
-        const roomData: RoomData = {
-          id: data.room.id,
-          code: data.room.roomCode,
-          name: data.room.name,
-          host: user?.first_name || user?.username || 'Хост',
-          hostId: user?.id?.toString() || 'host',
-          maxPlayers,
-          gameMode,
-          hasPassword,
-          isPrivate,
-          status: 'waiting',
-          players: [
-            {
-              id: user?.id?.toString() || 'host',
-              name: user?.first_name || user?.username || 'Хост',
-              isHost: true,
-              isReady: true,
-              isBot: false,
-              joinedAt: new Date()
-            }
-          ],
-          settings: {
-            autoStart: false,
-            allowBots: true,
-            minPlayers: 2
-          }
-        };
+         // Создаем данные для комнаты ожидания
+         const roomData: RoomData = {
+           id: data.room.id.toString(), // Конвертируем в string
+           code: data.room.roomCode,
+           name: data.room.name,
+           host: user?.first_name || user?.username || 'Хост',
+           hostId: user?.id?.toString() || 'host',
+           maxPlayers,
+           gameMode,
+           hasPassword,
+           isPrivate,
+           status: 'waiting',
+           players: [
+             {
+               id: user?.id?.toString() || 'host',
+               name: user?.first_name || user?.username || 'Хост',
+               isHost: true,
+               isReady: true,
+               isBot: false,
+               joinedAt: new Date()
+             }
+           ],
+           settings: {
+             autoStart: false,
+             allowBots: true,
+             minPlayers: 2
+           }
+         };
 
         setCurrentRoom(roomData);
         setView('waiting');
@@ -234,42 +234,42 @@ export const ProperMultiplayer: React.FC = () => {
         const result = await response.json();
         console.log('✅ Присоединились к комнате:', result.room);
 
-        // Создаем данные для комнаты ожидания
-        const roomData: RoomData = {
-          id: result.room.id,
-          code: result.room.roomCode,
-          name: result.room.name,
-          host: 'Хост',
-          hostId: 'host_id',
-          maxPlayers: 6,
-          gameMode: 'casual',
-          hasPassword: false,
-          isPrivate: false,
-          status: 'waiting',
-          players: [
-            {
-              id: 'host_id',
-              name: 'Хост',
-              isHost: true,
-              isReady: true,
-              isBot: false,
-              joinedAt: new Date()
-            },
-            {
-              id: user?.id?.toString() || 'player',
-              name: user?.first_name || user?.username || 'Игрок',
-              isHost: false,
-              isReady: false,
-              isBot: false,
-              joinedAt: new Date()
-            }
-          ],
-          settings: {
-            autoStart: false,
-            allowBots: true,
-            minPlayers: 2
-          }
-        };
+         // Создаем данные для комнаты ожидания
+         const roomData: RoomData = {
+           id: result.room.id.toString(), // Конвертируем в string
+           code: result.room.roomCode,
+           name: result.room.name,
+           host: 'Хост',
+           hostId: 'host_id',
+           maxPlayers: 6,
+           gameMode: 'casual',
+           hasPassword: false,
+           isPrivate: false,
+           status: 'waiting',
+           players: [
+             {
+               id: 'host_id',
+               name: 'Хост',
+               isHost: true,
+               isReady: true,
+               isBot: false,
+               joinedAt: new Date()
+             },
+             {
+               id: user?.id?.toString() || 'player',
+               name: user?.first_name || user?.username || 'Игрок',
+               isHost: false,
+               isReady: false,
+               isBot: false,
+               joinedAt: new Date()
+             }
+           ],
+           settings: {
+             autoStart: false,
+             allowBots: true,
+             minPlayers: 2
+           }
+         };
 
         setCurrentRoom(roomData);
         setView('waiting');
@@ -306,10 +306,11 @@ export const ProperMultiplayer: React.FC = () => {
   if (view === 'waiting' && currentRoom) {
     return (
       <WaitingRoomProfessional
-        room={currentRoom}
-        onLeave={handleLeaveRoom}
-        onStart={handleStartGame}
-        onUpdate={handleUpdateRoom}
+        roomData={currentRoom}
+        currentUserId={user?.id?.toString() || 'anonymous'}
+        onLeaveRoom={handleLeaveRoom}
+        onStartGame={handleStartGame}
+        onUpdateRoom={handleUpdateRoom}
       />
     );
   }
@@ -402,23 +403,22 @@ export const ProperMultiplayer: React.FC = () => {
             />
           </div>
 
-          <div className={styles.field}>
-            <label className={styles.label}>Максимум игроков</label>
-            <select
-              className={styles.select}
-              value={maxPlayers}
-              onChange={(e) => setMaxPlayers(Number(e.target.value))}
-            >
-              <option value={2}>2 игрока</option>
-              <option value={3}>3 игрока</option>
-              <option value={4}>4 игрока</option>
-              <option value={5}>5 игроков</option>
-              <option value={6}>6 игроков</option>
-              <option value={7}>7 игроков</option>
-              <option value={8}>8 игроков</option>
-              <option value={9}>9 игроков</option>
-            </select>
-          </div>
+           <div className={styles.field}>
+             <label className={styles.label}>Максимум игроков</label>
+             <div className={styles.playerCards}>
+               {[4, 5, 6, 7, 8, 9].map((num) => (
+                 <button
+                   key={num}
+                   type="button"
+                   className={`${styles.playerCard} ${maxPlayers === num ? styles.selected : ''}`}
+                   onClick={() => setMaxPlayers(num)}
+                 >
+                   <div className={styles.cardNumber}>{num}</div>
+                   <div className={styles.cardLabel}>игроков</div>
+                 </button>
+               ))}
+             </div>
+           </div>
 
           <div className={styles.field}>
             <label className={styles.label}>Режим игры</label>
