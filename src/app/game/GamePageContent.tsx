@@ -96,32 +96,25 @@ const getRectanglePosition = (index: number, totalPlayers: number): {
     };
   }
   
-  // РАССАДКА ПО ЧАСОВОЙ СТРЕЛКЕ от позиции игрока (снизу):
-  // 1 → слева внизу
-  // 2 → слева по центру
-  // 3 → слева вверху
-  // 4 → сверху слева
-  // 5 → сверху по центру
-  // 6 → сверху справа
-  // 7 → справа вверху
-  // 8 → справа по центру
-  // 9 → справа внизу
+  // НОВАЯ РАССАДКА: 2 СВЕРХУ, ПО 3 ПО БОКАМ
+  // 1-3 → левая сторона (3 игрока)
+  // 4-5 → верхняя сторона (2 игрока) 
+  // 6-8 → правая сторона (3 игрока)
   
   const positions = [
-    // ЛЕВАЯ СТОРОНА - ПО ЧАСОВОЙ СНИЗУ ВВЕРХ
-    { left: '5%', top: '75%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 } }, // 1: слева внизу
+    // ЛЕВАЯ СТОРОНА - 3 ИГРОКА (снизу вверх)
+    { left: '5%', top: '70%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 } }, // 1: слева внизу
     { left: '5%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 } }, // 2: слева центр
-    { left: '5%', top: '25%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 } }, // 3: слева вверху
+    { left: '5%', top: '30%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 } }, // 3: слева вверху
     
-    // ВЕРХ - ПО ЧАСОВОЙ СЛЕВА НАПРАВО
-    { left: '25%', top: '5%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 55 } }, // 4: сверху слева
-    { left: '50%', top: '5%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 55 } }, // 5: сверху центр
-    { left: '75%', top: '5%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 55 } }, // 6: сверху справа
+    // ВЕРХНЯЯ СТОРОНА - 2 ИГРОКА (слева направо)
+    { left: '35%', top: '5%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 55 } }, // 4: сверху слева
+    { left: '65%', top: '5%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 55 } }, // 5: сверху справа
     
-    // ПРАВАЯ СТОРОНА - ПО ЧАСОВОЙ СВЕРХУ ВНИЗ
-    { left: '95%', top: '25%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 } }, // 7: справа вверху
-    { left: '95%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 } }, // 8: справа центр
-    { left: '95%', top: '75%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 } }, // 9: справа внизу
+    // ПРАВАЯ СТОРОНА - 3 ИГРОКА (сверху вниз)
+    { left: '95%', top: '30%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 } }, // 6: справа вверху
+    { left: '95%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 } }, // 7: справа центр
+    { left: '95%', top: '70%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 } }, // 8: справа внизу
   ];
   
   // Возвращаем позицию для индекса
@@ -1158,8 +1151,8 @@ function GamePageContentComponent({
                             }}
                             className={`${styles.tableCard} ${index === tableStack.length - 1 ? styles.tableCardTop : ''}`}
                             style={{
-                              left: `${-15 + index * 12}px`, // ИСПРАВЛЕНО: Еще меньшее смещение для лучшей видимости всех карт
-                              top: `${-10 + index * 3}px`, // ИСПРАВЛЕНО: Минимальное вертикальное смещение
+                              left: `${-8 + index * 8}px`, // ИСПРАВЛЕНО: Минимальное горизонтальное смещение
+                              top: `${-5 + index * 2}px`, // ИСПРАВЛЕНО: Еще меньшее вертикальное смещение
                               zIndex: 200 + index // Высокий z-index - верхние карты поверх нижних
                             }}
                           >
@@ -1203,8 +1196,8 @@ function GamePageContentComponent({
                     <Image 
                       src="/img/cards/back.png" 
                       alt="deck" 
-                      width={screenInfo.isVerySmallMobile ? 32 : screenInfo.isSmallMobile ? 37 : screenInfo.isMobile ? 42 : 47} 
-                      height={screenInfo.isVerySmallMobile ? 48 : screenInfo.isSmallMobile ? 53 : screenInfo.isMobile ? 60 : 67}
+                      width={screenInfo.isVerySmallMobile ? 45 : screenInfo.isSmallMobile ? 52 : screenInfo.isMobile ? 60 : 70} 
+                      height={screenInfo.isVerySmallMobile ? 65 : screenInfo.isSmallMobile ? 75 : screenInfo.isMobile ? 87 : 102}
                       className={styles.deckCard}
                     />
                   )}
