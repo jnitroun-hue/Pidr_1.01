@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '../../../lib/supabase';
+import { supabase } from '../../../../lib/supabase';
 
 // GET /api/stats/online - Статистика онлайн игроков
 export async function GET(req: NextRequest) {
