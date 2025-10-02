@@ -467,34 +467,34 @@ export async function POST(req: NextRequest) {
       if (room.host_id === userId) {
         console.log('👑 Хост заходит в свою комнату:', roomCode);
         
-        // Проверяем, не находится ли хост уже в комнате
-        const { data: existingPlayer } = await supabase
-          .from('_pidr_room_players')
-          .select('id, position, is_ready')
-          .eq('room_id', room.id)
-          .eq('user_id', userId)
-          .single();
+      // Проверяем, не находится ли хост уже в комнате (ИСПРАВЛЕНО: проверяем ДО добавления)
+      const { data: existingPlayer } = await supabase
+        .from('_pidr_room_players')
+        .select('id, position, is_ready')
+        .eq('room_id', room.id)
+        .eq('user_id', userId)
+        .single();
 
-        if (existingPlayer) {
-          console.log('👑 Хост уже в комнате, просто восстанавливаем статус ready');
+      if (existingPlayer) {
+        console.log('👑 Хост уже в комнате, просто обновляем статус ready');
+        
+        // Хост уже есть - просто обновляем статус на ready
+        await supabase
+          .from('_pidr_room_players')
+          .update({ is_ready: true })
+          .eq('id', existingPlayer.id);
           
-          // Хост уже есть - просто обновляем статус на ready
-          await supabase
-            .from('_pidr_room_players')
-            .update({ is_ready: true })
-            .eq('id', existingPlayer.id);
-            
-          return NextResponse.json({ 
-            success: true, 
-            room: {
-              id: room.id,
-              roomCode,
-              name: room.name,
-              position: existingPlayer.position
-            },
-            message: 'С возвращением, хост! 👑'
-          });
-        }
+        return NextResponse.json({ 
+          success: true, 
+          room: {
+            id: room.id,
+            roomCode,
+            name: room.name,
+            position: existingPlayer.position
+          },
+          message: 'С возвращением, хост! 👑'
+        });
+      }
 
         // ИСПРАВЛЕНО: Хоста НЕТ в списке игроков - добавляем его правильно
         console.log('👑 Добавляем хоста в комнату впервые');
