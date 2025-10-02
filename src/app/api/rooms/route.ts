@@ -285,33 +285,58 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: false, message: 'ID комнаты обязателен' }, { status: 400 });
       }
 
-      // УДАЛЯЕМ ИГРОКА ИЗ КОМНАТЫ
-      const { error: leaveError } = await supabase
-        .from('_pidr_room_players')
-        .delete()
-        .eq('room_id', roomId)
-        .eq('user_id', userId);
-
-      if (leaveError) {
-        console.error('❌ Ошибка выхода из комнаты:', leaveError);
-        return NextResponse.json({ 
-          success: false, 
-          message: 'Ошибка выхода из комнаты: ' + leaveError.message 
-        }, { status: 500 });
-      }
-
-      // ОБНОВЛЯЕМ СЧЕТЧИК ИГРОКОВ
+      // ПРОВЕРЯЕМ ЯВЛЯЕТСЯ ЛИ ИГРОК ХОСТОМ
       const { data: room } = await supabase
         .from('_pidr_rooms')
-        .select('current_players')
+        .select('host_id')
         .eq('id', roomId)
         .single();
 
-      if (room && room.current_players > 0) {
-        await supabase
+      const isHost = room?.host_id === userId;
+
+      if (isHost) {
+        // ХОСТ НЕ УДАЛЯЕТСЯ, ТОЛЬКО ПОМЕЧАЕТСЯ КАК НЕАКТИВНЫЙ
+        console.log('🏠 Хост выходит, но остается в комнате');
+        const { error: updateError } = await supabase
+          .from('_pidr_room_players')
+          .update({ is_ready: false })
+          .eq('room_id', roomId)
+          .eq('user_id', userId);
+
+        if (updateError) {
+          console.error('❌ Ошибка обновления хоста:', updateError);
+        }
+      } else {
+        // ОБЫЧНЫЙ ИГРОК УДАЛЯЕТСЯ
+        const { error: leaveError } = await supabase
+          .from('_pidr_room_players')
+          .delete()
+          .eq('room_id', roomId)
+          .eq('user_id', userId);
+
+        if (leaveError) {
+          console.error('❌ Ошибка выхода из комнаты:', leaveError);
+          return NextResponse.json({ 
+            success: false, 
+            message: 'Ошибка выхода из комнаты: ' + leaveError.message 
+          }, { status: 500 });
+        }
+      }
+
+      // ОБНОВЛЯЕМ СЧЕТЧИК ИГРОКОВ (только для обычных игроков)
+      if (!isHost) {
+        const { data: roomData } = await supabase
           .from('_pidr_rooms')
-          .update({ current_players: room.current_players - 1 })
-          .eq('id', roomId);
+          .select('current_players')
+          .eq('id', roomId)
+          .single();
+
+        if (roomData && roomData.current_players > 0) {
+          await supabase
+            .from('_pidr_rooms')
+            .update({ current_players: roomData.current_players - 1 })
+            .eq('id', roomId);
+        }
       }
 
       return NextResponse.json({ 

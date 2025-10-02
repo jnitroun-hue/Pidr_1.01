@@ -145,6 +145,30 @@ export default function WaitingRoomProfessional({
     setShowSettings(false);
   };
 
+  const handleDeleteRoom = async () => {
+    if (!isHost) return;
+    
+    if (!confirm('Вы уверены что хотите удалить комнату?')) return;
+    
+    try {
+      const response = await fetch(`/api/rooms/${roomData.id}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        console.log('✅ Комната удалена');
+        onLeaveRoom(); // Выходим после удаления
+      } else {
+        console.error('❌ Ошибка удаления комнаты');
+        alert('Не удалось удалить комнату');
+      }
+    } catch (error) {
+      console.error('❌ Ошибка API удаления:', error);
+      alert('Ошибка удаления комнаты');
+    }
+  };
+
   const getGameModeInfo = () => {
     switch (roomData.gameMode) {
       case 'casual':
@@ -169,7 +193,7 @@ export default function WaitingRoomProfessional({
         
         {isHost && (
           <button 
-            onClick={onLeaveRoom} 
+            onClick={handleDeleteRoom} 
             className="delete-room-button"
             style={{ 
               background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',

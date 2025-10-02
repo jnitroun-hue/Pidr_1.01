@@ -18,20 +18,10 @@ export async function GET(req: NextRequest, { params }: { params: { roomId: stri
 
     console.log(`🔍 [GET /api/rooms/${roomId}/players] Загружаем игроков комнаты`);
 
-    // Получаем всех игроков в комнате с их данными из _pidr_users
+    // УПРОЩЕННЫЙ ЗАПРОС: Получаем игроков без JOIN
     const { data: players, error } = await supabase
       .from('_pidr_room_players')
-      .select(`
-        user_id,
-        username,
-        position,
-        is_ready,
-        joined_at,
-        _pidr_users!inner(
-          username,
-          avatar_url
-        )
-      `)
+      .select('user_id, username, position, is_ready, joined_at')
       .eq('room_id', roomId)
       .order('position', { ascending: true });
 
@@ -43,14 +33,14 @@ export async function GET(req: NextRequest, { params }: { params: { roomId: stri
       }, { status: 500 });
     }
 
-    // Форматируем данные игроков
+    // Форматируем данные игроков (упрощенно)
     const formattedPlayers = players.map(player => ({
       user_id: player.user_id,
-      username: player.username || player._pidr_users.username,
+      username: player.username || 'Игрок',
       position: player.position,
       is_ready: player.is_ready,
       joined_at: player.joined_at,
-      avatar_url: player._pidr_users.avatar_url
+      avatar_url: null // Пока без аватаров
     }));
 
     console.log(`✅ [GET /api/rooms/${roomId}/players] Найдено ${formattedPlayers.length} игроков`);
