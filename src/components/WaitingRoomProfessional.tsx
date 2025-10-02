@@ -58,10 +58,19 @@ export default function WaitingRoomProfessional({
   const [showSettings, setShowSettings] = useState(false);
   const [startCountdown, setStartCountdown] = useState(0);
   const [localSettings, setLocalSettings] = useState(roomData.settings);
+  const [isReady, setIsReady] = useState(false);
+  const [isUpdatingReady, setIsUpdatingReady] = useState(false);
 
   const isHost = roomData.hostId === currentUserId;
   const currentPlayer = roomData.players.find(p => p.id === currentUserId);
   const readyPlayers = roomData.players.filter(p => p.isReady || p.isHost).length;
+  
+  // ОБНОВЛЯЕМ ЛОКАЛЬНОЕ СОСТОЯНИЕ ГОТОВНОСТИ
+  useEffect(() => {
+    if (currentPlayer) {
+      setIsReady(currentPlayer.isReady || isHost);
+    }
+  }, [currentPlayer, isHost]);
   
   // ОТЛАДКА: Проверяем определение хоста
   console.log('🔍 [WaitingRoom] Отладка хоста:', {
@@ -167,17 +176,6 @@ export default function WaitingRoomProfessional({
     }
   };
 
-  const handleToggleReady = () => {
-    if (!currentPlayer || isHost) return;
-    
-    const updatedPlayers = roomData.players.map(p => 
-      p.id === currentUserId 
-        ? { ...p, isReady: !p.isReady }
-        : p
-    );
-    
-    onUpdateRoom({ players: updatedPlayers });
-  };
 
   const handleKickPlayer = (playerId: string) => {
     if (!isHost || playerId === currentUserId) return;
@@ -231,6 +229,77 @@ export default function WaitingRoomProfessional({
     } catch (error) {
       console.error('❌ Ошибка API удаления:', error);
       alert('Ошибка удаления комнаты');
+    }
+  };
+
+  // ФУНКЦИЯ ИЗМЕНЕНИЯ ГОТОВНОСТИ
+  const handleToggleReady = async () => {
+    if (isHost || isUpdatingReady) return; // ХОСТ ВСЕГДА ГОТОВ
+    
+    setIsUpdatingReady(true);
+    const newReadyState = !isReady;
+    
+    try {
+      const response = await fetch(`/api/rooms/${roomData.id}/ready`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ isReady: newReadyState })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Готовность обновлена:', data);
+        setIsReady(newReadyState);
+        
+        // ОБНОВЛЯЕМ ДАННЫЕ КОМНАТЫ
+        if (data.players) {
+          onUpdateRoom({ 
+            players: data.players.map((p: any) => ({
+              id: p.user_id,
+              name: p.username,
+              isHost: p.user_id === roomData.hostId,
+              isReady: p.is_ready,
+              isBot: parseInt(p.user_id) < 0,
+              avatar: p.avatar_url,
+              joinedAt: new Date(p.joined_at)
+            }))
+          });
+        }
+      } else {
+        console.error('❌ Ошибка обновления готовности');
+      }
+    } catch (error) {
+      console.error('❌ Ошибка обновления готовности:', error);
+    } finally {
+      setIsUpdatingReady(false);
+    }
+  };
+
+  // ФУНКЦИЯ ДОБАВЛЕНИЯ БОТА
+  const handleAddBot = async () => {
+    if (!isHost) return;
+    
+    try {
+      const response = await fetch(`/api/rooms/${roomData.id}/bots`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ action: 'add' })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Бот добавлен:', data);
+        
+        // ОБНОВЛЯЕМ СПИСОК ИГРОКОВ (ПЕРЕЗАГРУЖАЕМ)
+        window.location.reload();
+      } else {
+        const errorData = await response.json();
+        console.error('❌ Ошибка добавления бота:', errorData.message);
+      }
+    } catch (error) {
+      console.error('❌ Ошибка добавления бота:', error);
     }
   };
 
@@ -460,6 +529,7 @@ export default function WaitingRoomProfessional({
                   e.currentTarget.style.transform = 'translateY(0)';
                   e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.3)';
                 }}
+                onClick={handleAddBot}
               >
                 <Bot size={20} />
                 🤖 Добавить бота
@@ -487,9 +557,15 @@ export default function WaitingRoomProfessional({
         ) : (
           <button 
             onClick={handleToggleReady}
-            className={`ready-button ${currentPlayer?.isReady ? 'ready' : 'not-ready'}`}
+            disabled={isHost || isUpdatingReady}
+            className={`ready-button ${isReady ? 'ready' : 'not-ready'} ${isUpdatingReady ? 'updating' : ''}`}
           >
-            {currentPlayer?.isReady ? (
+            {isUpdatingReady ? (
+              <>
+                <Clock size={20} className="animate-spin" />
+                Обновление...
+              </>
+            ) : isReady ? (
               <>
                 <Check size={20} />
                 Готов

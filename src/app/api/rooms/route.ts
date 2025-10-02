@@ -217,7 +217,13 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: false, message: 'Комната не найдена' }, { status: 404 });
       }
 
-      // УБРАНА ДУБЛИРУЮЩАЯ ПРОВЕРКА - логика перенесена ниже
+      // ПРОВЕРЯЕМ СУЩЕСТВУЕТ ЛИ УЖЕ ИГРОК В КОМНАТЕ
+      const { data: existingPlayer } = await supabase
+        .from('_pidr_room_players')
+        .select('*')
+        .eq('room_id', room.id)
+        .eq('user_id', userId)
+        .single();
 
       // ПОЛУЧАЕМ РЕАЛЬНОЕ ИМЯ ИГРОКА
       const { data: userData } = await supabase
@@ -226,75 +232,74 @@ export async function POST(req: NextRequest) {
         .eq('id', userId)
         .single();
 
-      // ПРОВЕРЯЕМ ЯВЛЯЕТСЯ ЛИ НОВЫЙ ИГРОК ХОСТОМ
-      const isNewPlayerHost = room.host_id === userId;
+      // ПРОВЕРЯЕМ ЯВЛЯЕТСЯ ЛИ ИГРОК ХОСТОМ
+      const isHost = room.host_id === userId;
       
-      let nextPosition;
-      if (isNewPlayerHost) {
-        // ХОСТ ВСЕГДА ПОЛУЧАЕТ ПОЗИЦИЮ 1
-        nextPosition = 1;
-        console.log(`👑 Добавляем ХОСТА: position=${nextPosition}`);
+      let finalPosition;
+      
+      if (existingPlayer) {
+        // ИГРОК УЖЕ В КОМНАТЕ - ОБНОВЛЯЕМ ТОЛЬКО is_ready
+        console.log(`🔄 Игрок уже в комнате: position=${existingPlayer.position}, isHost=${isHost}`);
+        
+        if (isHost && existingPlayer.position !== 1) {
+          // ХОСТ ДОЛЖЕН БЫТЬ НА ПОЗИЦИИ 1 - ИСПРАВЛЯЕМ
+          finalPosition = 1;
+          console.log(`👑 ИСПРАВЛЯЕМ позицию хоста: ${existingPlayer.position} → 1`);
+        } else {
+          // СОХРАНЯЕМ СУЩЕСТВУЮЩУЮ ПОЗИЦИЮ
+          finalPosition = existingPlayer.position;
+        }
       } else {
-        // ПОЛУЧАЕМ МАКСИМАЛЬНУЮ ПОЗИЦИЮ В КОМНАТЕ
-        const { data: maxPositionData } = await supabase
-          .from('_pidr_room_players')
-          .select('position')
-          .eq('room_id', room.id)
-          .order('position', { ascending: false })
-          .limit(1);
+        // НОВЫЙ ИГРОК
+        if (isHost) {
+          // ХОСТ ВСЕГДА ПОЛУЧАЕТ ПОЗИЦИЮ 1
+          finalPosition = 1;
+          console.log(`👑 Новый ХОСТ: position=${finalPosition}`);
+        } else {
+          // ПОЛУЧАЕМ МАКСИМАЛЬНУЮ ПОЗИЦИЮ В КОМНАТЕ
+          const { data: maxPositionData } = await supabase
+            .from('_pidr_room_players')
+            .select('position')
+            .eq('room_id', room.id)
+            .order('position', { ascending: false })
+            .limit(1);
 
-        const maxPosition = maxPositionData?.[0]?.position || 0;
-        nextPosition = maxPosition + 1;
-        console.log(`🎯 Добавляем игрока: maxPosition=${maxPosition}, nextPosition=${nextPosition}`);
+          const maxPosition = maxPositionData?.[0]?.position || 0;
+          finalPosition = maxPosition + 1;
+          console.log(`🎯 Новый игрок: maxPosition=${maxPosition}, finalPosition=${finalPosition}`);
+        }
       }
 
-      // ПРОВЕРЯЕМ ЕСТЬ ЛИ УЖЕ ЭТОТ ИГРОК В КОМНАТЕ
-      const { data: existingPlayerCheck } = await supabase
-        .from('_pidr_room_players')
-        .select('id, position')
-        .eq('room_id', room.id)
-        .eq('user_id', userId)
-        .single();
-
+      // ВЫПОЛНЯЕМ UPSERT ОПЕРАЦИЮ
       let playerError;
-      let finalPosition = nextPosition;
       
-      if (existingPlayerCheck) {
+      if (existingPlayer) {
         // ОБНОВЛЯЕМ СУЩЕСТВУЮЩЕГО ИГРОКА
-        console.log(`🔄 Обновляем игрока: старая позиция=${existingPlayerCheck.position}, новая=${nextPosition}`);
-        
-        // Если это хост, оставляем позицию 1, иначе обновляем
-        if (isNewPlayerHost && existingPlayerCheck.position !== 1) {
-          finalPosition = 1;
-          console.log(`👑 Исправляем позицию хоста: ${existingPlayerCheck.position} → 1`);
-        } else {
-          finalPosition = existingPlayerCheck.position; // Оставляем старую позицию
-        }
+        console.log(`🔄 Обновляем игрока: позиция=${finalPosition}, isHost=${isHost}`);
         
         const { error } = await supabase
           .from('_pidr_room_players')
           .update({
             username: userData?.username || 'Игрок',
             position: finalPosition,
-            is_ready: isNewPlayerHost // ХОСТ СРАЗУ ГОТОВ
+            is_ready: isHost // ХОСТ СРАЗУ ГОТОВ
           })
           .eq('room_id', room.id)
           .eq('user_id', userId);
         playerError = error;
       } else {
         // ДОБАВЛЯЕМ НОВОГО ИГРОКА
-        console.log(`➕ Добавляем нового игрока с позицией ${nextPosition}`);
+        console.log(`➕ Добавляем нового игрока с позицией ${finalPosition}`);
         const { error } = await supabase
           .from('_pidr_room_players')
           .insert({
             room_id: room.id,
             user_id: userId,
             username: userData?.username || 'Игрок',
-            position: nextPosition, // АКТУАЛЬНАЯ ПОЗИЦИЯ
-            is_ready: isNewPlayerHost // ХОСТ СРАЗУ ГОТОВ
+            position: finalPosition,
+            is_ready: isHost // ХОСТ СРАЗУ ГОТОВ
           });
         playerError = error;
-        finalPosition = nextPosition;
       }
 
       if (playerError) {
@@ -318,7 +323,7 @@ export async function POST(req: NextRequest) {
             roomCode: room.room_code,
             name: room.name,
             position: finalPosition, // ФИНАЛЬНАЯ ПОЗИЦИЯ
-            isHost: isNewPlayerHost
+            isHost: isHost
           }
         });
     }
