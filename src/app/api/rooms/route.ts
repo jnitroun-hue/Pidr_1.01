@@ -91,6 +91,13 @@ export async function POST(req: NextRequest) {
     const { action, name, maxPlayers, gameMode, hasPassword, password, isPrivate } = body;
 
     console.log('📋 Данные запроса:', { action, name, maxPlayers, gameMode });
+    console.log('🔍 ДЕТАЛЬНАЯ ДИАГНОСТИКА maxPlayers:', {
+      maxPlayers,
+      type: typeof maxPlayers,
+      isUndefined: maxPlayers === undefined,
+      isNull: maxPlayers === null,
+      finalValue: maxPlayers || 6
+    });
 
     if (action === 'create') {
       console.log('🆕 Создание новой комнаты...');
@@ -118,7 +125,7 @@ export async function POST(req: NextRequest) {
           room_code: roomCode,
           name: name || 'Новая комната',
           host_id: userId,
-          max_players: maxPlayers || 9, // МАКСИМУМ 9 ИГРОКОВ!
+          max_players: maxPlayers || 6, // ДЕФОЛТ 6, НО ДОЛЖНО ПРИХОДИТЬ ОТ КЛИЕНТА
           current_players: 0, // Начинаем с 0, потом добавим хоста
           status: 'waiting',
           is_private: isPrivate || false,

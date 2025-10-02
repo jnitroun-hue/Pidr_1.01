@@ -64,7 +64,7 @@ export const ProperMultiplayer: React.FC = () => {
 
   // Форма создания комнаты
   const [roomName, setRoomName] = useState('');
-  const [maxPlayers, setMaxPlayers] = useState(9); // ДЕФОЛТ 9 ИГРОКОВ!
+  const [maxPlayers, setMaxPlayers] = useState(6); // ДЕФОЛТ 6 ИГРОКОВ
   const [gameMode, setGameMode] = useState('casual');
   const [hasPassword, setHasPassword] = useState(false);
   const [password, setPassword] = useState('');
@@ -140,6 +140,14 @@ export const ProperMultiplayer: React.FC = () => {
 
     setLoading(true);
     setError('');
+
+    console.log('🔍 ОТПРАВЛЯЕМ НА СЕРВЕР:', {
+      action: 'create',
+      name: roomName,
+      maxPlayers,
+      gameMode,
+      type_maxPlayers: typeof maxPlayers
+    });
 
     try {
       const response = await fetch('/api/rooms', {
