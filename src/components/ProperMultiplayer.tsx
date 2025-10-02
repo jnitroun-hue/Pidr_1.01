@@ -78,12 +78,21 @@ export const ProperMultiplayer: React.FC = () => {
     fetchUser();
   }, []);
 
-  // Загрузка комнат при открытии лобби
+  // Загрузка комнат при открытии лобби и периодическое обновление
   useEffect(() => {
     if (view === 'lobby') {
       fetchRooms();
+      
+      // Обновляем список комнат каждые 5 секунд
+      const interval = setInterval(() => {
+        if (view === 'lobby' && !currentRoom) {
+          fetchRooms();
+        }
+      }, 5000);
+      
+      return () => clearInterval(interval);
     }
-  }, [view]);
+  }, [view, currentRoom]);
 
   const fetchUser = async () => {
     try {

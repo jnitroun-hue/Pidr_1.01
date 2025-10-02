@@ -73,6 +73,71 @@ export default function WaitingRoomProfessional({
   });
   const canStart = readyPlayers >= localSettings.minPlayers && readyPlayers === roomData.players.length;
 
+  // РЕАЛ-ТАЙМ ОБНОВЛЕНИЕ СПИСКА ИГРОКОВ
+  useEffect(() => {
+    if (!roomData?.id) return;
+
+    const updatePlayers = async () => {
+      try {
+        // Получаем игроков
+        const playersResponse = await fetch(`/api/rooms/${roomData.id}/players`, {
+          credentials: 'include'
+        });
+        
+        // Получаем информацию о комнате (включая maxPlayers)
+        const roomsResponse = await fetch('/api/rooms?type=public', {
+          credentials: 'include'
+        });
+        
+        if (playersResponse.ok && roomsResponse.ok) {
+          const playersData = await playersResponse.json();
+          const roomsData = await roomsResponse.json();
+          
+          if (playersData.success && playersData.players && roomsData.success) {
+            console.log('🔄 Обновлен список игроков:', playersData.players);
+            
+            // Находим текущую комнату в списке
+            const currentRoom = roomsData.rooms.find((r: any) => r.id.toString() === roomData.id);
+            
+            // Преобразуем данные из API в формат Player
+            const updatedPlayers: Player[] = playersData.players.map((p: any) => ({
+              id: p.user_id,
+              name: p.username || 'Игрок',
+              isHost: p.user_id === roomData.hostId,
+              isReady: p.is_ready,
+              isBot: false,
+              avatar: p.avatar_url,
+              joinedAt: new Date(p.joined_at)
+            }));
+
+            // Обновляем если что-то изменилось
+            const needsUpdate = updatedPlayers.length !== roomData.players.length || 
+                               (currentRoom && currentRoom.max_players !== roomData.maxPlayers);
+            
+            if (needsUpdate) {
+              const updateData: any = { players: updatedPlayers };
+              if (currentRoom && currentRoom.max_players !== roomData.maxPlayers) {
+                updateData.maxPlayers = currentRoom.max_players;
+                console.log(`🔄 Обновлен maxPlayers: ${roomData.maxPlayers} → ${currentRoom.max_players}`);
+              }
+              onUpdateRoom(updateData);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('❌ Ошибка обновления игроков:', error);
+      }
+    };
+
+    // Обновляем каждые 3 секунды
+    const interval = setInterval(updatePlayers, 3000);
+    
+    // Первое обновление сразу
+    updatePlayers();
+
+    return () => clearInterval(interval);
+  }, [roomData?.id, roomData?.players.length, roomData?.hostId, onUpdateRoom]);
+
   // Автостарт при готовности всех игроков
   useEffect(() => {
     if (localSettings.autoStart && canStart && isHost && roomData.players.length >= localSettings.minPlayers) {
