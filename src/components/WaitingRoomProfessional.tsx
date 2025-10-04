@@ -7,6 +7,7 @@ import {
   Gamepad2, Zap, Trophy
 } from 'lucide-react';
 import { useTelegram } from '../hooks/useTelegram';
+import './WaitingRoomProfessional-fixed.css';
 
 interface Player {
   id: string;
@@ -318,37 +319,30 @@ export default function WaitingRoomProfessional({
 
   return (
     <div className="waiting-room-container">
-      {/* Header */}
+      {/* Header - Исправленный дизайн */}
       <div className="room-header">
-        <button onClick={onLeaveRoom} className="back-button">
-          <ArrowLeft size={24} />
-          <span>Покинуть</span>
-        </button>
-        
-        {isHost && (
-          <button 
-            onClick={handleDeleteRoom} 
-            className="delete-room-button"
-            style={{ 
-              background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-              border: 'none',
-              color: 'white',
-              padding: '8px 16px',
-              borderRadius: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              cursor: 'pointer'
-            }}
-          >
-            <UserX size={20} />
-            <span>Удалить комнату</span>
+        {/* Левый блок с кнопками управления */}
+        <div className="header-controls">
+          <button onClick={onLeaveRoom} className="back-button">
+            <ArrowLeft size={24} />
+            <span>Покинуть</span>
           </button>
-        )}
+          
+          {isHost && (
+            <button 
+              onClick={handleDeleteRoom} 
+              className="delete-room-button"
+            >
+              <UserX size={20} />
+              <span>Удалить комнату</span>
+            </button>
+          )}
+        </div>
         
-        <div className="room-info">
+        {/* Центральный блок с информацией о комнате */}
+        <div className="room-info-center">
           <h1 className="room-name">{roomData.name}</h1>
-          <div className="room-meta">
+          <div className="room-meta-center">
             <div className="room-code-section">
               <span className="room-code">{roomData.code}</span>
               <button 
@@ -366,14 +360,17 @@ export default function WaitingRoomProfessional({
           </div>
         </div>
 
-        {isHost && (
-          <button 
-            onClick={() => setShowSettings(!showSettings)}
-            className="settings-button"
-          >
-            <Settings size={24} />
-          </button>
-        )}
+        {/* Правый блок с настройками */}
+        <div className="header-settings">
+          {isHost && (
+            <button 
+              onClick={() => setShowSettings(!showSettings)}
+              className="settings-button"
+            >
+              <Settings size={24} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Settings Panel */}

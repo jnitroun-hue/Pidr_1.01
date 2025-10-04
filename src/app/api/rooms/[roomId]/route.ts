@@ -52,6 +52,21 @@ export async function DELETE(req: NextRequest, { params }: { params: { roomId: s
       }, { status: 500 });
     }
 
+    // Обновляем статус пользователей (убираем их из комнаты)
+    const { error: statusError } = await supabase
+      .from('_pidr_user_status')
+      .update({ 
+        current_room_id: null, 
+        status: 'online',
+        updated_at: new Date().toISOString()
+      })
+      .eq('current_room_id', roomId);
+
+    if (statusError) {
+      console.error('⚠️ Предупреждение: не удалось обновить статус пользователей:', statusError);
+      // Не возвращаем ошибку, так как это не критично
+    }
+
     // Удаляем саму комнату
     const { error: deleteError } = await supabase
       .from('_pidr_rooms')

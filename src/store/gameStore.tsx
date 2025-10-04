@@ -2076,12 +2076,42 @@ export const useGameStore = create<GameState>()(
            console.log(`🏆 Победители: ${winners.length} - ${winners.map(w => w.name).join(', ')}`);
            console.log(`🏆 В игре: ${playersInGame.length} - ${playersInGame.map(p => `${p.name}(${p.cards.length + p.penki.length})`).join(', ')}`);
            
-          // ✅ ПРАВИЛЬНЫЕ УСЛОВИЯ ЗАВЕРШЕНИЯ ИГРЫ P.I.D.R.
-          // Игра завершается когда остался ТОЛЬКО ОДИН игрок с картами (или ничья)
-          if (playersInGame.length <= 1) {
+          // ✅ ИСПРАВЛЕНИЕ: ПРОВЕРЯЕМ ЕСТЬ ЛИ ПОБЕДИТЕЛИ С 0 КАРТАМИ
+          if (winners.length > 0 || playersInGame.length <= 1) {
             console.log(`🎉 [checkVictoryCondition] 🏆 ИГРА ЗАВЕРШЕНА!`);
             
-            if (playersInGame.length === 1) {
+            // Завершаем игру НЕМЕДЛЕННО
+            set({
+              isGameActive: false,
+              gameStage: 4, // Завершение игры
+            });
+            
+            if (winners.length === 1) {
+              // ОДИН ПОБЕДИТЕЛЬ
+              const winner = winners[0];
+              console.log(`🎉 ЕДИНСТВЕННЫЙ ПОБЕДИТЕЛЬ: ${winner.name}`);
+              
+              get().showNotification(`🎉 ПОБЕДИТЕЛЬ: ${winner.name}!`, 'success', 5000);
+              
+              // Показываем модальное окно победы
+              set({
+                showVictoryModal: true,
+                victoryData: {
+                  position: 1,
+                  isWinner: true,
+                  playerName: winner.name,
+                  gameMode: get().gameMode,
+                  ratingChange: winner.isUser ? 50 : 0,
+                  rewardsEarned: winner.isUser ? 100 : 0
+                }
+              });
+              
+            } else if (winners.length > 1) {
+              // НЕСКОЛЬКО ПОБЕДИТЕЛЕЙ (НИЧЬЯ)
+              console.log(`🤝 НИЧЬЯ: ${winners.map(w => w.name).join(', ')}`);
+              get().showNotification(`🤝 НИЧЬЯ: ${winners.map(w => w.name).join(', ')}!`, 'success', 5000);
+              
+            } else if (playersInGame.length === 1) {
               // ОДИН ПРОИГРАВШИЙ, ВСЕ ОСТАЛЬНЫЕ ПОБЕДИТЕЛИ
               const loser = playersInGame[0];
               const cardsLeft = loser.cards.length + loser.penki.length;
