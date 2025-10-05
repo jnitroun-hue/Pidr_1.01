@@ -185,25 +185,6 @@ export default function WaitingRoomProfessional({
     onUpdateRoom({ players: updatedPlayers });
   };
 
-  const handleAddBot = () => {
-    if (!isHost || roomData.players.length >= roomData.maxPlayers) return;
-    
-    const botNames = ['Алекс', 'Мария', 'Дмитрий', 'Анна', 'Сергей', 'Елена'];
-    const usedNames = roomData.players.map(p => p.name);
-    const availableName = botNames.find(name => !usedNames.includes(name)) || `Бот${Date.now()}`;
-    
-    const newBot: Player = {
-      id: `bot_${Date.now()}`,
-      name: availableName,
-      isHost: false,
-      isReady: true,
-      isBot: true,
-      joinedAt: new Date()
-    };
-    
-    onUpdateRoom({ players: [...roomData.players, newBot] });
-  };
-
   const handleUpdateSettings = () => {
     onUpdateRoom({ settings: localSettings });
     setShowSettings(false);
@@ -501,7 +482,6 @@ export default function WaitingRoomProfessional({
           <div className="host-actions">
             {localSettings.allowBots && roomData.players.length < roomData.maxPlayers && (
               <button 
-                onClick={handleAddBot} 
                 className="add-bot-button"
                 style={{
                   background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
