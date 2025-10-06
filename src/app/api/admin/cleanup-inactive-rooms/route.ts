@@ -52,21 +52,59 @@ export async function POST() {
   try {
     console.log('🗑️ [POST /api/admin/cleanup-inactive-rooms] Удаление неактивных комнат...');
 
-    // Находим комнаты в статусе 'waiting' старше 30 минут (увеличено время)
-    const { data: inactiveRooms, error: findError } = await supabase
+    // Сначала получаем все комнаты в статусе 'waiting'
+    const { data: waitingRooms, error: roomsError } = await supabase
       .from('_pidr_rooms')
-      .select('id, room_code, name, created_at, current_players')
-      .eq('status', 'waiting')
-      .lt('created_at', new Date(Date.now() - 30 * 60 * 1000).toISOString()) // 30 минут
-      .eq('current_players', 0); // Только пустые комнаты
+      .select('id, room_code, name, created_at, current_players, host_id')
+      .eq('status', 'waiting');
 
-    if (findError) {
-      console.error('❌ Ошибка поиска неактивных комнат:', findError);
+    if (roomsError) {
+      console.error('❌ Ошибка получения комнат:', roomsError);
       return NextResponse.json({ 
         success: false, 
-        message: 'Ошибка поиска: ' + findError.message 
+        message: 'Ошибка получения комнат: ' + roomsError.message 
       }, { status: 500 });
     }
+
+    if (!waitingRooms || waitingRooms.length === 0) {
+      console.log('✅ Нет комнат в статусе waiting');
+      return NextResponse.json({
+        success: true,
+        message: 'Нет комнат для проверки',
+        deletedCount: 0
+      });
+    }
+
+    // Получаем статус всех хостов
+    const hostIds = waitingRooms.map(r => r.host_id);
+    const { data: hostStatuses } = await supabase
+      .from('_pidr_user_status')
+      .select('user_id, status, last_seen')
+      .in('user_id', hostIds);
+
+    // Находим комнаты с неактивными хостами
+    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+    const inactiveRooms = waitingRooms.filter(room => {
+      const hostStatus = hostStatuses?.find(h => h.user_id === room.host_id);
+      
+      if (!hostStatus) {
+        // Если нет статуса хоста - считаем неактивным
+        console.log(`🔍 Хост ${room.host_id} комнаты ${room.room_code} не найден в статусах`);
+        return true;
+      }
+      
+      const isOffline = hostStatus.status !== 'online';
+      const lastSeenTooOld = hostStatus.last_seen && new Date(hostStatus.last_seen) < fifteenMinutesAgo;
+      
+      if (isOffline || lastSeenTooOld) {
+        console.log(`🔍 Хост ${room.host_id} комнаты ${room.room_code} неактивен: status=${hostStatus.status}, last_seen=${hostStatus.last_seen}`);
+        return true;
+      }
+      
+      return false;
+    });
+
+    console.log(`🔍 Найдено ${inactiveRooms.length} комнат с неактивными хостами из ${waitingRooms.length} общих комнат`);
 
     if (!inactiveRooms || inactiveRooms.length === 0) {
       console.log('✅ Неактивных комнат не найдено');
@@ -81,6 +119,26 @@ export async function POST() {
       inactiveRooms.map(r => `${r.room_code} (${r.name})`));
 
     const roomIds = inactiveRooms.map(r => r.id);
+
+    // Сначала получаем всех игроков из удаляемых комнат
+    const { data: playersToUpdate } = await supabase
+      .from('_pidr_room_players')
+      .select('user_id')
+      .in('room_id', roomIds);
+
+    // Обновляем статус пользователей (убираем их из комнат)
+    if (playersToUpdate && playersToUpdate.length > 0) {
+      const userIds = playersToUpdate.map(p => p.user_id);
+      
+      // Обновляем _pidr_user_status если таблица существует
+      await supabase
+        .from('_pidr_user_status')
+        .update({ 
+          current_room_id: null,
+          status: 'online'
+        })
+        .in('user_id', userIds);
+    }
 
     // Удаляем игроков из неактивных комнат
     const { error: playersError } = await supabase

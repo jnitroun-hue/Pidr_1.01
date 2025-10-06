@@ -78,48 +78,12 @@ export const ProperMultiplayer: React.FC = () => {
     fetchUser();
   }, []);
 
-  // Загрузка комнат при открытии лобби и периодическое обновление
+  // Загрузка комнат при открытии лобби (БЕЗ автоматического обновления)
   useEffect(() => {
     if (view === 'lobby') {
       fetchRooms();
-      
-      // Обновляем список комнат каждые 5 секунд
-      const interval = setInterval(() => {
-        if (view === 'lobby' && !currentRoom) {
-          fetchRooms();
-        }
-      }, 5000);
-
-      // Очищаем неактивные комнаты каждые 5 минут
-      const cleanupInterval = setInterval(async () => {
-        try {
-          console.log('🧹 Запуск автоочистки неактивных комнат...');
-          const response = await fetch('/api/admin/cleanup-inactive-rooms', {
-            method: 'POST',
-            credentials: 'include'
-          });
-          
-          if (response.ok) {
-            const data = await response.json();
-            if (data.deletedCount > 0) {
-              console.log(`✅ Удалено ${data.deletedCount} неактивных комнат`);
-              // Обновляем список комнат после очистки
-              if (view === 'lobby' && !currentRoom) {
-                fetchRooms();
-              }
-            }
-          }
-        } catch (error) {
-          console.error('❌ Ошибка автоочистки комнат:', error);
-        }
-      }, 5 * 60 * 1000); // 5 минут
-      
-      return () => {
-        clearInterval(interval);
-        clearInterval(cleanupInterval);
-      };
     }
-  }, [view, currentRoom]);
+  }, [view]);
 
   const fetchUser = async () => {
     try {
@@ -446,7 +410,19 @@ export const ProperMultiplayer: React.FC = () => {
           </div>
 
           <div className={styles.roomsList}>
-            <h3 className={styles.sectionTitle}>Открытые комнаты</h3>
+            <div className={styles.roomsHeader}>
+              <h3 className={styles.sectionTitle}>Открытые комнаты</h3>
+              <button 
+                className={`${styles.button} ${styles.refresh}`}
+                onClick={async () => {
+                  await fetchRooms();
+                }}
+                disabled={loading}
+                title="Обновить список активных комнат"
+              >
+                {loading ? '⏳' : '🔄'} Обновить
+              </button>
+            </div>
             
             {loading ? (
               <div className={styles.loading}>⏳ Загрузка комнат...</div>

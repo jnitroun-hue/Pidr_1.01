@@ -127,6 +127,47 @@
   text-align: center;
 }
 
+/* Заголовок с кнопками обновления и очистки */
+.roomsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.roomsHeader .sectionTitle {
+  margin-bottom: 0;
+  text-align: left;
+}
+
+
+.refresh {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  color: white !important;
+  border: none !important;
+  padding: 8px 16px !important;
+  font-size: 14px !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  transition: all 0.3s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+.refresh:hover:not(:disabled) {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4) !important;
+}
+
+.refresh:disabled {
+  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%) !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+}
+
+
 .loading {
   text-align: center;
   padding: 40px;
