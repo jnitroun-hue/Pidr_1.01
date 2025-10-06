@@ -623,11 +623,19 @@ export const useGameStore = create<GameState>()(
             return;
           }
           
-          const currentPlayerName = players.find(p => p.id === currentPlayerId)?.name || currentPlayerId;
+          const currentPlayer = players.find(p => p.id === currentPlayerId);
+          const currentPlayerName = currentPlayer?.name || currentPlayerId;
           console.log(`🔄 [nextTurn] Передача хода от ${currentPlayerName}`);
           
-          // ИСПРАВЛЕНО: Находим следующего АКТИВНОГО игрока (с картами) ПО ЧАСОВОЙ СТРЕЛКЕ
-          const activePlayers = players.filter(p => p.cards.length > 0); // ТОЛЬКО ИГРОКИ С КАРТАМИ
+          // КРИТИЧНО: Если текущий игрок стал победителем, пропускаем его
+          if (currentPlayer?.isWinner) {
+            console.log(`🏆 [nextTurn] ${currentPlayerName} уже победитель - пропускаем`);
+          }
+          
+          // ИСПРАВЛЕНО: Находим следующего АКТИВНОГО игрока (с картами или пеньками) ПО ЧАСОВОЙ СТРЕЛКЕ
+          const activePlayers = players.filter(p => 
+            (p.cards.length > 0 || p.penki.length > 0) && !p.isWinner
+          ); // ТОЛЬКО ИГРОКИ С КАРТАМИ/ПЕНЬКАМИ И НЕ ПОБЕДИТЕЛИ
           
           if (activePlayers.length <= 1) {
             console.log(`🔄 [nextTurn] ⚠️ Осталось ${activePlayers.length} активных игроков - проверяем победу`);
@@ -1702,8 +1710,16 @@ export const useGameStore = create<GameState>()(
            const penkiLeft = currentPlayer.penki.length;
            const totalCardsLeft = cardsLeft + penkiLeft;
            
+           console.log(`🏆 [playSelectedCard] Проверка победы для ${currentPlayer.name}: карт=${cardsLeft}, пеньков=${penkiLeft}, всего=${totalCardsLeft}, стадия=${gameStage}`);
+           
            if (gameStage >= 2 && totalCardsLeft === 0 && cardsLeft === 0 && penkiLeft === 0) {
              console.log(`🎉 [playSelectedCard] 🏆 ИГРОК ${currentPlayer.name} ИЗБАВИЛСЯ ОТ ВСЕХ КАРТ И ПЕНЬКОВ ВО 2-Й СТАДИИ!`);
+             
+             // КРИТИЧНО: Помечаем игрока как победителя НЕМЕДЛЕННО
+             const updatedPlayers = players.map(p => 
+               p.id === currentPlayer.id ? { ...p, isWinner: true } : p
+             );
+             set({ players: updatedPlayers });
              
              // Добавляем игрока в порядок выбывания (первые места)
              const { eliminationOrder } = get();
@@ -1720,6 +1736,11 @@ export const useGameStore = create<GameState>()(
              get().showNotification(`🏆 ${currentPlayer.name} - ${positionText}!`, 'success', 3500);
              
              console.log(`🏆 [playSelectedCard] ${currentPlayer.name} занял ${position}-е место`);
+             
+             // КРИТИЧНО: Принудительно вызываем проверку победы
+             setTimeout(() => {
+               get().checkVictoryCondition();
+             }, 100);
            }
            
            // Добавляем карту на стол (поверх всех)

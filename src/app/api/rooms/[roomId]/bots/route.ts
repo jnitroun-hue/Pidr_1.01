@@ -74,7 +74,7 @@ export async function POST(
         'Сергей_БОТ', 'Владимир_БОТ', 'Николай_БОТ', 'Игорь_БОТ'
       ];
       
-      const usedNames = currentPlayers.map(p => p.username).filter(name => name?.includes('_БОТ'));
+      const usedNames = currentPlayers.map((p: any) => p.username).filter((name: string) => name?.includes('_БОТ'));
       const availableNames = botNames.filter(name => !usedNames.includes(name));
       const botName = availableNames[0] || `БОТ_${nextPosition}`;
 

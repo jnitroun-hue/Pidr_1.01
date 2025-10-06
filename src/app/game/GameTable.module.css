@@ -40,13 +40,13 @@
   left: 50%;
   transform: translate(-50%, -50%);
   
-  /* УМЕНЬШЕННЫЙ РАЗМЕР СТОЛА ДО 80 */
-  width: 40vw; /* Уменьшено с 60vw до 40vw */
-  height: 80vh; /* Уменьшено с 95vh до 80vh */
-  max-width: 400px; /* Уменьшено с 600px до 400px */
+  /* УМЕНЬШЕННЫЙ РАЗМЕР СТОЛА НА 10% БОЛЬШЕ */
+  width: 36vw; /* Уменьшено еще на 10% с 40vw до 36vw */
+  height: 72vh; /* Уменьшено еще на 10% с 80vh до 72vh */
+  max-width: 360px; /* Уменьшено еще на 10% с 400px до 360px */
   max-height: none; /* БЕЗ ОГРАНИЧЕНИЙ! */
-  min-width: 250px; /* Уменьшено с 320px до 250px */
-  min-height: 500px; /* Уменьшено с 700px до 500px */
+  min-width: 225px; /* Уменьшено еще на 10% с 250px до 225px */
+  min-height: 450px; /* Уменьшено еще на 10% с 500px до 450px */
   
   /* SVG фон роскошного стола (сгенерированный через MCP Stable Diffusion) */
   background-image: url('/images/luxury-table.svg');
@@ -67,10 +67,10 @@
 /* Адаптивность вертикального стола */
 @media (max-width: 768px) {
   .rectangularTable {
-    width: 75vw;
-    height: 93vh; /* МАКСИМУМ ДЛЯ ПЛАНШЕТОВ! */
-    min-width: 300px;
-    min-height: 650px;
+    width: 67vw; /* Уменьшено на 10% с 75vw до 67vw */
+    height: 84vh; /* Уменьшено на 10% с 93vh до 84vh */
+    min-width: 270px; /* Уменьшено на 10% с 300px до 270px */
+    min-height: 585px; /* Уменьшено на 10% с 650px до 585px */
     border-radius: 16px;
     border-width: 3px;
   }
@@ -78,10 +78,10 @@
 
 @media (max-width: 480px) {
   .rectangularTable {
-    width: 90vw;
-    height: 90vh; /* МАКСИМУМ ДЛЯ МОБИЛЬНЫХ! */
-    min-width: 280px;
-    min-height: 600px;
+    width: 81vw; /* Уменьшено на 10% с 90vw до 81vw */
+    height: 81vh; /* Уменьшено на 10% с 90vh до 81vh */
+    min-width: 252px; /* Уменьшено на 10% с 280px до 252px */
+    min-height: 540px; /* Уменьшено на 10% с 600px до 540px */
     border-radius: 12px;
     border-width: 2px;
   }
@@ -671,7 +671,7 @@
   background: transparent;
   border: none;
   border-radius: 20px;
-  transform: translate(-50%, -50%);
+  transform: translate(-80px, -50%); /* ЛЕВЕЕ чтобы быть ближе к открытой карте */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1064,7 +1064,7 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  transform: translate(-150px, -50%); /* Дальше от колоды и игроков */
+  transform: translate(-40px, -50%); /* БЛИЖЕ к колоде и правее */
   z-index: 5; /* Ниже игроков */
   display: flex;
   flex-direction: column;
