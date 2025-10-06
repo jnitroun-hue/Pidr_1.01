@@ -155,16 +155,16 @@ export async function POST() {
     }
 
     // Удаляем сами комнаты
-    const { error: roomsError } = await supabase
+    const { error: deleteRoomsError } = await supabase
       .from('_pidr_rooms')
       .delete()
       .in('id', roomIds);
 
-    if (roomsError) {
-      console.error('❌ Ошибка удаления комнат:', roomsError);
+    if (deleteRoomsError) {
+      console.error('❌ Ошибка удаления комнат:', deleteRoomsError);
       return NextResponse.json({ 
         success: false, 
-        message: 'Ошибка удаления комнат: ' + roomsError.message 
+        message: 'Ошибка удаления комнат: ' + deleteRoomsError.message 
       }, { status: 500 });
     }
 
