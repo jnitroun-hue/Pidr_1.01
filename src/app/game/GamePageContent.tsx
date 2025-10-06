@@ -200,7 +200,7 @@ function GamePageContentComponent({
     players, currentPlayerId, deck, availableTargets,
     selectedHandCard, revealedDeckCard, tableStack, trumpSuit,
     oneCardDeclarations, oneCardTimers, playersWithOneCard, pendingPenalty,
-    gameCoins,
+    penaltyDeck, gameCoins,
     startGame, endGame, 
     drawCard, makeMove, onDeckClick, placeCardOnSelfByRules,
     selectHandCard, playSelectedCard, takeTableCards, showNotification,
@@ -1219,6 +1219,20 @@ function GamePageContentComponent({
                     />
                   )}
                   <div className={styles.deckCount}>{deck.length}</div>
+                </div>
+                
+                {/* НОВАЯ МЕХАНИКА: Штрафная стопка */}
+                <div className={styles.penaltyDeck}>
+                  {penaltyDeck.length > 0 && (
+                    <Image 
+                      src="/img/cards/back.png" 
+                      alt="penalty deck" 
+                      width={screenInfo.isVerySmallMobile ? 45 : screenInfo.isSmallMobile ? 52 : screenInfo.isMobile ? 60 : 70} 
+                      height={screenInfo.isVerySmallMobile ? 65 : screenInfo.isSmallMobile ? 75 : screenInfo.isMobile ? 87 : 102}
+                      className={styles.deckCard}
+                    />
+                  )}
+                  <div className={styles.deckCount}>{penaltyDeck.length}</div>
                 </div>
                 
                 {/* В 1-й стадии нет кнопки "Взять карту" - только клик по колоде */}

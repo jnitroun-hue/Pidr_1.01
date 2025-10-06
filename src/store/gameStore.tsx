@@ -61,6 +61,9 @@ interface GameState {
   playedCards: Card[]
   lastPlayedCard: Card | null
   
+  // НОВАЯ МЕХАНИКА: Стопка штрафных карт
+  penaltyDeck: Card[]
+  
   // Состояние для стадий игры P.I.D.R
   gameStage: 1 | 2 | 3 | 4 // 4 = завершение игры
   availableTargets: number[] // Индексы игроков, на которых можно положить карту
@@ -191,6 +194,10 @@ interface GameState {
   contributePenaltyCard: (contributorId: string, cardId: string) => void // Отдать карту за штраф
   cancelPenalty: () => void // Отменить штраф
   findWorstCardInHand: (cards: Card[], trumpSuit: string | null) => Card | null // Найти плохую карту
+  
+  // НОВЫЕ МЕТОДЫ ДЛЯ ШТРАФНОЙ СТОПКИ
+  addCardToPenaltyDeck: (card: Card) => void // Добавить карту в штрафную стопку
+  distributePenaltyCards: (targetPlayerId: string) => void // Раздать штрафные карты игроку
   // Новые методы для ботов
   calculateAdaptiveDelay: () => number // Вычисляет адаптивную задержку в зависимости от FPS
   scheduleBotAskHowManyCards: (targetPlayerId: string) => void // Планирует вопрос бота "сколько карт?"
@@ -268,6 +275,9 @@ export const useGameStore = create<GameState>()(
       deck: [...DEFAULT_CARDS],
       playedCards: [],
       lastPlayedCard: null,
+      
+      // НОВАЯ МЕХАНИКА: Стопка штрафных карт
+      penaltyDeck: [],
       
       // Состояние для стадий игры P.I.D.R
       gameStage: 1,
@@ -725,7 +735,8 @@ export const useGameStore = create<GameState>()(
           deck: [...DEFAULT_CARDS],
           playedCards: [],
           lastPlayedCard: null,
-          selectedCard: null
+          selectedCard: null,
+          penaltyDeck: []
         })
       },
       
@@ -765,6 +776,44 @@ export const useGameStore = create<GameState>()(
       removeCardFromDeck: (cardId) => {
         const { deck } = get()
         set({ deck: deck.filter(c => c.id !== cardId) })
+      },
+      
+      // НОВЫЕ МЕТОДЫ ДЛЯ ШТРАФНОЙ СТОПКИ
+      addCardToPenaltyDeck: (card) => {
+        const { penaltyDeck } = get();
+        console.log(`⚠️ [addCardToPenaltyDeck] Добавляем карту ${card.image} в штрафную стопку`);
+        set({ penaltyDeck: [...penaltyDeck, card] });
+      },
+      
+      distributePenaltyCards: (targetPlayerId) => {
+        const { penaltyDeck, players } = get();
+        if (penaltyDeck.length === 0) return;
+        
+        const targetPlayer = players.find(p => p.id === targetPlayerId);
+        if (!targetPlayer) return;
+        
+        console.log(`⚠️ [distributePenaltyCards] Раздаем ${penaltyDeck.length} штрафных карт игроку ${targetPlayer.name}`);
+        
+        const newPlayers = players.map(player => {
+          if (player.id === targetPlayerId) {
+            // Добавляем все штрафные карты в руку (в закрытом виде)
+            const newCards = [...player.cards, ...penaltyDeck.map(card => ({ ...card, open: false }))];
+            return { ...player, cards: newCards };
+          }
+          return player;
+        });
+        
+        // Очищаем штрафную стопку и обновляем игроков
+        set({ 
+          penaltyDeck: [],
+          players: newPlayers 
+        });
+        
+        get().showNotification(
+          `⚠️ ${targetPlayer.name} получил ${penaltyDeck.length} штрафных карт!`, 
+          'warning', 
+          3000
+        );
       },
       
       // Управление игроками
@@ -2125,33 +2174,36 @@ export const useGameStore = create<GameState>()(
             
             set({ players: updatedPlayers });
             
-            // Объявляем каждого нового победителя
+            // Объявляем каждого нового победителя НЕМЕДЛЕННО
             newWinners.forEach((winner, index) => {
-              setTimeout(() => {
-                console.log(`🎉 ОБЪЯВЛЯЕМ ПОБЕДИТЕЛЯ: ${winner.name}`);
-                get().showNotification(
-                  `🎉 ${winner.name} ПОБЕДИЛ! (0 карт)`, 
-                  'success', 
-                  4000
-                );
-                
-                // Если это пользователь - показываем модальное окно
-                if (winner.isUser) {
-                  setTimeout(() => {
-                    set({
-                      showVictoryModal: true,
-                      victoryData: {
-                        position: existingWinners.length + index + 1, // Место среди победителей
-                        isWinner: true,
-                        playerName: winner.name,
-                        gameMode: get().gameMode,
-                        ratingChange: 50,
-                        rewardsEarned: 100
-                      }
-                    });
-                  }, 1000);
-                }
-              }, index * 1500); // Задержка между объявлениями
+              const position = existingWinners.length + index + 1;
+              const positionText = position === 1 ? '1-е место' : position === 2 ? '2-е место' : position === 3 ? '3-е место' : `${position}-е место`;
+              
+              console.log(`🎉 ОБЪЯВЛЯЕМ ПОБЕДИТЕЛЯ: ${winner.name} - ${positionText}`);
+              
+              // НЕМЕДЛЕННО показываем уведомление
+              get().showNotification(
+                `🏆 ${winner.name} - ${positionText}!`, 
+                'success', 
+                5000
+              );
+              
+              // Если это пользователь - показываем модальное окно
+              if (winner.isUser) {
+                setTimeout(() => {
+                  set({
+                    showVictoryModal: true,
+                    victoryData: {
+                      position: position,
+                      isWinner: true,
+                      playerName: winner.name,
+                      gameMode: get().gameMode,
+                      ratingChange: 50,
+                      rewardsEarned: 100
+                    }
+                  });
+                }, 500);
+              }
             });
           }
           
@@ -2248,7 +2300,7 @@ export const useGameStore = create<GameState>()(
                  
                  // ===== ИСПРАВЛЕНО: БОТЫ АВТОМАТИЧЕСКИ ОБЪЯВЛЯЮТ И СПРАШИВАЮТ =====
                  if (player.isBot) {
-                   // БОТ АВТОМАТИЧЕСКИ ОБЪЯВЛЯЕТ "ОДНА КАРТА!" через 2 секунды
+                   // БОТ АВТОМАТИЧЕСКИ ОБЪЯВЛЯЕТ "ОДНА КАРТА!" через 1.5 секунды
                    setTimeout(() => {
                      const { oneCardDeclarations } = get();
                      if (!oneCardDeclarations[player.id]) {
@@ -2257,9 +2309,9 @@ export const useGameStore = create<GameState>()(
                        
                        setTimeout(() => {
                          get().declareOneCard(player.id);
-                       }, 500);
+                       }, 1500); // Увеличено до 1.5 секунды
                      }
-                   }, 2000); // Боты объявляют быстрее
+                   }, 1500); // Увеличено до 1.5 секунды
                  } else {
                    // Для человека - планируем вопрос ботов
                    get().scheduleBotAskHowManyCards(player.id);
@@ -2276,17 +2328,17 @@ export const useGameStore = create<GameState>()(
                        if (otherPlayer.id !== bot.id) {
                          const otherOpenCards = otherPlayer.cards.filter(c => c.open);
                          if (otherOpenCards.length === 1 && !get().oneCardDeclarations[otherPlayer.id]) {
-                           // Бот спрашивает с задержкой
+                           // Бот спрашивает с задержкой 1.5 секунды
                            setTimeout(() => {
                              console.log(`🤖 [checkOneCardStatus] Бот ${bot.name} спрашивает у ${otherPlayer.name}: "Сколько карт?"`);
                              get().showNotification(`🤖 ${bot.name}: "Сколько карт у ${otherPlayer.name}?"`, 'info', 3000);
                              get().askHowManyCards(bot.id, otherPlayer.id);
-                           }, Math.random() * 3000 + 1000); // Случайная задержка 1-4 секунды
+                           }, 1500); // Фиксированная задержка 1.5 секунды для сложности
                          }
                        }
                      });
                    });
-                 }, 4000); // Боты спрашивают через 4 секунды
+                 }, 1500); // Боты начинают проверки через 1.5 секунды
                }
              } else {
                // ПРАВИЛЬНО: У игрока больше или меньше 1 ОТКРЫТОЙ карты - сбрасываем объявление и таймер
@@ -2448,30 +2500,36 @@ export const useGameStore = create<GameState>()(
              return;
            }
            
-           console.log(`💸 [contributePenaltyCard] ${contributor.name} отдает карту ${card.image} игроку ${targetPlayer.name}`);
-           console.log(`💸 [contributePenaltyCard] ДО: ${targetPlayer.name} имеет ${targetPlayer.cards.length} карт (${targetPlayer.cards.filter(c => c.open).length} открытых)`);
+           console.log(`💸 [contributePenaltyCard] ${contributor.name} отдает карту ${card.image} в штрафную стопку для ${targetPlayer.name}`);
            
            // Создаем новое состояние
            const newPlayers = players.map(player => ({ ...player, cards: [...player.cards] }));
            const contributorIndex = newPlayers.findIndex(p => p.id === contributorId);
-           const targetIndex = newPlayers.findIndex(p => p.id === pendingPenalty.targetPlayerId);
            
            // Убираем карту у отдающего
            newPlayers[contributorIndex].cards.splice(cardIndex, 1);
            
-           // ПРАВИЛЬНО: Штрафные карты передаются в ЗАКРЫТОМ виде! В руке штрафуемого они станут открытыми.
+           // НОВАЯ МЕХАНИКА: Добавляем карту в штрафную стопку
            const penaltyCard = { ...card, open: false };
-           newPlayers[targetIndex].cards.push(penaltyCard);
+           get().addCardToPenaltyDeck(penaltyCard);
            
-           // ВАЖНО: После добавления штрафной карты, открываем ВСЕ карты в руке штрафуемого
-           newPlayers[targetIndex].cards.forEach(c => {
-             if (!c.open) {
-               c.open = true; // Все карты в руке становятся открытыми
-             }
-           });
-           
-           console.log(`💸 [contributePenaltyCard] ПОСЛЕ: ${newPlayers[targetIndex].name} имеет ${newPlayers[targetIndex].cards.length} карт (${newPlayers[targetIndex].cards.filter(c => c.open).length} открытых)`);
-           console.log(`💸 [contributePenaltyCard] Добавленная карта: ${penaltyCard.image} (open: ${penaltyCard.open})`);
+           // НОВОЕ ПРАВИЛО: Если у отдающего осталась 1 карта - он должен объявить "одна карта!"
+           if (newPlayers[contributorIndex].cards.filter(c => c.open).length === 1) {
+             console.log(`🃏 [contributePenaltyCard] У ${contributor.name} осталась 1 открытая карта - нужно объявить!`);
+             setTimeout(() => {
+               if (contributor.isBot) {
+                 // Бот автоматически объявляет через 1.5 секунды
+                 get().showNotification(`🤖 ${contributor.name}: "ОДНА КАРТА!"`, 'info', 3000);
+                 setTimeout(() => {
+                   get().declareOneCard(contributorId);
+                 }, 1500); // Увеличено до 1.5 секунды
+               } else {
+                 // Для пользователя - НЕ АВТОМАТИЧЕСКИ! Только планируем проверку ботами
+                 console.log(`👤 [contributePenaltyCard] Пользователь ${contributor.name} должен сам объявить "одна карта!"`);
+                 // Боты будут спрашивать через checkOneCardStatus
+               }
+             }, 1000);
+           }
            
            // Убираем игрока из списка ожидающих
            const newContributorsNeeded = pendingPenalty.contributorsNeeded.filter(id => id !== contributorId);
@@ -2482,6 +2540,12 @@ export const useGameStore = create<GameState>()(
                ...pendingPenalty,
                contributorsNeeded: newContributorsNeeded
              };
+           } else {
+             // ВСЕ КАРТЫ СОБРАНЫ - раздаем штрафные карты из стопки
+             console.log(`⚠️ [contributePenaltyCard] Все штрафные карты собраны - раздаем игроку ${targetPlayer.name}`);
+             setTimeout(() => {
+               get().distributePenaltyCards(pendingPenalty.targetPlayerId);
+             }, 500);
            }
            
            // Обновляем состояние с принудительным обновлением
