@@ -52,12 +52,13 @@ export async function POST() {
   try {
     console.log('🗑️ [POST /api/admin/cleanup-inactive-rooms] Удаление неактивных комнат...');
 
-    // Находим комнаты в статусе 'waiting' старше 10 минут
+    // Находим комнаты в статусе 'waiting' старше 30 минут (увеличено время)
     const { data: inactiveRooms, error: findError } = await supabase
       .from('_pidr_rooms')
-      .select('id, room_code, name, created_at')
+      .select('id, room_code, name, created_at, current_players')
       .eq('status', 'waiting')
-      .lt('created_at', new Date(Date.now() - 10 * 60 * 1000).toISOString());
+      .lt('created_at', new Date(Date.now() - 30 * 60 * 1000).toISOString()) // 30 минут
+      .eq('current_players', 0); // Только пустые комнаты
 
     if (findError) {
       console.error('❌ Ошибка поиска неактивных комнат:', findError);

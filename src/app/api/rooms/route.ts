@@ -119,19 +119,28 @@ export async function POST(req: NextRequest) {
         }, { status: 400 });
       }
 
-      // СОЗДАЕМ КОМНАТУ БЕЗ ЛИШНИХ ПОЛЕЙ
+      // СОЗДАЕМ КОМНАТУ С ПОЛНЫМИ НАСТРОЙКАМИ
       const roomCode = generateRoomCode();
+      const roomSettings = {
+        gameMode: gameMode || 'casual',
+        isRanked: gameMode === 'ranked',
+        allowBots: true,
+        maxPlayers: maxPlayers || 6,
+        hasPassword: hasPassword || false
+      };
+
       const { data: room, error: roomError } = await supabase
         .from('_pidr_rooms')
         .insert({
           room_code: roomCode,
           name: name || 'Новая комната',
           host_id: userId,
-          max_players: maxPlayers || 6, // ДЕФОЛТ 6, НО ДОЛЖНО ПРИХОДИТЬ ОТ КЛИЕНТА
+          max_players: maxPlayers || 6,
           current_players: 0, // Начинаем с 0, потом добавим хоста
           status: 'waiting',
           is_private: isPrivate || false,
           password: hasPassword ? password : null,
+          settings: roomSettings, // СОХРАНЯЕМ НАСТРОЙКИ
           created_at: new Date().toISOString()
         })
         .select()
@@ -215,6 +224,19 @@ export async function POST(req: NextRequest) {
 
       if (roomError || !room) {
         return NextResponse.json({ success: false, message: 'Комната не найдена' }, { status: 404 });
+      }
+
+      // УДАЛЯЕМ ИГРОКА ИЗ ВСЕХ ДРУГИХ КОМНАТ (предотвращаем дублирование)
+      const { error: cleanupError } = await supabase
+        .from('_pidr_room_players')
+        .delete()
+        .eq('user_id', userId)
+        .neq('room_id', room.id);
+
+      if (cleanupError) {
+        console.error('⚠️ Предупреждение: не удалось очистить старые комнаты:', cleanupError);
+      } else {
+        console.log('🧹 Игрок удален из других комнат');
       }
 
       // ПРОВЕРЯЕМ СУЩЕСТВУЕТ ЛИ УЖЕ ИГРОК В КОМНАТЕ
