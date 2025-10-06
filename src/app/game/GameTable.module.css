@@ -671,7 +671,7 @@
   background: transparent;
   border: none;
   border-radius: 20px;
-  transform: translate(-80px, -50%); /* ЛЕВЕЕ чтобы быть ближе к открытой карте */
+  transform: translate(-40px, -50%); /* ПРАВЕЕ - колода справа от открытой карты */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1064,7 +1064,7 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  transform: translate(-40px, -50%); /* БЛИЖЕ к колоде и правее */
+  transform: translate(-120px, -50%); /* ЛЕВЕЕ - открытая карта слева */
   z-index: 5; /* Ниже игроков */
   display: flex;
   flex-direction: column;
