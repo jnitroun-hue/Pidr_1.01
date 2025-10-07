@@ -1,60 +1,193 @@
+/**
+ * ============================================================
+ * ROOM PLAYERS API
+ * ============================================================
+ * API для получения списка игроков в комнате
+ * Использует Redis для real-time данных + PostgreSQL для детальной информации
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
-import { requireAuth } from '@/lib/auth-utils';
+import { supabase } from '../../../../../lib/supabase';
+import { getRoomPlayers, getRoomDetails } from '../../../../../lib/multiplayer/player-state-manager';
 
-// GET /api/rooms/[roomId]/players - получить всех игроков в комнате
-export async function GET(req: NextRequest, { params }: { params: { roomId: string } }) {
+interface RouteParams {
+  params: {
+    roomId: string;
+  };
+}
+
+/**
+ * GET /api/rooms/[roomId]/players
+ * Получить список всех игроков в комнате
+ */
+export async function GET(
+  req: NextRequest,
+  { params }: RouteParams
+) {
   try {
-    const auth = requireAuth(req);
-    if (auth.error) {
-      return NextResponse.json({ success: false, message: auth.error }, { status: 401 });
-    }
-
     const { roomId } = params;
     
     if (!roomId) {
-      return NextResponse.json({ success: false, message: 'Room ID required' }, { status: 400 });
+      return NextResponse.json({
+        success: false,
+        message: 'Room ID обязателен'
+      }, { status: 400 });
     }
-
-    console.log(`🔍 [GET /api/rooms/${roomId}/players] Загружаем игроков комнаты`);
-
-    // УПРОЩЕННЫЙ ЗАПРОС: Получаем игроков без JOIN
+    
+    console.log(`📋 [GET PLAYERS] Загрузка игроков для комнаты ${roomId}`);
+    
+    // 1. ПОЛУЧАЕМ ДЕТАЛИ ИЗ REDIS
+    const roomDetails = await getRoomDetails(roomId);
+    
+    if (!roomDetails) {
+      console.warn(`⚠️ [GET PLAYERS] Комната ${roomId} не найдена в Redis`);
+      // Fallback к БД
+      return await getPlayersFromDatabase(roomId);
+    }
+    
+    const { players: playerIds, slots } = roomDetails;
+    
+    console.log(`📊 [GET PLAYERS] Найдено ${playerIds.length} игроков в Redis`);
+    
+    // 2. ПОЛУЧАЕМ ДЕТАЛЬНУЮ ИНФОРМАЦИЮ ИЗ БД
+    if (playerIds.length === 0) {
+      return NextResponse.json({
+        success: true,
+        players: [],
+        count: 0
+      });
+    }
+    
     const { data: players, error } = await supabase
       .from('_pidr_room_players')
-      .select('user_id, username, position, is_ready, joined_at')
+      .select(`
+        user_id,
+        username,
+        position,
+        is_host,
+        is_ready,
+        is_bot,
+        joined_at,
+        _pidr_users!inner(
+          avatar_url,
+          rating,
+          games_won,
+          games_played
+        )
+      `)
       .eq('room_id', roomId)
+      .in('user_id', playerIds)
       .order('position', { ascending: true });
-
+    
     if (error) {
-      console.error('❌ Ошибка загрузки игроков:', error);
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Ошибка загрузки игроков: ' + error.message 
+      console.error(`❌ [GET PLAYERS] Ошибка загрузки из БД:`, error);
+      return NextResponse.json({
+        success: false,
+        message: 'Ошибка загрузки игроков: ' + error.message
       }, { status: 500 });
     }
-
-    // Форматируем данные игроков (упрощенно)
-    const formattedPlayers = players.map((player: any) => ({
-      user_id: player.user_id,
-      username: player.username || 'Игрок',
-      position: player.position,
-      is_ready: player.is_ready,
-      joined_at: player.joined_at,
-      avatar_url: null // Пока без аватаров
-    }));
-
-    console.log(`✅ [GET /api/rooms/${roomId}/players] Найдено ${formattedPlayers.length} игроков`);
-
+    
+    // 3. ФОРМИРУЕМ ОТВЕТ
+    const enrichedPlayers = (players || []).map((player: any) => {
+      const userData = Array.isArray(player._pidr_users) 
+        ? player._pidr_users[0] 
+        : player._pidr_users;
+      
+      return {
+        user_id: player.user_id,
+        username: player.username,
+        position: player.position,
+        is_host: player.is_host,
+        is_ready: player.is_ready,
+        is_bot: player.is_bot,
+        joined_at: player.joined_at,
+        avatar_url: userData?.avatar_url || null,
+        rating: userData?.rating || 0,
+        games_won: userData?.games_won || 0,
+        games_played: userData?.games_played || 0,
+        // Добавляем информацию из Redis
+        in_redis: playerIds.includes(player.user_id),
+        redis_position: Object.entries(slots).find(([pos, uid]) => uid === player.user_id)?.[0] || null
+      };
+    });
+    
+    console.log(`✅ [GET PLAYERS] Загружено ${enrichedPlayers.length} игроков`);
+    
     return NextResponse.json({
       success: true,
-      players: formattedPlayers
+      players: enrichedPlayers,
+      count: enrichedPlayers.length,
+      redis_count: playerIds.length
     });
-
+    
   } catch (error: any) {
-    console.error('❌ Room players GET error:', error);
-    return NextResponse.json({ 
-      success: false, 
-      message: 'Ошибка сервера: ' + (error?.message || 'Неизвестная ошибка')
+    console.error('❌ [GET PLAYERS] Ошибка:', error);
+    return NextResponse.json({
+      success: false,
+      message: 'Internal server error: ' + error.message
     }, { status: 500 });
   }
+}
+
+/**
+ * Fallback: Получить игроков только из БД
+ */
+async function getPlayersFromDatabase(roomId: string) {
+  console.log(`📦 [GET PLAYERS] Fallback к БД для комнаты ${roomId}`);
+  
+  const { data: players, error } = await supabase
+    .from('_pidr_room_players')
+    .select(`
+      user_id,
+      username,
+      position,
+      is_host,
+      is_ready,
+      is_bot,
+      joined_at,
+      _pidr_users!inner(
+        avatar_url,
+        rating,
+        games_won,
+        games_played
+      )
+    `)
+    .eq('room_id', roomId)
+    .order('position', { ascending: true });
+  
+  if (error) {
+    return NextResponse.json({
+      success: false,
+      message: 'Ошибка загрузки игроков: ' + error.message
+    }, { status: 500 });
+  }
+  
+  const enrichedPlayers = (players || []).map((player: any) => {
+    const userData = Array.isArray(player._pidr_users) 
+      ? player._pidr_users[0] 
+      : player._pidr_users;
+    
+    return {
+      user_id: player.user_id,
+      username: player.username,
+      position: player.position,
+      is_host: player.is_host,
+      is_ready: player.is_ready,
+      is_bot: player.is_bot,
+      joined_at: player.joined_at,
+      avatar_url: userData?.avatar_url || null,
+      rating: userData?.rating || 0,
+      games_won: userData?.games_won || 0,
+      games_played: userData?.games_played || 0,
+      in_redis: false,
+      redis_position: null
+    };
+  });
+  
+  return NextResponse.json({
+    success: true,
+    players: enrichedPlayers,
+    count: enrichedPlayers.length,
+    source: 'database_only'
+  });
 }

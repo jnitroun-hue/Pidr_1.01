@@ -61,6 +61,8 @@ export const ProperMultiplayer: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [currentRoom, setCurrentRoom] = useState<RoomData | null>(null);
+  const [currentRoomId, setCurrentRoomId] = useState<string | null>(null); // Для отслеживания текущей комнаты
+  const [playerPosition, setPlayerPosition] = useState<number | null>(null); // Позиция игрока
 
   // Форма создания комнаты
   const [roomName, setRoomName] = useState('');
@@ -200,6 +202,10 @@ export const ProperMultiplayer: React.FC = () => {
            }
          };
 
+        // Сохраняем ID комнаты и позицию
+        setCurrentRoomId(data.room.id);
+        setPlayerPosition(data.room.position || 1); // Хост всегда позиция 1
+
         setCurrentRoom(roomData);
         setView('waiting');
       } else {
@@ -208,7 +214,14 @@ export const ProperMultiplayer: React.FC = () => {
       }
     } catch (error: any) {
       console.error('❌ Ошибка создания комнаты:', error);
-      setError(error.message || 'Не удалось создать комнату');
+      
+      // Специальная обработка ошибки "уже в комнате"
+      if (error.message && error.message.includes('уже есть активная комната')) {
+        setError(error.message + ' Хотите выйти из неё?');
+        // Можно добавить кнопку для выхода
+      } else {
+        setError(error.message || 'Не удалось создать комнату');
+      }
     } finally {
       setLoading(false);
     }
@@ -242,6 +255,10 @@ export const ProperMultiplayer: React.FC = () => {
       if (response.ok) {
         const result = await response.json();
         console.log('✅ Присоединились к комнате:', result.room);
+        
+        // Сохраняем ID комнаты и позицию
+        setCurrentRoomId(result.room.id);
+        setPlayerPosition(result.room.position);
 
         // ЗАГРУЖАЕМ ВСЕХ ИГРОКОВ В КОМНАТЕ
         const playersResponse = await fetch(`/api/rooms/${result.room.id}/players`, {
@@ -304,7 +321,16 @@ export const ProperMultiplayer: React.FC = () => {
       }
     } catch (error: any) {
       console.error('❌ Ошибка присоединения к комнате:', error);
-      setError(error.message || 'Не удалось присоединиться к комнате');
+      
+      // Специальная обработка ошибок
+      if (error.message && error.message.includes('уже находитесь в другой комнате')) {
+        setError(error.message + ' Нажмите "Выйти из текущей комнаты" ниже.');
+        // Можно показать кнопку выхода из текущей комнаты
+      } else if (error.message && error.message.includes('нет свободных мест')) {
+        setError('❌ Комната заполнена. Попробуйте другую комнату.');
+      } else {
+        setError(error.message || 'Не удалось присоединиться к комнате');
+      }
     } finally {
       setLoading(false);
     }
@@ -339,9 +365,38 @@ export const ProperMultiplayer: React.FC = () => {
       console.error('❌ Ошибка API выхода:', error);
     } finally {
       setLoading(false);
-      // В любом случае возвращаемся в лобби
+      // Очищаем состояние
       setCurrentRoom(null);
+      setCurrentRoomId(null);
+      setPlayerPosition(null);
       setView('lobby');
+    }
+  };
+  
+  // Функция для быстрого выхода из текущей комнаты
+  const handleForceLeave = async () => {
+    if (!currentRoomId) return;
+    
+    setLoading(true);
+    try {
+      await fetch('/api/rooms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          action: 'leave',
+          roomId: currentRoomId
+        })
+      });
+      
+      setCurrentRoomId(null);
+      setPlayerPosition(null);
+      setError('');
+      console.log('✅ Вышли из текущей комнаты');
+    } catch (error) {
+      console.error('❌ Ошибка выхода:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -385,6 +440,30 @@ export const ProperMultiplayer: React.FC = () => {
       {error && (
         <div className={styles.error}>
           ❌ {error}
+          {error.includes('уже находитесь в другой комнате') && currentRoomId && (
+            <button 
+              className={`${styles.button} ${styles.secondary}`}
+              onClick={handleForceLeave}
+              disabled={loading}
+              style={{ marginTop: '10px', width: '100%' }}
+            >
+              🚪 Выйти из текущей комнаты
+            </button>
+          )}
+        </div>
+      )}
+      
+      {playerPosition && (
+        <div className={styles.info} style={{ 
+          background: 'rgba(76, 175, 80, 0.1)', 
+          padding: '12px', 
+          borderRadius: '8px',
+          marginBottom: '15px',
+          textAlign: 'center',
+          color: '#4CAF50'
+        }}>
+          🎯 Ваша позиция: <strong>{playerPosition}</strong>
+          {playerPosition === 1 && ' 👑 (Хост)'}
         </div>
       )}
 
