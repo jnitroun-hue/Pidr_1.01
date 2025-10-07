@@ -1193,47 +1193,59 @@ function GamePageContentComponent({
                 </div>
               )}
 
-              {/* Колода и кнопка добора */}
-              <div className={styles.dropZone}>
-                <div 
-                  className={styles.deckStack}
-                  onClick={() => {
-                    if (canClickDeck) {
-                      onDeckClick();
-                    } else if (canDrawCard) {
-                      drawCard();
-                    }
-                  }}
-                  style={{
-                    cursor: (canDrawCard || canClickDeck) ? 'pointer' : 'default',
-                    opacity: (canDrawCard || canClickDeck) ? 1 : 0.7
-                  }}
-                >
-                  {deck.length > 0 && (
-                    <Image 
-                      src="/img/cards/back.png" 
-                      alt="deck" 
-                      width={screenInfo.isVerySmallMobile ? 45 : screenInfo.isSmallMobile ? 52 : screenInfo.isMobile ? 60 : 70} 
-                      height={screenInfo.isVerySmallMobile ? 65 : screenInfo.isSmallMobile ? 75 : screenInfo.isMobile ? 87 : 102}
-                      className={styles.deckCard}
-                    />
-                  )}
+              {/* Колода и кнопка добора - показываем только если есть карты или можно взаимодействовать */}
+              {(deck.length > 0 || canClickDeck || canDrawCard) && (
+                <div className={styles.dropZone}>
+                  <div 
+                    className={styles.deckStack}
+                    onClick={() => {
+                      if (canClickDeck) {
+                        onDeckClick();
+                      } else if (canDrawCard) {
+                        drawCard();
+                      }
+                    }}
+                    style={{
+                      cursor: (canDrawCard || canClickDeck) ? 'pointer' : 'default',
+                      opacity: (canDrawCard || canClickDeck) ? 1 : 0.7
+                    }}
+                  >
+                    {deck.length > 0 && (
+                      <Image 
+                        src="/img/cards/back.png" 
+                        alt="deck" 
+                        width={screenInfo.isVerySmallMobile ? 45 : screenInfo.isSmallMobile ? 52 : screenInfo.isMobile ? 60 : 70} 
+                        height={screenInfo.isVerySmallMobile ? 65 : screenInfo.isSmallMobile ? 75 : screenInfo.isMobile ? 87 : 102}
+                        className={styles.deckCard}
+                      />
+                    )}
+                    <div className={styles.deckCount}>{deck.length}</div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Если колода пустая, показываем только счетчик */}
+              {deck.length === 0 && !canClickDeck && !canDrawCard && (
+                <div className={styles.emptyDeckCounter}>
                   <div className={styles.deckCount}>{deck.length}</div>
                 </div>
+              )}
                 
-                {/* НОВАЯ МЕХАНИКА: Штрафная стопка */}
-                <div className={styles.penaltyDeck}>
-                  {penaltyDeck.length > 0 && (
-                    <Image 
-                      src="/img/cards/back.png" 
-                      alt="penalty deck" 
-                      width={screenInfo.isVerySmallMobile ? 45 : screenInfo.isSmallMobile ? 52 : screenInfo.isMobile ? 60 : 70} 
-                      height={screenInfo.isVerySmallMobile ? 65 : screenInfo.isSmallMobile ? 75 : screenInfo.isMobile ? 87 : 102}
-                      className={styles.deckCard}
-                    />
-                  )}
-                  <div className={styles.deckCount}>{penaltyDeck.length}</div>
-                </div>
+                {/* НОВАЯ МЕХАНИКА: Штрафная стопка (только со 2-й стадии) */}
+                {gameStage >= 2 && (
+                  <div className={styles.penaltyDeck}>
+                    {penaltyDeck.length > 0 && (
+                      <Image 
+                        src="/img/cards/back.png" 
+                        alt="penalty deck" 
+                        width={screenInfo.isVerySmallMobile ? 45 : screenInfo.isSmallMobile ? 52 : screenInfo.isMobile ? 60 : 70} 
+                        height={screenInfo.isVerySmallMobile ? 65 : screenInfo.isSmallMobile ? 75 : screenInfo.isMobile ? 87 : 102}
+                        className={styles.deckCard}
+                      />
+                    )}
+                    <div className={styles.deckCount}>{penaltyDeck.length}</div>
+                  </div>
+                )}
                 
                 {/* В 1-й стадии нет кнопки "Взять карту" - только клик по колоде */}
                 {canDrawCard && gameStage > 1 && (
@@ -1710,32 +1722,20 @@ function GamePageContentComponent({
                           </div>
                         )}
                         
-                        {/* Индикация активного штрафа */}
-                        {pendingPenalty && humanPlayer && (
+                        {/* Индикация активного штрафа - только для игроков которые должны отдать карту */}
+                        {pendingPenalty && humanPlayer && pendingPenalty.contributorsNeeded.includes(humanPlayer.id) && (
                           <div className={styles.cardCountButtonsContainer}>
-                            {pendingPenalty.contributorsNeeded.includes(humanPlayer.id) ? (
-                              <div 
-                                className={styles.cardCountButton}
-                                style={{ 
-                                  background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                                  animation: 'pulse 1s infinite',
-                                  border: '2px solid #ffd700',
-                                  cursor: 'default'
-                                }}
-                              >
-                                💸 Выберите карту для штрафа!
-                              </div>
-                            ) : (
-                              <div 
-                                className={styles.cardCountButton}
-                                style={{ 
-                                  background: 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)',
-                                  cursor: 'default'
-                                }}
-                              >
-                                ⏳ Ждем других игроков...
-                              </div>
-                            )}
+                            <div 
+                              className={styles.cardCountButton}
+                              style={{ 
+                                background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                                animation: 'pulse 1s infinite',
+                                border: '2px solid #ffd700',
+                                cursor: 'default'
+                              }}
+                            >
+                              💸 Выберите карту для штрафа!
+                            </div>
                           </div>
                         )}
                       </>

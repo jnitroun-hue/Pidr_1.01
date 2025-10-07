@@ -2486,6 +2486,12 @@ export const useGameStore = create<GameState>()(
            const { players, pendingPenalty } = get();
            if (!pendingPenalty) return;
            
+           // ЗАЩИТА: Проверяем что игрок еще в списке ожидающих (не отдал карту)
+           if (!pendingPenalty.contributorsNeeded.includes(contributorId)) {
+             console.log(`⚠️ [contributePenaltyCard] Игрок ${contributorId} уже отдал карту или не должен участвовать в штрафе`);
+             return;
+           }
+           
            const contributor = players.find(p => p.id === contributorId);
            const targetPlayer = players.find(p => p.id === pendingPenalty.targetPlayerId);
            if (!contributor || !targetPlayer) return;
