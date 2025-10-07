@@ -26,6 +26,12 @@ export class TonPaymentService {
     this.apiKey = process.env.TONCENTER_API_KEY || '';
     this.masterAddress = process.env.MASTER_TON_ADDRESS || '';
     
+    // Нормализуем адрес (конвертируем UQ в EQ если нужно)
+    if (this.masterAddress.startsWith('UQ')) {
+      this.masterAddress = 'EQ' + this.masterAddress.substring(2);
+      console.log('✅ Конвертирован UQ адрес в EQ:', this.masterAddress);
+    }
+    
     if (!this.apiKey) {
       console.warn('⚠️ TONCENTER_API_KEY не настроен');
     }
