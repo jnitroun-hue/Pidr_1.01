@@ -1,9 +1,12 @@
 'use client';
 
 import { Suspense } from 'react';
+import dynamic from 'next/dynamic';
 
-function GamePageContentFallback() {
-  return (
+// Динамический импорт игрового компонента
+const GamePageContent = dynamic(() => import('./GamePageContent'), {
+  ssr: false,
+  loading: () => (
     <div style={{
       display: 'flex',
       alignItems: 'center',
@@ -15,14 +18,14 @@ function GamePageContentFallback() {
     }}>
       <div style={{ textAlign: 'center' }}>
         <div style={{ fontSize: '32px', marginBottom: '16px' }}>🎮</div>
-        <div style={{ fontSize: '18px', fontWeight: '600' }}>Игра временно недоступна</div>
+        <div style={{ fontSize: '18px', fontWeight: '600' }}>Загрузка игры...</div>
         <div style={{ fontSize: '14px', opacity: 0.7, marginTop: '8px' }}>
-          Мы обновляем игровой движок. Мультиплеер уже работает.
+          Подготавливаем карты для Telegram WebApp
         </div>
       </div>
     </div>
-  );
-}
+  )
+});
 
 export default function GamePage() {
   return (
@@ -45,7 +48,7 @@ export default function GamePage() {
         </div>
       </div>
     }>
-      <GamePageContentFallback />
+      <GamePageContent />
     </Suspense>
   );
 } 
