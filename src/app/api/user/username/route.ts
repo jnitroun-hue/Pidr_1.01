@@ -11,35 +11,60 @@ import { verify } from 'jsonwebtoken';
 
 export async function PATCH(req: NextRequest) {
   try {
-    const token = req.cookies.get('auth-token')?.value;
+    // Проверяем все возможные источники токена
+    let token = req.cookies.get('auth_token')?.value; // HTTP-only cookie (основной)
     
     if (!token) {
+      token = req.cookies.get('auth-token')?.value; // Fallback старое имя
+    }
+    
+    if (!token) {
+      const authHeader = req.headers.get('authorization');
+      if (authHeader?.startsWith('Bearer ')) {
+        token = authHeader.replace('Bearer ', '');
+      }
+    }
+    
+    if (!token) {
+      console.error('❌ Токен не найден ни в cookies, ни в headers');
       return NextResponse.json({ 
         success: false, 
-        message: 'Не авторизован' 
+        message: 'Не авторизован - токен отсутствует' 
       }, { status: 401 });
     }
 
     // Проверяем токен
     const JWT_SECRET = process.env.JWT_SECRET || '';
+    if (!JWT_SECRET) {
+      console.error('❌ JWT_SECRET не настроен на сервере');
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Ошибка конфигурации сервера' 
+      }, { status: 500 });
+    }
+    
     let decoded: any;
     
     try {
       decoded = verify(token, JWT_SECRET);
-    } catch (error) {
+    } catch (error: any) {
+      console.error('❌ Ошибка проверки токена:', error.message);
       return NextResponse.json({ 
         success: false, 
-        message: 'Невалидный токен' 
+        message: 'Невалидный токен - ' + error.message 
       }, { status: 401 });
     }
 
     const userId = decoded.userId;
     if (!userId) {
+      console.error('❌ userId отсутствует в токене');
       return NextResponse.json({ 
         success: false, 
-        message: 'User ID не найден' 
+        message: 'User ID не найден в токене' 
       }, { status: 400 });
     }
+    
+    console.log('✅ Пользователь авторизован для изменения имени:', userId);
 
     // Получаем новое имя из body
     const body = await req.json();
