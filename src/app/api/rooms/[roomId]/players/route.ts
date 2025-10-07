@@ -29,7 +29,7 @@ export async function GET(
     // 1) Пытаемся получить игроков комнаты из БД (без join)
     const { data: dbPlayers, error: playersError } = await supabase
       .from('_pidr_room_players')
-      .select('user_id, username, position, is_host, is_ready, is_bot, joined_at')
+      .select('user_id, username, position, is_host, is_ready, is_bot, joined_at, avatar_url')
       .eq('room_id', roomId)
       .order('position', { ascending: true });
 
@@ -63,7 +63,7 @@ export async function GET(
       redisSlots = details?.slots || {};
     } catch (_) {}
 
-    const enrichedPlayers = players.map((p: { user_id: string; username: string; position: number; is_host: boolean; is_ready: boolean; is_bot: boolean; joined_at: string }) => {
+    const enrichedPlayers = players.map((p: { user_id: string; username: string; position: number; is_host: boolean; is_ready: boolean; is_bot: boolean; joined_at: string; avatar_url?: string | null }) => {
       const profile = usersMap[p.user_id] || {};
       const redisPosition = Object.entries(redisSlots).find(([, uid]) => uid === p.user_id)?.[0] || null;
       return {
@@ -74,7 +74,8 @@ export async function GET(
         is_ready: p.is_ready,
         is_bot: p.is_bot,
         joined_at: p.joined_at,
-        avatar_url: profile.avatar_url || null,
+        // Приоритет: avatar_url из room_players (для ботов), затем из users (для реальных игроков)
+        avatar_url: p.avatar_url || profile.avatar_url || null,
         rating: profile.rating || 0,
         games_won: profile.games_won || 0,
         games_played: profile.games_played || 0,
