@@ -305,6 +305,35 @@ export default function ProfilePage() {
     }
   ]);
 
+  // ✏️ ОБРАБОТКА ИЗМЕНЕНИЯ ИМЕНИ
+  const handleUsernameChange = async (newUsername: string) => {
+    try {
+      console.log('✏️ Обновление имени пользователя:', newUsername);
+
+      const response = await fetch('/api/user/username', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ username: newUsername })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Ошибка обновления имени');
+      }
+
+      if (result.success) {
+        console.log('✅ Имя успешно обновлено');
+        setUser((prev: any) => prev ? { ...prev, username: newUsername } : null);
+        alert(`✅ Имя успешно изменено на "${newUsername}"!`);
+      }
+    } catch (error: any) {
+      console.error('❌ Ошибка изменения имени:', error);
+      alert(`❌ ${error.message}`);
+    }
+  };
+
   // ✅ ИСПРАВЛЕНО: Обработка получения бонусов через Supabase API
   const handleBonusClick = async (bonusId: string) => {
     console.log('🎁 Получение бонуса через API:', bonusId);
@@ -469,7 +498,41 @@ export default function ProfilePage() {
               <span className="profile-avatar-emoji">{avatarUrl}</span>
             )}
           </div>
-          <h2 className="profile-name">{user?.username || 'Игрок'}</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
+            <h2 className="profile-name" style={{ margin: 0 }}>{user?.username || 'Игрок'}</h2>
+            <button
+              onClick={() => {
+                const newUsername = prompt('Введите новое имя (3-20 символов):', user?.username || '');
+                if (newUsername && newUsername.length >= 3 && newUsername.length <= 20) {
+                  handleUsernameChange(newUsername);
+                } else if (newUsername) {
+                  alert('❌ Имя должно быть от 3 до 20 символов');
+                }
+              }}
+              style={{
+                background: 'rgba(59, 130, 246, 0.2)',
+                border: '1px solid rgba(59, 130, 246, 0.4)',
+                borderRadius: '8px',
+                padding: '6px 8px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(59, 130, 246, 0.4)';
+                e.currentTarget.style.transform = 'scale(1.05)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(59, 130, 246, 0.2)';
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
+              title="Редактировать имя"
+            >
+              <span style={{ fontSize: '16px' }}>✏️</span>
+            </button>
+          </div>
           <p className="profile-status">🟢 {t.profile.online}</p>
           <div style={{
             background: 'linear-gradient(135deg, #fbbf24, #f59e0b)',

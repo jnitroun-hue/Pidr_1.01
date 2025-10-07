@@ -873,21 +873,6 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
               <h3 className="section-title">Быстрые действия</h3>
               
               <div className="quick-action-item">
-                <FaGift className="quick-icon" />
-                <div className="quick-text">
-                  <span className="quick-title">Ежедневный бонус</span>
-                  <span className="quick-desc">+100 монет каждый день</span>
-                </div>
-                <button 
-                  className={`quick-button ${!checkBonusAvailability() ? 'disabled' : ''}`}
-                  onClick={handleDailyBonus}
-                  disabled={loading || !checkBonusAvailability()}
-                >
-                  {checkBonusAvailability() ? 'Получить' : 'Получено'}
-                </button>
-              </div>
-
-              <div className="quick-action-item">
                 <FaTrophy className="quick-icon" />
                 <div className="quick-text">
                   <span className="quick-title">Пригласить друга</span>
