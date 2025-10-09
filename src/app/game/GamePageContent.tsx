@@ -938,7 +938,7 @@ function GamePageContentComponent({
   const waitingForTarget = turnPhase === 'waiting_target_selection';
 
   // Показываем загрузку если игра инициализируется
-  if (!isGameActive) {
+  if (!isGameActive && !winner) {
     return (
       <div className={styles.gameContainer}>
         <div style={{
@@ -953,25 +953,28 @@ function GamePageContentComponent({
         }}>
           <h2 style={{ marginBottom: '20px', fontSize: '24px' }}>🎮 P.I.D.R. Game</h2>
           <p style={{ marginBottom: '30px', opacity: 0.7 }}>
-            Запускаем игру...
+            {players.length > 0 ? 'Игра завершена! Начните новую игру' : 'Запускаем игру...'}
           </p>
-          <div style={{
-            width: '40px',
-            height: '40px',
-            border: '4px solid rgba(99, 102, 241, 0.3)',
-            borderTop: '4px solid #6366f1',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
-            margin: '0 auto 20px'
-          }}></div>
+          {players.length === 0 && (
+            <div style={{
+              width: '40px',
+              height: '40px',
+              border: '4px solid rgba(99, 102, 241, 0.3)',
+              borderTop: '4px solid #6366f1',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite',
+              margin: '0 auto 20px'
+            }}></div>
+          )}
           <button
             onClick={() => {
-              console.log('🎮 Принудительный запуск игры...');
+              console.log('🎮 Запуск новой игры...');
               startGame('single', playerCount, null, {
                 avatar: userData?.avatar,
                 username: userData?.username
               });
               setGameInitialized(true);
+              setDealt(false);
             }}
             style={{
               background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
@@ -986,7 +989,7 @@ function GamePageContentComponent({
               marginBottom: '10px'
             }}
           >
-            🚀 Запустить игру
+            🚀 {players.length > 0 ? 'Играть снова' : 'Запустить игру'}
           </button>
           <button
             onClick={() => typeof window !== 'undefined' && window.history.back()}
