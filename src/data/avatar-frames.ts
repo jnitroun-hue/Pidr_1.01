@@ -21,48 +21,57 @@ export const avatarFrames: AvatarFrame[] = [
   },
   {
     id: 'frame_common_gold',
-    name: 'Золотая Простая',
-    description: 'Простая золотая рамка с легким блеском',
+    name: 'Золотая Классика',
+    description: 'Простая золотая рамка с элегантным блеском',
     preview: '/avatars/frame_common_gold.svg',
     price: 1000,
     unlocked: false,
     rarity: 'common'
   },
   {
-    id: 'frame_uncommon_silver',
-    name: 'Серебряный Гексагон',
-    description: 'Серебряная шестиугольная рамка с синими кристаллами',
-    preview: '/avatars/frame_uncommon_silver.svg',
+    id: 'frame_halloween',
+    name: '🎃 Хэллоуин',
+    description: 'Жуткая тыквенная рамка с оранжевым свечением и летучими мышами',
+    preview: '/avatars/frame_halloween.svg',
     price: 5000,
-    unlocked: false,
-    rarity: 'uncommon'
-  },
-  {
-    id: 'frame_rare_fire',
-    name: 'Огненная Эпическая',
-    description: 'Эпическая огненная рамка с пылающими углями',
-    preview: '/avatars/frame_rare_fire.svg',
-    price: 15000,
     unlocked: false,
     rarity: 'rare'
   },
   {
-    id: 'frame_legendary_diamond',
-    name: 'Легендарный Алмаз',
-    description: 'Легендарная алмазная рамка с радужными искрами',
-    preview: '/avatars/frame_legendary_diamond.svg',
-    price: 35000,
+    id: 'frame_newyear',
+    name: '❄️ Новый Год',
+    description: 'Ледяная рамка со снежинками и зимним волшебством',
+    preview: '/avatars/frame_newyear.svg',
+    price: 8000,
+    unlocked: false,
+    rarity: 'epic'
+  },
+  {
+    id: 'frame_christmas',
+    name: '🎄 Рождество',
+    description: 'Золотая рамка с красными лентами, колокольчиками и праздничным декором',
+    preview: '/avatars/frame_christmas.svg',
+    price: 15000,
     unlocked: false,
     rarity: 'legendary'
   },
   {
-    id: 'frame_mythic_nature',
-    name: 'Мифическая Природа',
-    description: 'Мифическая природная рамка с космическими лозами',
-    preview: '/avatars/frame_mythic_nature.svg',
-    price: 50000,
+    id: 'frame_valentine',
+    name: '💖 День Влюблённых',
+    description: 'Розовая алмазная рамка с сердечками и романтическими розами',
+    preview: '/avatars/frame_valentine.svg',
+    price: 25000,
     unlocked: false,
     rarity: 'mythic'
+  },
+  {
+    id: 'frame_cyberpunk',
+    name: '⚡ Киберпанк',
+    description: 'Неоновая рамка со светящимися схемами и футуристическими технологиями',
+    preview: '/avatars/frame_cyberpunk.svg',
+    price: 35000,
+    unlocked: false,
+    rarity: 'legendary'
   }
 ];
 
