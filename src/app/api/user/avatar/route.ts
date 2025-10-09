@@ -6,15 +6,10 @@ import { requireAuth } from '../../../../lib/auth-utils';
 export async function POST(req: NextRequest) {
   console.log('🖼️ POST /api/user/avatar - Обновление аватара пользователя...');
   
-  const auth = requireAuth(req);
-  if (auth.error) {
-    console.error('❌ Ошибка авторизации:', auth.error);
-    return NextResponse.json({ success: false, message: auth.error }, { status: 401 });
-  }
-  
-  const userId = auth.userId as string;
-  
   try {
+    const userId = await requireAuth(req);
+    console.log(`✅ Авторизован пользователь: ${userId}`);
+    
     const body = await req.json();
     const { avatar_url } = body;
     
