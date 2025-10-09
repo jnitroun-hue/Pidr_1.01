@@ -91,12 +91,59 @@ export default function UltraPremiumShop() {
     },
   ];
 
+  // Функция перевода названий и описаний товаров
+  const translateItem = (id: string, field: 'name' | 'description') => {
+    const translations: Record<string, Record<string, { ru: string; en: string }>> = {
+      'mythic-royal': {
+        name: { ru: 'Королевское восхождение', en: 'Royal Ascendancy' },
+        description: { 
+          ru: 'Легендарная коллекция с золотыми анимациями, эффектами частиц и эксклюзивными праздниками победы',
+          en: 'Legendary collection featuring golden animations, particle effects, and exclusive victory celebrations'
+        }
+      },
+      'diamond-prestige': {
+        name: { ru: 'Алмазный престиж', en: 'Diamond Prestige' },
+        description: { 
+          ru: 'Кристаллический дизайн карт с голографическими эффектами и премиум звуковым оформлением',
+          en: 'Crystalline card designs with holographic effects and premium sound design'
+        }
+      },
+      'neon-cyberpunk': {
+        name: { ru: 'Киберпанк 2077', en: 'Cyberpunk 2077' },
+        description: { 
+          ru: 'Футуристическая неоновая эстетика с эффектами глитча и электронными саундтреками',
+          en: 'Futuristic neon aesthetics with glitch effects and electronic soundtracks'
+        }
+      },
+      'phoenix-flames': {
+        name: { ru: 'Восходящий Феникс', en: 'Phoenix Rising' },
+        description: { 
+          ru: 'Величественные огненные эффекты с анимацией крыльев и эпическими последовательностями победы',
+          en: 'Majestic fire effects with wing animations and epic victory sequences'
+        }
+      },
+      'quantum-boost': {
+        name: { ru: 'Квантовый ускоритель', en: 'Quantum Accelerator' },
+        description: { 
+          ru: '5x множитель монет с эффектами частиц и визуальными искажениями времени',
+          en: '5x coin multiplier with particle effects and time distortion visuals'
+        }
+      },
+    };
+    
+    const translation = translations[id]?.[field]?.[language];
+    if (translation) return translation;
+    
+    // Fallback: если перевода нет, возвращаем английский текст или пустую строку
+    return translations[id]?.[field]?.en || '';
+  };
+
   // Премиум товары с реальными описаниями
   const shopItems: ShopItem[] = [
     {
       id: 'mythic-royal',
-      name: 'Royal Ascendancy',
-      description: 'Legendary collection featuring golden animations, particle effects, and exclusive victory celebrations',
+      name: translateItem('mythic-royal', 'name'),
+      description: translateItem('mythic-royal', 'description'),
       price: 2500,
       originalPrice: 3500,
       category: 'featured',
@@ -109,8 +156,8 @@ export default function UltraPremiumShop() {
     },
     {
       id: 'diamond-prestige',
-      name: 'Diamond Prestige',
-      description: 'Crystalline card designs with holographic effects and premium sound design',
+      name: translateItem('diamond-prestige', 'name'),
+      description: translateItem('diamond-prestige', 'description'),
       price: 1800,
       category: 'featured',
       rarity: 'legendary',
@@ -120,8 +167,8 @@ export default function UltraPremiumShop() {
     },
     {
       id: 'neon-cyberpunk',
-      name: 'Cyberpunk 2077',
-      description: 'Futuristic neon aesthetics with glitch effects and electronic soundtracks',
+      name: translateItem('neon-cyberpunk', 'name'),
+      description: translateItem('neon-cyberpunk', 'description'),
       price: 1200,
       category: 'skins',
       rarity: 'epic',
@@ -130,8 +177,8 @@ export default function UltraPremiumShop() {
     },
     {
       id: 'phoenix-flames',
-      name: 'Phoenix Rising',
-      description: 'Majestic fire effects with wing animations and epic victory sequences',
+      name: translateItem('phoenix-flames', 'name'),
+      description: translateItem('phoenix-flames', 'description'),
       price: 1400,
       category: 'effects',
       rarity: 'legendary',
@@ -140,8 +187,8 @@ export default function UltraPremiumShop() {
     },
     {
       id: 'quantum-boost',
-      name: 'Quantum Accelerator',
-      description: '5x coin multiplier with particle effects and time distortion visuals',
+      name: translateItem('quantum-boost', 'name'),
+      description: translateItem('quantum-boost', 'description'),
       price: 800,
       category: 'boosters',
       rarity: 'epic',
