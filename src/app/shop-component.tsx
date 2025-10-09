@@ -51,26 +51,131 @@ const Shop = () => {
   ];
 
   useEffect(() => {
-    const savedCoins = localStorage.getItem('pidr-coins');
-    const savedPurchases = localStorage.getItem('pidr-purchases');
-    
-    if (savedCoins) setCoins(parseInt(savedCoins));
-    if (savedPurchases) setPurchasedItems(JSON.parse(savedPurchases));
+    // Загружаем баланс и покупки из БД
+    loadUserDataFromDB();
   }, []);
 
-  const handlePurchase = (item: ShopItem) => {
+  const loadUserDataFromDB = async () => {
+    try {
+      // Получаем данные пользователя из localStorage (Telegram ID)
+      const userData = localStorage.getItem('user');
+      if (!userData) {
+        console.error('❌ Нет данных пользователя');
+        return;
+      }
+
+      const parsedUser = JSON.parse(userData);
+      const userId = parsedUser.telegramId || parsedUser.id;
+
+      // Получаем актуальный баланс из БД
+      const balanceResponse = await fetch('/api/pidr-db', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'get_user_balance',
+          userId: userId
+        })
+      });
+
+      if (balanceResponse.ok) {
+        const balanceData = await balanceResponse.json();
+        if (balanceData.success) {
+          setCoins(balanceData.balance || 0);
+          console.log('✅ Баланс загружен из БД:', balanceData.balance);
+        }
+      }
+
+      // Получаем покупки из БД (если есть таблица для покупок)
+      // TODO: Создать таблицу _pidr_shop_purchases
+      const savedPurchases = localStorage.getItem('pidr-purchases');
+      if (savedPurchases) {
+        setPurchasedItems(JSON.parse(savedPurchases));
+      }
+    } catch (error) {
+      console.error('❌ Ошибка загрузки данных из БД:', error);
+      // Fallback к localStorage
+      const savedCoins = localStorage.getItem('pidr-coins');
+      const savedPurchases = localStorage.getItem('pidr-purchases');
+      
+      if (savedCoins) setCoins(parseInt(savedCoins));
+      if (savedPurchases) setPurchasedItems(JSON.parse(savedPurchases));
+    }
+  };
+
+  const handlePurchase = async (item: ShopItem) => {
     if (coins >= item.price && !purchasedItems.includes(item.id)) {
-      const newCoins = coins - item.price;
-      const newPurchases = [...purchasedItems, item.id];
-      
-      setCoins(newCoins);
-      setPurchasedItems(newPurchases);
-      
-      localStorage.setItem('pidr-coins', newCoins.toString());
-      localStorage.setItem('pidr-purchases', JSON.stringify(newPurchases));
-      
-      // Показать уведомление об успешной покупке
-      showNotification(`${item.name} приобретен!`, 'success');
+      try {
+        // Получаем данные пользователя
+        const userData = localStorage.getItem('user');
+        if (!userData) {
+          showNotification('❌ Ошибка: нет данных пользователя', 'error');
+          return;
+        }
+
+        const parsedUser = JSON.parse(userData);
+        const userId = parsedUser.telegramId || parsedUser.id;
+
+        // Обновляем баланс в БД
+        const updateResponse = await fetch('/api/pidr-db', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'update_user_balance',
+            userId: userId,
+            amount: -item.price // Отрицательное значение для списания
+          })
+        });
+
+        if (!updateResponse.ok) {
+          showNotification('❌ Ошибка обновления баланса', 'error');
+          return;
+        }
+
+        const updateData = await updateResponse.json();
+        if (!updateData.success) {
+          showNotification('❌ ' + (updateData.error || 'Ошибка покупки'), 'error');
+          return;
+        }
+
+        // Создаем транзакцию покупки
+        await fetch('/api/pidr-db', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'create_transaction',
+            userId: userId,
+            amount: item.price,
+            transactionType: 'purchase',
+            description: `Покупка: ${item.name}`
+          })
+        });
+
+        // Обновляем локальное состояние
+        const newCoins = coins - item.price;
+        const newPurchases = [...purchasedItems, item.id];
+        
+        setCoins(newCoins);
+        setPurchasedItems(newPurchases);
+        
+        // Сохраняем покупки в localStorage (временно, пока нет таблицы покупок)
+        localStorage.setItem('pidr-purchases', JSON.stringify(newPurchases));
+        
+        // Обновляем баланс в localStorage для синхронизации
+        parsedUser.coins = newCoins;
+        localStorage.setItem('user', JSON.stringify(parsedUser));
+        
+        // Показать уведомление об успешной покупке
+        showNotification(`✅ ${item.name} приобретен!`, 'success');
+        
+        console.log('✅ Покупка успешна:', {
+          item: item.name,
+          price: item.price,
+          newBalance: newCoins
+        });
+      } catch (error) {
+        console.error('❌ Ошибка покупки:', error);
+        showNotification('❌ Ошибка при покупке', 'error');
+      }
     } else if (coins < item.price) {
       showNotification(t.shop.notEnoughCoins, 'error');
     } else {

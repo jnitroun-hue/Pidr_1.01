@@ -1,17 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '../../../../lib/supabase';
-import jwt from 'jsonwebtoken';
+import { requireAuth } from '../../../../lib/auth-utils';
 
-const JWT_SECRET = process.env.JWT_SECRET;
-
-function getUserIdFromRequest(req: NextRequest): string | null {
-  if (!JWT_SECRET) return null;
-  const auth = req.headers.get('authorization');
-  if (!auth) return null;
-  const token = auth.replace('Bearer ', '');
+// Используем единую функцию авторизации из auth-utils
+async function getUserIdFromRequest(req: NextRequest): Promise<string | null> {
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as any;
-    return payload.userId;
+    const userId = await requireAuth(req);
+    return userId;
   } catch {
     return null;
   }
@@ -19,7 +14,7 @@ function getUserIdFromRequest(req: NextRequest): string | null {
 
 // GET /api/wallet/transactions - Получить транзакции пользователя
 export async function GET(req: NextRequest) {
-  const userId = getUserIdFromRequest(req);
+  const userId = await getUserIdFromRequest(req);
   if (!userId) {
     return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
   }
@@ -92,7 +87,7 @@ export async function GET(req: NextRequest) {
 
 // POST /api/wallet/transactions - Создать новую транзакцию
 export async function POST(req: NextRequest) {
-  const userId = getUserIdFromRequest(req);
+  const userId = await getUserIdFromRequest(req);
   if (!userId) {
     return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
   }
