@@ -1119,6 +1119,7 @@ function GamePageContentComponent({
               const position = getPlayerPosition(index, players.length);
               const isCurrentTurn = player.id === currentPlayerId;
               const playerCards = (player as any).hand || [];
+              const isHumanPlayer = index === 0 || !player.isBot; // Первый игрок или не бот = человек
 
                 return (
                   <div
@@ -1156,8 +1157,8 @@ function GamePageContentComponent({
                             ? card.replace('(open)', '').replace('(closed)', '')
                             : `${card.rank}_of_${card.suit}.png`;
                           
-                          // Показываем открытую карту только для player_1 (игрока)
-                          const showOpen = player.id === 'player_1' || (typeof card === 'string' && card.includes('(open)'));
+                          // Показываем открытую карту для человека или если карта помечена как (open)
+                          const showOpen = isHumanPlayer || (typeof card === 'string' && card.includes('(open)'));
                           
                           return (
                             <div key={cardIndex} className={styles.cardOnPenki} style={{
