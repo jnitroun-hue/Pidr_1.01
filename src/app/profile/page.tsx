@@ -5,6 +5,7 @@ import { ArrowLeft, Trophy, Medal, Users, User, Star, Award, Target, Camera, Upl
 import GameWallet from '../../components/GameWallet';
 import { useLanguage } from '../../components/LanguageSwitcher';
 import { useTranslations } from '../../lib/i18n/translations';
+import { avatarFrames, getRarityColor, getRarityName } from '../../data/avatar-frames';
 
 // Компонент таймера для бонусов
 function BonusCooldownTimer({ bonus, onCooldownEnd }: { bonus: any; onCooldownEnd: () => void }) {
@@ -178,13 +179,47 @@ export default function ProfilePage() {
       }
     };
     
+    const loadInventory = async () => {
+      try {
+        console.log('📦 Загружаем инвентарь пользователя...');
+        const response = await fetch('/api/shop/inventory', {
+          method: 'GET',
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.inventory) {
+            console.log('✅ Инвентарь загружен:', result.inventory);
+            setInventory(result.inventory);
+            
+            // Обновляем список купленных предметов
+            const purchased = result.inventory.map((item: any) => item.item_id);
+            setPurchasedItems(purchased);
+            
+            // Устанавливаем активные предметы
+            const activeFrame = result.inventory.find((item: any) => item.item_type === 'frame' && item.is_active);
+            if (activeFrame) {
+              setSelectedFrame(activeFrame.item_id);
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('⚠️ Не удалось загрузить инвентарь:', error);
+      }
+    };
+    
     loadUserData();
     loadBonuses();
+    loadInventory();
   }, []);
   const [activeSection, setActiveSection] = useState('stats'); // 'stats', 'achievements', 'wallet'
-  const [showModal, setShowModal] = useState<'skins' | 'effects' | 'bonuses' | null>(null);
+  const [showModal, setShowModal] = useState<'skins' | 'effects' | 'bonuses' | 'frames' | null>(null);
   const [selectedSkin, setSelectedSkin] = useState('classic');
   const [selectedEffect, setSelectedEffect] = useState('none');
+  const [selectedFrame, setSelectedFrame] = useState('default');
+  const [purchasedItems, setPurchasedItems] = useState<string[]>([]);
+  const [inventory, setInventory] = useState<any[]>([]);
 
   // Скины для карт
   const cardSkins = [
@@ -405,6 +440,121 @@ export default function ProfilePage() {
     }
   };
 
+  // 🛒 ПОКУПКА ПРЕДМЕТА
+  const handlePurchaseItem = async (item: any, itemType: 'skin' | 'effect' | 'frame') => {
+    try {
+      console.log('🛒 Покупка предмета:', item);
+      
+      if (!user || user.coins < item.price) {
+        alert('❌ Недостаточно монет для покупки!');
+        return;
+      }
+      
+      const response = await fetch('/api/shop/purchase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          item_id: item.id,
+          item_type: itemType,
+          item_name: item.name,
+          price: item.price,
+          metadata: {
+            description: item.description,
+            preview: item.preview,
+            rarity: item.rarity
+          }
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || 'Ошибка покупки');
+      }
+      
+      console.log('✅ Предмет куплен:', result);
+      
+      // Обновляем баланс
+      setUser((prev: any) => prev ? { ...prev, coins: result.new_balance } : null);
+      
+      // Добавляем в список купленных
+      setPurchasedItems(prev => [...prev, item.id]);
+      
+      // Перезагружаем инвентарь
+      const inventoryResponse = await fetch('/api/shop/inventory', {
+        method: 'GET',
+        credentials: 'include'
+      });
+      
+      if (inventoryResponse.ok) {
+        const inventoryResult = await inventoryResponse.json();
+        if (inventoryResult.success) {
+          setInventory(inventoryResult.inventory);
+        }
+      }
+      
+      alert(`✅ ${item.name} успешно куплен!`);
+      
+    } catch (error: any) {
+      console.error('❌ Ошибка покупки:', error);
+      alert(`❌ ${error.message}`);
+    }
+  };
+
+  // ✨ АКТИВАЦИЯ ПРЕДМЕТА
+  const handleActivateItem = async (inventoryItemId: string, itemId: string, itemType: 'skin' | 'effect' | 'frame') => {
+    try {
+      console.log('✨ Активация предмета:', inventoryItemId);
+      
+      const response = await fetch('/api/shop/activate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          inventory_item_id: inventoryItemId,
+          is_active: true
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || 'Ошибка активации');
+      }
+      
+      console.log('✅ Предмет активирован:', result);
+      
+      // Обновляем локальное состояние
+      if (itemType === 'frame') {
+        setSelectedFrame(itemId);
+      } else if (itemType === 'skin') {
+        setSelectedSkin(itemId);
+      } else if (itemType === 'effect') {
+        setSelectedEffect(itemId);
+      }
+      
+      // Перезагружаем инвентарь
+      const inventoryResponse = await fetch('/api/shop/inventory', {
+        method: 'GET',
+        credentials: 'include'
+      });
+      
+      if (inventoryResponse.ok) {
+        const inventoryResult = await inventoryResponse.json();
+        if (inventoryResult.success) {
+          setInventory(inventoryResult.inventory);
+        }
+      }
+      
+      alert(`✅ Предмет активирован!`);
+      
+    } catch (error: any) {
+      console.error('❌ Ошибка активации:', error);
+      alert(`❌ ${error.message}`);
+    }
+  };
+
   const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -535,42 +685,6 @@ export default function ProfilePage() {
           </div>
           <p className="profile-status">🟢 {t.profile.online}</p>
           
-          {/* 5 КНОПОК КРИПТОВАЛЮТ */}
-          <div style={{
-            display: 'flex',
-            gap: '8px',
-            justifyContent: 'center',
-            margin: '16px 0',
-            flexWrap: 'wrap'
-          }}>
-            {['TON', 'ETH', 'USDT', 'BTC', 'SOL'].map((crypto) => (
-              <motion.button
-                key={crypto}
-                onClick={() => {
-                  // TODO: Открыть модалку пополнения для этой криптовалюты
-                  console.log(`Пополнение ${crypto}`);
-                }}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                style={{
-                  background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.3))',
-                  border: '1px solid rgba(59, 130, 246, 0.4)',
-                  borderRadius: '12px',
-                  padding: '10px 16px',
-                  color: '#60a5fa',
-                  fontWeight: '700',
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  backdropFilter: 'blur(10px)',
-                  minWidth: '60px'
-                }}
-              >
-                {crypto}
-              </motion.button>
-            ))}
-          </div>
-
           {/* ИГРОВЫЕ МОНЕТЫ НАД КНОПКОЙ ДРУЗЬЯ */}
           <div style={{
             background: 'linear-gradient(135deg, #fbbf24, #f59e0b)',
@@ -1045,6 +1159,7 @@ export default function ProfilePage() {
                 {showModal === 'skins' && '🎨 СКИНЫ КАРТ'}
                 {showModal === 'effects' && '✨ ИГРОВЫЕ ЭФФЕКТЫ'}
                 {showModal === 'bonuses' && '🎁 БОНУСЫ'}
+                {showModal === 'frames' && '🖼️ РАМКИ АВАТАРОВ'}
               </h3>
               <button
                 onClick={() => setShowModal(null)}
@@ -1240,6 +1355,115 @@ export default function ProfilePage() {
                     )}
                   </motion.div>
                 ))}
+              </div>
+            )}
+
+            {showModal === 'frames' && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                {avatarFrames.map((frame) => {
+                  const isPurchased = purchasedItems.includes(frame.id) || frame.unlocked;
+                  const isActive = selectedFrame === frame.id;
+                  const inventoryItem = inventory.find(item => item.item_id === frame.id);
+                  
+                  return (
+                    <motion.div
+                      key={frame.id}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => {
+                        if (!isPurchased && user && user.coins >= frame.price) {
+                          handlePurchaseItem(frame, 'frame');
+                        } else if (isPurchased && !isActive && inventoryItem) {
+                          handleActivateItem(inventoryItem.id, frame.id, 'frame');
+                        }
+                      }}
+                      style={{
+                        background: isActive 
+                          ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.8) 0%, rgba(22, 163, 74, 0.6) 100%)'
+                          : isPurchased 
+                            ? 'linear-gradient(135deg, rgba(71, 85, 105, 0.8) 0%, rgba(51, 65, 85, 0.6) 100%)'
+                            : 'linear-gradient(135deg, rgba(55, 65, 81, 0.6) 0%, rgba(31, 41, 55, 0.4) 100%)',
+                        border: isActive 
+                          ? `2px solid ${getRarityColor(frame.rarity)}` 
+                          : '1px solid rgba(255, 255, 255, 0.1)',
+                        borderRadius: '16px',
+                        padding: '16px',
+                        cursor: isPurchased || (user && user.coins >= frame.price) ? 'pointer' : 'not-allowed',
+                        opacity: isPurchased || (user && user.coins >= frame.price) ? 1 : 0.6,
+                        position: 'relative',
+                        overflow: 'hidden'
+                      }}
+                    >
+                      {/* Индикатор редкости */}
+                      <div style={{
+                        position: 'absolute',
+                        top: '8px',
+                        right: '8px',
+                        padding: '4px 8px',
+                        borderRadius: '8px',
+                        fontSize: '0.7rem',
+                        fontWeight: '600',
+                        background: getRarityColor(frame.rarity),
+                        color: '#fff'
+                      }}>
+                        {getRarityName(frame.rarity).toUpperCase()}
+                      </div>
+
+                      <div style={{ textAlign: 'center', marginTop: '20px' }}>
+                        <div style={{ fontSize: '3rem', marginBottom: '12px' }}>
+                          {frame.preview.startsWith('/') ? (
+                            <img src={frame.preview} alt={frame.name} style={{ width: '80px', height: '80px', borderRadius: '50%' }} />
+                          ) : (
+                            frame.preview
+                          )}
+                        </div>
+                        <h4 style={{ color: '#e2e8f0', fontSize: '1.1rem', fontWeight: '600', margin: '0 0 8px 0' }}>
+                          {frame.name}
+                        </h4>
+                        <p style={{ color: '#94a3b8', fontSize: '0.9rem', margin: '0 0 12px 0' }}>
+                          {frame.description}
+                        </p>
+                        
+                        {isPurchased ? (
+                          isActive ? (
+                            <div style={{
+                              background: 'rgba(34, 197, 94, 0.8)',
+                              color: '#fff',
+                              padding: '8px 16px',
+                              borderRadius: '12px',
+                              fontSize: '0.8rem',
+                              fontWeight: '600'
+                            }}>
+                              ✅ АКТИВНА
+                            </div>
+                          ) : (
+                            <div style={{
+                              background: 'rgba(59, 130, 246, 0.8)',
+                              color: '#fff',
+                              padding: '8px 16px',
+                              borderRadius: '12px',
+                              fontSize: '0.8rem',
+                              fontWeight: '600'
+                            }}>
+                              👆 АКТИВИРОВАТЬ
+                            </div>
+                          )
+                        ) : (
+                          <div style={{
+                            background: user && user.coins >= frame.price ? 'rgba(34, 197, 94, 0.8)' : 'rgba(239, 68, 68, 0.8)',
+                            color: '#fff',
+                            padding: '8px 16px',
+                            borderRadius: '12px',
+                            fontSize: '0.8rem',
+                            fontWeight: '600'
+                          }}>
+                            {user && user.coins >= frame.price ? `💰 КУПИТЬ ${frame.price.toLocaleString()}` : `🔒 ${frame.price.toLocaleString()} монет`}
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })}
               </div>
             )}
 

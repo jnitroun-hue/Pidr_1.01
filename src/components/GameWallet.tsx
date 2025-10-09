@@ -16,7 +16,8 @@ import {
   FaArrowUp,
   FaArrowDown,
   FaKey,
-  FaDatabase
+  FaDatabase,
+  FaBars
 } from 'react-icons/fa';
 import { MasterWalletService } from '@/lib/wallets/master-wallet-service';
 import styles from './GameWallet.module.css';
@@ -59,6 +60,14 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
   const [isGeneratingAddress, setIsGeneratingAddress] = useState(false);
   const [isMonitoringPayments, setIsMonitoringPayments] = useState(false);
   const [bonusAvailable, setBonusAvailable] = useState(true); // Состояние доступности бонуса
+  const [isCryptoMenuOpen, setIsCryptoMenuOpen] = useState(false); // Состояние бургер-меню криптовалют
+  const [cryptoBalances, setCryptoBalances] = useState<Record<string, number>>({
+    TON: 0,
+    ETH: 0,
+    USDT: 0,
+    BTC: 0,
+    SOL: 0
+  });
   const masterWalletService = new MasterWalletService();
 
   // Загружаем данные пользователя и транзакции
@@ -758,7 +767,47 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
         <div className="balance-header">
           <FaWallet className="balance-icon" />
           <span className="balance-title">Игровой кошелек</span>
+          <button 
+            className="crypto-burger-btn"
+            onClick={() => setIsCryptoMenuOpen(!isCryptoMenuOpen)}
+            title="Криптовалютные балансы"
+          >
+            <FaBars />
+          </button>
         </div>
+        
+        {/* БУРГЕР-МЕНЮ С КРИПТОВАЛЮТАМИ */}
+        <AnimatePresence>
+          {isCryptoMenuOpen && (
+            <motion.div 
+              className="crypto-menu"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className="crypto-menu-header">💰 Реальные балансы</div>
+              <div className="crypto-list">
+                {['TON', 'ETH', 'USDT', 'BTC', 'SOL'].map((crypto) => (
+                  <div key={crypto} className="crypto-item">
+                    <span className="crypto-name">{crypto}</span>
+                    <span className="crypto-balance">{cryptoBalances[crypto].toFixed(6)}</span>
+                    <button 
+                      className="crypto-action-btn"
+                      onClick={() => {
+                        setSelectedCrypto(crypto);
+                        setActiveModal('deposit');
+                        setIsCryptoMenuOpen(false);
+                      }}
+                    >
+                      Пополнить
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
         
         <div className="balance-amount">
           <FaCoins className="coin-icon" />
@@ -1168,6 +1217,7 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
           align-items: center;
           gap: 8px;
           margin-bottom: 8px;
+          position: relative;
         }
 
         .balance-icon {
@@ -1179,6 +1229,102 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
           font-size: 14px;
           font-weight: 600;
           color: #e2e8f0;
+          flex: 1;
+        }
+        
+        .crypto-burger-btn {
+          background: rgba(59, 130, 246, 0.2);
+          border: 1px solid rgba(59, 130, 246, 0.4);
+          border-radius: 8px;
+          padding: 6px 8px;
+          color: #3b82f6;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 14px;
+        }
+        
+        .crypto-burger-btn:hover {
+          background: rgba(59, 130, 246, 0.4);
+          transform: scale(1.05);
+        }
+        
+        .crypto-menu {
+          background: rgba(15, 23, 42, 0.95);
+          border: 1px solid rgba(59, 130, 246, 0.3);
+          border-radius: 12px;
+          padding: 12px;
+          margin: 12px 0;
+          overflow: hidden;
+        }
+        
+        .crypto-menu-header {
+          font-size: 12px;
+          font-weight: 700;
+          color: #3b82f6;
+          margin-bottom: 10px;
+          text-align: center;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+        }
+        
+        .crypto-list {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        
+        .crypto-item {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          background: rgba(30, 41, 59, 0.6);
+          border: 1px solid rgba(59, 130, 246, 0.2);
+          border-radius: 8px;
+          padding: 8px 10px;
+          transition: all 0.3s ease;
+        }
+        
+        .crypto-item:hover {
+          background: rgba(30, 41, 59, 0.8);
+          border-color: rgba(59, 130, 246, 0.4);
+        }
+        
+        .crypto-name {
+          font-weight: 700;
+          color: #3b82f6;
+          font-size: 13px;
+          min-width: 50px;
+        }
+        
+        .crypto-balance {
+          font-family: monospace;
+          color: #10b981;
+          font-size: 11px;
+          flex: 1;
+          text-align: center;
+        }
+        
+        .crypto-action-btn {
+          background: linear-gradient(135deg, #10b981, #059669);
+          border: 1px solid rgba(16, 185, 129, 0.4);
+          border-radius: 6px;
+          padding: 4px 8px;
+          color: white;
+          font-size: 10px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        
+        .crypto-action-btn:hover {
+          background: linear-gradient(135deg, #059669, #047857);
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
         }
 
         .balance-amount {

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+  
+      <defs>
+        <filter id="frameGlow">
+          <feGaussianBlur stdDeviation="5" result="coloredBlur"/>
+          <feMerge> 
+            <feMergeNode in="coloredBlur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+      </defs>
+      
+      <!-- Прозрачный фон -->
+      <rect width="512" height="512" fill="transparent" />
+      
+      <!-- Внешняя рамка -->
+      <rect x="10" y="10" width="492" height="492" 
+            fill="none" stroke="#C0C0C0" stroke-width="20" filter="url(#frameGlow)" />
+      
+      <!-- Внутренняя рамка -->
+      <rect x="35" y="35" width="442" height="442" 
+            fill="none" stroke="#A0A0A0" stroke-width="2" />
+      
+      <!-- Декоративные элементы -->
+      <circle cx="30" cy="30" r="8" fill="#C0C0C0" />
+      <circle cx="482" cy="30" r="8" fill="#C0C0C0" />
+      <circle cx="30" cy="482" r="8" fill="#C0C0C0" />
+      <circle cx="482" cy="482" r="8" fill="#C0C0C0" />
+    
+</svg>
