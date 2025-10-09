@@ -1157,8 +1157,8 @@ function GamePageContentComponent({
                             ? card.replace('(open)', '').replace('(closed)', '')
                             : `${card.rank}_of_${card.suit}.png`;
                           
-                          // Показываем открытую карту для человека или если карта помечена как (open)
-                          const showOpen = isHumanPlayer || (typeof card === 'string' && card.includes('(open)'));
+                          // В 1-й стадии ВСЕ карты открыты! Со 2-й стадии - только свои или помеченные (open)
+                          const showOpen = gameStage === 1 || isHumanPlayer || (typeof card === 'string' && card.includes('(open)'));
                           
                           return (
                             <div key={cardIndex} className={styles.cardOnPenki} style={{
