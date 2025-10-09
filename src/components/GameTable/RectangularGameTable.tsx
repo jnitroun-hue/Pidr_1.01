@@ -138,7 +138,7 @@ const RectangularGameTable: React.FC<RectangularGameTableProps> = ({
                 }}
               >
                 <img 
-                  src={`/cards/${card.suit}_${card.rank}.png`} 
+                  src={`/img/cards/${card.suit}_${card.rank}.png`} 
                   alt={`${card.rank} of ${card.suit}`}
                   className={styles.cardImage}
                 />
@@ -212,7 +212,7 @@ const RectangularGameTable: React.FC<RectangularGameTableProps> = ({
                       }}
                     >
                       <img 
-                        src="/cards/back.png" 
+                        src="/img/cards/back.png" 
                         alt="Card back"
                         className={styles.cardBackImage}
                       />

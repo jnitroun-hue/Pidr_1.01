@@ -36,6 +36,7 @@ const CARD_IMAGES = [
   'queen_of_clubs.png','queen_of_diamonds.png','queen_of_hearts.png','queen_of_spades.png',
 ];
 const CARD_BACK = 'back.png';
+const CARDS_PATH = '/img/cards/'; // ПРАВИЛЬНЫЙ ПУТЬ К КАРТАМ!
 
 // Рассчитываем размеры и позицию стола
 const getTableDimensions = () => {
@@ -1102,13 +1103,13 @@ function GamePageContentComponent({
                 transform: 'translate(-50%, -50%)',
                 zIndex: 10
               }}>
-                    <Image 
-                  src={`/cards/${CARD_BACK}`}
+                <Image
+                  src={`${CARDS_PATH}${CARD_BACK}`}
                   alt="Deck"
                   width={70}
                   height={105}
-                        className={styles.deckCard}
-                      />
+                  className={styles.deckCard}
+                />
                     <div className={styles.deckCount}>{deck.length}</div>
                 </div>
               )}
@@ -1163,7 +1164,7 @@ function GamePageContentComponent({
                               marginLeft: cardIndex > 0 ? '-30px' : '0'
                             }}>
                               <Image
-                                src={showOpen ? `/cards/${cardImage}` : `/cards/${CARD_BACK}`}
+                                src={showOpen ? `${CARDS_PATH}${cardImage}` : `${CARDS_PATH}${CARD_BACK}`}
                                 alt={showOpen ? cardImage : 'Card'}
                                 width={60}
                                 height={90}
@@ -1201,7 +1202,7 @@ function GamePageContentComponent({
                   }}
                 >
                   <Image
-                    src={`/cards/${cardImage}`}
+                    src={`${CARDS_PATH}${cardImage}`}
                     alt={cardImage}
                     width={70}
                     height={105}

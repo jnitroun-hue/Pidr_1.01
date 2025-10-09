@@ -88,7 +88,7 @@ const PlayerHand: React.FC<PlayerHandProps> = ({
                 {/* Изображение карты */}
                 <div className={styles.cardImageContainer}>
                   <img
-                    src={`/cards/${card.suit}_${card.rank}.png`}
+                    src={`/img/cards/${card.suit}_${card.rank}.png`}
                     alt={`${card.rank} of ${card.suit}`}
                     className={styles.cardImage}
                     draggable={false}
