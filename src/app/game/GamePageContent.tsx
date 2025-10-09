@@ -1106,9 +1106,10 @@ function GamePageContentComponent({
                 <Image
                   src={`${CARDS_PATH}${CARD_BACK}`}
                   alt="Deck"
-                  width={70}
-                  height={105}
+                  width={90}
+                  height={135}
                   className={styles.deckCard}
+                  style={{ opacity: 1 }}
                 />
                     <div className={styles.deckCount}>{deck.length}</div>
                 </div>
@@ -1169,7 +1170,7 @@ function GamePageContentComponent({
                                 alt={showOpen ? cardImage : 'Card'}
                                 width={60}
                                 height={90}
-                                style={{ borderRadius: '8px' }}
+                                style={{ borderRadius: '8px', opacity: 1 }}
                               />
                             </div>
                           );
@@ -1184,8 +1185,8 @@ function GamePageContentComponent({
           </div>
       )}
 
-      {/* Рука игрока внизу экрана */}
-      {isGameActive && humanPlayer && humanPlayer.cards && humanPlayer.cards.length > 0 && (
+      {/* Рука игрока внизу экрана - ТОЛЬКО СО 2-Й СТАДИИ! */}
+      {isGameActive && gameStage >= 2 && humanPlayer && humanPlayer.cards && humanPlayer.cards.length > 0 && (
         <div className={styles.playerHand}>
           <div className={styles.handCards}>
             {humanPlayer.cards.map((card: any, index: number) => {
@@ -1207,7 +1208,7 @@ function GamePageContentComponent({
                     alt={cardImage}
                     width={70}
                     height={105}
-                    style={{ borderRadius: '8px' }}
+                    style={{ borderRadius: '8px', opacity: 1 }}
                   />
                 </div>
               );
