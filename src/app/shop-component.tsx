@@ -105,64 +105,47 @@ const Shop = () => {
   const handlePurchase = async (item: ShopItem) => {
     if (coins >= item.price && !purchasedItems.includes(item.id)) {
       try {
-        // Получаем данные пользователя
-        const userData = localStorage.getItem('user');
-        if (!userData) {
-          showNotification('❌ Ошибка: нет данных пользователя', 'error');
-          return;
-        }
-
-        const parsedUser = JSON.parse(userData);
-        const userId = parsedUser.telegramId || parsedUser.id;
-
-        // Обновляем баланс в БД
-        const updateResponse = await fetch('/api/pidr-db', {
+        console.log('🛒 Покупка товара:', item);
+        
+        // Используем новый API для покупки через БД
+        const purchaseResponse = await fetch('/api/shop/purchase', {
           method: 'POST',
+          credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            action: 'update_user_balance',
-            userId: userId,
-            amount: -item.price // Отрицательное значение для списания
+            item_id: item.id,
+            item_type: item.type,
+            item_name: item.name,
+            price: item.price,
+            metadata: {
+              description: item.description,
+              icon: item.icon,
+              duration: item.duration
+            }
           })
         });
 
-        if (!updateResponse.ok) {
-          showNotification('❌ Ошибка обновления баланса', 'error');
+        const purchaseData = await purchaseResponse.json();
+
+        if (!purchaseResponse.ok || !purchaseData.success) {
+          showNotification('❌ ' + (purchaseData.message || 'Ошибка покупки'), 'error');
           return;
         }
-
-        const updateData = await updateResponse.json();
-        if (!updateData.success) {
-          showNotification('❌ ' + (updateData.error || 'Ошибка покупки'), 'error');
-          return;
-        }
-
-        // Создаем транзакцию покупки
-        await fetch('/api/pidr-db', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'create_transaction',
-            userId: userId,
-            amount: item.price,
-            transactionType: 'purchase',
-            description: `Покупка: ${item.name}`
-          })
-        });
 
         // Обновляем локальное состояние
-        const newCoins = coins - item.price;
+        const newCoins = purchaseData.new_balance || (coins - item.price);
         const newPurchases = [...purchasedItems, item.id];
         
         setCoins(newCoins);
         setPurchasedItems(newPurchases);
         
-        // Сохраняем покупки в localStorage (временно, пока нет таблицы покупок)
-        localStorage.setItem('pidr-purchases', JSON.stringify(newPurchases));
-        
         // Обновляем баланс в localStorage для синхронизации
-        parsedUser.coins = newCoins;
-        localStorage.setItem('user', JSON.stringify(parsedUser));
+        const userData = localStorage.getItem('user');
+        if (userData) {
+          const parsedUser = JSON.parse(userData);
+          parsedUser.coins = newCoins;
+          localStorage.setItem('user', JSON.stringify(parsedUser));
+        }
         
         // Показать уведомление об успешной покупке
         showNotification(`✅ ${item.name} приобретен!`, 'success');
