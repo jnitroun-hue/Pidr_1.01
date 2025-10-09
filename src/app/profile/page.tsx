@@ -1,7 +1,7 @@
 'use client'
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Trophy, Medal, Users, User, Star, Award, Target, Camera, Upload, Wallet, Palette, Sparkles, Gift } from 'lucide-react';
+import { ArrowLeft, Trophy, Medal, Users, User, Star, Award, Target, Camera, Upload, Wallet, Palette, Sparkles, Gift, Frame } from 'lucide-react';
 import GameWallet from '../../components/GameWallet';
 import { useLanguage } from '../../components/LanguageSwitcher';
 import { useTranslations } from '../../lib/i18n/translations';
@@ -648,6 +648,7 @@ export default function ProfilePage() {
             gap: '12px',
             width: '100%'
           }}>
+            {/* СКИНЫ */}
             <motion.button
               onClick={() => setShowModal('skins')}
               whileHover={{ scale: 1.05, y: -2 }}
@@ -689,6 +690,7 @@ export default function ProfilePage() {
               </span>
             </motion.button>
 
+            {/* ЭФФЕКТЫ */}
             <motion.button
               onClick={() => setShowModal('effects')}
               whileHover={{ scale: 1.05, y: -2 }}
@@ -730,8 +732,9 @@ export default function ProfilePage() {
               </span>
             </motion.button>
 
+            {/* РАМКА АВАТАР */}
             <motion.button
-              onClick={() => setShowModal('bonuses')}
+              onClick={() => setShowModal('frames')}
               whileHover={{ scale: 1.05, y: -2 }}
               whileTap={{ scale: 0.95 }}
               style={{
@@ -759,7 +762,7 @@ export default function ProfilePage() {
                 e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.2)';
               }}
             >
-              <Gift style={{ fontSize: '1.5rem', color: '#e2e8f0', filter: 'drop-shadow(0 2px 4px rgba(34, 197, 94, 0.3))' }} />
+              <Frame style={{ fontSize: '1.5rem', color: '#e2e8f0', filter: 'drop-shadow(0 2px 4px rgba(34, 197, 94, 0.3))' }} />
               <span style={{ 
                 color: '#e2e8f0', 
                 fontSize: '0.8rem', 
@@ -767,10 +770,54 @@ export default function ProfilePage() {
                 letterSpacing: '0.5px',
                 textAlign: 'center'
               }}>
-                БОНУСЫ
+                РАМКА АВАТАР
               </span>
             </motion.button>
           </div>
+
+          {/* БОНУСЫ - ВЫТЯНУТАЯ КНОПКА ПОД ТРЕМЯ */}
+          <motion.button
+            onClick={() => setShowModal('bonuses')}
+            whileHover={{ scale: 1.02, y: -2 }}
+            whileTap={{ scale: 0.98 }}
+            style={{
+              width: '100%',
+              marginTop: '12px',
+              background: 'linear-gradient(135deg, rgba(251, 146, 60, 0.8) 0%, rgba(249, 115, 22, 0.6) 100%)',
+              border: '1px solid rgba(251, 146, 60, 0.4)',
+              borderRadius: '16px',
+              padding: '16px 20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '12px',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              backdropFilter: 'blur(10px)',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = 'rgba(255, 215, 0, 0.6)';
+              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(249, 115, 22, 0.9) 0%, rgba(234, 88, 12, 0.8) 100%)';
+              e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.3), 0 0 20px rgba(255, 215, 0, 0.1)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = 'rgba(251, 146, 60, 0.4)';
+              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(251, 146, 60, 0.8) 0%, rgba(249, 115, 22, 0.6) 100%)';
+              e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.2)';
+            }}
+          >
+            <Gift style={{ fontSize: '1.8rem', color: '#e2e8f0', filter: 'drop-shadow(0 2px 4px rgba(251, 146, 60, 0.3))' }} />
+            <span style={{ 
+              color: '#e2e8f0', 
+              fontSize: '1rem', 
+              fontWeight: '700', 
+              letterSpacing: '1px',
+              textAlign: 'center'
+            }}>
+              БОНУСЫ
+            </span>
+          </motion.button>
         </motion.div>
 
         {/* Navigation Tabs */}
