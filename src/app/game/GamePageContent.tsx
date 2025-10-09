@@ -1149,19 +1149,29 @@ function GamePageContentComponent({
                   {playerCards.length > 0 && (
                     <div className={styles.cardsContainer}>
                       <div className={styles.activeCardContainer}>
-                        {playerCards.slice(0, 3).map((card: any, cardIndex: number) => (
-                          <div key={cardIndex} className={styles.cardOnPenki} style={{
-                            marginLeft: cardIndex > 0 ? '-30px' : '0'
-                          }}>
-                            <Image
-                              src={player.id === 'player_1' ? `/cards/${card.rank}_of_${card.suit}.png` : `/cards/${CARD_BACK}`}
-                              alt={player.id === 'player_1' ? `${card.rank} of ${card.suit}` : 'Card'}
-                              width={60}
-                              height={90}
-                              style={{ borderRadius: '8px' }}
-                            />
-                          </div>
-                        ))}
+                        {playerCards.slice(0, 3).map((card: any, cardIndex: number) => {
+                          // Карта может быть строкой "7_of_spades.png" или объектом {rank, suit}
+                          const cardImage = typeof card === 'string' 
+                            ? card.replace('(open)', '').replace('(closed)', '')
+                            : `${card.rank}_of_${card.suit}.png`;
+                          
+                          // Показываем открытую карту только для player_1 (игрока)
+                          const showOpen = player.id === 'player_1' || (typeof card === 'string' && card.includes('(open)'));
+                          
+                          return (
+                            <div key={cardIndex} className={styles.cardOnPenki} style={{
+                              marginLeft: cardIndex > 0 ? '-30px' : '0'
+                            }}>
+                              <Image
+                                src={showOpen ? `/cards/${cardImage}` : `/cards/${CARD_BACK}`}
+                                alt={showOpen ? cardImage : 'Card'}
+                                width={60}
+                                height={90}
+                                style={{ borderRadius: '8px' }}
+                              />
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -1176,23 +1186,30 @@ function GamePageContentComponent({
       {isGameActive && humanPlayer && (humanPlayer as any).hand && (humanPlayer as any).hand.length > 0 && (
         <div className={styles.playerHand}>
           <div className={styles.handCards}>
-            {(humanPlayer as any).hand.map((card: any, index: number) => (
-              <div
-                key={`${card.suit}-${card.rank}-${index}`}
-                className={styles.handCard}
-                style={{
-                  zIndex: index,
-                }}
-              >
-                <Image
-                  src={`/cards/${card.rank}_of_${card.suit}.png`}
-                  alt={`${card.rank} of ${card.suit}`}
-                  width={70}
-                  height={105}
-                  style={{ borderRadius: '8px' }}
-                />
-              </div>
-            ))}
+            {(humanPlayer as any).hand.map((card: any, index: number) => {
+              // Карта может быть строкой "7_of_spades.png" или объектом {rank, suit}
+              const cardImage = typeof card === 'string' 
+                ? card.replace('(open)', '').replace('(closed)', '')
+                : `${card.rank}_of_${card.suit}.png`;
+              
+              return (
+                <div
+                  key={`hand-${index}-${cardImage}`}
+                  className={styles.handCard}
+                  style={{
+                    zIndex: index,
+                  }}
+                >
+                  <Image
+                    src={`/cards/${cardImage}`}
+                    alt={cardImage}
+                    width={70}
+                    height={105}
+                    style={{ borderRadius: '8px' }}
+                  />
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
