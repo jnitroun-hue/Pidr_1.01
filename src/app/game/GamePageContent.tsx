@@ -1118,7 +1118,7 @@ function GamePageContentComponent({
             {players.map((player, index) => {
               const position = getPlayerPosition(index, players.length);
               const isCurrentTurn = player.id === currentPlayerId;
-              const playerCards = (player as any).hand || [];
+              const playerCards = player.cards || []; // ИСПРАВЛЕНО: используем player.cards из gameStore!
               const isHumanPlayer = index === 0 || !player.isBot; // Первый игрок или не бот = человек
 
                 return (
@@ -1152,13 +1152,13 @@ function GamePageContentComponent({
                     <div className={styles.cardsContainer}>
                       <div className={styles.activeCardContainer}>
                         {playerCards.slice(0, 3).map((card: any, cardIndex: number) => {
-                          // Карта может быть строкой "7_of_spades.png" или объектом {rank, suit}
+                          // Карта может быть строкой "7_of_spades.png(open)" или объектом {rank, suit, image}
                           const cardImage = typeof card === 'string' 
                             ? card.replace('(open)', '').replace('(closed)', '')
-                            : `${card.rank}_of_${card.suit}.png`;
+                            : card.image || `${card.rank}_of_${card.suit}.png`;
                           
                           // В 1-й стадии ВСЕ карты открыты! Со 2-й стадии - только свои или помеченные (open)
-                          const showOpen = gameStage === 1 || isHumanPlayer || (typeof card === 'string' && card.includes('(open)'));
+                          const showOpen = gameStage === 1 || isHumanPlayer || (typeof card === 'string' && card.includes('(open)')) || card.open;
                           
                           return (
                             <div key={cardIndex} className={styles.cardOnPenki} style={{
@@ -1185,14 +1185,14 @@ function GamePageContentComponent({
       )}
 
       {/* Рука игрока внизу экрана */}
-      {isGameActive && humanPlayer && (humanPlayer as any).hand && (humanPlayer as any).hand.length > 0 && (
+      {isGameActive && humanPlayer && humanPlayer.cards && humanPlayer.cards.length > 0 && (
         <div className={styles.playerHand}>
           <div className={styles.handCards}>
-            {(humanPlayer as any).hand.map((card: any, index: number) => {
-              // Карта может быть строкой "7_of_spades.png" или объектом {rank, suit}
+            {humanPlayer.cards.map((card: any, index: number) => {
+              // Карта может быть строкой "7_of_spades.png(open)" или объектом {rank, suit, image}
               const cardImage = typeof card === 'string' 
                 ? card.replace('(open)', '').replace('(closed)', '')
-                : `${card.rank}_of_${card.suit}.png`;
+                : card.image || `${card.rank}_of_${card.suit}.png`;
               
               return (
                 <div
