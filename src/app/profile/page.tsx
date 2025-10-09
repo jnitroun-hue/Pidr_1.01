@@ -534,6 +534,44 @@ export default function ProfilePage() {
             </button>
           </div>
           <p className="profile-status">🟢 {t.profile.online}</p>
+          
+          {/* 5 КНОПОК КРИПТОВАЛЮТ */}
+          <div style={{
+            display: 'flex',
+            gap: '8px',
+            justifyContent: 'center',
+            margin: '16px 0',
+            flexWrap: 'wrap'
+          }}>
+            {['TON', 'ETH', 'USDT', 'BTC', 'SOL'].map((crypto) => (
+              <motion.button
+                key={crypto}
+                onClick={() => {
+                  // TODO: Открыть модалку пополнения для этой криптовалюты
+                  console.log(`Пополнение ${crypto}`);
+                }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                style={{
+                  background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.3))',
+                  border: '1px solid rgba(59, 130, 246, 0.4)',
+                  borderRadius: '12px',
+                  padding: '10px 16px',
+                  color: '#60a5fa',
+                  fontWeight: '700',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  backdropFilter: 'blur(10px)',
+                  minWidth: '60px'
+                }}
+              >
+                {crypto}
+              </motion.button>
+            ))}
+          </div>
+
+          {/* ИГРОВЫЕ МОНЕТЫ НАД КНОПКОЙ ДРУЗЬЯ */}
           <div style={{
             background: 'linear-gradient(135deg, #fbbf24, #f59e0b)',
             padding: '8px 16px',
