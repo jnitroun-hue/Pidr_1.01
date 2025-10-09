@@ -809,12 +809,6 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
           )}
         </AnimatePresence>
         
-        <div className="balance-amount">
-          <FaCoins className="coin-icon" />
-          <span className="amount-text">{balance.toLocaleString()}</span>
-          <span className="currency">монет</span>
-        </div>
-
         <div className="wallet-id">
           <span>ID кошелька: #{user?.id ? String(user.id).slice(-8) : 'XXXXXXXX'}</span>
         </div>
