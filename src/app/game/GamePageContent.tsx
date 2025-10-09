@@ -937,6 +937,22 @@ function GamePageContentComponent({
   const canClickDeck = turnPhase === 'showing_deck_hint' && currentTurnPlayer?.id === currentPlayerId;
   const waitingForTarget = turnPhase === 'waiting_target_selection';
 
+  // Функция для расчета позиции игрока вокруг прямоугольного стола
+  const getPlayerPosition = (index: number, totalPlayers: number) => {
+    // Позиции для прямоугольного стола (8 позиций max)
+    const positions = [
+      { x: 50, y: 85 }, // Низ (игрок)
+      { x: 15, y: 70 }, // Лево-низ
+      { x: 5, y: 50 },  // Лево-центр
+      { x: 15, y: 30 }, // Лево-верх
+      { x: 50, y: 15 }, // Верх
+      { x: 85, y: 30 }, // Право-верх
+      { x: 95, y: 50 }, // Право-центр
+      { x: 85, y: 70 }, // Право-низ
+    ];
+    return positions[index % positions.length];
+  };
+
   // Показываем загрузку если игра инициализируется
   if (!isGameActive && !winner) {
     return (
@@ -956,15 +972,15 @@ function GamePageContentComponent({
             {players.length > 0 ? 'Игра завершена! Начните новую игру' : 'Запускаем игру...'}
           </p>
           {players.length === 0 && (
-            <div style={{
-              width: '40px',
-              height: '40px',
-              border: '4px solid rgba(99, 102, 241, 0.3)',
-              borderTop: '4px solid #6366f1',
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite',
-              margin: '0 auto 20px'
-            }}></div>
+          <div style={{
+            width: '40px',
+            height: '40px',
+            border: '4px solid rgba(99, 102, 241, 0.3)',
+            borderTop: '4px solid #6366f1',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 20px'
+          }}></div>
           )}
           <button
             onClick={() => {
@@ -1037,6 +1053,115 @@ function GamePageContentComponent({
              trumpSuit === 'spades' ? '♠️' : ''}
           </span>
           Козырь
+        </div>
+      )}
+
+      {/* 🎮 ИГРОВОЙ СТОЛ И КАРТЫ */}
+      {isGameActive && (
+        <div className={styles.tableWrapper}>
+          {/* Прямоугольный стол */}
+          <div className={styles.rectangularTable}>
+            {/* Колода и открытая карта в центре */}
+            {deck && deck.length > 0 && (
+              <div className={styles.deckStack} style={{
+                position: 'absolute',
+                left: '50%',
+                top: '50%',
+                transform: 'translate(-50%, -50%)',
+                zIndex: 10
+              }}>
+                    <Image 
+                  src={`/cards/${CARD_BACK}`}
+                  alt="Deck"
+                  width={70}
+                  height={105}
+                        className={styles.deckCard}
+                      />
+                    <div className={styles.deckCount}>{deck.length}</div>
+                </div>
+              )}
+              
+            {/* Игроки вокруг стола */}
+            {players.map((player, index) => {
+              const position = getPlayerPosition(index, players.length);
+              const isCurrentTurn = player.id === currentPlayerId;
+              const playerCards = (player as any).hand || [];
+
+                return (
+                  <div
+                  key={player.id}
+                  className={`${styles.playerSeat} ${isCurrentTurn ? styles.activePlayer : ''}`}
+                    style={{
+                    left: `${position.x}%`,
+                    top: `${position.y}%`,
+                  }}
+                >
+                  {/* Аватар и имя */}
+                    <div className={styles.avatarWrap}>
+                      <div className={styles.avatarContainer}>
+                          <Image 
+                        src={playerAvatars[player.id] || player.avatar || '/images/default-avatar.png'}
+                        alt={player.name}
+                        width={40}
+                        height={40}
+                            className={styles.avatar}
+                          />
+                      {player.isBot && (
+                        <div className={styles.botBadge}>🤖</div>
+                        )}
+                          </div>
+                    <span className={styles.playerName}>{player.name}</span>
+                    </div>
+                    
+                  {/* Карты игрока */}
+                  {playerCards.length > 0 && (
+                    <div className={styles.cardsContainer}>
+                      <div className={styles.activeCardContainer}>
+                        {playerCards.slice(0, 3).map((card: any, cardIndex: number) => (
+                          <div key={cardIndex} className={styles.cardOnPenki} style={{
+                            marginLeft: cardIndex > 0 ? '-30px' : '0'
+                          }}>
+                            <Image
+                              src={player.id === 'player_1' ? `/cards/${card.rank}_of_${card.suit}.png` : `/cards/${CARD_BACK}`}
+                              alt={player.id === 'player_1' ? `${card.rank} of ${card.suit}` : 'Card'}
+                              width={60}
+                              height={90}
+                              style={{ borderRadius: '8px' }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+      )}
+
+      {/* Рука игрока внизу экрана */}
+      {isGameActive && humanPlayer && (humanPlayer as any).hand && (humanPlayer as any).hand.length > 0 && (
+        <div className={styles.playerHand}>
+          <div className={styles.handCards}>
+            {(humanPlayer as any).hand.map((card: any, index: number) => (
+              <div
+                key={`${card.suit}-${card.rank}-${index}`}
+                className={styles.handCard}
+                style={{
+                  zIndex: index,
+                }}
+              >
+                <Image
+                  src={`/cards/${card.rank}_of_${card.suit}.png`}
+                  alt={`${card.rank} of ${card.suit}`}
+                  width={70}
+                  height={105}
+                  style={{ borderRadius: '8px' }}
+                />
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
