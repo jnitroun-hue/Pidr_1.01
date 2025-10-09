@@ -1029,30 +1029,62 @@ function GamePageContentComponent({
 
   return (
     <div className={styles.gameContainer}>
-      {/* Информация о козыре - только со 2-й стадии рядом с бургер меню */}
-      {isGameActive && gameStage >= 2 && trumpSuit && (
-        <div style={{
-          position: 'fixed',
-          top: '15px',
-          right: '70px', // Рядом с бургер меню
-          zIndex: 1100,
-          background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-          color: '#fff',
-          padding: '5px 10px', // Уменьшено в 2 раза
-          borderRadius: '12px',
-          fontSize: '12px', // Уменьшено в 2 раза
-          fontWeight: 600,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '4px'
-        }}>
-          <span style={{ fontSize: '14px' }}>
-            {trumpSuit === 'hearts' ? '♥️' : 
-             trumpSuit === 'diamonds' ? '♦️' : 
-             trumpSuit === 'clubs' ? '♣️' : 
-             trumpSuit === 'spades' ? '♠️' : ''}
-          </span>
-          Козырь
+      {/* ЗАГОЛОВОК ИГРЫ - СТАДИЯ И КОЛОДА */}
+      {isGameActive && (
+        <div className={styles.gameHeader}>
+          <div className={styles.stageInfo}>
+            <span className={styles.trumpIcon}>
+              {gameStage === 1 ? '🎴' : gameStage === 2 ? '🃏' : gameStage === 3 ? '🎯' : '🏆'}
+            </span>
+            Стадия {gameStage}
+            {gameStage >= 2 && trumpSuit && (
+              <span style={{ marginLeft: '8px' }}>
+                {trumpSuit === 'hearts' ? '♥️' : 
+                 trumpSuit === 'diamonds' ? '♦️' : 
+                 trumpSuit === 'clubs' ? '♣️' : 
+                 trumpSuit === 'spades' ? '♠️' : ''}
+              </span>
+            )}
+          </div>
+          <div className={styles.deckInfo}>
+            🎴 Колода: {deck.length}
+          </div>
+        </div>
+      )}
+
+      {/* БУРГЕР МЕНЮ */}
+      {isGameActive && (
+        <div className={styles.gameControls}>
+          <div className={styles.burgerMenu}>
+            <button className={styles.burgerButton}>
+              <div className={styles.burgerLines}>
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </button>
+            <div className={styles.burgerDropdown}>
+              <div className={styles.menuCoinsBalance}>
+                <span className={styles.coinsIcon}>🪙</span>
+                <div className={styles.coinsInfo}>
+                  <div className={styles.coinsAmount}>{gameCoins}</div>
+                  <div className={styles.coinsLabel}>Монеты</div>
+                </div>
+              </div>
+              <div className={styles.menuDivider}></div>
+              <button className={styles.menuItem} onClick={() => typeof window !== 'undefined' && window.history.back()}>
+                🏠 Главная
+              </button>
+              <button className={styles.menuItem} onClick={() => {
+                if (confirm('Вы уверены что хотите завершить игру?')) {
+                  endGame();
+                  typeof window !== 'undefined' && window.history.back();
+                }
+              }}>
+                🚪 Выйти
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
