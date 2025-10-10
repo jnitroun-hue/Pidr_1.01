@@ -2,10 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cardQueue } from '../../../../lib/nft/card-queue';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Проверяем переменные окружения
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.warn('⚠️ Supabase credentials not found for cron job');
+}
+
+const supabase = supabaseUrl && supabaseKey 
+  ? createClient(supabaseUrl, supabaseKey)
+  : null;
 
 /**
  * GET /api/cron/process-card-queue
@@ -14,6 +21,14 @@ const supabase = createClient(
  */
 export async function GET(request: NextRequest) {
   try {
+    // Проверяем наличие Supabase
+    if (!supabase) {
+      return NextResponse.json(
+        { error: 'Supabase not configured' },
+        { status: 500 }
+      );
+    }
+
     // Проверяем Authorization заголовок для cron
     const authHeader = request.headers.get('authorization');
     if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
