@@ -1,35 +1,37 @@
 /**
- * Скрипт для прегенерации базовых NFT карт
- * Генерирует 2-3 карты разной редкости и загружает в Supabase Storage
+ * Упрощенный скрипт для прегенерации NFT карт
+ * Принимает переменные окружения как аргументы
  * 
- * Запуск: npx tsx scripts/pregenerate-cards.ts
+ * Запуск:
+ * npx tsx scripts/pregenerate-cards-cli.ts <SUPABASE_URL> <SERVICE_ROLE_KEY>
  */
 
 import { createClient } from '@supabase/supabase-js';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as dotenv from 'dotenv';
 
-// Загружаем переменные окружения из .env.local
-dotenv.config({ path: '.env.local' });
+// Получаем аргументы из командной строки
+const args = process.argv.slice(2);
 
-// Проверяем наличие переменных
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
-  console.error('❌ NEXT_PUBLIC_SUPABASE_URL не найден в .env.local');
+if (args.length < 2) {
+  console.log('');
+  console.log('📝 Использование:');
+  console.log('npx tsx scripts/pregenerate-cards-cli.ts <SUPABASE_URL> <SERVICE_ROLE_KEY>');
+  console.log('');
+  console.log('Пример:');
+  console.log('npx tsx scripts/pregenerate-cards-cli.ts https://xxx.supabase.co eyJhbGc...');
+  console.log('');
+  console.log('💡 Переменные можно найти в Vercel Dashboard → Settings → Environment Variables');
   process.exit(1);
 }
 
-if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-  console.error('❌ SUPABASE_SERVICE_ROLE_KEY не найден в .env.local');
-  process.exit(1);
-}
+const SUPABASE_URL = args[0];
+const SERVICE_ROLE_KEY = args[1];
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+console.log('🔗 Подключаемся к Supabase...');
+console.log(`URL: ${SUPABASE_URL.substring(0, 30)}...`);
 
-// Карты для прегенерации (примеры разной редкости)
+const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+
+// Карты для прегенерации
 const CARDS_TO_GENERATE = [
   { rank: '2', suit: 'hearts', rarity: 'common' },
   { rank: 'K', suit: 'spades', rarity: 'rare' },
@@ -46,20 +48,8 @@ async function pregenerateCards() {
       // Генерируем SVG карту
       const svg = generateCardSVG(card.rank, card.suit, card.rarity);
 
-      // Конвертируем SVG в PNG (упрощенная версия)
-      const fileName = `${card.rank}.png`;
-      const filePath = path.join(process.cwd(), 'temp', `${card.suit}_${fileName}`);
-
-      // Создаем временную директорию
-      const tempDir = path.join(process.cwd(), 'temp');
-      if (!fs.existsSync(tempDir)) {
-        fs.mkdirSync(tempDir, { recursive: true });
-      }
-
-      // Сохраняем SVG во временный файл
-      fs.writeFileSync(filePath.replace('.png', '.svg'), svg);
-
       // Загружаем в Supabase Storage
+      const fileName = `${card.rank}.svg`;
       const storagePath = `base-cards/${card.suit}/${fileName}`;
       
       const { data, error } = await supabase.storage
@@ -70,7 +60,7 @@ async function pregenerateCards() {
         });
 
       if (error) {
-        console.error(`❌ Ошибка загрузки ${storagePath}:`, error);
+        console.error(`❌ Ошибка загрузки ${storagePath}:`, error.message);
         continue;
       }
 
@@ -85,25 +75,31 @@ async function pregenerateCards() {
       const { error: dbError } = await supabase
         .from('_pidr_nft_cards')
         .upsert({
-          rank: card.rank,
-          suit: card.suit,
+          card_id: `${card.rank.toLowerCase()}_of_${card.suit}`,
+          card_rank: card.rank,
+          card_suit: card.suit,
+          card_name: `${card.rank} of ${card.suit}`,
           rarity: card.rarity,
           image_url: publicUrlData.publicUrl,
-          metadata_url: null
+          mint_price_ton: card.rarity === 'legendary' ? 3.0 : card.rarity === 'rare' ? 1.0 : 0.5,
+          nft_contract_address: null
         }, {
-          onConflict: 'rank,suit'
+          onConflict: 'card_id'
         });
 
       if (dbError) {
-        console.error(`❌ Ошибка сохранения в БД:`, dbError);
+        console.error(`⚠️ Ошибка сохранения в БД:`, dbError.message);
+      } else {
+        console.log(`💾 Метаданные сохранены в БД\n`);
       }
 
-    } catch (error) {
-      console.error(`❌ Ошибка генерации карты ${card.rank} of ${card.suit}:`, error);
+    } catch (error: any) {
+      console.error(`❌ Ошибка генерации карты ${card.rank} of ${card.suit}:`, error.message);
     }
   }
 
   console.log('\n✅ Прегенерация завершена!');
+  console.log(`📊 Создано ${CARDS_TO_GENERATE.length} базовых карт`);
 }
 
 /**
