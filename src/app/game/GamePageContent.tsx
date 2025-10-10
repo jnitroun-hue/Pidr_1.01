@@ -729,15 +729,14 @@ function GamePageContentComponent({
   // Инициализация игры из gameStore
   useEffect(() => {
     if (!gameInitialized) {
-      if (isGameActive && players.length > 0) {
-        // ИГРА УЖЕ ЗАПУЩЕНА - ВОССТАНАВЛИВАЕМ СОСТОЯНИЕ ПОСЛЕ REFRESH!
+      if (isGameActive && players.length > 0 && dealt) {
+        // ИГРА УЖЕ ЗАПУЩЕНА И КАРТЫ РОЗДАНЫ - ВОССТАНАВЛИВАЕМ СОСТОЯНИЕ ПОСЛЕ REFRESH!
         console.log(`🎮 [ВОССТАНОВЛЕНИЕ] Игра P.I.D.R. восстановлена: ${players.length} игроков`);
         console.log(`🎮 [ВОССТАНОВЛЕНИЕ] Стадия: ${gameStage}, текущий игрок: ${currentPlayerId}`);
         console.log(`🎮 [ВОССТАНОВЛЕНИЕ] Фаза хода: ${turnPhase}, stage2TurnPhase: ${stage2TurnPhase}`);
         
         setPlayerCount(players.length);
         setGameInitialized(true);
-        setDealt(true); // ВАЖНО: карты уже розданы при восстановлении!
         
         // Уведомляем о восстановлении
         showNotification(`🔄 Игра восстановлена! Продолжаем с ${gameStage}-й стадии`, 'success', 3000);
@@ -747,13 +746,13 @@ function GamePageContentComponent({
         if (currentTurnPlayer?.isBot) {
           console.log(`🤖 [ВОССТАНОВЛЕНИЕ] Бот ${currentTurnPlayer.name} должен продолжить ход`);
         }
-      } else {
+      } else if (!isGameActive) {
         // Игра не активна - просто инициализируем интерфейс
         console.log('🎮 Ожидание запуска игры...');
         setGameInitialized(true);
       }
     }
-  }, [gameInitialized, isGameActive, players.length, gameStage, currentPlayerId, turnPhase, stage2TurnPhase, showNotification]);
+  }, [gameInitialized, isGameActive, players.length, gameStage, currentPlayerId, turnPhase, stage2TurnPhase, dealt, showNotification]);
 
   // 🎲 Используем роскошный SVG стол (экипированный стол удален)
   // Функциональность выбора стола удалена - используем только luxury SVG table
@@ -781,12 +780,27 @@ function GamePageContentComponent({
 
   // Запуск игры
   const handleStartGame = () => {
+    console.log('🎮 [handleStartGame] Запуск новой игры с ботами');
+    
+    // ВАЖНО: Сбрасываем все состояния перед новой игрой
+    setDealt(false);
+    setGameInitialized(false);
+    
+    // Очищаем AI
+    setAiPlayers(new Map());
+    aiProcessingRef.current = null;
+    
+    // Запускаем новую игру
     startGame('multiplayer', playerCount, null, {
       avatar: userData?.avatar,
       username: userData?.username
     });
-    setDealt(false);
-    setGameInitialized(true);
+    
+    // Помечаем, что игра инициализирована
+    setTimeout(() => {
+      setGameInitialized(true);
+      console.log('✅ [handleStartGame] Игра инициализирована');
+    }, 100);
   };
 
   // НОВЫЕ ФУНКЦИИ для кнопок подсчета карт
