@@ -217,6 +217,16 @@ function GamePageContentComponent({
   } | null>(null);
   const [isLoadingUserData, setIsLoadingUserData] = useState(true);
 
+  // Текущая открытая карта из колоды (для отображения рядом с колодой)
+  const [currentCard, setCurrentCard] = useState<string | null>(null);
+
+  // Обновляем currentCard из revealedDeckCard
+  useEffect(() => {
+    if (revealedDeckCard) {
+      setCurrentCard(revealedDeckCard);
+    }
+  }, [revealedDeckCard]);
+
   // АВАТАРКИ ИГРОКОВ
   const [playerAvatars, setPlayerAvatars] = useState<Record<string, string>>({});
 
