@@ -1106,10 +1106,16 @@ function GamePageContentComponent({
                 <Image
                   src={`${CARDS_PATH}${CARD_BACK}`}
                   alt="Deck"
-                  width={45}
-                  height={67}
+                  width={90}
+                  height={135}
                   className={styles.deckCard}
-                  style={{ opacity: 1 }}
+                  style={{ 
+                    opacity: 1,
+                    filter: 'none',
+                    visibility: 'visible',
+                    display: 'block'
+                  }}
+                  priority
                 />
                     <div className={styles.deckCount}>{deck.length}</div>
                 </div>
@@ -1168,9 +1174,16 @@ function GamePageContentComponent({
                               <Image
                                 src={showOpen ? `${CARDS_PATH}${cardImage}` : `${CARDS_PATH}${CARD_BACK}`}
                                 alt={showOpen ? cardImage : 'Card'}
-                                width={45}
-                                height={67}
-                                style={{ borderRadius: '8px', opacity: 1 }}
+                                width={60}
+                                height={90}
+                                style={{ 
+                                  borderRadius: '8px', 
+                                  opacity: 1,
+                                  filter: 'none',
+                                  visibility: 'visible',
+                                  display: 'block'
+                                }}
+                                priority
                               />
                             </div>
                           );
@@ -1206,9 +1219,16 @@ function GamePageContentComponent({
                   <Image
                     src={`${CARDS_PATH}${cardImage}`}
                     alt={cardImage}
-                    width={45}
-                    height={67}
-                    style={{ borderRadius: '8px', opacity: 1 }}
+                    width={70}
+                    height={105}
+                    style={{ 
+                      borderRadius: '8px', 
+                      opacity: 1,
+                      filter: 'none',
+                      visibility: 'visible',
+                      display: 'block'
+                    }}
+                    priority
                   />
                 </div>
               );

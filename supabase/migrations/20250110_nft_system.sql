@@ -143,7 +143,12 @@ CREATE TABLE IF NOT EXISTS _pidr_user_achievements (
 );
 
 CREATE INDEX IF NOT EXISTS idx_user_achievements_user_id ON _pidr_user_achievements(user_id);
-CREATE INDEX IF NOT EXISTS idx_user_achievements_completed ON _pidr_user_achievements(user_id, is_completed);
+
+-- Удаляем старый индекс если он существует с неправильной колонкой
+DROP INDEX IF EXISTS idx_user_achievements_completed;
+
+-- Создаем новый индекс с правильной колонкой
+CREATE INDEX idx_user_achievements_completed ON _pidr_user_achievements(user_id, is_completed);
 
 -- ============================================
 -- ФУНКЦИИ ДЛЯ РАБОТЫ С NFT
