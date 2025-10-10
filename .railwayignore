@@ -1,0 +1,13 @@
+# Игнорируем все, кроме API
+*
+!server/
+!package.json
+!package-lock.json
+!tsconfig.json
+
+# Railway не должен деплоить фронтенд
+src/
+public/
+.next/
+out/
+
