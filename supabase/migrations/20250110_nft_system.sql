@@ -135,20 +135,32 @@ CREATE TABLE IF NOT EXISTS _pidr_user_achievements (
   user_id BIGINT NOT NULL REFERENCES _pidr_users(id) ON DELETE CASCADE,
   achievement_id TEXT NOT NULL REFERENCES _pidr_nft_achievements(achievement_id) ON DELETE CASCADE,
   current_progress INTEGER DEFAULT 0,
-  is_completed BOOLEAN DEFAULT FALSE,
   completed_at TIMESTAMP WITH TIME ZONE,
   claimed BOOLEAN DEFAULT FALSE,
   claimed_at TIMESTAMP WITH TIME ZONE,
   UNIQUE(user_id, achievement_id)
 );
 
+-- Добавляем колонку is_completed если её нет
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = '_pidr_user_achievements' 
+    AND column_name = 'is_completed'
+  ) THEN
+    ALTER TABLE _pidr_user_achievements ADD COLUMN is_completed BOOLEAN DEFAULT FALSE;
+  END IF;
+END $$;
+
+-- Создаем индексы
 CREATE INDEX IF NOT EXISTS idx_user_achievements_user_id ON _pidr_user_achievements(user_id);
 
--- Удаляем старый индекс если он существует с неправильной колонкой
+-- Удаляем старый индекс если существует
 DROP INDEX IF EXISTS idx_user_achievements_completed;
 
--- Создаем новый индекс с правильной колонкой
-CREATE INDEX idx_user_achievements_completed ON _pidr_user_achievements(user_id, is_completed);
+-- Создаем новый индекс
+CREATE INDEX IF NOT EXISTS idx_user_achievements_completed ON _pidr_user_achievements(user_id, is_completed);
 
 -- ============================================
 -- ФУНКЦИИ ДЛЯ РАБОТЫ С NFT
