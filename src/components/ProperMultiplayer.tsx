@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import WaitingRoomProfessional from './WaitingRoomProfessional'; // Исправил импорт - default export
-import { roomStorage } from '../utils/roomStorage';
 import styles from './ProperMultiplayer.module.css';
 
 interface Room {
