@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import { TelegramProvider } from '../hooks/useTelegram'
 import { ThemeProvider } from '../context/theme_context'
+import { TonConnectProvider } from '../context/TonConnectProvider'
 import type { TelegramWebApp } from '../types/telegram-webapp'
 import { ChakraProvider } from '@chakra-ui/react'
 import { defaultSystem } from '@chakra-ui/react/preset'
@@ -60,7 +61,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <ChakraProvider value={defaultSystem}>
       <TelegramProvider>
         <ThemeProvider>
-          {children}
+          <TonConnectProvider>
+            {children}
+          </TonConnectProvider>
         </ThemeProvider>
       </TelegramProvider>
     </ChakraProvider>

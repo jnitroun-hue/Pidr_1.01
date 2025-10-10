@@ -214,7 +214,7 @@ export default function ProfilePage() {
     loadInventory();
   }, []);
   const [activeSection, setActiveSection] = useState('stats'); // 'stats', 'achievements', 'wallet'
-  const [showModal, setShowModal] = useState<'skins' | 'effects' | 'bonuses' | 'frames' | null>(null);
+  const [showModal, setShowModal] = useState<'skins' | 'effects' | 'bonuses' | 'frames' | 'nft' | null>(null);
   const [selectedSkin, setSelectedSkin] = useState('classic');
   const [selectedEffect, setSelectedEffect] = useState('none');
   const [selectedFrame, setSelectedFrame] = useState('default');
@@ -932,6 +932,50 @@ export default function ProfilePage() {
               БОНУСЫ
             </span>
           </motion.button>
+
+          {/* NFT СЕКЦИЯ - НОВАЯ КНОПКА */}
+          <motion.button
+            onClick={() => setShowModal('nft')}
+            whileHover={{ scale: 1.02, y: -2 }}
+            whileTap={{ scale: 0.98 }}
+            style={{
+              width: '100%',
+              marginTop: '12px',
+              background: 'linear-gradient(135deg, rgba(0, 136, 204, 0.8) 0%, rgba(0, 85, 128, 0.6) 100%)',
+              border: '2px solid rgba(0, 136, 204, 0.4)',
+              borderRadius: '16px',
+              padding: '16px 20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '12px',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              backdropFilter: 'blur(10px)',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = 'rgba(0, 153, 221, 0.6)';
+              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 153, 221, 0.9) 0%, rgba(0, 102, 144, 0.8) 100%)';
+              e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.3), 0 0 20px rgba(0, 136, 204, 0.2)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = 'rgba(0, 136, 204, 0.4)';
+              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 136, 204, 0.8) 0%, rgba(0, 85, 128, 0.6) 100%)';
+              e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.2)';
+            }}
+          >
+            <Wallet style={{ fontSize: '1.8rem', color: '#e2e8f0', filter: 'drop-shadow(0 2px 4px rgba(0, 136, 204, 0.3))' }} />
+            <span style={{ 
+              color: '#e2e8f0', 
+              fontSize: '1rem', 
+              fontWeight: '700', 
+              letterSpacing: '1px',
+              textAlign: 'center'
+            }}>
+              NFT КОЛЛЕКЦИЯ
+            </span>
+          </motion.button>
         </motion.div>
 
         {/* Navigation Tabs */}
@@ -1160,6 +1204,7 @@ export default function ProfilePage() {
                 {showModal === 'effects' && '✨ ИГРОВЫЕ ЭФФЕКТЫ'}
                 {showModal === 'bonuses' && '🎁 БОНУСЫ'}
                 {showModal === 'frames' && '🖼️ РАМКИ АВАТАРОВ'}
+                {showModal === 'nft' && '🎴 NFT КОЛЛЕКЦИЯ'}
               </h3>
               <button
                 onClick={() => setShowModal(null)}
@@ -1554,6 +1599,119 @@ export default function ProfilePage() {
                     </div>
                   </motion.div>
                 ))}
+              </div>
+            )}
+
+            {/* NFT КОЛЛЕКЦИЯ МОДАЛЬНОЕ ОКНО */}
+            {showModal === 'nft' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {/* TON Wallet Connect */}
+                <div style={{
+                  background: 'rgba(30, 41, 59, 0.6)',
+                  border: '2px solid rgba(0, 136, 204, 0.3)',
+                  borderRadius: '16px',
+                  padding: '20px'
+                }}>
+                  <h4 style={{ 
+                    color: '#e2e8f0', 
+                    fontSize: '1.1rem', 
+                    fontWeight: '700', 
+                    margin: '0 0 16px 0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px'
+                  }}>
+                    <Wallet size={24} /> Подключение TON кошелька
+                  </h4>
+                  <div style={{ 
+                    color: '#94a3b8', 
+                    fontSize: '0.9rem', 
+                    marginBottom: '16px',
+                    lineHeight: '1.6'
+                  }}>
+                    Подключите свой TON кошелек для владения NFT картами. Все NFT будут минтиться напрямую в ваш кошелек.
+                  </div>
+                  {/* Компонент подключения кошелька будет здесь */}
+                  <div style={{
+                    background: 'rgba(15, 23, 42, 0.8)',
+                    border: '1px solid rgba(148, 163, 184, 0.2)',
+                    borderRadius: '12px',
+                    padding: '16px',
+                    textAlign: 'center',
+                    color: '#94a3b8'
+                  }}>
+                    🔜 TON Connect интеграция загружается...
+                  </div>
+                </div>
+
+                {/* NFT Gallery */}
+                <div style={{
+                  background: 'rgba(30, 41, 59, 0.6)',
+                  border: '2px solid rgba(0, 136, 204, 0.3)',
+                  borderRadius: '16px',
+                  padding: '20px'
+                }}>
+                  <h4 style={{ 
+                    color: '#e2e8f0', 
+                    fontSize: '1.1rem', 
+                    fontWeight: '700', 
+                    margin: '0 0 16px 0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px'
+                  }}>
+                    <Trophy size={24} /> Моя NFT коллекция
+                  </h4>
+                  {/* Галерея NFT будет здесь */}
+                  <div style={{
+                    background: 'rgba(15, 23, 42, 0.8)',
+                    border: '1px solid rgba(148, 163, 184, 0.2)',
+                    borderRadius: '12px',
+                    padding: '40px 16px',
+                    textAlign: 'center',
+                    color: '#94a3b8'
+                  }}>
+                    <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🎴</div>
+                    <div style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '8px', color: '#e2e8f0' }}>
+                      Коллекция пуста
+                    </div>
+                    <div style={{ fontSize: '0.9rem' }}>
+                      Подключите кошелек и заминтите свою первую NFT карту!
+                    </div>
+                  </div>
+                </div>
+
+                {/* Информация о NFT */}
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(0, 136, 204, 0.05) 100%)',
+                  border: '1px solid rgba(59, 130, 246, 0.2)',
+                  borderRadius: '12px',
+                  padding: '16px'
+                }}>
+                  <h5 style={{ 
+                    color: '#3b82f6', 
+                    fontSize: '0.9rem', 
+                    fontWeight: '700', 
+                    margin: '0 0 12px 0',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}>
+                    ℹ️ О NFT картах
+                  </h5>
+                  <ul style={{ 
+                    color: '#94a3b8', 
+                    fontSize: '0.85rem', 
+                    margin: 0, 
+                    paddingLeft: '20px',
+                    lineHeight: '1.8'
+                  }}>
+                    <li>Каждая карта — уникальный NFT в блокчейне TON</li>
+                    <li>Вы полностью владеете своими картами</li>
+                    <li>Можно торговать на маркетплейсах</li>
+                    <li>Редкие карты стоят 2-3 TON для минта</li>
+                    <li>Обычные карты — от 0.5 TON</li>
+                  </ul>
+                </div>
               </div>
             )}
           </motion.div>
