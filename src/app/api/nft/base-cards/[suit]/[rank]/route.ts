@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Проверяем переменные окружения
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.warn('⚠️ Supabase credentials not found for base-cards');
+}
+
+const supabase = supabaseUrl && supabaseKey 
+  ? createClient(supabaseUrl, supabaseKey)
+  : null;
 
 /**
  * GET /api/nft/base-cards/[suit]/[rank]
@@ -15,6 +22,14 @@ export async function GET(
   { params }: { params: { suit: string; rank: string } }
 ) {
   try {
+    // Проверяем наличие Supabase
+    if (!supabase) {
+      return NextResponse.json(
+        { error: 'Supabase not configured' },
+        { status: 500 }
+      );
+    }
+
     const { suit, rank } = params;
 
     // Путь к карте в Supabase Storage

@@ -5,10 +5,17 @@
 
 import { Redis } from '@upstash/redis';
 
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL!,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN!
-});
+// Проверяем переменные окружения
+const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
+const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+if (!redisUrl || !redisToken) {
+  console.warn('⚠️ Redis credentials not found for card queue');
+}
+
+const redis = redisUrl && redisToken 
+  ? new Redis({ url: redisUrl, token: redisToken })
+  : null;
 
 export interface CardGenerationJob {
   id: string;
@@ -40,6 +47,10 @@ export class CardQueue {
    * Добавить задачу в очередь
    */
   async addJob(job: Omit<CardGenerationJob, 'id' | 'status' | 'progress' | 'createdAt' | 'updatedAt'>): Promise<string> {
+    if (!redis) {
+      throw new Error('Redis not configured');
+    }
+
     const jobId = `job_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const fullJob: CardGenerationJob = {
       ...job,
@@ -69,6 +80,10 @@ export class CardQueue {
    * Получить следующую задачу из очереди
    */
   async getNextJob(): Promise<CardGenerationJob | null> {
+    if (!redis) {
+      return null;
+    }
+
     // Получаем первую задачу из очереди
     const jobs = await redis.zrange(QUEUE_KEY, 0, 0);
     if (!jobs || jobs.length === 0) {
@@ -108,6 +123,8 @@ export class CardQueue {
    * Обновить прогресс задачи
    */
   async updateJobProgress(jobId: string, progress: number): Promise<void> {
+    if (!redis) return;
+
     const jobData = await redis.get(`${JOB_KEY_PREFIX}${jobId}`);
     if (!jobData) return;
 
@@ -127,6 +144,8 @@ export class CardQueue {
     jobId: string,
     result: CardGenerationJob['result']
   ): Promise<void> {
+    if (!redis) return;
+
     const jobData = await redis.get(`${JOB_KEY_PREFIX}${jobId}`);
     if (!jobData) return;
 
@@ -151,6 +170,8 @@ export class CardQueue {
    * Пометить задачу как неудавшуюся
    */
   async failJob(jobId: string, error: string): Promise<void> {
+    if (!redis) return;
+
     const jobData = await redis.get(`${JOB_KEY_PREFIX}${jobId}`);
     if (!jobData) return;
 
@@ -174,6 +195,8 @@ export class CardQueue {
    * Получить статус задачи
    */
   async getJobStatus(jobId: string): Promise<CardGenerationJob | null> {
+    if (!redis) return null;
+
     const jobData = await redis.get(`${JOB_KEY_PREFIX}${jobId}`);
     if (!jobData) return null;
 
@@ -184,6 +207,7 @@ export class CardQueue {
    * Удалить задачу из очереди
    */
   private async removeJob(jobId: string): Promise<void> {
+    if (!redis) return;
     await redis.zrem(QUEUE_KEY, jobId);
   }
 
@@ -191,6 +215,7 @@ export class CardQueue {
    * Получить длину очереди
    */
   async getQueueLength(): Promise<number> {
+    if (!redis) return 0;
     return await redis.zcard(QUEUE_KEY);
   }
 }
