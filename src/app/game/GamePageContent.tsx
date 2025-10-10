@@ -222,8 +222,12 @@ function GamePageContentComponent({
 
   // Обновляем currentCard из revealedDeckCard
   useEffect(() => {
-    if (revealedDeckCard) {
-      setCurrentCard(revealedDeckCard);
+    if (revealedDeckCard && revealedDeckCard.image) {
+      console.log('🎴 [currentCard] Обновляем открытую карту:', revealedDeckCard.image);
+      setCurrentCard(revealedDeckCard.image); // Используем image, а не весь объект!
+    } else {
+      console.log('🎴 [currentCard] Нет открытой карты из колоды');
+      setCurrentCard(null);
     }
   }, [revealedDeckCard]);
 
