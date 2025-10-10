@@ -6,10 +6,17 @@
 import { createClient } from '@supabase/supabase-js';
 import { createHash } from 'crypto';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+// Проверяем переменные окружения
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-const supabase = createClient(supabaseUrl, supabaseKey);
+if (!supabaseUrl || !supabaseKey) {
+  console.warn('⚠️ Supabase credentials not found for universal-auth');
+}
+
+const supabase = supabaseUrl && supabaseKey 
+  ? createClient(supabaseUrl, supabaseKey)
+  : null;
 
 export type AuthProvider = 'telegram' | 'google' | 'vk' | 'email' | 'apple';
 
@@ -46,6 +53,10 @@ export async function authenticateUser(params: {
   supabaseAuthId?: string;
 }): Promise<AuthResult> {
   try {
+    if (!supabase) {
+      return { success: false, error: 'Supabase not configured' };
+    }
+
     const { data, error } = await supabase.rpc('authenticate_user', {
       p_auth_provider: params.authProvider,
       p_provider_user_id: params.providerUserId,
@@ -105,6 +116,10 @@ export async function createSession(params: {
   telegramInitData?: string;
   expiresInSeconds?: number;
 }): Promise<string> {
+  if (!supabase) {
+    throw new Error('Supabase not configured');
+  }
+
   // Генерируем уникальный токен
   const sessionToken = generateSessionToken();
   const sessionTokenHash = hashToken(sessionToken);
@@ -137,6 +152,10 @@ export async function validateSession(sessionToken: string): Promise<{
   userId?: number;
   expiresAt?: string;
 }> {
+  if (!supabase) {
+    return { isValid: false };
+  }
+
   const sessionTokenHash = hashToken(sessionToken);
 
   const { data, error } = await supabase.rpc('validate_session', {
@@ -166,6 +185,10 @@ export async function linkAuthMethod(params: {
   providerData?: Record<string, any>;
 }): Promise<{ success: boolean; authMethodId?: number; error?: string }> {
   try {
+    if (!supabase) {
+      return { success: false, error: 'Supabase not configured' };
+    }
+
     const { data, error } = await supabase.rpc('link_auth_method', {
       p_user_id: params.userId,
       p_auth_provider: params.authProvider,
@@ -191,6 +214,10 @@ export async function linkAuthMethod(params: {
  * Получение всех методов авторизации пользователя
  */
 export async function getUserAuthMethods(userId: number): Promise<UserAuthMethod[]> {
+  if (!supabase) {
+    return [];
+  }
+
   const { data, error } = await supabase.rpc('get_user_auth_methods', {
     p_user_id: userId,
   });
@@ -234,6 +261,10 @@ function hashToken(token: string): string {
  * Инвалидация сессии (logout)
  */
 export async function invalidateSession(sessionToken: string): Promise<boolean> {
+  if (!supabase) {
+    return false;
+  }
+
   const sessionTokenHash = hashToken(sessionToken);
 
   const { error } = await supabase
@@ -254,6 +285,10 @@ export async function invalidateSession(sessionToken: string): Promise<boolean> 
  * Получение пользователя по ID
  */
 export async function getUserById(userId: number) {
+  if (!supabase) {
+    return null;
+  }
+
   const { data, error } = await supabase
     .from('_pidr_users')
     .select('*')
