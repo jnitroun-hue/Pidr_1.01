@@ -57,14 +57,24 @@ const Shop = () => {
 
   const loadUserDataFromDB = async () => {
     try {
-      // Получаем данные пользователя из localStorage (Telegram ID)
-      const userData = localStorage.getItem('user');
-      if (!userData) {
+      // Получаем данные пользователя из API (не из localStorage!)
+      const authResponse = await fetch('/api/auth', {
+        method: 'GET',
+        credentials: 'include'
+      });
+      
+      if (!authResponse.ok) {
+        console.error('❌ Пользователь не авторизован');
+        return;
+      }
+      
+      const authResult = await authResponse.json();
+      if (!authResult.success || !authResult.user) {
         console.error('❌ Нет данных пользователя');
         return;
       }
-
-      const parsedUser = JSON.parse(userData);
+      
+      const parsedUser = authResult.user;
       const userId = parsedUser.telegramId || parsedUser.id;
 
       // Получаем актуальный баланс из БД
@@ -85,20 +95,22 @@ const Shop = () => {
         }
       }
 
-      // Получаем покупки из БД (если есть таблица для покупок)
-      // TODO: Создать таблицу _pidr_shop_purchases
-      const savedPurchases = localStorage.getItem('pidr-purchases');
-      if (savedPurchases) {
-        setPurchasedItems(JSON.parse(savedPurchases));
+      // Получаем покупки из БД через API
+      const purchasesResponse = await fetch('/api/shop/inventory', {
+        method: 'GET',
+        credentials: 'include'
+      });
+      
+      if (purchasesResponse.ok) {
+        const purchasesData = await purchasesResponse.json();
+        if (purchasesData.success && purchasesData.data) {
+          setPurchasedItems(purchasesData.data.purchased || []);
+        }
       }
     } catch (error) {
       console.error('❌ Ошибка загрузки данных из БД:', error);
-      // Fallback к localStorage
-      const savedCoins = localStorage.getItem('pidr-coins');
-      const savedPurchases = localStorage.getItem('pidr-purchases');
-      
-      if (savedCoins) setCoins(parseInt(savedCoins));
-      if (savedPurchases) setPurchasedItems(JSON.parse(savedPurchases));
+      setCoins(0);
+      setPurchasedItems([]);
     }
   };
 
@@ -139,13 +151,7 @@ const Shop = () => {
         setCoins(newCoins);
         setPurchasedItems(newPurchases);
         
-        // Обновляем баланс в localStorage для синхронизации
-        const userData = localStorage.getItem('user');
-        if (userData) {
-          const parsedUser = JSON.parse(userData);
-          parsedUser.coins = newCoins;
-          localStorage.setItem('user', JSON.stringify(parsedUser));
-        }
+        // Баланс обновляется в БД через API - localStorage не используется!
         
         // Показать уведомление об успешной покупке
         showNotification(`✅ ${item.name} приобретен!`, 'success');

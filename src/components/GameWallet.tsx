@@ -107,13 +107,13 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
 
     const interval = setInterval(async () => {
       try {
-        const token = localStorage.getItem('auth_token');
-        if (!token) return;
+        // Используем cookies через API (не localStorage!)
+        // Token передается автоматически через HTTP-only cookies
 
         const response = await fetch('/api/wallet/check-payments', {
           method: 'POST',
+          credentials: 'include', // Автоматически отправляет cookies
           headers: {
-            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         });
@@ -190,48 +190,54 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
 
   const loadUserData = async () => {
     try {
-      const userData = localStorage.getItem('user');
-      if (userData) {
-        const parsedUser = JSON.parse(userData);
+      // Получаем данные пользователя из API (не из localStorage!)
+      const authResponse = await fetch('/api/auth', {
+        method: 'GET',
+        credentials: 'include'
+      });
+      
+      if (!authResponse.ok) {
+        console.error('❌ Пользователь не авторизован');
+        return;
+      }
+      
+      const authResult = await authResponse.json();
+      if (!authResult.success || !authResult.user) {
+        console.error('❌ Нет данных пользователя');
+        return;
+      }
+      
+      const parsedUser = authResult.user;
         
-        // Получаем актуальный баланс из базы данных
-        const response = await fetch('/api/pidr-db', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'get_user_balance',
-            userId: parsedUser.telegramId || parsedUser.id
-          })
-        });
+      // Получаем актуальный баланс из базы данных
+      const balanceResponse = await fetch('/api/pidr-db', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'get_user_balance',
+          userId: parsedUser.telegramId || parsedUser.id
+        })
+      });
 
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            const actualBalance = data.balance || 0;
-            setBalance(actualBalance);
-            
-            // Обновляем localStorage с актуальным балансом
-            parsedUser.coins = actualBalance;
-            localStorage.setItem('user', JSON.stringify(parsedUser));
-            
-            onBalanceUpdate?.(actualBalance);
-          } else {
-            // Fallback к данным из localStorage
-            setBalance(parsedUser.coins || 0);
-          }
+      if (balanceResponse.ok) {
+        const data = await balanceResponse.json();
+        if (data.success) {
+          const actualBalance = data.balance || 0;
+          setBalance(actualBalance);
+          onBalanceUpdate?.(actualBalance);
+          console.log('✅ Баланс загружен из БД:', actualBalance);
         } else {
-          // Fallback к данным из localStorage
+          // Используем баланс из auth API
           setBalance(parsedUser.coins || 0);
         }
-      }
-    } catch (error) {
-      console.error('Ошибка загрузки данных пользователя:', error);
-      // Fallback к данным из localStorage
-      const userData = localStorage.getItem('user');
-      if (userData) {
-        const parsedUser = JSON.parse(userData);
+      } else {
+        // Используем баланс из auth API
         setBalance(parsedUser.coins || 0);
       }
+    } catch (error) {
+      console.error('❌ Ошибка загрузки данных пользователя:', error);
+      setBalance(0);
     }
   };
 
