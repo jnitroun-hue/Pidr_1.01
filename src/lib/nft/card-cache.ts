@@ -1,19 +1,29 @@
 /**
- * IndexedDB кеширование для NFT карт
- * Хранит базовые карты и метаданные для быстрого доступа
+ * ✅ БЕЗОПАСНОЕ IndexedDB кеширование для NFT карт
+ * 
+ * ВАЖНО: Хранит ТОЛЬКО публичные UI данные:
+ * - Изображения карт (base64)
+ * - Публичные метаданные
+ * - НЕ хранит приватные ключи
+ * - НЕ хранит NFT ownership (только в блокчейне)
+ * - Используется ТОЛЬКО для ускорения UI
  */
 
-const DB_NAME = 'pidr_nft_cache';
-const STORE_NAME = 'cards';
+const DB_NAME = 'pidr_nft_ui_cache';
+const STORE_NAME = 'card_images';
 const DB_VERSION = 1;
 
-interface CachedCard {
+interface CachedCardUI {
   id: string;
   rank: string;
   suit: string;
   rarity: string;
-  imageData: string; // base64
-  metadata: any;
+  imageData: string; // base64 - ТОЛЬКО UI изображение
+  publicMetadata: {
+    name: string;
+    description: string;
+    attributes: any[];
+  };
   timestamp: number;
 }
 
@@ -44,7 +54,10 @@ class CardCache {
     });
   }
 
-  async getCard(id: string): Promise<CachedCard | null> {
+  /**
+   * ✅ Получить UI кеш карты (ТОЛЬКО изображение)
+   */
+  async getCard(id: string): Promise<CachedCardUI | null> {
     if (!this.db) await this.init();
     if (!this.db) return null;
 
@@ -55,7 +68,7 @@ class CardCache {
 
       request.onerror = () => reject(request.error);
       request.onsuccess = () => {
-        const card = request.result as CachedCard | undefined;
+        const card = request.result as CachedCardUI | undefined;
         // Проверяем, не устарела ли карта (7 дней)
         if (card && Date.now() - card.timestamp < 7 * 24 * 60 * 60 * 1000) {
           resolve(card);
@@ -66,24 +79,35 @@ class CardCache {
     });
   }
 
-  async saveCard(card: CachedCard): Promise<void> {
+  /**
+   * ✅ Сохранить UI кеш (ТОЛЬКО публичные данные)
+   */
+  async saveCard(card: CachedCardUI): Promise<void> {
     if (!this.db) await this.init();
     if (!this.db) return;
+
+    // ⚠️ БЕЗОПАСНОСТЬ: Убеждаемся, что НЕТ приватных данных
+    const safeCard: CachedCardUI = {
+      id: card.id,
+      rank: card.rank,
+      suit: card.suit,
+      rarity: card.rarity,
+      imageData: card.imageData,
+      publicMetadata: card.publicMetadata,
+      timestamp: Date.now()
+    };
 
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([STORE_NAME], 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
-      const request = store.put({
-        ...card,
-        timestamp: Date.now()
-      });
+      const request = store.put(safeCard);
 
       request.onerror = () => reject(request.error);
       request.onsuccess = () => resolve();
     });
   }
 
-  async getCardsByRarity(rarity: string): Promise<CachedCard[]> {
+  async getCardsByRarity(rarity: string): Promise<CachedCardUI[]> {
     if (!this.db) await this.init();
     if (!this.db) return [];
 
@@ -94,10 +118,13 @@ class CardCache {
       const request = index.getAll(rarity);
 
       request.onerror = () => reject(request.error);
-      request.onsuccess = () => resolve(request.result as CachedCard[]);
+      request.onsuccess = () => resolve(request.result as CachedCardUI[]);
     });
   }
 
+  /**
+   * ✅ Очистить UI кеш
+   */
   async clearCache(): Promise<void> {
     if (!this.db) await this.init();
     if (!this.db) return;

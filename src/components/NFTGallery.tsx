@@ -1,10 +1,21 @@
 'use client'
 
+/**
+ * ✅ БЕЗОПАСНАЯ галерея NFT карт
+ * 
+ * ПРИНЦИПЫ БЕЗОПАСНОСТИ:
+ * 1. NFT загружаются из блокчейна через TON Connect
+ * 2. Приватные ключи НИКОГДА не используются
+ * 3. Supabase - только для UI кеша публичных метаданных
+ * 4. Владение проверяется в блокчейне
+ */
+
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
-import { FaGem, FaTimes, FaExternalLinkAlt, FaFire } from 'react-icons/fa';
+import { FaGem, FaTimes, FaExternalLinkAlt, FaFire, FaShieldAlt } from 'react-icons/fa';
 import { useTonAddress } from '@tonconnect/ui-react';
+import { nftBlockchainService } from '../lib/nft/nft-blockchain-service';
 import styles from './NFTGallery.module.css';
 
 interface NFTCard {
@@ -34,9 +45,29 @@ export default function NFTGallery() {
     }
   }, [userAddress]);
 
+  /**
+   * ✅ БЕЗОПАСНАЯ загрузка NFT из блокчейна
+   * Сначала загружаем из блокчейна, затем синхронизируем с Supabase для UI
+   */
   const loadCollection = async () => {
     setIsLoading(true);
     try {
+      if (!userAddress) {
+        setIsLoading(false);
+        return;
+      }
+
+      console.log('🔍 Загружаем NFT из блокчейна для:', userAddress);
+
+      // 1. Загружаем NFT напрямую из блокчейна (источник истины)
+      const blockchainNFTs = await nftBlockchainService.getUserNFTs(userAddress);
+      
+      // 2. Синхронизируем с Supabase для быстрого UI
+      if (blockchainNFTs.length > 0) {
+        await nftBlockchainService.syncNFTsToSupabase(userAddress, blockchainNFTs);
+      }
+
+      // 3. Загружаем из Supabase для отображения
       const response = await fetch('/api/nft/collection', {
         method: 'GET',
         credentials: 'include'
@@ -48,8 +79,10 @@ export default function NFTGallery() {
           setCollection(result.collection || []);
         }
       }
+
+      console.log(`✅ Загружено ${blockchainNFTs.length} NFT из блокчейна`);
     } catch (error) {
-      console.error('Ошибка загрузки коллекции:', error);
+      console.error('❌ Ошибка загрузки коллекции:', error);
     } finally {
       setIsLoading(false);
     }
