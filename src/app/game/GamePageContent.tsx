@@ -1101,25 +1101,52 @@ function GamePageContentComponent({
                 left: '50%',
                 top: '50%',
                 transform: 'translate(-50%, -50%)',
-                zIndex: 10
+                zIndex: 10,
+                display: 'flex',
+                gap: '15px',
+                alignItems: 'center'
               }}>
-                <Image
-                  src={`${CARDS_PATH}${CARD_BACK}`}
-                  alt="Deck"
-                  width={90}
-                  height={135}
-                  className={styles.deckCard}
-                  style={{ 
-                    opacity: 1,
-                    filter: 'none',
-                    visibility: 'visible',
-                    display: 'block'
-                  }}
-                  priority
-                />
-                    <div className={styles.deckCount}>{deck.length}</div>
+                {/* Открытая карта из колоды (слева) */}
+                {currentCard && (
+                  <div style={{ position: 'relative' }}>
+                    <Image
+                      src={`${CARDS_PATH}${currentCard}`}
+                      alt="Current Card"
+                      width={36}
+                      height={54}
+                      style={{ 
+                        borderRadius: '6px',
+                        opacity: 1,
+                        filter: 'none',
+                        visibility: 'visible',
+                        display: 'block',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.4)'
+                      }}
+                      priority
+                    />
+                  </div>
+                )}
+                
+                {/* Колода (справа, уменьшена на 60%) */}
+                <div style={{ position: 'relative' }}>
+                  <Image
+                    src={`${CARDS_PATH}${CARD_BACK}`}
+                    alt="Deck"
+                    width={36}
+                    height={54}
+                    className={styles.deckCard}
+                    style={{ 
+                      opacity: 1,
+                      filter: 'none',
+                      visibility: 'visible',
+                      display: 'block'
+                    }}
+                    priority
+                  />
+                  <div className={styles.deckCount}>{deck.length}</div>
                 </div>
-              )}
+              </div>
+            )}
               
             {/* Игроки вокруг стола */}
             {players.map((player, index) => {
@@ -1169,7 +1196,8 @@ function GamePageContentComponent({
                           
                           return (
                             <div key={cardIndex} className={styles.cardOnPenki} style={{
-                              marginLeft: cardIndex > 0 ? '-20px' : '0'
+                              marginLeft: cardIndex > 0 ? '-54px' : '0', // 90% перекрытие (60px * 0.9 = 54px)
+                              zIndex: cardIndex // Верхние карты выше
                             }}>
                               <Image
                                 src={showOpen ? `${CARDS_PATH}${cardImage}` : `${CARDS_PATH}${CARD_BACK}`}
