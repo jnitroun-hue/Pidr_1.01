@@ -6,6 +6,8 @@ import GameWallet from '../../components/GameWallet';
 import { useLanguage } from '../../components/LanguageSwitcher';
 import { useTranslations } from '../../lib/i18n/translations';
 import { avatarFrames, getRarityColor, getRarityName } from '../../data/avatar-frames';
+import TonWalletConnect from '../../components/TonWalletConnect';
+import NFTGallery from '../../components/NFTGallery';
 
 // Компонент таймера для бонусов
 function BonusCooldownTimer({ bonus, onCooldownEnd }: { bonus: any; onCooldownEnd: () => void }) {
@@ -78,6 +80,25 @@ export default function ProfilePage() {
   const [user, setUser] = useState<any>(null);
 
   const [avatarUrl, setAvatarUrl] = useState('😎');
+
+  const loadNFTCollection = async () => {
+    try {
+      console.log('🎴 Загружаем NFT коллекцию...');
+      const response = await fetch('/api/nft/collection', {
+        method: 'GET',
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          console.log('✅ NFT коллекция загружена:', result.nfts);
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️ Не удалось загрузить NFT коллекцию:', error);
+    }
+  };
 
   // ✅ ИСПРАВЛЕНО: Загружаем ВСЕ данные пользователя из Supabase БД
   useEffect(() => {
@@ -1631,17 +1652,10 @@ export default function ProfilePage() {
                   }}>
                     Подключите свой TON кошелек для владения NFT картами. Все NFT будут минтиться напрямую в ваш кошелек.
                   </div>
-                  {/* Компонент подключения кошелька будет здесь */}
-                  <div style={{
-                    background: 'rgba(15, 23, 42, 0.8)',
-                    border: '1px solid rgba(148, 163, 184, 0.2)',
-                    borderRadius: '12px',
-                    padding: '16px',
-                    textAlign: 'center',
-                    color: '#94a3b8'
-                  }}>
-                    🔜 TON Connect интеграция загружается...
-                  </div>
+                  <TonWalletConnect onConnect={(address) => {
+                    console.log('✅ Кошелек подключен:', address);
+                    loadNFTCollection();
+                  }} />
                 </div>
 
                 {/* NFT Gallery */}
@@ -1662,23 +1676,66 @@ export default function ProfilePage() {
                   }}>
                     <Trophy size={24} /> Моя NFT коллекция
                   </h4>
-                  {/* Галерея NFT будет здесь */}
-                  <div style={{
-                    background: 'rgba(15, 23, 42, 0.8)',
-                    border: '1px solid rgba(148, 163, 184, 0.2)',
-                    borderRadius: '12px',
-                    padding: '40px 16px',
-                    textAlign: 'center',
-                    color: '#94a3b8'
-                  }}>
-                    <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🎴</div>
-                    <div style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '8px', color: '#e2e8f0' }}>
-                      Коллекция пуста
-                    </div>
-                    <div style={{ fontSize: '0.9rem' }}>
-                      Подключите кошелек и заминтите свою первую NFT карту!
-                    </div>
-                  </div>
+                  <NFTGallery userId={user?.id || 0} />
+                </div>
+
+                {/* Кнопки минта */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                      // TODO: Открыть модал минта random
+                      console.log('Открыть Random Mint');
+                    }}
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.8) 0%, rgba(124, 58, 237, 0.6) 100%)',
+                      border: '2px solid rgba(139, 92, 246, 0.3)',
+                      borderRadius: '16px',
+                      padding: '20px',
+                      color: '#fff',
+                      fontSize: '1rem',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      textAlign: 'center',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    <div style={{ fontSize: '2rem' }}>🎲</div>
+                    <div>RANDOM MINT</div>
+                    <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>0.5 TON</div>
+                  </motion.button>
+
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                      // TODO: Открыть модал минта custom
+                      console.log('Открыть Custom Mint');
+                    }}
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.8) 0%, rgba(217, 119, 6, 0.6) 100%)',
+                      border: '2px solid rgba(245, 158, 11, 0.3)',
+                      borderRadius: '16px',
+                      padding: '20px',
+                      color: '#fff',
+                      fontSize: '1rem',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      textAlign: 'center',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    <div style={{ fontSize: '2rem' }}>🎨</div>
+                    <div>CUSTOM MINT</div>
+                    <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>3 TON</div>
+                  </motion.button>
                 </div>
 
                 {/* Информация о NFT */}
@@ -1708,8 +1765,8 @@ export default function ProfilePage() {
                     <li>Каждая карта — уникальный NFT в блокчейне TON</li>
                     <li>Вы полностью владеете своими картами</li>
                     <li>Можно торговать на маркетплейсах</li>
-                    <li>Редкие карты стоят 2-3 TON для минта</li>
-                    <li>Обычные карты — от 0.5 TON</li>
+                    <li>Рандомный минт: 2-10 = 95%, J-K = 4%, A = 1%</li>
+                    <li>Кастомный минт: выберите масть, ранг и стиль</li>
                   </ul>
                 </div>
               </div>
