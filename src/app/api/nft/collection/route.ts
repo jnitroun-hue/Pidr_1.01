@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '../../../../../lib/supabase';
-import { requireAuth } from '../../../../../lib/auth-utils';
+import { supabase } from '../../../../lib/supabase';
+import { requireAuth } from '../../../../lib/auth-utils';
 
 /**
  * GET /api/nft/collection

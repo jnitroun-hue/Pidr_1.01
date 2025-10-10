@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '../../../../../lib/supabase';
-import { requireAuth } from '../../../../../lib/auth-utils';
-import { getNFTService } from '../../../../../lib/ton/nft-service';
+import { supabase } from '../../../../lib/supabase';
+import { requireAuth } from '../../../../lib/auth-utils';
+import { getNFTService } from '../../../../lib/ton/nft-service';
 
 /**
  * POST /api/nft/mint
