@@ -428,6 +428,17 @@ function GamePageContentComponent({
   // Получаем пользователя-человека (для UI контейнера карт)
   const humanPlayer = players.find(p => p.isUser);
   
+  // ОТЛАДКА: Логируем всех игроков при каждом рендере
+  useEffect(() => {
+    if (players.length > 0) {
+      console.log('👥 [ОТЛАДКА] Всего игроков:', players.length);
+      players.forEach((p, index) => {
+        console.log(`  ${index + 1}. ${p.name} - isUser: ${p.isUser}, isBot: ${p.isBot}, id: ${p.id}`);
+      });
+      console.log('🎮 [ОТЛАДКА] humanPlayer найден:', humanPlayer ? `${humanPlayer.name} (${humanPlayer.id})` : 'НЕТ!');
+    }
+  }, [players, humanPlayer]);
+  
   // Создаем экземпляры ИИ для ботов
   const [aiPlayers, setAiPlayers] = useState<Map<number, AIPlayer>>(new Map());
   
@@ -785,6 +796,11 @@ function GamePageContentComponent({
   // Запуск игры
   const handleStartGame = () => {
     console.log('🎮 [handleStartGame] Запуск новой игры с ботами');
+    console.log('👤 [handleStartGame] userData:', userData);
+    console.log('👤 [handleStartGame] Передаем в startGame:', {
+      avatar: userData?.avatar,
+      username: userData?.username
+    });
     
     // ВАЖНО: Сбрасываем все состояния перед новой игрой
     setDealt(false);
