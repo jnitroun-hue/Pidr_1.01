@@ -7,23 +7,26 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '../../../../lib/auth/auth-middleware';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-const supabase = supabaseUrl && supabaseKey 
-  ? createClient(supabaseUrl, supabaseKey)
-  : null;
-
 const BURNING_MINT_COST = 20000; // 20000 монет
 
 export async function POST(request: NextRequest) {
   try {
-    if (!supabase) {
+    // Ленивая инициализация Supabase
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('❌ [mint-burning] Supabase не настроен:', { 
+        hasUrl: !!supabaseUrl, 
+        hasKey: !!supabaseKey 
+      });
       return NextResponse.json(
-        { error: 'Supabase not configured' },
+        { error: 'Supabase не настроен. Обратитесь к администратору.' },
         { status: 500 }
       );
     }
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
     const authContext = await requireAuth(request);
     if (!authContext.authenticated || !authContext.userId) {

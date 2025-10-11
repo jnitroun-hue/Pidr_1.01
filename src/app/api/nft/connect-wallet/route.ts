@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '../../../../lib/supabase';
-import { requireAuth } from '../../../../lib/auth-utils';
+import { createClient } from '@supabase/supabase-js';
+import { requireAuth } from '../../../../lib/auth/auth-middleware';
 
 /**
  * POST /api/nft/connect-wallet
@@ -8,7 +8,29 @@ import { requireAuth } from '../../../../lib/auth-utils';
  */
 export async function POST(req: NextRequest) {
   try {
-    const userId = await requireAuth(req);
+    // Ленивая инициализация Supabase
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('❌ [connect-wallet] Supabase не настроен');
+      return NextResponse.json(
+        { success: false, message: 'Supabase не настроен' },
+        { status: 500 }
+      );
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const authContext = await requireAuth(req);
+    if (!authContext.authenticated || !authContext.userId) {
+      return NextResponse.json(
+        { success: false, message: 'Не авторизован' },
+        { status: 401 }
+      );
+    }
+
+    const userId = authContext.userId;
     console.log(`🔗 Пользователь ${userId} подключает TON кошелек...`);
 
     const { wallet_address, wallet_type = 'ton', proof } = await req.json();
