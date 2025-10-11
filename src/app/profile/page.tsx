@@ -576,6 +576,59 @@ export default function ProfilePage() {
     }
   };
 
+  const handleBurningMint = async () => {
+    try {
+      console.log('🔥 Генерация горящей NFT карты...');
+      
+      if (!user || user.coins < 20000) {
+        alert('❌ Недостаточно монет! Требуется 20 000 монет.');
+        return;
+      }
+      
+      if (!confirm('🔥 Сгенерировать уникальную горящую NFT карту за 20 000 монет?')) {
+        return;
+      }
+      
+      const response = await fetch('/api/nft/mint-burning', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Ошибка генерации NFT');
+      }
+      
+      console.log('✅ Горящая NFT карта создана:', result.nft);
+      
+      // Обновляем баланс
+      if (user) {
+        setUser({ ...user, coins: result.newBalance });
+      }
+      
+      // Перезагружаем NFT коллекцию
+      await loadNFTCollection();
+      
+      alert(`🔥 Поздравляем! Вы получили ${result.nft.rarity} карту:\n${result.nft.rank} ${getSuitEmoji(result.nft.suit)}\n\nОгонь: ${result.nft.burningParams.fireColor}\nИнтенсивность: ${result.nft.burningParams.intensity}`);
+      
+    } catch (error: any) {
+      console.error('❌ Ошибка генерации горящей NFT:', error);
+      alert(`❌ ${error.message}`);
+    }
+  };
+
+  function getSuitEmoji(suit: string): string {
+    switch (suit) {
+      case 'hearts': return '♥️';
+      case 'diamonds': return '♦️';
+      case 'clubs': return '♣️';
+      case 'spades': return '♠️';
+      default: return suit;
+    }
+  }
+
   const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -1676,7 +1729,7 @@ export default function ProfilePage() {
                   }}>
                     <Trophy size={24} /> Моя NFT коллекция
                   </h4>
-                  <NFTGallery userId={user?.id || 0} />
+                  <NFTGallery />
                 </div>
 
                 {/* Кнопки минта */}
@@ -1737,6 +1790,44 @@ export default function ProfilePage() {
                     <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>3 TON</div>
                   </motion.button>
                 </div>
+
+                {/* 3-я кнопка - BURNING MINT за монеты */}
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleBurningMint}
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.8) 0%, rgba(220, 38, 38, 0.6) 100%)',
+                    border: '2px solid rgba(239, 68, 68, 0.3)',
+                    borderRadius: '16px',
+                    padding: '20px',
+                    color: '#fff',
+                    fontSize: '1.1rem',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    textAlign: 'center',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '12px',
+                    boxShadow: '0 0 30px rgba(239, 68, 68, 0.3)'
+                  }}
+                >
+                  <div style={{ fontSize: '3rem' }}>🔥</div>
+                  <div>BURNING CARD MINT</div>
+                  <div style={{ 
+                    fontSize: '1rem', 
+                    fontWeight: '900', 
+                    color: '#fbbf24',
+                    textShadow: '0 0 10px rgba(251, 191, 36, 0.5)'
+                  }}>
+                    💰 20 000 монет
+                  </div>
+                  <div style={{ fontSize: '0.75rem', opacity: 0.9, lineHeight: '1.3' }}>
+                    Уникальная карта с горящей мастью!<br/>
+                    Случайная масть, ранг и цвет огня
+                  </div>
+                </motion.button>
 
                 {/* Информация о NFT */}
                 <div style={{
