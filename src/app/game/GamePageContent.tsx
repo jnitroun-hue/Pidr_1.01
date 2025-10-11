@@ -1134,9 +1134,16 @@ function GamePageContentComponent({
                 gap: '15px',
                 alignItems: 'center'
               }}>
-                {/* Открытая карта из колоды (слева) */}
+                {/* Открытая карта из колоды (слева) - БЕЛЫЙ ФОН! */}
                 {currentCard && (
-                  <div style={{ position: 'relative' }}>
+                  <div style={{ 
+                    position: 'relative',
+                    background: '#ffffff',
+                    borderRadius: '8px',
+                    padding: '2px',
+                    boxShadow: '0 0 20px rgba(255, 255, 255, 0.3), 0 4px 12px rgba(0,0,0,0.4)',
+                    border: '2px solid #e2e8f0'
+                  }}>
                     <Image
                       src={`${CARDS_PATH}${currentCard}`}
                       alt="Current Card"
@@ -1147,8 +1154,7 @@ function GamePageContentComponent({
                         opacity: 1,
                         filter: 'none',
                         visibility: 'visible',
-                        display: 'block',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.4)'
+                        display: 'block'
                       }}
                       priority
                     />
@@ -1181,7 +1187,7 @@ function GamePageContentComponent({
               const position = getPlayerPosition(index, players.length);
               const isCurrentTurn = player.id === currentPlayerId;
               const playerCards = player.cards || []; // ИСПРАВЛЕНО: используем player.cards из gameStore!
-              const isHumanPlayer = index === 0 || !player.isBot; // Первый игрок или не бот = человек
+              const isHumanPlayer = player.isUser === true; // ИСПРАВЛЕНО: используем флаг isUser из gameStore!
 
                 return (
                   <div

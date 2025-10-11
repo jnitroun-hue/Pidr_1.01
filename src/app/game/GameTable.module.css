@@ -649,7 +649,10 @@
   letter-spacing: 0;
   text-align: center;
   min-width: 40px;
+  max-width: 80px; /* ИСПРАВЛЕНО: ограничиваем ширину */
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   margin-left: 3px;
 }
 

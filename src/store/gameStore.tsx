@@ -441,7 +441,7 @@ export const useGameStore = create<GameState>()(
           
           console.log(`🎮 [GameStore] Создаем игрока ${i + 1}:`, playerInfo);
           
-          players.push({
+          const newPlayer = {
             id: `player_${i + 1}`,
             name: playerInfo.name,
             avatar: playerInfo.avatar,
@@ -453,9 +453,16 @@ export const useGameStore = create<GameState>()(
             isUser: !playerInfo.isBot,
             isBot: playerInfo.isBot,
             difficulty: playerInfo.difficulty
-          });
+          };
           
-          console.log(`🎮 [GameStore] Игрок ${i + 1} создан успешно`);
+          players.push(newPlayer);
+          
+          console.log(`🎮 [GameStore] Игрок ${i + 1} создан:`, {
+            name: newPlayer.name,
+            isUser: newPlayer.isUser,
+            isBot: newPlayer.isBot,
+            avatar: newPlayer.avatar ? 'есть' : 'нет'
+          });
         }
         
         // Оставшиеся карты в колоде
@@ -469,6 +476,8 @@ export const useGameStore = create<GameState>()(
           rank: get().getCardRank(imageName),
           open: false,
         }));
+        
+        console.log(`🃏 [GameStore] Колода создана: ${remainingCards.length} карт (52 - ${playersCount} * 3 = ${52 - playersCount * 3})`);
         
         // Определяем первого игрока по старшей открытой карте
         let firstPlayerIndex = 0;
