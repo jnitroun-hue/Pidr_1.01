@@ -1,6 +1,7 @@
 /**
  * POST /api/nft/mint-burning
- * Генерация NFT карты с горящей мастью за 20000 монет
+ * Генерация BURNING NFT карты с горящей мастью за 20000 монет + привязка к кошельку
+ * Гарантированная редкость: Legendary
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -21,7 +22,7 @@ export async function POST(request: NextRequest) {
         hasKey: !!supabaseKey 
       });
       return NextResponse.json(
-        { error: 'Supabase не настроен. Обратитесь к администратору.' },
+        { success: false, error: 'Supabase не настроен. Обратитесь к администратору.' },
         { status: 500 }
       );
     }
@@ -31,10 +32,13 @@ export async function POST(request: NextRequest) {
     const authContext = await requireAuth(request);
     if (!authContext.authenticated || !authContext.userId) {
       return NextResponse.json(
-        { error: 'Не авторизован' },
+        { success: false, error: 'Не авторизован' },
         { status: 401 }
       );
     }
+
+    const body = await request.json();
+    const { wallet_address, network } = body; // опционально - для привязки к кошельку
 
     // Проверяем баланс пользователя
     const { data: userData, error: userError } = await supabase
@@ -105,7 +109,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Создаем запись NFT в БД
+    // Создаем запись NFT в БД (с опциональной привязкой к кошельку)
     const { data: nftData, error: nftError } = await supabase
       .from('_pidr_nft_ownership')
       .insert({
@@ -115,6 +119,8 @@ export async function POST(request: NextRequest) {
         rarity,
         mint_type: 'burning',
         custom_style: JSON.stringify(burningParams),
+        wallet_address: wallet_address || null,
+        network: network || null,
         minted_at: new Date().toISOString(),
       })
       .select()
@@ -127,8 +133,9 @@ export async function POST(request: NextRequest) {
         .update({ balance: userData.balance })
         .eq('id', authContext.userId);
 
+      console.error('❌ Ошибка создания NFT:', nftError);
       return NextResponse.json(
-        { error: 'Ошибка создания NFT' },
+        { success: false, error: 'Ошибка создания NFT' },
         { status: 500 }
       );
     }
@@ -139,12 +146,19 @@ export async function POST(request: NextRequest) {
       .insert({
         user_id: authContext.userId,
         nft_id: nftData.id,
+        wallet_address: wallet_address || null,
         mint_type: 'burning',
         mint_price_ton: 0,
+        mint_price_sol: 0,
         commission_paid_ton: 0,
+        commission_paid_sol: 0,
         master_wallet_address: null,
+        network: network || null,
+        status: 'completed',
         minted_at: new Date().toISOString(),
       });
+
+    console.log(`✅ Горящая NFT карта создана: ${randomRank} of ${randomSuit} (legendary)`);
 
     return NextResponse.json({
       success: true,
@@ -156,14 +170,25 @@ export async function POST(request: NextRequest) {
         burningParams,
       },
       newBalance: userData.balance - BURNING_MINT_COST,
+      message: `Создана уникальная горящая карта ${randomRank} ${getSuitEmoji(randomSuit)}!`
     });
 
   } catch (error: any) {
     console.error('❌ Ошибка генерации горящей NFT:', error);
     return NextResponse.json(
-      { error: 'Внутренняя ошибка сервера' },
+      { success: false, error: error.message || 'Внутренняя ошибка сервера' },
       { status: 500 }
     );
+  }
+}
+
+function getSuitEmoji(suit: string): string {
+  switch (suit) {
+    case 'hearts': return '♥️';
+    case 'diamonds': return '♦️';
+    case 'clubs': return '♣️';
+    case 'spades': return '♠️';
+    default: return suit;
   }
 }
 

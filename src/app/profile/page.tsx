@@ -576,6 +576,9 @@ export default function ProfilePage() {
     }
   };
 
+  // State для подключенных кошельков
+  const [connectedWallets, setConnectedWallets] = useState<{ton?: string, solana?: string}>({});
+
   const handleBurningMint = async () => {
     try {
       console.log('🔥 Генерация горящей NFT карты...');
@@ -585,14 +588,22 @@ export default function ProfilePage() {
         return;
       }
       
-      if (!confirm('🔥 Сгенерировать уникальную горящую NFT карту за 20 000 монет?')) {
+      if (!confirm('🔥 Сгенерировать уникальную горящую NFT карту за 20 000 монет?\n\nКарта будет создана и привязана к вашему кошельку (опционально).')) {
         return;
       }
+
+      // Опционально: привязываем к кошельку если подключен
+      const wallet_address = connectedWallets.ton || connectedWallets.solana;
+      const network = connectedWallets.ton ? 'TON' : connectedWallets.solana ? 'SOL' : undefined;
       
       const response = await fetch('/api/nft/mint-burning', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
+        body: JSON.stringify({ 
+          wallet_address, 
+          network 
+        }),
       });
       
       const result = await response.json();
@@ -611,7 +622,7 @@ export default function ProfilePage() {
       // Перезагружаем NFT коллекцию
       await loadNFTCollection();
       
-      alert(`🔥 Поздравляем! Вы получили ${result.nft.rarity} карту:\n${result.nft.rank} ${getSuitEmoji(result.nft.suit)}\n\nОгонь: ${result.nft.burningParams.fireColor}\nИнтенсивность: ${result.nft.burningParams.intensity}`);
+      alert(`🔥 Поздравляем! Вы получили ${result.nft.rarity} карту:\n${result.nft.rank} ${getSuitEmoji(result.nft.suit)}\n\nОгонь: ${result.nft.burningParams.fireColor}\nИнтенсивность: ${result.nft.burningParams.intensity}\n\n${wallet_address ? `✅ Привязана к кошельку: ${wallet_address.slice(0, 8)}...` : '📦 Сохранена в аккаунте'}`);
       
     } catch (error: any) {
       console.error('❌ Ошибка генерации горящей NFT:', error);
@@ -1706,7 +1717,8 @@ export default function ProfilePage() {
                     Подключите свой TON кошелек для владения NFT картами. Все NFT будут минтиться напрямую в ваш кошелек.
                   </div>
                   <TonWalletConnect onConnect={(address) => {
-                    console.log('✅ Кошелек подключен:', address);
+                    console.log('✅ TON кошелек подключен:', address);
+                    setConnectedWallets(prev => ({ ...prev, ton: address }));
                     loadNFTCollection();
                   }} />
                 </div>
@@ -1741,12 +1753,18 @@ export default function ProfilePage() {
                       try {
                         console.log('🎲 Генерация случайной NFT карты...');
                         
-                        if (!user || user.coins < 5000) {
-                          alert('❌ Недостаточно монет! Требуется 5 000 монет.');
+                        // Проверяем подключен ли кошелек
+                        const wallet_address = connectedWallets.ton || connectedWallets.solana;
+                        const network = connectedWallets.ton ? 'TON' : connectedWallets.solana ? 'SOL' : null;
+
+                        if (!wallet_address || !network) {
+                          alert('❌ Подключите кошелек!\n\n💎 TON Connect или Phantom (Solana) требуется для минта NFT.\n\nСкролльте вверх в разделе NFT КОЛЛЕКЦИЯ и нажмите "Подключить кошелек".');
                           return;
                         }
+
+                        const mintPrice = network === 'SOL' ? 0.1 : 0.5;
                         
-                        if (!confirm('🎲 Сгенерировать случайную NFT карту за 5 000 монет?\n\nВы получите карту случайной масти и ранга с редкостью от Common до Epic!')) {
+                        if (!confirm(`🎲 Сгенерировать случайную NFT карту?\n\n💰 Цена: ${mintPrice} ${network}\n🎰 Редкость: Common (60%), Rare (25%), Epic (15%)\n🎲 Случайная масть и ранг\n\nПродолжить?`)) {
                           return;
                         }
                         
@@ -1754,6 +1772,10 @@ export default function ProfilePage() {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           credentials: 'include',
+                          body: JSON.stringify({
+                            wallet_address,
+                            network
+                          }),
                         });
                         
                         const result = await response.json();
@@ -1764,15 +1786,10 @@ export default function ProfilePage() {
                         
                         console.log('✅ Случайная NFT карта создана:', result.nft);
                         
-                        // Обновляем баланс
-                        if (user) {
-                          setUser({ ...user, coins: result.newBalance });
-                        }
-                        
                         // Перезагружаем NFT коллекцию
                         await loadNFTCollection();
                         
-                        alert(`🎉 Поздравляем! Вы получили ${result.nft.rarity} карту:\n${result.nft.rank} ${getSuitEmoji(result.nft.suit)}\n\nТеперь она в вашей NFT коллекции!`);
+                        alert(`🎉 Поздравляем! Вы получили ${result.nft.rarity} карту:\n${result.nft.rank} ${getSuitEmoji(result.nft.suit)}\n\n✅ Сохранено в кошелек: ${wallet_address.slice(0, 8)}...${wallet_address.slice(-6)}\n🌐 Сеть: ${network}`);
                         
                       } catch (error: any) {
                         console.error('❌ Ошибка генерации случайной NFT:', error);
@@ -1780,30 +1797,24 @@ export default function ProfilePage() {
                       }
                     }}
                     style={{
-                      background: user && user.coins >= 5000 
-                        ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.8) 0%, rgba(124, 58, 237, 0.6) 100%)'
-                        : 'linear-gradient(135deg, rgba(55, 65, 81, 0.6) 0%, rgba(31, 41, 55, 0.4) 100%)',
-                      border: user && user.coins >= 5000 
-                        ? '2px solid rgba(139, 92, 246, 0.3)' 
-                        : '2px solid rgba(100, 116, 139, 0.3)',
+                      background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.8) 0%, rgba(124, 58, 237, 0.6) 100%)',
+                      border: '2px solid rgba(139, 92, 246, 0.3)',
                       borderRadius: '16px',
                       padding: '20px',
                       color: '#fff',
                       fontSize: '1rem',
                       fontWeight: '700',
-                      cursor: user && user.coins >= 5000 ? 'pointer' : 'not-allowed',
+                      cursor: 'pointer',
                       textAlign: 'center',
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
-                      gap: '8px',
-                      opacity: user && user.coins >= 5000 ? 1 : 0.6
+                      gap: '8px'
                     }}
-                    disabled={!user || user.coins < 5000}
                   >
                     <div style={{ fontSize: '2rem' }}>🎲</div>
                     <div>RANDOM MINT</div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: '900', color: '#fbbf24' }}>💰 5 000 монет</div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: '900', color: '#fbbf24' }}>💎 0.5 TON / 0.1 SOL</div>
                     <div style={{ fontSize: '0.7rem', opacity: 0.8 }}>Common-Epic</div>
                   </motion.button>
 
@@ -1814,12 +1825,18 @@ export default function ProfilePage() {
                       try {
                         console.log('🎨 Генерация кастомной NFT карты...');
                         
-                        if (!user || user.coins < 15000) {
-                          alert('❌ Недостаточно монет! Требуется 15 000 монет.');
+                        // Проверяем подключен ли кошелек
+                        const wallet_address = connectedWallets.ton || connectedWallets.solana;
+                        const network = connectedWallets.ton ? 'TON' : connectedWallets.solana ? 'SOL' : null;
+
+                        if (!wallet_address || !network) {
+                          alert('❌ Подключите кошелек!\n\n💎 TON Connect или Phantom (Solana) требуется для минта NFT.\n\nСкролльте вверх в разделе NFT КОЛЛЕКЦИЯ и нажмите "Подключить кошелек".');
                           return;
                         }
+
+                        const mintPrice = network === 'SOL' ? 0.5 : 3.0;
                         
-                        if (!confirm('🎨 Сгенерировать улучшенную NFT карту за 15 000 монет?\n\nВы получите карту с гарантированной редкостью Rare или выше + специальные эффекты!')) {
+                        if (!confirm(`🎨 Сгенерировать улучшенную NFT карту?\n\n💰 Цена: ${mintPrice} ${network}\n✨ Гарантия: Rare (50%), Epic (35%), Legendary (15%)\n🎨 Премиум эффекты\n\nПродолжить?`)) {
                           return;
                         }
                         
@@ -1827,6 +1844,12 @@ export default function ProfilePage() {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           credentials: 'include',
+                          body: JSON.stringify({
+                            wallet_address,
+                            network,
+                            custom_style: 'premium',
+                            effects: ['glow', 'particles']
+                          }),
                         });
                         
                         const result = await response.json();
@@ -1837,15 +1860,10 @@ export default function ProfilePage() {
                         
                         console.log('✅ Кастомная NFT карта создана:', result.nft);
                         
-                        // Обновляем баланс
-                        if (user) {
-                          setUser({ ...user, coins: result.newBalance });
-                        }
-                        
                         // Перезагружаем NFT коллекцию
                         await loadNFTCollection();
                         
-                        alert(`✨ Поздравляем! Вы получили ${result.nft.rarity} карту:\n${result.nft.rank} ${getSuitEmoji(result.nft.suit)}\n\nСпециальные эффекты: ${result.nft.effects || 'None'}\n\nТеперь она в вашей NFT коллекции!`);
+                        alert(`✨ Поздравляем! Вы получили ${result.nft.rarity} карту:\n${result.nft.rank} ${getSuitEmoji(result.nft.suit)}\n\n✨ Эффекты: ${result.nft.effects.join(', ')}\n✅ Сохранено в кошелек: ${wallet_address.slice(0, 8)}...${wallet_address.slice(-6)}\n🌐 Сеть: ${network}`);
                         
                       } catch (error: any) {
                         console.error('❌ Ошибка генерации кастомной NFT:', error);
@@ -1853,30 +1871,24 @@ export default function ProfilePage() {
                       }
                     }}
                     style={{
-                      background: user && user.coins >= 15000 
-                        ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.8) 0%, rgba(217, 119, 6, 0.6) 100%)'
-                        : 'linear-gradient(135deg, rgba(55, 65, 81, 0.6) 0%, rgba(31, 41, 55, 0.4) 100%)',
-                      border: user && user.coins >= 15000 
-                        ? '2px solid rgba(245, 158, 11, 0.3)' 
-                        : '2px solid rgba(100, 116, 139, 0.3)',
+                      background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.8) 0%, rgba(217, 119, 6, 0.6) 100%)',
+                      border: '2px solid rgba(245, 158, 11, 0.3)',
                       borderRadius: '16px',
                       padding: '20px',
                       color: '#fff',
                       fontSize: '1rem',
                       fontWeight: '700',
-                      cursor: user && user.coins >= 15000 ? 'pointer' : 'not-allowed',
+                      cursor: 'pointer',
                       textAlign: 'center',
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
-                      gap: '8px',
-                      opacity: user && user.coins >= 15000 ? 1 : 0.6
+                      gap: '8px'
                     }}
-                    disabled={!user || user.coins < 15000}
                   >
                     <div style={{ fontSize: '2rem' }}>🎨</div>
                     <div>CUSTOM MINT</div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: '900', color: '#fbbf24' }}>💰 15 000 монет</div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: '900', color: '#fbbf24' }}>💎 3 TON / 0.5 SOL</div>
                     <div style={{ fontSize: '0.7rem', opacity: 0.8 }}>Rare-Legendary</div>
                   </motion.button>
                 </div>

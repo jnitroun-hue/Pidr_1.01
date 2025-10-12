@@ -939,14 +939,7 @@ export const useGameStore = create<GameState>()(
         // Определяем целевой ранг с учетом правил P.I.D.R. 1-й стадии
         // ПРАВИЛО: СТАРШАЯ карта бьет МЛАДШУЮ (ищем карту на 1 ранг НИЖЕ)
         // Туз(14) → Король(13), Король(13) → Дама(12), Дама(12) → Валет(11), ..., 3 → 2
-        // ИСКЛЮЧЕНИЕ: Только двойка (2) может ложиться на Туз (14)!
-        let targetRank: number;
-        
-        if (currentRank === 2) {
-          targetRank = 14; // Двойка может ложиться ТОЛЬКО на Туз (14)
-        } else {
-          targetRank = currentRank - 1; // Обычное правило: ищем карты на 1 ранг НИЖЕ
-        }
+        // ИСКЛЮЧЕНИЕ: Двойка (2) кладется ТОЛЬКО на Туз (14)!
         
         const targets: number[] = [];
         players.forEach((player, index) => {
@@ -955,7 +948,13 @@ export const useGameStore = create<GameState>()(
           const playerTopCard = player.cards[player.cards.length - 1];
           if (playerTopCard && playerTopCard.open) {
             const playerRank = get().getCardRank(playerTopCard.image || '');
-            if (playerRank === targetRank) {
+            
+            // ДВОЙКА (2) кладется ТОЛЬКО на ТУЗ (14)!
+            if (currentRank === 2 && playerRank === 14) {
+              targets.push(index);
+            }
+            // Для остальных карт: старшая карта бьет карту на 1 ранг ниже
+            else if (currentRank !== 2 && playerRank === currentRank - 1) {
               targets.push(index);
             }
           }
@@ -1144,22 +1143,38 @@ export const useGameStore = create<GameState>()(
         console.log(`🎯 [checkStage1End] Стартовый игрок: ${players.find(p => p.id === startingPlayerId)?.name}`);
         
         // Обновляем текущего игрока и переводим всех во 2-ю стадию
-        // ИСПРАВЛЕНО: Открываем пеньки для тех у кого нет открытых карт
+        // КРИТИЧНО: Во 2-й стадии ВСЕ карты БОТОВ закрыты, у ИГРОКА - открыты!
         players.forEach(p => {
           p.isCurrentPlayer = p.id === startingPlayerId;
           p.playerStage = 2; // Все переходят во 2-ю стадию
           
-          // КРИТИЧЕСКИ ВАЖНО: Если у игрока нет открытых карт - открываем пеньки СРАЗУ!
-          const hasOpenCards = p.cards.some(c => c.open);
-          if (!hasOpenCards && p.penki.length > 0) {
-            console.log(`🃏 [checkStage1End] ⚠️ У игрока ${p.name} нет открытых карт - открываем пеньки СРАЗУ!`);
+          // ВАЖНО: Во 2-й стадии играется В ЗАКРЫТУЮ!
+          // - У БОТОВ: ВСЕ карты закрыты (open = false) - никто их не видит
+          // - У ИГРОКА: ВСЕ карты открыты (open = true) - только он видит свою руку
+          if (p.isBot) {
+            p.cards = p.cards.map(card => ({
+              ...card,
+              open: false // ВСЕ карты бота закрыты (даже те что были с 1-й стадии)
+            }));
+            console.log(`🤖 [checkStage1End] Закрыты ВСЕ карты у бота ${p.name} (${p.cards.length} карт)`);
+          } else {
+            p.cards = p.cards.map(card => ({
+              ...card,
+              open: true // ВСЕ карты игрока открыты для него
+            }));
+            console.log(`👤 [checkStage1End] Открыты карты для игрока ${p.name} (${p.cards.length} карт)`);
+          }
+          
+          // КРИТИЧЕСКИ ВАЖНО: Если у игрока нет карт - активируем пеньки СРАЗУ!
+          if (p.cards.length === 0 && p.penki.length > 0) {
+            console.log(`🃏 [checkStage1End] ⚠️ У игрока ${p.name} нет карт в руке - активируем пеньки СРАЗУ!`);
             const activatedPenki = p.penki.map(card => ({
               ...card,
-              open: true
+              open: p.isBot ? false : true // Пеньки бота закрыты, игрока - открыты
             }));
-            p.cards = [...p.cards, ...activatedPenki];
+            p.cards = [...activatedPenki];
             p.penki = [];
-            console.log(`🃏 [checkStage1End] ✅ Пеньки игрока ${p.name} открыты:`, p.cards.map(c => c.image));
+            console.log(`🃏 [checkStage1End] ✅ Пеньки игрока ${p.name} активированы`);
           }
         });
         
@@ -1345,6 +1360,20 @@ export const useGameStore = create<GameState>()(
           console.log(`🎯 [onDeckClick] - Результат canPlaceCardOnSelf: ${canPlaceOnSelfByRules}`);
         }
         
+        // АВТОМАТИЧЕСКИ кладем на себя если можно по правилам И НЕТ ходов на соперников
+        if (!canMoveToOpponents && canPlaceOnSelfByRules) {
+          console.log(`✅ [onDeckClick] Автоматически кладем карту на себя по правилам (нет ходов на соперников)`);
+          set({
+            turnPhase: 'waiting_deck_action',
+            canPlaceOnSelfByRules: true,
+            availableTargets: []
+          });
+          setTimeout(() => {
+            get().placeCardOnSelfByRules();
+          }, currentPlayer.isBot ? 1200 : 800);
+          return;
+        }
+        
         set({
           turnPhase: 'waiting_deck_action',
           canPlaceOnSelfByRules: canPlaceOnSelfByRules,
@@ -1355,7 +1384,6 @@ export const useGameStore = create<GameState>()(
         if (currentPlayer.isBot) {
           console.log(`🤖 [onDeckClick] Бот анализирует карту из колоды:`);
           console.log(`🤖 [onDeckClick] - canMoveToOpponents: ${canMoveToOpponents}, targets: [${deckTargets.join(', ')}]`);
-          console.log(`🤖 [onDeckClick] - canPlaceOnSelfByRules: ${canPlaceOnSelfByRules}`);
           
           setTimeout(() => {
             if (canMoveToOpponents) {
@@ -1364,23 +1392,17 @@ export const useGameStore = create<GameState>()(
               const targetPlayer = players[targetIndex];
               console.log(`🤖 [onDeckClick] Бот ходит картой из колоды на ${targetPlayer?.name}`);
               get().makeMove(targetPlayer?.id || '');
-            } else if (canPlaceOnSelfByRules) {
-              // Второй приоритет: положить на себя по правилам
-              console.log(`🤖 [onDeckClick] Бот кладет карту на себя по правилам`);
-              get().placeCardOnSelfByRules();
             } else {
-              // Последний вариант: взять поверх
+              // Взять карту поверх
               console.log(`🤖 [onDeckClick] Бот берет карту поверх своих карт`);
               get().takeCardNotByRules();
             }
           }, 1500);
         } else {
           // Для пользователя - показываем варианты
-          if (canMoveToOpponents && !currentPlayer.isBot) {
-            get().showNotification('Выберите: сходить на соперника или положить на себя', 'info');
-          } else if (canPlaceOnSelfByRules && !currentPlayer.isBot) {
-            get().showNotification('Можете положить карту на себя по правилам', 'info');
-          } else if (!currentPlayer.isBot) {
+          if (canMoveToOpponents) {
+            get().showNotification('Выберите цель для хода', 'info');
+          } else {
             get().showNotification('Нет доступных ходов - карта ложится поверх ваших карт', 'warning');
             // Автоматически кладем карту поверх через 2 секунды
             setTimeout(() => {
@@ -1487,15 +1509,20 @@ export const useGameStore = create<GameState>()(
         const deckRank = get().getCardRank(deckCard.image);
         const playerRank = get().getCardRank(playerTopCard.image);
         
-
+        console.log(`🎯 [canPlaceCardOnSelf] Проверка: карта из колоды ${deckCard.image} (ранг ${deckRank}) на карту игрока ${playerTopCard.image} (ранг ${playerRank})`);
+        
+        // ДВОЙКА (2) кладется ТОЛЬКО на ТУЗ (14)!
+        if (deckRank === 2) {
+          const canPlace = playerRank === 14;
+          console.log(`🎯 [canPlaceCardOnSelf] Двойка может лечь только на Туз: ${canPlace} (playerRank=${playerRank})`);
+          return canPlace;
+        }
         
         // ПРАВИЛЬНАЯ ЛОГИКА: Карта из колоды может лечь на карту игрока, если она на 1 ранг БОЛЬШЕ
         // Пример: 5♠ (deckRank=5) может лечь на 4♣ (playerRank=4)
-        if (deckRank === 2) {
-          return playerRank === 14; // Двойка только на туз
-        } else {
-          return deckRank === (playerRank + 1); // ПРАВИЛЬНО: 5 ложится на 4
-        }
+        const canPlace = deckRank === (playerRank + 1);
+        console.log(`🎯 [canPlaceCardOnSelf] ${deckRank} === ${playerRank + 1}? ${canPlace}`);
+        return canPlace;
       },
        
        // Положить карту из колоды на себя по правилам
@@ -1605,20 +1632,6 @@ export const useGameStore = create<GameState>()(
            const deckRank = get().getCardRank(deckCard.image);
            console.log(`🃏 [findAvailableTargetsForDeckCard] Анализ карты из колоды: ${deckCard.image}, ранг: ${deckRank}`);
            
-           // Определяем целевой ранг (та же логика что в findAvailableTargets)
-           let targetRank: number;
-           
-           if (deckRank === 2) {
-             // Двойка может ложиться ТОЛЬКО на Туз (14)
-             targetRank = 14;
-           } else {
-             // Обычное правило: ищем карты на 1 ранг ниже
-             // Туз(14) → Король(13), Король(13) → Дама(12), и т.д.
-             targetRank = deckRank - 1;
-           }
-           
-           console.log(`🃏 [findAvailableTargetsForDeckCard] Ищем соперников с картами ранга: ${targetRank}`);
-           
            const targets: number[] = [];
            players.forEach((player, index) => {
              if (player.id === currentPlayerId) return; // Не можем положить на себя
@@ -1628,8 +1641,15 @@ export const useGameStore = create<GameState>()(
              if (playerTopCard && playerTopCard.open && playerTopCard.image) {
                const playerRank = get().getCardRank(playerTopCard.image);
                console.log(`🃏 [findAvailableTargetsForDeckCard] Соперник ${player.name} (индекс ${index}), карта: ${playerTopCard.image}, ранг: ${playerRank}`);
-               if (playerRank === targetRank) {
-                 console.log(`✅ [findAvailableTargetsForDeckCard] НАЙДЕНА ЦЕЛЬ ДЛЯ КАРТЫ ИЗ КОЛОДЫ: ${player.name} (индекс ${index})`);
+               
+               // ДВОЙКА (2) кладется ТОЛЬКО на ТУЗ (14)!
+               if (deckRank === 2 && playerRank === 14) {
+                 console.log(`✅ [findAvailableTargetsForDeckCard] ДВОЙКА НА ТУЗ: ${player.name} (индекс ${index})`);
+                 targets.push(index);
+               }
+               // Для остальных карт: старшая карта бьет карту на 1 ранг ниже
+               else if (deckRank !== 2 && playerRank === deckRank - 1) {
+                 console.log(`✅ [findAvailableTargetsForDeckCard] НАЙДЕНА ЦЕЛЬ: ${player.name} (индекс ${index})`);
                  targets.push(index);
                }
              }

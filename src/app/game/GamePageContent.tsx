@@ -1259,8 +1259,50 @@ function GamePageContentComponent({
         <div className={styles.tableWrapper}>
           {/* Прямоугольный стол */}
           <div className={styles.rectangularTable}>
-            {/* Колода и открытая карта в центре */}
-            {deck && deck.length > 0 && (
+            {/* КАРТЫ НА СТОЛЕ (2-я стадия) */}
+            {gameStage >= 2 && tableStack && tableStack.length > 0 && (
+              <div style={{
+                position: 'absolute',
+                left: '50%',
+                top: '40%',
+                transform: 'translate(-50%, -50%)',
+                zIndex: 15,
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '8px',
+                maxWidth: '300px',
+                justifyContent: 'center',
+                alignItems: 'center',
+                background: 'rgba(0, 0, 0, 0.5)',
+                padding: '12px',
+                borderRadius: '12px',
+                border: '2px solid rgba(255, 193, 7, 0.5)'
+              }}>
+                {tableStack.map((card, idx) => (
+                  <div key={`table-${idx}`} style={{
+                    position: 'relative',
+                    background: '#ffffff',
+                    borderRadius: '6px',
+                    padding: '2px',
+                    boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
+                  }}>
+                    <Image
+                      src={`${CARDS_PATH}${card.image || 'card_back.png'}`}
+                      alt={`Card ${idx + 1}`}
+                      width={32}
+                      height={48}
+                      style={{ 
+                        borderRadius: '4px',
+                        display: 'block'
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Колода и открытая карта в центре (1-я стадия) */}
+            {deck && deck.length > 0 && gameStage === 1 && (
               <div className={styles.deckStack} style={{
                 position: 'absolute',
                 left: '50%',
@@ -1647,37 +1689,7 @@ function GamePageContentComponent({
                       </button>
                     )}
 
-                    {/* Кнопка "Положить себе" если можно по правилам */}
-                    {canPlaceOnSelf && (
-                      <button
-                        onClick={() => {
-                          console.log(`🎴 [Действие с картой] Кладем себе по правилам`);
-                          placeCardOnSelfByRules();
-                        }}
-                        style={{
-                          background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '12px',
-                          padding: '14px 20px',
-                          fontSize: '15px',
-                          fontWeight: '700',
-                          cursor: 'pointer',
-                          boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)',
-                          transition: 'all 0.3s ease',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.transform = 'translateY(-2px)';
-                          e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.5)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.transform = 'translateY(0)';
-                          e.currentTarget.style.boxShadow = '0 4px 15px rgba(59, 130, 246, 0.4)';
-                        }}
-                      >
-                        📥 Положить себе (по правилам)
-                      </button>
-                    )}
+                    {/* Кнопка "Положить себе" УДАЛЕНА - теперь автоматически */}
 
                     {/* Кнопка "Взять себе" если нет других ходов */}
                     {deckTargets.length === 0 && !canPlaceOnSelf && (

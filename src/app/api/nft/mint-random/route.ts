@@ -1,18 +1,39 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '../../../../lib/supabase';
-import { requireAuth } from '../../../../lib/auth-utils';
-
 /**
  * POST /api/nft/mint-random
- * Рандомная генерация NFT карты (0.5 TON комиссия)
- * Вероятности: 2-10 = 95%, J-K = 4%, A = 1%
+ * Рандомная генерация NFT карты (0.5 TON или 0.1 SOL комиссия)
+ * Вероятности: Common (60%), Rare (25%), Epic (15%)
  */
-export async function POST(req: NextRequest) {
-  try {
-    const userId = await requireAuth(req);
-    console.log(`🎲 Пользователь ${userId} запрашивает рандомную генерацию NFT...`);
 
-    const { wallet_address } = await req.json();
+import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '../../../../lib/auth/auth-middleware';
+import { createClient } from '@supabase/supabase-js';
+
+export async function POST(request: NextRequest) {
+  try {
+    // Ленивая инициализация Supabase
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('❌ [mint-random] Supabase не настроен');
+      return NextResponse.json(
+        { success: false, error: 'Supabase не настроен. Обратитесь к администратору.' },
+        { status: 500 }
+      );
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const authContext = await requireAuth(request);
+    if (!authContext.authenticated || !authContext.userId) {
+      return NextResponse.json(
+        { success: false, error: 'Не авторизован' },
+        { status: 401 }
+      );
+    }
+
+    const body = await request.json();
+    const { wallet_address, network } = body; // network: 'TON' или 'SOL'
 
     if (!wallet_address) {
       return NextResponse.json(
@@ -21,112 +42,94 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Проверяем, что кошелек принадлежит пользователю
-    const { data: walletCheck, error: walletError } = await supabase
-      .from('_pidr_player_wallets')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('wallet_address', wallet_address)
-      .single();
-
-    if (walletError || !walletCheck) {
-      return NextResponse.json(
-        { success: false, message: 'Кошелек не подключен' },
-        { status: 403 }
-      );
-    }
-
-    // Получаем все карты из БД
-    const { data: allCards, error: cardsError } = await supabase
-      .from('_pidr_nft_cards')
-      .select('*');
-
-    if (cardsError || !allCards || allCards.length === 0) {
-      return NextResponse.json(
-        { success: false, message: 'Ошибка загрузки карт' },
-        { status: 500 }
-      );
-    }
-
-    // Рандомная генерация с вероятностями
-    const randomValue = Math.random() * 100;
-    let selectedCard;
-
-    if (randomValue < 1) {
-      // 1% - Тузы (A)
-      const aces = allCards.filter(c => c.card_rank === 'A');
-      selectedCard = aces[Math.floor(Math.random() * aces.length)];
-    } else if (randomValue < 5) {
-      // 4% - Фигуры (J, Q, K)
-      const figures = allCards.filter(c => ['J', 'Q', 'K'].includes(c.card_rank));
-      selectedCard = figures[Math.floor(Math.random() * figures.length)];
+    // Генерируем случайную карту
+    const suits = ['hearts', 'diamonds', 'clubs', 'spades'] as const;
+    const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+    
+    const randomSuit = suits[Math.floor(Math.random() * suits.length)];
+    const randomRank = ranks[Math.floor(Math.random() * ranks.length)];
+    
+    // Определяем редкость: Common (60%), Rare (25%), Epic (15%)
+    const rarityRoll = Math.random() * 100;
+    let rarity: string;
+    if (rarityRoll < 60) {
+      rarity = 'common';
+    } else if (rarityRoll < 85) {
+      rarity = 'rare';
     } else {
-      // 95% - Обычные карты (2-10)
-      const numbers = allCards.filter(c => !['J', 'Q', 'K', 'A'].includes(c.card_rank));
-      selectedCard = numbers[Math.floor(Math.random() * numbers.length)];
+      rarity = 'epic';
     }
 
-    if (!selectedCard) {
-      return NextResponse.json(
-        { success: false, message: 'Не удалось выбрать карту' },
-        { status: 500 }
-      );
-    }
+    // Цены в зависимости от сети
+    const mintPrice = network === 'SOL' ? 0.1 : 0.5; // SOL дешевле
+    const commission = mintPrice;
+    const masterWalletAddress = network === 'SOL' 
+      ? process.env.MASTER_SOLANA_ADDRESS 
+      : process.env.MASTER_TON_ADDRESS;
 
-    // Резервируем минт
-    const mintPrice = 0.5; // Фиксированная цена для рандомной генерации
-    const commission = 0.5; // Вся сумма идет на мастер-кошелек
-    const masterWalletAddress = process.env.MASTER_TON_ADDRESS || '';
-
-    const { data: mintHistory, error: mintError } = await supabase
-      .from('_pidr_nft_mint_history')
+    // Создаем запись NFT в БД
+    const { data: nftData, error: nftError } = await supabase
+      .from('_pidr_nft_ownership')
       .insert({
-        user_id: userId,
-        card_id: selectedCard.card_id,
-        wallet_address,
-        nft_address: '', // Будет заполнено после минта
+        user_id: authContext.userId,
+        rank: randomRank,
+        suit: randomSuit,
+        rarity,
         mint_type: 'random',
-        mint_price_ton: mintPrice,
-        commission_paid_ton: commission,
-        master_wallet_address: masterWalletAddress,
-        transaction_hash: '',
-        status: 'pending'
+        wallet_address,
+        network: network || 'TON',
+        minted_at: new Date().toISOString(),
       })
       .select()
       .single();
 
-    if (mintError) {
-      console.error('❌ Ошибка создания истории минта:', mintError);
+    if (nftError || !nftData) {
+      console.error('❌ Ошибка создания NFT:', nftError);
       return NextResponse.json(
-        { success: false, message: 'Ошибка резервирования минта' },
+        { success: false, error: 'Ошибка создания NFT' },
         { status: 500 }
       );
     }
 
-    console.log(`✅ Рандомная карта выбрана: ${selectedCard.card_name}`);
+    // Записываем историю минта
+    await supabase
+      .from('_pidr_nft_mint_history')
+      .insert({
+        user_id: authContext.userId,
+        nft_id: nftData.id,
+        wallet_address,
+        mint_type: 'random',
+        mint_price_ton: network === 'TON' ? mintPrice : 0,
+        mint_price_sol: network === 'SOL' ? mintPrice : 0,
+        commission_paid_ton: network === 'TON' ? commission : 0,
+        commission_paid_sol: network === 'SOL' ? commission : 0,
+        master_wallet_address: masterWalletAddress,
+        network: network || 'TON',
+        status: 'completed',
+        minted_at: new Date().toISOString(),
+      });
+
+    console.log(`✅ Случайная NFT карта создана: ${randomRank} of ${randomSuit} (${rarity})`);
     
     return NextResponse.json({
       success: true,
-      mint_id: mintHistory.id,
-      card: {
-        card_id: selectedCard.card_id,
-        card_name: selectedCard.card_name,
-        card_rank: selectedCard.card_rank,
-        card_suit: selectedCard.card_suit,
-        rarity: selectedCard.rarity,
-        image_url: selectedCard.image_url
+      nft: {
+        id: nftData.id,
+        rank: randomRank,
+        suit: randomSuit,
+        rarity,
       },
-      mint_price_ton: mintPrice,
-      commission_ton: commission,
+      mint_price: mintPrice,
+      network: network || 'TON',
       master_wallet_address: masterWalletAddress,
-      message: `Выпала карта: ${selectedCard.card_name}! Подтвердите транзакцию.`
+      message: `Выпала карта ${randomRank} of ${randomSuit} (${rarity})!`
     });
 
   } catch (error: any) {
-    console.error('❌ Ошибка API рандомной генерации NFT:', error);
+    console.error('❌ Ошибка генерации случайной NFT:', error);
     return NextResponse.json(
-      { success: false, message: error.message || 'Ошибка сервера' },
-      { status: 401 }
+      { success: false, error: error.message || 'Внутренняя ошибка сервера' },
+      { status: 500 }
     );
   }
 }
