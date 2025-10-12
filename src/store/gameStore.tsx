@@ -934,7 +934,6 @@ export const useGameStore = create<GameState>()(
           const match = name.match(/(\d+)_of/);
           rank = match ? parseInt(match[1], 10) : 0;
         }
-        console.log(`🎴 [getCardRank] ${imageName} → ${name} → ранг: ${rank}`);
         return rank;
       },
       
@@ -949,7 +948,6 @@ export const useGameStore = create<GameState>()(
         if (!topCard || !topCard.open) return [];
         
         const currentRank = get().getCardRank(topCard.image || '');
-        console.log(`🎯 [findAvailableTargets] СТАДИЯ ${gameStage}: Игрок ${currentPlayer.name}, карта: ${topCard.image}, ранг: ${currentRank}`);
         
         // Определяем целевой ранг с учетом правил P.I.D.R. 1-й стадии
         // ПРАВИЛО: СТАРШАЯ карта бьет МЛАДШУЮ (ищем карту на 1 ранг НИЖЕ)
@@ -958,41 +956,30 @@ export const useGameStore = create<GameState>()(
         let targetRank: number;
         
         if (currentRank === 2) {
-          // Двойка может ложиться ТОЛЬКО на Туз (14) - ИСКЛЮЧЕНИЕ!
-          targetRank = 14;
-          console.log(`🎯 [findAvailableTargets] ИСКЛЮЧЕНИЕ: 2-ка ищет туза (14)`);
+          targetRank = 14; // Двойка может ложиться ТОЛЬКО на Туз (14)
         } else {
-          // Обычное правило: ищем карты на 1 ранг НИЖЕ нашей карты
-          // Туз(14) → Король(13), Король(13) → Дама(12), Дама(12) → Валет(11), ..., 3 → 2
-          targetRank = currentRank - 1;
+          targetRank = currentRank - 1; // Обычное правило: ищем карты на 1 ранг НИЖЕ
         }
-        
-        console.log(`🎯 [findAvailableTargets] Ищем цели с рангом: ${targetRank}`);
         
         const targets: number[] = [];
         players.forEach((player, index) => {
-          if (player.id === currentPlayerId) return; // Не можем положить на себя (пока)
+          if (player.id === currentPlayerId) return;
           
-          // Проверяем верхнюю карту игрока
           const playerTopCard = player.cards[player.cards.length - 1];
           if (playerTopCard && playerTopCard.open) {
             const playerRank = get().getCardRank(playerTopCard.image || '');
-            console.log(`🎯 [findAvailableTargets] Соперник ${player.name}, карта: ${playerTopCard.image}, ранг: ${playerRank}`);
             if (playerRank === targetRank) {
-              console.log(`✅ [findAvailableTargets] НАЙДЕНА ЦЕЛЬ: ${player.name} (индекс ${index})`);
               targets.push(index);
             }
           }
         });
         
-        console.log(`🎯 [findAvailableTargets] ИТОГО найдено целей: ${targets.length}, массив: [${targets.join(', ')}]`);
         return targets;
       },
       
       // Проверка возможности сделать ход
       canMakeMove: (currentPlayerId: string) => {
         const targets = get().findAvailableTargets(currentPlayerId);
-        console.log(`🎯 [canMakeMove] Игрок ${currentPlayerId}, найдено целей: ${targets.length}, цели: [${targets.join(', ')}]`);
         return targets.length > 0;
       },
       
@@ -1069,9 +1056,10 @@ export const useGameStore = create<GameState>()(
           players: [...players]
         });
         
-        get().showNotification(`Карта переложена на ${targetPlayer.name}!`, 'success');
+        // ЕДИНСТВЕННЫЙ ЛОГ ХОДА
+        console.log(`🎴 ${currentPlayer.name} положил ${cardToMove.image} на ${targetPlayer.name}`);
         
-        console.log(`🔄 [makeMove] Ход выполнен успешно, игрок продолжает ходить`);
+        get().showNotification(`Карта переложена на ${targetPlayer.name}!`, 'success');
         
         // ИСПРАВЛЕНО: После успешного хода игрок ПРОДОЛЖАЕТ ходить (анализ руки)
         // Ход передается только когда игрок не может больше ходить
