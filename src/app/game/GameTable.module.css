@@ -2366,6 +2366,73 @@
 }
 
 /* Баланс монет в бургер меню */
+/* НОВЫЙ ДИЗАЙН: Профиль пользователя в меню */
+.menuUserProfile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(99, 102, 241, 0.05) 100%);
+  border-radius: 12px;
+  margin-bottom: 8px;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.menuUserAvatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.menuAvatarImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.menuAvatarPlaceholder {
+  font-size: 24px;
+}
+
+.menuUserInfo {
+  flex: 1;
+  min-width: 0; /* Для правильного обрезания текста */
+}
+
+.menuUserName {
+  font-size: 14px;
+  font-weight: 700;
+  color: #e2e8f0;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.menuUserCoins {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #fbbf24;
+  font-weight: 600;
+}
+
+.menuCoinsIcon {
+  font-size: 16px;
+}
+
+.menuCoinsValue {
+  font-weight: 700;
+}
+
 .menuCoinsBalance {
   display: flex;
   align-items: center;

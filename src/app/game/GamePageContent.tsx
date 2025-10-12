@@ -1117,14 +1117,30 @@ function GamePageContentComponent({
               </div>
             </button>
             <div className={styles.burgerDropdown}>
-              <div className={styles.menuCoinsBalance}>
-                <span className={styles.coinsIcon}>🪙</span>
-                <div className={styles.coinsInfo}>
-                  <div className={styles.coinsAmount}>{gameCoins}</div>
-                  <div className={styles.coinsLabel}>Монеты</div>
+              {/* Профиль пользователя */}
+              <div className={styles.menuUserProfile}>
+                <div className={styles.menuUserAvatar}>
+                  {userData?.avatar ? (
+                    <img 
+                      src={userData.avatar} 
+                      alt="Avatar" 
+                      className={styles.menuAvatarImage}
+                    />
+                  ) : (
+                    <span className={styles.menuAvatarPlaceholder}>👤</span>
+                  )}
+                </div>
+                <div className={styles.menuUserInfo}>
+                  <div className={styles.menuUserName}>{userData?.username || 'Игрок'}</div>
+                  <div className={styles.menuUserCoins}>
+                    <span className={styles.menuCoinsIcon}>🪙</span>
+                    <span className={styles.menuCoinsValue}>{userData?.coins || 0}</span>
+                  </div>
                 </div>
               </div>
+              
               <div className={styles.menuDivider}></div>
+              
               <button className={styles.menuItem} onClick={() => typeof window !== 'undefined' && window.history.back()}>
                 🏠 Главная
               </button>
