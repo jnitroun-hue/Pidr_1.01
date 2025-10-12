@@ -1302,27 +1302,34 @@ function GamePageContentComponent({
                 <div 
                   style={{ 
                     position: 'relative',
-                    cursor: currentPlayerId === players.find(p => p.isUser)?.id ? 'pointer' : 'default',
+                    cursor: (currentPlayerId === players.find(p => p.isUser)?.id && (turnPhase === 'showing_deck_hint' || turnPhase === 'waiting_deck_action')) ? 'pointer' : 'default',
                     transition: 'transform 0.2s ease, box-shadow 0.3s ease',
                     borderRadius: '8px',
                     padding: '4px',
-                    boxShadow: currentPlayerId === players.find(p => p.isUser)?.id 
+                    boxShadow: (currentPlayerId === players.find(p => p.isUser)?.id && turnPhase === 'showing_deck_hint')
+                      ? '0 0 30px rgba(255, 193, 7, 0.9), 0 0 50px rgba(255, 193, 7, 0.6), 0 0 70px rgba(255, 193, 7, 0.3)' 
+                      : currentPlayerId === players.find(p => p.isUser)?.id 
                       ? '0 0 20px rgba(59, 130, 246, 0.6), 0 0 40px rgba(59, 130, 246, 0.4)' 
-                      : 'none'
+                      : 'none',
+                    animation: (currentPlayerId === players.find(p => p.isUser)?.id && turnPhase === 'showing_deck_hint')
+                      ? 'pulse 1.5s ease-in-out infinite'
+                      : 'none',
                   }}
                   onClick={() => {
                     const humanPlayer = players.find(p => p.isUser);
-                    if (currentPlayerId === humanPlayer?.id) {
+                    if (currentPlayerId === humanPlayer?.id && (turnPhase === 'showing_deck_hint' || turnPhase === 'waiting_deck_action')) {
                       console.log('🎴 [КЛИК НА КОЛОДУ] Игрок кликнул на колоду');
                       onDeckClick();
-                    } else {
+                    } else if (currentPlayerId !== humanPlayer?.id) {
                       console.log('⛔ [КЛИК НА КОЛОДУ] Сейчас не ваш ход');
+                    } else {
+                      showNotification('Сначала попробуйте сходить из руки!', 'warning', 2000);
                     }
                   }}
                   onMouseEnter={(e) => {
                     const humanPlayer = players.find(p => p.isUser);
-                    if (currentPlayerId === humanPlayer?.id) {
-                      e.currentTarget.style.transform = 'scale(1.1)';
+                    if (currentPlayerId === humanPlayer?.id && (turnPhase === 'showing_deck_hint' || turnPhase === 'waiting_deck_action')) {
+                      e.currentTarget.style.transform = 'scale(1.15)';
                     }
                   }}
                   onMouseLeave={(e) => {
@@ -1344,6 +1351,36 @@ function GamePageContentComponent({
                     priority
                   />
                   <div className={styles.deckCount}>{deck.length}</div>
+                  
+                  {/* Индикатор подсказки когда нужно кликнуть на колоду */}
+                  {currentPlayerId === players.find(p => p.isUser)?.id && turnPhase === 'showing_deck_hint' && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '-35px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      fontSize: '24px',
+                      animation: 'bounce 1s ease-in-out infinite',
+                      filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))',
+                    }}>👆</div>
+                  )}
+                  {currentPlayerId === players.find(p => p.isUser)?.id && turnPhase === 'showing_deck_hint' && (
+                    <div style={{
+                      position: 'absolute',
+                      bottom: '-40px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      whiteSpace: 'nowrap',
+                      background: 'rgba(255, 193, 7, 0.95)',
+                      color: '#1e293b',
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                      animation: 'pulse 2s ease-in-out infinite',
+                    }}>Кликните на колоду</div>
+                  )}
                 </div>
               </div>
             )}
@@ -1401,11 +1438,39 @@ function GamePageContentComponent({
                           // В 1-й стадии ВСЕ карты открыты! Со 2-й стадии - только свои или помеченные (open)
                           const showOpen = gameStage === 1 || isHumanPlayer || (typeof card === 'string' && card.includes('(open)')) || card.open;
                           
+                          // ЛОГИКА ДЛЯ 1-Й СТАДИИ: подсветка верхней карты если можно ходить
+                          const isTopCard = cardIndex === playerCards.length - 1;
+                          const isMyTurn = player.id === currentPlayerId;
+                          const canMakeMove = gameStage === 1 && isMyTurn && isHumanPlayer && turnPhase === 'analyzing_hand' && availableTargets.length > 0;
+                          const shouldHighlight = gameStage === 1 && isTopCard && canMakeMove;
+                          
+                          // Подсветка игрока как доступной цели
+                          const isAvailableTarget = gameStage === 1 && !isHumanPlayer && availableTargets.includes(index) && turnPhase === 'waiting_target_selection';
+                          
                           return (
-                            <div key={cardIndex} className={styles.cardOnPenki} style={{
-                              marginLeft: cardIndex > 0 ? '-54px' : '0', // 90% перекрытие (60px * 0.9 = 54px)
-                              zIndex: cardIndex // Верхние карты выше
-                            }}>
+                            <div 
+                              key={cardIndex} 
+                              className={styles.cardOnPenki} 
+                              style={{
+                                marginLeft: cardIndex > 0 ? '-54px' : '0', // 90% перекрытие (60px * 0.9 = 54px)
+                                zIndex: cardIndex, // Верхние карты выше
+                                cursor: (shouldHighlight || isAvailableTarget) ? 'pointer' : 'default',
+                                position: 'relative',
+                              }}
+                              onClick={() => {
+                                if (gameStage === 1) {
+                                  if (shouldHighlight && isTopCard) {
+                                    // Клик по своей верхней карте - инициируем выбор цели
+                                    console.log(`🎴 [1-я стадия] Клик по своей карте, инициируем выбор цели`);
+                                    makeMove('initiate_move');
+                                  } else if (isAvailableTarget) {
+                                    // Клик по доступной цели - делаем ход
+                                    console.log(`🎴 [1-я стадия] Клик по цели: ${player.name}`);
+                                    makeMove(player.id);
+                                  }
+                                }
+                              }}
+                            >
                               <Image
                                 src={showOpen ? `${CARDS_PATH}${cardImage}` : `${CARDS_PATH}${CARD_BACK}`}
                                 alt={showOpen ? cardImage : 'Card'}
@@ -1414,12 +1479,42 @@ function GamePageContentComponent({
                                 style={{ 
                                   borderRadius: '8px', 
                                   opacity: 1,
-                                  filter: 'none',
+                                  filter: shouldHighlight || isAvailableTarget ? 'brightness(1.2)' : 'none',
                                   visibility: 'visible',
-                                  display: 'block'
+                                  display: 'block',
+                                  boxShadow: shouldHighlight 
+                                    ? '0 0 20px rgba(40, 167, 69, 0.8), 0 0 30px rgba(40, 167, 69, 0.5)' 
+                                    : isAvailableTarget 
+                                    ? '0 0 20px rgba(59, 130, 246, 0.8), 0 0 30px rgba(59, 130, 246, 0.5)'
+                                    : 'none',
+                                  transition: 'all 0.3s ease',
                                 }}
                                 priority
                               />
+                              {shouldHighlight && (
+                                <div style={{
+                                  position: 'absolute',
+                                  top: '5px',
+                                  right: '5px',
+                                  width: '10px',
+                                  height: '10px',
+                                  background: '#28a745',
+                                  borderRadius: '50%',
+                                  border: '2px solid white',
+                                  animation: 'pulse 1.5s ease-in-out infinite',
+                                  zIndex: 10,
+                                }}></div>
+                              )}
+                              {isAvailableTarget && (
+                                <div style={{
+                                  position: 'absolute',
+                                  top: '-10px',
+                                  left: '50%',
+                                  transform: 'translateX(-50%)',
+                                  fontSize: '20px',
+                                  animation: 'bounce 1s ease-in-out infinite',
+                                }}>⬇️</div>
+                              )}
                             </div>
                           );
                         })}
@@ -1443,12 +1538,48 @@ function GamePageContentComponent({
                 ? card.replace('(open)', '').replace('(closed)', '')
                 : card.image || `${card.rank}_of_${card.suit}.png`;
               
+              // Проверяем можно ли сыграть эту карту
+              const isMyTurn = humanPlayer.id === currentPlayerId;
+              const isSelected = selectedHandCard?.id === card.id || selectedHandCard?.image === cardImage;
+              
+              // Логика подсветки: карта доступна если это ваш ход и либо стол пустой, либо карта может побить верхнюю
+              let canPlay = false;
+              if (isMyTurn && stage2TurnPhase === 'selecting_card') {
+                if (tableStack.length === 0) {
+                  canPlay = true; // Можно сыграть любую карту на пустой стол
+                } else {
+                  // Проверяем можем ли побить верхнюю карту на столе
+                  const topCard = tableStack[tableStack.length - 1];
+                  // Простая проверка - используем функцию из gameStore
+                  const cardObj = typeof card === 'string' ? { image: cardImage, open: true } : card;
+                  const state = useGameStore.getState();
+                  if (state.canBeatCard && topCard && trumpSuit) {
+                    canPlay = state.canBeatCard(topCard, cardObj, trumpSuit);
+                  }
+                }
+              }
+              
               return (
                 <div
                   key={`hand-${index}-${cardImage}`}
-                  className={styles.handCard}
+                  className={`${styles.handCard} ${isSelected ? styles.selected : ''} ${canPlay ? styles.playable : ''} ${!isMyTurn ? styles.disabled : ''}`}
                   style={{
-                    zIndex: index,
+                    zIndex: isSelected ? 100 : index,
+                    cursor: isMyTurn ? 'pointer' : 'not-allowed',
+                  }}
+                  onClick={() => {
+                    if (!isMyTurn) {
+                      showNotification('Сейчас не ваш ход!', 'warning', 2000);
+                      return;
+                    }
+                    
+                    // Клик по карте - выбираем её через gameStore
+                    const cardObj = typeof card === 'string' 
+                      ? { image: cardImage, open: true, id: `card-${index}` }
+                      : { ...card, id: card.id || `card-${index}` };
+                    
+                    console.log(`🎴 [Клик по карте] Игрок кликнул на карту:`, cardObj);
+                    selectHandCard(cardObj);
                   }}
                 >
                   <Image
@@ -1458,13 +1589,30 @@ function GamePageContentComponent({
                     height={105}
                     style={{ 
                       borderRadius: '8px', 
-                      opacity: 1,
-                      filter: 'none',
+                      opacity: isMyTurn ? 1 : 0.6,
+                      filter: canPlay ? 'brightness(1.1)' : 'none',
                       visibility: 'visible',
-                      display: 'block'
+                      display: 'block',
+                      transform: isSelected ? 'translateY(-20px) scale(1.1)' : 'none',
+                      transition: 'all 0.3s ease',
+                      boxShadow: canPlay ? '0 0 20px rgba(40, 167, 69, 0.6), 0 0 40px rgba(40, 167, 69, 0.3)' : 'none',
                     }}
                     priority
                   />
+                  {canPlay && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '5px',
+                      right: '5px',
+                      width: '12px',
+                      height: '12px',
+                      background: '#28a745',
+                      borderRadius: '50%',
+                      border: '2px solid white',
+                      animation: 'pulse 1.5s ease-in-out infinite',
+                      zIndex: 10,
+                    }}></div>
+                  )}
                 </div>
               );
             })}
