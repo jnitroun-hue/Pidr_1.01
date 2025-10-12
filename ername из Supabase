@@ -1,0 +1,167 @@
+warning: in the working copy of 'src/store/gameStore.tsx', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/src/store/gameStore.tsx b/src/store/gameStore.tsx[m
+[1mindex 5fda36b..65d2686 100644[m
+[1m--- a/src/store/gameStore.tsx[m
+[1m+++ b/src/store/gameStore.tsx[m
+[36m@@ -53,8 +53,6 @@[m [minterface GameState {[m
+   // Игровое состояние[m
+   isGameActive: boolean[m
+   gameMode: 'single' | 'multiplayer'[m
+[31m-  currentRound: number[m
+[31m-  maxRounds: number[m
+   players: Player[][m
+   currentPlayerId: string | null[m
+   deck: Card[][m
+[36m@@ -268,8 +266,6 @@[m [mexport const useGameStore = create<GameState>()([m
+       // Начальное состояние[m
+       isGameActive: false,[m
+       gameMode: 'single',[m
+[31m-      currentRound: 0,[m
+[31m-      maxRounds: 10,[m
+       players: [],[m
+       currentPlayerId: null,[m
+       deck: [...DEFAULT_CARDS],[m
+[36m@@ -391,21 +387,31 @@[m [mexport const useGameStore = create<GameState>()([m
+         const players: Player[] = [][m
+         const cardsPerPlayer = 3;[m
+         [m
+[31m-        // ИСПРАВЛЕНО: Создаем игроков с реальными данными пользователя из Supabase БД[m
+[31m-        console.log('🎮 [GameStore] Создаем игроков...');[m
+[32m+[m[32m        // ИСПРАВЛЕНО: ЗАГРУЖАЕМ данные реального игрока из Supabase БД через API[m
+[32m+[m[32m        console.log('🎮 [GameStore] Загружаем данные игрока из БД...');[m
+         [m
+[31m-        const userAvatar = userInfo?.avatar || '';[m
+[31m-        const userName = userInfo?.username || 'Игрок'; // Fallback на "Игрок" вместо "Вы"[m
+[32m+[m[32m        let userAvatar = '';[m
+[32m+[m[32m        let userName = 'Игрок';[m
+         [m
+[31m-        console.log('🎮 [GameStore] Данные пользователя:', { userAvatar, userName });[m
+[32m+[m[32m        try {[m
+[32m+[m[32m          const response = await fetch('/api/auth', { credentials: 'include' });[m
+[32m+[m[32m          if (response.ok) {[m
+[32m+[m[32m            const result = await response.json();[m
+[32m+[m[32m            if (result.success && result.user) {[m
+[32m+[m[32m              userAvatar = result.user.avatar_url || '';[m
+[32m+[m[32m              userName = result.user.username || 'Игрок';[m
+[32m+[m[32m              console.log('✅ [GameStore] Данные игрока загружены из БД:', { userName, avatar: userAvatar ? 'есть' : 'нет' });[m
+[32m+[m[32m            }[m
+[32m+[m[32m          }[m
+[32m+[m[32m        } catch (error) {[m
+[32m+[m[32m          console.error('❌ [GameStore] Ошибка загрузки данных игрока:', error);[m
+[32m+[m[32m        }[m
+         [m
+         const playerInfos = createPlayers(playersCount, 0, userAvatar, userName);[m
+[31m-        console.log('🎮 [GameStore] Игроки созданы:', playerInfos);[m
+         [m
+         for (let i = 0; i < playersCount; i++) {[m
+           const playerInfo = playerInfos[i];[m
+           [m
+[31m-          // Проверяем что playerInfo корректен[m
+           if (!playerInfo) {[m
+             throw new Error(`Не удалось создать информацию для игрока ${i + 1}`);[m
+           }[m
+[36m@@ -439,8 +445,6 @@[m [mexport const useGameStore = create<GameState>()([m
+             }[m
+           }[m
+           [m
+[31m-          console.log(`🎮 [GameStore] Создаем игрока ${i + 1}:`, playerInfo);[m
+[31m-          [m
+           const newPlayer = {[m
+             id: `player_${i + 1}`,[m
+             name: playerInfo.name,[m
+[36m@@ -456,13 +460,6 @@[m [mexport const useGameStore = create<GameState>()([m
+           };[m
+           [m
+           players.push(newPlayer);[m
+[31m-          [m
+[31m-          console.log(`🎮 [GameStore] Игрок ${i + 1} создан:`, {[m
+[31m-            name: newPlayer.name,[m
+[31m-            isUser: newPlayer.isUser,[m
+[31m-            isBot: newPlayer.isBot,[m
+[31m-            avatar: newPlayer.avatar ? 'есть' : 'нет'[m
+[31m-          });[m
+         }[m
+         [m
+         // Оставшиеся карты в колоде[m
+[36m@@ -1144,35 +1141,25 @@[m [mexport const useGameStore = create<GameState>()([m
+         const { deck, gameStage, lastPlayerToDrawCard, players } = get();[m
+         if (gameStage !== 1 || deck.length > 0) return;[m
+         [m
+[31m-        console.log(`🎯 [checkStage1End] ✅ 1-я стадия завершена! Переход во 2-ю стадию...`);[m
+[31m-        [m
+[31m-        // Определяем козырь второй стадии[m
+[31m-        const trumpSuit = get().determineTrumpSuit();[m
+[31m-[m
+[31m-        console.log(`🎯 [checkStage1End] Козырь определен: ${trumpSuit || 'НЕТ'}`);[m
+[32m+[m[32m        console.log(`🎯 [checkStage1End] ✅ 1-я стадия завершена! Переход во 2-ю стадию (ОТКРЫТИЕ ПЕНЬКОВ)...`);[m
+         [m
+         // Определяем стартового игрока (последний взявший карту)[m
+         const startingPlayerId = lastPlayerToDrawCard || players[0].id;[m
+[31m-[m
+[31m-        console.log(`🎯 [checkStage1End] Стартовый игрок: ${players.find(p => p.id === startingPlayerId)?.name}`);[m
+         [m
+[31m-        // Обновляем текущего игрока и переводим всех во 2-ю стадию[m
+[31m-        // ИСПРАВЛЕНО: Открываем пеньки для тех у кого нет открытых карт[m
+[32m+[m[32m        // СТАДИЯ 2: ТОЛЬКО ОТКРЫТИЕ ПЕНЬКОВ У ВСЕХ ИГРОКОВ![m
+         players.forEach(p => {[m
+[31m-          p.isCurrentPlayer = p.id === startingPlayerId;[m
+[32m+[m[32m          p.isCurrentPlayer = false; // Никто не ходит во 2-й стадии[m
+           p.playerStage = 2; // Все переходят во 2-ю стадию[m
+           [m
+[31m-          // КРИТИЧЕСКИ ВАЖНО: Если у игрока нет открытых карт - открываем пеньки СРАЗУ![m
+[31m-          const hasOpenCards = p.cards.some(c => c.open);[m
+[31m-          if (!hasOpenCards && p.penki.length > 0) {[m
+[31m-            console.log(`🃏 [checkStage1End] ⚠️ У игрока ${p.name} нет открытых карт - открываем пеньки СРАЗУ!`);[m
+[32m+[m[32m          // ОТКРЫВАЕМ ВСЕ ПЕНЬКИ У ВСЕХ ИГРОКОВ[m
+[32m+[m[32m          if (p.penki.length > 0) {[m
+[32m+[m[32m            console.log(`🃏 [Стадия 2] Открываем пеньки у ${p.name}:`, p.penki.map(c => c.image));[m
+             const activatedPenki = p.penki.map(card => ({[m
+               ...card,[m
+               open: true[m
+             }));[m
+             p.cards = [...p.cards, ...activatedPenki];[m
+             p.penki = [];[m
+[31m-            console.log(`🃏 [checkStage1End] ✅ Пеньки игрока ${p.name} открыты:`, p.cards.map(c => c.image));[m
+           }[m
+         });[m
+         [m
+[36m@@ -1181,14 +1168,33 @@[m [mexport const useGameStore = create<GameState>()([m
+           availableTargets: [],[m
+           canPlaceOnSelf: false,[m
+           mustDrawFromDeck: false,[m
+[31m-          trumpSuit: trumpSuit,[m
+[31m-          currentPlayerId: startingPlayerId,[m
+[31m-          players: [...players],[m
+[31m-          currentRound: 1 // Сбрасываем раунды для новой стадии[m
+[32m+[m[32m          currentPlayerId: null, // Во 2-й стадии НЕТ текущего игрока[m
+[32m+[m[32m          players: [...players][m
+         });[m
+         [m
+[31m-        // Инициализируем 2-ю стадию[m
+[31m-        get().initializeStage2();[m
+[32m+[m[32m        // Через 2 секунды автоматически переходим к стадии 3 (игра)[m
+[32m+[m[32m        setTimeout(() => {[m
+[32m+[m[32m          console.log(`🎯 [Стадия 2] ✅ Пеньки открыты! Переход к стадии 3 (ИГРА)...`);[m
+[32m+[m[41m          [m
+[32m+[m[32m          const trumpSuit = get().determineTrumpSuit();[m
+[32m+[m[32m          console.log(`🎯 [Стадия 3] Козырь определен: ${trumpSuit || 'НЕТ'}`);[m
+[32m+[m[41m          [m
+[32m+[m[32m          const { players: currentPlayers } = get();[m
+[32m+[m[32m          currentPlayers.forEach(p => {[m
+[32m+[m[32m            p.playerStage = 3; // Все переходят в 3-ю стадию[m
+[32m+[m[32m            p.isCurrentPlayer = p.id === startingPlayerId;[m
+[32m+[m[32m          });[m
+[32m+[m[41m          [m
+[32m+[m[32m          set({[m
+[32m+[m[32m            gameStage: 3,[m
+[32m+[m[32m            trumpSuit: trumpSuit,[m
+[32m+[m[32m            currentPlayerId: startingPlayerId,[m
+[32m+[m[32m            players: [...currentPlayers][m
+[32m+[m[32m          });[m
+[32m+[m[41m          [m
+[32m+[m[32m          // Инициализируем 3-ю стадию (игра)[m
+[32m+[m[32m          get().initializeStage2(); // Функция называется initializeStage2, но теперь для стадии 3[m
+[32m+[m[32m        }, 2000);[m
+         [m
+         // Показываем уведомления и СРАЗУ запускаем ход[m
+         get().showNotification('🎉 Первая стадия завершена!', 'success', 3000);[m

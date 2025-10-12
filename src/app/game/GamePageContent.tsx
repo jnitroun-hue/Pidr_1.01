@@ -518,16 +518,7 @@ function GamePageContentComponent({
   // Получаем пользователя-человека (для UI контейнера карт)
   const humanPlayer = players.find(p => p.isUser);
   
-  // ОТЛАДКА: Логируем всех игроков при каждом рендере
-  useEffect(() => {
-    if (players.length > 0) {
-      console.log('👥 [ОТЛАДКА] Всего игроков:', players.length);
-      players.forEach((p, index) => {
-        console.log(`  ${index + 1}. ${p.name} - isUser: ${p.isUser}, isBot: ${p.isBot}, id: ${p.id}`);
-      });
-      console.log('🎮 [ОТЛАДКА] humanPlayer найден:', humanPlayer ? `${humanPlayer.name} (${humanPlayer.id})` : 'НЕТ!');
-    }
-  }, [players, humanPlayer]);
+  // ОТЛАДКА убрана - логи были слишком многословные
   
   // Создаем экземпляры ИИ для ботов
   const [aiPlayers, setAiPlayers] = useState<Map<number, AIPlayer>>(new Map());
@@ -628,11 +619,9 @@ function GamePageContentComponent({
       if (player.isBot) {
         const playerId = typeof player.id === 'string' ? 
           parseInt(player.id.replace('player_', '')) : player.id;
-        console.log(`🤖 [AI Init] Создаем AI для бота ${player.name} (ID: ${player.id} -> ${playerId}, difficulty: ${player.difficulty || 'medium'})`);
         newAiPlayers.set(playerId, new AIPlayer(playerId, player.difficulty || 'medium'));
       }
     });
-    console.log(`🤖 [AI Init] Всего AI создано: ${newAiPlayers.size}, для игроков:`, Array.from(newAiPlayers.keys()));
     setAiPlayers(newAiPlayers);
   }, [players]);
 
@@ -675,42 +664,30 @@ function GamePageContentComponent({
     }
     
     // СТРОГИЕ ПРОВЕРКИ: ИИ может ходить только в свой ход!
-    console.log(`🤖 [AI Check] Проверка хода для бота ${currentTurnPlayer.name}:`);
-    console.log(`🤖 [AI Check] - gameStage: ${gameStage}, turnPhase: ${turnPhase}, stage2TurnPhase: ${stage2TurnPhase}`);
-    console.log(`🤖 [AI Check] - currentPlayerId: ${currentPlayerId}, player.id: ${currentTurnPlayer.id}`);
-    console.log(`🤖 [AI Check] - игрок.карты: ${currentTurnPlayer.cards.length}, открытых: ${currentTurnPlayer.cards.filter(c => c.open).length}`);
-    console.log(`🤖 [AI Check] - карты игрока:`, currentTurnPlayer.cards.map(c => `${c.image}(${c.open ? 'open' : 'closed'})`));
     
     // Проверяем что это действительно ход этого бота
     if (gameStage === 2 || gameStage === 3) {
       // Разрешаем ИИ ходить в фазах 'selecting_card' и 'waiting_beat' для 2-й и 3-й стадий
       if (stage2TurnPhase !== 'selecting_card' && stage2TurnPhase !== 'waiting_beat') {
-        console.log(`🚫 [AI Check] Бот не может ходить в фазу ${gameStage}-й стадии: ${stage2TurnPhase}`);
         return;
       }
       // Дополнительная проверка: игрок должен быть текущим
       if (currentTurnPlayer?.id !== currentPlayerId) {
-        console.log(`🚫 [AI Check] ID игрока не совпадает с текущим ID хода`);
         return;
       }
     } else if (gameStage === 1) {
       if (turnPhase !== 'analyzing_hand' && turnPhase !== 'waiting_deck_action') {
-        console.log(`🚫 [AI Check] Бот не может ходить в фазу 1-й стадии: ${turnPhase}`);
         return;
       }
     }
     
     const playerIdNum = typeof currentPlayerId === 'string' ? 
       parseInt(currentPlayerId.replace('player_', '')) : currentPlayerId;
-    console.log(`🔍 [AI useEffect] currentPlayerId: ${currentPlayerId}, converted to: ${playerIdNum}`);
     
     const ai = aiPlayers.get(playerIdNum);
     if (!ai) {
-      console.log(`🚨 [AI useEffect] AI не найден для игрока ${playerIdNum}, доступные AI:`, Array.from(aiPlayers.keys()));
       return;
     }
-    
-    console.log(`✅ [AI Check] ВСЕ ПРОВЕРКИ ПРОЙДЕНЫ! Запускаем AI для игрока ${currentTurnPlayer.name}`);
     
     // Устанавливаем флаг обработки
     aiProcessingRef.current = currentPlayerId;

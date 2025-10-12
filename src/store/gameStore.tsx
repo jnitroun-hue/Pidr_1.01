@@ -53,8 +53,6 @@ interface GameState {
   // Игровое состояние
   isGameActive: boolean
   gameMode: 'single' | 'multiplayer'
-  currentRound: number
-  maxRounds: number
   players: Player[]
   currentPlayerId: string | null
   deck: Card[]
@@ -144,7 +142,7 @@ interface GameState {
   } | null
   
   // Действия игры
-  startGame: (mode: 'single' | 'multiplayer', playersCount?: number, multiplayerConfig?: any, userInfo?: { avatar?: string; username?: string }) => void
+  startGame: (mode: 'single' | 'multiplayer', playersCount?: number, multiplayerConfig?: any, userInfo?: { avatar?: string; username?: string }) => Promise<void>
   endGame: () => void
   playCard: (cardId: string) => void
   drawCard: () => void
@@ -268,8 +266,6 @@ export const useGameStore = create<GameState>()(
       // Начальное состояние
       isGameActive: false,
       gameMode: 'single',
-      currentRound: 0,
-      maxRounds: 10,
       players: [],
       currentPlayerId: null,
       deck: [...DEFAULT_CARDS],
@@ -348,7 +344,7 @@ export const useGameStore = create<GameState>()(
       notification: null,
       
       // Игровые действия
-      startGame: (mode, playersCount = 2, multiplayerConfig = null, userInfo = undefined) => {
+      startGame: async (mode, playersCount = 2, multiplayerConfig = null, userInfo = undefined) => {
         console.log('🎮 [GameStore] startGame вызван с параметрами:', { mode, playersCount, multiplayerConfig });
         
         try {
@@ -391,21 +387,31 @@ export const useGameStore = create<GameState>()(
         const players: Player[] = []
         const cardsPerPlayer = 3;
         
-        // ИСПРАВЛЕНО: Создаем игроков с реальными данными пользователя из Supabase БД
-        console.log('🎮 [GameStore] Создаем игроков...');
+        // ИСПРАВЛЕНО: ЗАГРУЖАЕМ данные реального игрока из Supabase БД через API
+        console.log('🎮 [GameStore] Загружаем данные игрока из БД...');
         
-        const userAvatar = userInfo?.avatar || '';
-        const userName = userInfo?.username || 'Игрок'; // Fallback на "Игрок" вместо "Вы"
+        let userAvatar = '';
+        let userName = 'Игрок';
         
-        console.log('🎮 [GameStore] Данные пользователя:', { userAvatar, userName });
+        try {
+          const response = await fetch('/api/auth', { credentials: 'include' });
+          if (response.ok) {
+            const result = await response.json();
+            if (result.success && result.user) {
+              userAvatar = result.user.avatar_url || '';
+              userName = result.user.username || 'Игрок';
+              console.log('✅ [GameStore] Данные игрока загружены из БД:', { userName, avatar: userAvatar ? 'есть' : 'нет' });
+            }
+          }
+        } catch (error) {
+          console.error('❌ [GameStore] Ошибка загрузки данных игрока:', error);
+        }
         
         const playerInfos = createPlayers(playersCount, 0, userAvatar, userName);
-        console.log('🎮 [GameStore] Игроки созданы:', playerInfos);
         
         for (let i = 0; i < playersCount; i++) {
           const playerInfo = playerInfos[i];
           
-          // Проверяем что playerInfo корректен
           if (!playerInfo) {
             throw new Error(`Не удалось создать информацию для игрока ${i + 1}`);
           }
@@ -439,8 +445,6 @@ export const useGameStore = create<GameState>()(
             }
           }
           
-          console.log(`🎮 [GameStore] Создаем игрока ${i + 1}:`, playerInfo);
-          
           const newPlayer = {
             id: `player_${i + 1}`,
             name: playerInfo.name,
@@ -456,13 +460,6 @@ export const useGameStore = create<GameState>()(
           };
           
           players.push(newPlayer);
-          
-          console.log(`🎮 [GameStore] Игрок ${i + 1} создан:`, {
-            name: newPlayer.name,
-            isUser: newPlayer.isUser,
-            isBot: newPlayer.isBot,
-            avatar: newPlayer.avatar ? 'есть' : 'нет'
-          });
         }
         
         // Оставшиеся карты в колоде
@@ -501,7 +498,6 @@ export const useGameStore = create<GameState>()(
         set({
           isGameActive: true,
           gameMode: mode,
-          currentRound: 1,
           players,
           currentPlayerId: players[firstPlayerIndex].id,
           deck: remainingCards,
@@ -630,7 +626,7 @@ export const useGameStore = create<GameState>()(
       
       nextTurn: () => {
         try {
-          const { players, currentPlayerId, currentRound, maxRounds, gameStage } = get()
+          const { players, currentPlayerId, gameStage } = get()
           
           if (!players || players.length === 0) {
             console.error(`🔄 [nextTurn] ❌ Нет игроков для передачи хода`);
@@ -682,13 +678,6 @@ export const useGameStore = create<GameState>()(
           
           // Обновляем текущего игрока
           players.forEach(p => p.isCurrentPlayer = p.id === nextPlayerId)
-          
-          let newRound = currentRound
-          
-          // Если круг завершен (вернулись к первому игроку при движении по часовой стрелке)
-          if (nextIndex === 0) {
-            newRound = currentRound + 1
-          }
         
         // Сбрасываем состояния хода только для 1-й стадии
         if (gameStage === 1) {
@@ -697,8 +686,7 @@ export const useGameStore = create<GameState>()(
         
         set({
           players: [...players],
-          currentPlayerId: nextPlayerId,
-          currentRound: newRound
+          currentPlayerId: nextPlayerId
         })
         
         get().showNotification(`Ход переходит к ${nextPlayer.name}`, 'info')
@@ -738,7 +726,6 @@ export const useGameStore = create<GameState>()(
       resetGame: () => {
         set({
           isGameActive: false,
-          currentRound: 0,
           players: [],
           currentPlayerId: null,
           deck: [...DEFAULT_CARDS],
@@ -1183,8 +1170,7 @@ export const useGameStore = create<GameState>()(
           mustDrawFromDeck: false,
           trumpSuit: trumpSuit,
           currentPlayerId: startingPlayerId,
-          players: [...players],
-          currentRound: 1 // Сбрасываем раунды для новой стадии
+          players: [...players]
         });
         
         // Инициализируем 2-ю стадию
@@ -2848,8 +2834,6 @@ export const useGameStore = create<GameState>()(
         // Основное игровое состояние
         isGameActive: state.isGameActive,
         gameMode: state.gameMode,
-        currentRound: state.currentRound,
-        maxRounds: state.maxRounds,
         players: state.players,
         currentPlayerId: state.currentPlayerId,
         deck: state.deck,
