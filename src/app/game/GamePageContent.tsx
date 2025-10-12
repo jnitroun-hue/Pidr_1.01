@@ -890,12 +890,36 @@ function GamePageContentComponent({
   }, [isGameActive, dealt]);
 
   // Запуск игры
-  const handleStartGame = () => {
+  const handleStartGame = async () => {
     console.log('🎮 [handleStartGame] Запуск новой игры с ботами');
-    console.log('👤 [handleStartGame] userData:', userData);
+    
+    // ВАЖНО: Загружаем актуальные данные из БД
+    let actualUsername = userData?.username;
+    let actualAvatar = userData?.avatar;
+    
+    try {
+      const response = await fetch('/api/auth', {
+        credentials: 'include',
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.user) {
+          actualUsername = result.user.username || actualUsername;
+          actualAvatar = result.user.avatar_url || actualAvatar;
+          console.log('✅ [handleStartGame] Данные из БД:', {
+            username: actualUsername,
+            avatar: actualAvatar ? 'есть' : 'нет'
+          });
+        }
+      }
+    } catch (error) {
+      console.error('❌ [handleStartGame] Ошибка загрузки данных:', error);
+    }
+    
     console.log('👤 [handleStartGame] Передаем в startGame:', {
-      avatar: userData?.avatar,
-      username: userData?.username
+      avatar: actualAvatar,
+      username: actualUsername
     });
     
     // ВАЖНО: Сбрасываем все состояния перед новой игрой
@@ -906,10 +930,10 @@ function GamePageContentComponent({
     setAiPlayers(new Map());
     aiProcessingRef.current = null;
     
-    // Запускаем новую игру
+    // Запускаем новую игру с РЕАЛЬНЫМИ данными из БД
     startGame('multiplayer', playerCount, null, {
-      avatar: userData?.avatar,
-      username: userData?.username
+      avatar: actualAvatar,
+      username: actualUsername || 'Игрок' // Fallback на "Игрок" вместо "Вы"
     });
     
     // Помечаем, что игра инициализирована

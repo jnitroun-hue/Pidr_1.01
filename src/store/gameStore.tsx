@@ -940,7 +940,7 @@ export const useGameStore = create<GameState>()(
       
       // Поиск доступных целей для текущего хода
       findAvailableTargets: (currentPlayerId: string) => {
-        const { players } = get();
+        const { players, gameStage } = get();
         const currentPlayer = players.find(p => p.id === currentPlayerId);
         if (!currentPlayer || currentPlayer.cards.length === 0) return [];
         
@@ -949,7 +949,7 @@ export const useGameStore = create<GameState>()(
         if (!topCard || !topCard.open) return [];
         
         const currentRank = get().getCardRank(topCard.image || '');
-        console.log(`🎯 [findAvailableTargets] Игрок ${currentPlayer.name}, карта: ${topCard.image}, ранг: ${currentRank}`);
+        console.log(`🎯 [findAvailableTargets] СТАДИЯ ${gameStage}: Игрок ${currentPlayer.name}, карта: ${topCard.image}, ранг: ${currentRank}`);
         
         // Определяем целевой ранг с учетом правил P.I.D.R.
         // ПРАВИЛО: Ищем у соперников карты на 1 ранг НИЖЕ нашей карты

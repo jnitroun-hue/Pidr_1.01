@@ -11,15 +11,15 @@
 
 .modal {
   position: fixed;
-  top: 50%;
+  top: 45%;
   left: 50%;
   transform: translate(-50%, -50%);
   background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
-  border-radius: 24px;
-  padding: 24px;
-  max-width: 420px;
-  width: 90%;
-  max-height: 85vh;
+  border-radius: 16px;
+  padding: 16px;
+  max-width: 320px;
+  width: 85%;
+  max-height: 70vh;
   overflow-y: auto;
   z-index: 9999;
   box-shadow: 
@@ -31,11 +31,11 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
 .title {
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 700;
   color: #e2e8f0;
   margin: 0;
@@ -63,14 +63,14 @@
 
 .avatarContainer {
   text-align: center;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
 .avatarWrapper {
   position: relative;
-  width: 120px;
-  height: 120px;
-  margin: 0 auto 12px;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 8px;
 }
 
 .avatar {
@@ -119,14 +119,14 @@
 }
 
 .playerName {
-  font-size: 24px;
+  font-size: 18px;
   font-weight: 700;
   color: #e2e8f0;
-  margin: 0 0 8px 0;
+  margin: 0 0 4px 0;
 }
 
 .status {
-  font-size: 14px;
+  font-size: 12px;
   color: #94a3b8;
   margin: 0;
 }
@@ -134,15 +134,15 @@
 .statsGrid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
 .statCard {
   background: rgba(15, 23, 42, 0.6);
   border: 1px solid rgba(59, 130, 246, 0.2);
-  border-radius: 12px;
-  padding: 16px;
+  border-radius: 10px;
+  padding: 10px;
   text-align: center;
   transition: all 0.3s ease;
 }
@@ -154,30 +154,30 @@
 }
 
 .statIcon {
-  font-size: 28px;
-  margin-bottom: 8px;
-}
-
-.statValue {
-  font-size: 22px;
-  font-weight: 700;
-  color: #3b82f6;
+  font-size: 20px;
   margin-bottom: 4px;
 }
 
+.statValue {
+  font-size: 16px;
+  font-weight: 700;
+  color: #3b82f6;
+  margin-bottom: 2px;
+}
+
 .statLabel {
-  font-size: 12px;
+  font-size: 10px;
   color: #94a3b8;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
 }
 
 .additionalInfo {
   background: rgba(15, 23, 42, 0.4);
   border: 1px solid rgba(100, 116, 139, 0.2);
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 20px;
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 12px;
 }
 
 .infoRow {
