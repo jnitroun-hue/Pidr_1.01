@@ -60,7 +60,7 @@ export function generateAvatar(name: string, seed: number = 0): string {
 
 // Генерация случайного имени
 export function generateRandomName(isBot: boolean = true, seed: number = 0): string {
-  if (!isBot) return 'Вы';
+  if (!isBot) return 'Игрок'; // Fallback на "Игрок" вместо "Вы"
   
   const allNames = [...MALE_NAMES, ...FEMALE_NAMES, ...NICKNAMES];
   const index = Math.floor(Math.random() * allNames.length);
@@ -80,7 +80,7 @@ export function generatePlayerNames(count: number, includeUser: boolean = true):
   const usedNames = new Set<string>();
   
   if (includeUser) {
-    names.push('Вы');
+    names.push('Игрок'); // Fallback на "Игрок" вместо "Вы"
     count--;
   }
   
@@ -123,7 +123,7 @@ export function createPlayers(
     
     if (isUser) {
       // Используем реальные данные пользователя из БД
-      name = userName || 'Вы';
+      name = userName || 'Игрок'; // Fallback на "Игрок" вместо "Вы"
       avatar = userAvatar || generateAvatar(name, i);
       console.log(`✅ [createPlayers] Игрок ${i}: РЕАЛЬНЫЙ ПОЛЬЗОВАТЕЛЬ - ${name}`);
     } else {

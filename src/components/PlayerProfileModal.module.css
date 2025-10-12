@@ -11,15 +11,15 @@
 
 .modal {
   position: fixed;
-  top: 45%;
+  top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
   border-radius: 16px;
   padding: 16px;
-  max-width: 320px;
-  width: 85%;
-  max-height: 70vh;
+  max-width: 340px;
+  width: 90%;
+  max-height: 75vh;
   overflow-y: auto;
   z-index: 9999;
   box-shadow: 

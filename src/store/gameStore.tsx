@@ -395,7 +395,7 @@ export const useGameStore = create<GameState>()(
         console.log('🎮 [GameStore] Создаем игроков...');
         
         const userAvatar = userInfo?.avatar || '';
-        const userName = userInfo?.username || 'Вы';
+        const userName = userInfo?.username || 'Игрок'; // Fallback на "Игрок" вместо "Вы"
         
         console.log('🎮 [GameStore] Данные пользователя:', { userAvatar, userName });
         

@@ -1356,13 +1356,18 @@ function GamePageContentComponent({
                     style={{
                     left: `${position.x}%`,
                     top: `${position.y}%`,
-                    cursor: 'pointer',
                   }}
-                    onClick={() => handlePlayerClick(player)}
                 >
                   {/* Аватар и имя */}
                     <div className={styles.avatarWrap}>
-                      <div className={styles.avatarContainer}>
+                      <div 
+                        className={styles.avatarContainer}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePlayerClick(player);
+                        }}
+                        style={{ cursor: 'pointer' }}
+                      >
                           <Image 
                         src={playerAvatars[player.id] || player.avatar || '/images/default-avatar.png'}
                         alt={player.name}
