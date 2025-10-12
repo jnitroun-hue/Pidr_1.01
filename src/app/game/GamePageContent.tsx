@@ -1322,7 +1322,36 @@ function GamePageContentComponent({
                 )}
                 
                 {/* Колода (справа, уменьшена на 60%) */}
-                <div style={{ position: 'relative' }}>
+                <div 
+                  style={{ 
+                    position: 'relative',
+                    cursor: currentPlayerId === players.find(p => p.isUser)?.id ? 'pointer' : 'default',
+                    transition: 'transform 0.2s ease, box-shadow 0.3s ease',
+                    borderRadius: '8px',
+                    padding: '4px',
+                    boxShadow: currentPlayerId === players.find(p => p.isUser)?.id 
+                      ? '0 0 20px rgba(59, 130, 246, 0.6), 0 0 40px rgba(59, 130, 246, 0.4)' 
+                      : 'none'
+                  }}
+                  onClick={() => {
+                    const humanPlayer = players.find(p => p.isUser);
+                    if (currentPlayerId === humanPlayer?.id) {
+                      console.log('🎴 [КЛИК НА КОЛОДУ] Игрок кликнул на колоду');
+                      onDeckClick();
+                    } else {
+                      console.log('⛔ [КЛИК НА КОЛОДУ] Сейчас не ваш ход');
+                    }
+                  }}
+                  onMouseEnter={(e) => {
+                    const humanPlayer = players.find(p => p.isUser);
+                    if (currentPlayerId === humanPlayer?.id) {
+                      e.currentTarget.style.transform = 'scale(1.1)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }}
+                >
                   <Image
                     src={`${CARDS_PATH}${CARD_BACK}`}
                     alt="Deck"
