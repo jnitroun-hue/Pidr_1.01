@@ -1,6 +1,7 @@
 'use client'
 import { useState, useMemo, useEffect, useRef } from 'react';
 import Image from 'next/image';
+import PlayerProfileModal from '../../components/PlayerProfileModal';
 import styles from './GameTable.module.css';
 // Генераторы перенесены в отдельный проект pidr_generators
 import { getPremiumTable } from '@/utils/generatePremiumTable';
@@ -219,6 +220,95 @@ function GamePageContentComponent({
 
   // Текущая открытая карта из колоды (для отображения рядом с колодой)
   const [currentCard, setCurrentCard] = useState<string | null>(null);
+
+  // Модальное окно профиля игрока
+  const [selectedPlayerProfile, setSelectedPlayerProfile] = useState<any>(null);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+
+  // Функция генерации профиля игрока
+  const generatePlayerProfile = async (player: any) => {
+    if (player.isUser) {
+      // Реальный игрок - данные из БД
+      try {
+        const response = await fetch('/api/auth', {
+          credentials: 'include',
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.user) {
+            return {
+              id: player.id,
+              name: result.user.username || userData?.username || 'Игрок',
+              avatar: result.user.avatar_url || userData?.avatar || '',
+              isBot: false,
+              isUser: true,
+              level: Math.floor((result.user.experience || 0) / 1000) + 1,
+              rating: result.user.rating || 0,
+              gamesPlayed: result.user.games_played || 0,
+              winRate: result.user.games_played > 0 
+                ? Math.round((result.user.wins / result.user.games_played) * 100) 
+                : 0,
+              bestStreak: result.user.best_win_streak || 0,
+              status: '🟢 Online',
+              joinedDate: result.user.created_at 
+                ? new Date(result.user.created_at).toLocaleDateString('ru-RU')
+                : 'Недавно',
+            };
+          }
+        }
+      } catch (error) {
+        console.error('Ошибка загрузки профиля:', error);
+      }
+      
+      // Fallback для реального игрока
+      return {
+        id: player.id,
+        name: userData?.username || 'Игрок',
+        avatar: userData?.avatar || '',
+        isBot: false,
+        isUser: true,
+        level: 1,
+        rating: 0,
+        gamesPlayed: 0,
+        winRate: 0,
+        bestStreak: 0,
+        status: '🟢 Online',
+        joinedDate: 'Сегодня',
+      };
+    } else {
+      // Бот - генерируем рандомные данные
+      const seed = player.name.length + player.id.length;
+      return {
+        id: player.id,
+        name: player.name,
+        avatar: player.avatar,
+        isBot: true,
+        isUser: false,
+        level: Math.floor(Math.random() * 50) + 1,
+        rating: Math.floor(Math.random() * 2000) + 500,
+        gamesPlayed: Math.floor(Math.random() * 500) + 50,
+        winRate: Math.floor(Math.random() * 40) + 30, // 30-70%
+        bestStreak: Math.floor(Math.random() * 15) + 1,
+        status: '🤖 AI Bot',
+        joinedDate: `${Math.floor(Math.random() * 30) + 1}.${Math.floor(Math.random() * 12) + 1}.2024`,
+      };
+    }
+  };
+
+  // Обработчик клика на игрока
+  const handlePlayerClick = async (player: any) => {
+    const profile = await generatePlayerProfile(player);
+    setSelectedPlayerProfile(profile);
+    setIsProfileModalOpen(true);
+  };
+
+  // Обработчик добавления в друзья
+  const handleAddFriend = (playerId: string) => {
+    console.log('🤝 Добавить в друзья:', playerId);
+    alert(`Запрос в друзья отправлен! (В разработке)`);
+    setIsProfileModalOpen(false);
+  };
 
   // Обновляем currentCard из revealedDeckCard
   useEffect(() => {
@@ -1242,7 +1332,9 @@ function GamePageContentComponent({
                     style={{
                     left: `${position.x}%`,
                     top: `${position.y}%`,
+                    cursor: 'pointer',
                   }}
+                    onClick={() => handlePlayerClick(player)}
                 >
                   {/* Аватар и имя */}
                     <div className={styles.avatarWrap}>
@@ -1375,6 +1467,13 @@ function GamePageContentComponent({
         />
       )}
 
+      {/* Модальное окно профиля игрока */}
+      <PlayerProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        playerData={selectedPlayerProfile}
+        onAddFriend={handleAddFriend}
+      />
     </div>
   );
 }
