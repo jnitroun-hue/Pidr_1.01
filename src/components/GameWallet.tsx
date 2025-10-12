@@ -815,6 +815,13 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
           )}
         </AnimatePresence>
         
+        {/* БАЛАНС ИГРОВЫХ МОНЕТ */}
+        <div className="balance-amount">
+          <FaCoins className="coin-icon" />
+          <span className="amount-text">{balance.toLocaleString()}</span>
+          <span className="currency">монет</span>
+        </div>
+        
         <div className="wallet-id">
           <span>ID кошелька: #{user?.id ? String(user.id).slice(-8) : 'XXXXXXXX'}</span>
         </div>
@@ -1050,23 +1057,47 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
                   </div>
                   
                   <div className="crypto-select">
-                    <label>Выбрать валюту</label>
-                    <select value={selectedCrypto} onChange={(e) => setSelectedCrypto(e.target.value)}>
-                      <option value="TON">TONHA</option>
-                      <option value="USDT">USDT</option>
-                      <option value="BTC">Bitcoin</option>
+                    <label>💰 Выберите криптовалюту для пополнения</label>
+                    <select value={selectedCrypto} onChange={(e) => setSelectedCrypto(e.target.value)} className="crypto-selector">
+                      <option value="TON">TON (The Open Network)</option>
+                      <option value="ETH">ETH (Ethereum ERC-20)</option>
+                      <option value="SOL">SOL (Solana SPL)</option>
+                      <option value="USDT">USDT (Tether)</option>
+                      <option value="BTC">BTC (Bitcoin)</option>
                     </select>
                   </div>
 
-                  <div className="qr-section">
-                    <div className="qr-placeholder">
-                      <div className="qr-code">📱</div>
-                      <p>QR-код для пополнения</p>
+                  {/* Информация о выбранной сети */}
+                  <div className="network-info-card">
+                    <div className="network-info-header">
+                      <span className="network-icon">{selectedCrypto === 'TON' ? '💎' : selectedCrypto === 'ETH' ? '⟠' : selectedCrypto === 'SOL' ? '◎' : selectedCrypto === 'BTC' ? '₿' : '💵'}</span>
+                      <span className="network-name">
+                        {selectedCrypto === 'TON' && 'The Open Network'}
+                        {selectedCrypto === 'ETH' && 'Ethereum (ERC-20)'}
+                        {selectedCrypto === 'SOL' && 'Solana (SPL)'}
+                        {selectedCrypto === 'USDT' && 'Tether (USDT)'}
+                        {selectedCrypto === 'BTC' && 'Bitcoin Network'}
+                      </span>
+                    </div>
+                    <div className="network-info-body">
+                      <p className="network-warning">
+                        ⚠️ <strong>ВАЖНО!</strong> Отправляйте только {selectedCrypto} в {selectedCrypto === 'ETH' ? 'сети Ethereum (ERC-20)' : selectedCrypto === 'SOL' ? 'сети Solana' : selectedCrypto === 'TON' ? 'сети TON' : selectedCrypto === 'BTC' ? 'сети Bitcoin' : 'правильной сети'}!
+                      </p>
+                      <p className="network-desc">
+                        {selectedCrypto === 'TON' && '🔹 Минимальная сумма: 1 TON (~$2-5)'}
+                        {selectedCrypto === 'ETH' && '🔹 Минимальная сумма: 0.01 ETH (~$20-50)'}
+                        {selectedCrypto === 'SOL' && '🔹 Минимальная сумма: 0.1 SOL (~$2-5)'}
+                        {selectedCrypto === 'USDT' && '🔹 Минимальная сумма: 10 USDT'}
+                        {selectedCrypto === 'BTC' && '🔹 Минимальная сумма: 0.0001 BTC (~$5-10)'}
+                      </p>
+                      <p className="network-time">
+                        ⏱️ Время зачисления: {selectedCrypto === 'SOL' ? '~30 сек' : selectedCrypto === 'TON' ? '~5 сек' : selectedCrypto === 'BTC' ? '10-60 мин' : '2-15 мин'}
+                      </p>
                     </div>
                   </div>
 
                   <div className="address-section">
-                    <label>🔐 Ваш персональный HD адрес {selectedCrypto} для пополнения</label>
+                    <label>🔐 Ваш персональный HD адрес для пополнения</label>
                     <HDAddressDisplay 
                       crypto={selectedCrypto} 
                       userId={user?.id || ''} 
@@ -1075,9 +1106,12 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
                     />
                     <div className="hd-info">
                       <FaKey className="hd-icon" />
-                      <span>HD Wallet: уникальный адрес из вашего мастер-кошелька</span>
+                      <span>Уникальный адрес для {selectedCrypto} - скопируйте и отправьте средства точно в указанной сети!</span>
                     </div>
-                    <div className="warning">⚠️ Пожалуйста, внимательно проверьте адрес депозита кошелька!</div>
+                    <div className="warning-critical">
+                      <strong>⛔ НЕ отправляйте токены из другой сети!</strong><br/>
+                      Например, не отправляйте USDT (TRC-20) на ETH адрес - средства будут потеряны!
+                    </div>
                   </div>
                 </div>
               )}
@@ -1090,11 +1124,13 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
                   </div>
                   
                   <div className="crypto-select">
-                    <label>Выбрать валюту</label>
-                    <select value={selectedCrypto} onChange={(e) => setSelectedCrypto(e.target.value)}>
-                      <option value="TON">TON</option>
-                      <option value="USDT">USDT</option>
-                      <option value="BTC">Bitcoin</option>
+                    <label>💰 Выберите криптовалюту для вывода</label>
+                    <select value={selectedCrypto} onChange={(e) => setSelectedCrypto(e.target.value)} className="crypto-selector">
+                      <option value="TON">TON (The Open Network)</option>
+                      <option value="ETH">ETH (Ethereum ERC-20)</option>
+                      <option value="SOL">SOL (Solana SPL)</option>
+                      <option value="USDT">USDT (Tether)</option>
+                      <option value="BTC">BTC (Bitcoin)</option>
                     </select>
                   </div>
 
@@ -1895,6 +1931,108 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
           display: flex;
           align-items: center;
           gap: 8px;
+        }
+        
+        .warning-critical {
+          background: rgba(239, 68, 68, 0.15);
+          border: 2px solid rgba(239, 68, 68, 0.5);
+          border-radius: 12px;
+          padding: 14px;
+          margin-top: 16px;
+          color: #fca5a5;
+          font-size: 13px;
+          line-height: 1.5;
+        }
+        
+        .warning-critical strong {
+          color: #ef4444;
+          font-weight: 700;
+        }
+        
+        .network-info-card {
+          background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(16, 185, 129, 0.15) 100%);
+          border: 2px solid rgba(59, 130, 246, 0.4);
+          border-radius: 16px;
+          padding: 16px;
+          margin: 20px 0;
+          backdrop-filter: blur(10px);
+        }
+        
+        .network-info-header {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 12px;
+          padding-bottom: 12px;
+          border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+        }
+        
+        .network-icon {
+          font-size: 24px;
+          filter: drop-shadow(0 2px 8px rgba(59, 130, 246, 0.5));
+        }
+        
+        .network-name {
+          font-size: 16px;
+          font-weight: 700;
+          color: #3b82f6;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        
+        .network-info-body {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        
+        .network-warning {
+          color: #fbbf24;
+          font-size: 13px;
+          line-height: 1.5;
+          margin: 0;
+        }
+        
+        .network-warning strong {
+          color: #fbbf24;
+          font-weight: 700;
+        }
+        
+        .network-desc, .network-time {
+          color: #e2e8f0;
+          font-size: 13px;
+          line-height: 1.5;
+          margin: 0;
+        }
+        
+        .crypto-selector {
+          width: 100%;
+          padding: 14px 16px;
+          background: rgba(15, 23, 42, 0.9);
+          border: 2px solid rgba(59, 130, 246, 0.4);
+          border-radius: 12px;
+          color: #e2e8f0;
+          font-size: 15px;
+          font-weight: 600;
+          transition: all 0.3s ease;
+          cursor: pointer;
+        }
+        
+        .crypto-selector:hover {
+          border-color: rgba(59, 130, 246, 0.6);
+          background: rgba(15, 23, 42, 1);
+        }
+        
+        .crypto-selector:focus {
+          outline: none;
+          border-color: #3b82f6;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+        
+        .crypto-selector option {
+          background: #0f172a;
+          padding: 12px;
+          font-weight: 600;
         }
 
         .amount-container {

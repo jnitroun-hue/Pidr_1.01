@@ -1737,95 +1737,193 @@ export default function ProfilePage() {
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    onClick={() => {
-                      // TODO: Открыть модал минта random
-                      console.log('Открыть Random Mint');
+                    onClick={async () => {
+                      try {
+                        console.log('🎲 Генерация случайной NFT карты...');
+                        
+                        if (!user || user.coins < 5000) {
+                          alert('❌ Недостаточно монет! Требуется 5 000 монет.');
+                          return;
+                        }
+                        
+                        if (!confirm('🎲 Сгенерировать случайную NFT карту за 5 000 монет?\n\nВы получите карту случайной масти и ранга с редкостью от Common до Epic!')) {
+                          return;
+                        }
+                        
+                        const response = await fetch('/api/nft/mint-random', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          credentials: 'include',
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (!response.ok || !result.success) {
+                          throw new Error(result.error || 'Ошибка генерации NFT');
+                        }
+                        
+                        console.log('✅ Случайная NFT карта создана:', result.nft);
+                        
+                        // Обновляем баланс
+                        if (user) {
+                          setUser({ ...user, coins: result.newBalance });
+                        }
+                        
+                        // Перезагружаем NFT коллекцию
+                        await loadNFTCollection();
+                        
+                        alert(`🎉 Поздравляем! Вы получили ${result.nft.rarity} карту:\n${result.nft.rank} ${getSuitEmoji(result.nft.suit)}\n\nТеперь она в вашей NFT коллекции!`);
+                        
+                      } catch (error: any) {
+                        console.error('❌ Ошибка генерации случайной NFT:', error);
+                        alert(`❌ ${error.message}`);
+                      }
                     }}
                     style={{
-                      background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.8) 0%, rgba(124, 58, 237, 0.6) 100%)',
-                      border: '2px solid rgba(139, 92, 246, 0.3)',
+                      background: user && user.coins >= 5000 
+                        ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.8) 0%, rgba(124, 58, 237, 0.6) 100%)'
+                        : 'linear-gradient(135deg, rgba(55, 65, 81, 0.6) 0%, rgba(31, 41, 55, 0.4) 100%)',
+                      border: user && user.coins >= 5000 
+                        ? '2px solid rgba(139, 92, 246, 0.3)' 
+                        : '2px solid rgba(100, 116, 139, 0.3)',
                       borderRadius: '16px',
                       padding: '20px',
                       color: '#fff',
                       fontSize: '1rem',
                       fontWeight: '700',
-                      cursor: 'pointer',
+                      cursor: user && user.coins >= 5000 ? 'pointer' : 'not-allowed',
                       textAlign: 'center',
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
-                      gap: '8px'
+                      gap: '8px',
+                      opacity: user && user.coins >= 5000 ? 1 : 0.6
                     }}
+                    disabled={!user || user.coins < 5000}
                   >
                     <div style={{ fontSize: '2rem' }}>🎲</div>
                     <div>RANDOM MINT</div>
-                    <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>0.5 TON</div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: '900', color: '#fbbf24' }}>💰 5 000 монет</div>
+                    <div style={{ fontSize: '0.7rem', opacity: 0.8 }}>Common-Epic</div>
                   </motion.button>
 
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    onClick={() => {
-                      // TODO: Открыть модал минта custom
-                      console.log('Открыть Custom Mint');
+                    onClick={async () => {
+                      try {
+                        console.log('🎨 Генерация кастомной NFT карты...');
+                        
+                        if (!user || user.coins < 15000) {
+                          alert('❌ Недостаточно монет! Требуется 15 000 монет.');
+                          return;
+                        }
+                        
+                        if (!confirm('🎨 Сгенерировать улучшенную NFT карту за 15 000 монет?\n\nВы получите карту с гарантированной редкостью Rare или выше + специальные эффекты!')) {
+                          return;
+                        }
+                        
+                        const response = await fetch('/api/nft/mint-custom', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          credentials: 'include',
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (!response.ok || !result.success) {
+                          throw new Error(result.error || 'Ошибка генерации NFT');
+                        }
+                        
+                        console.log('✅ Кастомная NFT карта создана:', result.nft);
+                        
+                        // Обновляем баланс
+                        if (user) {
+                          setUser({ ...user, coins: result.newBalance });
+                        }
+                        
+                        // Перезагружаем NFT коллекцию
+                        await loadNFTCollection();
+                        
+                        alert(`✨ Поздравляем! Вы получили ${result.nft.rarity} карту:\n${result.nft.rank} ${getSuitEmoji(result.nft.suit)}\n\nСпециальные эффекты: ${result.nft.effects || 'None'}\n\nТеперь она в вашей NFT коллекции!`);
+                        
+                      } catch (error: any) {
+                        console.error('❌ Ошибка генерации кастомной NFT:', error);
+                        alert(`❌ ${error.message}`);
+                      }
                     }}
                     style={{
-                      background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.8) 0%, rgba(217, 119, 6, 0.6) 100%)',
-                      border: '2px solid rgba(245, 158, 11, 0.3)',
+                      background: user && user.coins >= 15000 
+                        ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.8) 0%, rgba(217, 119, 6, 0.6) 100%)'
+                        : 'linear-gradient(135deg, rgba(55, 65, 81, 0.6) 0%, rgba(31, 41, 55, 0.4) 100%)',
+                      border: user && user.coins >= 15000 
+                        ? '2px solid rgba(245, 158, 11, 0.3)' 
+                        : '2px solid rgba(100, 116, 139, 0.3)',
                       borderRadius: '16px',
                       padding: '20px',
                       color: '#fff',
                       fontSize: '1rem',
                       fontWeight: '700',
-                      cursor: 'pointer',
+                      cursor: user && user.coins >= 15000 ? 'pointer' : 'not-allowed',
                       textAlign: 'center',
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
-                      gap: '8px'
+                      gap: '8px',
+                      opacity: user && user.coins >= 15000 ? 1 : 0.6
                     }}
+                    disabled={!user || user.coins < 15000}
                   >
                     <div style={{ fontSize: '2rem' }}>🎨</div>
                     <div>CUSTOM MINT</div>
-                    <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>3 TON</div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: '900', color: '#fbbf24' }}>💰 15 000 монет</div>
+                    <div style={{ fontSize: '0.7rem', opacity: 0.8 }}>Rare-Legendary</div>
                   </motion.button>
                 </div>
 
                 {/* 3-я кнопка - BURNING MINT за монеты */}
                 <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                  whileHover={user && user.coins >= 20000 ? { scale: 1.02 } : {}}
+                  whileTap={user && user.coins >= 20000 ? { scale: 0.98 } : {}}
                   onClick={handleBurningMint}
                   style={{
-                    background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.8) 0%, rgba(220, 38, 38, 0.6) 100%)',
-                    border: '2px solid rgba(239, 68, 68, 0.3)',
+                    background: user && user.coins >= 20000 
+                      ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.8) 0%, rgba(220, 38, 38, 0.6) 100%)'
+                      : 'linear-gradient(135deg, rgba(55, 65, 81, 0.6) 0%, rgba(31, 41, 55, 0.4) 100%)',
+                    border: user && user.coins >= 20000 
+                      ? '2px solid rgba(239, 68, 68, 0.3)'
+                      : '2px solid rgba(100, 116, 139, 0.3)',
                     borderRadius: '16px',
                     padding: '20px',
                     color: '#fff',
                     fontSize: '1.1rem',
                     fontWeight: '700',
-                    cursor: 'pointer',
+                    cursor: user && user.coins >= 20000 ? 'pointer' : 'not-allowed',
                     textAlign: 'center',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     gap: '12px',
-                    boxShadow: '0 0 30px rgba(239, 68, 68, 0.3)'
+                    boxShadow: user && user.coins >= 20000 
+                      ? '0 0 30px rgba(239, 68, 68, 0.3)'
+                      : 'none',
+                    opacity: user && user.coins >= 20000 ? 1 : 0.6
                   }}
+                  disabled={!user || user.coins < 20000}
                 >
                   <div style={{ fontSize: '3rem' }}>🔥</div>
                   <div>BURNING CARD MINT</div>
                   <div style={{ 
                     fontSize: '1rem', 
                     fontWeight: '900', 
-                    color: '#fbbf24',
-                    textShadow: '0 0 10px rgba(251, 191, 36, 0.5)'
+                    color: user && user.coins >= 20000 ? '#fbbf24' : '#94a3b8',
+                    textShadow: user && user.coins >= 20000 ? '0 0 10px rgba(251, 191, 36, 0.5)' : 'none'
                   }}>
                     💰 20 000 монет
                   </div>
                   <div style={{ fontSize: '0.75rem', opacity: 0.9, lineHeight: '1.3' }}>
                     Уникальная карта с горящей мастью!<br/>
-                    Случайная масть, ранг и цвет огня
+                    Случайная масть, ранг и цвет огня (Legendary)
                   </div>
                 </motion.button>
 

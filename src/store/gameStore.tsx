@@ -445,14 +445,14 @@ export const useGameStore = create<GameState>()(
             }
           }
           
-          const newPlayer = {
+          const newPlayer: Player = {
             id: `player_${i + 1}`,
             name: playerInfo.name,
             avatar: playerInfo.avatar,
             score: 0,
             cards: playerOpenCards, // Только верхняя открытая карта
             penki: playerPenki, // 2 закрытые карты
-            playerStage: 1, // Все начинают с 1-й стадии
+            playerStage: 1 as 1, // Все начинают с 1-й стадии
             isCurrentPlayer: i === 0,
             isUser: !playerInfo.isBot,
             isBot: playerInfo.isBot,
