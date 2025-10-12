@@ -563,8 +563,14 @@ function GamePageContentComponent({
     }
     
     const currentTurnPlayer = players.find(p => p.id === currentPlayerId);
-    if (!currentTurnPlayer || !currentTurnPlayer.isBot) {
-      console.log(`🤖 [AI useEffect] Не бот или игрок не найден: currentTurnPlayer=${currentTurnPlayer?.name}, isBot=${currentTurnPlayer?.isBot}`);
+    if (!currentTurnPlayer) {
+      console.log(`🤖 [AI useEffect] Игрок не найден: currentPlayerId=${currentPlayerId}`);
+      return;
+    }
+    
+    if (!currentTurnPlayer.isBot) {
+      console.log(`👤 [AI useEffect] Ход РЕАЛЬНОГО ИГРОКА: ${currentTurnPlayer.name}, isUser=${currentTurnPlayer.isUser}`);
+      // Это РЕАЛЬНЫЙ ИГРОК - не обрабатываем через AI!
       return;
     }
 
@@ -1133,7 +1139,7 @@ function GamePageContentComponent({
                 <div className={styles.menuUserInfo}>
                   <div className={styles.menuUserName}>{userData?.username || 'Игрок'}</div>
                   <div className={styles.menuUserCoins}>
-                    <span className={styles.menuCoinsIcon}>🪙</span>
+                    <div className={styles.coinAnimated}></div>
                     <span className={styles.menuCoinsValue}>{userData?.coins || 0}</span>
                   </div>
                 </div>
