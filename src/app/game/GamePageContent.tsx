@@ -1272,14 +1272,17 @@ function GamePageContentComponent({
                 alignItems: 'center'
               }}>
                 {/* Открытая карта из колоды (слева) - БЕЛЫЙ ФОН! */}
-                {currentCard && (
+                {currentCard && revealedDeckCard && (
                   <div style={{ 
                     position: 'relative',
                     background: '#ffffff',
                     borderRadius: '8px',
                     padding: '2px',
-                    boxShadow: '0 0 20px rgba(255, 255, 255, 0.3), 0 4px 12px rgba(0,0,0,0.4)',
-                    border: '2px solid #e2e8f0'
+                    boxShadow: turnPhase === 'waiting_deck_action' 
+                      ? '0 0 30px rgba(99, 102, 241, 0.8), 0 0 50px rgba(99, 102, 241, 0.5)' 
+                      : '0 0 20px rgba(255, 255, 255, 0.3), 0 4px 12px rgba(0,0,0,0.4)',
+                    border: '2px solid #e2e8f0',
+                    animation: turnPhase === 'waiting_deck_action' ? 'pulse 2s ease-in-out infinite' : 'none',
                   }}>
                     <Image
                       src={`${CARDS_PATH}${currentCard}`}
@@ -1445,7 +1448,14 @@ function GamePageContentComponent({
                           const shouldHighlight = gameStage === 1 && isTopCard && canMakeMove;
                           
                           // Подсветка игрока как доступной цели
-                          const isAvailableTarget = gameStage === 1 && !isHumanPlayer && availableTargets.includes(index) && turnPhase === 'waiting_target_selection';
+                          let isAvailableTarget = gameStage === 1 && !isHumanPlayer && availableTargets.includes(index) && turnPhase === 'waiting_target_selection';
+                          
+                          // Также подсвечиваем цели для карты из колоды
+                          if (gameStage === 1 && !isHumanPlayer && turnPhase === 'waiting_deck_action' && revealedDeckCard) {
+                            const state = useGameStore.getState();
+                            const deckTargets = state.findAvailableTargetsForDeckCard?.(revealedDeckCard) || [];
+                            isAvailableTarget = deckTargets.includes(index);
+                          }
                           
                           return (
                             <div 
@@ -1469,6 +1479,14 @@ function GamePageContentComponent({
                                     makeMove(player.id);
                                   }
                                 }
+                              }}
+                              onMouseEnter={(e) => {
+                                if (isAvailableTarget) {
+                                  e.currentTarget.style.transform = 'scale(1.05)';
+                                }
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.transform = 'scale(1)';
                               }}
                             >
                               <Image
@@ -1526,6 +1544,179 @@ function GamePageContentComponent({
               })}
             </div>
           </div>
+      )}
+
+      {/* ПАНЕЛЬ ДЕЙСТВИЙ С ОТКРЫТОЙ КАРТОЙ ИЗ КОЛОДЫ - 1-Я СТАДИЯ */}
+      {isGameActive && gameStage === 1 && turnPhase === 'waiting_deck_action' && humanPlayer?.id === currentPlayerId && revealedDeckCard && (
+        <div style={{
+          position: 'fixed',
+          bottom: '20px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 200,
+          background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%)',
+          backdropFilter: 'blur(20px)',
+          borderRadius: '16px',
+          padding: '20px',
+          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(99, 102, 241, 0.3)',
+          border: '2px solid rgba(99, 102, 241, 0.4)',
+          minWidth: '320px',
+          maxWidth: '90vw',
+        }}>
+          <div style={{
+            textAlign: 'center',
+            marginBottom: '16px',
+          }}>
+            <div style={{
+              fontSize: '14px',
+              color: '#94a3b8',
+              marginBottom: '12px',
+              fontWeight: '600',
+            }}>Открыта карта из колоды:</div>
+            
+            {/* Отображение открытой карты */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              marginBottom: '16px',
+            }}>
+              <div style={{
+                background: '#ffffff',
+                borderRadius: '12px',
+                padding: '4px',
+                boxShadow: '0 8px 24px rgba(99, 102, 241, 0.4)',
+              }}>
+                <Image
+                  src={`${CARDS_PATH}${revealedDeckCard.image}`}
+                  alt="Revealed Card"
+                  width={80}
+                  height={120}
+                  style={{ borderRadius: '8px' }}
+                  priority
+                />
+              </div>
+            </div>
+
+            {/* Кнопки действий */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px',
+            }}>
+              {(() => {
+                const state = useGameStore.getState();
+                const deckTargets = state.findAvailableTargetsForDeckCard?.(revealedDeckCard) || [];
+                const canPlaceOnSelf = humanPlayer.cards.length > 0 && state.canPlaceCardOnSelf?.(
+                  revealedDeckCard,
+                  humanPlayer.cards[humanPlayer.cards.length - 1]
+                );
+
+                return (
+                  <>
+                    {/* Кнопка "Положить на соперника" если есть цели */}
+                    {deckTargets.length > 0 && (
+                      <button
+                        onClick={() => {
+                          const targetIndex = deckTargets[0];
+                          const targetPlayer = players[targetIndex];
+                          console.log(`🎴 [Действие с картой] Кладем на соперника: ${targetPlayer.name}`);
+                          makeMove(targetPlayer.id);
+                        }}
+                        style={{
+                          background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '12px',
+                          padding: '14px 20px',
+                          fontSize: '15px',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          boxShadow: '0 4px 15px rgba(16, 185, 129, 0.4)',
+                          transition: 'all 0.3s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                          e.currentTarget.style.boxShadow = '0 6px 20px rgba(16, 185, 129, 0.5)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.boxShadow = '0 4px 15px rgba(16, 185, 129, 0.4)';
+                        }}
+                      >
+                        ✅ Положить на соперника ({players[deckTargets[0]].name})
+                      </button>
+                    )}
+
+                    {/* Кнопка "Положить себе" если можно по правилам */}
+                    {canPlaceOnSelf && (
+                      <button
+                        onClick={() => {
+                          console.log(`🎴 [Действие с картой] Кладем себе по правилам`);
+                          placeCardOnSelfByRules();
+                        }}
+                        style={{
+                          background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '12px',
+                          padding: '14px 20px',
+                          fontSize: '15px',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)',
+                          transition: 'all 0.3s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                          e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.5)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.boxShadow = '0 4px 15px rgba(59, 130, 246, 0.4)';
+                        }}
+                      >
+                        📥 Положить себе (по правилам)
+                      </button>
+                    )}
+
+                    {/* Кнопка "Взять себе" если нет других ходов */}
+                    {deckTargets.length === 0 && !canPlaceOnSelf && (
+                      <button
+                        onClick={() => {
+                          console.log(`🎴 [Действие с картой] Берем себе (не по правилам)`);
+                          const state = useGameStore.getState();
+                          state.takeCardNotByRules?.();
+                        }}
+                        style={{
+                          background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '12px',
+                          padding: '14px 20px',
+                          fontSize: '15px',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          boxShadow: '0 4px 15px rgba(245, 158, 11, 0.4)',
+                          transition: 'all 0.3s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                          e.currentTarget.style.boxShadow = '0 6px 20px rgba(245, 158, 11, 0.5)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.boxShadow = '0 4px 15px rgba(245, 158, 11, 0.4)';
+                        }}
+                      >
+                        ⬇️ Взять себе (нет ходов)
+                      </button>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Рука игрока внизу экрана - ТОЛЬКО СО 2-Й СТАДИИ! */}
