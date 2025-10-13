@@ -23,11 +23,20 @@ export async function POST(request: NextRequest) {
 
     // Получаем данные пользователя
     const sessionData = JSON.parse(sessionCookie.value);
-    const userId = sessionData.userId || sessionData.telegramId;
+    const userId = sessionData.userId || sessionData.telegramId || sessionData.telegram_id || sessionData.id;
+
+    console.log('🎴 [NFT Canvas] Session data:', { 
+      hasUserId: !!sessionData.userId,
+      hasTelegramId: !!sessionData.telegramId,
+      hasTelegram_id: !!sessionData.telegram_id,
+      hasId: !!sessionData.id,
+      finalUserId: userId
+    });
 
     if (!userId) {
+      console.error('❌ [NFT Canvas] ID пользователя не найден в сессии:', Object.keys(sessionData));
       return NextResponse.json(
-        { success: false, error: 'ID пользователя не найден' },
+        { success: false, error: 'ID пользователя не найден в сессии' },
         { status: 400 }
       );
     }
@@ -245,7 +254,14 @@ export async function GET(request: NextRequest) {
     }
 
     const sessionData = JSON.parse(sessionCookie.value);
-    const userId = sessionData.userId || sessionData.telegramId;
+    const userId = sessionData.userId || sessionData.telegramId || sessionData.telegram_id || sessionData.id;
+
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: 'ID пользователя не найден' },
+        { status: 400 }
+      );
+    }
 
     // Получаем все карты пользователя
     const { data: cards, error } = await supabase
