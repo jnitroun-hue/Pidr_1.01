@@ -1374,41 +1374,38 @@ export const useGameStore = create<GameState>()(
           return;
         }
         
+        // АВТОМАТИЧЕСКИ берем карту если НЕТ ХОДОВ ВООБЩЕ
+        if (!canMoveToOpponents && !canPlaceOnSelfByRules) {
+          console.log(`✅ [onDeckClick] Автоматически берем карту (нет ходов)`);
+          set({
+            turnPhase: 'waiting_deck_action',
+            canPlaceOnSelfByRules: false,
+            availableTargets: []
+          });
+          setTimeout(() => {
+            get().takeCardNotByRules();
+          }, currentPlayer.isBot ? 1200 : 800);
+          return;
+        }
+        
         set({
           turnPhase: 'waiting_deck_action',
           canPlaceOnSelfByRules: canPlaceOnSelfByRules,
           availableTargets: canMoveToOpponents ? deckTargets : []
         });
         
-        // Для ботов - автоматически принимаем решение
-        if (currentPlayer.isBot) {
-          console.log(`🤖 [onDeckClick] Бот анализирует карту из колоды:`);
-          console.log(`🤖 [onDeckClick] - canMoveToOpponents: ${canMoveToOpponents}, targets: [${deckTargets.join(', ')}]`);
-          
+        // Для ботов - автоматически принимаем решение (только если есть ходы)
+        if (currentPlayer.isBot && canMoveToOpponents) {
+          console.log(`🤖 [onDeckClick] Бот ходит картой из колоды на противника`);
           setTimeout(() => {
-            if (canMoveToOpponents) {
-              // Приоритет: ходить на противников
-              const targetIndex = deckTargets[0];
-              const targetPlayer = players[targetIndex];
-              console.log(`🤖 [onDeckClick] Бот ходит картой из колоды на ${targetPlayer?.name}`);
-              get().makeMove(targetPlayer?.id || '');
-            } else {
-              // Взять карту поверх
-              console.log(`🤖 [onDeckClick] Бот берет карту поверх своих карт`);
-              get().takeCardNotByRules();
-            }
+            const targetIndex = deckTargets[0];
+            const targetPlayer = players[targetIndex];
+            console.log(`🤖 [onDeckClick] Цель: ${targetPlayer?.name}`);
+            get().makeMove(targetPlayer?.id || '');
           }, 1500);
-        } else {
-          // Для пользователя - показываем варианты
-          if (canMoveToOpponents) {
-            get().showNotification('Выберите цель для хода', 'info');
-          } else {
-            get().showNotification('Нет доступных ходов - карта ложится поверх ваших карт', 'warning');
-            // Автоматически кладем карту поверх через 2 секунды
-            setTimeout(() => {
-              get().takeCardNotByRules();
-            }, 2000);
-          }
+        } else if (!currentPlayer.isBot && canMoveToOpponents) {
+          // Для игрока - показываем что нужно КЛИКНУТЬ по карте
+          get().showNotification('✓ Кликните по открытой карте чтобы сходить', 'info');
         }
       },
       
