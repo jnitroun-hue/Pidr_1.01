@@ -1,13 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '../../../../lib/supabase';
-import { requireAuth } from '../../../../lib/auth-utils';
+import { getSessionFromRequest } from '@/lib/auth/session-utils';
 
 // GET /api/shop/inventory - Получить инвентарь пользователя
 export async function GET(req: NextRequest) {
   console.log('📦 GET /api/shop/inventory - Получение инвентаря...');
   
   try {
-    const userId = await requireAuth(req);
+    const session = getSessionFromRequest(req);
+    
+    if (!session) {
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Требуется авторизация' 
+      }, { status: 401 });
+    }
+    
+    const userId = session.telegramId;
     console.log(`✅ Авторизован пользователь: ${userId}`);
     
     // Вызываем функцию БД для получения инвентаря

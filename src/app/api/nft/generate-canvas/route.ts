@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { supabase } from '@/lib/supabase';
+import { getSessionFromRequest } from '@/lib/auth/session-utils';
 
 /**
  * API для генерации NFT карт через Canvas
@@ -11,46 +11,22 @@ export async function POST(request: NextRequest) {
     console.log('🎴 [NFT Canvas] Запрос на генерацию карты');
 
     // Проверяем аутентификацию
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get('pidr_session');
+    const session = getSessionFromRequest(request);
     
-    if (!sessionCookie) {
+    if (!session) {
+      console.error('❌ [NFT Canvas] Сессия не найдена');
       return NextResponse.json(
         { success: false, error: 'Требуется авторизация' },
         { status: 401 }
       );
     }
 
-    // Получаем данные пользователя
-    let sessionData;
-    try {
-      sessionData = JSON.parse(sessionCookie.value);
-    } catch (error) {
-      console.error('❌ [NFT Canvas] Ошибка парсинга сессии:', error);
-      return NextResponse.json(
-        { success: false, error: 'Некорректная сессия' },
-        { status: 401 }
-      );
-    }
+    const userId = session.telegramId; // Используем telegramId как основной идентификатор
 
-    const userId = String(sessionData.userId || sessionData.telegramId || sessionData.telegram_id || sessionData.id || '');
-
-    console.log('🎴 [NFT Canvas] Session data:', { 
-      hasUserId: !!sessionData.userId,
-      hasTelegramId: !!sessionData.telegramId,
-      hasTelegram_id: !!sessionData.telegram_id,
-      hasId: !!sessionData.id,
-      finalUserId: userId,
-      sessionKeys: Object.keys(sessionData)
+    console.log('✅ [NFT Canvas] Авторизован:', { 
+      userId,
+      username: session.username 
     });
-
-    if (!userId) {
-      console.error('❌ [NFT Canvas] ID пользователя не найден в сессии:', sessionData);
-      return NextResponse.json(
-        { success: false, error: 'ID пользователя не найден в сессии' },
-        { status: 401 }
-      );
-    }
 
     const body = await request.json();
     const { 
@@ -254,25 +230,16 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get('pidr_session');
+    const session = getSessionFromRequest(request);
     
-    if (!sessionCookie) {
+    if (!session) {
       return NextResponse.json(
         { success: false, error: 'Требуется авторизация' },
         { status: 401 }
       );
     }
 
-    const sessionData = JSON.parse(sessionCookie.value);
-    const userId = sessionData.userId || sessionData.telegramId || sessionData.telegram_id || sessionData.id;
-
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'ID пользователя не найден' },
-        { status: 400 }
-      );
-    }
+    const userId = session.telegramId;
 
     // Получаем все карты пользователя
     const { data: cards, error } = await supabase

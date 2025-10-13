@@ -18,6 +18,17 @@ export default function AuthPage() {
   const [code, setCode] = useState('');
   const [step, setStep] = useState<'method' | 'phone' | 'code'>('method');
   const [isLoading, setIsLoading] = useState(false);
+  const [redirectPath, setRedirectPath] = useState<string>('/');
+
+  useEffect(() => {
+    // Получаем параметр redirect из URL
+    const params = new URLSearchParams(window.location.search);
+    const redirect = params.get('redirect');
+    if (redirect) {
+      setRedirectPath(redirect);
+      console.log('📍 Redirect after auth:', redirect);
+    }
+  }, []);
 
   useEffect(() => {
     // Загружаем Telegram Login Widget скрипт
@@ -52,8 +63,8 @@ export default function AuthPage() {
         const data = await response.json();
 
         if (data.success) {
-          console.log('✅ Сессия создана, перенаправление...');
-          router.push('/');
+          console.log('✅ Сессия создана, перенаправление на:', redirectPath);
+          router.push(redirectPath);
         } else {
           alert(`Ошибка: ${data.error}`);
         }
@@ -69,7 +80,7 @@ export default function AuthPage() {
       // Очистка при размонтировании
       window.onTelegramAuth = undefined;
     };
-  }, [router]);
+  }, [router, redirectPath]);
 
   const handlePhoneAuth = async () => {
     if (!phoneNumber) {

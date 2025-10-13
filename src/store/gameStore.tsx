@@ -1035,6 +1035,9 @@ export const useGameStore = create<GameState>()(
         
         if (!cardToMove) return;
         
+        // Запоминаем верхнюю карту цели ДО хода
+        const targetTopCard = targetPlayer.cards[targetPlayer.cards.length - 1];
+        
         // Перемещаем карту ПОВЕРХ открытых карт целевого игрока
         targetPlayer.cards.push(cardToMove);
         
@@ -1043,7 +1046,11 @@ export const useGameStore = create<GameState>()(
         });
         
         // ЕДИНСТВЕННЫЙ ЛОГ ХОДА
-        console.log(`🎴 ${currentPlayer.name} положил ${cardToMove.image} на ${targetPlayer.name}`);
+        if (targetTopCard && targetTopCard.image) {
+          console.log(`🎴 ${currentPlayer.name} положил ${cardToMove.image} на ${targetTopCard.image} (${targetPlayer.name})`);
+        } else {
+          console.log(`🎴 ${currentPlayer.name} положил ${cardToMove.image} на ${targetPlayer.name}`);
+        }
         
         get().showNotification(`Карта переложена на ${targetPlayer.name}!`, 'success');
         
@@ -1622,39 +1629,34 @@ export const useGameStore = create<GameState>()(
          },
          
          // Поиск целей для карты из колоды
-         findAvailableTargetsForDeckCard: (deckCard: Card) => {
-           const { players, currentPlayerId } = get();
-           if (!deckCard.image || !currentPlayerId) return [];
-           
-           const deckRank = get().getCardRank(deckCard.image);
-           console.log(`🃏 [findAvailableTargetsForDeckCard] Анализ карты из колоды: ${deckCard.image}, ранг: ${deckRank}`);
-           
-           const targets: number[] = [];
-           players.forEach((player, index) => {
-             if (player.id === currentPlayerId) return; // Не можем положить на себя
-             
-             // Проверяем верхнюю карту игрока
-             const playerTopCard = player.cards[player.cards.length - 1];
-             if (playerTopCard && playerTopCard.open && playerTopCard.image) {
-               const playerRank = get().getCardRank(playerTopCard.image);
-               console.log(`🃏 [findAvailableTargetsForDeckCard] Соперник ${player.name} (индекс ${index}), карта: ${playerTopCard.image}, ранг: ${playerRank}`);
-               
-               // ДВОЙКА (2) кладется ТОЛЬКО на ТУЗ (14)!
-               if (deckRank === 2 && playerRank === 14) {
-                 console.log(`✅ [findAvailableTargetsForDeckCard] ДВОЙКА НА ТУЗ: ${player.name} (индекс ${index})`);
-                 targets.push(index);
-               }
-               // Для остальных карт: старшая карта бьет карту на 1 ранг ниже
-               else if (deckRank !== 2 && playerRank === deckRank - 1) {
-                 console.log(`✅ [findAvailableTargetsForDeckCard] НАЙДЕНА ЦЕЛЬ: ${player.name} (индекс ${index})`);
-                 targets.push(index);
-               }
-             }
-           });
-           
-           console.log(`🃏 [findAvailableTargetsForDeckCard] ИТОГО найдено целей для карты из колоды: ${targets.length}, массив: [${targets.join(', ')}]`);
-           return targets;
-         },
+        findAvailableTargetsForDeckCard: (deckCard: Card) => {
+          const { players, currentPlayerId } = get();
+          if (!deckCard.image || !currentPlayerId) return [];
+          
+          const deckRank = get().getCardRank(deckCard.image);
+          const targets: number[] = [];
+          
+          players.forEach((player, index) => {
+            if (player.id === currentPlayerId) return; // Не можем положить на себя
+            
+            // Проверяем верхнюю карту игрока
+            const playerTopCard = player.cards[player.cards.length - 1];
+            if (playerTopCard && playerTopCard.open && playerTopCard.image) {
+              const playerRank = get().getCardRank(playerTopCard.image);
+              
+              // ДВОЙКА (2) кладется ТОЛЬКО на ТУЗ (14)!
+              if (deckRank === 2 && playerRank === 14) {
+                targets.push(index);
+              }
+              // Для остальных карт: старшая карта бьет карту на 1 ранг ниже
+              else if (deckRank !== 2 && playerRank === deckRank - 1) {
+                targets.push(index);
+              }
+            }
+          });
+          
+          return targets;
+        },
          
          // ===== МЕТОДЫ ДЛЯ 2-Й СТАДИИ =====
          
@@ -2265,25 +2267,28 @@ export const useGameStore = create<GameState>()(
          
          // ===== МЕТОДЫ ДЛЯ СИСТЕМЫ "ОДНА КАРТА!" И ШТРАФОВ =====
          
-         // Проверка кому нужно объявлять "одна карта"
-         checkOneCardStatus: () => {
-           const { players, gameStage, oneCardDeclarations, oneCardTimers } = get();
-           if (gameStage !== 2 && gameStage !== 3) return; // Только во 2-й и 3-й стадиях
-           
-           const currentTime = Date.now();
-           const newOneCardTimers = { ...oneCardTimers };
-           const newOneCardDeclarations = { ...oneCardDeclarations };
-           const newPlayersWithOneCard: string[] = [];
-           
-           players.forEach(player => {
-             const openCards = player.cards.filter(c => c.open);
-             const totalCards = player.cards.length; // ИСПРАВЛЕНО: Общее количество карт
-             
-             console.log(`🔍 [checkOneCardStatus] ${player.name}: открытых=${openCards.length}, всего=${totalCards}`);
-             
-             // ПРАВИЛЬНО: Проверяем есть ли у игрока ровно 1 ОТКРЫТАЯ карта (включая открытые пеньки!)
-             // Игрок должен объявлять "одна карта" когда у него остается 1 открытая карта
-             if (openCards.length === 1) {
+        // Проверка кому нужно объявлять "одна карта"
+        checkOneCardStatus: () => {
+          const { players, gameStage, oneCardDeclarations, oneCardTimers } = get();
+          if (gameStage !== 2 && gameStage !== 3) return; // Только во 2-й и 3-й стадиях
+          
+          const currentTime = Date.now();
+          const newOneCardTimers = { ...oneCardTimers };
+          const newOneCardDeclarations = { ...oneCardDeclarations };
+          const newPlayersWithOneCard: string[] = [];
+          
+          players.forEach(player => {
+            const openCards = player.cards.filter(c => c.open);
+            const totalCards = player.cards.length;
+            
+            // ИСПРАВЛЕНО: Во 2-й и 3-й стадии считаем ВСЕ карты (пеньков нет - все карты в руке!)
+            // В 1-й стадии считали бы только открытые (пеньки не считаем), но в 1-й стадии эта функция не работает
+            const cardsInPlay = totalCards; // Во 2-й/3-й стадии все карты в игре
+            
+            console.log(`🔍 [checkOneCardStatus] ${player.name}: в игре=${cardsInPlay} (открытых=${openCards.length}, всего=${totalCards})`);
+            
+            // Проверяем есть ли у игрока ровно 1 карта В ИГРЕ (без пеньков!)
+            if (cardsInPlay === 1) {
                newPlayersWithOneCard.push(player.id);
                
                // Если игрок еще не объявил "одна карта" и у него нет таймера
@@ -2295,8 +2300,8 @@ export const useGameStore = create<GameState>()(
                  
                  // Уведомляем игрока (если это человек)
                  if (!player.isBot) {
-                   get().showNotification(`⚠️ У вас осталась 1 открытая карта! ОБЯЗАТЕЛЬНО нажмите "Одна карта!" в течение 5 секунд!`, 'warning', 5000);
-                 }
+                  get().showNotification(`⚠️ У вас осталась 1 карта! ОБЯЗАТЕЛЬНО нажмите "Одна карта!" в течение 5 секунд!`, 'warning', 5000);
+                }
                  
                  // ===== ИСПРАВЛЕНО: БОТЫ АВТОМАТИЧЕСКИ ОБЪЯВЛЯЮТ И СПРАШИВАЮТ =====
                  if (player.isBot) {
@@ -2317,17 +2322,17 @@ export const useGameStore = create<GameState>()(
                    get().scheduleBotAskHowManyCards(player.id);
                  }
                  
-                 // ДОПОЛНИТЕЛЬНО: Все боты проверяют других игроков и спрашивают "сколько карт"
-                 setTimeout(() => {
-                   const { players: currentPlayers } = get();
-                   const bots = currentPlayers.filter(p => p.isBot);
-                   
-                   bots.forEach(bot => {
-                     // Каждый бот проверяет всех других игроков
-                     currentPlayers.forEach(otherPlayer => {
-                       if (otherPlayer.id !== bot.id) {
-                         const otherOpenCards = otherPlayer.cards.filter(c => c.open);
-                         if (otherOpenCards.length === 1 && !get().oneCardDeclarations[otherPlayer.id]) {
+                // ДОПОЛНИТЕЛЬНО: Все боты проверяют других игроков и спрашивают "сколько карт"
+                setTimeout(() => {
+                  const { players: currentPlayers } = get();
+                  const bots = currentPlayers.filter(p => p.isBot);
+                  
+                  bots.forEach(bot => {
+                    // Каждый бот проверяет всех других игроков
+                    currentPlayers.forEach(otherPlayer => {
+                      if (otherPlayer.id !== bot.id) {
+                        const otherTotalCards = otherPlayer.cards.length;
+                        if (otherTotalCards === 1 && !get().oneCardDeclarations[otherPlayer.id]) {
                            // Бот спрашивает с задержкой 1.5 секунды
                            setTimeout(() => {
                              console.log(`🤖 [checkOneCardStatus] Бот ${bot.name} спрашивает у ${otherPlayer.name}: "Сколько карт?"`);
@@ -2340,14 +2345,14 @@ export const useGameStore = create<GameState>()(
                    });
                  }, 1500); // Боты начинают проверки через 1.5 секунды
                }
-             } else {
-               // ПРАВИЛЬНО: У игрока больше или меньше 1 ОТКРЫТОЙ карты - сбрасываем объявление и таймер
-               if (oneCardDeclarations[player.id] || oneCardTimers[player.id]) {
-                 console.log(`🔄 [checkOneCardStatus] У игрока ${player.name} теперь ${openCards.length} открытых карт - СБРАСЫВАЕМ объявление и таймер`);
-                 delete newOneCardDeclarations[player.id];
-                 delete newOneCardTimers[player.id];
-               }
-             }
+            } else {
+              // У игрока больше или меньше 1 карты - сбрасываем объявление и таймер
+              if (oneCardDeclarations[player.id] || oneCardTimers[player.id]) {
+                console.log(`🔄 [checkOneCardStatus] У игрока ${player.name} теперь ${cardsInPlay} карт(ы) - СБРАСЫВАЕМ объявление и таймер`);
+                delete newOneCardDeclarations[player.id];
+                delete newOneCardTimers[player.id];
+              }
+            }
            });
            
            // Обновляем состояние
@@ -2358,19 +2363,23 @@ export const useGameStore = create<GameState>()(
            });
          },
          
-         // Игрок объявляет "одна карта"
-         declareOneCard: (playerId: string) => {
-           const { players, oneCardDeclarations, oneCardTimers } = get();
-           const player = players.find(p => p.id === playerId);
-           if (!player) return;
-           
-           const openCards = player.cards.filter(c => c.open);
-           
-           // Проверяем что у игрока действительно 1 открытая карта
-           if (openCards.length !== 1) {
-             get().showNotification(`❌ ${player.name}: неправильное объявление! У вас ${openCards.length} карт`, 'error', 3000);
-             return;
-           }
+        // Игрок объявляет "одна карта"
+        declareOneCard: (playerId: string) => {
+          const { players, oneCardDeclarations, oneCardTimers, gameStage } = get();
+          const player = players.find(p => p.id === playerId);
+          if (!player) return;
+          
+          const openCards = player.cards.filter(c => c.open);
+          const totalCards = player.cards.length;
+          
+          // Во 2-й/3-й стадии считаем все карты (без пеньков), в 1-й стадии - только открытые
+          const cardsInPlay = (gameStage === 2 || gameStage === 3) ? totalCards : openCards.length;
+          
+          // Проверяем что у игрока действительно 1 карта в игре
+          if (cardsInPlay !== 1) {
+            get().showNotification(`❌ ${player.name}: неправильное объявление! У вас ${cardsInPlay} карт`, 'error', 3000);
+            return;
+          }
            
            // Успешное объявление
            const newDeclarations = { ...oneCardDeclarations };
@@ -2388,29 +2397,27 @@ export const useGameStore = create<GameState>()(
            get().showNotification(`✅ ${player.name}: "ОДНА КАРТА!" объявлено вовремя`, 'success', 3000);
          },
          
-        // Спросить "сколько карт?" у другого игрока
-        askHowManyCards: (askerPlayerId: string, targetPlayerId: string) => {
-          const { players, oneCardDeclarations, oneCardTimers } = get();
+       // Спросить "сколько карт?" у другого игрока
+       askHowManyCards: (askerPlayerId: string, targetPlayerId: string) => {
+          const { players, oneCardDeclarations, oneCardTimers, gameStage } = get();
           const asker = players.find(p => p.id === askerPlayerId);
           const target = players.find(p => p.id === targetPlayerId);
           
           if (!asker || !target) return;
           
-          // ПРАВИЛЬНО: Считаем только ОТКРЫТЫЕ карты (пеньки не в игре!)
           const targetOpenCards = target.cards.filter(c => c.open);
+          const targetTotalCards = target.cards.length;
           const currentTime = Date.now();
           
+          // ОТОБРАЖАЕМ только открытые карты (пеньки = закрытые, НЕ показываем!)
           console.log(`❓ [askHowManyCards] ${asker.name} спрашивает у ${target.name} сколько карт`);
-          console.log(`❓ [askHowManyCards] У ${target.name}: ${targetOpenCards.length} открытых карт (пеньки не считаются)`);
-          console.log(`❓ [askHowManyCards] Таймер: ${oneCardTimers[targetPlayerId]}, текущее время: ${currentTime}`);
-          console.log(`❓ [askHowManyCards] Объявил: ${oneCardDeclarations[targetPlayerId]}`);
+          console.log(`❓ [askHowManyCards] У ${target.name}: открытых=${targetOpenCards.length}, всего=${targetTotalCards} (показываем ТОЛЬКО открытые!)`);
           
-          // Показываем только ОТКРЫТЫЕ карты
-          get().showNotification(`📊 ${target.name} имеет ${targetOpenCards.length} открытых карт`, 'info', 4000);
+          // Показываем только ОТКРЫТЫЕ карты (пеньки закрыты - не показываем)
+          get().showNotification(`📊 ${target.name} имеет ${targetOpenCards.length} открыт${targetOpenCards.length === 1 ? 'ую' : 'ых'} карт${targetOpenCards.length === 1 ? 'у' : ''}`, 'info', 4000);
            
-          // ИСПРАВЛЕНО: ШТРАФНАЯ ПРОВЕРКА по ОБЩЕМУ количеству карт, не только открытых
-          const targetTotalCards = target.cards.length;
-          console.log(`🎯 [askHowManyCards] ${target.name}: открытых=${targetOpenCards.length}, всего=${targetTotalCards}`);
+          // ШТРАФ проверяем по ОБЩЕМУ количеству карт (включая пеньки)
+          console.log(`🎯 [askHowManyCards] Проверка штрафа: всего карт=${targetTotalCards}`);
           
           if (targetTotalCards === 1) {
              const hasActiveTimer = oneCardTimers[targetPlayerId] && oneCardTimers[targetPlayerId] > currentTime;

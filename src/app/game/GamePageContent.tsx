@@ -1551,6 +1551,83 @@ function GamePageContentComponent({
                   {/* Карты игрока */}
                   {playerCards.length > 0 && (
                     <div className={styles.cardsContainer}>
+                      {/* Кнопки НАД картами для ИГРОКА */}
+                      {isHumanPlayer && gameStage >= 2 && (
+                        <div style={{
+                          position: 'absolute',
+                          bottom: '100px',
+                          left: '50%',
+                          transform: 'translateX(-50%)',
+                          display: 'flex',
+                          gap: '8px',
+                          zIndex: 1000,
+                          flexWrap: 'wrap',
+                          justifyContent: 'center',
+                          maxWidth: '400px'
+                        }}>
+                          {/* Кнопка "Одна карта!" */}
+                          {player.cards.length === 1 && !oneCardDeclarations[player.id] && (
+                            <button
+                              onClick={() => {
+                                console.log(`🎴 [Одна карта] Игрок объявляет`);
+                                declareOneCard(player.id);
+                              }}
+                              style={{
+                                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '8px',
+                                padding: '8px 14px',
+                                fontSize: '12px',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                                boxShadow: '0 2px 10px rgba(16, 185, 129, 0.4)',
+                                transition: 'all 0.2s ease',
+                                whiteSpace: 'nowrap'
+                              }}
+                            >
+                              ☝️ Одна карта!
+                            </button>
+                          )}
+                          
+                          {/* Кнопка "Сколько карт?" */}
+                          {playersWithOneCard && playersWithOneCard.length > 0 && (
+                            <button
+                              onClick={() => {
+                                const targets = players.filter(p => 
+                                  playersWithOneCard.includes(p.id) && p.id !== player.id
+                                );
+                                
+                                if (targets.length === 1) {
+                                  console.log(`🎴 [Сколько карт] Спрашиваем у ${targets[0].name}`);
+                                  askHowManyCards(player.id, targets[0].id);
+                                } else if (targets.length > 1) {
+                                  console.log(`🎴 [Штраф] Несколько целей, открываем окно`);
+                                  setPenaltyTargets(targets);
+                                  setSelectedCards({});
+                                  setShowPenaltyModal(true);
+                                }
+                              }}
+                              style={{
+                                background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '8px',
+                                padding: '8px 14px',
+                                fontSize: '12px',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                                boxShadow: '0 2px 10px rgba(59, 130, 246, 0.4)',
+                                transition: 'all 0.2s ease',
+                                whiteSpace: 'nowrap'
+                              }}
+                            >
+                              ❓ Сколько карт?
+                            </button>
+                          )}
+                        </div>
+                      )}
+                      
                       <div className={styles.activeCardContainer}>
                         {playerCards.slice(0, 3).map((card: any, cardIndex: number) => {
                           // Карта может быть строкой "7_of_spades.png(open)" или объектом {rank, suit, image}

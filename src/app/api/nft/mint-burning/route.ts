@@ -5,13 +5,27 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '../../../../lib/auth/auth-middleware';
+import { getSessionFromRequest } from '@/lib/auth/session-utils';
 import { createClient } from '@supabase/supabase-js';
 
 const BURNING_MINT_COST = 20000; // 20000 монет
 
 export async function POST(request: NextRequest) {
   try {
+    // Проверяем авторизацию
+    const session = getSessionFromRequest(request);
+    
+    if (!session) {
+      console.error('❌ [mint-burning] Не авторизован');
+      return NextResponse.json(
+        { success: false, error: 'Требуется авторизация' },
+        { status: 401 }
+      );
+    }
+
+    const userId = session.telegramId;
+    console.log('✅ [mint-burning] Авторизован:', { userId, username: session.username });
+
     // Ленивая инициализация Supabase
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -29,22 +43,14 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const authContext = await requireAuth(request);
-    if (!authContext.authenticated || !authContext.userId) {
-      return NextResponse.json(
-        { success: false, error: 'Не авторизован' },
-        { status: 401 }
-      );
-    }
-
     const body = await request.json();
     const { wallet_address, network } = body; // опционально - для привязки к кошельку
 
     // Проверяем баланс пользователя
     const { data: userData, error: userError } = await supabase
       .from('_pidr_users')
-      .select('balance')
-      .eq('id', authContext.userId)
+      .select('coins')
+      .eq('telegram_id', userId)
       .single();
 
     if (userError || !userData) {
@@ -54,12 +60,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (userData.balance < BURNING_MINT_COST) {
+    if (userData.coins < BURNING_MINT_COST) {
       return NextResponse.json(
         { 
           error: 'Недостаточно монет',
           required: BURNING_MINT_COST,
-          current: userData.balance
+          current: userData.coins
         },
         { status: 400 }
       );
@@ -97,10 +103,10 @@ export async function POST(request: NextRequest) {
     const { error: updateError } = await supabase
       .from('_pidr_users')
       .update({ 
-        balance: userData.balance - BURNING_MINT_COST,
+        coins: userData.coins - BURNING_MINT_COST,
         updated_at: new Date().toISOString()
       })
-      .eq('id', authContext.userId);
+      .eq('telegram_id', userId);
 
     if (updateError) {
       return NextResponse.json(
@@ -113,14 +119,13 @@ export async function POST(request: NextRequest) {
     const { data: nftData, error: nftError } = await supabase
       .from('_pidr_nft_ownership')
       .insert({
-        user_id: authContext.userId,
-        rank: randomRank,
-        suit: randomSuit,
+        user_telegram_id: userId,
+        card_rank: randomRank,
+        card_suit: randomSuit,
         rarity,
-        mint_type: 'burning',
-        custom_style: JSON.stringify(burningParams),
-        wallet_address: wallet_address || null,
-        network: network || null,
+        acquired_via: 'burning',
+        metadata: burningParams,
+        blockchain: network || 'none',
         minted_at: new Date().toISOString(),
       })
       .select()
@@ -130,8 +135,8 @@ export async function POST(request: NextRequest) {
       // Откатываем транзакцию
       await supabase
         .from('_pidr_users')
-        .update({ balance: userData.balance })
-        .eq('id', authContext.userId);
+        .update({ coins: userData.coins })
+        .eq('telegram_id', userId);
 
       console.error('❌ Ошибка создания NFT:', nftError);
       return NextResponse.json(
@@ -140,25 +145,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Записываем историю минта
-    await supabase
-      .from('_pidr_nft_mint_history')
-      .insert({
-        user_id: authContext.userId,
-        nft_id: nftData.id,
-        wallet_address: wallet_address || null,
-        mint_type: 'burning',
-        mint_price_ton: 0,
-        mint_price_sol: 0,
-        commission_paid_ton: 0,
-        commission_paid_sol: 0,
-        master_wallet_address: null,
-        network: network || null,
-        status: 'completed',
-        minted_at: new Date().toISOString(),
-      });
-
-    console.log(`✅ Горящая NFT карта создана: ${randomRank} of ${randomSuit} (legendary)`);
+    console.log(`✅ Горящая NFT карта создана: ${randomRank} of ${randomSuit} (${rarity})`);
 
     return NextResponse.json({
       success: true,
@@ -169,7 +156,7 @@ export async function POST(request: NextRequest) {
         rarity,
         burningParams,
       },
-      newBalance: userData.balance - BURNING_MINT_COST,
+      newBalance: userData.coins - BURNING_MINT_COST,
       message: `Создана уникальная горящая карта ${randomRank} ${getSuitEmoji(randomSuit)}!`
     });
 
