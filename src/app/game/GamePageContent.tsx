@@ -225,6 +225,11 @@ function GamePageContentComponent({
   const [selectedPlayerProfile, setSelectedPlayerProfile] = useState<any>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
+  // Модальное окно сдачи штрафных карт
+  const [showPenaltyModal, setShowPenaltyModal] = useState(false);
+  const [penaltyTargets, setPenaltyTargets] = useState<any[]>([]);
+  const [selectedCards, setSelectedCards] = useState<{[playerId: string]: any}>({});
+
   // Функция генерации профиля игрока
   const generatePlayerProfile = async (player: any) => {
     if (player.isUser) {
@@ -1259,45 +1264,75 @@ function GamePageContentComponent({
         <div className={styles.tableWrapper}>
           {/* Прямоугольный стол */}
           <div className={styles.rectangularTable}>
-            {/* КАРТЫ НА СТОЛЕ (2-я стадия) */}
+            {/* СТОПКА КАРТ НА СТОЛЕ (2-я стадия) - ЗАМЕНЯЕТ КОЛОДУ */}
             {gameStage >= 2 && tableStack && tableStack.length > 0 && (
               <div style={{
                 position: 'absolute',
                 left: '50%',
-                top: '40%',
+                top: '50%',
                 transform: 'translate(-50%, -50%)',
                 zIndex: 15,
+                width: '80px',
+                height: '120px',
                 display: 'flex',
-                flexWrap: 'wrap',
-                gap: '8px',
-                maxWidth: '300px',
                 justifyContent: 'center',
-                alignItems: 'center',
-                background: 'rgba(0, 0, 0, 0.5)',
-                padding: '12px',
-                borderRadius: '12px',
-                border: '2px solid rgba(255, 193, 7, 0.5)'
+                alignItems: 'center'
               }}>
-                {tableStack.map((card, idx) => (
-                  <div key={`table-${idx}`} style={{
-                    position: 'relative',
-                    background: '#ffffff',
-                    borderRadius: '6px',
-                    padding: '2px',
-                    boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
-                  }}>
-                    <Image
-                      src={`${CARDS_PATH}${card.image || 'card_back.png'}`}
-                      alt={`Card ${idx + 1}`}
-                      width={32}
-                      height={48}
-                      style={{ 
-                        borderRadius: '4px',
-                        display: 'block'
+                {tableStack.map((card, idx) => {
+                  // Каждая следующая карта смещается на 25% вниз (верхняя закрывает нижнюю на 75%)
+                  const offset = idx * 30; // 30px смещение = примерно 25% от высоты карты 120px
+                  const isTopCard = idx === tableStack.length - 1;
+                  
+                  return (
+                    <div 
+                      key={`table-${idx}`} 
+                      style={{
+                        position: 'absolute',
+                        top: `${offset}px`,
+                        left: '0',
+                        background: '#ffffff',
+                        borderRadius: '8px',
+                        padding: '3px',
+                        boxShadow: isTopCard 
+                          ? '0 8px 24px rgba(255, 193, 7, 0.6), 0 0 30px rgba(255, 193, 7, 0.4)' 
+                          : '0 4px 12px rgba(0,0,0,0.4)',
+                        border: isTopCard ? '3px solid rgba(255, 193, 7, 0.8)' : '2px solid rgba(255, 255, 255, 0.3)',
+                        zIndex: idx,
+                        transition: 'all 0.3s ease',
+                        animation: isTopCard ? 'pulse 2s ease-in-out infinite' : 'none'
                       }}
-                    />
-                  </div>
-                ))}
+                    >
+                      <Image
+                        src={`${CARDS_PATH}${card.image || 'card_back.png'}`}
+                        alt={`Card ${idx + 1}`}
+                        width={74}
+                        height={111}
+                        style={{ 
+                          borderRadius: '6px',
+                          display: 'block'
+                        }}
+                        priority
+                      />
+                    </div>
+                  );
+                })}
+                {/* Индикатор количества карт */}
+                <div style={{
+                  position: 'absolute',
+                  bottom: '-30px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  background: 'rgba(0, 0, 0, 0.8)',
+                  color: '#fbbf24',
+                  padding: '4px 12px',
+                  borderRadius: '12px',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  whiteSpace: 'nowrap',
+                  border: '2px solid rgba(255, 193, 7, 0.5)'
+                }}>
+                  На столе: {tableStack.length}
+                </div>
               </div>
             )}
 
@@ -1633,6 +1668,174 @@ function GamePageContentComponent({
 
       {/* ПАНЕЛЬ ДЕЙСТВИЙ УДАЛЕНА - теперь всё автоматически через стрелки */}
 
+      {/* ПАНЕЛЬ КНОПОК ДЕЙСТВИЙ (СПРАВА) */}
+      {isGameActive && gameStage >= 2 && humanPlayer && (
+        <div style={{
+          position: 'fixed',
+          bottom: '200px',
+          right: '20px',
+          zIndex: 100,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px'
+        }}>
+          {/* Кнопка "Взять нижнюю карту" - только когда есть карты на столе */}
+          {tableStack && tableStack.length > 0 && humanPlayer.id === currentPlayerId && (
+            <button
+              onClick={() => {
+                console.log(`🎴 [2-я стадия] Игрок берет нижнюю карту`);
+                takeTableCards();
+              }}
+              style={{
+                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '12px',
+                padding: '12px 20px',
+                fontSize: '14px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                boxShadow: '0 4px 15px rgba(245, 158, 11, 0.4)',
+                transition: 'all 0.3s ease',
+                whiteSpace: 'nowrap'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 6px 20px rgba(245, 158, 11, 0.5)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 15px rgba(245, 158, 11, 0.4)';
+              }}
+            >
+              ⬇️ Взять карту
+            </button>
+          )}
+
+          {/* Кнопка "Одна карта!" - когда у игрока осталась 1 карта */}
+          {humanPlayer.cards.length === 1 && !oneCardDeclarations[humanPlayer.id] && (
+            <button
+              onClick={() => {
+                console.log(`🎴 [Одна карта] Игрок объявляет`);
+                declareOneCard(humanPlayer.id);
+              }}
+              style={{
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '12px',
+                padding: '12px 20px',
+                fontSize: '14px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                boxShadow: '0 4px 15px rgba(16, 185, 129, 0.4)',
+                transition: 'all 0.3s ease',
+                whiteSpace: 'nowrap'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 6px 20px rgba(16, 185, 129, 0.5)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 15px rgba(16, 185, 129, 0.4)';
+              }}
+            >
+              ☝️ Одна карта!
+            </button>
+          )}
+
+          {/* Кнопка "Сколько карт?" / Сдача штрафных карт */}
+          {playersWithOneCard && playersWithOneCard.length > 0 && (
+            <button
+              onClick={() => {
+                // Находим всех игроков с одной картой (кроме себя)
+                const targets = players.filter(p => 
+                  playersWithOneCard.includes(p.id) && p.id !== humanPlayer.id
+                );
+                
+                if (targets.length === 1) {
+                  // Если цель одна - сразу спрашиваем
+                  console.log(`🎴 [Сколько карт] Спрашиваем у ${targets[0].name}`);
+                  askHowManyCards(humanPlayer.id, targets[0].id);
+                } else if (targets.length > 1) {
+                  // Если целей несколько - открываем модальное окно для сдачи штрафных карт
+                  console.log(`🎴 [Штраф] Несколько целей (${targets.length}), открываем окно штрафов`);
+                  setPenaltyTargets(targets);
+                  setSelectedCards({});
+                  setShowPenaltyModal(true);
+                }
+              }}
+              style={{
+                background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '12px',
+                padding: '12px 20px',
+                fontSize: '14px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)',
+                transition: 'all 0.3s ease',
+                whiteSpace: 'nowrap'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.5)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 15px rgba(59, 130, 246, 0.4)';
+              }}
+            >
+              ❓ Сколько карт?
+            </button>
+          )}
+          
+          {/* Кнопка сдачи штрафных карт - если есть активный штраф */}
+          {pendingPenalty && pendingPenalty.targetPlayerId && (
+            <button
+              onClick={() => {
+                console.log(`🎴 [Штраф] Открываем окно для сдачи карт`);
+                // Если есть pendingPenalty - показываем только одну цель
+                if (pendingPenalty && pendingPenalty.targetPlayerId) {
+                  const target = players.find(p => p.id === pendingPenalty.targetPlayerId);
+                  if (target) {
+                    setPenaltyTargets([target]);
+                    setSelectedCards({});
+                    setShowPenaltyModal(true);
+                  }
+                }
+              }}
+              style={{
+                background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '12px',
+                padding: '12px 20px',
+                fontSize: '14px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                boxShadow: '0 4px 15px rgba(239, 68, 68, 0.4)',
+                transition: 'all 0.3s ease',
+                whiteSpace: 'nowrap',
+                animation: 'pulse 2s ease-in-out infinite'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 6px 20px rgba(239, 68, 68, 0.5)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 15px rgba(239, 68, 68, 0.4)';
+              }}
+            >
+              ⚠️ Сдать штраф
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Рука игрока внизу экрана - ТОЛЬКО СО 2-Й СТАДИИ! */}
       {isGameActive && gameStage >= 2 && humanPlayer && humanPlayer.cards && humanPlayer.cards.length > 0 && (
         <div className={styles.playerHand}>
@@ -1762,11 +1965,275 @@ function GamePageContentComponent({
         playerData={selectedPlayerProfile}
         onAddFriend={handleAddFriend}
       />
+
+      {/* МОДАЛЬНОЕ ОКНО СДАЧИ ШТРАФНЫХ КАРТ */}
+      {showPenaltyModal && penaltyTargets.length > 0 && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.85)',
+            backdropFilter: 'blur(12px)',
+            zIndex: 999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}
+          onClick={() => {
+            setShowPenaltyModal(false);
+            setPenaltyTargets([]);
+            setSelectedCards({});
+          }}
+        >
+          <div 
+            style={{
+              background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%)',
+              borderRadius: '20px',
+              padding: '24px',
+              maxWidth: '700px',
+              width: '100%',
+              maxHeight: '80vh',
+              overflowY: 'auto',
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.6)',
+              border: '2px solid rgba(239, 68, 68, 0.5)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ 
+              color: '#ef4444', 
+              marginBottom: '8px', 
+              fontSize: '20px', 
+              fontWeight: 'bold',
+              textAlign: 'center'
+            }}>
+              ⚠️ Сдача штрафных карт
+            </h2>
+            <p style={{ 
+              color: '#94a3b8', 
+              marginBottom: '24px', 
+              fontSize: '14px',
+              textAlign: 'center'
+            }}>
+              Выберите по одной карте для каждого оштрафованного игрока
+            </p>
+
+            {/* Список оштрафованных игроков */}
+            {penaltyTargets.map((target, targetIndex) => (
+              <div 
+                key={`penalty-target-${target.id}`}
+                style={{
+                  marginBottom: '20px',
+                  padding: '16px',
+                  background: 'rgba(15, 23, 42, 0.6)',
+                  borderRadius: '12px',
+                  border: selectedCards[target.id] 
+                    ? '2px solid rgba(16, 185, 129, 0.6)' 
+                    : '2px solid rgba(100, 116, 139, 0.3)'
+                }}
+              >
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  marginBottom: '12px',
+                  gap: '12px'
+                }}>
+                  <Image
+                    src={`${CARDS_PATH}card_back.png`}
+                    alt="card"
+                    width={40}
+                    height={60}
+                    style={{ borderRadius: '4px' }}
+                  />
+                  <div>
+                    <h3 style={{ 
+                      color: '#fbbf24', 
+                      fontSize: '16px', 
+                      fontWeight: 'bold',
+                      marginBottom: '4px'
+                    }}>
+                      {target.name}
+                    </h3>
+                    <p style={{ 
+                      color: selectedCards[target.id] ? '#10b981' : '#94a3b8', 
+                      fontSize: '12px'
+                    }}>
+                      {selectedCards[target.id] ? '✓ Карта выбрана' : 'Выберите карту →'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Список карт игрока для выбора */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(60px, 1fr))',
+                  gap: '8px'
+                }}>
+                  {humanPlayer?.cards.map((card: any, index: number) => {
+                    const cardImage = typeof card === 'string' 
+                      ? card.replace('(open)', '').replace('(closed)', '')
+                      : card.image || `${card.rank}_of_${card.suit}.png`;
+                    
+                    const isSelected = selectedCards[target.id]?.image === cardImage;
+                    const isUsed = Object.values(selectedCards).some((c: any) => c?.image === cardImage);
+                    
+                    return (
+                      <div 
+                        key={`penalty-card-${target.id}-${index}`}
+                        style={{
+                          cursor: isUsed && !isSelected ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.3s ease',
+                          position: 'relative',
+                          opacity: isUsed && !isSelected ? 0.4 : 1
+                        }}
+                        onClick={() => {
+                          if (isUsed && !isSelected) return;
+                          
+                          console.log(`🎴 [Штраф] Выбираем карту ${cardImage} для ${target.name}`);
+                          setSelectedCards(prev => ({
+                            ...prev,
+                            [target.id]: { image: cardImage, id: card.id || cardImage }
+                          }));
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isUsed || isSelected) {
+                            e.currentTarget.style.transform = 'translateY(-6px)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = 'translateY(0)';
+                        }}
+                      >
+                        <Image
+                          src={`${CARDS_PATH}${cardImage}`}
+                          alt={cardImage}
+                          width={60}
+                          height={90}
+                          style={{ 
+                            borderRadius: '6px',
+                            border: isSelected 
+                              ? '3px solid #10b981' 
+                              : '2px solid rgba(255, 255, 255, 0.2)',
+                            boxShadow: isSelected 
+                              ? '0 0 20px rgba(16, 185, 129, 0.6)' 
+                              : '0 4px 12px rgba(0,0,0,0.3)'
+                          }}
+                        />
+                        {isSelected && (
+                          <div style={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            background: 'rgba(16, 185, 129, 0.9)',
+                            borderRadius: '50%',
+                            width: '30px',
+                            height: '30px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '18px'
+                          }}>
+                            ✓
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+
+            {/* Кнопки действий */}
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => {
+                  console.log(`🎴 [Штраф] Отмена`);
+                  setShowPenaltyModal(false);
+                  setPenaltyTargets([]);
+                  setSelectedCards({});
+                }}
+                style={{
+                  flex: 1,
+                  background: 'rgba(100, 116, 139, 0.3)',
+                  color: 'white',
+                  border: '2px solid rgba(100, 116, 139, 0.5)',
+                  borderRadius: '12px',
+                  padding: '12px 20px',
+                  fontSize: '14px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(100, 116, 139, 0.5)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(100, 116, 139, 0.3)';
+                }}
+              >
+                Отменить
+              </button>
+
+              <button
+                disabled={Object.keys(selectedCards).length !== penaltyTargets.length}
+                onClick={() => {
+                  console.log(`🎴 [Штраф] Отдаем карты:`, selectedCards);
+                  
+                  // Сдаём карты каждому оштрафованному игроку
+                  if (humanPlayer) {
+                    penaltyTargets.forEach(target => {
+                      const card = selectedCards[target.id];
+                      if (card) {
+                        console.log(`🎴 [Штраф] Отдаём карту ${card.id} игроку ${target.name}`);
+                        contributePenaltyCard(humanPlayer.id, card.id);
+                      }
+                    });
+                  }
+                  
+                  setShowPenaltyModal(false);
+                  setPenaltyTargets([]);
+                  setSelectedCards({});
+                }}
+                style={{
+                  flex: 1,
+                  background: Object.keys(selectedCards).length === penaltyTargets.length
+                    ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                    : 'rgba(100, 116, 139, 0.3)',
+                  color: 'white',
+                  border: '2px solid rgba(16, 185, 129, 0.5)',
+                  borderRadius: '12px',
+                  padding: '12px 20px',
+                  fontSize: '14px',
+                  fontWeight: '700',
+                  cursor: Object.keys(selectedCards).length === penaltyTargets.length ? 'pointer' : 'not-allowed',
+                  transition: 'all 0.3s ease',
+                  opacity: Object.keys(selectedCards).length === penaltyTargets.length ? 1 : 0.5
+                }}
+                onMouseEnter={(e) => {
+                  if (Object.keys(selectedCards).length === penaltyTargets.length) {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(16, 185, 129, 0.5)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >
+                ✓ Сдать карты ({Object.keys(selectedCards).length}/{penaltyTargets.length})
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-// Оборачиваем в ErrorBoundary чтобы игра не вылетала
 export default function GamePageContentWrapper(props: GamePageContentProps) {
   return (
     <ErrorBoundary>
