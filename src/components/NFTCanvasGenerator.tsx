@@ -320,65 +320,152 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
   return (
     <div className="space-y-6">
       {/* Заголовок */}
-      <div className="text-center">
-        <h2 className="text-2xl font-bold text-white mb-2">
-          🎴 Генератор NFT Карт
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-center"
+      >
+        <h2 
+          className="text-3xl font-extrabold text-white mb-3"
+          style={{
+            textShadow: '0 0 30px rgba(251, 191, 36, 0.5), 0 4px 8px rgba(0,0,0,0.3)'
+          }}
+        >
+          ✨ ГЕНЕРАТОР NFT КАРТ ✨
         </h2>
-        <p className="text-gray-400 text-sm">
-          Создавайте уникальные NFT карты через Canvas для дальнейшего минта в блокчейн
+        <p className="text-gray-300 text-base font-medium">
+          Создайте уникальные NFT карты премиум качества
         </p>
-      </div>
+      </motion.div>
 
       {/* Выбор параметров */}
-      <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700">
-        <h3 className="text-lg font-bold text-white mb-4">Параметры карты</h3>
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        style={{
+          background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
+          backdropFilter: 'blur(20px)',
+          borderRadius: '24px',
+          padding: '32px',
+          border: '2px solid rgba(251, 191, 36, 0.2)',
+          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
+        }}
+      >
+        <h3 
+          className="text-2xl font-extrabold text-white mb-6"
+          style={{
+            background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            textShadow: '0 0 30px rgba(251, 191, 36, 0.3)'
+          }}
+        >
+          Параметры карты
+        </h3>
 
         {/* Масть */}
-        <div className="mb-6">
-          <label className="block text-sm font-bold text-white mb-3 flex items-center gap-2">
-            <span className="text-2xl">🎴</span> Выберите масть
+        <div className="mb-8">
+          <label className="block text-lg font-extrabold text-white mb-4 flex items-center gap-3">
+            <span className="text-3xl">🎴</span> 
+            <span style={{
+              background: 'linear-gradient(135deg, #fff 0%, #cbd5e1 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent'
+            }}>
+              Выберите масть
+            </span>
           </label>
-          <div className="grid grid-cols-2 gap-3">
-            {SUITS.map((suit) => (
-              <motion.button
-                key={suit.value}
-                onClick={() => setSelectedSuit(suit.value)}
-                disabled={isGenerating}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="relative overflow-hidden rounded-xl transition-all"
-                style={{ 
-                  background: selectedSuit === suit.value ? suit.gradient : 'rgba(51, 65, 85, 0.8)',
-                  border: selectedSuit === suit.value ? `3px solid ${suit.color}` : '2px solid rgba(71, 85, 105, 0.5)',
-                  boxShadow: selectedSuit === suit.value ? `0 0 20px ${suit.color}50` : 'none'
-                }}
-              >
-                <div className="p-4 flex flex-col items-center gap-2">
-                  <span 
-                    className="text-5xl" 
-                    style={{ 
-                      color: selectedSuit === suit.value ? 'white' : suit.color,
-                      filter: selectedSuit === suit.value ? 'drop-shadow(0 0 10px rgba(255,255,255,0.5))' : 'none'
-                    }}
-                  >
-                    {suit.symbol}
-                  </span>
-                  <span 
-                    className="text-sm font-bold"
-                    style={{ color: selectedSuit === suit.value ? 'white' : '#cbd5e1' }}
-                  >
-                    {suit.label}
-                  </span>
-                </div>
-              </motion.button>
-            ))}
+          <div className="grid grid-cols-2 gap-4">
+            {SUITS.map((suit) => {
+              const isSelected = selectedSuit === suit.value;
+              return (
+                <motion.button
+                  key={suit.value}
+                  onClick={() => setSelectedSuit(suit.value)}
+                  disabled={isGenerating}
+                  whileHover={{ scale: 1.05, y: -5 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="relative overflow-hidden"
+                  style={{ 
+                    background: isSelected 
+                      ? `linear-gradient(145deg, ${suit.color}15, ${suit.color}30)`
+                      : 'linear-gradient(145deg, #1e293b, #0f172a)',
+                    border: isSelected 
+                      ? `3px solid ${suit.color}` 
+                      : '2px solid rgba(71, 85, 105, 0.4)',
+                    borderRadius: '20px',
+                    padding: '24px',
+                    boxShadow: isSelected
+                      ? `0 8px 32px ${suit.color}40, inset 0 1px 0 rgba(255,255,255,0.1), 0 0 0 4px ${suit.color}20`
+                      : '8px 8px 16px rgba(0, 0, 0, 0.4), -8px -8px 16px rgba(255, 255, 255, 0.02)',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <div className="flex flex-col items-center gap-3">
+                    <motion.span 
+                      className="text-6xl" 
+                      animate={isSelected ? { 
+                        scale: [1, 1.1, 1],
+                        rotate: [0, 5, -5, 0]
+                      } : {}}
+                      transition={{ duration: 0.5 }}
+                      style={{ 
+                        color: isSelected ? suit.color : '#64748b',
+                        filter: isSelected 
+                          ? `drop-shadow(0 0 20px ${suit.color}80)` 
+                          : 'none',
+                        textShadow: isSelected ? `0 0 30px ${suit.color}60` : 'none'
+                      }}
+                    >
+                      {suit.symbol}
+                    </motion.span>
+                    <span 
+                      className="text-base font-extrabold uppercase tracking-wide"
+                      style={{ 
+                        color: isSelected ? '#fff' : '#94a3b8',
+                        textShadow: isSelected ? '0 2px 8px rgba(0,0,0,0.3)' : 'none'
+                      }}
+                    >
+                      {suit.label}
+                    </span>
+                  </div>
+                  {isSelected && (
+                    <motion.div
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      className="absolute top-3 right-3"
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        background: suit.gradient,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: `0 4px 12px ${suit.color}60`
+                      }}
+                    >
+                      <span className="text-white text-xl font-bold">✓</span>
+                    </motion.div>
+                  )}
+                </motion.button>
+              );
+            })}
           </div>
         </div>
 
         {/* Ранг */}
-        <div className="mb-6">
-          <label className="block text-sm font-bold text-white mb-3 flex items-center gap-2">
-            <span className="text-2xl">🎯</span> Выберите ранг карты
+        <div className="mb-8">
+          <label className="block text-lg font-extrabold text-white mb-4 flex items-center gap-3">
+            <span className="text-3xl">🎯</span> 
+            <span style={{
+              background: 'linear-gradient(135deg, #fff 0%, #cbd5e1 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent'
+            }}>
+              Выберите ранг карты
+            </span>
           </label>
           <div className="grid grid-cols-7 gap-2">
             {RANKS.map((rank) => {
@@ -390,29 +477,50 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
                   key={rank.value}
                   onClick={() => setSelectedRank(rank.value)}
                   disabled={isGenerating}
-                  whileHover={{ scale: 1.1, y: -5 }}
+                  whileHover={{ scale: 1.15, y: -8 }}
                   whileTap={{ scale: 0.9 }}
-                  className="aspect-[2/3] rounded-lg font-bold text-lg transition-all relative overflow-hidden"
+                  className="aspect-[2/3] font-bold text-2xl transition-all relative overflow-hidden"
                   style={{
                     background: isSelected 
-                      ? `linear-gradient(135deg, ${suitColor}20 0%, ${suitColor}40 100%)`
-                      : 'rgba(51, 65, 85, 0.6)',
-                    border: isSelected ? `2px solid ${suitColor}` : '1px solid rgba(71, 85, 105, 0.8)',
-                    color: isSelected ? suitColor : '#cbd5e1',
-                    boxShadow: isSelected ? `0 0 15px ${suitColor}50` : 'none'
+                      ? `linear-gradient(145deg, ${suitColor}25, ${suitColor}40)`
+                      : 'linear-gradient(145deg, #1e293b, #0f172a)',
+                    border: isSelected ? `3px solid ${suitColor}` : '1px solid rgba(71, 85, 105, 0.4)',
+                    borderRadius: '12px',
+                    color: isSelected ? suitColor : '#64748b',
+                    boxShadow: isSelected 
+                      ? `0 8px 24px ${suitColor}50, inset 0 1px 0 rgba(255,255,255,0.1)`
+                      : '4px 4px 8px rgba(0, 0, 0, 0.4), -2px -2px 6px rgba(255, 255, 255, 0.02)',
+                    textShadow: isSelected ? `0 0 20px ${suitColor}80` : 'none',
+                    cursor: 'pointer'
                   }}
                   title={rank.label}
                 >
                   <div className="flex flex-col items-center justify-center h-full">
-                    <span className="text-xl">{rank.display}</span>
+                    <motion.span
+                      animate={isSelected ? { scale: [1, 1.2, 1] } : {}}
+                      transition={{ duration: 0.3 }}
+                    >
+                      {rank.display}
+                    </motion.span>
                   </div>
                   {isSelected && (
                     <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      className="absolute top-1 right-1"
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      className="absolute -top-1 -right-1"
+                      style={{
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '50%',
+                        background: `linear-gradient(135deg, ${suitColor} 0%, ${suitColor}dd 100%)`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: `0 2px 8px ${suitColor}80`,
+                        border: '2px solid white'
+                      }}
                     >
-                      <span className="text-xs">✓</span>
+                      <span className="text-white text-xs font-bold">✓</span>
                     </motion.div>
                   )}
                 </motion.button>
@@ -422,11 +530,18 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
         </div>
 
         {/* Редкость */}
-        <div className="mb-6">
-          <label className="block text-sm font-bold text-white mb-3 flex items-center gap-2">
-            <span className="text-2xl">💎</span> Выберите редкость
+        <div className="mb-8">
+          <label className="block text-lg font-extrabold text-white mb-4 flex items-center gap-3">
+            <span className="text-3xl">💎</span> 
+            <span style={{
+              background: 'linear-gradient(135deg, #fff 0%, #cbd5e1 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent'
+            }}>
+              Выберите редкость
+            </span>
           </label>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {RARITIES.map((rarity) => {
               const isSelected = selectedRarity === rarity.value;
               return (
@@ -434,40 +549,89 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
                   key={rarity.value}
                   onClick={() => setSelectedRarity(rarity.value)}
                   disabled={isGenerating}
-                  whileHover={{ scale: 1.02, x: 5 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="w-full p-4 rounded-xl font-bold transition-all flex justify-between items-center relative overflow-hidden"
+                  whileHover={{ scale: 1.03, x: 8 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="w-full rounded-2xl font-extrabold transition-all flex justify-between items-center relative overflow-hidden"
                   style={{
-                    background: isSelected ? rarity.gradient : 'rgba(51, 65, 85, 0.6)',
-                    border: isSelected ? `2px solid ${rarity.color}` : '1px solid rgba(71, 85, 105, 0.8)',
-                    color: isSelected ? 'white' : '#cbd5e1',
-                    boxShadow: isSelected ? `0 0 20px ${rarity.color}60, inset 0 0 20px ${rarity.color}20` : 'none'
+                    background: isSelected 
+                      ? `linear-gradient(135deg, ${rarity.color}30 0%, ${rarity.color}20 100%)`
+                      : 'linear-gradient(145deg, #1e293b, #0f172a)',
+                    border: isSelected ? `3px solid ${rarity.color}` : '2px solid rgba(71, 85, 105, 0.4)',
+                    padding: '20px 24px',
+                    boxShadow: isSelected 
+                      ? `0 12px 40px ${rarity.color}50, inset 0 1px 0 rgba(255,255,255,0.1), 0 0 0 4px ${rarity.color}15`
+                      : '8px 8px 16px rgba(0, 0, 0, 0.4), -4px -4px 10px rgba(255, 255, 255, 0.02)',
+                    cursor: 'pointer'
                   }}
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">{rarity.emoji}</span>
-                    <span className="text-base">{rarity.label}</span>
+                  <div className="flex items-center gap-4">
+                    <motion.span 
+                      className="text-3xl"
+                      animate={isSelected ? { 
+                        scale: [1, 1.2, 1],
+                        rotate: [0, 10, -10, 0]
+                      } : {}}
+                      transition={{ duration: 0.5 }}
+                    >
+                      {rarity.emoji}
+                    </motion.span>
+                    <div className="text-left">
+                      <span 
+                        className="text-lg uppercase tracking-wider block"
+                        style={{ 
+                          color: isSelected ? rarity.color : '#cbd5e1',
+                          textShadow: isSelected ? `0 0 15px ${rarity.color}60` : 'none'
+                        }}
+                      >
+                        {rarity.label}
+                      </span>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span 
-                      className="font-extrabold text-lg px-3 py-1 rounded-lg"
+                    <div
+                      className="font-extrabold text-xl px-4 py-2 rounded-xl"
                       style={{
-                        background: isSelected ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.2)',
-                        color: isSelected ? '#fbbf24' : '#94a3b8'
+                        background: isSelected 
+                          ? 'linear-gradient(135deg, rgba(251, 191, 36, 0.3), rgba(245, 158, 11, 0.3))'
+                          : 'rgba(0,0,0,0.3)',
+                        color: isSelected ? '#fbbf24' : '#64748b',
+                        boxShadow: isSelected ? '0 4px 12px rgba(251, 191, 36, 0.4), inset 0 1px 0 rgba(255,255,255,0.2)' : 'none',
+                        border: isSelected ? '2px solid rgba(251, 191, 36, 0.5)' : '1px solid rgba(100, 116, 139, 0.3)'
                       }}
                     >
                       {rarity.cost} 🪙
-                    </span>
+                    </div>
                   </div>
                   {isSelected && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="absolute inset-0 pointer-events-none"
-                      style={{
-                        background: `radial-gradient(circle at center, ${rarity.color}15 0%, transparent 70%)`
-                      }}
-                    />
+                    <>
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="absolute inset-0 pointer-events-none"
+                        style={{
+                          background: `radial-gradient(ellipse at center, ${rarity.color}15 0%, transparent 70%)`,
+                          animation: 'pulse 2s ease-in-out infinite'
+                        }}
+                      />
+                      <motion.div
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="absolute top-3 right-3"
+                        style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '50%',
+                          background: rarity.gradient,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: `0 4px 12px ${rarity.color}70`,
+                          border: '2px solid white'
+                        }}
+                      >
+                        <span className="text-white text-lg font-bold">✓</span>
+                      </motion.div>
+                    </>
                   )}
                 </motion.button>
               );
@@ -476,33 +640,51 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
         </div>
 
         {/* Кнопки генерации */}
-        <div className="space-y-3 mt-6">
+        <div className="space-y-4 mt-8">
           <motion.button
             onClick={handleGenerate}
             disabled={isGenerating || userCoins < currentCost}
-            whileHover={!isGenerating && userCoins >= currentCost ? { scale: 1.03, y: -2 } : {}}
+            whileHover={!isGenerating && userCoins >= currentCost ? { scale: 1.02, y: -4 } : {}}
             whileTap={!isGenerating && userCoins >= currentCost ? { scale: 0.98 } : {}}
-            className="w-full py-4 px-6 rounded-xl font-bold text-white transition-all relative overflow-hidden"
+            className="w-full rounded-2xl font-extrabold text-white transition-all relative overflow-hidden"
             style={{
               background: isGenerating || userCoins < currentCost
-                ? 'rgba(75, 85, 99, 0.6)'
-                : 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
+                ? 'linear-gradient(145deg, #4b5563, #374151)'
+                : 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #ea580c 100%)',
+              padding: '24px 32px',
               boxShadow: isGenerating || userCoins < currentCost
-                ? 'none'
-                : '0 4px 20px rgba(251, 191, 36, 0.4), inset 0 1px 0 rgba(255,255,255,0.2)',
-              opacity: isGenerating || userCoins < currentCost ? 0.5 : 1,
-              cursor: isGenerating || userCoins < currentCost ? 'not-allowed' : 'pointer'
+                ? '4px 4px 8px rgba(0, 0, 0, 0.4)'
+                : '0 12px 40px rgba(251, 191, 36, 0.6), inset 0 2px 0 rgba(255,255,255,0.3), 0 0 0 4px rgba(251, 191, 36, 0.2)',
+              opacity: isGenerating || userCoins < currentCost ? 0.6 : 1,
+              cursor: isGenerating || userCoins < currentCost ? 'not-allowed' : 'pointer',
+              border: '3px solid rgba(251, 191, 36, 0.5)'
             }}
           >
-            <div className="flex items-center justify-center gap-3">
-              <span className="text-2xl">{isGenerating ? '⏳' : '🎴'}</span>
-              <span className="text-lg">
-                {isGenerating ? 'Генерация...' : 'Сгенерировать карту'}
-              </span>
-              {!isGenerating && (
-                <span className="px-3 py-1 rounded-lg bg-black/20 font-extrabold">
-                  {currentCost} 🪙
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <motion.span 
+                  className="text-4xl"
+                  animate={isGenerating ? { rotate: 360 } : {}}
+                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                >
+                  {isGenerating ? '⏳' : '🎴'}
+                </motion.span>
+                <span className="text-xl">
+                  {isGenerating ? 'Генерация...' : 'СГЕНЕРИРОВАТЬ КАРТУ'}
                 </span>
+              </div>
+              {!isGenerating && (
+                <div
+                  className="font-extrabold text-2xl px-5 py-2 rounded-xl"
+                  style={{
+                    background: 'rgba(0,0,0,0.3)',
+                    color: '#fff',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.2)',
+                    border: '2px solid rgba(255,255,255,0.3)'
+                  }}
+                >
+                  {currentCost} 🪙
+                </div>
               )}
             </div>
           </motion.button>
@@ -510,29 +692,52 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
           <motion.button
             onClick={handleGenerateFullDeck}
             disabled={isGenerating || userCoins < FULL_DECK_COST}
-            whileHover={!isGenerating && userCoins >= FULL_DECK_COST ? { scale: 1.03, y: -2 } : {}}
+            whileHover={!isGenerating && userCoins >= FULL_DECK_COST ? { scale: 1.02, y: -4 } : {}}
             whileTap={!isGenerating && userCoins >= FULL_DECK_COST ? { scale: 0.98 } : {}}
-            className="w-full py-4 px-6 rounded-xl font-bold text-white transition-all relative overflow-hidden"
+            className="w-full rounded-2xl font-extrabold text-white transition-all relative overflow-hidden"
             style={{
               background: isGenerating || userCoins < FULL_DECK_COST
-                ? 'rgba(75, 85, 99, 0.6)'
-                : 'linear-gradient(135deg, #a855f7 0%, #8b5cf6 100%)',
+                ? 'linear-gradient(145deg, #4b5563, #374151)'
+                : 'linear-gradient(135deg, #a855f7 0%, #8b5cf6 50%, #7c3aed 100%)',
+              padding: '24px 32px',
               boxShadow: isGenerating || userCoins < FULL_DECK_COST
-                ? 'none'
-                : '0 4px 20px rgba(168, 85, 247, 0.4), inset 0 1px 0 rgba(255,255,255,0.2)',
-              opacity: isGenerating || userCoins < FULL_DECK_COST ? 0.5 : 1,
-              cursor: isGenerating || userCoins < FULL_DECK_COST ? 'not-allowed' : 'pointer'
+                ? '4px 4px 8px rgba(0, 0, 0, 0.4)'
+                : '0 12px 40px rgba(168, 85, 247, 0.6), inset 0 2px 0 rgba(255,255,255,0.3), 0 0 0 4px rgba(168, 85, 247, 0.2)',
+              opacity: isGenerating || userCoins < FULL_DECK_COST ? 0.6 : 1,
+              cursor: isGenerating || userCoins < FULL_DECK_COST ? 'not-allowed' : 'pointer',
+              border: '3px solid rgba(168, 85, 247, 0.5)'
             }}
           >
-            <div className="flex items-center justify-center gap-3">
-              <span className="text-2xl">{isGenerating ? '⏳' : '🎴'}</span>
-              <span className="text-lg">
-                {isGenerating ? 'Генерация колоды...' : 'Полная колода (52 карты)'}
-              </span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <motion.span 
+                  className="text-4xl"
+                  animate={isGenerating ? { rotate: 360 } : {}}
+                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                >
+                  {isGenerating ? '⏳' : '🎴'}
+                </motion.span>
+                <div className="text-left">
+                  <span className="text-xl block">
+                    {isGenerating ? 'ГЕНЕРАЦИЯ КОЛОДЫ...' : 'ПОЛНАЯ КОЛОДА'}
+                  </span>
+                  {!isGenerating && (
+                    <span className="text-sm opacity-80 block">52 КАРТЫ В КОМПЛЕКТЕ</span>
+                  )}
+                </div>
+              </div>
               {!isGenerating && (
-                <span className="px-3 py-1 rounded-lg bg-black/20 font-extrabold">
+                <div
+                  className="font-extrabold text-2xl px-5 py-2 rounded-xl"
+                  style={{
+                    background: 'rgba(0,0,0,0.3)',
+                    color: '#fff',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.2)',
+                    border: '2px solid rgba(255,255,255,0.3)'
+                  }}
+                >
                   {FULL_DECK_COST} 🪙
-                </span>
+                </div>
               )}
             </div>
           </motion.button>
@@ -540,22 +745,45 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
 
         {/* Баланс */}
         <motion.div 
-          className="mt-6 p-4 rounded-xl text-center relative overflow-hidden"
+          className="mt-8 rounded-2xl text-center relative overflow-hidden"
           style={{
-            background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(245, 158, 11, 0.1) 100%)',
-            border: '2px solid rgba(251, 191, 36, 0.3)',
-            boxShadow: '0 0 20px rgba(251, 191, 36, 0.1)'
+            background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.15) 100%)',
+            border: '3px solid rgba(251, 191, 36, 0.4)',
+            boxShadow: '0 8px 32px rgba(251, 191, 36, 0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
+            padding: '24px'
           }}
         >
-          <div className="flex items-center justify-center gap-3">
-            <span className="text-3xl">🪙</span>
+          <div className="flex items-center justify-center gap-4">
+            <motion.span 
+              className="text-5xl"
+              animate={{ rotate: [0, 5, -5, 0] }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            >
+              🪙
+            </motion.span>
             <div>
-              <p className="text-gray-400 text-xs uppercase tracking-wider">Ваш баланс</p>
-              <p className="text-2xl font-extrabold text-yellow-500">{userCoins.toLocaleString()}</p>
+              <p 
+                className="text-sm uppercase tracking-widest font-bold mb-1"
+                style={{
+                  color: '#fbbf24',
+                  textShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                }}
+              >
+                ВАШ БАЛАНС
+              </p>
+              <p 
+                className="text-4xl font-black"
+                style={{
+                  color: '#fff',
+                  textShadow: '0 0 20px rgba(251, 191, 36, 0.8), 0 4px 8px rgba(0,0,0,0.3)'
+                }}
+              >
+                {userCoins.toLocaleString()}
+              </p>
             </div>
           </div>
         </motion.div>
-      </div>
+      </motion.div>
 
       {/* Успешная генерация */}
       <AnimatePresence>

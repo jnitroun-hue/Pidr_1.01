@@ -22,22 +22,33 @@ export async function POST(request: NextRequest) {
     }
 
     // Получаем данные пользователя
-    const sessionData = JSON.parse(sessionCookie.value);
-    const userId = sessionData.userId || sessionData.telegramId || sessionData.telegram_id || sessionData.id;
+    let sessionData;
+    try {
+      sessionData = JSON.parse(sessionCookie.value);
+    } catch (error) {
+      console.error('❌ [NFT Canvas] Ошибка парсинга сессии:', error);
+      return NextResponse.json(
+        { success: false, error: 'Некорректная сессия' },
+        { status: 401 }
+      );
+    }
+
+    const userId = String(sessionData.userId || sessionData.telegramId || sessionData.telegram_id || sessionData.id || '');
 
     console.log('🎴 [NFT Canvas] Session data:', { 
       hasUserId: !!sessionData.userId,
       hasTelegramId: !!sessionData.telegramId,
       hasTelegram_id: !!sessionData.telegram_id,
       hasId: !!sessionData.id,
-      finalUserId: userId
+      finalUserId: userId,
+      sessionKeys: Object.keys(sessionData)
     });
 
     if (!userId) {
-      console.error('❌ [NFT Canvas] ID пользователя не найден в сессии:', Object.keys(sessionData));
+      console.error('❌ [NFT Canvas] ID пользователя не найден в сессии:', sessionData);
       return NextResponse.json(
         { success: false, error: 'ID пользователя не найден в сессии' },
-        { status: 400 }
+        { status: 401 }
       );
     }
 
