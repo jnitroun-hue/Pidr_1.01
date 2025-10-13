@@ -8,7 +8,7 @@ import { useTranslations } from '../../lib/i18n/translations';
 import { avatarFrames, getRarityColor, getRarityName } from '../../data/avatar-frames';
 import TonWalletConnect from '../../components/TonWalletConnect';
 import NFTGallery from '../../components/NFTGallery';
-import NFTCanvasGenerator from '../../components/NFTCanvasGenerator';
+import NFTCanvasGenerator from '../../components/NFTCanvasGeneratorCompact';
 
 // Компонент таймера для бонусов
 function BonusCooldownTimer({ bonus, onCooldownEnd }: { bonus: any; onCooldownEnd: () => void }) {

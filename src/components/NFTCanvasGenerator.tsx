@@ -318,142 +318,64 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
   };
 
   return (
-    <div className="space-y-6">
-      {/* Заголовок */}
+    <div className="space-y-4">
+      {/* Компактный контейнер */}
       <motion.div 
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-center"
-      >
-        <h2 
-          className="text-3xl font-extrabold text-white mb-3"
-          style={{
-            textShadow: '0 0 30px rgba(251, 191, 36, 0.5), 0 4px 8px rgba(0,0,0,0.3)'
-          }}
-        >
-          ✨ ГЕНЕРАТОР NFT КАРТ ✨
-        </h2>
-        <p className="text-gray-300 text-base font-medium">
-          Создайте уникальные NFT карты премиум качества
-        </p>
-      </motion.div>
-
-      {/* Выбор параметров */}
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }}
+        initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
         style={{
-          background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
-          backdropFilter: 'blur(20px)',
-          borderRadius: '24px',
-          padding: '32px',
-          border: '2px solid rgba(251, 191, 36, 0.2)',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
+          background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%)',
+          backdropFilter: 'blur(10px)',
+          borderRadius: '16px',
+          padding: '20px',
+          border: '1px solid rgba(251, 191, 36, 0.15)',
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)'
         }}
       >
         <h3 
-          className="text-2xl font-extrabold text-white mb-6"
+          className="text-lg font-bold text-white mb-4"
           style={{
-            background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            textShadow: '0 0 30px rgba(251, 191, 36, 0.3)'
+            color: '#fbbf24'
           }}
         >
-          Параметры карты
+          ⚡ ГЕНЕРАТОР NFT
         </h3>
 
-        {/* Масть */}
-        <div className="mb-8">
-          <label className="block text-lg font-extrabold text-white mb-4 flex items-center gap-3">
-            <span className="text-3xl">🎴</span> 
-            <span style={{
-              background: 'linear-gradient(135deg, #fff 0%, #cbd5e1 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent'
-            }}>
-              Выберите масть
-            </span>
-          </label>
-          <div className="grid grid-cols-2 gap-4">
-            {SUITS.map((suit) => {
-              const isSelected = selectedSuit === suit.value;
-              return (
-                <motion.button
-                  key={suit.value}
-                  onClick={() => setSelectedSuit(suit.value)}
-                  disabled={isGenerating}
-                  whileHover={{ scale: 1.05, y: -5 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="relative overflow-hidden"
-                  style={{ 
-                    background: isSelected 
-                      ? `linear-gradient(145deg, ${suit.color}15, ${suit.color}30)`
-                      : 'linear-gradient(145deg, #1e293b, #0f172a)',
-                    border: isSelected 
-                      ? `3px solid ${suit.color}` 
-                      : '2px solid rgba(71, 85, 105, 0.4)',
-                    borderRadius: '20px',
-                    padding: '24px',
-                    boxShadow: isSelected
-                      ? `0 8px 32px ${suit.color}40, inset 0 1px 0 rgba(255,255,255,0.1), 0 0 0 4px ${suit.color}20`
-                      : '8px 8px 16px rgba(0, 0, 0, 0.4), -8px -8px 16px rgba(255, 255, 255, 0.02)',
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <div className="flex flex-col items-center gap-3">
-                    <motion.span 
-                      className="text-6xl" 
-                      animate={isSelected ? { 
-                        scale: [1, 1.1, 1],
-                        rotate: [0, 5, -5, 0]
-                      } : {}}
-                      transition={{ duration: 0.5 }}
-                      style={{ 
-                        color: isSelected ? suit.color : '#64748b',
-                        filter: isSelected 
-                          ? `drop-shadow(0 0 20px ${suit.color}80)` 
-                          : 'none',
-                        textShadow: isSelected ? `0 0 30px ${suit.color}60` : 'none'
-                      }}
-                    >
-                      {suit.symbol}
-                    </motion.span>
-                    <span 
-                      className="text-base font-extrabold uppercase tracking-wide"
-                      style={{ 
-                        color: isSelected ? '#fff' : '#94a3b8',
-                        textShadow: isSelected ? '0 2px 8px rgba(0,0,0,0.3)' : 'none'
-                      }}
-                    >
-                      {suit.label}
-                    </span>
-                  </div>
-                  {isSelected && (
-                    <motion.div
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      className="absolute top-3 right-3"
-                      style={{
-                        width: '32px',
-                        height: '32px',
-                        borderRadius: '50%',
-                        background: suit.gradient,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: `0 4px 12px ${suit.color}60`
-                      }}
-                    >
-                      <span className="text-white text-xl font-bold">✓</span>
-                    </motion.div>
-                  )}
-                </motion.button>
-              );
-            })}
+        {/* Компактная сетка: Масть + Редкость */}
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          
+          {/* Масть */}
+          <div>
+            <label className="block text-xs font-bold text-gray-300 mb-2 uppercase tracking-wide">
+              Масть
+            </label>
+              {SUITS.map((suit) => {
+                const isSelected = selectedSuit === suit.value;
+                return (
+                  <button
+                    key={suit.value}
+                    onClick={() => setSelectedSuit(suit.value)}
+                    disabled={isGenerating}
+                    className="relative p-3 rounded-lg transition-all"
+                    style={{ 
+                      background: isSelected ? `${suit.color}20` : 'rgba(30, 41, 59, 0.6)',
+                      border: isSelected ? `2px solid ${suit.color}` : '1px solid rgba(71, 85, 105, 0.4)',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <div className="text-center">
+                      <div className="text-3xl mb-1" style={{ color: isSelected ? suit.color : '#64748b' }}>
+                        {suit.symbol}
+                      </div>
+                      <div className="text-xs font-bold" style={{ color: isSelected ? '#fff' : '#64748b' }}>
+                        {suit.label}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
 
         {/* Ранг */}
         <div className="mb-8">
