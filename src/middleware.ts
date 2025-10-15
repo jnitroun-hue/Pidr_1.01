@@ -2,42 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 
 // Публичные пути (НЕ требуют авторизации)
 const publicPaths: string[] = [
-  '/',      // Главная страница (меню)
-  '/auth',  // Страница авторизации
+  '/',           // Главная страница (меню)
+  '/auth',       // Страница авторизации
+  '/game',       // Игра (single player работает без авторизации)
+  '/rules',      // Правила
+  '/shop',       // Магазин
+  '/friends',    // Друзья
+  '/rating',     // Рейтинг
+  '/settings',   // Настройки
+  '/multiplayer', // Мультиплеер
 ];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   
-  // Если это публичный путь - пропускаем
-  if (publicPaths.includes(pathname)) {
-    return NextResponse.next();
-  }
-  
-  // ВСЁ ОСТАЛЬНОЕ ТРЕБУЕТ АВТОРИЗАЦИЮ!
-  const sessionCookie = req.cookies.get('pidr_session')?.value;
-  let isAuthenticated = false;
-
-  if (sessionCookie) {
-    try {
-      const sessionData = JSON.parse(sessionCookie);
-      const hasUserId = !!(sessionData.userId || sessionData.user_id || 
-                          sessionData.telegramId || sessionData.telegram_id || 
-                          sessionData.id);
-      isAuthenticated = hasUserId;
-    } catch (error) {
-      isAuthenticated = false;
-    }
-  }
-
-  // Если НЕ авторизован - редирект на /auth
-  if (!isAuthenticated) {
-    console.log(`🔒 Redirecting to /auth from ${pathname} (no session)`);
-    const authUrl = new URL('/auth', req.url);
-    authUrl.searchParams.set('redirect', pathname);
-    return NextResponse.redirect(authUrl);
-  }
-
+  // ВСЁ ДОСТУПНО БЕЗ АВТОРИЗАЦИИ!
+  // Авторизация нужна только для некоторых API и действий внутри страниц
   return NextResponse.next();
 }
 
