@@ -198,12 +198,12 @@ function GamePageContentComponent({
   const t = useTranslations(language);
   
   const { 
-    isGameActive, gameStage, turnPhase, stage2TurnPhase,
+    isGameActive, gameMode, gameStage, turnPhase, stage2TurnPhase,
     players, currentPlayerId, deck, availableTargets,
     selectedHandCard, revealedDeckCard, tableStack, trumpSuit,
     oneCardDeclarations, oneCardTimers, playersWithOneCard, pendingPenalty,
     penaltyDeck, gameCoins,
-    startGame, endGame, 
+    startGame, endGame, resetGame,
     drawCard, makeMove, onDeckClick, placeCardOnSelfByRules,
     selectHandCard, playSelectedCard, takeTableCards, showNotification,
     declareOneCard, askHowManyCards, contributePenaltyCard, cancelPenalty
@@ -790,7 +790,16 @@ function GamePageContentComponent({
   useEffect(() => {
     if (!gameInitialized) {
       if (isGameActive && players.length > 0 && dealt) {
-        // ИГРА УЖЕ ЗАПУЩЕНА И КАРТЫ РОЗДАНЫ - ВОССТАНАВЛИВАЕМ СОСТОЯНИЕ ПОСЛЕ REFRESH!
+        // ВОССТАНОВЛЕНИЕ ТОЛЬКО ДЛЯ МУЛЬТИПЛЕЕРА!
+        // Для single player - сбрасываем игру при перезагрузке страницы
+        if (gameMode === 'single') {
+          console.log(`🎮 [SINGLE PLAYER] Сброс игры при перезагрузке страницы`);
+          resetGame();
+          setGameInitialized(true);
+          return;
+        }
+        
+        // МУЛЬТИПЛЕЕР: ВОССТАНАВЛИВАЕМ СОСТОЯНИЕ ПОСЛЕ REFRESH!
         console.log(`🎮 [ВОССТАНОВЛЕНИЕ] Игра P.I.D.R. восстановлена: ${players.length} игроков`);
         console.log(`🎮 [ВОССТАНОВЛЕНИЕ] Стадия: ${gameStage}, текущий игрок: ${currentPlayerId}`);
         console.log(`🎮 [ВОССТАНОВЛЕНИЕ] Фаза хода: ${turnPhase}, stage2TurnPhase: ${stage2TurnPhase}`);
@@ -1626,8 +1635,8 @@ function GamePageContentComponent({
                               key={cardIndex} 
                               className={styles.cardOnPenki} 
                               style={{
-                                marginLeft: cardIndex > 0 ? '-30px' : '0', // 50% перекрытие (60px * 0.5 = 30px) - ВИДНО 30px каждой карты!
-                                zIndex: playerCards.length - cardIndex, // ВЕРХНЯЯ карта (последняя) ПОВЕРХ всех!
+                                marginLeft: cardIndex > 0 ? '-48px' : '0', // 80% перекрытие (60px * 0.8 = 48px) - ВИДНО 12px каждой карты!
+                                zIndex: cardIndex + 1, // ВЕРХНЯЯ карта (последняя, больший индекс) ПОВЕРХ всех! Первая=1, последняя=макс
                                 cursor: (shouldHighlight || isAvailableTarget) ? 'pointer' : 'default',
                                 position: 'relative',
                               }}
