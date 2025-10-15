@@ -1626,7 +1626,7 @@ function GamePageContentComponent({
                               key={cardIndex} 
                               className={styles.cardOnPenki} 
                               style={{
-                                marginLeft: cardIndex > 0 ? '-51px' : '0', // 85% перекрытие (60px * 0.85 = 51px)
+                                marginLeft: cardIndex > 0 ? '-30px' : '0', // 50% перекрытие (60px * 0.5 = 30px) - ВИДНО 30px каждой карты!
                                 zIndex: playerCards.length - cardIndex, // ВЕРХНЯЯ карта (последняя) ПОВЕРХ всех!
                                 cursor: (shouldHighlight || isAvailableTarget) ? 'pointer' : 'default',
                                 position: 'relative',

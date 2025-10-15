@@ -410,7 +410,7 @@ export const useGameStore = create<GameState>()(
           }
           
           const playerOpenCards: Card[] = []; // Открытые карты (для 1-й стадии)
-          const playerPenki: Card[] = []; // Пеньки (2 закрытые карты)
+          const playerPenki: Card[] = []; // Пеньки (2 закрытые карты для 3-й стадии!)
           
           // Раздаем 3 карты каждому игроку
           for (let j = 0; j < cardsPerPlayer; j++) {
@@ -429,7 +429,7 @@ export const useGameStore = create<GameState>()(
             };
             
             if (j < 2) {
-              // Первые 2 карты = пеньки (закрытые)
+              // Первые 2 карты = ПЕНЬКИ (закрытые, для 3-й стадии!)
               playerPenki.push(card);
             } else {
               // Последняя карта = открытая карта для 1-й стадии
@@ -443,8 +443,8 @@ export const useGameStore = create<GameState>()(
             name: playerInfo.name,
             avatar: playerInfo.avatar,
             score: 0,
-            cards: playerOpenCards, // Только верхняя открытая карта
-            penki: playerPenki, // 2 закрытые карты
+            cards: playerOpenCards, // 1 открытая карта для 1-й стадии
+            penki: playerPenki, // 2 пеньки (для 3-й стадии!)
             playerStage: 1 as 1, // Все начинают с 1-й стадии
             isCurrentPlayer: i === 0,
             isUser: !playerInfo.isBot,
@@ -958,7 +958,7 @@ export const useGameStore = create<GameState>()(
       
       // Выполнение хода (обновленная логика)
       makeMove: (targetPlayerId: string) => {
-        const { players, currentPlayerId, revealedDeckCard, turnPhase } = get();
+        const { players, currentPlayerId, revealedDeckCard, turnPhase, deck } = get();
         if (!currentPlayerId) return;
         
         // Специальная обработка инициации хода
@@ -981,43 +981,28 @@ export const useGameStore = create<GameState>()(
         if (!currentPlayer || !targetPlayer) return;
         
         let cardToMove: Card | undefined;
+        let newDeck = deck;
+        let shouldCheckStage1End = false;
         
         // Определяем какую карту перемещаем
         if (revealedDeckCard && (turnPhase === 'waiting_target_selection' || turnPhase === 'waiting_deck_action')) {
           // Ходим картой из колоды
           cardToMove = revealedDeckCard;
           
-          // Убираем карту из колоды и сбрасываем состояние
-          const { deck } = get();
-          const newDeck = deck.slice(1);
-          set({
-            deck: newDeck,
-            revealedDeckCard: null,
-            lastDrawnCard: cardToMove,
-            lastPlayerToDrawCard: currentPlayerId,
-            turnPhase: 'turn_ended'
-          });
+          // Убираем карту из колоды
+          newDeck = deck.slice(1);
           
           // Проверяем переход к стадии 2 после использования карты из колоды
           if (newDeck.length === 0) {
             console.log(`🃏 [makeMove] Колода пуста после хода - переходим к стадии 2!`);
-            setTimeout(() => {
-              get().checkStage1End();
-            }, 1000);
+            shouldCheckStage1End = true;
           }
         } else {
           // Ходим верхней картой из руки
           if (currentPlayer.cards.length === 0) return;
           
-          // Ходим верхней картой из руки (удаляем ее из стопки)
-          cardToMove = currentPlayer.cards.pop();
-          
-          // В 1-Й СТАДИИ НЕТ ПОБЕДИТЕЛЕЙ! Только раскладка карт!
-          
-          set({ 
-            players: [...players],
-            skipHandAnalysis: false // После хода на соперника - ВСЕГДА анализ руки
-          });
+          // Берём верхнюю карту (последнюю в массиве)
+          cardToMove = currentPlayer.cards[currentPlayer.cards.length - 1];
         }
         
         if (!cardToMove) return;
@@ -1025,12 +1010,44 @@ export const useGameStore = create<GameState>()(
         // Запоминаем верхнюю карту цели ДО хода
         const targetTopCard = targetPlayer.cards[targetPlayer.cards.length - 1];
         
-        // Перемещаем карту ПОВЕРХ открытых карт целевого игрока
-        targetPlayer.cards.push(cardToMove);
+        // ГАРАНТИРУЕМ что карта открыта в 1-й стадии!
+        cardToMove.open = true;
         
-        set({ 
-          players: [...players]
+        // СОЗДАЁМ НОВЫЙ МАССИВ ИГРОКОВ с IMMUTABLE обновлениями!
+        const newPlayers = players.map(p => {
+          if (p.id === currentPlayerId && !revealedDeckCard) {
+            // Убираем верхнюю карту у текущего игрока (если ходим из руки)
+            return {
+              ...p,
+              cards: p.cards.slice(0, -1) // Убираем последнюю карту
+            };
+          } else if (p.id === targetPlayerId) {
+            // Добавляем карту целевому игроку
+            return {
+              ...p,
+              cards: [...p.cards, cardToMove!] // Добавляем карту!
+            };
+          }
+          return p;
         });
+        
+        // Обновляем state ОДИН раз со всеми изменениями!
+        set({ 
+          players: newPlayers,
+          deck: newDeck,
+          revealedDeckCard: revealedDeckCard ? null : revealedDeckCard,
+          lastDrawnCard: revealedDeckCard ? cardToMove : null,
+          lastPlayerToDrawCard: revealedDeckCard ? currentPlayerId : null,
+          turnPhase: revealedDeckCard ? 'turn_ended' : turnPhase,
+          skipHandAnalysis: false // После хода на соперника - ВСЕГДА анализ руки
+        });
+        
+        // Проверяем переход к стадии 2 ПОСЛЕ обновления state
+        if (shouldCheckStage1End) {
+          setTimeout(() => {
+            get().checkStage1End();
+          }, 1000);
+        }
         
         // ЕДИНСТВЕННЫЙ ЛОГ ХОДА
         if (targetTopCard && targetTopCard.image) {
