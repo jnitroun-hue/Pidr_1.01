@@ -5,21 +5,11 @@ import { supabase } from '../../../../lib/supabase';
 // GET /api/user/me - Получить данные текущего пользователя из pidr_session
 export async function GET(req: NextRequest) {
   try {
-    console.log('👤 [/api/user/me] Запрос данных пользователя...');
-
     // Читаем pidr_session cookie
     const cookieStore = await cookies();
-    const allCookies = Array.from(cookieStore).map(([key, cookie]) => ({
-      name: key,
-      hasValue: !!cookie.value
-    }));
-    console.log('🍪 [/api/user/me] Все куки:', allCookies);
-    
     const sessionCookie = cookieStore.get('pidr_session');
-    console.log('🍪 [/api/user/me] pidr_session:', sessionCookie ? 'ЕСТЬ' : 'НЕТ');
 
     if (!sessionCookie?.value) {
-      console.log('❌ [/api/user/me] pidr_session не найдена');
       return NextResponse.json(
         { success: false, message: 'Не авторизован' },
         { status: 401 }
@@ -31,7 +21,6 @@ export async function GET(req: NextRequest) {
     try {
       sessionData = JSON.parse(sessionCookie.value);
     } catch (parseError) {
-      console.error('❌ [/api/user/me] Ошибка парсинга сессии:', parseError);
       return NextResponse.json(
         { success: false, message: 'Невалидная сессия' },
         { status: 401 }
@@ -47,14 +36,11 @@ export async function GET(req: NextRequest) {
       sessionData.id;
 
     if (!userId) {
-      console.log('❌ [/api/user/me] userId не найден в сессии');
       return NextResponse.json(
         { success: false, message: 'Невалидная сессия' },
         { status: 401 }
       );
     }
-
-    console.log('✅ [/api/user/me] userId из сессии:', userId);
 
     // Ищем пользователя в БД
     const { data: user, error } = await supabase
@@ -64,14 +50,11 @@ export async function GET(req: NextRequest) {
       .single();
 
     if (error || !user) {
-      console.error('❌ [/api/user/me] Пользователь не найден в БД:', error);
       return NextResponse.json(
         { success: false, message: 'Пользователь не найден в БД' },
         { status: 404 }
       );
     }
-
-    console.log('✅ [/api/user/me] Пользователь найден:', user.username);
 
     // Обновляем last_seen
     await supabase
@@ -99,7 +82,6 @@ export async function GET(req: NextRequest) {
       }
     });
   } catch (error: any) {
-    console.error('❌ [/api/user/me] Ошибка:', error);
     return NextResponse.json(
       { success: false, message: 'Ошибка сервера' },
       { status: 500 }

@@ -98,6 +98,7 @@ export async function GET(req: NextRequest) {
         firstName: user.first_name,
         lastName: user.last_name,
         telegramId: user.telegram_id,
+        avatar_url: user.avatar_url,
         coins: user.coins,
         rating: user.rating,
         gamesPlayed: user.games_played,

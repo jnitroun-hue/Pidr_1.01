@@ -383,16 +383,16 @@ export const useGameStore = create<GameState>()(
         const players: Player[] = []
         const cardsPerPlayer = 3;
         
-        // ЗАГРУЖАЕМ данные реального игрока из БД через pidr_session
+        // ЗАГРУЖАЕМ данные реального игрока из БД
         let userAvatar = '';
         let userName = 'Игрок';
         
         try {
-          const response = await fetch('/api/user/me', { credentials: 'include' });
+          const response = await fetch('/api/auth', { credentials: 'include' });
           if (response.ok) {
             const result = await response.json();
             if (result.success && result.user) {
-              userAvatar = result.user.avatar_url || '';
+              userAvatar = result.user.avatar_url || result.user.avatar || '';
               userName = result.user.username || 'Игрок';
             }
           }
