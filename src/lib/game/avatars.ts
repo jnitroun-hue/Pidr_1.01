@@ -111,8 +111,6 @@ export function createPlayers(
   userAvatar?: string, 
   userName?: string
 ): PlayerInfo[] {
-  console.log('🏗️ [createPlayers] Создаем игроков:', { count, userPosition, userAvatar: userAvatar ? 'есть' : 'нет', userName });
-  
   const names = generatePlayerNames(count, true);
   const players: PlayerInfo[] = [];
   
@@ -122,15 +120,11 @@ export function createPlayers(
     let avatar: string;
     
     if (isUser) {
-      // Используем реальные данные пользователя из БД
-      name = userName || 'Игрок'; // Fallback на "Игрок" вместо "Вы"
+      name = userName || 'Игрок';
       avatar = userAvatar || generateAvatar(name, i);
-      console.log(`✅ [createPlayers] Игрок ${i}: РЕАЛЬНЫЙ ПОЛЬЗОВАТЕЛЬ - ${name}`);
     } else {
-      // Генерируем ботов
       name = names[i] || `Игрок ${i + 1}`;
       avatar = generateAvatar(name, i);
-      console.log(`🤖 [createPlayers] Игрок ${i}: БОТ - ${name}`);
     }
     
     const playerInfo = {
@@ -141,10 +135,8 @@ export function createPlayers(
       difficulty: isUser ? undefined : ['easy', 'medium', 'hard'][Math.floor(Math.random() * 3)] as 'easy' | 'medium' | 'hard'
     };
     
-    console.log(`  → isBot: ${playerInfo.isBot}, isUser: ${isUser}`);
     players.push(playerInfo);
   }
   
-  console.log('🏁 [createPlayers] Создано игроков:', players.length);
   return players;
 }

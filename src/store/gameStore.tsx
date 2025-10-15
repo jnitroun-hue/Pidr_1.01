@@ -345,11 +345,7 @@ export const useGameStore = create<GameState>()(
       
       // Игровые действия
       startGame: async (mode, playersCount = 2, multiplayerConfig = null, userInfo = undefined) => {
-        console.log('🎮 [GameStore] startGame вызван с параметрами:', { mode, playersCount, multiplayerConfig });
-        
         try {
-          // Создаем полную стандартную колоду карт (52 карты)
-          console.log('🎮 [GameStore] Создаем колоду...');
         const standardDeck = [
           // Двойки (2)
           '2_of_clubs.png','2_of_diamonds.png','2_of_hearts.png','2_of_spades.png',
@@ -387,24 +383,21 @@ export const useGameStore = create<GameState>()(
         const players: Player[] = []
         const cardsPerPlayer = 3;
         
-        // ИСПРАВЛЕНО: ЗАГРУЖАЕМ данные реального игрока из Supabase БД через API
-        console.log('🎮 [GameStore] Загружаем данные игрока из БД...');
-        
+        // ЗАГРУЖАЕМ данные реального игрока из БД через pidr_session
         let userAvatar = '';
         let userName = 'Игрок';
         
         try {
-          const response = await fetch('/api/auth', { credentials: 'include' });
+          const response = await fetch('/api/user/me', { credentials: 'include' });
           if (response.ok) {
             const result = await response.json();
             if (result.success && result.user) {
               userAvatar = result.user.avatar_url || '';
               userName = result.user.username || 'Игрок';
-              console.log('✅ [GameStore] Данные игрока загружены из БД:', { userName, avatar: userAvatar ? 'есть' : 'нет' });
             }
           }
         } catch (error) {
-          console.error('❌ [GameStore] Ошибка загрузки данных игрока:', error);
+          console.error('❌ Ошибка загрузки игрока:', error);
         }
         
         const playerInfos = createPlayers(playersCount, 0, userAvatar, userName);
@@ -474,8 +467,6 @@ export const useGameStore = create<GameState>()(
           open: false,
         }));
         
-        console.log(`🃏 [GameStore] Колода создана: ${remainingCards.length} карт (52 - ${playersCount} * 3 = ${52 - playersCount * 3})`);
-        
         // Определяем первого игрока по старшей открытой карте
         let firstPlayerIndex = 0;
         let maxRank = 0;
@@ -518,19 +509,15 @@ export const useGameStore = create<GameState>()(
           } : null
         });
         
-        console.log('🎮 [GameStore] Игра успешно создана, показываем уведомление...');
         get().showNotification(`Игра начата! Ходит первым: ${players[firstPlayerIndex].name}`, 'success');
         
-        // ИСПРАВЛЕНО: Запускаем обработку хода первого игрока через новую систему (УСКОРЕНО В 2 РАЗА)
-        console.log('🎮 [GameStore] Запускаем processPlayerTurn через 0.5 секунды...');
+        // Запускаем обработку хода первого игрока
         setTimeout(() => {
           get().processPlayerTurn(players[firstPlayerIndex].id);
         }, 500);
         
-        console.log('🎮 [GameStore] startGame завершен успешно!');
-        
         } catch (error) {
-          console.error('🚨 [GameStore] ОШИБКА В startGame:', error);
+          console.error('❌ Ошибка старта игры:', error);
           console.error('Stack trace:', (error as Error).stack);
           
           // Сбрасываем состояние при ошибке
@@ -1224,19 +1211,11 @@ export const useGameStore = create<GameState>()(
         const currentPlayer = players.find(p => p.id === playerId);
         if (!currentPlayer) return;
         
-        console.log(`🎮 [processPlayerTurn] Обработка хода для ${currentPlayer.name} (стадия ${gameStage}, бот: ${currentPlayer.isBot})`);
-        
         // ИСПРАВЛЕНО: Обрабатываем 2-ю и 3-ю стадии одинаково (правила дурака)
         if (gameStage === 2 || gameStage === 3) {
-          console.log(`🎮 [processPlayerTurn Stage${gameStage}] Обрабатываем ход для ${currentPlayer.name} (бот: ${currentPlayer.isBot})`);
-          
-          // Для 2-й и 3-й стадий устанавливаем фазу выбора карты (правила одинаковые)
           set({ stage2TurnPhase: 'selecting_card' });
           
           if (currentPlayer.isBot) {
-            console.log(`🤖 [processPlayerTurn Stage${gameStage}] Бот ${currentPlayer.name} должен автоматически выбрать карту`);
-            // Для бота - логика обрабатывается через useEffect в GamePageContent
-            // Принудительно обновляем состояние чтобы useEffect сработал
             set({ 
               currentPlayerId: currentPlayer.id,
               stage2TurnPhase: 'selecting_card'
@@ -1247,19 +1226,14 @@ export const useGameStore = create<GameState>()(
           return;
         }
         
-        if (gameStage !== 1) return; // Поддерживаем только 1-ю стадию в этой ветке
+        if (gameStage !== 1) return;
         
-        // Проверяем состояние карт игрока
         const openCards = currentPlayer.cards.filter(c => c.open);
         
         // ЭТАП 1: Анализ руки (ТОЛЬКО если не пропускаем)
         if (!skipHandAnalysis && currentPlayer.cards.length > 0) {
-          console.log(`🎮 [processPlayerTurn] ЭТАП 1: Анализ руки для ${currentPlayer.name}`);
-          
           if (get().canMakeMove(playerId)) {
-            // Может ходить - для ботов автоматически делаем ход, для пользователя ждем клика
             const targets = get().findAvailableTargets(playerId);
-            console.log(`✅ [processPlayerTurn] Игрок МОЖЕТ ходить, цели: [${targets.join(', ')}]`);
 
             set({ 
               availableTargets: targets,
@@ -1267,32 +1241,24 @@ export const useGameStore = create<GameState>()(
             });
             
             if (currentPlayer.isBot) {
-              console.log(`🤖 [processPlayerTurn] Бот автоматически делает ход из руки`);
-              // ИСПРАВЛЕНО: Убрали двойные setTimeout - источник race conditions
               if (targets.length > 0) {
                 const targetIndex = targets[0];
                 const targetPlayer = players[targetIndex];
-                console.log(`🤖 [processPlayerTurn] Бот ходит на ${targetPlayer?.name} (индекс ${targetIndex})`);
-                // Один безопасный setTimeout
                 setTimeout(() => {
                   try {
-                    get().makeMove(targetPlayer?.id || ''); // Прямой ход на цель
+                    get().makeMove(targetPlayer?.id || '');
                   } catch (error) {
-                    console.error(`🚨 [processPlayerTurn] Ошибка хода бота:`, error);
+                    console.error(`🚨 Ошибка хода бота:`, error);
                   }
                 }, 800);
               } else {
-                console.log(`🤖 [processPlayerTurn] У бота нет целей для хода - переход к колоде`);
                 setTimeout(() => get().nextTurn(), 1000);
               }
             } else if (!currentPlayer.isBot) {
               get().showNotification(`${currentPlayer.name}: выберите карту для хода`, 'info');
             }
-            return; // Ждем выполнения хода
+            return;
           } else {
-            console.log(`❌ [processPlayerTurn] Игрок НЕ МОЖЕТ ходить, переход к колоде`);
-
-            // Очищаем состояние и переходим к колоде
             set({ 
               availableTargets: [],
               canPlaceOnSelf: false,
@@ -1300,33 +1266,27 @@ export const useGameStore = create<GameState>()(
             });
             
             if (currentPlayer.isBot) {
-              console.log(`🤖 [processPlayerTurn] Бот автоматически кликает по колоде`);
-              // Для бота - автоматически кликаем по колоде (УСКОРЕНО В 2 РАЗА)
               setTimeout(() => {
                 get().onDeckClick();
               }, 500);
             } else if (!currentPlayer.isBot) {
               get().showNotification(`${currentPlayer.name}: нет ходов из руки, кликните на колоду`, 'warning');
             }
-            return; // Ждем клика по колоде
+            return;
           }
         } else if (skipHandAnalysis) {
-          set({ skipHandAnalysis: false }); // Сбрасываем флаг
+          set({ skipHandAnalysis: false });
         }
         
         // ЭТАП 2: Работа с колодой
         if (deck.length === 0) {
-          // Если колода пуста, переходим к стадии 2
           get().checkStage1End();
           return;
         }
         
-        // Показываем подсказку о клике на колоду
         set({ turnPhase: 'showing_deck_hint' });
         
         if (currentPlayer.isBot) {
-          console.log(`🤖 [processPlayerTurn] Бот автоматически кликает по колоде (этап 2)`);
-          // Для бота - автоматически кликаем по колоде (УСКОРЕНО В 2 РАЗА)
           setTimeout(() => {
             get().onDeckClick();
           }, 500);
@@ -1361,15 +1321,10 @@ export const useGameStore = create<GameState>()(
         if (currentPlayer.cards.length > 0) {
           const topCard = currentPlayer.cards[currentPlayer.cards.length - 1];
           canPlaceOnSelfByRules = get().canPlaceCardOnSelf(newRevealedCard, topCard);
-          console.log(`🎯 [onDeckClick] Проверка canPlaceCardOnSelf:`);
-          console.log(`🎯 [onDeckClick] - Карта из колоды: ${newRevealedCard.image} (ранг ${get().getCardRank(newRevealedCard.image || '')})`);
-          console.log(`🎯 [onDeckClick] - Верхняя карта игрока: ${topCard.image} (ранг ${get().getCardRank(topCard.image || '')})`);
-          console.log(`🎯 [onDeckClick] - Результат canPlaceCardOnSelf: ${canPlaceOnSelfByRules}`);
         }
         
         // АВТОМАТИЧЕСКИ кладем на себя если можно по правилам И НЕТ ходов на соперников
         if (!canMoveToOpponents && canPlaceOnSelfByRules) {
-          console.log(`✅ [onDeckClick] Автоматически кладем карту на себя по правилам (нет ходов на соперников)`);
           set({
             turnPhase: 'waiting_deck_action',
             canPlaceOnSelfByRules: true,
@@ -1383,7 +1338,6 @@ export const useGameStore = create<GameState>()(
         
         // АВТОМАТИЧЕСКИ берем карту если НЕТ ХОДОВ ВООБЩЕ
         if (!canMoveToOpponents && !canPlaceOnSelfByRules) {
-          console.log(`✅ [onDeckClick] Автоматически берем карту (нет ходов)`);
           set({
             turnPhase: 'waiting_deck_action',
             canPlaceOnSelfByRules: false,
@@ -1403,11 +1357,9 @@ export const useGameStore = create<GameState>()(
         
         // Для ботов - автоматически принимаем решение (только если есть ходы)
         if (currentPlayer.isBot && canMoveToOpponents) {
-          console.log(`🤖 [onDeckClick] Бот ходит картой из колоды на противника`);
           setTimeout(() => {
             const targetIndex = deckTargets[0];
             const targetPlayer = players[targetIndex];
-            console.log(`🤖 [onDeckClick] Цель: ${targetPlayer?.name}`);
             get().makeMove(targetPlayer?.id || '');
           }, 1500);
         } else if (!currentPlayer.isBot && canMoveToOpponents) {
@@ -1494,14 +1446,7 @@ export const useGameStore = create<GameState>()(
            drawnHistory: [...drawnHistory, topCard] // Добавляем в историю при открытии
          });
          
-         // СПЕЦИАЛЬНЫЙ СЛУЧАЙ: Если это последняя карта, отмечаем это в логах
-         if (deck.length === 1) {
-           console.log(`🃏 [revealDeckCard] ВНИМАНИЕ: Открыта ПОСЛЕДНЯЯ карта из колоды: ${topCard.image}`);
-           console.log(`🃏 [revealDeckCard] После использования этой карты -> переход к стадии 2`);
-         }
-         
-         console.log(`🎴 [revealDeckCard] Карта из колоды открыта: ${topCard.image}, добавлена в drawnHistory`);
-         return true;
+        return true;
        },
        
 
@@ -1513,20 +1458,14 @@ export const useGameStore = create<GameState>()(
         const deckRank = get().getCardRank(deckCard.image);
         const playerRank = get().getCardRank(playerTopCard.image);
         
-        console.log(`🎯 [canPlaceCardOnSelf] Проверка: карта из колоды ${deckCard.image} (ранг ${deckRank}) на карту игрока ${playerTopCard.image} (ранг ${playerRank})`);
-        
         // ДВОЙКА (2) кладется ТОЛЬКО на ТУЗ (14)!
         if (deckRank === 2) {
-          const canPlace = playerRank === 14;
-          console.log(`🎯 [canPlaceCardOnSelf] Двойка может лечь только на Туз: ${canPlace} (playerRank=${playerRank})`);
-          return canPlace;
+          return playerRank === 14;
         }
         
         // ПРАВИЛЬНАЯ ЛОГИКА: Карта из колоды может лечь на карту игрока, если она на 1 ранг БОЛЬШЕ
         // Пример: 5♠ (deckRank=5) может лечь на 4♣ (playerRank=4)
-        const canPlace = deckRank === (playerRank + 1);
-        console.log(`🎯 [canPlaceCardOnSelf] ${deckRank} === ${playerRank + 1}? ${canPlace}`);
-        return canPlace;
+        return deckRank === (playerRank + 1);
       },
        
        // Положить карту из колоды на себя по правилам
