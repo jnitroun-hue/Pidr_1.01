@@ -15,7 +15,14 @@ export function middleware(req: NextRequest) {
   }
   
   // ВСЁ ОСТАЛЬНОЕ ТРЕБУЕТ АВТОРИЗАЦИЮ!
+  console.log(`🔍 [Middleware] Проверка авторизации для: ${pathname}`);
+  
+  const allCookies = Array.from(req.cookies.getAll()).map(c => c.name);
+  console.log(`🍪 [Middleware] Все куки в запросе:`, allCookies);
+  
   const sessionCookie = req.cookies.get('pidr_session')?.value;
+  console.log(`🍪 [Middleware] pidr_session:`, sessionCookie ? 'ЕСТЬ' : 'НЕТ');
+  
   let isAuthenticated = false;
 
   if (sessionCookie) {

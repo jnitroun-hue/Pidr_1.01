@@ -153,18 +153,15 @@ export async function POST(request: NextRequest) {
       photoUrl: user.avatar_url
     };
 
-    const cookieStore = await cookies();
-    cookieStore.set('pidr_session', JSON.stringify(sessionData), {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 30, // 30 дней
-      path: '/'
-    });
+    const sessionJson = JSON.stringify(sessionData);
+    
+    console.log('🍪 [Telegram Login] Устанавливаем pidr_session cookie...');
+    console.log('🍪 [Telegram Login] Session data:', sessionData);
+    console.log('🍪 [Telegram Login] Session JSON length:', sessionJson.length);
 
     console.log('✅ [Telegram Login] Сессия создана:', user.username);
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       message: 'Авторизация успешна',
       user: {
@@ -174,6 +171,19 @@ export async function POST(request: NextRequest) {
         coins: user.coins
       }
     });
+
+    // Устанавливаем cookie через NextResponse для правильной работы с sameSite: 'none'
+    response.cookies.set('pidr_session', sessionJson, {
+      httpOnly: true,
+      secure: true, // Всегда true для HTTPS (Vercel)
+      sameSite: 'none', // Для Telegram WebApp
+      maxAge: 60 * 60 * 24 * 30, // 30 дней
+      path: '/'
+    });
+
+    console.log('✅ [Telegram Login] Cookie pidr_session установлена через NextResponse');
+
+    return response;
 
   } catch (error: any) {
     console.error('❌ [Telegram Login] Ошибка:', error);

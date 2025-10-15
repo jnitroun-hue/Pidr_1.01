@@ -9,7 +9,14 @@ export async function GET(req: NextRequest) {
 
     // Читаем pidr_session cookie
     const cookieStore = await cookies();
+    const allCookies = Array.from(cookieStore).map(([key, cookie]) => ({
+      name: key,
+      hasValue: !!cookie.value
+    }));
+    console.log('🍪 [/api/user/me] Все куки:', allCookies);
+    
     const sessionCookie = cookieStore.get('pidr_session');
+    console.log('🍪 [/api/user/me] pidr_session:', sessionCookie ? 'ЕСТЬ' : 'НЕТ');
 
     if (!sessionCookie?.value) {
       console.log('❌ [/api/user/me] pidr_session не найдена');
