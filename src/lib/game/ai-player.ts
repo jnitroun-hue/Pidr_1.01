@@ -35,8 +35,6 @@ export class AIPlayer {
   ): AIDecision {
     const { gameStage } = gameState;
     
-    console.log(`🤖 [AI makeDecision] Игрок ${this.playerId} принимает решение для стадии ${gameStage}`);
-    
     let decision: AIDecision;
     switch (gameStage) {
       case 1:
@@ -52,7 +50,6 @@ export class AIPlayer {
         decision = { action: 'pass', confidence: 0 };
     }
     
-    console.log(`🤖 [AI makeDecision] Игрок ${this.playerId} принял решение:`, decision);
     return decision;
   }
   

@@ -1182,10 +1182,7 @@ export const useGameStore = create<GameState>()(
           players: [...players]
         });
         
-        // Инициализируем 2-ю стадию
-        get().initializeStage2();
-        
-        // Показываем уведомления и СРАЗУ запускаем ход
+        // Показываем уведомления
         get().showNotification('🎉 Первая стадия завершена!', 'success', 3000);
         
         setTimeout(() => {
@@ -1199,10 +1196,18 @@ export const useGameStore = create<GameState>()(
           setTimeout(() => {
             get().showNotification(`🃏 Козырь: ${trumpName} (Пики не козырь!)`, 'warning', 3000);
           }, 1000);
-          
-          // ИСПРАВЛЕНО: Запускаем ход СРАЗУ (не ждем окончания уведомлений)
-          get().processPlayerTurn(startingPlayerId);
         }, 500);
+        
+        // ИНИЦИАЛИЗИРУЕМ 2-Ю СТАДИЮ И ЗАПУСКАЕМ ХОД
+        setTimeout(() => {
+          get().initializeStage2();
+          
+          // Даём время на обновление state и ЗАТЕМ запускаем ход
+          setTimeout(() => {
+            console.log(`🎮 [checkStage1End] Запускаем processPlayerTurn для ${players.find(p => p.id === startingPlayerId)?.name}`);
+            get().processPlayerTurn(startingPlayerId);
+          }, 300);
+        }, 800);
       },
       
       // Обработка хода игрока (НОВАЯ логика)

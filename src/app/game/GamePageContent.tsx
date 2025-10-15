@@ -318,10 +318,8 @@ function GamePageContentComponent({
   // Обновляем currentCard из revealedDeckCard
   useEffect(() => {
     if (revealedDeckCard && revealedDeckCard.image) {
-      console.log('🎴 [currentCard] Обновляем открытую карту:', revealedDeckCard.image);
-      setCurrentCard(revealedDeckCard.image); // Используем image, а не весь объект!
+      setCurrentCard(revealedDeckCard.image);
     } else {
-      console.log('🎴 [currentCard] Нет открытой карты из колоды');
       setCurrentCard(null);
     }
   }, [revealedDeckCard]);
@@ -339,7 +337,6 @@ function GamePageContentComponent({
         }
       });
       setPlayerAvatars(avatars);
-      console.log('🖼️ Аватарки игроков обновлены:', avatars);
     }
   }, [players]);
 
@@ -642,29 +639,20 @@ function GamePageContentComponent({
     const { isGameActive, currentPlayerId, players, gameStage, stage2TurnPhase, deck, availableTargets, revealedDeckCard, trumpSuit, tableStack } = useGameStore.getState();
     
     if (!isGameActive || !currentPlayerId) {
-      console.log(`🤖 [AI useEffect] Игра неактивна или нет текущего игрока: isGameActive=${isGameActive}, currentPlayerId=${currentPlayerId}`);
       return;
     }
     
     const currentTurnPlayer = players.find(p => p.id === currentPlayerId);
     if (!currentTurnPlayer) {
-      console.log(`🤖 [AI useEffect] Игрок не найден: currentPlayerId=${currentPlayerId}`);
       return;
     }
     
     if (!currentTurnPlayer.isBot) {
-      console.log(`👤 [AI useEffect] Ход РЕАЛЬНОГО ИГРОКА: ${currentTurnPlayer.name}, isUser=${currentTurnPlayer.isUser}`);
-      // Это РЕАЛЬНЫЙ ИГРОК - не обрабатываем через AI!
       return;
     }
-
-    console.log(`🤖 [AI useEffect] ЗАПУСК AI для бота ${currentTurnPlayer.name}`);
-    console.log(`🤖 [AI useEffect] Состояние: gameStage=${gameStage}, stage2TurnPhase=${stage2TurnPhase}`);
-    console.log(`🤖 [AI useEffect] Карты в руке: ${currentTurnPlayer.cards?.length || 0}, на столе: ${tableStack?.length || 0}`);
     
     // Защита от повторных вызовов AI (race condition protection)
     if (aiProcessingRef.current === currentPlayerId) {
-      console.log(`🚫 [AI Protection] AI уже обрабатывает ход для ${currentTurnPlayer.name}, пропускаем`);
       return;
     }
     
@@ -702,7 +690,6 @@ function GamePageContentComponent({
       try {
         // ПРОВЕРКА: Убеждаемся что все нужные данные есть
         if (!currentTurnPlayer || !currentTurnPlayer.isBot || !players.length) {
-          console.log(`🚨 [makeAIMove] Недостаточно данных для хода ИИ`);
           aiProcessingRef.current = null;
           return;
         }
@@ -737,64 +724,44 @@ function GamePageContentComponent({
             if (onDeckClick) onDeckClick();
             break;
           default:
-            console.log('ИИ не может сделать ход в 1-й стадии');
             break;
         }
       } else if (gameStage === 2 || gameStage === 3) {
         // Во 2-й и 3-й стадиях AI использует систему selectHandCard + playSelectedCard (правила одинаковые)
-        console.log(`🤖 [AI Stage${gameStage}] Принято решение:`, decision);
-        console.log(`🤖 [AI Stage${gameStage}] - tableStack.length: ${tableStack?.length || 0}`);
-        console.log(`🤖 [AI Stage${gameStage}] - trumpSuit: ${trumpSuit}`);
-        console.log(`🤖 [AI Stage${gameStage}] - доступные функции проверяются динамически`);
         switch (decision.action) {
           case 'play_card':
             const { selectHandCard, playSelectedCard } = useGameStore.getState();
             if (decision.cardToPlay && selectHandCard && playSelectedCard) {
               // Найдем карту в руке игрока и выберем её
               if (currentTurnPlayer) {
-                console.log(`🤖 [AI Stage${gameStage}] Ищем карту ${decision.cardToPlay?.image} среди:`, currentTurnPlayer.cards.map(c => `${c.image}(${c.open ? 'open' : 'closed'})`));
-                
                 const cardInHand = currentTurnPlayer.cards.find(c => 
                   c.image === decision.cardToPlay?.image && c.open
                 );
                 if (cardInHand) {
-                  console.log(`🤖 [AI Stage${gameStage}] ✅ Выбираем карту: ${cardInHand.image}`);
                   selectHandCard(cardInHand);
                   // Играем карту с небольшой задержкой (УСКОРЕНО В 2 РАЗА)
                   setTimeout(() => {
-                    console.log(`🤖 [AI Stage${gameStage}] ✅ Играем выбранную карту`);
                     playSelectedCard();
                   }, 400);
                 } else {
-                  console.log(`🚨 [AI Stage${gameStage}] Карта не найдена в руке или закрыта:`, decision.cardToPlay?.image);
-                  console.log(`🚨 [AI Stage${gameStage}] Доступные карты:`, currentTurnPlayer.cards.filter(c => c.open).map(c => c.image));
-                  console.log(`🚨 [AI Stage${gameStage}] Все карты игрока:`, currentTurnPlayer.cards.map(c => `${c.image}(${c.open ? 'open' : 'closed'})`));
-                  // ИСПРАВЛЕНО: Безопасный fallback
-                  console.log(`🤖 [AI Stage${gameStage}] Fallback: не можем найти карту, пропускаем ход`);
                   // Сбрасываем флаг обработки
                   aiProcessingRef.current = null;
                 }
               }
-            } else {
-              console.log(`🚨 [AI Stage${gameStage}] Нет функций для игры карт`);
             }
             break;
           case 'draw_card':
             // Во 2-й и 3-й стадиях это значит "взять карты со стола"
             const { takeTableCards } = useGameStore.getState();
             if (takeTableCards) {
-              console.log(`🤖 [AI Stage${gameStage}] Берем карты со стола`);
               takeTableCards();
-            } else {
-              console.log(`🚨 [AI Stage${gameStage}] Нет функции takeTableCards`);
             }
             break;
           case 'pass':
-            console.log(`🤖 [AI Stage${gameStage}] Игрок пропускает ход`);
             // Логика пропуска хода может потребовать вызова nextTurn()
             break;
           default:
-            console.log(`🚨 [AI Stage${gameStage}] Неизвестное действие:`, decision.action);
+            break;
         }
       }
         
@@ -1629,7 +1596,7 @@ function GamePageContentComponent({
                       )}
                       
                       <div className={styles.activeCardContainer}>
-                        {playerCards.slice(0, 3).map((card: any, cardIndex: number) => {
+                        {playerCards.map((card: any, cardIndex: number) => {
                           // Карта может быть строкой "7_of_spades.png(open)" или объектом {rank, suit, image}
                           const cardImage = typeof card === 'string' 
                             ? card.replace('(open)', '').replace('(closed)', '')
@@ -1659,8 +1626,8 @@ function GamePageContentComponent({
                               key={cardIndex} 
                               className={styles.cardOnPenki} 
                               style={{
-                                marginLeft: cardIndex > 0 ? '-54px' : '0', // 90% перекрытие (60px * 0.9 = 54px)
-                                zIndex: cardIndex, // Верхние карты выше
+                                marginLeft: cardIndex > 0 ? '-51px' : '0', // 85% перекрытие (60px * 0.85 = 51px)
+                                zIndex: playerCards.length - cardIndex, // ВЕРХНЯЯ карта (последняя) ПОВЕРХ всех!
                                 cursor: (shouldHighlight || isAvailableTarget) ? 'pointer' : 'default',
                                 position: 'relative',
                               }}
