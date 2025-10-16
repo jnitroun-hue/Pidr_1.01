@@ -579,6 +579,42 @@ export default function ProfilePage() {
 
   // State для подключенных кошельков
   const [connectedWallets, setConnectedWallets] = useState<{ton?: string, solana?: string}>({});
+  
+  // Загружаем подключенные кошельки при инициализации
+  useEffect(() => {
+    const loadConnectedWallets = async () => {
+      try {
+        console.log('🔍 [Profile] Загружаем сохраненные кошельки...');
+        const response = await fetch('/api/nft/connect-wallet', {
+          method: 'GET',
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          console.log('🔍 [Profile] Результат загрузки кошельков:', result);
+          if (result.success && result.wallets && result.wallets.length > 0) {
+            // Берем последний подключенный TON кошелек
+            const tonWallet = result.wallets.find((w: any) => w.wallet_type === 'ton');
+            if (tonWallet) {
+              console.log('✅ [Profile] Загружен сохраненный TON кошелек:', tonWallet.wallet_address);
+              setConnectedWallets(prev => ({ ...prev, ton: tonWallet.wallet_address }));
+            } else {
+              console.log('⚠️ [Profile] TON кошелек не найден в сохраненных кошельках');
+            }
+          } else {
+            console.log('⚠️ [Profile] Нет сохраненных кошельков');
+          }
+        } else {
+          console.error('❌ [Profile] Ошибка ответа сервера:', response.status);
+        }
+      } catch (error) {
+        console.error('❌ [Profile] Ошибка загрузки кошельков:', error);
+      }
+    };
+    
+    loadConnectedWallets();
+  }, []);
 
   const handleBurningMint = async () => {
     try {
@@ -1717,11 +1753,17 @@ export default function ProfilePage() {
                   }}>
                     Подключите свой TON кошелек для владения NFT картами. Все NFT будут минтиться напрямую в ваш кошелек.
                   </div>
-                  <TonWalletConnect onConnect={(address) => {
-                    console.log('✅ TON кошелек подключен:', address);
-                    setConnectedWallets(prev => ({ ...prev, ton: address }));
-                    loadNFTCollection();
-                  }} />
+                  <TonWalletConnect 
+                    onConnect={(address) => {
+                      console.log('✅ TON кошелек подключен:', address);
+                      setConnectedWallets(prev => ({ ...prev, ton: address }));
+                      loadNFTCollection();
+                    }}
+                    onDisconnect={() => {
+                      console.log('❌ TON кошелек отключен');
+                      setConnectedWallets(prev => ({ ...prev, ton: undefined }));
+                    }}
+                  />
                 </div>
 
                 {/* NFT Canvas Generator */}
@@ -1773,6 +1815,31 @@ export default function ProfilePage() {
                   <NFTGallery />
                 </div>
 
+                {/* Индикатор подключенного кошелька */}
+                {(connectedWallets.ton || connectedWallets.solana) && (
+                  <div style={{
+                    background: 'rgba(16, 185, 129, 0.2)',
+                    border: '1px solid rgba(16, 185, 129, 0.4)',
+                    borderRadius: '12px',
+                    padding: '12px',
+                    marginBottom: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px'
+                  }}>
+                    <div style={{ fontSize: '24px' }}>✅</div>
+                    <div>
+                      <div style={{ fontSize: '0.9rem', fontWeight: '600', color: '#10b981' }}>
+                        Кошелек подключен
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '4px' }}>
+                        {connectedWallets.ton && `TON: ${connectedWallets.ton.slice(0, 8)}...${connectedWallets.ton.slice(-6)}`}
+                        {connectedWallets.solana && `SOL: ${connectedWallets.solana.slice(0, 8)}...${connectedWallets.solana.slice(-6)}`}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Кнопки минта */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <motion.button
@@ -1781,12 +1848,17 @@ export default function ProfilePage() {
                     onClick={async () => {
                       try {
                         console.log('🎲 Генерация случайной NFT карты...');
+                        console.log('🔍 Текущее состояние connectedWallets:', connectedWallets);
                         
                         // Проверяем подключен ли кошелек
                         const wallet_address = connectedWallets.ton || connectedWallets.solana;
                         const network = connectedWallets.ton ? 'TON' : connectedWallets.solana ? 'SOL' : null;
+                        
+                        console.log('🔍 wallet_address:', wallet_address);
+                        console.log('🔍 network:', network);
 
                         if (!wallet_address || !network) {
+                          console.error('❌ Кошелек не подключен! connectedWallets:', connectedWallets);
                           alert('❌ Подключите кошелек!\n\n💎 TON Connect или Phantom (Solana) требуется для минта NFT.\n\nСкролльте вверх в разделе NFT КОЛЛЕКЦИЯ и нажмите "Подключить кошелек".');
                           return;
                         }
@@ -1853,12 +1925,17 @@ export default function ProfilePage() {
                     onClick={async () => {
                       try {
                         console.log('🎨 Генерация кастомной NFT карты...');
+                        console.log('🔍 Текущее состояние connectedWallets:', connectedWallets);
                         
                         // Проверяем подключен ли кошелек
                         const wallet_address = connectedWallets.ton || connectedWallets.solana;
                         const network = connectedWallets.ton ? 'TON' : connectedWallets.solana ? 'SOL' : null;
+                        
+                        console.log('🔍 wallet_address:', wallet_address);
+                        console.log('🔍 network:', network);
 
                         if (!wallet_address || !network) {
+                          console.error('❌ Кошелек не подключен! connectedWallets:', connectedWallets);
                           alert('❌ Подключите кошелек!\n\n💎 TON Connect или Phantom (Solana) требуется для минта NFT.\n\nСкролльте вверх в разделе NFT КОЛЛЕКЦИЯ и нажмите "Подключить кошелек".');
                           return;
                         }
