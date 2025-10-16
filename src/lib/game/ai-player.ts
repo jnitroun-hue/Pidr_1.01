@@ -144,11 +144,13 @@ export class AIPlayer {
     // ВО 2-Й СТАДИИ AI видит ВСЕ свои карты (даже если open=false для отображения)!
     const handCards = currentPlayer.cards; // ВСЕ карты, не фильтруем по open!
     
-    console.log(`🤖 [AI Stage2 P.I.D.R.] Анализ ситуации для игрока ${this.playerId}:`);
-    console.log(`🤖 [AI Stage2 P.I.D.R.] - tableStack.length: ${tableStack?.length || 0}`);
-    console.log(`🤖 [AI Stage2 P.I.D.R.] - handCards.length: ${handCards.length}`);
-    console.log(`🤖 [AI Stage2 P.I.D.R.] - handCards:`, handCards.map((c: any) => c.image));
-    console.log(`🤖 [AI Stage2 P.I.D.R.] - trumpSuit: ${trumpSuit}`);
+    const playerName = currentPlayer.name || `Игрок ${this.playerId}`;
+    console.log(`🤖 [${playerName}] Анализ ситуации:`, {
+      tableStack: tableStack?.length || 0,
+      handCards: handCards.length,
+      cards: handCards.map((c: any) => c.image),
+      trumpSuit
+    });
     
     // Проверяем есть ли карты для игры
     if (handCards.length === 0) {
@@ -158,27 +160,22 @@ export class AIPlayer {
     
     if (!tableStack || tableStack.length === 0) {
       // ПРАВИЛА P.I.D.R.: Начинаем раунд - кладем самую слабую карту
-      console.log(`🤖 [AI Stage2 P.I.D.R.] Начинаем новый раунд`);
       const weakestCard = this.findWeakestNonTrumpCard(handCards, trumpSuit) || this.findWeakestCard(handCards, trumpSuit);
       if (weakestCard) {
-        console.log(`🤖 [AI Stage2 P.I.D.R.] ✅ Начинаем раунд картой: ${weakestCard.image}`);
+        console.log(`🃏 [${playerName}] ходит ${weakestCard.image} (начало раунда)`);
         return {
           action: 'play_card',
           cardToPlay: weakestCard,
           confidence: 0.8
         };
-      } else {
-        console.log(`🚨 [AI Stage2 P.I.D.R.] ❌ Не можем найти слабейшую карту среди:`, handCards.map((c: any) => c.image));
       }
     } else {
       // ПРАВИЛА P.I.D.R.: На столе есть карты - пытаемся побить ВЕРХНЮЮ карту
       const topCard = tableStack[tableStack.length - 1];
-      console.log(`🤖 [AI Stage2 P.I.D.R.] Пытаемся побить верхнюю карту: ${topCard?.image}`);
-      
       const defenseCard = this.findBestDefenseCard(handCards, topCard, trumpSuit);
       
       if (defenseCard) {
-        console.log(`🤖 [AI Stage2 P.I.D.R.] ✅ Побиваем верхнюю карту: ${defenseCard.image}`);
+        console.log(`🛡️ [${playerName}] бьет ${topCard?.image} картой ${defenseCard.image}`);
         return {
           action: 'play_card',
           cardToPlay: defenseCard,
@@ -186,7 +183,7 @@ export class AIPlayer {
         };
       } else {
         // ПРАВИЛА P.I.D.R.: Не можем побить - берем НИЖНЮЮ карту со стола
-        console.log(`🤖 [AI Stage2 P.I.D.R.] ❌ Не можем побить - берем нижнюю карту`);
+        console.log(`⬇️ [${playerName}] берет карту (не может побить ${topCard?.image})`);
         return {
           action: 'draw_card', // В P.I.D.R. = takeTableCards (берет нижнюю)
           confidence: 0.9

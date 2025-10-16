@@ -1037,7 +1037,6 @@ function GamePageContentComponent({
   // Автоматически запускаем игру если она не активна
   useEffect(() => {
     if (!isGameActive && !gameInitialized && userData) { // Ждем загрузки данных пользователя
-      console.log('🎮 [AUTO-START] Автоматически запускаем игру...');
       if (isMultiplayer && multiplayerData) {
         // Для мультиплеера
         startGame('multiplayer', playerCount, null, {
@@ -1099,9 +1098,6 @@ function GamePageContentComponent({
           padding: '20px'
         }}>
           <h2 style={{ marginBottom: '20px', fontSize: '24px' }}>🎮 P.I.D.R. Game</h2>
-          <p style={{ marginBottom: '30px', opacity: 0.7 }}>
-            {players.length > 0 ? 'Игра завершена! Начните новую игру' : 'Запускаем игру...'}
-          </p>
           {players.length === 0 && (
           <div style={{
             width: '40px',
@@ -1766,8 +1762,17 @@ function GamePageContentComponent({
             {pendingPenalty && (
               <button
                 onClick={() => {
-                  console.log(`🎴 [Штраф] Открываем окно для сдачи штрафа`);
-                  setPenaltyTargets([players.find(p => p.id === pendingPenalty.targetPlayerId)!]);
+                  const target = players.find(p => p.id === pendingPenalty.targetPlayerId);
+                  console.log(`🎴 [Штраф] Открываем окно для сдачи штрафа игроку:`, target?.name);
+                  console.log(`🎴 [Штраф] pendingPenalty:`, pendingPenalty);
+                  console.log(`🎴 [Штраф] humanPlayer cards:`, humanPlayer?.cards);
+                  
+                  if (!target) {
+                    alert('Ошибка: игрок не найден');
+                    return;
+                  }
+                  
+                  setPenaltyTargets([target]);
                   setSelectedCards({});
                   setShowPenaltyModal(true);
                 }}
@@ -2026,7 +2031,12 @@ function GamePageContentComponent({
                   gridTemplateColumns: 'repeat(auto-fill, minmax(60px, 1fr))',
                   gap: '8px'
                 }}>
-                  {humanPlayer?.cards.map((card: any, index: number) => {
+                  {!humanPlayer?.cards || humanPlayer.cards.length === 0 && (
+                    <div style={{ padding: '20px', textAlign: 'center', color: '#ef4444' }}>
+                      ❌ Нет доступных карт для сдачи штрафа
+                    </div>
+                  )}
+                  {humanPlayer?.cards?.map((card: any, index: number) => {
                     const cardImage = typeof card === 'string' 
                       ? card.replace('(open)', '').replace('(closed)', '')
                       : card.image || `${card.rank}_of_${card.suit}.png`;

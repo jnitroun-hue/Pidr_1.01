@@ -1775,6 +1775,8 @@ export const useGameStore = create<GameState>()(
            const newTableStack = [...tableStack, playedCard];
            const wasEmptyTable = tableStack.length === 0;
            
+           console.log(`🃏 [${currentPlayer.name}] кладет карту ${playedCard.image} на стол (всего на столе: ${newTableStack.length})`);
+           
            // НОВАЯ ЛОГИКА: Определяем инициатора и финишера круга
            let newInitiator = get().currentRoundInitiator;
            let newFinisher = get().roundFinisher;
