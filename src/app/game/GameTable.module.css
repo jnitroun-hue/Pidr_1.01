@@ -33,20 +33,12 @@
   bottom: 0;
 }
 
-/* 🔥 УМЕНЬШЕННЫЙ ВЕРТИКАЛЬНЫЙ СТОЛ (РАЗМЕР 80) */
+/* 🔥 АДАПТИВНЫЙ ВЕРТИКАЛЬНЫЙ СТОЛ - ОПТИМИЗИРОВАН ДЛЯ ВСЕХ ЭКРАНОВ */
 .rectangularTable {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  
-  /* УМЕНЬШЕННЫЙ РАЗМЕР СТОЛА НА 10% БОЛЬШЕ */
-  width: 36vw; /* Уменьшено еще на 10% с 40vw до 36vw */
-  height: 72vh; /* Уменьшено еще на 10% с 80vh до 72vh */
-  max-width: 360px; /* Уменьшено еще на 10% с 400px до 360px */
-  max-height: none; /* БЕЗ ОГРАНИЧЕНИЙ! */
-  min-width: 225px; /* Уменьшено еще на 10% с 250px до 225px */
-  min-height: 450px; /* Уменьшено еще на 10% с 500px до 450px */
   
   /* SVG фон роскошного стола (сгенерированный через MCP Stable Diffusion) */
   background-image: url('/images/luxury-table.svg');
@@ -54,36 +46,56 @@
   background-position: center;
   background-repeat: no-repeat;
   
-  /* Убираем старые стили, так как теперь используем SVG */
   border: none;
-  border-radius: 20px;
+  border-radius: 24px;
   box-shadow: 
-    0 0 30px rgba(255, 215, 0, 0.3),
-    0 8px 32px rgba(0, 0, 0, 0.4);
+    0 0 40px rgba(255, 215, 0, 0.4),
+    0 12px 48px rgba(0, 0, 0, 0.5);
   
   z-index: 10;
+  
+  /* DESKTOP (>1200px) - БОЛЬШОЙ СТОЛ */
+  width: 50vw;
+  height: 85vh;
+  max-width: 700px;
+  max-height: none;
+  min-width: 450px;
+  min-height: 600px;
 }
 
-/* Адаптивность вертикального стола */
-@media (max-width: 768px) {
+/* DESKTOP СРЕДНИЙ (769px - 1200px) */
+@media (max-width: 1200px) and (min-width: 769px) {
   .rectangularTable {
-    width: 67vw; /* Уменьшено на 10% с 75vw до 67vw */
-    height: 84vh; /* Уменьшено на 10% с 93vh до 84vh */
-    min-width: 270px; /* Уменьшено на 10% с 300px до 270px */
-    min-height: 585px; /* Уменьшено на 10% с 650px до 585px */
-    border-radius: 16px;
-    border-width: 3px;
+    width: 55vw;
+    height: 82vh;
+    max-width: 600px;
+    min-width: 400px;
+    min-height: 550px;
+    border-radius: 20px;
   }
 }
 
+/* TABLET (481px - 768px) */
+@media (max-width: 768px) and (min-width: 481px) {
+  .rectangularTable {
+    width: 67vw;
+    height: 84vh;
+    max-width: 450px;
+    min-width: 320px;
+    min-height: 585px;
+    border-radius: 16px;
+  }
+}
+
+/* MOBILE (до 480px) */
 @media (max-width: 480px) {
   .rectangularTable {
-    width: 81vw; /* Уменьшено на 10% с 90vw до 81vw */
-    height: 81vh; /* Уменьшено на 10% с 90vh до 81vh */
-    min-width: 252px; /* Уменьшено на 10% с 280px до 252px */
-    min-height: 540px; /* Уменьшено на 10% с 600px до 540px */
+    width: 81vw;
+    height: 81vh;
+    max-width: 360px;
+    min-width: 252px;
+    min-height: 540px;
     border-radius: 12px;
-    border-width: 2px;
   }
 }
 
@@ -2881,5 +2893,339 @@
   .roomButton {
     padding: 20px 60px;
     font-size: 22px;
+  }
+}
+
+/* ======================================================
+   🎮 ОПТИМИЗАЦИЯ ДЛЯ DESKTOP - УВЕЛИЧЕННЫЕ ЭЛЕМЕНТЫ
+   ====================================================== */
+
+/* LARGE DESKTOP (>1200px) - МАКСИМАЛЬНЫЙ КОМФОРТ */
+@media (min-width: 1201px) {
+  /* Увеличенные карты игроков вокруг стола */
+  .cardOnPenki {
+    width: 95px !important;
+    height: 138px !important;
+  }
+  
+  /* Увеличенные аватары */
+  .avatar {
+    width: 50px !important;
+    height: 50px !important;
+  }
+  
+  .botBadge {
+    width: 20px !important;
+    height: 20px !important;
+    font-size: 11px !important;
+  }
+  
+  /* Увеличенное место игрока */
+  .playerSeat {
+    width: 140px !important;
+    padding: 12px 10px !important;
+  }
+  
+  .playerName {
+    font-size: 15px !important;
+    max-width: 120px !important;
+  }
+  
+  /* Рука игрока внизу - УВЕЛИЧЕНА */
+  .playerHand {
+    max-width: 700px !important;
+    padding: 16px 24px !important;
+    min-height: 140px !important;
+    bottom: 20px !important;
+  }
+  
+  .handCard {
+    width: 90px !important;
+    height: 135px !important;
+  }
+  
+  .handCards {
+    min-height: 150px !important;
+    gap: 8px !important;
+  }
+  
+  /* Увеличенная колода и карты в центре */
+  .deckStack img {
+    width: 50px !important;
+    height: 75px !important;
+  }
+  
+  .deckCount {
+    width: 40px !important;
+    height: 40px !important;
+    font-size: 18px !important;
+  }
+  
+  /* Заголовок игры */
+  .gameHeader {
+    top: 25px !important;
+    gap: 30px !important;
+  }
+  
+  .stageInfo, .deckInfo {
+    padding: 14px 28px !important;
+    font-size: 18px !important;
+  }
+}
+
+/* MEDIUM DESKTOP (769px - 1200px) - КОМФОРТНЫЙ РАЗМЕР */
+@media (min-width: 769px) and (max-width: 1200px) {
+  /* Средние карты игроков */
+  .cardOnPenki {
+    width: 80px !important;
+    height: 116px !important;
+  }
+  
+  /* Средние аватары */
+  .avatar {
+    width: 44px !important;
+    height: 44px !important;
+  }
+  
+  .botBadge {
+    width: 18px !important;
+    height: 18px !important;
+    font-size: 10px !important;
+  }
+  
+  /* Место игрока */
+  .playerSeat {
+    width: 130px !important;
+    padding: 10px 8px !important;
+  }
+  
+  .playerName {
+    font-size: 14px !important;
+    max-width: 110px !important;
+  }
+  
+  /* Рука игрока */
+  .playerHand {
+    max-width: 600px !important;
+    padding: 14px 20px !important;
+    min-height: 120px !important;
+    bottom: 18px !important;
+  }
+  
+  .handCard {
+    width: 82px !important;
+    height: 123px !important;
+  }
+  
+  .handCards {
+    min-height: 135px !important;
+    gap: 7px !important;
+  }
+  
+  /* Колода */
+  .deckStack img {
+    width: 45px !important;
+    height: 67px !important;
+  }
+  
+  .deckCount {
+    width: 36px !important;
+    height: 36px !important;
+    font-size: 16px !important;
+  }
+  
+  /* Заголовок */
+  .gameHeader {
+    top: 22px !important;
+    gap: 25px !important;
+  }
+  
+  .stageInfo, .deckInfo {
+    padding: 12px 24px !important;
+    font-size: 16px !important;
+  }
+}
+
+/* Улучшенные эффекты наведения для desktop */
+@media (min-width: 769px) {
+  .handCard:hover {
+    transform: translateY(-20px) scale(1.15) !important;
+    z-index: 999 !important;
+  }
+  
+  .cardOnPenki:hover {
+    transform: translateY(-8px) scale(1.08) !important;
+  }
+  
+  .playerSeat:hover {
+    transform: translate(-50%, -50%) scale(1.1) !important;
+  }
+  
+  /* Увеличенные кнопки для desktop */
+  .takeCardFromTableButton {
+    padding: 16px 28px !important;
+    font-size: 16px !important;
+    min-height: 52px !important;
+    min-width: 160px !important;
+  }
+  
+  .cardCountButton {
+    padding: 14px 24px !important;
+    font-size: 15px !important;
+    min-height: 48px !important;
+    min-width: 140px !important;
+  }
+}
+
+/* БУРГЕР МЕНЮ - адаптация для desktop */
+@media (min-width: 769px) {
+  .burgerButton {
+    width: 50px !important;
+    height: 50px !important;
+  }
+  
+  .burgerLines span {
+    width: 30px !important;
+    height: 3px !important;
+  }
+  
+  .burgerDropdown {
+    min-width: 280px !important;
+    padding: 20px !important;
+  }
+  
+  .menuUserAvatar {
+    width: 70px !important;
+    height: 70px !important;
+  }
+  
+  .menuUserName {
+    font-size: 18px !important;
+  }
+  
+  .menuCoinsValue {
+    font-size: 16px !important;
+  }
+  
+  .menuItem {
+    padding: 14px 20px !important;
+    font-size: 16px !important;
+  }
+}
+
+/* ======================================================
+   📱 ЛАНДШАФТНАЯ ОРИЕНТАЦИЯ НА МОБИЛЬНЫХ
+   ====================================================== */
+
+/* Mobile Landscape (до 896px в ширину, до 414px в высоту) */
+@media (max-width: 896px) and (max-height: 414px) and (orientation: landscape) {
+  /* Уменьшаем стол для ландшафта */
+  .rectangularTable {
+    width: 35vh !important;
+    height: 85vw !important;
+    max-width: 280px !important;
+    min-width: 200px !important;
+    min-height: 400px !important;
+  }
+  
+  /* Компактные карты */
+  .cardOnPenki {
+    width: 50px !important;
+    height: 72px !important;
+  }
+  
+  /* Компактные аватары */
+  .avatar {
+    width: 32px !important;
+    height: 32px !important;
+  }
+  
+  .playerSeat {
+    width: 100px !important;
+    padding: 6px 5px !important;
+  }
+  
+  .playerName {
+    font-size: 11px !important;
+  }
+  
+  /* Рука игрока снизу - компактная */
+  .playerHand {
+    bottom: 8px !important;
+    padding: 8px 12px !important;
+    min-height: 90px !important;
+    max-width: 70% !important;
+  }
+  
+  .handCard {
+    width: 60px !important;
+    height: 90px !important;
+  }
+  
+  .handCards {
+    min-height: 95px !important;
+  }
+  
+  /* Компактный заголовок */
+  .gameHeader {
+    top: 8px !important;
+    gap: 12px !important;
+  }
+  
+  .stageInfo, .deckInfo {
+    padding: 6px 12px !important;
+    font-size: 12px !important;
+  }
+  
+  /* Компактная колода */
+  .deckStack img {
+    width: 32px !important;
+    height: 48px !important;
+  }
+  
+  .deckCount {
+    width: 26px !important;
+    height: 26px !important;
+    font-size: 12px !important;
+  }
+}
+
+/* Tablet Landscape (768px - 1024px в ширину, ландшафт) */
+@media (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
+  .rectangularTable {
+    width: 45vh !important;
+    height: 78vw !important;
+    max-width: 400px !important;
+  }
+  
+  .playerHand {
+    max-width: 60% !important;
+    bottom: 12px !important;
+  }
+}
+
+/* ======================================================
+   ✨ АНИМАЦИИ ДЛЯ СООБЩЕНИЙ НАД ИГРОКАМИ
+   ====================================================== */
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes fadeOutUp {
+  from {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px);
   }
 } 

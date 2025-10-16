@@ -734,16 +734,21 @@ function GamePageContentComponent({
             if (decision.cardToPlay && selectHandCard && playSelectedCard) {
               // Найдем карту в руке игрока и выберем её
               if (currentTurnPlayer) {
+                // ИСПРАВЛЕНО: Убрана проверка c.open - у ботов карты закрыты во 2-й стадии!
                 const cardInHand = currentTurnPlayer.cards.find(c => 
-                  c.image === decision.cardToPlay?.image && c.open
+                  c.image === decision.cardToPlay?.image
                 );
                 if (cardInHand) {
+                  console.log(`🤖 [${currentTurnPlayer.name}] AI выбирает карту ${cardInHand.image} для хода`);
                   selectHandCard(cardInHand);
                   // Играем карту с небольшой задержкой (УСКОРЕНО В 2 РАЗА)
                   setTimeout(() => {
+                    console.log(`🤖 [${currentTurnPlayer.name}] AI играет карту ${cardInHand.image}`);
                     playSelectedCard();
                   }, 400);
                 } else {
+                  console.error(`🚨 [AI] Карта ${decision.cardToPlay?.image} не найдена в руке ${currentTurnPlayer.name}!`);
+                  console.log(`🚨 [AI] Карты в руке:`, currentTurnPlayer.cards.map(c => c.image));
                   // Сбрасываем флаг обработки
                   aiProcessingRef.current = null;
                 }
@@ -906,6 +911,9 @@ function GamePageContentComponent({
   // НОВЫЙ STATE для сообщений над игроками
   const [playerMessages, setPlayerMessages] = useState<{[playerId: string]: {text: string; type: 'info' | 'warning' | 'success' | 'error'; timestamp: number}}>({});
   
+  // STATE для задержки показа кнопки "Сколько карт?"
+  const [showAskCardsButton, setShowAskCardsButton] = useState(false);
+  const [lastPlayersWithOneCardUpdate, setLastPlayersWithOneCardUpdate] = useState<string[]>([]);
 
   // Показать сообщение над конкретным игроком
   const showPlayerMessage = (playerId: string, text: string, type: 'info' | 'warning' | 'success' | 'error' = 'info', duration: number = 3000) => {
@@ -923,6 +931,40 @@ function GamePageContentComponent({
       });
     }, duration);
   };
+
+  // Отслеживаем изменения playersWithOneCard и показываем кнопку с задержкой 2 сек
+  useEffect(() => {
+    // Если список игроков с 1 картой изменился
+    const currentIds = JSON.stringify(playersWithOneCard?.sort() || []);
+    const lastIds = JSON.stringify(lastPlayersWithOneCardUpdate.sort());
+    
+    if (currentIds !== lastIds) {
+      setLastPlayersWithOneCardUpdate(playersWithOneCard || []);
+      
+      // Если появились игроки с 1 картой
+      if (playersWithOneCard && playersWithOneCard.length > 0) {
+        console.log('⏰ [Задержка] Обнаружен игрок с 1 картой, показываем кнопку через 2 сек');
+        setShowAskCardsButton(false); // Скрываем сначала
+        
+        // Показываем сообщение над игроками у которых 1 карта
+        playersWithOneCard.forEach(playerId => {
+          const player = players.find(p => p.id === playerId);
+          if (player && !player.isUser) {
+            showPlayerMessage(playerId, '⚠️ 1 карта!', 'warning', 5000);
+          }
+        });
+        
+        // Показываем кнопку через 2 секунды
+        setTimeout(() => {
+          setShowAskCardsButton(true);
+          console.log('✅ [Задержка] Кнопка "Сколько карт?" теперь доступна');
+        }, 2000);
+      } else {
+        // Нет игроков с 1 картой - скрываем кнопку
+        setShowAskCardsButton(false);
+      }
+    }
+  }, [playersWithOneCard, players, lastPlayersWithOneCardUpdate]);
 
   // Показать количество карт у всех соперников (ОБНОВЛЕННАЯ ЛОГИКА)
   const showOpponentsCardCount = () => {
@@ -1244,15 +1286,16 @@ function GamePageContentComponent({
                 top: '50%',
                 transform: 'translate(-50%, -50%)',
                 zIndex: 15,
-                width: '80px',
-                height: '120px',
                 display: 'flex',
                 justifyContent: 'center',
-                alignItems: 'center'
+                alignItems: 'center',
+                minWidth: '200px',
+                minHeight: '120px'
               }}>
                 {tableStack.map((card, idx) => {
-                  // Каждая следующая карта смещается на 25% вниз (верхняя закрывает нижнюю на 75%)
-                  const offset = idx * 30; // 30px смещение = примерно 25% от высоты карты 120px
+                  // ГОРИЗОНТАЛЬНАЯ СТОПКА: Каждая следующая карта смещается ВПРАВО
+                  // Левая карта = нижняя (первая), правая карта = верхняя (последняя)
+                  const offset = idx * 25; // 25px смещение вправо (примерно 30% от ширины карты 74px)
                   const isTopCard = idx === tableStack.length - 1;
                   
                   return (
@@ -1260,8 +1303,8 @@ function GamePageContentComponent({
                       key={`table-${idx}`} 
                       style={{
                         position: 'absolute',
-                        top: `${offset}px`,
-                        left: '0',
+                        left: `${offset}px`, // СЛЕВА НАПРАВО!
+                        top: '0',
                         background: '#ffffff',
                         borderRadius: '8px',
                         padding: '3px',
@@ -1269,7 +1312,7 @@ function GamePageContentComponent({
                           ? '0 8px 24px rgba(255, 193, 7, 0.6), 0 0 30px rgba(255, 193, 7, 0.4)' 
                           : '0 4px 12px rgba(0,0,0,0.4)',
                         border: isTopCard ? '3px solid rgba(255, 193, 7, 0.8)' : '2px solid rgba(255, 255, 255, 0.3)',
-                        zIndex: idx,
+                        zIndex: idx, // Правая карта (больший idx) поверх левой
                         transition: 'all 0.3s ease',
                         animation: isTopCard ? 'pulse 2s ease-in-out infinite' : 'none'
                       }}
@@ -1291,7 +1334,7 @@ function GamePageContentComponent({
                 {/* Индикатор количества карт */}
                 <div style={{
                   position: 'absolute',
-                  bottom: '-30px',
+                  bottom: '-35px',
                   left: '50%',
                   transform: 'translateX(-50%)',
                   background: 'rgba(0, 0, 0, 0.8)',
@@ -1498,6 +1541,53 @@ function GamePageContentComponent({
                 >
                   {/* Аватар и имя */}
                     <div className={styles.avatarWrap}>
+                      {/* Сообщение над игроком (как в чате) */}
+                      {playerMessages[player.id] && (
+                        <div style={{
+                          position: 'absolute',
+                          bottom: '100%',
+                          left: '50%',
+                          transform: 'translateX(-50%)',
+                          marginBottom: '8px',
+                          background: playerMessages[player.id].type === 'success' 
+                            ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                            : playerMessages[player.id].type === 'error'
+                            ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
+                            : playerMessages[player.id].type === 'warning'
+                            ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
+                            : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                          color: 'white',
+                          padding: '6px 12px',
+                          borderRadius: '12px',
+                          fontSize: '11px',
+                          fontWeight: '700',
+                          whiteSpace: 'nowrap',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                          zIndex: 1000,
+                          animation: 'fadeInDown 0.3s ease-out',
+                          border: '2px solid rgba(255,255,255,0.3)'
+                        }}>
+                          {playerMessages[player.id].text}
+                          {/* Стрелка вниз */}
+                          <div style={{
+                            position: 'absolute',
+                            bottom: '-6px',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            width: '0',
+                            height: '0',
+                            borderLeft: '6px solid transparent',
+                            borderRight: '6px solid transparent',
+                            borderTop: `6px solid ${
+                              playerMessages[player.id].type === 'success' ? '#059669'
+                              : playerMessages[player.id].type === 'error' ? '#dc2626'
+                              : playerMessages[player.id].type === 'warning' ? '#d97706'
+                              : '#2563eb'
+                            }`
+                          }}></div>
+                        </div>
+                      )}
+                      
                       <div 
                         className={styles.avatarContainer}
                         onClick={(e) => {
@@ -1718,9 +1808,26 @@ function GamePageContentComponent({
               <button
                 onClick={() => {
                   console.log(`🎴 [Одна карта] Клик! humanPlayer:`, humanPlayer);
-                  console.log(`🎴 [Одна карта] oneCardDeclarations:`, oneCardDeclarations);
-                  console.log(`🎴 [Одна карта] Вызываем declareOneCard...`);
-                  declareOneCard(humanPlayer.id);
+                  console.log(`🎴 [Одна карта] Карты:`, humanPlayer.cards);
+                  console.log(`🎴 [Одна карта] gameStage:`, gameStage);
+                  
+                  // ИСПРАВЛЕНО: Во 2-й стадии считаем ВСЕ карты, а не только открытые!
+                  // После пеньков могут быть закрытые карты (open: false)
+                  const totalCards = humanPlayer.cards.length;
+                  
+                  if (totalCards === 1) {
+                    // Объявляем
+                    declareOneCard(humanPlayer.id);
+                    
+                    // Показываем сообщение над своим аватаром
+                    showPlayerMessage(humanPlayer.id, '☝️ ОДНА КАРТА!', 'success', 4000);
+                    console.log(`📢 [Одна карта] ${humanPlayer.name} объявил!`);
+                  } else {
+                    // Ошибка - у игрока больше 1 карты
+                    showPlayerMessage(humanPlayer.id, `❌ У вас ${totalCards} ${totalCards === 1 ? 'карта' : totalCards < 5 ? 'карты' : 'карт'}!`, 'error', 3000);
+                    showNotification(`Нельзя объявлять "одна карта" - у вас ${totalCards} ${totalCards === 1 ? 'карта' : totalCards < 5 ? 'карты' : 'карт'}`, 'error', 3000);
+                    console.warn(`⚠️ [Одна карта] Неправильное объявление: ${totalCards} карт вместо 1`);
+                  }
                 }}
                 style={{
                   background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
@@ -1732,24 +1839,26 @@ function GamePageContentComponent({
                   fontWeight: '700',
                   cursor: 'pointer',
                   boxShadow: '0 2px 8px rgba(16, 185, 129, 0.4)',
-                  whiteSpace: 'nowrap'
+                  whiteSpace: 'nowrap',
+                  animation: 'pulse 2s ease-in-out infinite'
                 }}
               >
                 ☝️ Одна карта!
               </button>
             )}
             
-            {/* Кнопка "Сколько карт?" */}
+            {/* Кнопка "Сколько карт?" - ПОКАЗЫВАЕТСЯ С ЗАДЕРЖКОЙ 2 СЕК */}
             {(() => {
-              const showButton = playersWithOneCard && playersWithOneCard.length > 0;
-              console.log(`🎮 [Кнопка "Сколько карт?"] Показать: ${showButton}, playersWithOneCard:`, playersWithOneCard);
+              const showButton = showAskCardsButton && playersWithOneCard && playersWithOneCard.length > 0;
+              console.log(`🎮 [Кнопка "Сколько карт?"] Показать: ${showButton}, задержка завершена: ${showAskCardsButton}, playersWithOneCard:`, playersWithOneCard);
               return showButton;
             })() && (
               <button
                 onClick={() => {
                   console.log(`🎴 [Сколько карт] Клик! playersWithOneCard:`, playersWithOneCard);
-                  console.log(`🎴 [Сколько карт] players:`, players.map(p => ({id: p.id, name: p.name, cards: p.cards.length})));
-                  console.log(`🎴 [Сколько карт] humanPlayer:`, humanPlayer);
+                  
+                  // Показываем сообщение над своим аватаром
+                  showPlayerMessage(humanPlayer.id, '❓ Сколько карт?', 'info', 2000);
                   
                   const targets = players.filter(p => 
                     playersWithOneCard.includes(p.id) && p.id !== humanPlayer.id
@@ -1759,14 +1868,25 @@ function GamePageContentComponent({
                   
                   if (targets.length === 1) {
                     console.log(`🎴 [Сколько карт] Спрашиваем у ${targets[0].name}`);
+                    
+                    // Показываем сообщение над целью
+                    showPlayerMessage(targets[0].id, '🔍 Проверка...', 'warning', 3000);
+                    
                     askHowManyCards(humanPlayer.id, targets[0].id);
                   } else if (targets.length > 1) {
                     console.log(`🎴 [Штраф] Несколько целей, открываем окно`);
+                    
+                    // Показываем сообщения над всеми целями
+                    targets.forEach(t => {
+                      showPlayerMessage(t.id, '🎯 Выберите цель', 'warning', 3000);
+                    });
+                    
                     setPenaltyTargets(targets);
                     setSelectedCards({});
                     setShowPenaltyModal(true);
                   } else {
                     console.log(`🎴 [Сколько карт] ❌ Нет доступных целей!`);
+                    showNotification('Нет доступных целей для проверки', 'warning', 2000);
                   }
                 }}
                 style={{
@@ -1779,7 +1899,8 @@ function GamePageContentComponent({
                   fontWeight: '700',
                   cursor: 'pointer',
                   boxShadow: '0 2px 8px rgba(59, 130, 246, 0.4)',
-                  whiteSpace: 'nowrap'
+                  whiteSpace: 'nowrap',
+                  animation: 'pulse 2s ease-in-out infinite'
                 }}
               >
                 ❓ Сколько карт?
