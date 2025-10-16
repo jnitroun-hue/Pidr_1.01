@@ -1592,8 +1592,10 @@ function GamePageContentComponent({
                                 alt={showOpen ? cardImage : 'Card'}
                                 width={60}
                                 height={90}
+                                loading="eager"
                                 style={{ 
-                                  borderRadius: '8px', 
+                                  borderRadius: '8px',
+                                  background: '#ffffff',
                                   opacity: 1,
                                   filter: shouldHighlight || isAvailableTarget ? 'brightness(1.2)' : 'none',
                                   visibility: 'visible',
@@ -1687,134 +1689,106 @@ function GamePageContentComponent({
               ⬇️ Взять карту
             </button>
           )}
-
-          {/* Кнопка "Одна карта!" - когда у игрока осталась 1 карта */}
-          {humanPlayer.cards.length === 1 && !oneCardDeclarations[humanPlayer.id] && (
-            <button
-              onClick={() => {
-                console.log(`🎴 [Одна карта] Игрок объявляет`);
-                declareOneCard(humanPlayer.id);
-              }}
-              style={{
-                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '12px',
-                padding: '12px 20px',
-                fontSize: '14px',
-                fontWeight: '700',
-                cursor: 'pointer',
-                boxShadow: '0 4px 15px rgba(16, 185, 129, 0.4)',
-                transition: 'all 0.3s ease',
-                whiteSpace: 'nowrap'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 6px 20px rgba(16, 185, 129, 0.5)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 15px rgba(16, 185, 129, 0.4)';
-              }}
-            >
-              ☝️ Одна карта!
-            </button>
-          )}
-
-          {/* Кнопка "Сколько карт?" / Сдача штрафных карт */}
-          {playersWithOneCard && playersWithOneCard.length > 0 && (
-            <button
-              onClick={() => {
-                // Находим всех игроков с одной картой (кроме себя)
-                const targets = players.filter(p => 
-                  playersWithOneCard.includes(p.id) && p.id !== humanPlayer.id
-                );
-                
-                if (targets.length === 1) {
-                  // Если цель одна - сразу спрашиваем
-                  console.log(`🎴 [Сколько карт] Спрашиваем у ${targets[0].name}`);
-                  askHowManyCards(humanPlayer.id, targets[0].id);
-                } else if (targets.length > 1) {
-                  // Если целей несколько - открываем модальное окно для сдачи штрафных карт
-                  console.log(`🎴 [Штраф] Несколько целей (${targets.length}), открываем окно штрафов`);
-                  setPenaltyTargets(targets);
-                  setSelectedCards({});
-                  setShowPenaltyModal(true);
-                }
-              }}
-              style={{
-                background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '12px',
-                padding: '12px 20px',
-                fontSize: '14px',
-                fontWeight: '700',
-                cursor: 'pointer',
-                boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)',
-                transition: 'all 0.3s ease',
-                whiteSpace: 'nowrap'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.5)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 15px rgba(59, 130, 246, 0.4)';
-              }}
-            >
-              ❓ Сколько карт?
-            </button>
-          )}
-          
-          {/* Кнопка сдачи штрафных карт - если есть активный штраф */}
-          {pendingPenalty && pendingPenalty.targetPlayerId && (
-            <button
-              onClick={() => {
-                console.log(`🎴 [Штраф] Открываем окно для сдачи карт`);
-                // Если есть pendingPenalty - показываем только одну цель
-                if (pendingPenalty && pendingPenalty.targetPlayerId) {
-                  const target = players.find(p => p.id === pendingPenalty.targetPlayerId);
-                  if (target) {
-                    setPenaltyTargets([target]);
-                    setSelectedCards({});
-                    setShowPenaltyModal(true);
-                  }
-                }
-              }}
-              style={{
-                background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '12px',
-                padding: '12px 20px',
-                fontSize: '14px',
-                fontWeight: '700',
-                cursor: 'pointer',
-                boxShadow: '0 4px 15px rgba(239, 68, 68, 0.4)',
-                transition: 'all 0.3s ease',
-                whiteSpace: 'nowrap',
-                animation: 'pulse 2s ease-in-out infinite'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 6px 20px rgba(239, 68, 68, 0.5)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 15px rgba(239, 68, 68, 0.4)';
-              }}
-            >
-              ⚠️ Сдать штраф
-            </button>
-          )}
         </div>
       )}
 
       {/* Рука игрока внизу экрана - ТОЛЬКО СО 2-Й СТАДИИ! */}
       {isGameActive && gameStage >= 2 && humanPlayer && humanPlayer.cards && humanPlayer.cards.length > 0 && (
         <div className={styles.playerHand}>
+          {/* Кнопки компактно над картами игрока */}
+          <div style={{
+            display: 'flex',
+            gap: '6px',
+            justifyContent: 'center',
+            marginBottom: '8px',
+            flexWrap: 'wrap',
+          }}>
+            {/* Кнопка "Одна карта!" */}
+            {humanPlayer.cards.length === 1 && !oneCardDeclarations[humanPlayer.id] && (
+              <button
+                onClick={() => {
+                  console.log(`🎴 [Одна карта] Игрок объявляет`);
+                  declareOneCard(humanPlayer.id);
+                }}
+                style={{
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '6px 12px',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 8px rgba(16, 185, 129, 0.4)',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                ☝️ Одна карта!
+              </button>
+            )}
+            
+            {/* Кнопка "Сколько карт?" */}
+            {playersWithOneCard && playersWithOneCard.length > 0 && (
+              <button
+                onClick={() => {
+                  const targets = players.filter(p => 
+                    playersWithOneCard.includes(p.id) && p.id !== humanPlayer.id
+                  );
+                  
+                  if (targets.length === 1) {
+                    console.log(`🎴 [Сколько карт] Спрашиваем у ${targets[0].name}`);
+                    askHowManyCards(humanPlayer.id, targets[0].id);
+                  } else if (targets.length > 1) {
+                    console.log(`🎴 [Штраф] Несколько целей, открываем окно`);
+                    setPenaltyTargets(targets);
+                    setSelectedCards({});
+                    setShowPenaltyModal(true);
+                  }
+                }}
+                style={{
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '6px 12px',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 8px rgba(59, 130, 246, 0.4)',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                ❓ Сколько карт?
+              </button>
+            )}
+            
+            {/* Кнопка "Сдать штраф" */}
+            {pendingPenalty && (
+              <button
+                onClick={() => {
+                  console.log(`🎴 [Штраф] Открываем окно для сдачи штрафа`);
+                  setPenaltyTargets([players.find(p => p.id === pendingPenalty.targetPlayerId)!]);
+                  setSelectedCards({});
+                  setShowPenaltyModal(true);
+                }}
+                style={{
+                  background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '6px 12px',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 8px rgba(239, 68, 68, 0.4)',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                ⚠️ Сдать штраф
+              </button>
+            )}
+          </div>
+          
           <div className={styles.handCards}>
             {humanPlayer.cards.map((card: any, index: number) => {
               // Карта может быть строкой "7_of_spades.png(open)" или объектом {rank, suit, image}
@@ -1873,9 +1847,11 @@ function GamePageContentComponent({
                     alt={cardImage}
                     width={70}
                     height={105}
+                    loading="eager"
                     style={{ 
-                      borderRadius: '8px', 
-                      opacity: isMyTurn ? 1 : 0.6,
+                      borderRadius: '8px',
+                      background: '#ffffff',
+                      opacity: 1,
                       filter: canPlay ? 'brightness(1.1)' : 'none',
                       visibility: 'visible',
                       display: 'block',

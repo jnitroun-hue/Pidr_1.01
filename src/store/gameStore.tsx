@@ -769,7 +769,7 @@ export const useGameStore = create<GameState>()(
       },
       
       distributePenaltyCards: (targetPlayerId) => {
-        const { penaltyDeck, players } = get();
+        const { penaltyDeck, players, gameStage } = get();
         if (penaltyDeck.length === 0) return;
         
         const targetPlayer = players.find(p => p.id === targetPlayerId);
@@ -779,8 +779,13 @@ export const useGameStore = create<GameState>()(
         
         const newPlayers = players.map(player => {
           if (player.id === targetPlayerId) {
-            // Добавляем все штрафные карты в руку (в закрытом виде)
-            const newCards = [...player.cards, ...penaltyDeck.map(card => ({ ...card, open: false }))];
+            // Добавляем все штрафные карты в руку
+            // ВАЖНО: Для ИГРОКА карты открыты (он видит свою руку), для БОТА - закрыты
+            const penaltyCardsForPlayer = penaltyDeck.map(card => ({ 
+              ...card, 
+              open: !player.isBot // Игрок видит свои карты, бот - нет
+            }));
+            const newCards = [...player.cards, ...penaltyCardsForPlayer];
             return { ...player, cards: newCards };
           }
           return player;
@@ -789,7 +794,8 @@ export const useGameStore = create<GameState>()(
         // Очищаем штрафную стопку и обновляем игроков
         set({ 
           penaltyDeck: [],
-          players: newPlayers 
+          players: newPlayers,
+          pendingPenalty: null // ВАЖНО: Сбрасываем pendingPenalty чтобы убрать кнопку
         });
         
         get().showNotification(
@@ -797,6 +803,16 @@ export const useGameStore = create<GameState>()(
           'warning', 
           3000
         );
+        
+        // КРИТИЧНО: Продолжаем игру после раздачи штрафа!
+        // Проверяем кто сейчас ходит
+        const currentPlayerId = get().currentPlayerId;
+        if (currentPlayerId && gameStage === 2) {
+          console.log(`⚠️ [distributePenaltyCards] Продолжаем ход игрока ${currentPlayerId}`);
+          setTimeout(() => {
+            get().processPlayerTurn(currentPlayerId);
+          }, 1000);
+        }
       },
       
       // Управление игроками
