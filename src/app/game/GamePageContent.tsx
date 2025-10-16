@@ -1689,7 +1689,17 @@ function GamePageContentComponent({
       )}
 
       {/* Рука игрока внизу экрана - ТОЛЬКО СО 2-Й СТАДИИ! */}
-      {isGameActive && gameStage >= 2 && humanPlayer && humanPlayer.cards && humanPlayer.cards.length > 0 && (
+      {isGameActive && gameStage >= 2 && humanPlayer && humanPlayer.cards && humanPlayer.cards.length > 0 && (() => {
+        console.log(`🎮 [Рука игрока] Отрисовка:`, {
+          isGameActive,
+          gameStage,
+          humanPlayer: humanPlayer ? {id: humanPlayer.id, name: humanPlayer.name, cards: humanPlayer.cards.length} : null,
+          oneCardDeclarations: oneCardDeclarations[humanPlayer.id],
+          playersWithOneCard,
+          pendingPenalty
+        });
+        return true;
+      })() && (
         <div className={styles.playerHand}>
           {/* Кнопки компактно над картами игрока */}
           <div style={{
@@ -1700,10 +1710,16 @@ function GamePageContentComponent({
             flexWrap: 'wrap',
           }}>
             {/* Кнопка "Одна карта!" */}
-            {humanPlayer.cards.length === 1 && !oneCardDeclarations[humanPlayer.id] && (
+            {(() => {
+              const showButton = humanPlayer.cards.length === 1 && !oneCardDeclarations[humanPlayer.id];
+              console.log(`🎮 [Кнопка "Одна карта!"] Показать: ${showButton}, карт: ${humanPlayer.cards.length}, объявлено: ${oneCardDeclarations[humanPlayer.id]}`);
+              return showButton;
+            })() && (
               <button
                 onClick={() => {
-                  console.log(`🎴 [Одна карта] Игрок объявляет`);
+                  console.log(`🎴 [Одна карта] Клик! humanPlayer:`, humanPlayer);
+                  console.log(`🎴 [Одна карта] oneCardDeclarations:`, oneCardDeclarations);
+                  console.log(`🎴 [Одна карта] Вызываем declareOneCard...`);
                   declareOneCard(humanPlayer.id);
                 }}
                 style={{
@@ -1724,12 +1740,22 @@ function GamePageContentComponent({
             )}
             
             {/* Кнопка "Сколько карт?" */}
-            {playersWithOneCard && playersWithOneCard.length > 0 && (
+            {(() => {
+              const showButton = playersWithOneCard && playersWithOneCard.length > 0;
+              console.log(`🎮 [Кнопка "Сколько карт?"] Показать: ${showButton}, playersWithOneCard:`, playersWithOneCard);
+              return showButton;
+            })() && (
               <button
                 onClick={() => {
+                  console.log(`🎴 [Сколько карт] Клик! playersWithOneCard:`, playersWithOneCard);
+                  console.log(`🎴 [Сколько карт] players:`, players.map(p => ({id: p.id, name: p.name, cards: p.cards.length})));
+                  console.log(`🎴 [Сколько карт] humanPlayer:`, humanPlayer);
+                  
                   const targets = players.filter(p => 
                     playersWithOneCard.includes(p.id) && p.id !== humanPlayer.id
                   );
+                  
+                  console.log(`🎴 [Сколько карт] Найдено целей:`, targets.length, targets.map(t => t.name));
                   
                   if (targets.length === 1) {
                     console.log(`🎴 [Сколько карт] Спрашиваем у ${targets[0].name}`);
@@ -1739,6 +1765,8 @@ function GamePageContentComponent({
                     setPenaltyTargets(targets);
                     setSelectedCards({});
                     setShowPenaltyModal(true);
+                  } else {
+                    console.log(`🎴 [Сколько карт] ❌ Нет доступных целей!`);
                   }
                 }}
                 style={{
@@ -1759,9 +1787,18 @@ function GamePageContentComponent({
             )}
             
             {/* Кнопка "Сдать штраф" */}
-            {pendingPenalty && (
+            {(() => {
+              const showButton = !!pendingPenalty;
+              console.log(`🎮 [Кнопка "Сдать штраф"] Показать: ${showButton}, pendingPenalty:`, pendingPenalty);
+              return showButton;
+            })() && (
               <button
                 onClick={() => {
+                  if (!pendingPenalty) {
+                    console.error(`🎴 [Штраф] ❌ pendingPenalty is null!`);
+                    return;
+                  }
+                  
                   const target = players.find(p => p.id === pendingPenalty.targetPlayerId);
                   console.log(`🎴 [Штраф] Открываем окно для сдачи штрафа игроку:`, target?.name);
                   console.log(`🎴 [Штраф] pendingPenalty:`, pendingPenalty);
