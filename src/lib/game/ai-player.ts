@@ -141,7 +141,8 @@ export class AIPlayer {
       return { action: 'pass', confidence: 0 };
     }
     
-    const handCards = currentPlayer.cards.filter((c: Card) => c.open);
+    // ВО 2-Й СТАДИИ AI видит ВСЕ свои карты (даже если open=false для отображения)!
+    const handCards = currentPlayer.cards; // ВСЕ карты, не фильтруем по open!
     
     console.log(`🤖 [AI Stage2 P.I.D.R.] Анализ ситуации для игрока ${this.playerId}:`);
     console.log(`🤖 [AI Stage2 P.I.D.R.] - tableStack.length: ${tableStack?.length || 0}`);
@@ -151,8 +152,7 @@ export class AIPlayer {
     
     // Проверяем есть ли карты для игры
     if (handCards.length === 0) {
-      console.log(`🤖 [AI Stage2 P.I.D.R.] ❌ Нет открытых карт для игры`);
-      console.log(`🤖 [AI Stage2 P.I.D.R.] ❌ Все карты игрока:`, currentPlayer.cards.map((c: any) => `${c.image}(${c.open ? 'open' : 'closed'})`));
+      console.log(`🤖 [AI Stage2 P.I.D.R.] ❌ Нет карт для игры`);
       return { action: 'draw_card', confidence: 0.9 }; // Берем нижнюю карту
     }
     
