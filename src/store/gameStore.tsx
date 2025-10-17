@@ -1177,22 +1177,13 @@ export const useGameStore = create<GameState>()(
           // Они активируются ТОЛЬКО когда закончатся карты в руке (переход в 3-ю стадию)
           console.log(`🃏 [checkStage1End] ${p.name}: ${p.cards.length} карт в руке, ${p.penki.length} пеньков`);
           
-          // Устанавливаем видимость карт для 2-й стадии:
-          // У БОТОВ: open = false (не видны игроку, но AI видит через gameStage)
-          // У ИГРОКА: open = true (видны только ему)
-          if (p.isBot) {
-            p.cards = p.cards.map(card => ({
-              ...card,
-              open: false // Закрыты для ОТОБРАЖЕНИЯ (AI будет игнорировать эту проверку во 2-й стадии)
-            }));
-            console.log(`🤖 [checkStage1End] Бот ${p.name}: ${p.cards.length} карт (open=false), ${p.penki.length} пеньков (для 3-й стадии)`);
-          } else {
-            p.cards = p.cards.map(card => ({
-              ...card,
-              open: true // Открыты для игрока
-            }));
-            console.log(`👤 [checkStage1End] Игрок ${p.name}: ${p.cards.length} карт (open=true), ${p.penki.length} пеньков (для 3-й стадии)`);
-          }
+          // ✅ ИСПРАВЛЕНО: ВСЕ карты во 2-й стадии - ОТКРЫТЫЕ (open: true)!
+          // Визуальное отображение (рубашкой вверх для других игроков) контролируется в UI
+          p.cards = p.cards.map(card => ({
+            ...card,
+            open: true // ✅ ВСЕ карты открыты (для логики игры)
+          }));
+          console.log(`✅ [checkStage1End] ${p.name}: ${p.cards.length} карт (open=true), ${p.penki.length} пеньков`)
         });
         
         set({ 
@@ -1834,8 +1825,13 @@ export const useGameStore = create<GameState>()(
             console.log(`🎯 [playSelectedCard] 🗑️ Карты: ${newTableStack.map(c => c.image).join(', ')}`);
             
             // ВСЕ КАРТЫ СО СТОЛА УХОДЯТ В БИТУ
+            const { playedCards = [] } = get();
+            const updatedPlayedCards = [...playedCards, ...newTableStack];
+            console.log(`🗑️ [playSelectedCard] Добавляем ${newTableStack.length} карт в бито (всего: ${updatedPlayedCards.length})`);
+            
             set({
               tableStack: [],
+              playedCards: updatedPlayedCards, // ✅ Добавляем карты в бито
               roundInProgress: false,
               currentRoundInitiator: null,
               roundFinisher: null,
@@ -1844,7 +1840,7 @@ export const useGameStore = create<GameState>()(
               stage2TurnPhase: 'selecting_card'
             });
             
-            get().showNotification(`🏁 ${reasonText}! ${newTableStack.length} карт в биту`, 'success', 3000);
+            get().showNotification(`🏁 ${reasonText}! ${newTableStack.length} карт в бито`, 'success', 3000);
             
             // ИСПРАВЛЕНО: Проверяем активацию пеньков для ВСЕХ игроков
             players.forEach(player => {
@@ -1876,39 +1872,34 @@ export const useGameStore = create<GameState>()(
            setTimeout(() => get().nextTurn(), 200);
          },
          
-         // Проверка возможности побить карту
-         canBeatCard: (attackCard: Card, defendCard: Card, trumpSuit: string) => {
-           if (!attackCard.image || !defendCard.image) return false;
-           
-           const attackSuit = get().getCardSuit(attackCard.image);
-           const defendSuit = get().getCardSuit(defendCard.image);
-           const attackRank = get().getCardRank(attackCard.image);
-           const defendRank = get().getCardRank(defendCard.image);
-           
-           console.log(`🃏 [canBeatCard] Проверка: ${attackCard.image} (${attackSuit}, ранг ${attackRank}) vs ${defendCard.image} (${defendSuit}, ранг ${defendRank}), козырь: ${trumpSuit}`);
-           
-           // ОСОБОЕ ПРАВИЛО: "Пики только Пикями" - пики можно бить ТОЛЬКО пиками
-           if (attackSuit === 'spades' && defendSuit !== 'spades') {
-             console.log(`🃏 [canBeatCard] ❌ Пику можно бить только пикой!`);
-             return false;
-           }
-           
-           // Бить той же мастью старшей картой
-           if (attackSuit === defendSuit) {
-             const result = defendRank > attackRank;
-             console.log(`🃏 [canBeatCard] Та же масть: ${result ? '✅' : '❌'} (${defendRank} > ${attackRank})`);
-             return result;
-           }
-           
-           // Бить козырем некозырную карту (НО НЕ ПИКУ!)
-           if (defendSuit === trumpSuit && attackSuit !== trumpSuit && attackSuit !== 'spades') {
-             console.log(`🃏 [canBeatCard] ✅ Козырь бьет некозырную (не пику)`);
-             return true;
-           }
-           
-           console.log(`🃏 [canBeatCard] ❌ Нет подходящих правил для битья`);
-           return false;
-         },
+        // Проверка возможности побить карту
+        canBeatCard: (attackCard: Card, defendCard: Card, trumpSuit: string) => {
+          if (!attackCard.image || !defendCard.image) return false;
+          
+          const attackSuit = get().getCardSuit(attackCard.image);
+          const defendSuit = get().getCardSuit(defendCard.image);
+          const attackRank = get().getCardRank(attackCard.image);
+          const defendRank = get().getCardRank(defendCard.image);
+          
+          // Убраны логи (спамят консоль - вызываются 30+ раз за ход)
+          
+          // ОСОБОЕ ПРАВИЛО: "Пики только Пикями" - пики можно бить ТОЛЬКО пиками
+          if (attackSuit === 'spades' && defendSuit !== 'spades') {
+            return false;
+          }
+          
+          // Бить той же мастью старшей картой
+          if (attackSuit === defendSuit) {
+            return defendRank > attackRank;
+          }
+          
+          // Бить козырем некозырную карту (НО НЕ ПИКУ!)
+          if (defendSuit === trumpSuit && attackSuit !== trumpSuit && attackSuit !== 'spades') {
+            return true;
+          }
+          
+          return false;
+        },
          
 
          
@@ -2245,9 +2236,12 @@ export const useGameStore = create<GameState>()(
             const penkiCount = player.penki.length; // Пеньки (отдельно, не считаются!)
             const openCards = player.cards.filter(c => c.open);
             
-            // ✅ ОТЛАДКА: Логируем ТОЛЬКО игроков с 1 картой
+            // ✅ ИСПРАВЛЕНО: Логируем ВСЕХ игроков с количеством карт
+            console.log(`🔍 [checkOneCardStatus] ${player.name}: ${cardsInHand} карт в руке (открытых=${openCards.length}, пеньки=${penkiCount})`);
+            
+            // Дополнительная отметка для игроков с 1 картой
             if (cardsInHand === 1) {
-              console.log(`🔍 [checkOneCardStatus] ${player.name}: 1 карта в руке (открытых=${openCards.length}, пеньки=${penkiCount})`);
+              console.log(`⚠️ [checkOneCardStatus] ${player.name} - ВНИМАНИЕ! 1 КАРТА В РУКЕ!`);
             }
             
             // Проверяем есть ли у игрока ровно 1 карта В РУКЕ (БЕЗ пеньков!)
@@ -2266,47 +2260,41 @@ export const useGameStore = create<GameState>()(
                   get().showNotification(`⚠️ У вас осталась 1 карта! ОБЯЗАТЕЛЬНО нажмите "Одна карта!" в течение 5 секунд!`, 'warning', 5000);
                 }
                  
-                 // ===== ИСПРАВЛЕНО: БОТЫ АВТОМАТИЧЕСКИ ОБЪЯВЛЯЮТ И СПРАШИВАЮТ =====
-                 if (player.isBot) {
-                   // БОТ АВТОМАТИЧЕСКИ ОБЪЯВЛЯЕТ "ОДНА КАРТА!" через 1.5 секунды
-                   setTimeout(() => {
-                     const { oneCardDeclarations } = get();
-                     if (!oneCardDeclarations[player.id]) {
-                       console.log(`🤖 [checkOneCardStatus] Бот ${player.name} автоматически объявляет: "ОДНА КАРТА!"`);
-                       get().showNotification(`🤖 ${player.name}: "ОДНА КАРТА!"`, 'info', 3000);
-                       
-                       setTimeout(() => {
-                         get().declareOneCard(player.id);
-                       }, 1500); // Увеличено до 1.5 секунды
-                     }
-                   }, 1500); // Увеличено до 1.5 секунды
-                 } else {
-                   // Для человека - планируем вопрос ботов
-                   get().scheduleBotAskHowManyCards(player.id);
-                 }
+                // ===== ИСПРАВЛЕНО: БОТЫ АВТОМАТИЧЕСКИ ОБЪЯВЛЯЮТ И СПРАШИВАЮТ =====
+                if (player.isBot) {
+                  // БОТ АВТОМАТИЧЕСКИ ОБЪЯВЛЯЕТ "ОДНА КАРТА!" через 3.5 секунды
+                  setTimeout(() => {
+                    const { oneCardDeclarations } = get();
+                    if (!oneCardDeclarations[player.id]) {
+                      console.log(`🤖 [checkOneCardStatus] Бот ${player.name} автоматически объявляет: "ОДНА КАРТА!"`);
+                      get().showNotification(`🤖 ${player.name}: "ОДНА КАРТА!"`, 'info', 3000);
+                      get().declareOneCard(player.id);
+                    }
+                  }, 3500); // ✅ Задержка 3.5 секунды
+                } else {
+                  // Для человека - планируем вопрос ботов
+                  get().scheduleBotAskHowManyCards(player.id);
+                }
+                
+               // ДОПОЛНИТЕЛЬНО: Все боты проверяют других игроков и спрашивают "сколько карт" через 3.5 сек
+               setTimeout(() => {
+                 const { players: currentPlayers } = get();
+                 const bots = currentPlayers.filter(p => p.isBot);
                  
-                // ДОПОЛНИТЕЛЬНО: Все боты проверяют других игроков и спрашивают "сколько карт"
-                setTimeout(() => {
-                  const { players: currentPlayers } = get();
-                  const bots = currentPlayers.filter(p => p.isBot);
-                  
-                  bots.forEach(bot => {
-                    // Каждый бот проверяет всех других игроков
-                    currentPlayers.forEach(otherPlayer => {
-                      if (otherPlayer.id !== bot.id) {
-                        const otherTotalCards = otherPlayer.cards.length;
-                        if (otherTotalCards === 1 && !get().oneCardDeclarations[otherPlayer.id]) {
-                           // Бот спрашивает с задержкой 1.5 секунды
-                           setTimeout(() => {
-                             console.log(`🤖 [checkOneCardStatus] Бот ${bot.name} спрашивает у ${otherPlayer.name}: "Сколько карт?"`);
-                             get().showNotification(`🤖 ${bot.name}: "Сколько карт у ${otherPlayer.name}?"`, 'info', 3000);
-                             get().askHowManyCards(bot.id, otherPlayer.id);
-                           }, 1500); // Фиксированная задержка 1.5 секунды для сложности
-                         }
-                       }
-                     });
-                   });
-                 }, 1500); // Боты начинают проверки через 1.5 секунды
+                 bots.forEach(bot => {
+                   // Каждый бот проверяет всех других игроков
+                   currentPlayers.forEach(otherPlayer => {
+                     if (otherPlayer.id !== bot.id) {
+                       const otherTotalCards = otherPlayer.cards.length;
+                       if (otherTotalCards === 1 && !get().oneCardDeclarations[otherPlayer.id]) {
+                         console.log(`🤖 [checkOneCardStatus] Бот ${bot.name} спрашивает у ${otherPlayer.name}: "Сколько карт?"`);
+                         get().showNotification(`🤖 ${bot.name}: "Сколько карт у ${otherPlayer.name}?"`, 'info', 3000);
+                         get().askHowManyCards(bot.id, otherPlayer.id);
+                        }
+                      }
+                    });
+                  });
+                }, 3500); // ✅ Боты начинают проверки через 3.5 секунды
                }
             } else {
               // У игрока больше или меньше 1 карты - сбрасываем объявление и таймер

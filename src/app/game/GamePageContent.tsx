@@ -1217,7 +1217,27 @@ function GamePageContentComponent({
             {gameStage === 1 ? (
               <>🎴 Колода: {deck.length}</>
             ) : (
-              <>🗑️ Битко: {playedCards?.length || 0}</>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>🗑️ Бито:</span>
+                {/* Показываем последние 2-3 карты в бито */}
+                <div style={{ display: 'flex', gap: '2px' }}>
+                  {(playedCards || []).slice(-3).map((card, index) => (
+                    <Image
+                      key={`bito-${index}`}
+                      src="/img/cards/card_back.png"
+                      alt="Карта в бито"
+                      width={20}
+                      height={30}
+                      style={{ 
+                        opacity: 0.8,
+                        transform: `rotate(${(index - 1) * 5}deg)`,
+                        marginLeft: index > 0 ? '-10px' : '0'
+                      }}
+                    />
+                  ))}
+                </div>
+                <span>{playedCards?.length || 0}</span>
+              </div>
             )}
           </div>
         </div>
