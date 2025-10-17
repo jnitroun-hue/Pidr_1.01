@@ -202,7 +202,7 @@ function GamePageContentComponent({
     players, currentPlayerId, deck, availableTargets,
     selectedHandCard, revealedDeckCard, tableStack, trumpSuit,
     oneCardDeclarations, oneCardTimers, playersWithOneCard, pendingPenalty,
-    penaltyDeck, gameCoins,
+    penaltyDeck, gameCoins, playedCards,
     startGame, endGame, resetGame,
     drawCard, makeMove, onDeckClick, placeCardOnSelfByRules,
     selectHandCard, playSelectedCard, takeTableCards, showNotification,
@@ -1198,7 +1198,7 @@ function GamePageContentComponent({
 
   return (
     <div className={styles.gameContainer}>
-      {/* ЗАГОЛОВОК ИГРЫ - СТАДИЯ И КОЛОДА */}
+      {/* ЗАГОЛОВОК ИГРЫ - СТАДИЯ И КОЛОДА/БИТКО */}
       {isGameActive && (
         <div className={styles.gameHeader}>
           <div className={styles.stageInfo}>
@@ -1216,7 +1216,11 @@ function GamePageContentComponent({
             )}
           </div>
           <div className={styles.deckInfo}>
-            🎴 Колода: {deck.length}
+            {gameStage === 1 ? (
+              <>🎴 Колода: {deck.length}</>
+            ) : (
+              <>🗑️ Битко: {playedCards?.length || 0}</>
+            )}
           </div>
         </div>
       )}
@@ -1313,8 +1317,8 @@ function GamePageContentComponent({
                           : '0 4px 12px rgba(0,0,0,0.4)',
                         border: isTopCard ? '3px solid rgba(255, 193, 7, 0.8)' : '2px solid rgba(255, 255, 255, 0.3)',
                         zIndex: idx, // Правая карта (больший idx) поверх левой
-                        transition: 'all 0.3s ease',
-                        animation: isTopCard ? 'pulse 2s ease-in-out infinite' : 'none'
+                        transition: 'all 0.3s ease'
+                        // УБРАНА АНИМАЦИЯ pulse - не мерцает больше
                       }}
                     >
                       <Image
@@ -1622,8 +1626,9 @@ function GamePageContentComponent({
                             ? card.replace('(open)', '').replace('(closed)', '')
                             : card.image || `${card.rank}_of_${card.suit}.png`;
                           
-                          // В 1-й стадии ВСЕ карты открыты! Со 2-й стадии - только свои или помеченные (open)
-                          const showOpen = gameStage === 1 || isHumanPlayer || (typeof card === 'string' && card.includes('(open)')) || card.open;
+                          // ИСПРАВЛЕНО: В 1-й стадии ВСЕ карты открыты! Во 2-й стадии ТОЛЬКО СВОИ КАРТЫ открыты!
+                          // У ботов карты ВСЕГДА закрыты во 2-й стадии для игрока
+                          const showOpen = gameStage === 1 || isHumanPlayer;
                           
                           // ЛОГИКА ДЛЯ 1-Й СТАДИИ: подсветка верхней карты если можно ходить
                           const isTopCard = cardIndex === playerCards.length - 1;
@@ -1732,51 +1737,7 @@ function GamePageContentComponent({
           </div>
       )}
 
-      {/* ПАНЕЛЬ КНОПОК ДЕЙСТВИЙ (СПРАВА) */}
-      {isGameActive && gameStage >= 2 && humanPlayer && (
-        <div style={{
-          position: 'fixed',
-          bottom: '200px',
-          right: '20px',
-          zIndex: 100,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '10px'
-        }}>
-          {/* Кнопка "Взять нижнюю карту" - только когда есть карты на столе */}
-          {tableStack && tableStack.length > 0 && humanPlayer.id === currentPlayerId && (
-            <button
-              onClick={() => {
-                console.log(`🎴 [2-я стадия] Игрок берет нижнюю карту`);
-                takeTableCards();
-              }}
-              style={{
-                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '12px',
-                padding: '12px 20px',
-                fontSize: '14px',
-                fontWeight: '700',
-                cursor: 'pointer',
-                boxShadow: '0 4px 15px rgba(245, 158, 11, 0.4)',
-                transition: 'all 0.3s ease',
-                whiteSpace: 'nowrap'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 6px 20px rgba(245, 158, 11, 0.5)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 15px rgba(245, 158, 11, 0.4)';
-              }}
-            >
-              ⬇️ Взять карту
-            </button>
-          )}
-        </div>
-      )}
+      {/* ПАНЕЛЬ КНОПОК ДЕЙСТВИЙ - УБРАНА, КНОПКА ПЕРЕНЕСЕНА В РУКУ ИГРОКА */}
 
       {/* Рука игрока внизу экрана - ТОЛЬКО СО 2-Й СТАДИИ! */}
       {isGameActive && gameStage >= 2 && humanPlayer && humanPlayer.cards && humanPlayer.cards.length > 0 && (() => {
@@ -1948,6 +1909,30 @@ function GamePageContentComponent({
                 }}
               >
                 ⚠️ Сдать штраф
+              </button>
+            )}
+            
+            {/* Кнопка "Взять карту" - ПЕРЕНЕСЕНА В РУКУ ИГРОКА */}
+            {tableStack && tableStack.length > 0 && humanPlayer.id === currentPlayerId && (
+              <button
+                onClick={() => {
+                  console.log(`🎴 [2-я стадия] Игрок берет карты со стола`);
+                  takeTableCards();
+                }}
+                style={{
+                  background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '6px 12px',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 8px rgba(245, 158, 11, 0.4)',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                ⬇️ Взять карту
               </button>
             )}
           </div>
