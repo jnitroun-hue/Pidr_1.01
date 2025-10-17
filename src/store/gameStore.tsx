@@ -452,6 +452,8 @@ export const useGameStore = create<GameState>()(
             difficulty: playerInfo.difficulty
           };
           
+          console.log(`🎴 [startGame] Создан ${newPlayer.isBot ? 'бот' : 'игрок'} ${newPlayer.name}: ${newPlayer.cards.length} карт в руке, ${newPlayer.penki.length} пеньков`);
+          
           players.push(newPlayer);
         }
         
@@ -2094,8 +2096,7 @@ export const useGameStore = create<GameState>()(
             return;
           }
           
-          console.log(`🏆 [checkVictoryCondition] ===== ПРОВЕРКА УСЛОВИЙ ПОБЕДЫ =====`);
-          console.log(`🏆 [checkVictoryCondition] Стадия: ${gameStage}, Игроков: ${players.length}`);
+          // Убран лог проверки победы (слишком частый)
           
           // Анализируем КАЖДОГО игрока
           const newWinners: Player[] = [];
@@ -2108,9 +2109,7 @@ export const useGameStore = create<GameState>()(
             const penki = player.penki.length;
             const total = player.cards.length + player.penki.length;
             
-            console.log(`🏆 [checkVictoryCondition] ${player.name}:`);
-            console.log(`   - Открытые: ${openCards}, Закрытые: ${closedCards}, Пеньки: ${penki}`);
-            console.log(`   - ВСЕГО: ${total} карт, Статус: ${player.isWinner ? 'ПОБЕДИТЕЛЬ' : 'ИГРАЕТ'}`);
+            // Убран лог для каждого игрока (слишком частый)
             
             // ПОБЕДИТЕЛЬ = НЕТ КАРТ ВООБЩЕ (ни открытых, ни закрытых, ни пеньков)
             if (total === 0) {
@@ -2127,10 +2126,7 @@ export const useGameStore = create<GameState>()(
             }
           });
           
-          console.log(`🏆 [checkVictoryCondition] ===== ИТОГИ =====`);
-          console.log(`🎉 Новые победители: ${newWinners.length} - ${newWinners.map(w => w.name).join(', ')}`);
-          console.log(`✅ Уже победители: ${existingWinners.length} - ${existingWinners.map(w => w.name).join(', ')}`);
-          console.log(`🏆 В игре: ${playersInGame.length} - ${playersInGame.map(p => `${p.name}(${p.cards.length + p.penki.length})`).join(', ')}`);
+          // Убран лог итогов (слишком частый)
           
           // 🎉 ОБЪЯВЛЯЕМ НОВЫХ ПОБЕДИТЕЛЕЙ (НЕ ЗАВЕРШАЯ ИГРУ)
           if (newWinners.length > 0) {
@@ -2254,7 +2250,7 @@ export const useGameStore = create<GameState>()(
             const penkiCount = player.penki.length; // Пеньки (отдельно, не считаются!)
             const openCards = player.cards.filter(c => c.open);
             
-            console.log(`🔍 [checkOneCardStatus] ${player.name}: в руке=${cardsInHand}, пеньки=${penkiCount} (открытых=${openCards.length})`);
+            // Убран лог для каждого игрока (слишком частый)
             
             // Проверяем есть ли у игрока ровно 1 карта В РУКЕ (БЕЗ пеньков!)
             if (cardsInHand === 1) {

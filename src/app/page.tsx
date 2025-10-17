@@ -29,11 +29,18 @@ function HomeWithParams() {
   const [loading, setLoading] = useState(true);
   const [showMainMenu, setShowMainMenu] = useState(false);
   const [error, setError] = useState<string>('');
+  const [initialized, setInitialized] = useState(false); // Флаг инициализации
   const { user: telegramUser, isReady } = useTelegram();
   const { language } = useLanguage();
   const router = useRouter();
 
   useEffect(() => {
+    // ✅ ЗАЩИТА ОТ ПОВТОРНОГО ЗАПУСКА
+    if (initialized) {
+      console.log('🛡️ Уже инициализировано - пропускаем');
+      return;
+    }
+    
     console.log('🎮 P.I.D.R. GAME - АВТОМАТИЧЕСКАЯ АВТОРИЗАЦИЯ');
     
     const initializePlayer = async () => {
@@ -71,6 +78,7 @@ function HomeWithParams() {
             };
             
             setUser(existingUser);
+            setInitialized(true); // ✅ Устанавливаем флаг
             setTimeout(() => {
               setLoading(false);
               setTimeout(() => setShowMainMenu(true), 100);
@@ -191,6 +199,7 @@ function HomeWithParams() {
           };
           
           setUser(newUser);
+          setInitialized(true); // ✅ Устанавливаем флаг
           setTimeout(() => {
             setLoading(false);
             setTimeout(() => setShowMainMenu(true), 100);
