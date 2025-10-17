@@ -1228,6 +1228,12 @@ export const useGameStore = create<GameState>()(
         setTimeout(() => {
           get().initializeStage2();
           
+          // ✅ ВАЖНО: Проверяем статус "одна карта" после перехода во 2-ю стадию
+          setTimeout(() => {
+            get().checkOneCardStatus();
+            console.log('✅ [checkStage1End] Проверка "одна карта" после перехода во 2-ю стадию');
+          }, 200);
+          
           // Даём время на обновление state и ЗАТЕМ запускаем ход
           setTimeout(() => {
             console.log(`🎮 [checkStage1End] Запускаем processPlayerTurn для ${players.find(p => p.id === startingPlayerId)?.name}`);
@@ -2092,7 +2098,7 @@ export const useGameStore = create<GameState>()(
           
           // КРИТИЧЕСКИ ВАЖНО: В 1-й стадии победа НЕВОЗМОЖНА!
           if (gameStage === 1) {
-            console.log(`🏆 [checkVictoryCondition] ⚠️ 1-я стадия - победа невозможна`);
+            // Убран лог (слишком частый - при каждом ходе)
             return;
           }
           
@@ -2250,7 +2256,10 @@ export const useGameStore = create<GameState>()(
             const penkiCount = player.penki.length; // Пеньки (отдельно, не считаются!)
             const openCards = player.cards.filter(c => c.open);
             
-            // Убран лог для каждого игрока (слишком частый)
+            // ✅ ОТЛАДКА: Логируем ТОЛЬКО игроков с 1 картой
+            if (cardsInHand === 1) {
+              console.log(`🔍 [checkOneCardStatus] ${player.name}: 1 карта в руке (открытых=${openCards.length}, пеньки=${penkiCount})`);
+            }
             
             // Проверяем есть ли у игрока ровно 1 карта В РУКЕ (БЕЗ пеньков!)
             if (cardsInHand === 1) {
@@ -2261,7 +2270,7 @@ export const useGameStore = create<GameState>()(
                  // Запускаем таймер на 5 секунд для объявления
                  newOneCardTimers[player.id] = currentTime + 5000; // 5 секунд на объявление
                  
-                 console.log(`⏰ [checkOneCardStatus] У игрока ${player.name} 1 открытая карта! Запущен таймер на объявление (до ${new Date(newOneCardTimers[player.id]).toLocaleTimeString()})`);
+                 console.log(`⏰ [checkOneCardStatus] У игрока ${player.name} 1 карта в руке! Запущен таймер на объявление (до ${new Date(newOneCardTimers[player.id]).toLocaleTimeString()})`);
                  
                  // Уведомляем игрока (если это человек)
                  if (!player.isBot) {
