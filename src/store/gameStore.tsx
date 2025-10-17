@@ -1174,12 +1174,9 @@ export const useGameStore = create<GameState>()(
           p.isCurrentPlayer = p.id === startingPlayerId;
           p.playerStage = 2; // Все переходят во 2-ю стадию
           
-          // Активируем пеньки если нет карт!
-          if (p.cards.length === 0 && p.penki.length > 0) {
-            console.log(`🃏 [checkStage1End] ⚠️ У игрока ${p.name} нет карт в руке - активируем пеньки СРАЗУ!`);
-            p.cards = [...p.penki]; // Пеньки переходят в руку (open будет установлен ниже)
-            p.penki = [];
-          }
+          // ✅ ИСПРАВЛЕНО: Пеньки ОСТАЮТСЯ в penki[] при переходе во 2-ю стадию!
+          // Они активируются ТОЛЬКО когда закончатся карты в руке (переход в 3-ю стадию)
+          console.log(`🃏 [checkStage1End] ${p.name}: ${p.cards.length} карт в руке, ${p.penki.length} пеньков`);
           
           // Устанавливаем видимость карт для 2-й стадии:
           // У БОТОВ: open = false (не видны игроку, но AI видит через gameStage)
@@ -1189,13 +1186,13 @@ export const useGameStore = create<GameState>()(
               ...card,
               open: false // Закрыты для ОТОБРАЖЕНИЯ (AI будет игнорировать эту проверку во 2-й стадии)
             }));
-            console.log(`🤖 [checkStage1End] Бот ${p.name}: ${p.cards.length} карт (open=false, но AI видит их через gameStage=2)`);
+            console.log(`🤖 [checkStage1End] Бот ${p.name}: ${p.cards.length} карт (open=false), ${p.penki.length} пеньков (для 3-й стадии)`);
           } else {
             p.cards = p.cards.map(card => ({
               ...card,
               open: true // Открыты для игрока
             }));
-            console.log(`👤 [checkStage1End] Игрок ${p.name}: ${p.cards.length} карт (open=true)`);
+            console.log(`👤 [checkStage1End] Игрок ${p.name}: ${p.cards.length} карт (open=true), ${p.penki.length} пеньков (для 3-й стадии)`);
           }
         });
         
@@ -2251,17 +2248,16 @@ export const useGameStore = create<GameState>()(
           const newPlayersWithOneCard: string[] = [];
           
           players.forEach(player => {
+            // ✅ ИСПРАВЛЕНО: Считаем ТОЛЬКО карты в руке (player.cards), БЕЗ пеньков (player.penki)!
+            // Пеньки открываются ТОЛЬКО когда рука пустая!
+            const cardsInHand = player.cards.length; // Карты В РУКЕ (без пеньков!)
+            const penkiCount = player.penki.length; // Пеньки (отдельно, не считаются!)
             const openCards = player.cards.filter(c => c.open);
-            const totalCards = player.cards.length;
             
-            // ИСПРАВЛЕНО: Во 2-й и 3-й стадии считаем ВСЕ карты (пеньков нет - все карты в руке!)
-            // В 1-й стадии считали бы только открытые (пеньки не считаем), но в 1-й стадии эта функция не работает
-            const cardsInPlay = totalCards; // Во 2-й/3-й стадии все карты в игре
+            console.log(`🔍 [checkOneCardStatus] ${player.name}: в руке=${cardsInHand}, пеньки=${penkiCount} (открытых=${openCards.length})`);
             
-            console.log(`🔍 [checkOneCardStatus] ${player.name}: в игре=${cardsInPlay} (открытых=${openCards.length}, всего=${totalCards})`);
-            
-            // Проверяем есть ли у игрока ровно 1 карта В ИГРЕ (без пеньков!)
-            if (cardsInPlay === 1) {
+            // Проверяем есть ли у игрока ровно 1 карта В РУКЕ (БЕЗ пеньков!)
+            if (cardsInHand === 1) {
                newPlayersWithOneCard.push(player.id);
                
                // Если игрок еще не объявил "одна карта" и у него нет таймера
@@ -2321,7 +2317,7 @@ export const useGameStore = create<GameState>()(
             } else {
               // У игрока больше или меньше 1 карты - сбрасываем объявление и таймер
               if (oneCardDeclarations[player.id] || oneCardTimers[player.id]) {
-                console.log(`🔄 [checkOneCardStatus] У игрока ${player.name} теперь ${cardsInPlay} карт(ы) - СБРАСЫВАЕМ объявление и таймер`);
+                console.log(`🔄 [checkOneCardStatus] У игрока ${player.name} теперь ${cardsInHand} карт(ы) в руке (пеньки: ${penkiCount}) - СБРАСЫВАЕМ объявление и таймер`);
                 delete newOneCardDeclarations[player.id];
                 delete newOneCardTimers[player.id];
               }

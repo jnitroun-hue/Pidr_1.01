@@ -513,12 +513,12 @@ function GamePageContentComponent({
     return 1; // 5 и меньше
   }, [players.length, playerCount]);
 
-  // Получаем игрока, который сейчас ходит
-  const currentTurnPlayer = players.find(p => p.id === currentPlayerId);
-  const currentPlayerIndex = players.findIndex(p => p.id === currentPlayerId);
+  // Получаем игрока, который сейчас ходит (МЕМОИЗИРОВАНО)
+  const currentTurnPlayer = useMemo(() => players.find(p => p.id === currentPlayerId), [players, currentPlayerId]);
+  const currentPlayerIndex = useMemo(() => players.findIndex(p => p.id === currentPlayerId), [players, currentPlayerId]);
   
-  // Получаем пользователя-человека (для UI контейнера карт)
-  const humanPlayer = players.find(p => p.isUser);
+  // Получаем пользователя-человека (для UI контейнера карт) (МЕМОИЗИРОВАНО)
+  const humanPlayer = useMemo(() => players.find(p => p.isUser), [players]);
   
   // ОТЛАДКА убрана - логи были слишком многословные
   
@@ -943,7 +943,6 @@ function GamePageContentComponent({
       
       // Если появились игроки с 1 картой
       if (playersWithOneCard && playersWithOneCard.length > 0) {
-        console.log('⏰ [Задержка] Обнаружен игрок с 1 картой, показываем кнопку через 2 сек');
         setShowAskCardsButton(false); // Скрываем сначала
         
         // Показываем сообщение над игроками у которых 1 карта
@@ -957,7 +956,6 @@ function GamePageContentComponent({
         // Показываем кнопку через 2 секунды
         setTimeout(() => {
           setShowAskCardsButton(true);
-          console.log('✅ [Задержка] Кнопка "Сколько карт?" теперь доступна');
         }, 2000);
       } else {
         // Нет игроков с 1 картой - скрываем кнопку
@@ -1740,17 +1738,7 @@ function GamePageContentComponent({
       {/* ПАНЕЛЬ КНОПОК ДЕЙСТВИЙ - УБРАНА, КНОПКА ПЕРЕНЕСЕНА В РУКУ ИГРОКА */}
 
       {/* Рука игрока внизу экрана - ТОЛЬКО СО 2-Й СТАДИИ! */}
-      {isGameActive && gameStage >= 2 && humanPlayer && humanPlayer.cards && humanPlayer.cards.length > 0 && (() => {
-        console.log(`🎮 [Рука игрока] Отрисовка:`, {
-          isGameActive,
-          gameStage,
-          humanPlayer: humanPlayer ? {id: humanPlayer.id, name: humanPlayer.name, cards: humanPlayer.cards.length} : null,
-          oneCardDeclarations: oneCardDeclarations[humanPlayer.id],
-          playersWithOneCard,
-          pendingPenalty
-        });
-        return true;
-      })() && (
+      {isGameActive && gameStage >= 2 && humanPlayer && humanPlayer.cards && humanPlayer.cards.length > 0 && (
         <div className={styles.playerHand}>
           {/* Кнопки компактно над картами игрока */}
           <div style={{
@@ -1761,33 +1749,18 @@ function GamePageContentComponent({
             flexWrap: 'wrap',
           }}>
             {/* Кнопка "Одна карта!" */}
-            {(() => {
-              const showButton = humanPlayer.cards.length === 1 && !oneCardDeclarations[humanPlayer.id];
-              console.log(`🎮 [Кнопка "Одна карта!"] Показать: ${showButton}, карт: ${humanPlayer.cards.length}, объявлено: ${oneCardDeclarations[humanPlayer.id]}`);
-              return showButton;
-            })() && (
+            {humanPlayer.cards.length === 1 && !oneCardDeclarations[humanPlayer.id] && (
               <button
                 onClick={() => {
-                  console.log(`🎴 [Одна карта] Клик! humanPlayer:`, humanPlayer);
-                  console.log(`🎴 [Одна карта] Карты:`, humanPlayer.cards);
-                  console.log(`🎴 [Одна карта] gameStage:`, gameStage);
-                  
                   // ИСПРАВЛЕНО: Во 2-й стадии считаем ВСЕ карты, а не только открытые!
-                  // После пеньков могут быть закрытые карты (open: false)
                   const totalCards = humanPlayer.cards.length;
                   
                   if (totalCards === 1) {
-                    // Объявляем
                     declareOneCard(humanPlayer.id);
-                    
-                    // Показываем сообщение над своим аватаром
                     showPlayerMessage(humanPlayer.id, '☝️ ОДНА КАРТА!', 'success', 4000);
-                    console.log(`📢 [Одна карта] ${humanPlayer.name} объявил!`);
                   } else {
-                    // Ошибка - у игрока больше 1 карты
                     showPlayerMessage(humanPlayer.id, `❌ У вас ${totalCards} ${totalCards === 1 ? 'карта' : totalCards < 5 ? 'карты' : 'карт'}!`, 'error', 3000);
                     showNotification(`Нельзя объявлять "одна карта" - у вас ${totalCards} ${totalCards === 1 ? 'карта' : totalCards < 5 ? 'карты' : 'карт'}`, 'error', 3000);
-                    console.warn(`⚠️ [Одна карта] Неправильное объявление: ${totalCards} карт вместо 1`);
                   }
                 }}
                 style={{
@@ -1809,15 +1782,9 @@ function GamePageContentComponent({
             )}
             
             {/* Кнопка "Сколько карт?" - ПОКАЗЫВАЕТСЯ С ЗАДЕРЖКОЙ 2 СЕК */}
-            {(() => {
-              const showButton = showAskCardsButton && playersWithOneCard && playersWithOneCard.length > 0;
-              console.log(`🎮 [Кнопка "Сколько карт?"] Показать: ${showButton}, задержка завершена: ${showAskCardsButton}, playersWithOneCard:`, playersWithOneCard);
-              return showButton;
-            })() && (
+            {showAskCardsButton && playersWithOneCard && playersWithOneCard.length > 0 && (
               <button
                 onClick={() => {
-                  console.log(`🎴 [Сколько карт] Клик! playersWithOneCard:`, playersWithOneCard);
-                  
                   // Показываем сообщение над своим аватаром
                   showPlayerMessage(humanPlayer.id, '❓ Сколько карт?', 'info', 2000);
                   
@@ -1825,28 +1792,19 @@ function GamePageContentComponent({
                     playersWithOneCard.includes(p.id) && p.id !== humanPlayer.id
                   );
                   
-                  console.log(`🎴 [Сколько карт] Найдено целей:`, targets.length, targets.map(t => t.name));
-                  
                   if (targets.length === 1) {
-                    console.log(`🎴 [Сколько карт] Спрашиваем у ${targets[0].name}`);
-                    
                     // Показываем сообщение над целью
                     showPlayerMessage(targets[0].id, '🔍 Проверка...', 'warning', 3000);
-                    
                     askHowManyCards(humanPlayer.id, targets[0].id);
                   } else if (targets.length > 1) {
-                    console.log(`🎴 [Штраф] Несколько целей, открываем окно`);
-                    
                     // Показываем сообщения над всеми целями
                     targets.forEach(t => {
                       showPlayerMessage(t.id, '🎯 Выберите цель', 'warning', 3000);
                     });
-                    
                     setPenaltyTargets(targets);
                     setSelectedCards({});
                     setShowPenaltyModal(true);
                   } else {
-                    console.log(`🎴 [Сколько карт] ❌ Нет доступных целей!`);
                     showNotification('Нет доступных целей для проверки', 'warning', 2000);
                   }
                 }}
@@ -1869,23 +1827,12 @@ function GamePageContentComponent({
             )}
             
             {/* Кнопка "Сдать штраф" */}
-            {(() => {
-              const showButton = !!pendingPenalty;
-              console.log(`🎮 [Кнопка "Сдать штраф"] Показать: ${showButton}, pendingPenalty:`, pendingPenalty);
-              return showButton;
-            })() && (
+            {!!pendingPenalty && (
               <button
                 onClick={() => {
-                  if (!pendingPenalty) {
-                    console.error(`🎴 [Штраф] ❌ pendingPenalty is null!`);
-                    return;
-                  }
+                  if (!pendingPenalty) return;
                   
                   const target = players.find(p => p.id === pendingPenalty.targetPlayerId);
-                  console.log(`🎴 [Штраф] Открываем окно для сдачи штрафа игроку:`, target?.name);
-                  console.log(`🎴 [Штраф] pendingPenalty:`, pendingPenalty);
-                  console.log(`🎴 [Штраф] humanPlayer cards:`, humanPlayer?.cards);
-                  
                   if (!target) {
                     alert('Ошибка: игрок не найден');
                     return;
@@ -1915,10 +1862,7 @@ function GamePageContentComponent({
             {/* Кнопка "Взять карту" - ПЕРЕНЕСЕНА В РУКУ ИГРОКА */}
             {tableStack && tableStack.length > 0 && humanPlayer.id === currentPlayerId && (
               <button
-                onClick={() => {
-                  console.log(`🎴 [2-я стадия] Игрок берет карты со стола`);
-                  takeTableCards();
-                }}
+                onClick={takeTableCards}
                 style={{
                   background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
                   color: 'white',
