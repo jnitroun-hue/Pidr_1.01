@@ -631,11 +631,6 @@ export const useGameStore = create<GameState>()(
           const currentPlayerName = currentPlayer?.name || currentPlayerId;
           console.log(`🔄 [nextTurn] Передача хода от ${currentPlayerName}`);
           
-          // КРИТИЧНО: Если текущий игрок стал победителем, пропускаем его
-          if (currentPlayer?.isWinner) {
-            console.log(`🏆 [nextTurn] ${currentPlayerName} уже победитель - пропускаем`);
-          }
-          
           // ИСПРАВЛЕНО: Находим следующего АКТИВНОГО игрока (с картами или пеньками) ПО ЧАСОВОЙ СТРЕЛКЕ
           const activePlayers = players.filter(p => 
             (p.cards.length > 0 || p.penki.length > 0) && !p.isWinner
@@ -647,11 +642,13 @@ export const useGameStore = create<GameState>()(
             return;
           }
           
-          const currentIndex = activePlayers.findIndex(p => p.id === currentPlayerId)
+          // ✅ ИСПРАВЛЕНО: Если текущий игрок победитель, берем первого активного игрока
+          let currentIndex = activePlayers.findIndex(p => p.id === currentPlayerId);
           
           if (currentIndex === -1) {
-            console.error(`🔄 [nextTurn] ❌ Текущий игрок не найден среди активных игроков`);
-            return;
+            // Текущий игрок стал победителем или вышел из игры - берем первого активного
+            console.log(`🏆 [nextTurn] ${currentPlayerName} уже не активен - передаем ход первому активному игроку`);
+            currentIndex = 0; // Начинаем с первого активного игрока
           }
           
           const nextIndex = (currentIndex + 1) % activePlayers.length
@@ -2017,22 +2014,14 @@ export const useGameStore = create<GameState>()(
            
            // ЗАЩИТА: Если у игрока уже нет пеньков, значит они уже активированы
            if (player.penki.length === 0) {
-             console.log(`🃏 [checkStage3Transition] ⚠️ У игрока ${player.name} пеньки уже активированы - пропускаем`);
+             // Убран лог (повторяется при каждом ходе для каждого бота)
              return;
            }
            
-           // Проверяем есть ли у игрока открытые карты
-           const hasOpenCards = player.cards.some(card => card.open);
-           
-           console.log(`🃏 [checkStage3Transition] Проверка перехода игрока ${player.name}:`);
-           console.log(`🃏 [checkStage3Transition] - hasOpenCards: ${hasOpenCards}`);
-           console.log(`🃏 [checkStage3Transition] - player.cards.length: ${player.cards.length}`);
-           console.log(`🃏 [checkStage3Transition] - player.playerStage: ${player.playerStage}`);
-           console.log(`🃏 [checkStage3Transition] - player.penki.length: ${player.penki.length}`);
-           
-           // ИСПРАВЛЕНО: Во 2-й стадии если у игрока НЕТ открытых карт → открываем пеньки
-           if (!hasOpenCards && player.playerStage === 2 && player.penki.length > 0) {
-             console.log(`🃏 [checkStage3Transition] ✅ У игрока ${player.name} нет открытых карт во 2-й стадии - активируем пеньки!`);
+           // ✅ ИСПРАВЛЕНО: Пеньки активируются только когда РУКА ПУСТАЯ (cards.length === 0)
+           // НЕ когда "нет открытых карт", а когда "ВООБЩЕ НЕТ КАРТ"!
+           if (player.cards.length === 0 && player.playerStage === 2 && player.penki.length > 0) {
+             console.log(`🃏 [checkStage3Transition] ✅ У игрока ${player.name} пустая рука во 2-й стадии - активируем пеньки!`);
              get().activatePenki(playerId);
            }
          },
@@ -2127,7 +2116,7 @@ export const useGameStore = create<GameState>()(
                 existingWinners.push(player);
               }
             } else {
-              console.log(`   ⏳ Играет (${total} карт)`);
+              // Убран лог (повторяется при каждом ходе для каждого игрока)
               playersInGame.push(player);
             }
           });
