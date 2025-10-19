@@ -1716,13 +1716,18 @@ export const useGameStore = create<GameState>()(
            // УБРАНА СТАРАЯ НЕПРАВИЛЬНАЯ ЛОГИКА ЛИМИТА КАРТ
            // Теперь круг завершается только когда финишер (-1 от инициатора) побьет карту
            
-           // Убираем карту из руки игрока
-           const cardIndex = currentPlayer.cards.findIndex(c => c.id === selectedHandCard.id);
-           if (cardIndex === -1) return;
-           
-           currentPlayer.cards.splice(cardIndex, 1);
-           
-           // 🏆 ПРОВЕРЯЕМ ПОБЕДУ ТОЛЬКО ВО 2-Й СТАДИИ КОГДА И КАРТЫ И ПЕНЬКИ ЗАКОНЧИЛИСЬ!
+          // Убираем карту из руки игрока
+          const cardIndex = currentPlayer.cards.findIndex(c => c.id === selectedHandCard.id);
+          if (cardIndex === -1) return;
+          
+          currentPlayer.cards.splice(cardIndex, 1);
+          
+          // 🔍 ДЛЯ ОТЛАДКИ: Логируем если у игрока осталось 0 карт
+          if (currentPlayer.cards.length === 0) {
+            console.log(`🔥 [playSelectedCard] У ${currentPlayer.name} закончились карты! Пеньки: ${currentPlayer.penki.length}, playerStage: ${currentPlayer.playerStage}`);
+          }
+          
+          // 🏆 ПРОВЕРЯЕМ ПОБЕДУ ТОЛЬКО ВО 2-Й СТАДИИ КОГДА И КАРТЫ И ПЕНЬКИ ЗАКОНЧИЛИСЬ!
            const { gameStage } = get();
            const cardsLeft = currentPlayer.cards.length;
            const penkiLeft = currentPlayer.penki.length;
@@ -1843,9 +1848,14 @@ export const useGameStore = create<GameState>()(
             get().showNotification(`🏁 ${reasonText}! ${newTableStack.length} карт в бито`, 'success', 3000);
             
             // ИСПРАВЛЕНО: Проверяем активацию пеньков для ВСЕХ игроков
-            players.forEach(player => {
-              get().checkStage3Transition(player.id);
-            });
+            // ✅ ВАЖНО: Проверяем с задержкой, чтобы состояние успело обновиться!
+            setTimeout(() => {
+              const currentPlayers = get().players; // Получаем СВЕЖИЕ данные из стора!
+              currentPlayers.forEach(player => {
+                get().checkStage3Transition(player.id);
+              });
+            }, 50);
+            
             // Проверяем условия победы
             get().checkVictoryCondition();
             // Проверяем статус "одна карта"
@@ -1857,19 +1867,24 @@ export const useGameStore = create<GameState>()(
           }
            
            // ОБЫЧНОЕ ПРОДОЛЖЕНИЕ КРУГА
-           // ИСПРАВЛЕНО: Проверяем активацию пеньков для ВСЕХ игроков
-           players.forEach(player => {
-             get().checkStage3Transition(player.id);
-           });
-           // Проверяем условия победы
-           get().checkVictoryCondition();
-           // КРИТИЧНО: Проверяем статус "одна карта" ДВАЖДЫ для надежности
-           get().checkOneCardStatus();
-           setTimeout(() => get().checkOneCardStatus(), 1000);
-           
-           // ПРАВИЛА P.I.D.R.: Ход переходит к следующему игроку (УСКОРЕНО)
-           console.log(`🃏 [playSelectedCard P.I.D.R.] ✅ Ход к следующему игроку`);
-           setTimeout(() => get().nextTurn(), 200);
+          // ИСПРАВЛЕНО: Проверяем активацию пеньков для ВСЕХ игроков
+          // ✅ ВАЖНО: Проверяем с задержкой, чтобы состояние успело обновиться!
+          setTimeout(() => {
+            const currentPlayers = get().players; // Получаем СВЕЖИЕ данные из стора!
+            currentPlayers.forEach(player => {
+              get().checkStage3Transition(player.id);
+            });
+          }, 50);
+          
+          // Проверяем условия победы
+          get().checkVictoryCondition();
+          // КРИТИЧНО: Проверяем статус "одна карта" ДВАЖДЫ для надежности
+          get().checkOneCardStatus();
+          setTimeout(() => get().checkOneCardStatus(), 1000);
+          
+          // ПРАВИЛА P.I.D.R.: Ход переходит к следующему игроку (УСКОРЕНО)
+          console.log(`🃏 [playSelectedCard P.I.D.R.] ✅ Ход к следующему игроку`);
+          setTimeout(() => get().nextTurn(), 200);
          },
          
         // Проверка возможности побить карту
@@ -1957,13 +1972,17 @@ export const useGameStore = create<GameState>()(
              get().showNotification('Стол очищен! Новый раунд', 'info', 3000);
            }
            
-           // ИСПРАВЛЕНО: Проверяем активацию пеньков для ВСЕХ игроков
-           players.forEach(player => {
-             get().checkStage3Transition(player.id);
-           });
-           
-           // Проверяем условия победы
-           get().checkVictoryCondition();
+          // ИСПРАВЛЕНО: Проверяем активацию пеньков для ВСЕХ игроков
+          // ✅ ВАЖНО: Проверяем с задержкой, чтобы состояние успело обновиться!
+          setTimeout(() => {
+            const currentPlayers = get().players; // Получаем СВЕЖИЕ данные из стора!
+            currentPlayers.forEach(player => {
+              get().checkStage3Transition(player.id);
+            });
+          }, 50);
+          
+          // Проверяем условия победы
+          get().checkVictoryCondition();
            
            // Проверяем статус "одна карта"
            get().checkOneCardStatus();
@@ -2009,12 +2028,19 @@ export const useGameStore = create<GameState>()(
              return;
            }
            
-           // ✅ ИСПРАВЛЕНО: Пеньки активируются только когда РУКА ПУСТАЯ (cards.length === 0)
-           // НЕ когда "нет открытых карт", а когда "ВООБЩЕ НЕТ КАРТ"!
-           if (player.cards.length === 0 && player.playerStage === 2 && player.penki.length > 0) {
-             console.log(`🃏 [checkStage3Transition] ✅ У игрока ${player.name} пустая рука во 2-й стадии - активируем пеньки!`);
-             get().activatePenki(playerId);
-           }
+         // ✅ ИСПРАВЛЕНО: Пеньки активируются только когда РУКА ПУСТАЯ (cards.length === 0)
+          // НЕ когда "нет открытых карт", а когда "ВООБЩЕ НЕТ КАРТ"!
+          
+          // ДЛЯ ОТЛАДКИ: Логируем проверку для игроков с 0 картами
+          if (player.cards.length === 0) {
+            console.log(`🔍 [checkStage3Transition] ${player.name}: карт=${player.cards.length}, пеньки=${player.penki.length}, playerStage=${player.playerStage || 'undefined'}`);
+          }
+          
+          // ✅ УБРАНА ПРОВЕРКА player.playerStage === 2 (избыточна, т.к. gameStage уже === 2)
+          if (player.cards.length === 0 && player.penki.length > 0) {
+            console.log(`🃏 [checkStage3Transition] ✅ У игрока ${player.name} пустая рука во 2-й стадии - активируем пеньки!`);
+            get().activatePenki(playerId);
+          }
          },
          
          // Активация пеньков (остается во 2-й стадии) - ИСПРАВЛЕНО
