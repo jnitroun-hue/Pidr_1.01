@@ -769,22 +769,32 @@ export const useGameStore = create<GameState>()(
       
       distributePenaltyCards: (targetPlayerId) => {
         const { penaltyDeck, players, gameStage } = get();
-        if (penaltyDeck.length === 0) return;
+        if (penaltyDeck.length === 0) {
+          console.log(`⚠️ [distributePenaltyCards] Штрафная стопка пуста!`);
+          return;
+        }
         
         const targetPlayer = players.find(p => p.id === targetPlayerId);
-        if (!targetPlayer) return;
+        if (!targetPlayer) {
+          console.log(`❌ [distributePenaltyCards] Игрок ${targetPlayerId} не найден!`);
+          return;
+        }
         
         console.log(`⚠️ [distributePenaltyCards] Раздаем ${penaltyDeck.length} штрафных карт игроку ${targetPlayer.name}`);
+        console.log(`📊 [distributePenaltyCards] До штрафа: ${targetPlayer.name} имеет ${targetPlayer.cards.length} карт`);
         
         const newPlayers = players.map(player => {
           if (player.id === targetPlayerId) {
             // Добавляем все штрафные карты в руку
-            // ВАЖНО: Для ИГРОКА карты открыты (он видит свою руку), для БОТА - закрыты
+            // ✅ ИСПРАВЛЕНО: Во 2-й стадии ВСЕ карты открыты (open: true) для логики игры!
+            // Визуальное отображение контролируется в UI
             const penaltyCardsForPlayer = penaltyDeck.map(card => ({ 
               ...card, 
-              open: !player.isBot // Игрок видит свои карты, бот - нет
+              open: true // ✅ Все карты открыты во 2-й стадии!
             }));
             const newCards = [...player.cards, ...penaltyCardsForPlayer];
+            console.log(`📊 [distributePenaltyCards] После штрафа: ${player.name} будет иметь ${newCards.length} карт`);
+            console.log(`🃏 [distributePenaltyCards] Добавленные карты:`, penaltyCardsForPlayer.map(c => c.image));
             return { ...player, cards: newCards };
           }
           return player;
@@ -796,6 +806,15 @@ export const useGameStore = create<GameState>()(
           players: newPlayers,
           pendingPenalty: null // ВАЖНО: Сбрасываем pendingPenalty чтобы убрать кнопку
         });
+        
+        // ✅ ПРОВЕРЯЕМ что карты действительно добавились
+        setTimeout(() => {
+          const updatedPlayer = get().players.find(p => p.id === targetPlayerId);
+          if (updatedPlayer) {
+            console.log(`✅ [distributePenaltyCards] ПРОВЕРКА: ${updatedPlayer.name} теперь имеет ${updatedPlayer.cards.length} карт`);
+            console.log(`✅ [distributePenaltyCards] Карты в руке:`, updatedPlayer.cards.map(c => c.image));
+          }
+        }, 100);
         
         get().showNotification(
           `⚠️ ${targetPlayer.name} получил ${penaltyDeck.length} штрафных карт!`, 
@@ -812,6 +831,11 @@ export const useGameStore = create<GameState>()(
             get().processPlayerTurn(currentPlayerId);
           }, 1000);
         }
+        
+        // ✅ ВАЖНО: Проверяем статус "одна карта" после раздачи штрафа
+        setTimeout(() => {
+          get().checkOneCardStatus();
+        }, 1500);
       },
       
       // Управление игроками
@@ -1238,6 +1262,7 @@ export const useGameStore = create<GameState>()(
         
         // ИСПРАВЛЕНО: Обрабатываем 2-ю и 3-ю стадии одинаково (правила дурака)
         if (gameStage === 2 || gameStage === 3) {
+          console.log(`🎮 [processPlayerTurn] Стадия ${gameStage}: ${currentPlayer.name} (${currentPlayer.cards.length} карт, ${currentPlayer.penki.length} пеньков)`);
           set({ stage2TurnPhase: 'selecting_card' });
           
           if (currentPlayer.isBot) {
@@ -1686,16 +1711,17 @@ export const useGameStore = create<GameState>()(
         },
          
          // Розыгрыш выбранной карты (ПРАВИЛА P.I.D.R.)
-         playSelectedCard: () => {
-           const { selectedHandCard, currentPlayerId, players, tableStack, roundInProgress, stage2TurnPhase, trumpSuit, roundFinisher, finisherPassed } = get();
-           if (!selectedHandCard || !currentPlayerId) return;
-           
-           const currentPlayer = players.find(p => p.id === currentPlayerId);
-           if (!currentPlayer) return;
-           
-           console.log(`🃏 [playSelectedCard P.I.D.R.] Игрок ${currentPlayer.name} играет картой: ${selectedHandCard?.image}`);
-           console.log(`🃏 [playSelectedCard P.I.D.R.] - tableStack.length: ${tableStack.length}`);
-           console.log(`🃏 [playSelectedCard P.I.D.R.] - roundInProgress: ${roundInProgress}`);
+        playSelectedCard: () => {
+          const { selectedHandCard, currentPlayerId, players, tableStack, roundInProgress, stage2TurnPhase, trumpSuit, roundFinisher, finisherPassed } = get();
+          if (!selectedHandCard || !currentPlayerId) return;
+          
+          const currentPlayer = players.find(p => p.id === currentPlayerId);
+          if (!currentPlayer) return;
+          
+          console.log(`🃏 [playSelectedCard P.I.D.R.] Игрок ${currentPlayer.name} играет картой: ${selectedHandCard?.image}`);
+          console.log(`📊 [playSelectedCard P.I.D.R.] У ${currentPlayer.name}: ${currentPlayer.cards.length} карт в руке, ${currentPlayer.penki.length} пеньков`);
+          console.log(`🃏 [playSelectedCard P.I.D.R.] - tableStack.length: ${tableStack.length}`);
+          console.log(`🃏 [playSelectedCard P.I.D.R.] - roundInProgress: ${roundInProgress}`);
            
            // ПРАВИЛА P.I.D.R.: Проверяем можем ли побить верхнюю карту (если есть карты на столе)
            if (tableStack.length > 0) {
@@ -2490,18 +2516,21 @@ export const useGameStore = create<GameState>()(
              return;
            }
            
-           console.log(`💸 [contributePenaltyCard] ${contributor.name} отдает карту ${card.image} в штрафную стопку для ${targetPlayer.name}`);
-           
-           // Создаем новое состояние
-           const newPlayers = players.map(player => ({ ...player, cards: [...player.cards] }));
-           const contributorIndex = newPlayers.findIndex(p => p.id === contributorId);
-           
-           // Убираем карту у отдающего
-           newPlayers[contributorIndex].cards.splice(cardIndex, 1);
-           
-           // НОВАЯ МЕХАНИКА: Добавляем карту в штрафную стопку
-           const penaltyCard = { ...card, open: false };
-           get().addCardToPenaltyDeck(penaltyCard);
+          console.log(`💸 [contributePenaltyCard] ${contributor.name} отдает карту ${card.image} в штрафную стопку для ${targetPlayer.name}`);
+          console.log(`📊 [contributePenaltyCard] До: ${contributor.name} имеет ${contributor.cards.length} карт`);
+          
+          // Создаем новое состояние
+          const newPlayers = players.map(player => ({ ...player, cards: [...player.cards] }));
+          const contributorIndex = newPlayers.findIndex(p => p.id === contributorId);
+          
+          // Убираем карту у отдающего
+          newPlayers[contributorIndex].cards.splice(cardIndex, 1);
+          console.log(`📊 [contributePenaltyCard] После: ${contributor.name} будет иметь ${newPlayers[contributorIndex].cards.length} карт`);
+          
+          // НОВАЯ МЕХАНИКА: Добавляем карту в штрафную стопку
+          const penaltyCard = { ...card, open: false };
+          console.log(`🗂️ [contributePenaltyCard] Добавляем карту ${penaltyCard.image} в штрафную стопку`);
+          get().addCardToPenaltyDeck(penaltyCard);
            
            // НОВОЕ ПРАВИЛО: Если у отдающего осталась 1 карта - он должен объявить "одна карта!"
            if (newPlayers[contributorIndex].cards.filter(c => c.open).length === 1) {
@@ -2538,15 +2567,23 @@ export const useGameStore = create<GameState>()(
              }, 500);
            }
            
-           // Обновляем состояние с принудительным обновлением
-           set({ 
-             players: newPlayers,
-             pendingPenalty: newPendingPenalty
-           });
-           
-           // КРИТИЧНО: Принудительно обновляем состояние для React
-           setTimeout(() => {
-             const currentPlayers = get().players;
+          // Обновляем состояние с принудительным обновлением
+          set({ 
+            players: newPlayers,
+            pendingPenalty: newPendingPenalty
+          });
+          
+          // ✅ ПРОВЕРЯЕМ что карта действительно убралась
+          setTimeout(() => {
+            const updatedContributor = get().players.find(p => p.id === contributorId);
+            if (updatedContributor) {
+              console.log(`✅ [contributePenaltyCard] ПРОВЕРКА: ${updatedContributor.name} теперь имеет ${updatedContributor.cards.length} карт`);
+            }
+          }, 100);
+          
+          // КРИТИЧНО: Принудительно обновляем состояние для React
+          setTimeout(() => {
+            const currentPlayers = get().players;
              set({ players: [...currentPlayers] });
              
              // ВАЖНО: Обновляем статус "одна карта" после обновления состояния
