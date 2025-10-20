@@ -1878,28 +1878,47 @@ function GamePageContentComponent({
             )}
             
             {/* Кнопка "Взять карту" - ПЕРЕНЕСЕНА В РУКУ ИГРОКА */}
-            {tableStack && tableStack.length > 0 && humanPlayer.id === currentPlayerId && (
-              <button
-                onClick={() => {
-                  console.log('🎴 [КНОПКА ВЗЯТЬ КАРТУ] КЛИК!');
-                  takeTableCards();
-                }}
-                style={{
-                  background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  padding: '6px 12px',
-                  fontSize: '11px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  boxShadow: '0 2px 8px rgba(245, 158, 11, 0.4)',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                ⬇️ Взять карту
-              </button>
-            )}
+            {(() => {
+              const shouldShowButton = tableStack && tableStack.length > 0 && humanPlayer.id === currentPlayerId;
+              const isMyTurn = humanPlayer.id === currentPlayerId;
+              const hasCardsOnTable = tableStack && tableStack.length > 0;
+              
+              console.log(`🎴 [КНОПКА DEBUG] tableStack.length=${tableStack?.length || 0}, humanPlayer.id=${humanPlayer.id}, currentPlayerId=${currentPlayerId}, isMyTurn=${isMyTurn}, shouldShow=${shouldShowButton}`);
+              
+              // ✅ ПОКАЗЫВАЕМ КНОПКУ ВСЕГДА если есть карты на столе (даже если не твой ход - для debug)
+              if (!hasCardsOnTable) return null;
+              
+              return (
+                <button
+                  onClick={() => {
+                    console.log('🎴 [КНОПКА ВЗЯТЬ КАРТУ] КЛИК!');
+                    console.log(`🎴 [КНОПКА] isMyTurn=${isMyTurn}, tableStack.length=${tableStack.length}`);
+                    if (!isMyTurn) {
+                      console.warn('⚠️ [КНОПКА] НЕ ТВОЙ ХОД! currentPlayerId=' + currentPlayerId);
+                    }
+                    takeTableCards();
+                  }}
+                  style={{
+                    background: isMyTurn 
+                      ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' 
+                      : 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)',
+                    color: 'white',
+                    border: '2px solid ' + (isMyTurn ? '#f59e0b' : '#ef4444'),
+                    borderRadius: '6px',
+                    padding: '6px 12px',
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 8px rgba(245, 158, 11, 0.4)',
+                    whiteSpace: 'nowrap',
+                    opacity: isMyTurn ? 1 : 0.6
+                  }}
+                  title={isMyTurn ? 'Взять карту со стола' : 'НЕ ТВОЙ ХОД!'}
+                >
+                  ⬇️ Взять карту {!isMyTurn && '(не твой ход!)'}
+                </button>
+              );
+            })()}
           </div>
           
           <div className={styles.handCards}>
