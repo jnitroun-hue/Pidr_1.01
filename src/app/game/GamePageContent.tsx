@@ -1880,7 +1880,10 @@ function GamePageContentComponent({
             {/* Кнопка "Взять карту" - ПЕРЕНЕСЕНА В РУКУ ИГРОКА */}
             {tableStack && tableStack.length > 0 && humanPlayer.id === currentPlayerId && (
               <button
-                onClick={takeTableCards}
+                onClick={() => {
+                  console.log('🎴 [КНОПКА ВЗЯТЬ КАРТУ] КЛИК!');
+                  takeTableCards();
+                }}
                 style={{
                   background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
                   color: 'white',

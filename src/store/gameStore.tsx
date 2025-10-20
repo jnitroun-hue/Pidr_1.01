@@ -637,7 +637,8 @@ export const useGameStore = create<GameState>()(
           
           const currentPlayer = players.find(p => p.id === currentPlayerId);
           const currentPlayerName = currentPlayer?.name || currentPlayerId;
-          console.log(`🔄 [nextTurn] Передача хода от ${currentPlayerName}`);
+          // ✅ ОПТИМИЗАЦИЯ: Убрали лишний лог (слишком частый во 2-й стадии)
+          // console.log(`🔄 [nextTurn] Передача хода от ${currentPlayerName}`);
           
           // ИСПРАВЛЕНО: Находим следующего АКТИВНОГО игрока (с картами или пеньками) ПО ЧАСОВОЙ СТРЕЛКЕ
           const activePlayers = players.filter(p => 
@@ -668,7 +669,8 @@ export const useGameStore = create<GameState>()(
             return;
           }
           
-          console.log(`🔄 [nextTurn] Ход переходит к ${nextPlayer.name} (индекс ${nextIndex}/${activePlayers.length} активных) - ПО ЧАСОВОЙ`);
+          // ✅ ОПТИМИЗАЦИЯ: Убрали лишний лог (слишком частый во 2-й стадии)
+          // console.log(`🔄 [nextTurn] Ход переходит к ${nextPlayer.name} (индекс ${nextIndex}/${activePlayers.length} активных) - ПО ЧАСОВОЙ`);
           
           // Обновляем текущего игрока
           players.forEach(p => p.isCurrentPlayer = p.id === nextPlayerId)
@@ -685,7 +687,8 @@ export const useGameStore = create<GameState>()(
         
         get().showNotification(`Ход переходит к ${nextPlayer.name}`, 'info')
         
-        console.log(`🔄 [nextTurn] Запускаем processPlayerTurn для ${nextPlayer.name}`);
+        // ✅ ОПТИМИЗАЦИЯ: Убрали лишний лог (слишком частый во 2-й стадии)
+        // console.log(`🔄 [nextTurn] Запускаем processPlayerTurn для ${nextPlayer.name}`);
         
         // ИСПРАВЛЕНО: Проверяем активацию пеньков для ВСЕХ игроков при переходе хода
         if (gameStage === 2) {
@@ -1277,7 +1280,8 @@ export const useGameStore = create<GameState>()(
         
         // ИСПРАВЛЕНО: Обрабатываем 2-ю и 3-ю стадии одинаково (правила дурака)
         if (gameStage === 2 || gameStage === 3) {
-          console.log(`🎮 [processPlayerTurn] Стадия ${gameStage}: ${currentPlayer.name} (${currentPlayer.cards.length} карт, ${currentPlayer.penki.length} пеньков)`);
+          // ✅ ОПТИМИЗАЦИЯ: Убрали лишний лог (слишком частый во 2-й стадии)
+          // console.log(`🎮 [processPlayerTurn] Стадия ${gameStage}: ${currentPlayer.name} (${currentPlayer.cards.length} карт, ${currentPlayer.penki.length} пеньков)`);
           set({ 
             currentPlayerId: currentPlayer.id,
             stage2TurnPhase: 'selecting_card'
@@ -1955,15 +1959,25 @@ export const useGameStore = create<GameState>()(
          
 
          
-         // Взять НИЖНЮЮ карту со стола (ПРАВИЛА P.I.D.R.)
-         takeTableCards: () => {
-           const { currentPlayerId, players, tableStack, roundFinisher, currentRoundInitiator } = get();
-           if (!currentPlayerId || tableStack.length === 0) return;
-           
-           const currentPlayer = players.find(p => p.id === currentPlayerId);
-           if (!currentPlayer) return;
-           
-           console.log(`🃏 [takeTableCards P.I.D.R.] ${currentPlayer.name} не может побить и берет НИЖНЮЮ карту`);
+        // Взять НИЖНЮЮ карту со стола (ПРАВИЛА P.I.D.R.)
+        takeTableCards: () => {
+          console.log('🎴 [takeTableCards] ВЫЗВАНА ФУНКЦИЯ!');
+          const { currentPlayerId, players, tableStack, roundFinisher, currentRoundInitiator } = get();
+          
+          console.log(`🎴 [takeTableCards] currentPlayerId=${currentPlayerId}, tableStack.length=${tableStack.length}`);
+          
+          if (!currentPlayerId || tableStack.length === 0) {
+            console.log('🎴 [takeTableCards] БЛОКИРОВКА: нет currentPlayerId или пустой стол');
+            return;
+          }
+          
+          const currentPlayer = players.find(p => p.id === currentPlayerId);
+          if (!currentPlayer) {
+            console.log('🎴 [takeTableCards] БЛОКИРОВКА: игрок не найден');
+            return;
+          }
+          
+          console.log(`🃏 [takeTableCards P.I.D.R.] ${currentPlayer.name} не может побить и берет НИЖНЮЮ карту`);
            console.log(`🃏 [takeTableCards P.I.D.R.] Карты на столе:`, tableStack.map(c => c.image));
            
            // Отслеживаем если финишер взял карту (начался овертайм)
@@ -2297,22 +2311,26 @@ export const useGameStore = create<GameState>()(
             // Пеньки открываются ТОЛЬКО когда рука пустая!
             const cardsInHand = player.cards.length; // Карты В РУКЕ (без пеньков!)
             const penkiCount = player.penki.length; // Пеньки (отдельно, не считаются!)
-            const openCards = player.cards.filter(c => c.open);
+            const hasAlreadyDeclared = oneCardDeclarations[player.id] === true;
             
-            // ✅ ИСПРАВЛЕНО: Логируем ВСЕХ игроков с количеством карт
-            console.log(`🔍 [checkOneCardStatus] ${player.name}: ${cardsInHand} карт в руке (открытых=${openCards.length}, пеньки=${penkiCount})`);
-            
-            // Дополнительная отметка для игроков с 1 картой
-            if (cardsInHand === 1) {
-              console.log(`⚠️ [checkOneCardStatus] ${player.name} - ВНИМАНИЕ! 1 КАРТА В РУКЕ!`);
+            // ✅ ОПТИМИЗАЦИЯ: Логируем ТОЛЬКО если 1 карта И НЕ объявлено
+            // Убрали спам логами для игроков с != 1 картой или уже объявивших
+            if (cardsInHand === 1 && !hasAlreadyDeclared) {
+              console.log(`⚠️ [checkOneCardStatus] ${player.name} - 1 КАРТА! Объявлено: ${hasAlreadyDeclared ? 'ДА' : 'НЕТ'}`);
             }
             
             // Проверяем есть ли у игрока ровно 1 карта В РУКЕ (БЕЗ пеньков!)
             if (cardsInHand === 1) {
                newPlayersWithOneCard.push(player.id);
                
+               // ✅ КРИТИЧНО: Если уже объявил "одна карта" - НЕ ПРОВЕРЯЕМ СНОВА!
+               if (hasAlreadyDeclared) {
+                 // Игрок уже объявил - пропускаем все проверки и таймеры
+                 return;
+               }
+               
                // Если игрок еще не объявил "одна карта" и у него нет таймера
-               if (!oneCardDeclarations[player.id] && !oneCardTimers[player.id]) {
+               if (!oneCardTimers[player.id]) {
                  // Запускаем таймер на 5 секунд для объявления
                  newOneCardTimers[player.id] = currentTime + 5000; // 5 секунд на объявление
                  
@@ -2359,10 +2377,11 @@ export const useGameStore = create<GameState>()(
                   });
                 }, 3500); // ✅ Боты начинают проверки через 3.5 секунды
                }
-            } else {
-              // У игрока больше или меньше 1 карты - сбрасываем объявление и таймер
+            } else if (cardsInHand !== 1) {
+              // ✅ КРИТИЧНО: У игрока больше или меньше 1 карты - СБРАСЫВАЕМ объявление и таймер
+              // Теперь при новых картах игрок СНОВА должен объявить!
               if (oneCardDeclarations[player.id] || oneCardTimers[player.id]) {
-                console.log(`🔄 [checkOneCardStatus] У игрока ${player.name} теперь ${cardsInHand} карт(ы) в руке (пеньки: ${penkiCount}) - СБРАСЫВАЕМ объявление и таймер`);
+                console.log(`🔄 [checkOneCardStatus] ${player.name}: ${cardsInHand} карт → СБРОС объявления (нужно объявлять заново)`);
                 delete newOneCardDeclarations[player.id];
                 delete newOneCardTimers[player.id];
               }
