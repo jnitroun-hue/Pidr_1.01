@@ -10,35 +10,27 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🎴 [NFT Canvas] Запрос на генерацию карты');
 
-    // Проверяем аутентификацию из cookie или header
-    let session = getSessionFromRequest(request);
+    // Проверяем аутентификацию - БЕЗ cookies, только из localStorage через headers
+    const telegramIdHeader = request.headers.get('x-telegram-id');
+    const usernameHeader = request.headers.get('x-username');
     
-    // Если нет cookie, пробуем header
-    if (!session) {
-      const telegramIdHeader = request.headers.get('x-telegram-id');
-      const usernameHeader = request.headers.get('x-username');
-      
-      if (telegramIdHeader) {
-        session = {
-          userId: telegramIdHeader,
-          telegramId: telegramIdHeader,
-          username: usernameHeader || undefined
-        };
-        console.log('✅ [NFT Canvas] Авторизация через header');
-      }
-    }
-    
-    if (!session) {
-      console.error('❌ [NFT Canvas] Сессия не найдена (ни cookie, ни header)');
+    if (!telegramIdHeader) {
+      console.error('❌ [NFT Canvas] Не найден x-telegram-id header');
       return NextResponse.json(
         { success: false, error: 'Требуется авторизация' },
         { status: 401 }
       );
     }
 
-    const userId = session.telegramId; // Используем telegramId как основной идентификатор
+    const session = {
+      userId: telegramIdHeader,
+      telegramId: telegramIdHeader,
+      username: usernameHeader || undefined
+    };
 
-    console.log('✅ [NFT Canvas] Авторизован:', { 
+    const userId = session.telegramId;
+
+    console.log('✅ [NFT Canvas] Авторизован через headers:', { 
       userId,
       username: session.username 
     });
@@ -270,28 +262,23 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
-    let session = getSessionFromRequest(request);
+    // Проверяем аутентификацию - БЕЗ cookies, только из localStorage через headers
+    const telegramIdHeader = request.headers.get('x-telegram-id');
+    const usernameHeader = request.headers.get('x-username');
     
-    // Если нет cookie, пробуем header
-    if (!session) {
-      const telegramIdHeader = request.headers.get('x-telegram-id');
-      const usernameHeader = request.headers.get('x-username');
-      
-      if (telegramIdHeader) {
-        session = {
-          userId: telegramIdHeader,
-          telegramId: telegramIdHeader,
-          username: usernameHeader || undefined
-        };
-      }
-    }
-    
-    if (!session) {
+    if (!telegramIdHeader) {
+      console.error('❌ [NFT Canvas GET] Не найден x-telegram-id header');
       return NextResponse.json(
         { success: false, error: 'Требуется авторизация' },
         { status: 401 }
       );
     }
+
+    const session = {
+      userId: telegramIdHeader,
+      telegramId: telegramIdHeader,
+      username: usernameHeader || undefined
+    };
 
     const userId = session.telegramId;
 

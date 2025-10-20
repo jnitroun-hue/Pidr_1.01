@@ -8,34 +8,20 @@ import { getSessionFromRequest } from '@/lib/auth/session-utils';
  */
 export async function POST(req: NextRequest) {
   try {
-    // ✅ Проверка сессии через cookies или headers
-    let session = getSessionFromRequest(req);
+    // Проверяем аутентификацию - БЕЗ cookies, только из localStorage через headers
+    const telegramIdHeader = req.headers.get('x-telegram-id');
+    const usernameHeader = req.headers.get('x-username');
     
-    // Если нет cookie, пробуем header
-    if (!session) {
-      const telegramIdHeader = req.headers.get('x-telegram-id');
-      const usernameHeader = req.headers.get('x-username');
-      
-      if (telegramIdHeader) {
-        session = {
-          userId: telegramIdHeader,
-          telegramId: telegramIdHeader,
-          username: usernameHeader || undefined
-        };
-        console.log('✅ [Connect Wallet] Авторизация через header');
-      }
-    }
-    
-    if (!session || !session.telegramId) {
-      console.error('❌ [connect-wallet] Сессия не найдена');
+    if (!telegramIdHeader) {
+      console.error('❌ [connect-wallet] Не найден x-telegram-id header');
       return NextResponse.json(
         { success: false, message: 'Требуется авторизация' },
         { status: 401 }
       );
     }
 
-    const userId = session.telegramId;
-    console.log(`🔗 Пользователь ${userId} подключает TON кошелек...`);
+    const userId = telegramIdHeader;
+    console.log(`🔗 Пользователь ${userId} подключает TON кошелек через headers...`);
 
     const { wallet_address, wallet_type = 'ton', proof } = await req.json();
 
@@ -94,34 +80,20 @@ export async function POST(req: NextRequest) {
  */
 export async function GET(req: NextRequest) {
   try {
-    // ✅ Проверка сессии через cookies или headers
-    let session = getSessionFromRequest(req);
+    // Проверяем аутентификацию - БЕЗ cookies, только из localStorage через headers
+    const telegramIdHeader = req.headers.get('x-telegram-id');
+    const usernameHeader = req.headers.get('x-username');
     
-    // Если нет cookie, пробуем header
-    if (!session) {
-      const telegramIdHeader = req.headers.get('x-telegram-id');
-      const usernameHeader = req.headers.get('x-username');
-      
-      if (telegramIdHeader) {
-        session = {
-          userId: telegramIdHeader,
-          telegramId: telegramIdHeader,
-          username: usernameHeader || undefined
-        };
-        console.log('✅ [Connect Wallet GET] Авторизация через header');
-      }
-    }
-    
-    if (!session || !session.telegramId) {
-      console.error('❌ [connect-wallet GET] Сессия не найдена');
+    if (!telegramIdHeader) {
+      console.error('❌ [connect-wallet GET] Не найден x-telegram-id header');
       return NextResponse.json(
         { success: false, message: 'Требуется авторизация' },
         { status: 401 }
       );
     }
 
-    const userId = session.telegramId;
-    console.log(`📋 Получаем кошельки пользователя ${userId}...`);
+    const userId = telegramIdHeader;
+    console.log(`📋 Получаем кошельки пользователя ${userId} через headers...`);
 
     const { data: wallets, error } = await supabase
       .from('_pidr_player_wallets')

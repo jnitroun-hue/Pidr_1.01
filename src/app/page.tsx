@@ -199,6 +199,17 @@ function HomeWithParams() {
           };
           
           setUser(newUser);
+          
+          // ✅ КРИТИЧНО: Сохраняем данные в localStorage для NFT API
+          localStorage.setItem('pidr_session', JSON.stringify({
+            userId: newUser.id,
+            telegramId: newUser.telegramId,
+            username: newUser.username,
+            firstName: newUser.firstName,
+            lastName: newUser.lastName
+          }));
+          console.log('✅ Данные сохранены в localStorage для NFT API');
+          
           setInitialized(true); // ✅ Устанавливаем флаг
           setTimeout(() => {
             setLoading(false);

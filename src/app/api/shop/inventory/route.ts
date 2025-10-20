@@ -7,32 +7,20 @@ export async function GET(req: NextRequest) {
   console.log('📦 GET /api/shop/inventory - Получение инвентаря...');
   
   try {
-    let session = getSessionFromRequest(req);
+    // Проверяем аутентификацию - БЕЗ cookies, только из localStorage через headers
+    const telegramIdHeader = req.headers.get('x-telegram-id');
+    const usernameHeader = req.headers.get('x-username');
     
-    // Если нет cookie, пробуем header
-    if (!session) {
-      const telegramIdHeader = req.headers.get('x-telegram-id');
-      const usernameHeader = req.headers.get('x-username');
-      
-      if (telegramIdHeader) {
-        session = {
-          userId: telegramIdHeader,
-          telegramId: telegramIdHeader,
-          username: usernameHeader || undefined
-        };
-        console.log('✅ [Shop Inventory] Авторизация через header');
-      }
-    }
-    
-    if (!session) {
+    if (!telegramIdHeader) {
+      console.error('❌ [Shop Inventory] Не найден x-telegram-id header');
       return NextResponse.json({ 
         success: false, 
         message: 'Требуется авторизация' 
       }, { status: 401 });
     }
     
-    const userId = session.telegramId;
-    console.log(`✅ Авторизован пользователь: ${userId}`);
+    const userId = telegramIdHeader;
+    console.log(`✅ [Shop Inventory] Авторизован пользователь через headers: ${userId}`);
     
     // Вызываем функцию БД для получения инвентаря
     const { data, error } = await supabase.rpc('get_user_inventory', {

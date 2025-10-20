@@ -8,34 +8,20 @@ import { getSessionFromRequest } from '@/lib/auth/session-utils';
  */
 export async function GET(req: NextRequest) {
   try {
-    // ✅ Проверка сессии через cookies или headers
-    let session = getSessionFromRequest(req);
+    // Проверяем аутентификацию - БЕЗ cookies, только из localStorage через headers
+    const telegramIdHeader = req.headers.get('x-telegram-id');
+    const usernameHeader = req.headers.get('x-username');
     
-    // Если нет cookie, пробуем header
-    if (!session) {
-      const telegramIdHeader = req.headers.get('x-telegram-id');
-      const usernameHeader = req.headers.get('x-username');
-      
-      if (telegramIdHeader) {
-        session = {
-          userId: telegramIdHeader,
-          telegramId: telegramIdHeader,
-          username: usernameHeader || undefined
-        };
-        console.log('✅ [Collection] Авторизация через header');
-      }
-    }
-    
-    if (!session || !session.telegramId) {
-      console.error('❌ [collection] Сессия не найдена');
+    if (!telegramIdHeader) {
+      console.error('❌ [collection] Не найден x-telegram-id header');
       return NextResponse.json(
         { success: false, message: 'Требуется авторизация' },
         { status: 401 }
       );
     }
 
-    const userId = session.telegramId;
-    console.log(`📦 Получаем NFT коллекцию пользователя ${userId}...`);
+    const userId = telegramIdHeader;
+    console.log(`📦 Получаем NFT коллекцию пользователя ${userId} через headers...`);
 
     // Вызываем SQL функцию для получения коллекции
     const { data, error } = await supabase.rpc('get_user_nft_collection', {
