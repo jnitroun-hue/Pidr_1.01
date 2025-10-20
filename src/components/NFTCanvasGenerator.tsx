@@ -292,11 +292,12 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
             // ✅ Генерируем изображение (БЕЗ rarity)
             const imageDataUrl = generateCardImage(suit, rank);
             
-            // Получаем данные пользователя из localStorage
-            const sessionStr = localStorage.getItem('pidr_session');
-            const session = sessionStr ? JSON.parse(sessionStr) : null;
-            const telegramId = session?.telegramId || session?.userId;
-            const username = session?.username;
+            // ✅ ИСПРАВЛЕНО: Берём telegramId из Telegram WebApp напрямую
+            const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+            const telegramId = telegramUser?.id?.toString() || '';
+            const username = telegramUser?.username || telegramUser?.first_name || '';
+            
+            console.log('🎴 [NFT Full Deck] Отправляем запрос с headers:', { telegramId, username });
             
             // Отправляем на сервер
             const response = await fetch('/api/nft/generate-canvas', {

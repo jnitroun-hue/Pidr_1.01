@@ -82,12 +82,12 @@ export default function WalletManager({ showExchange = true, onCoinsAdded }: Wal
   };
 
   useEffect(() => {
-    // Загружаем транзакции пользователя
-    const user = typeof window !== 'undefined' ? 
-      JSON.parse(localStorage.getItem('user') || '{}') : {};
+    // ✅ ИСПРАВЛЕНО: Загружаем транзакции пользователя через Telegram WebApp
+    const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+    const telegramId = telegramUser?.id?.toString() || '';
     
-    if (user.id) {
-      loadUserTransactions(user.id);
+    if (telegramId) {
+      loadUserTransactions(telegramId);
     }
     
     // Загружаем курсы валют

@@ -256,36 +256,35 @@ export class WalletService {
   }
 
   private async addGameCoinsToUser(userId: string, amount: number): Promise<void> {
-    // В реальном проекте здесь будет API вызов к Supabase
-    // Пока обновляем локальное хранилище
+    // ✅ ИСПРАВЛЕНО: Отправляем запрос в Supabase БД напрямую
     if (typeof window === 'undefined') return;
     
     try {
-      // Получаем текущего пользователя
-      const currentUser = JSON.parse(localStorage.getItem('current_user') || localStorage.getItem('user') || '{}');
+      // ✅ Обновляем баланс через API (который работает с БД)
+      const response = await fetch('/api/user/add-coins', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-telegram-id': userId
+        },
+        body: JSON.stringify({ amount })
+      });
       
-      if (currentUser && currentUser.id === userId) {
-        const newCoins = (currentUser.coins || 0) + amount;
-        
-        // Обновляем локальное хранилище
-        currentUser.coins = newCoins;
-        localStorage.setItem('current_user', JSON.stringify(currentUser));
-        localStorage.setItem('user', JSON.stringify(currentUser)); // Для совместимости
-        
-        // Отправляем событие об обновлении баланса
-        window.dispatchEvent(new CustomEvent('coinsUpdated', { 
-          detail: { newBalance: newCoins, added: amount } 
-        }));
-        
-        // TODO: Отправить API запрос для обновления баланса в Supabase
-        // await fetch('/api/user/update-coins', {
-        //   method: 'POST',
-        //   headers: { 'Content-Type': 'application/json' },
-        //   body: JSON.stringify({ userId, amount: newCoins })
-        // });
+      if (!response.ok) {
+        throw new Error('Failed to update coins in database');
       }
+      
+      const data = await response.json();
+      
+      // Отправляем событие об обновлении баланса
+      window.dispatchEvent(new CustomEvent('coinsUpdated', { 
+        detail: { newBalance: data.newBalance, added: amount } 
+      }));
+      
+      console.log(`✅ [Wallet] Баланс обновлён в БД: +${amount} монет`);
     } catch (error) {
-      console.error('Failed to update user coins:', error);
+      console.error('❌ [Wallet] Ошибка обновления баланса в БД:', error);
+      throw error;
     }
   }
 }

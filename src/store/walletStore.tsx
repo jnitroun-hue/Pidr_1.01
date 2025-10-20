@@ -198,18 +198,18 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   exchangeCryptoToCoins: async (crypto: CryptoType, amount: number) => {
     set({ isExchanging: true, error: null });
     try {
-      // Получаем текущего пользователя
-      const user = typeof window !== 'undefined' ? 
-        JSON.parse(localStorage.getItem('user') || '{}') : {};
+      // ✅ ИСПРАВЛЕНО: Получаем telegramId из Telegram WebApp
+      const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+      const telegramId = telegramUser?.id?.toString() || '';
       
-      if (!user.id) {
+      if (!telegramId) {
         throw new Error('User not logged in');
       }
       
-      const result = await walletService.exchangeToGameCoins(user.id, crypto, amount);
+      const result = await walletService.exchangeToGameCoins(telegramId, crypto, amount);
       
       // Обновляем транзакции
-      const transactions = walletService.getUserTransactions(user.id);
+      const transactions = walletService.getUserTransactions(telegramId);
       set({ transactions, isExchanging: false });
       
       return result;

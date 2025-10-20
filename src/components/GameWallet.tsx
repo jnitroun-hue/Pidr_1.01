@@ -47,6 +47,17 @@ interface GameWalletProps {
 type ModalType = 'deposit' | 'withdraw' | 'buy' | null;
 
 export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
+  // ✅ ИСПРАВЛЕНО: Получаем telegramId из Telegram WebApp если user не передан через props
+  const getTelegramUser = () => {
+    if (typeof window === 'undefined') return null;
+    const telegramUser = (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+    return {
+      id: telegramUser?.id?.toString() || user?.id || '',
+      username: telegramUser?.username || user?.username || '',
+      firstName: telegramUser?.first_name || user?.firstName || ''
+    };
+  };
+  
   const [activeTab, setActiveTab] = useState<'main' | 'history' | 'exchange'>('main');
   const [balance, setBalance] = useState(user?.coins || 0);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -307,16 +318,15 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
         console.warn(`⚠️ Ошибка API ${response.status}, используем fallback`);
         
         // Fallback к старому API
-        const userData = localStorage.getItem('user');
-        if (userData) {
-          const user = JSON.parse(userData);
+        const currentUser = getTelegramUser();
+        if (currentUser && currentUser.id) {
           
           const fallbackResponse = await fetch('/api/pidr-db', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               action: 'get_user_transactions',
-              userId: user.telegramId || user.id
+              userId: currentUser.id
             })
           });
 
@@ -346,13 +356,12 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
     try {
       setLoading(true);
       
-      const userData = localStorage.getItem('user');
-      if (!userData) {
+      // ✅ ИСПРАВЛЕНО: Берём из Telegram WebApp
+      const currentUser = getTelegramUser();
+      if (!currentUser || !currentUser.id) {
         alert('Пользователь не найден');
         return;
       }
-      
-      const currentUser = JSON.parse(userData);
       
       // Создаем транзакцию через API
       const response = await fetch('/api/pidr-db', {
@@ -360,7 +369,7 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'create_transaction',
-          userId: currentUser.telegramId || currentUser.id,
+          userId: currentUser.id,
           amount: amount,
           transactionType: 'deposit',
           description: 'Пополнение баланса'
@@ -374,9 +383,7 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
         setBalance(newBalance);
         setDepositAmount('');
         
-        // Обновляем данные в localStorage
-        currentUser.coins = newBalance;
-        localStorage.setItem('user', JSON.stringify(currentUser));
+        // ✅ ИСПРАВЛЕНО: НЕ сохраняем в localStorage, баланс уже в БД
         
         onBalanceUpdate?.(newBalance);
         
@@ -411,13 +418,12 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
     try {
       setLoading(true);
       
-      const userData = localStorage.getItem('user');
-      if (!userData) {
+      // ✅ ИСПРАВЛЕНО: Берём из Telegram WebApp
+      const currentUser = getTelegramUser();
+      if (!currentUser || !currentUser.id) {
         alert('Пользователь не найден');
         return;
       }
-      
-      const currentUser = JSON.parse(userData);
       
       // Создаем транзакцию через API
       const response = await fetch('/api/pidr-db', {
@@ -425,7 +431,7 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'create_transaction',
-          userId: currentUser.telegramId || currentUser.id,
+          userId: currentUser.id,
           amount: -amount, // Отрицательное значение для вывода
           transactionType: 'withdrawal',
           description: 'Вывод средств'
@@ -439,9 +445,7 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
         setBalance(newBalance);
         setWithdrawAmount('');
         
-        // Обновляем данные в localStorage
-        currentUser.coins = newBalance;
-        localStorage.setItem('user', JSON.stringify(currentUser));
+        // ✅ ИСПРАВЛЕНО: НЕ сохраняем в localStorage, баланс уже в БД
         
         onBalanceUpdate?.(newBalance);
         
@@ -513,13 +517,7 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
         setBalance(newBalance);
         setBonusAvailable(false); // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Отключаем бонус после получения
         
-        // Обновляем данные в localStorage
-        const userData = localStorage.getItem('user');
-        if (userData) {
-          const currentUser = JSON.parse(userData);
-          currentUser.coins = newBalance;
-          localStorage.setItem('user', JSON.stringify(currentUser));
-        }
+        // ✅ ИСПРАВЛЕНО: НЕ сохраняем в localStorage, баланс уже в БД
         
         onBalanceUpdate?.(newBalance);
         
@@ -541,13 +539,12 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
 
   const handleInviteFriend = async () => {
     try {
-      const userData = localStorage.getItem('user');
-      if (!userData) {
+      // ✅ ИСПРАВЛЕНО: Берём из Telegram WebApp
+      const currentUser = getTelegramUser();
+      if (!currentUser || !currentUser.id) {
         alert('Пользователь не найден');
         return;
       }
-      
-      const currentUser = JSON.parse(userData);
       
       // Генерируем реферальную ссылку
       const referralCode = currentUser.id || 'player_' + Date.now();
@@ -709,9 +706,10 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
     try {
       setIsMonitoringPayments(true);
       
-      const token = localStorage.getItem('auth_token');
-      if (!token) {
-        alert('Нет токена авторизации');
+      // ✅ ИСПРАВЛЕНО: Берём из Telegram WebApp
+      const currentUser = getTelegramUser();
+      if (!currentUser || !currentUser.id) {
+        alert('Пользователь не найден');
         return;
       }
 
@@ -719,7 +717,8 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
       const response = await fetch('/api/wallet/check-payments', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'x-telegram-id': currentUser.id,
+          'x-username': currentUser.username,
           'Content-Type': 'application/json'
         }
       });
