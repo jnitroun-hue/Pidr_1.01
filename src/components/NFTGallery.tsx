@@ -68,10 +68,10 @@ export default function NFTGallery() {
       }
 
       // Получаем данные пользователя из localStorage
-      const sessionStr = localStorage.getItem('pidr_session');
-      const session = sessionStr ? JSON.parse(sessionStr) : null;
-      const telegramId = session?.telegramId || session?.userId;
-      const username = session?.username;
+    // ✅ ИСПРАВЛЕНО: Берём telegramId из Telegram WebApp напрямую
+    const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+    const telegramId = telegramUser?.id?.toString() || '';
+    const username = telegramUser?.username || telegramUser?.first_name || '';
 
       // 3. Загружаем из Supabase для отображения
       const response = await fetch('/api/nft/collection', {
