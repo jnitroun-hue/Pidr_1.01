@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '../../../../lib/supabase';
-import { requireAuth } from '../../../../lib/auth-utils';
+import { supabase } from '@/lib/supabase';
+import { getSessionFromRequest } from '@/lib/auth/session-utils';
 
 /**
  * GET /api/nft/collection
@@ -8,7 +8,18 @@ import { requireAuth } from '../../../../lib/auth-utils';
  */
 export async function GET(req: NextRequest) {
   try {
-    const userId = await requireAuth(req);
+    // ✅ Проверка сессии через cookies
+    const session = getSessionFromRequest(req);
+    
+    if (!session || !session.telegramId) {
+      console.error('❌ [collection] Сессия не найдена');
+      return NextResponse.json(
+        { success: false, message: 'Требуется авторизация' },
+        { status: 401 }
+      );
+    }
+
+    const userId = session.telegramId;
     console.log(`📦 Получаем NFT коллекцию пользователя ${userId}...`);
 
     // Вызываем SQL функцию для получения коллекции

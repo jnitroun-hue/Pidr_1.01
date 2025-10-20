@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { requireAuth } from '../../../../lib/auth/auth-middleware';
+import { supabase } from '@/lib/supabase';
+import { getSessionFromRequest } from '@/lib/auth/session-utils';
 
 /**
  * POST /api/nft/connect-wallet
@@ -8,29 +8,18 @@ import { requireAuth } from '../../../../lib/auth/auth-middleware';
  */
 export async function POST(req: NextRequest) {
   try {
-    // Ленивая инициализация Supabase
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!supabaseUrl || !supabaseKey) {
-      console.error('❌ [connect-wallet] Supabase не настроен');
+    // ✅ Проверка сессии через cookies
+    const session = getSessionFromRequest(req);
+    
+    if (!session || !session.telegramId) {
+      console.error('❌ [connect-wallet] Сессия не найдена');
       return NextResponse.json(
-        { success: false, message: 'Supabase не настроен' },
-        { status: 500 }
-      );
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    const authContext = await requireAuth(req);
-    if (!authContext.authenticated || !authContext.userId) {
-      return NextResponse.json(
-        { success: false, message: 'Не авторизован' },
+        { success: false, message: 'Требуется авторизация' },
         { status: 401 }
       );
     }
 
-    const userId = authContext.userId;
+    const userId = session.telegramId;
     console.log(`🔗 Пользователь ${userId} подключает TON кошелек...`);
 
     const { wallet_address, wallet_type = 'ton', proof } = await req.json();
@@ -90,7 +79,18 @@ export async function POST(req: NextRequest) {
  */
 export async function GET(req: NextRequest) {
   try {
-    const userId = await requireAuth(req);
+    // ✅ Проверка сессии через cookies
+    const session = getSessionFromRequest(req);
+    
+    if (!session || !session.telegramId) {
+      console.error('❌ [connect-wallet GET] Сессия не найдена');
+      return NextResponse.json(
+        { success: false, message: 'Требуется авторизация' },
+        { status: 401 }
+      );
+    }
+
+    const userId = session.telegramId;
     console.log(`📋 Получаем кошельки пользователя ${userId}...`);
 
     const { data: wallets, error } = await supabase
@@ -117,7 +117,7 @@ export async function GET(req: NextRequest) {
     console.error('❌ Ошибка API получения кошельков:', error);
     return NextResponse.json(
       { success: false, message: error.message || 'Ошибка сервера' },
-      { status: 401 }
+      { status: 500 }
     );
   }
 }
