@@ -66,8 +66,18 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
 
   const fetchUserCards = async () => {
     try {
+      // Получаем данные пользователя из localStorage
+      const sessionStr = localStorage.getItem('pidr_session');
+      const session = sessionStr ? JSON.parse(sessionStr) : null;
+      const telegramId = session?.telegramId || session?.userId;
+      const username = session?.username;
+
       const response = await fetch('/api/nft/generate-canvas', {
-        credentials: 'include'
+        credentials: 'include',
+        headers: {
+          'x-telegram-id': telegramId || '',
+          'x-username': username || ''
+        }
       });
       
       if (response.ok) {
@@ -202,9 +212,19 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
       
       console.log('✅ Изображение сгенерировано, отправляем на сервер...');
 
+      // Получаем данные пользователя из localStorage
+      const sessionStr = localStorage.getItem('pidr_session');
+      const session = sessionStr ? JSON.parse(sessionStr) : null;
+      const telegramId = session?.telegramId || session?.userId;
+      const username = session?.username;
+
       const response = await fetch('/api/nft/generate-canvas', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-telegram-id': telegramId || '',
+          'x-username': username || ''
+        },
         credentials: 'include',
         body: JSON.stringify({
           action: 'single',
@@ -268,10 +288,20 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
             // ✅ Генерируем изображение (БЕЗ rarity)
             const imageDataUrl = generateCardImage(suit, rank);
             
+            // Получаем данные пользователя из localStorage
+            const sessionStr = localStorage.getItem('pidr_session');
+            const session = sessionStr ? JSON.parse(sessionStr) : null;
+            const telegramId = session?.telegramId || session?.userId;
+            const username = session?.username;
+            
             // Отправляем на сервер
             const response = await fetch('/api/nft/generate-canvas', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 
+                'Content-Type': 'application/json',
+                'x-telegram-id': telegramId || '',
+                'x-username': username || ''
+              },
               credentials: 'include',
               body: JSON.stringify({
                 action: isFirstCard ? 'full_deck' : 'deck_card', // Первая карта списывает 150000, остальные бесплатно

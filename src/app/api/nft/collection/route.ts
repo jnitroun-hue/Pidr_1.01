@@ -8,8 +8,23 @@ import { getSessionFromRequest } from '@/lib/auth/session-utils';
  */
 export async function GET(req: NextRequest) {
   try {
-    // ✅ Проверка сессии через cookies
-    const session = getSessionFromRequest(req);
+    // ✅ Проверка сессии через cookies или headers
+    let session = getSessionFromRequest(req);
+    
+    // Если нет cookie, пробуем header
+    if (!session) {
+      const telegramIdHeader = req.headers.get('x-telegram-id');
+      const usernameHeader = req.headers.get('x-username');
+      
+      if (telegramIdHeader) {
+        session = {
+          userId: telegramIdHeader,
+          telegramId: telegramIdHeader,
+          username: usernameHeader || undefined
+        };
+        console.log('✅ [Collection] Авторизация через header');
+      }
+    }
     
     if (!session || !session.telegramId) {
       console.error('❌ [collection] Сессия не найдена');

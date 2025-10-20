@@ -67,10 +67,20 @@ export default function NFTGallery() {
         await nftBlockchainService.syncNFTsToSupabase(userAddress, blockchainNFTs);
       }
 
+      // Получаем данные пользователя из localStorage
+      const sessionStr = localStorage.getItem('pidr_session');
+      const session = sessionStr ? JSON.parse(sessionStr) : null;
+      const telegramId = session?.telegramId || session?.userId;
+      const username = session?.username;
+
       // 3. Загружаем из Supabase для отображения
       const response = await fetch('/api/nft/collection', {
         method: 'GET',
-        credentials: 'include'
+        credentials: 'include',
+        headers: {
+          'x-telegram-id': telegramId || '',
+          'x-username': username || ''
+        }
       });
 
       if (response.ok) {

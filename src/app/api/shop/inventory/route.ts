@@ -7,7 +7,22 @@ export async function GET(req: NextRequest) {
   console.log('📦 GET /api/shop/inventory - Получение инвентаря...');
   
   try {
-    const session = getSessionFromRequest(req);
+    let session = getSessionFromRequest(req);
+    
+    // Если нет cookie, пробуем header
+    if (!session) {
+      const telegramIdHeader = req.headers.get('x-telegram-id');
+      const usernameHeader = req.headers.get('x-username');
+      
+      if (telegramIdHeader) {
+        session = {
+          userId: telegramIdHeader,
+          telegramId: telegramIdHeader,
+          username: usernameHeader || undefined
+        };
+        console.log('✅ [Shop Inventory] Авторизация через header');
+      }
+    }
     
     if (!session) {
       return NextResponse.json({ 

@@ -1263,16 +1263,15 @@ export const useGameStore = create<GameState>()(
         // ИСПРАВЛЕНО: Обрабатываем 2-ю и 3-ю стадии одинаково (правила дурака)
         if (gameStage === 2 || gameStage === 3) {
           console.log(`🎮 [processPlayerTurn] Стадия ${gameStage}: ${currentPlayer.name} (${currentPlayer.cards.length} карт, ${currentPlayer.penki.length} пеньков)`);
-          set({ stage2TurnPhase: 'selecting_card' });
+          set({ 
+            currentPlayerId: currentPlayer.id,
+            stage2TurnPhase: 'selecting_card'
+          });
           
-          if (currentPlayer.isBot) {
-            set({ 
-              currentPlayerId: currentPlayer.id,
-              stage2TurnPhase: 'selecting_card'
-            });
-          } else if (!currentPlayer.isBot) {
+          if (!currentPlayer.isBot) {
             get().showNotification(`${currentPlayer.name}: выберите карту для хода`, 'info', 5000);
           }
+          // Примечание: AI для ботов в стадии 2 управляется через внешние компоненты (ViktorAI и др.)
           return;
         }
         
@@ -1904,9 +1903,8 @@ export const useGameStore = create<GameState>()(
           
           // Проверяем условия победы
           get().checkVictoryCondition();
-          // КРИТИЧНО: Проверяем статус "одна карта" ДВАЖДЫ для надежности
+          // Проверяем статус "одна карта" (один раз достаточно)
           get().checkOneCardStatus();
-          setTimeout(() => get().checkOneCardStatus(), 1000);
           
           // ПРАВИЛА P.I.D.R.: Ход переходит к следующему игроку (УСКОРЕНО)
           console.log(`🃏 [playSelectedCard P.I.D.R.] ✅ Ход к следующему игроку`);

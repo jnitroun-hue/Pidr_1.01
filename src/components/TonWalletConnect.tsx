@@ -33,9 +33,19 @@ export default function TonWalletConnect({ onConnect, onDisconnect }: TonWalletC
 
   const loadSavedWallets = async () => {
     try {
+      // Получаем данные пользователя из localStorage
+      const sessionStr = localStorage.getItem('pidr_session');
+      const session = sessionStr ? JSON.parse(sessionStr) : null;
+      const telegramId = session?.telegramId || session?.userId;
+      const username = session?.username;
+
       const response = await fetch('/api/nft/connect-wallet', {
         method: 'GET',
-        credentials: 'include'
+        credentials: 'include',
+        headers: {
+          'x-telegram-id': telegramId || '',
+          'x-username': username || ''
+        }
       });
 
       if (response.ok) {
@@ -59,9 +69,19 @@ export default function TonWalletConnect({ onConnect, onDisconnect }: TonWalletC
 
     setIsSaving(true);
     try {
+      // Получаем данные пользователя из localStorage
+      const sessionStr = localStorage.getItem('pidr_session');
+      const session = sessionStr ? JSON.parse(sessionStr) : null;
+      const telegramId = session?.telegramId || session?.userId;
+      const username = session?.username;
+
       const response = await fetch('/api/nft/connect-wallet', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-telegram-id': telegramId || '',
+          'x-username': username || ''
+        },
         credentials: 'include',
         body: JSON.stringify({
           wallet_address: address,
