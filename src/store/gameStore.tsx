@@ -1225,7 +1225,14 @@ export const useGameStore = create<GameState>()(
           mustDrawFromDeck: false,
           trumpSuit: trumpSuit,
           currentPlayerId: startingPlayerId,
-          players: [...players]
+          players: [...players],
+          // ✅ КРИТИЧНО: Очищаем штраф и таймеры при переходе во 2-ю стадию
+          pendingPenalty: null,
+          showPenaltyCardSelection: false,
+          penaltyCardSelectionPlayerId: null,
+          oneCardDeclarations: {},
+          oneCardTimers: {},
+          playersWithOneCard: []
         });
         
         // Показываем уведомления
@@ -1891,8 +1898,7 @@ export const useGameStore = create<GameState>()(
             
             // Проверяем условия победы
             get().checkVictoryCondition();
-            // Проверяем статус "одна карта"
-            get().checkOneCardStatus();
+            // ✅ ИСПРАВЛЕНО: Убрали дублирующий вызов checkOneCardStatus() - он уже вызывается в nextTurn()
             
             // Игрок который завершил круг начинает новый раунд
             setTimeout(() => get().nextTurn(), 330);
@@ -1911,8 +1917,7 @@ export const useGameStore = create<GameState>()(
           
           // Проверяем условия победы
           get().checkVictoryCondition();
-          // Проверяем статус "одна карта" (один раз достаточно)
-          get().checkOneCardStatus();
+          // ✅ ИСПРАВЛЕНО: Убрали дублирующий вызов checkOneCardStatus() - он уже вызывается в nextTurn()
           
           // ПРАВИЛА P.I.D.R.: Ход переходит к следующему игроку (УСКОРЕНО)
           console.log(`🃏 [playSelectedCard P.I.D.R.] ✅ Ход к следующему игроку`);
