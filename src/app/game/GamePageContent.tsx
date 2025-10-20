@@ -2,6 +2,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import PlayerProfileModal from '../../components/PlayerProfileModal';
+import PenaltyCardSelector from '../../components/PenaltyCardSelector';
 import styles from './GameTable.module.css';
 // Генераторы перенесены в отдельный проект pidr_generators
 import { getPremiumTable } from '@/utils/generatePremiumTable';
@@ -203,6 +204,7 @@ function GamePageContentComponent({
     selectedHandCard, revealedDeckCard, tableStack, trumpSuit,
     oneCardDeclarations, oneCardTimers, playersWithOneCard, pendingPenalty,
     penaltyDeck, gameCoins, playedCards,
+    showPenaltyCardSelection, penaltyCardSelectionPlayerId,
     startGame, endGame, resetGame,
     drawCard, makeMove, onDeckClick, placeCardOnSelfByRules,
     selectHandCard, playSelectedCard, takeTableCards, showNotification,
@@ -225,10 +227,10 @@ function GamePageContentComponent({
   const [selectedPlayerProfile, setSelectedPlayerProfile] = useState<any>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
-  // Модальное окно сдачи штрафных карт
-  const [showPenaltyModal, setShowPenaltyModal] = useState(false);
-  const [penaltyTargets, setPenaltyTargets] = useState<any[]>([]);
-  const [selectedCards, setSelectedCards] = useState<{[playerId: string]: any}>({});
+  // Модальное окно сдачи штрафных карт (УДАЛЕНО - теперь используется showPenaltyCardSelection из store)
+  // const [showPenaltyModal, setShowPenaltyModal] = useState(false);
+  // const [penaltyTargets, setPenaltyTargets] = useState<any[]>([]);
+  // const [selectedCards, setSelectedCards] = useState<{[playerId: string]: any}>({});
 
   // Функция генерации профиля игрока
   const generatePlayerProfile = async (player: any) => {
@@ -1644,12 +1646,11 @@ function GamePageContentComponent({
                             ? card.replace('(open)', '').replace('(closed)', '')
                             : card.image || `${card.rank}_of_${card.suit}.png`;
                           
-                          // ИСПРАВЛЕНО: В 1-й стадии ВСЕ карты открыты! Во 2-й стадии ТОЛЬКО СВОИ КАРТЫ открыты!
-                          // У ботов карты ВСЕГДА закрыты во 2-й стадии для игрока
-                          const showOpen = gameStage === 1 || isHumanPlayer;
-                          
+                          // ИСПРАВЛЕНО: В 1-й стадии ТОЛЬКО ВЕРХНЯЯ карта соперника открыта!
+                          // Во 2-й стадии ТОЛЬКО СВОИ КАРТЫ открыты!
                           // ЛОГИКА ДЛЯ 1-Й СТАДИИ: подсветка верхней карты если можно ходить
                           const isTopCard = cardIndex === playerCards.length - 1;
+                          const showOpen = isHumanPlayer || (gameStage === 1 && isTopCard);
                           const isMyTurn = player.id === currentPlayerId;
                           const canMakeMove = gameStage === 1 && isMyTurn && isHumanPlayer && turnPhase === 'analyzing_hand' && availableTargets.length > 0;
                           const shouldHighlight = gameStage === 1 && isTopCard && canMakeMove;
@@ -1821,9 +1822,10 @@ function GamePageContentComponent({
                     targets.forEach(t => {
                       showPlayerMessage(t.id, '🎯 Выберите цель', 'warning', 3000);
                     });
-                    setPenaltyTargets(targets);
-                    setSelectedCards({});
-                    setShowPenaltyModal(true);
+                    // Старая система убрана - теперь модалка открывается автоматически через store
+                    // setPenaltyTargets(targets);
+                    // setSelectedCards({});
+                    // setShowPenaltyModal(true);
                   } else {
                     showNotification('Нет доступных целей для проверки', 'warning', 2000);
                   }
@@ -1847,20 +1849,16 @@ function GamePageContentComponent({
             )}
             
             {/* Кнопка "Сдать штраф" */}
-            {!!pendingPenalty && (
+            {!!pendingPenalty && pendingPenalty.contributorsNeeded.includes(humanPlayer.id) && (
               <button
                 onClick={() => {
                   if (!pendingPenalty) return;
                   
-                  const target = players.find(p => p.id === pendingPenalty.targetPlayerId);
-                  if (!target) {
-                    alert('Ошибка: игрок не найден');
-                    return;
-                  }
-                  
-                  setPenaltyTargets([target]);
-                  setSelectedCards({});
-                  setShowPenaltyModal(true);
+                  // ✅ ИСПРАВЛЕНО: Открываем модалку выбора карты ТОЛЬКО при клике на кнопку
+                  useGameStore.setState({
+                    showPenaltyCardSelection: true,
+                    penaltyCardSelectionPlayerId: humanPlayer.id
+                  });
                 }}
                 style={{
                   background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
@@ -2032,275 +2030,8 @@ function GamePageContentComponent({
         onAddFriend={handleAddFriend}
       />
 
-      {/* МОДАЛЬНОЕ ОКНО СДАЧИ ШТРАФНЫХ КАРТ */}
-      {showPenaltyModal && penaltyTargets.length > 0 && (
-        <div 
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.85)',
-            backdropFilter: 'blur(12px)',
-            zIndex: 999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '20px'
-          }}
-          onClick={() => {
-            setShowPenaltyModal(false);
-            setPenaltyTargets([]);
-            setSelectedCards({});
-          }}
-        >
-          <div 
-            style={{
-              background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%)',
-              borderRadius: '20px',
-              padding: '24px',
-              maxWidth: '700px',
-              width: '100%',
-              maxHeight: '80vh',
-              overflowY: 'auto',
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.6)',
-              border: '2px solid rgba(239, 68, 68, 0.5)'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 style={{ 
-              color: '#ef4444', 
-              marginBottom: '8px', 
-              fontSize: '20px', 
-              fontWeight: 'bold',
-              textAlign: 'center'
-            }}>
-              ⚠️ Сдача штрафных карт
-            </h2>
-            <p style={{ 
-              color: '#94a3b8', 
-              marginBottom: '24px', 
-              fontSize: '14px',
-              textAlign: 'center'
-            }}>
-              Выберите по одной карте для каждого оштрафованного игрока
-            </p>
-
-            {/* Список оштрафованных игроков */}
-            {penaltyTargets.map((target, targetIndex) => (
-              <div 
-                key={`penalty-target-${target.id}`}
-                style={{
-                  marginBottom: '20px',
-                  padding: '16px',
-                  background: 'rgba(15, 23, 42, 0.6)',
-                  borderRadius: '12px',
-                  border: selectedCards[target.id] 
-                    ? '2px solid rgba(16, 185, 129, 0.6)' 
-                    : '2px solid rgba(100, 116, 139, 0.3)'
-                }}
-              >
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  marginBottom: '12px',
-                  gap: '12px'
-                }}>
-                  <Image
-                    src={`${CARDS_PATH}card_back.png`}
-                    alt="card"
-                    width={40}
-                    height={60}
-                    style={{ borderRadius: '4px' }}
-                  />
-                  <div>
-                    <h3 style={{ 
-                      color: '#fbbf24', 
-                      fontSize: '16px', 
-                      fontWeight: 'bold',
-                      marginBottom: '4px'
-                    }}>
-                      {target.name}
-                    </h3>
-                    <p style={{ 
-                      color: selectedCards[target.id] ? '#10b981' : '#94a3b8', 
-                      fontSize: '12px'
-                    }}>
-                      {selectedCards[target.id] ? '✓ Карта выбрана' : 'Выберите карту →'}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Список карт игрока для выбора */}
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(60px, 1fr))',
-                  gap: '8px'
-                }}>
-                  {!humanPlayer?.cards || humanPlayer.cards.length === 0 && (
-                    <div style={{ padding: '20px', textAlign: 'center', color: '#ef4444' }}>
-                      ❌ Нет доступных карт для сдачи штрафа
-                    </div>
-                  )}
-                  {humanPlayer?.cards?.map((card: any, index: number) => {
-                    const cardImage = typeof card === 'string' 
-                      ? card.replace('(open)', '').replace('(closed)', '')
-                      : card.image || `${card.rank}_of_${card.suit}.png`;
-                    
-                    const isSelected = selectedCards[target.id]?.image === cardImage;
-                    const isUsed = Object.values(selectedCards).some((c: any) => c?.image === cardImage);
-                    
-                    return (
-                      <div 
-                        key={`penalty-card-${target.id}-${index}`}
-                        style={{
-                          cursor: isUsed && !isSelected ? 'not-allowed' : 'pointer',
-                          transition: 'all 0.3s ease',
-                          position: 'relative',
-                          opacity: isUsed && !isSelected ? 0.4 : 1
-                        }}
-                        onClick={() => {
-                          if (isUsed && !isSelected) return;
-                          
-                          console.log(`🎴 [Штраф] Выбираем карту ${cardImage} для ${target.name}`);
-                          setSelectedCards(prev => ({
-                            ...prev,
-                            [target.id]: { image: cardImage, id: card.id || cardImage }
-                          }));
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!isUsed || isSelected) {
-                            e.currentTarget.style.transform = 'translateY(-6px)';
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.transform = 'translateY(0)';
-                        }}
-                      >
-                        <Image
-                          src={`${CARDS_PATH}${cardImage}`}
-                          alt={cardImage}
-                          width={60}
-                          height={90}
-                          style={{ 
-                            borderRadius: '6px',
-                            border: isSelected 
-                              ? '3px solid #10b981' 
-                              : '2px solid rgba(255, 255, 255, 0.2)',
-                            boxShadow: isSelected 
-                              ? '0 0 20px rgba(16, 185, 129, 0.6)' 
-                              : '0 4px 12px rgba(0,0,0,0.3)'
-                          }}
-                        />
-                        {isSelected && (
-                          <div style={{
-                            position: 'absolute',
-                            top: '50%',
-                            left: '50%',
-                            transform: 'translate(-50%, -50%)',
-                            background: 'rgba(16, 185, 129, 0.9)',
-                            borderRadius: '50%',
-                            width: '30px',
-                            height: '30px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '18px'
-                          }}>
-                            ✓
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-
-            {/* Кнопки действий */}
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button
-                onClick={() => {
-                  console.log(`🎴 [Штраф] Отмена`);
-                  setShowPenaltyModal(false);
-                  setPenaltyTargets([]);
-                  setSelectedCards({});
-                }}
-                style={{
-                  flex: 1,
-                  background: 'rgba(100, 116, 139, 0.3)',
-                  color: 'white',
-                  border: '2px solid rgba(100, 116, 139, 0.5)',
-                  borderRadius: '12px',
-                  padding: '12px 20px',
-                  fontSize: '14px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(100, 116, 139, 0.5)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(100, 116, 139, 0.3)';
-                }}
-              >
-                Отменить
-              </button>
-
-              <button
-                disabled={Object.keys(selectedCards).length !== penaltyTargets.length}
-                onClick={() => {
-                  console.log(`🎴 [Штраф] Отдаем карты:`, selectedCards);
-                  
-                  // Сдаём карты каждому оштрафованному игроку
-                  if (humanPlayer) {
-                    penaltyTargets.forEach(target => {
-                      const card = selectedCards[target.id];
-                      if (card) {
-                        console.log(`🎴 [Штраф] Отдаём карту ${card.id} игроку ${target.name}`);
-                        contributePenaltyCard(humanPlayer.id, card.id);
-                      }
-                    });
-                  }
-                  
-                  setShowPenaltyModal(false);
-                  setPenaltyTargets([]);
-                  setSelectedCards({});
-                }}
-                style={{
-                  flex: 1,
-                  background: Object.keys(selectedCards).length === penaltyTargets.length
-                    ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-                    : 'rgba(100, 116, 139, 0.3)',
-                  color: 'white',
-                  border: '2px solid rgba(16, 185, 129, 0.5)',
-                  borderRadius: '12px',
-                  padding: '12px 20px',
-                  fontSize: '14px',
-                  fontWeight: '700',
-                  cursor: Object.keys(selectedCards).length === penaltyTargets.length ? 'pointer' : 'not-allowed',
-                  transition: 'all 0.3s ease',
-                  opacity: Object.keys(selectedCards).length === penaltyTargets.length ? 1 : 0.5
-                }}
-                onMouseEnter={(e) => {
-                  if (Object.keys(selectedCards).length === penaltyTargets.length) {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(16, 185, 129, 0.5)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
-              >
-                ✓ Сдать карты ({Object.keys(selectedCards).length}/{penaltyTargets.length})
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* МОДАЛЬНОЕ ОКНО ВЫБОРА КАРТЫ ДЛЯ ШТРАФА */}
+      <PenaltyCardSelector />
     </div>
   );
 }

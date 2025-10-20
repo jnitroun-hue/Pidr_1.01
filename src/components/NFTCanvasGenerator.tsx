@@ -381,8 +381,8 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
           ⚡ ГЕНЕРАТОР NFT
         </h3>
 
-        {/* Компактная сетка: Масть + Редкость */}
-        <div className="grid grid-cols-2 gap-4 mb-4">
+        {/* Масть */}
+        <div className="mb-4">
           
           {/* Масть */}
           <div>
@@ -694,7 +694,10 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
                 Карта успешно сгенерирована!
               </h3>
               <p className="text-green-300">
-                {generatedCard.rank.toUpperCase()} of {generatedCard.suit} ({generatedCard.rarity})
+                {generatedCard.rank.toUpperCase()} of {generatedCard.suit}
+              </p>
+              <p className="text-amber-400 font-bold mt-2">
+                💰 Стоимость: {currentCost} монет
               </p>
             </div>
           </motion.div>

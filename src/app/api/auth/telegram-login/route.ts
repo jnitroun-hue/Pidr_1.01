@@ -175,8 +175,8 @@ export async function POST(request: NextRequest) {
     // Устанавливаем pidr_session cookie
     response.cookies.set('pidr_session', sessionJson, {
       httpOnly: true,
-      secure: true,
-      sameSite: 'none',
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax', // Изменено с 'none' на 'lax' для лучшей совместимости
       maxAge: 60 * 60 * 24 * 30,
       path: '/'
     });
@@ -196,8 +196,8 @@ export async function POST(request: NextRequest) {
 
       response.cookies.set('auth_token', token, {
         httpOnly: true,
-        secure: true,
-        sameSite: 'none',
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax', // Изменено с 'none' на 'lax' для лучшей совместимости
         maxAge: 60 * 60 * 24 * 30,
         path: '/'
       });

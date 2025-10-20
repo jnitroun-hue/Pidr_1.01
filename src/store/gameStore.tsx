@@ -86,6 +86,10 @@ interface GameState {
   playersWithOneCard: string[] // Игроки у которых 1 карта (для проверки штрафов)
   pendingPenalty: {targetPlayerId: string, contributorsNeeded: string[]} | null // Ожидающий штраф
   
+  // UI для выбора карты для штрафа
+  showPenaltyCardSelection: boolean // Показать UI выбора карты для штрафа
+  penaltyCardSelectionPlayerId: string | null // ID игрока который выбирает карту
+  
   // Система рейтинга и результатов
   eliminationOrder: string[] // Порядок выбывания игроков (первый = последнее место)
   isRankedGame: boolean // Рейтинговая игра или нет
@@ -292,6 +296,10 @@ export const useGameStore = create<GameState>()(
       oneCardTimers: {},
       playersWithOneCard: [],
       pendingPenalty: null,
+      
+      // UI для выбора карты для штрафа
+      showPenaltyCardSelection: false,
+      penaltyCardSelectionPlayerId: null,
       
       // Система рейтинга и результатов
       eliminationOrder: [],
@@ -2471,22 +2479,27 @@ export const useGameStore = create<GameState>()(
              }
            });
            
-           get().showNotification(`💸 Игроки должны выбрать карты для штрафа ${forgetfulPlayer.name}!`, 'warning', 7000);
-           
-           // Для ботов - автоматически выбираем худшие карты с задержкой
-           contributorsNeeded.forEach((playerId, index) => {
-             const player = players.find(p => p.id === playerId);
-             if (player?.isBot) {
-               setTimeout(() => {
-                 const openCards = player.cards.filter(c => c.open);
-                 const worstCard = get().findWorstCardInHand(openCards, get().trumpSuit);
-                 if (worstCard) {
-                   console.log(`🤖 [startPenaltyProcess] Бот ${player.name} автоматически выбирает худшую карту для штрафа`);
-                   get().contributePenaltyCard(playerId, worstCard.id);
-                 }
-               }, (index + 1) * 1000); // Боты отдают карты с задержкой (УСКОРЕНО)
-             }
-           });
+          get().showNotification(`💸 Игроки должны выбрать карты для штрафа ${forgetfulPlayer.name}!`, 'warning', 7000);
+          
+          // ✅ ИСПРАВЛЕНО: Боты автоматически отдают карты, люди НЕ получают модалку автоматически!
+          // Модалка открывается ТОЛЬКО когда игрок нажимает кнопку "Сдать штраф"
+          contributorsNeeded.forEach((playerId, index) => {
+            const player = players.find(p => p.id === playerId);
+            
+            if (player?.isBot) {
+              // Для ботов - автоматически выбираем худшие карты с задержкой
+              setTimeout(() => {
+                const openCards = player.cards.filter(c => c.open);
+                const worstCard = get().findWorstCardInHand(openCards, get().trumpSuit);
+                if (worstCard) {
+                  console.log(`🤖 [startPenaltyProcess] Бот ${player.name} автоматически выбирает худшую карту для штрафа`);
+                  get().contributePenaltyCard(playerId, worstCard.id);
+                }
+              }, (index + 1) * 1000); // Боты отдают карты с задержкой
+            }
+            // Для людей - НЕ показываем модалку автоматически!
+            // Они сами нажмут кнопку "Сдать штраф"
+          });
          },
          
          // Игрок отдает карту за штраф
@@ -2565,11 +2578,16 @@ export const useGameStore = create<GameState>()(
              }, 500);
            }
            
-          // Обновляем состояние с принудительным обновлением
+          // Скрываем UI выбора карты для текущего игрока
           set({ 
             players: newPlayers,
-            pendingPenalty: newPendingPenalty
+            pendingPenalty: newPendingPenalty,
+            showPenaltyCardSelection: false,
+            penaltyCardSelectionPlayerId: null
           });
+          
+          // ✅ ИСПРАВЛЕНО: НЕ показываем модалку следующему автоматически
+          // Каждый игрок должен САМ нажать кнопку "Сдать штраф"
           
           // ✅ ПРОВЕРЯЕМ что карта действительно убралась
           setTimeout(() => {
