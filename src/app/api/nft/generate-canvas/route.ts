@@ -37,20 +37,43 @@ export async function POST(request: NextRequest) {
       imageDataUrl // Base64 изображение с клиента
     } = body;
 
-    // Цены в зависимости от редкости
-    const RARITY_COSTS: Record<string, number> = {
-      common: 1000,
-      rare: 2000,
-      epic: 3500,
-      legendary: 5000,
-      mythic: 10000
+    // ✅ НОВАЯ СИСТЕМА ЦЕН: Ранг + Масть
+    // Цены по рангам
+    const RANK_COSTS: Record<string, number> = {
+      '2': 1000, '3': 1000, '4': 1000, '5': 1000, '6': 1000, '7': 1000, '8': 1000, '9': 1000,
+      '10': 2500,
+      'jack': 2500, 'j': 2500,
+      'queen': 5000, 'q': 5000,
+      'king': 5000, 'k': 5000,
+      'ace': 8000, 'a': 8000
     };
 
-    const FULL_DECK_COST = 20000;
-    
-    const cost = action === 'full_deck' ? FULL_DECK_COST : (RARITY_COSTS[rarity] || 1000);
+    // Цены по мастям
+    const SUIT_COSTS: Record<string, number> = {
+      'hearts': 500,
+      'diamonds': 500,
+      'clubs': 500,
+      'spades': 1000 // ♠️ дороже
+    };
 
-    console.log('🎴 [NFT Canvas] Данные:', { userId, action, suit, rank, rarity, cost });
+    const FULL_DECK_COST = 150000; // 52 карты, средняя стоимость ~2800 за карту
+    
+    // Вычисляем стоимость карты
+    const rankCost = RANK_COSTS[rank?.toLowerCase()] || 1000;
+    const suitCost = SUIT_COSTS[suit?.toLowerCase()] || 500;
+    const cardCost = rankCost + suitCost;
+    
+    const cost = action === 'full_deck' ? FULL_DECK_COST : (action === 'deck_card' ? 0 : cardCost);
+
+    console.log('🎴 [NFT Canvas] Данные:', { 
+      userId, 
+      action, 
+      suit, 
+      rank, 
+      rankCost, 
+      suitCost, 
+      totalCost: cardCost 
+    });
 
     // Проверяем баланс пользователя
     const { data: user, error: userError } = await supabase
@@ -161,20 +184,22 @@ export async function POST(request: NextRequest) {
     console.log('✅ [NFT Canvas] Карта загружена в Storage:', publicUrl);
 
     // Сохраняем в таблицу _pidr_nft_cards
-    const { data: savedCard, error: saveError } = await supabase
+    const { data: savedCard, error: saveError} = await supabase
       .from('_pidr_nft_cards')
       .insert([{
         user_id: userId,
         suit: suit,
         rank: rank,
-        rarity: rarity,
+        rarity: 'custom', // ✅ Фиксированное значение вместо переменной редкости
         image_url: publicUrl,
         storage_path: fileName,
         metadata: {
           generated_at: new Date().toISOString(),
           generator: 'client_canvas',
-          version: '1.0',
-          cost: cost
+          version: '2.0',
+          cost: cost,
+          rank_cost: rankCost,
+          suit_cost: suitCost
         },
         created_at: new Date().toISOString()
       }])
@@ -191,12 +216,12 @@ export async function POST(request: NextRequest) {
       .insert([{
         user_telegram_id: userId,
         nft_address: `local_${Date.now()}`,
-        token_id: `${suit}_${rank}_${rarity}`,
+        token_id: `${suit}_${rank}_custom`,
         card_id: `${rank}_of_${suit}`,
         card_name: `${rank.toUpperCase()} of ${suit.toUpperCase()}`,
         card_rank: rank,
         card_suit: suit,
-        rarity: rarity,
+        rarity: 'custom',
         image_url: publicUrl,
         acquired_via: 'generation',
         minted_at: new Date().toISOString()

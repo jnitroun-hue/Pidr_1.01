@@ -12,30 +12,33 @@ const SUITS = [
 ];
 
 const RANKS = [
-  { value: '2', label: '2', display: '2' },
-  { value: '3', label: '3', display: '3' },
-  { value: '4', label: '4', display: '4' },
-  { value: '5', label: '5', display: '5' },
-  { value: '6', label: '6', display: '6' },
-  { value: '7', label: '7', display: '7' },
-  { value: '8', label: '8', display: '8' },
-  { value: '9', label: '9', display: '9' },
-  { value: '10', label: '10', display: '10' },
-  { value: 'jack', label: 'Валет', display: 'J' },
-  { value: 'queen', label: 'Дама', display: 'Q' },
-  { value: 'king', label: 'Король', display: 'K' },
-  { value: 'ace', label: 'Туз', display: 'A' }
+  { value: '2', label: '2', display: '2', cost: 1000 },
+  { value: '3', label: '3', display: '3', cost: 1000 },
+  { value: '4', label: '4', display: '4', cost: 1000 },
+  { value: '5', label: '5', display: '5', cost: 1000 },
+  { value: '6', label: '6', display: '6', cost: 1000 },
+  { value: '7', label: '7', display: '7', cost: 1000 },
+  { value: '8', label: '8', display: '8', cost: 1000 },
+  { value: '9', label: '9', display: '9', cost: 1000 },
+  { value: '10', label: '10', display: '10', cost: 2500 },
+  { value: 'jack', label: 'Валет', display: 'J', cost: 2500 },
+  { value: 'queen', label: 'Дама', display: 'Q', cost: 5000 },
+  { value: 'king', label: 'Король', display: 'K', cost: 5000 },
+  { value: 'ace', label: 'Туз', display: 'A', cost: 8000 }
 ];
 
-const RARITIES = [
-  { value: 'common', label: 'Common', emoji: '⚪', color: '#94a3b8', gradient: 'linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%)', cost: 1000 },
-  { value: 'rare', label: 'Rare', emoji: '🔵', color: '#3b82f6', gradient: 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)', cost: 2000 },
-  { value: 'epic', label: 'Epic', emoji: '🟣', color: '#a855f7', gradient: 'linear-gradient(135deg, #c084fc 0%, #a855f7 100%)', cost: 3500 },
-  { value: 'legendary', label: 'Legendary', emoji: '🟡', color: '#f59e0b', gradient: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)', cost: 5000 },
-  { value: 'mythic', label: 'Mythic', emoji: '🔴', color: '#ef4444', gradient: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)', cost: 10000 }
-];
+// ✅ НОВАЯ СИСТЕМА: Цена = Ранг + Масть
+// Цены по мастям (добавляются к цене ранга):
+// ♥️♦️♣️ = +500 монет
+// ♠️ = +1000 монет
+const SUIT_COSTS: Record<string, number> = {
+  'hearts': 500,
+  'diamonds': 500,
+  'clubs': 500,
+  'spades': 1000
+};
 
-const FULL_DECK_COST = 20000;
+const FULL_DECK_COST = 150000;
 
 interface NFTCanvasGeneratorProps {
   userCoins: number;
@@ -45,14 +48,16 @@ interface NFTCanvasGeneratorProps {
 export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCanvasGeneratorProps) {
   const [selectedSuit, setSelectedSuit] = useState<string>('hearts');
   const [selectedRank, setSelectedRank] = useState<string>('ace');
-  const [selectedRarity, setSelectedRarity] = useState<string>('common');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedCard, setGeneratedCard] = useState<any>(null);
   const [userCards, setUserCards] = useState<any[]>([]);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  const currentRarity = RARITIES.find(r => r.value === selectedRarity);
-  const currentCost = currentRarity?.cost || 100;
+  // ✅ Вычисляем цену на основе ранга и масти
+  const currentRank = RANKS.find(r => r.value === selectedRank);
+  const rankCost = currentRank?.cost || 1000;
+  const suitCost = SUIT_COSTS[selectedSuit] || 500;
+  const currentCost = rankCost + suitCost;
 
   // Загрузка карт пользователя
   useEffect(() => {
@@ -77,9 +82,9 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
   };
 
   /**
-   * Генерация изображения карты через Canvas
+   * ✅ Генерация изображения карты через Canvas (БЕЗ редкости)
    */
-  const generateCardImage = (suit: string, rank: string, rarity: string): string => {
+  const generateCardImage = (suit: string, rank: string): string => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Canvas не поддерживается');
@@ -91,26 +96,32 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
     canvas.width = CARD_WIDTH;
     canvas.height = CARD_HEIGHT;
 
-    const rarityConfig = RARITIES.find(r => r.value === rarity) || RARITIES[0];
+    const suitColor = getSuitColor(suit);
+    const suitSymbol = getSuitSymbol(suit);
 
     // Фон карты
     ctx.fillStyle = '#1e293b';
     roundRect(ctx, 0, 0, CARD_WIDTH, CARD_HEIGHT, CARD_RADIUS);
     ctx.fill();
 
-    // Градиент для редкости
-    if (rarityConfig.value !== 'common') {
-      const gradient = ctx.createLinearGradient(0, 0, CARD_WIDTH, CARD_HEIGHT);
-      gradient.addColorStop(0, `${rarityConfig.color}33`);
-      gradient.addColorStop(1, `${rarityConfig.color}11`);
-      ctx.fillStyle = gradient;
-      roundRect(ctx, 0, 0, CARD_WIDTH, CARD_HEIGHT, CARD_RADIUS);
-      ctx.fill();
+    // Градиент в зависимости от масти
+    const gradient = ctx.createLinearGradient(0, 0, CARD_WIDTH, CARD_HEIGHT);
+    if (suit === 'spades') {
+      // Пики - более темные и дорогие
+      gradient.addColorStop(0, '#37415133');
+      gradient.addColorStop(1, '#11182711');
+    } else {
+      // Остальные масти
+      gradient.addColorStop(0, `${suitColor}22`);
+      gradient.addColorStop(1, `${suitColor}11`);
     }
+    ctx.fillStyle = gradient;
+    roundRect(ctx, 0, 0, CARD_WIDTH, CARD_HEIGHT, CARD_RADIUS);
+    ctx.fill();
 
     // Рамка
-    ctx.strokeStyle = rarityConfig.color;
-    ctx.lineWidth = rarityConfig.value === 'common' ? 4 : 8;
+    ctx.strokeStyle = suitColor;
+    ctx.lineWidth = suit === 'spades' ? 8 : 4; // Пики с более толстой рамкой
     roundRect(ctx, 10, 10, CARD_WIDTH - 20, CARD_HEIGHT - 20, CARD_RADIUS - 5);
     ctx.stroke();
 
@@ -125,14 +136,15 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
 
     // Символ масти
     ctx.font = 'bold 80px Arial';
-    const suitSymbol = getSuitSymbol(suit);
-    ctx.fillStyle = getSuitColor(suit);
+    ctx.fillStyle = suitColor;
     ctx.fillText(suitSymbol, CARD_WIDTH / 2, CARD_HEIGHT / 2 + 80);
 
-    // Редкость внизу
+    // Цена внизу
+    const rankInfo = RANKS.find(r => r.value === rank);
+    const totalCost = (rankInfo?.cost || 1000) + (SUIT_COSTS[suit] || 500);
     ctx.font = 'bold 24px Arial';
-    ctx.fillStyle = rarityConfig.color;
-    ctx.fillText(rarityConfig.label, CARD_WIDTH / 2, CARD_HEIGHT - 40);
+    ctx.fillStyle = '#fbbf24';
+    ctx.fillText(`${totalCost} монет`, CARD_WIDTH / 2, CARD_HEIGHT - 40);
 
     // Маленькие символы по углам
     ctx.font = 'bold 40px Arial';
@@ -185,8 +197,8 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
     try {
       console.log('🎨 Генерация изображения карты...');
       
-      // Генерируем изображение через Canvas
-      const imageDataUrl = generateCardImage(selectedSuit, selectedRank, selectedRarity);
+      // ✅ Генерируем изображение через Canvas (БЕЗ rarity)
+      const imageDataUrl = generateCardImage(selectedSuit, selectedRank);
       
       console.log('✅ Изображение сгенерировано, отправляем на сервер...');
 
@@ -198,7 +210,6 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
           action: 'single',
           suit: selectedSuit,
           rank: selectedRank,
-          rarity: selectedRarity,
           imageDataUrl
         })
       });
@@ -254,8 +265,8 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
           try {
             console.log(`🎨 Генерация ${rank} of ${suit}...`);
             
-            // Генерируем изображение
-            const imageDataUrl = generateCardImage(suit, rank, selectedRarity);
+            // ✅ Генерируем изображение (БЕЗ rarity)
+            const imageDataUrl = generateCardImage(suit, rank);
             
             // Отправляем на сервер
             const response = await fetch('/api/nft/generate-canvas', {
@@ -263,10 +274,9 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
               headers: { 'Content-Type': 'application/json' },
               credentials: 'include',
               body: JSON.stringify({
-                action: isFirstCard ? 'full_deck' : 'deck_card', // Первая карта списывает 20000, остальные бесплатно
+                action: isFirstCard ? 'full_deck' : 'deck_card', // Первая карта списывает 150000, остальные бесплатно
                 suit,
                 rank,
-                rarity: selectedRarity,
                 imageDataUrl
               })
             });
@@ -451,113 +461,45 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
           </div>
         </div>
 
-        {/* Редкость */}
-        <div className="mb-8">
-          <label className="block text-lg font-extrabold text-white mb-4 flex items-center gap-3">
-            <span className="text-3xl">💎</span> 
-            <span style={{
-              background: 'linear-gradient(135deg, #fff 0%, #cbd5e1 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent'
-            }}>
-              Выберите редкость
+        {/* ✅ Информация о ценах */}
+        <div className="mb-8 bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border-2 border-amber-500/30">
+          <div className="mb-4">
+            <span className="text-xl font-extrabold text-amber-400 block">
+              💰 Система Ценообразования
             </span>
-          </label>
-          <div className="space-y-3">
-            {RARITIES.map((rarity) => {
-              const isSelected = selectedRarity === rarity.value;
-              return (
-                <motion.button
-                  key={rarity.value}
-                  onClick={() => setSelectedRarity(rarity.value)}
-                  disabled={isGenerating}
-                  whileHover={{ scale: 1.03, x: 8 }}
-                  whileTap={{ scale: 0.97 }}
-                  className="w-full rounded-2xl font-extrabold transition-all flex justify-between items-center relative overflow-hidden"
-                  style={{
-                    background: isSelected 
-                      ? `linear-gradient(135deg, ${rarity.color}30 0%, ${rarity.color}20 100%)`
-                      : 'linear-gradient(145deg, #1e293b, #0f172a)',
-                    border: isSelected ? `3px solid ${rarity.color}` : '2px solid rgba(71, 85, 105, 0.4)',
-                    padding: '20px 24px',
-                    boxShadow: isSelected 
-                      ? `0 12px 40px ${rarity.color}50, inset 0 1px 0 rgba(255,255,255,0.1), 0 0 0 4px ${rarity.color}15`
-                      : '8px 8px 16px rgba(0, 0, 0, 0.4), -4px -4px 10px rgba(255, 255, 255, 0.02)',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <div className="flex items-center gap-4">
-                    <motion.span 
-                      className="text-3xl"
-                      animate={isSelected ? { 
-                        scale: [1, 1.2, 1],
-                        rotate: [0, 10, -10, 0]
-                      } : {}}
-                      transition={{ duration: 0.5 }}
-                    >
-                      {rarity.emoji}
-                    </motion.span>
-                    <div className="text-left">
-                      <span 
-                        className="text-lg uppercase tracking-wider block"
-                        style={{ 
-                          color: isSelected ? rarity.color : '#cbd5e1',
-                          textShadow: isSelected ? `0 0 15px ${rarity.color}60` : 'none'
-                        }}
-                      >
-                        {rarity.label}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="font-extrabold text-xl px-4 py-2 rounded-xl"
-                      style={{
-                        background: isSelected 
-                          ? 'linear-gradient(135deg, rgba(251, 191, 36, 0.3), rgba(245, 158, 11, 0.3))'
-                          : 'rgba(0,0,0,0.3)',
-                        color: isSelected ? '#fbbf24' : '#64748b',
-                        boxShadow: isSelected ? '0 4px 12px rgba(251, 191, 36, 0.4), inset 0 1px 0 rgba(255,255,255,0.2)' : 'none',
-                        border: isSelected ? '2px solid rgba(251, 191, 36, 0.5)' : '1px solid rgba(100, 116, 139, 0.3)'
-                      }}
-                    >
-                      {rarity.cost} 🪙
-                    </div>
-                  </div>
-                  {isSelected && (
-                    <>
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="absolute inset-0 pointer-events-none"
-                        style={{
-                          background: `radial-gradient(ellipse at center, ${rarity.color}15 0%, transparent 70%)`,
-                          animation: 'pulse 2s ease-in-out infinite'
-                        }}
-                      />
-                      <motion.div
-                        initial={{ scale: 0, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        className="absolute top-3 right-3"
-                        style={{
-                          width: '32px',
-                          height: '32px',
-                          borderRadius: '50%',
-                          background: rarity.gradient,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          boxShadow: `0 4px 12px ${rarity.color}70`,
-                          border: '2px solid white'
-                        }}
-                      >
-                        <span className="text-white text-lg font-bold">✓</span>
-                      </motion.div>
-                    </>
-                  )}
-                </motion.button>
-              );
-            })}
+          </div>
+          
+          <div className="space-y-4">
+            {/* Цены по рангам */}
+            <div className="bg-slate-900/50 rounded-xl p-4">
+              <h3 className="text-md font-bold text-amber-300 mb-2">📊 По рангу:</h3>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="flex justify-between"><span className="text-slate-300">2-9:</span><span className="font-bold text-green-400">1,000🪙</span></div>
+                <div className="flex justify-between"><span className="text-slate-300">10-J:</span><span className="font-bold text-blue-400">2,500🪙</span></div>
+                <div className="flex justify-between"><span className="text-slate-300">Q-K:</span><span className="font-bold text-purple-400">5,000🪙</span></div>
+                <div className="flex justify-between"><span className="text-slate-300">A:</span><span className="font-bold text-red-400">8,000🪙</span></div>
+              </div>
+            </div>
+
+            {/* Цены по мастям */}
+            <div className="bg-slate-900/50 rounded-xl p-4">
+              <h3 className="text-md font-bold text-amber-300 mb-2">🃏 По масти:</h3>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="flex justify-between"><span className="text-slate-300">♥️♦️♣️:</span><span className="font-bold text-green-400">+500🪙</span></div>
+                <div className="flex justify-between"><span className="text-slate-300">♠️:</span><span className="font-bold text-purple-400">+1,000🪙</span></div>
+              </div>
+            </div>
+
+            {/* Итоговая цена */}
+            <div className="bg-gradient-to-r from-amber-500/20 to-orange-500/20 rounded-xl p-3 border border-amber-500/50">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-bold text-white">Итого:</span>
+                <span className="text-xl font-extrabold text-amber-400">{currentCost}🪙</span>
+              </div>
+              <p className="text-xs text-slate-400 mt-1">
+                {rankCost} + {suitCost} = {currentCost} монет
+              </p>
+            </div>
           </div>
         </div>
 
@@ -748,7 +690,7 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
                 className="relative group cursor-pointer hover:scale-105 transition-transform"
                 style={{
                   borderRadius: '8px',
-                  border: `2px solid ${RARITIES.find(r => r.value === card.rarity)?.color || '#94a3b8'}`,
+                  border: card.suit === 'spades' ? '3px solid #a855f7' : '2px solid #3b82f6',
                   padding: '4px',
                   background: 'rgba(15, 23, 42, 0.8)'
                 }}
@@ -756,7 +698,7 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
                 <div className="aspect-[5/7] bg-slate-700 rounded-md flex items-center justify-center">
                   <div className="text-center">
                     <div className="text-2xl mb-1">
-                      {card.suit === 'hearts' || card.suit === 'diamonds' ? '♥' : '♠'}
+                      {card.suit === 'hearts' ? '♥️' : card.suit === 'diamonds' ? '♦️' : card.suit === 'clubs' ? '♣️' : '♠️'}
                     </div>
                     <div className="text-xs font-bold text-white">
                       {card.rank.toUpperCase()}
@@ -764,14 +706,11 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
                   </div>
                 </div>
                 
-                {/* Редкость */}
+                {/* Цена карты */}
                 <div 
-                  className="absolute -top-2 -right-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border-2 border-slate-900"
-                  style={{
-                    backgroundColor: RARITIES.find(r => r.value === card.rarity)?.color || '#94a3b8'
-                  }}
+                  className="absolute -top-2 -right-2 px-2 py-1 rounded-full flex items-center justify-center text-xs font-bold border-2 border-amber-500 bg-amber-600"
                 >
-                  {card.rarity[0].toUpperCase()}
+                  💰
                 </div>
               </div>
             ))}
