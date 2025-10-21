@@ -89,18 +89,25 @@ export async function POST(req: NextRequest) {
 
     if (deletePlayersError) throw deletePlayersError;
 
-    // Обновляем статус всех игроков на "online"
+    // ✅ ИСПРАВЛЕНО: Обновляем статус ТОЛЬКО РЕАЛЬНЫХ игроков (НЕ БОТОВ)
     if (players && players.length > 0) {
-      const playerIds = players.map((p: any) => p.user_id);
+      // Фильтруем только реальных игроков (положительные ID)
+      const realPlayerIds = players
+        .filter((p: any) => parseInt(p.user_id) > 0)
+        .map((p: any) => p.user_id);
       
-      await supabase
-        .from('_pidr_user_status')
-        .update({ 
-          status: 'online',
-          current_room_id: null,
-          updated_at: new Date().toISOString()
-        })
-        .in('user_id', playerIds);
+      if (realPlayerIds.length > 0) {
+        await supabase
+          .from('_pidr_user_status')
+          .update({ 
+            status: 'online',
+            current_room_id: null,
+            updated_at: new Date().toISOString()
+          })
+          .in('user_id', realPlayerIds);
+        
+        console.log(`✅ [Close Room] Обновлен статус ${realPlayerIds.length} реальных игроков (боты исключены)`);
+      }
     }
 
     return NextResponse.json({ 

@@ -76,7 +76,7 @@ export async function POST() {
     }
 
     // Получаем статус всех хостов
-    const hostIds = waitingRooms.map(r => r.host_id);
+    const hostIds = waitingRooms.map((r: any) => r.host_id);
     const { data: hostStatuses } = await supabase
       .from('_pidr_user_status')
       .select('user_id, status, last_seen')
@@ -84,8 +84,8 @@ export async function POST() {
 
     // Находим комнаты с неактивными хостами
     const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
-    const inactiveRooms = waitingRooms.filter(room => {
-      const hostStatus = hostStatuses?.find(h => h.user_id === room.host_id);
+    const inactiveRooms = waitingRooms.filter((room: any) => {
+      const hostStatus = hostStatuses?.find((h: any) => h.user_id === room.host_id);
       
       if (!hostStatus) {
         // Если нет статуса хоста - считаем неактивным
@@ -116,9 +116,9 @@ export async function POST() {
     }
 
     console.log(`🗑️ Удаляем ${inactiveRooms.length} неактивных комнат:`, 
-      inactiveRooms.map(r => `${r.room_code} (${r.name})`));
+      inactiveRooms.map((r: any) => `${r.room_code} (${r.name})`));
 
-    const roomIds = inactiveRooms.map(r => r.id);
+    const roomIds = inactiveRooms.map((r: any) => r.id);
 
     // Сначала получаем всех игроков из удаляемых комнат
     const { data: playersToUpdate } = await supabase
@@ -126,21 +126,28 @@ export async function POST() {
       .select('user_id')
       .in('room_id', roomIds);
 
-    // Обновляем статус пользователей (убираем их из комнат)
+    // ✅ ИСПРАВЛЕНО: Обновляем статус ТОЛЬКО РЕАЛЬНЫХ пользователей (НЕ БОТОВ)
     if (playersToUpdate && playersToUpdate.length > 0) {
-      const userIds = playersToUpdate.map(p => p.user_id);
+      // Фильтруем только реальных игроков (положительные ID)
+      const realPlayerIds = playersToUpdate
+        .filter((p: any) => parseInt(p.user_id) > 0)
+        .map((p: any) => p.user_id);
       
-      // Обновляем _pidr_user_status если таблица существует
-      await supabase
-        .from('_pidr_user_status')
-        .update({ 
-          current_room_id: null,
-          status: 'online'
-        })
-        .in('user_id', userIds);
+      if (realPlayerIds.length > 0) {
+        // Обновляем _pidr_user_status если таблица существует
+        await supabase
+          .from('_pidr_user_status')
+          .update({ 
+            current_room_id: null,
+            status: 'online'
+          })
+          .in('user_id', realPlayerIds);
+        
+        console.log(`✅ Обновлен статус ${realPlayerIds.length} реальных игроков (боты исключены)`);
+      }
     }
 
-    // Удаляем игроков из неактивных комнат
+    // ✅ УДАЛЯЕМ ВСЕХ ИГРОКОВ (включая ботов) из неактивных комнат
     const { error: playersError } = await supabase
       .from('_pidr_room_players')
       .delete()
@@ -173,7 +180,7 @@ export async function POST() {
     return NextResponse.json({
       success: true,
       message: `Удалено ${inactiveRooms.length} неактивных комнат`,
-      deletedRooms: inactiveRooms.map(r => ({
+      deletedRooms: inactiveRooms.map((r: any) => ({
         room_code: r.room_code,
         name: r.name,
         created_at: r.created_at
