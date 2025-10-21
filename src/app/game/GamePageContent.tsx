@@ -83,7 +83,7 @@ const getTableDimensions = () => {
 };
 
 // 🎯 РАССАДКА ИГРОКОВ ПО ЧАСОВОЙ СТРЕЛКЕ ДЛЯ ВЕРТИКАЛЬНОГО СТОЛА
-const getRectanglePosition = (index: number, totalPlayers: number): { 
+const getRectanglePosition = (index: number, totalPlayers: number, gameStage: number = 1): { 
   top: string; 
   left: string; 
   cardDirection: 'horizontal' | 'vertical';
@@ -104,17 +104,32 @@ const getRectanglePosition = (index: number, totalPlayers: number): {
   // 4-5 → верхняя сторона (2 игрока) 
   // 6-8 → правая сторона (3 игрока)
   
-  const positions = [
-    // ЛЕВАЯ СТОРОНА - 3 ИГРОКА (снизу вверх)
+  // ✅ КРИТИЧНО: РАЗНЫЕ ПОЗИЦИИ ДЛЯ СТАДИЙ 1 И 2!
+  const positions = gameStage >= 2 ? [
+    // 📍 СТАДИЯ 2+: ИГРОКИ ПОДНЯТЫ ВЫШЕ (не перекрываются рукой)
+    { left: '5%', top: '58%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 } }, // 1: слева внизу
+    { left: '5%', top: '40%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 } }, // 2: слева центр
+    { left: '5%', top: '22%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 } }, // 3: слева вверху
+    
+    // ВЕРХНЯЯ СТОРОНА - 2 ИГРОКА (без изменений)
+    { left: '35%', top: '5%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 55 } }, // 4: сверху слева
+    { left: '65%', top: '5%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 55 } }, // 5: сверху справа
+    
+    // ПРАВАЯ СТОРОНА - 3 ИГРОКА
+    { left: '95%', top: '22%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 } }, // 6: справа вверху
+    { left: '95%', top: '40%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 } }, // 7: справа центр
+    { left: '95%', top: '58%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 } }, // 8: справа внизу
+  ] : [
+    // 📍 СТАДИЯ 1: ОРИГИНАЛЬНЫЕ ПОЗИЦИИ (как было)
     { left: '5%', top: '70%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 } }, // 1: слева внизу
     { left: '5%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 } }, // 2: слева центр
     { left: '5%', top: '30%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 } }, // 3: слева вверху
     
-    // ВЕРХНЯЯ СТОРОНА - 2 ИГРОКА (слева направо)
+    // ВЕРХНЯЯ СТОРОНА - 2 ИГРОКА
     { left: '35%', top: '5%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 55 } }, // 4: сверху слева
     { left: '65%', top: '5%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 55 } }, // 5: сверху справа
     
-    // ПРАВАЯ СТОРОНА - 3 ИГРОКА (сверху вниз)
+    // ПРАВАЯ СТОРОНА - 3 ИГРОКА
     { left: '95%', top: '30%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 } }, // 6: справа вверху
     { left: '95%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 } }, // 7: справа центр
     { left: '95%', top: '70%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 } }, // 8: справа внизу
@@ -139,9 +154,9 @@ const getRectanglePosition = (index: number, totalPlayers: number): {
 };
 
 // LEGACY ФУНКЦИЯ (для обратной совместимости)
-const getCirclePosition = (index: number, totalPlayers: number): { top: string; left: string } => {
+const getCirclePosition = (index: number, totalPlayers: number, gameStage: number = 1): { top: string; left: string } => {
   // Используем новую прямоугольную систему
-  return getRectanglePosition(index, totalPlayers);
+  return getRectanglePosition(index, totalPlayers, gameStage);
   
   /*
   // СТАРАЯ ОВАЛЬНАЯ СИСТЕМА (закомментирована)
@@ -1102,28 +1117,13 @@ function GamePageContentComponent({
   const canClickDeck = turnPhase === 'showing_deck_hint' && currentTurnPlayer?.id === currentPlayerId;
   const waitingForTarget = turnPhase === 'waiting_target_selection';
 
-  // Функция для расчета позиции игрока вокруг прямоугольного стола
+  // ✅ ИСПРАВЛЕНО: Используем getRectanglePosition с передачей gameStage
   const getPlayerPosition = (index: number, totalPlayers: number) => {
-    // Позиции для прямоугольного стола (9 позиций - ИСПРАВЛЕНО!)
-    const positions = [
-      { x: 50, y: 85 },  // 0: Низ-центр (РЕАЛЬНЫЙ ИГРОК)
-      { x: 20, y: 75 },  // 1: Лево-низ
-      { x: 5, y: 55 },   // 2: Лево-центр
-      { x: 10, y: 30 },  // 3: Лево-верх
-      { x: 35, y: 12 },  // 4: Верх-лево
-      { x: 65, y: 12 },  // 5: Верх-право
-      { x: 90, y: 30 },  // 6: Право-верх
-      { x: 95, y: 55 },  // 7: Право-центр
-      { x: 80, y: 75 },  // 8: Право-низ
-    ];
-    
-    // ВАЖНО: для 9 игроков все позиции должны быть уникальными!
-    if (index >= positions.length) {
-      console.warn(`⚠️ Индекс ${index} больше чем позиций ${positions.length}`);
-      return positions[index % positions.length];
-    }
-    
-    return positions[index];
+    const rectPos = getRectanglePosition(index, totalPlayers, gameStage);
+    return {
+      x: parseFloat(rectPos.left),
+      y: parseFloat(rectPos.top)
+    };
   };
 
   // Показываем загрузку если игра инициализируется
