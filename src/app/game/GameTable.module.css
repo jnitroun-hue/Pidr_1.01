@@ -3229,4 +3229,31 @@
     opacity: 0;
     transform: translateX(-50%) translateY(-10px);
   }
+}
+
+/* ======================================================
+   🎮 МАСШТАБИРОВАНИЕ КОМПОНЕНТОВ ВО 2-Й СТАДИИ
+   ====================================================== */
+
+/* ✅ Уменьшение компонентов до 80% во 2-й стадии */
+.stage2Scale {
+  transform: scale(0.8);
+  transform-origin: center;
+  transition: transform 0.3s ease;
+}
+
+/* Для аватаров игроков */
+.stage2Scale .playerSeat {
+  transform: translate(-50%, -50%) scale(0.8);
+}
+
+/* Для карт в руке */
+.stage2Scale .handCard {
+  transform: scale(0.8);
+}
+
+/* Для кнопок */
+.stage2Scale button {
+  transform: scale(0.8);
+  transform-origin: center;
 } 

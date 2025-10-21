@@ -1298,7 +1298,8 @@ function GamePageContentComponent({
       {isGameActive && (
         <div className={styles.tableWrapper}>
           {/* Прямоугольный стол */}
-          <div className={styles.rectangularTable}>
+          {/* ✅ УМЕНЬШАЕМ КОМПОНЕНТЫ ДО 80% ВО 2-Й СТАДИИ */}
+          <div className={`${styles.rectangularTable} ${gameStage >= 2 ? styles.stage2Scale : ''}`}>
             {/* СТОПКА КАРТ НА СТОЛЕ (2-я стадия) - ЗАМЕНЯЕТ КОЛОДУ */}
             {gameStage >= 2 && tableStack && tableStack.length > 0 && (
               <div style={{
