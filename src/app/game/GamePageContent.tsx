@@ -759,8 +759,9 @@ function GamePageContentComponent({
             break;
           case 'draw_card':
             // Во 2-й и 3-й стадиях это значит "взять карты со стола"
-            const { takeTableCards } = useGameStore.getState();
+            // ✅ ИСПРАВЛЕНО: Используем уже импортированную функцию из хука
             if (takeTableCards) {
+              console.log('🎴 [BOT] Вызываем takeTableCards для бота');
               takeTableCards();
             }
             break;
@@ -1219,26 +1220,22 @@ function GamePageContentComponent({
             {gameStage === 1 ? (
               <>🎴 Колода: {deck.length}</>
             ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span>🗑️ Бито:</span>
-                {/* Показываем последние 2-3 карты в бито */}
-                <div style={{ display: 'flex', gap: '2px' }}>
-                  {(playedCards || []).slice(-3).map((card, index) => (
-                    <Image
-                      key={`bito-${index}`}
-                      src="/img/cards/card_back.png"
-                      alt="Карта в бито"
-                      width={20}
-                      height={30}
-                      style={{ 
-                        opacity: 0.8,
-                        transform: `rotate(${(index - 1) * 5}deg)`,
-                        marginLeft: index > 0 ? '-10px' : '0'
-                      }}
-                    />
-                  ))}
-                </div>
-                <span>{playedCards?.length || 0}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span style={{ fontSize: '12px' }}>🗑️</span>
+                {/* ✅ ИСПРАВЛЕНО: Показываем 1 карту рубашкой + количество */}
+                {playedCards && playedCards.length > 0 && (
+                  <Image
+                    src="/img/cards/card_back.png"
+                    alt="Карта в бито"
+                    width={12}
+                    height={18}
+                    style={{ 
+                      opacity: 0.9,
+                      borderRadius: '2px'
+                    }}
+                  />
+                )}
+                <span style={{ fontSize: '11px', fontWeight: 700 }}>×{playedCards?.length || 0}</span>
               </div>
             )}
           </div>
@@ -1802,16 +1799,26 @@ function GamePageContentComponent({
               </button>
             )}
             
-            {/* Кнопка "Сколько карт?" - ПОКАЗЫВАЕТСЯ С ЗАДЕРЖКОЙ 2 СЕК */}
-            {showAskCardsButton && playersWithOneCard && playersWithOneCard.length > 0 && (
+            {/* Кнопка "Сколько карт?" - ПОКАЗЫВАЕТСЯ ТОЛЬКО ДЛЯ НЕ ОБЪЯВИВШИХ */}
+            {(() => {
+              // ✅ ИСПРАВЛЕНО: Фильтруем только тех, кто НЕ объявил "одна карта"
+              const targetsNotDeclared = players.filter(p => 
+                playersWithOneCard.includes(p.id) && 
+                p.id !== humanPlayer.id &&
+                !oneCardDeclarations[p.id] // ✅ КРИТИЧНО: НЕ объявил!
+              );
+              
+              if (!showAskCardsButton || targetsNotDeclared.length === 0) {
+                return null; // ✅ Скрываем кнопку если все объявили
+              }
+              
+              return (
               <button
                 onClick={() => {
                   // Показываем сообщение над своим аватаром
                   showPlayerMessage(humanPlayer.id, '❓ Сколько карт?', 'info', 2000);
                   
-                  const targets = players.filter(p => 
-                    playersWithOneCard.includes(p.id) && p.id !== humanPlayer.id
-                  );
+                  const targets = targetsNotDeclared;
                   
                   if (targets.length === 1) {
                     // Показываем сообщение над целью
@@ -1846,7 +1853,8 @@ function GamePageContentComponent({
               >
                 ❓ Сколько карт?
               </button>
-            )}
+              );
+            })()}
             
             {/* Кнопка "Сдать штраф" */}
             {!!pendingPenalty && pendingPenalty.contributorsNeeded.includes(humanPlayer.id) && (
@@ -1877,26 +1885,33 @@ function GamePageContentComponent({
               </button>
             )}
             
-            {/* Кнопка "Взять карту" - ПЕРЕНЕСЕНА В РУКУ ИГРОКА */}
+            {/* Кнопка "Взять карту" - STAGE 2 */}
             {(() => {
-              const shouldShowButton = tableStack && tableStack.length > 0 && humanPlayer.id === currentPlayerId;
               const isMyTurn = humanPlayer.id === currentPlayerId;
               const hasCardsOnTable = tableStack && tableStack.length > 0;
               
-              console.log(`🎴 [КНОПКА DEBUG] tableStack.length=${tableStack?.length || 0}, humanPlayer.id=${humanPlayer.id}, currentPlayerId=${currentPlayerId}, isMyTurn=${isMyTurn}, shouldShow=${shouldShowButton}`);
+              // ✅ ПОКАЗЫВАЕМ ТОЛЬКО ВО 2-Й СТАДИИ
+              if (gameStage !== 2 || !hasCardsOnTable) {
+                console.log(`🎴 [КНОПКА] СКРЫТА: stage=${gameStage}, hasCards=${hasCardsOnTable}`);
+                return null;
+              }
               
-              // ✅ ПОКАЗЫВАЕМ КНОПКУ ВСЕГДА если есть карты на столе (даже если не твой ход - для debug)
-              if (!hasCardsOnTable) return null;
+              console.log(`🎴 [КНОПКА] ПОКАЗАНА: stage=${gameStage}, tableStack=${tableStack.length}, isMyTurn=${isMyTurn}, currentPlayerId=${currentPlayerId}`);
               
               return (
                 <button
                   onClick={() => {
-                    console.log('🎴 [КНОПКА ВЗЯТЬ КАРТУ] КЛИК!');
-                    console.log(`🎴 [КНОПКА] isMyTurn=${isMyTurn}, tableStack.length=${tableStack.length}`);
-                    if (!isMyTurn) {
-                      console.warn('⚠️ [КНОПКА] НЕ ТВОЙ ХОД! currentPlayerId=' + currentPlayerId);
+                    console.log('🎴 [КНОПКА ВЗЯТЬ КАРТУ] ===== КЛИК =====');
+                    console.log(`🎴 [КНОПКА] humanPlayer.id=${humanPlayer.id}, currentPlayerId=${currentPlayerId}`);
+                    console.log(`🎴 [КНОПКА] tableStack:`, tableStack);
+                    console.log(`🎴 [КНОПКА] Вызываем takeTableCards()...`);
+                    
+                    try {
+                      takeTableCards();
+                      console.log('✅ [КНОПКА] takeTableCards() выполнена успешно');
+                    } catch (error) {
+                      console.error('❌ [КНОПКА] Ошибка при вызове takeTableCards:', error);
                     }
-                    takeTableCards();
                   }}
                   style={{
                     background: isMyTurn 

@@ -2205,18 +2205,20 @@ export const useGameStore = create<GameState>()(
             
             set({ players: updatedPlayers });
             
-            // Объявляем каждого нового победителя НЕМЕДЛЕННО
+            // ✅ УЛУЧШЕННОЕ ОБЪЯВЛЕНИЕ ПОБЕДИТЕЛЕЙ С АНИМАЦИЕЙ
             newWinners.forEach((winner, index) => {
               const position = existingWinners.length + index + 1;
+              const medals = ['🥇', '🥈', '🥉', '🏅', '🏅', '🏅'];
+              const medal = medals[position - 1] || '🏅';
               const positionText = position === 1 ? '1-е место' : position === 2 ? '2-е место' : position === 3 ? '3-е место' : `${position}-е место`;
               
               console.log(`🎉 ОБЪЯВЛЯЕМ ПОБЕДИТЕЛЯ: ${winner.name} - ${positionText}`);
               
-              // НЕМЕДЛЕННО показываем уведомление
+              // ✅ КРАСИВОЕ УВЕДОМЛЕНИЕ С МЕДАЛЬЮ
               get().showNotification(
-                `🏆 ${winner.name} - ${positionText}!`, 
+                `${medal} ${winner.name} - ${positionText}! 🎉`, 
                 'success', 
-                5000
+                7000
               );
               
               // Если это пользователь - показываем модальное окно
@@ -2353,37 +2355,28 @@ export const useGameStore = create<GameState>()(
                     }
                   }, 3500); // ✅ Задержка 3.5 секунды
                 } else {
-                  // Для человека - планируем вопрос ботов
-                  get().scheduleBotAskHowManyCards(player.id);
+                  // Для человека - планируем вопрос ботов ТОЛЬКО ОДИН РАЗ
+                  // ✅ ИСПРАВЛЕНО: Проверяем что не спрашивали ранее
+                  const alreadyScheduled = get().oneCardTimers[`bot_asked_${player.id}`];
+                  if (!alreadyScheduled) {
+                    console.log(`🤖 [checkOneCardStatus] Планируем вопрос ботов для ${player.name} (ПЕРВЫЙ РАЗ)`);
+                    get().scheduleBotAskHowManyCards(player.id);
+                    // Помечаем что уже запланировали
+                    newOneCardTimers[`bot_asked_${player.id}`] = currentTime;
+                  }
                 }
                 
-               // ДОПОЛНИТЕЛЬНО: Все боты проверяют других игроков и спрашивают "сколько карт" через 3.5 сек
-               setTimeout(() => {
-                 const { players: currentPlayers } = get();
-                 const bots = currentPlayers.filter(p => p.isBot);
-                 
-                 bots.forEach(bot => {
-                   // Каждый бот проверяет всех других игроков
-                   currentPlayers.forEach(otherPlayer => {
-                     if (otherPlayer.id !== bot.id) {
-                       const otherTotalCards = otherPlayer.cards.length;
-                       if (otherTotalCards === 1 && !get().oneCardDeclarations[otherPlayer.id]) {
-                         console.log(`🤖 [checkOneCardStatus] Бот ${bot.name} спрашивает у ${otherPlayer.name}: "Сколько карт?"`);
-                         get().showNotification(`🤖 ${bot.name}: "Сколько карт у ${otherPlayer.name}?"`, 'info', 3000);
-                         get().askHowManyCards(bot.id, otherPlayer.id);
-                        }
-                      }
-                    });
-                  });
-                }, 3500); // ✅ Боты начинают проверки через 3.5 секунды
+               // ✅ ИСПРАВЛЕНО: Боты проверяют ТОЛЬКО ОДИН РАЗ при появлении таймера
+               // НЕ ЗАПУСКАЕМ если уже спрашивали ранее (проверяем по pendingPenalty)
                }
             } else if (cardsInHand !== 1) {
               // ✅ КРИТИЧНО: У игрока больше или меньше 1 карты - СБРАСЫВАЕМ объявление и таймер
               // Теперь при новых картах игрок СНОВА должен объявить!
-              if (oneCardDeclarations[player.id] || oneCardTimers[player.id]) {
+              if (oneCardDeclarations[player.id] || oneCardTimers[player.id] || oneCardTimers[`bot_asked_${player.id}`]) {
                 console.log(`🔄 [checkOneCardStatus] ${player.name}: ${cardsInHand} карт → СБРОС объявления (нужно объявлять заново)`);
                 delete newOneCardDeclarations[player.id];
                 delete newOneCardTimers[player.id];
+                delete newOneCardTimers[`bot_asked_${player.id}`]; // ✅ Сбрасываем флаг вопроса ботов
               }
             }
            });
