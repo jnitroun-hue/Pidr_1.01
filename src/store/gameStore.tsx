@@ -2314,23 +2314,6 @@ export const useGameStore = create<GameState>()(
                   });
                 }, 3000);
               }, 500 + index * 200); // Задержка между модалками если несколько победителей одновременно
-              
-              // Если это пользователь - показываем также старое модальное окно
-              if (winner.isUser) {
-                setTimeout(() => {
-                  set({
-                    showVictoryModal: true,
-                    victoryData: {
-                      position: position,
-                      isWinner: true,
-                      playerName: winner.name,
-                      gameMode: get().gameMode,
-                      ratingChange: 50,
-                      rewardsEarned: 100
-                    }
-                  });
-                }, 500);
-              }
             });
           }
           
@@ -2376,23 +2359,6 @@ export const useGameStore = create<GameState>()(
                     });
                   }, 5000);
                 }, 1000);
-                
-                // Если проигравший - пользователь
-                if (loser.isUser) {
-                  setTimeout(() => {
-                    set({
-                      showVictoryModal: true,
-                      victoryData: {
-                        position: players.length, // Последнее место
-                        isWinner: false,
-                        playerName: loser.name,
-                        gameMode: get().gameMode,
-                        ratingChange: -25,
-                        rewardsEarned: 0
-                      }
-                    });
-                  }, 2000);
-                }
               }
               
               // Финальное объявление всех результатов
@@ -2529,18 +2495,38 @@ export const useGameStore = create<GameState>()(
           
           // ✅ ОБНОВЛЯЕМ СТАТИСТИКУ И БАЛАНС ПОЛЬЗОВАТЕЛЯ
           const userResult = results.find(r => r.isUser);
+          
+          console.log(`🔍 [calculateAndShowGameResults] Проверка пользователя:`, {
+            userResult,
+            currentUserTelegramId,
+            telegramUser
+          });
+          
           if (userResult) {
             const isWin = userResult.place >= 1 && userResult.place <= 3; // ✅ ТОП-3 = победа!
             const isLoss = userResult.place === results.length;
+            
+            const requestBody = {
+              amount: userResult.coinsEarned,
+              source: isWin ? 'game_win' : isLoss ? 'game_loss' : 'game_finish',
+              updateStats: {
+                gamesPlayed: true, // ✅ Всегда +1 к играм
+                wins: isWin, // ✅ +1 к победам если ТОП-3
+                losses: isLoss // ✅ +1 к поражениям если последнее место
+              }
+            };
             
             console.log(`📊 [calculateAndShowGameResults] Обновляем статистику пользователя:`, {
               place: userResult.place,
               coins: userResult.coinsEarned,
               isWin: isWin ? `ДА (ТОП-3!)` : 'нет',
-              isLoss
+              isLoss,
+              telegramId: currentUserTelegramId,
+              requestBody
             });
             
             // Обновляем баланс и статистику в БД через API
+            console.log(`🚀 [calculateAndShowGameResults] ОТПРАВЛЯЕМ FETCH на /api/user/add-coins`);
             fetch('/api/user/add-coins', {
               method: 'POST',
               headers: {
@@ -2548,22 +2534,30 @@ export const useGameStore = create<GameState>()(
                 'x-telegram-id': currentUserTelegramId,
                 'x-username': telegramUser?.username || telegramUser?.first_name || ''
               },
-              body: JSON.stringify({
-                amount: userResult.coinsEarned,
-                source: isWin ? 'game_win' : isLoss ? 'game_loss' : 'game_finish',
-                updateStats: {
-                  gamesPlayed: true, // ✅ Всегда +1 к играм
-                  wins: isWin, // ✅ +1 к победам если 1-е место
-                  losses: isLoss // ✅ +1 к поражениям если последнее место
-                }
+              body: JSON.stringify(requestBody)
+            })
+              .then(res => {
+                console.log(`📥 [calculateAndShowGameResults] Response status:`, res.status);
+                return res.json();
               })
-            }).then(res => res.json())
               .then(data => {
+                console.log(`📥 [calculateAndShowGameResults] Response data:`, data);
                 if (data.success) {
-                  console.log(`✅ Баланс и статистика обновлены: ${userResult.coinsEarned} монет`);
+                  console.log(`✅✅✅ БАЛАНС И СТАТИСТИКА ОБНОВЛЕНЫ: +${userResult.coinsEarned} монет`);
+                } else {
+                  console.error(`❌ API вернул ошибку:`, data.error);
                 }
               })
-              .catch(err => console.error('❌ Ошибка обновления баланса и статистики:', err));
+              .catch(err => {
+                console.error('❌❌❌ КРИТИЧЕСКАЯ ОШИБКА ОБНОВЛЕНИЯ:', err);
+                console.error('Полная ошибка:', {
+                  message: err.message,
+                  stack: err.stack,
+                  name: err.name
+                });
+              });
+          } else {
+            console.warn(`⚠️ [calculateAndShowGameResults] Пользователь не найден в результатах!`);
           }
           
           // Показываем модалку результатов
