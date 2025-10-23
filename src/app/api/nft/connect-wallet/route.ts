@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     // В production необходимо проверить, что пользователь действительно владеет кошельком
 
     // Вызываем SQL функцию для подключения кошелька
-    const { data, error } = await supabase.rpc('connect_player_wallet', {
+    const { data, error } = await supabase.rpc('_pidr_connect_player_wallet', {
       p_user_id: userId,
       p_wallet_address: wallet_address,
       p_wallet_type: wallet_type

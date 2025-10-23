@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
     console.log(`📦 Получаем NFT коллекцию пользователя ${userId} через headers...`);
 
     // Вызываем SQL функцию для получения коллекции
-    const { data, error } = await supabase.rpc('get_user_nft_collection', {
+    const { data, error } = await supabase.rpc('_pidr_get_user_nft_collection', {
       p_user_id: userId
     });
 

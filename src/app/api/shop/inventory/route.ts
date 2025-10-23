@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
     console.log(`✅ [Shop Inventory] Авторизован пользователь через headers: ${userId}`);
     
     // Вызываем функцию БД для получения инвентаря
-    const { data, error } = await supabase.rpc('get_user_inventory', {
+    const { data, error } = await supabase.rpc('_pidr_get_user_inventory', {
       p_user_id: userId
     });
     

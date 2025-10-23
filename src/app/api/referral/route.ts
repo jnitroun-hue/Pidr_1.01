@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
       
       // Используем новую функцию для создания реферальной связи
       const { data, error } = await supabase
-        .rpc('create_referral_link', {
+        .rpc('_pidr_create_referral_link', {
           p_referrer_id: referrerId,
           p_referred_id: userId,
           p_referral_code: referralCode
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
     if (action === 'get_stats') {
       // Получить статистику рефералов
       const { data, error } = await supabase
-        .rpc('get_referral_stats', {
+        .rpc('_pidr_get_referral_stats', {
           p_user_id: userId
         });
       

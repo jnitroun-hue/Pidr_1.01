@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     console.log(`🛒 Покупка: ${item_name} (${item_type}) за ${price} монет`);
     
     // Вызываем функцию БД для покупки
-    const { data, error } = await supabase.rpc('buy_shop_item', {
+    const { data, error } = await supabase.rpc('_pidr_buy_shop_item', {
       p_user_id: userId,
       p_item_id: item_id,
       p_item_type: item_type,
