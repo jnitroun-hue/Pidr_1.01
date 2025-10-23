@@ -1697,21 +1697,41 @@ export const useGameStore = create<GameState>()(
            });
          },
 
-         // Вычисляем игрока который должен завершить круг битья (позиция -1 от инициатора)
-         calculateRoundFinisher: (initiatorId: string): string | null => {
-           const { players } = get();
-           const initiatorIndex = players.findIndex(p => p.id === initiatorId);
-           if (initiatorIndex === -1) return null;
+        // Вычисляем игрока который должен завершить круг битья (позиция -1 от инициатора)
+        calculateRoundFinisher: (initiatorId: string): string | null => {
+          const { players } = get();
+          const initiatorIndex = players.findIndex(p => p.id === initiatorId);
+          if (initiatorIndex === -1) return null;
 
-           // Находим игрока который сидит ПЕРЕД инициатором (позиция -1)
-           const finisherIndex = initiatorIndex === 0 ? players.length - 1 : initiatorIndex - 1;
-           const finisher = players[finisherIndex];
-           
-           console.log(`🎯 [calculateRoundFinisher] Инициатор: ${players[initiatorIndex].name} (индекс ${initiatorIndex})`);
-           console.log(`🎯 [calculateRoundFinisher] Должен завершить: ${finisher.name} (индекс ${finisherIndex})`);
-           
-           return finisher.id;
-         },
+          console.log(`🎯 [calculateRoundFinisher] Инициатор: ${players[initiatorIndex].name} (индекс ${initiatorIndex})`);
+          
+          // ✅ КРИТИЧНО: Ищем ПЕРВОГО АКТИВНОГО игрока ПЕРЕД инициатором
+          // Пропускаем игроков которые уже выбыли (isWinner или карт+пеньков=0)
+          let finisherIndex = initiatorIndex;
+          let attempts = 0;
+          const maxAttempts = players.length; // Защита от бесконечного цикла
+          
+          do {
+            // Двигаемся против часовой стрелки
+            finisherIndex = finisherIndex === 0 ? players.length - 1 : finisherIndex - 1;
+            attempts++;
+            
+            const candidate = players[finisherIndex];
+            const isActive = !candidate.isWinner && (candidate.cards.length > 0 || candidate.penki.length > 0);
+            
+            if (isActive) {
+              console.log(`🎯 [calculateRoundFinisher] Должен завершить: ${candidate.name} (индекс ${finisherIndex})`);
+              return candidate.id;
+            }
+            
+            console.log(`⚠️ [calculateRoundFinisher] Пропускаем ${candidate.name} - выбыл из игры`);
+            
+          } while (finisherIndex !== initiatorIndex && attempts < maxAttempts);
+          
+          // Если дошли до инициатора - значит больше нет активных игроков
+          console.error(`🚨 [calculateRoundFinisher] НЕТ АКТИВНЫХ ИГРОКОВ ДЛЯ ЗАВЕРШЕНИЯ КРУГА!`);
+          return null;
+        },
          
                  // Выбор карты в руке (двойной клик)
         selectHandCard: (card: Card) => {
@@ -1873,22 +1893,27 @@ export const useGameStore = create<GameState>()(
            console.log(`🃏 [playSelectedCard] Карта добавлена в массив. На столе карт: ${newTableStack.length}`);
            console.log(`🃏 [playSelectedCard] Карты на столе: ${newTableStack.map(c => c.image).join(' -> ')}`);
            
-           // НОВАЯ УПРОЩЕННАЯ ЛОГИКА ЗАВЕРШЕНИЯ КРУГА:
-           // Круг завершается когда:
-           // 1. Финишер побил карту (обычное завершение)
-           // 2. Любой игрок после финишера побил карту (овертайм)
-           
-           const shouldEndRound = !wasEmptyTable && (
-             // Обычное завершение: финишер побил карту
-             (currentPlayerId === roundFinisher && !finisherPassed) ||
-             // Овертайм: финишер уже пропустил, любой следующий побил
-             (finisherPassed && newTableStack.length > 0)
-           );
+          // НОВАЯ УПРОЩЕННАЯ ЛОГИКА ЗАВЕРШЕНИЯ КРУГА:
+          // Круг завершается когда:
+          // 1. Финишер побил карту (обычное завершение)
+          // 2. Любой игрок после финишера побил карту (овертайм)
+          // 3. НЕТ финишера (все игроки выбыли) - любой игрок закрывает круг
+          
+          const shouldEndRound = !wasEmptyTable && (
+            // Обычное завершение: финишер побил карту
+            (currentPlayerId === roundFinisher && !finisherPassed) ||
+            // Овертайм: финишер уже пропустил, любой следующий побил
+            (finisherPassed && newTableStack.length > 0) ||
+            // ✅ КРИТИЧНО: Нет финишера (все игроки выбыли) - любой закрывает круг
+            (roundFinisher === null && newTableStack.length > 0)
+          );
            
           if (shouldEndRound) {
-            const reasonText = finisherPassed
-              ? `Овертайм! ${currentPlayer.name} побил и закрыл круг`
-              : `${currentPlayer.name} (финишер) закрыл круг`;
+            const reasonText = roundFinisher === null
+              ? `${currentPlayer.name} закрыл круг (нет финишера)`
+              : finisherPassed
+                ? `Овертайм! ${currentPlayer.name} побил и закрыл круг`
+                : `${currentPlayer.name} (финишер) закрыл круг`;
               
             console.log(`🎯 [playSelectedCard] 🏁 КРУГ ЗАВЕРШЕН! ${reasonText}`);
             console.log(`🎯 [playSelectedCard] 📊 Карт в биту: ${newTableStack.length}`);

@@ -11,11 +11,19 @@ const JWT_SECRET = process.env.JWT_SECRET;
 /**
  * ✅ ЕДИНАЯ функция получения userId из запроса
  * Поддерживает все методы передачи токена:
- * 1. HTTP-only cookies (приоритет)
+ * 0. Telegram WebApp headers (ПРИОРИТЕТ для мультиплеера)
+ * 1. HTTP-only cookies
  * 2. Authorization header (Bearer token)
  * 3. Query параметры (для тестирования)
  */
 export function getUserIdFromRequest(req: NextRequest): string | null {
+  // ✅ ПРИОРИТЕТ 0: Telegram WebApp headers (для мультиплеера и NFT)
+  const telegramIdHeader = req.headers.get('x-telegram-id');
+  if (telegramIdHeader) {
+    console.log('🎮 Telegram ID найден в x-telegram-id header:', telegramIdHeader);
+    return telegramIdHeader;
+  }
+  
   if (!JWT_SECRET) {
     console.error('❌ JWT_SECRET не настроен');
     return null;
@@ -23,7 +31,7 @@ export function getUserIdFromRequest(req: NextRequest): string | null {
   
   let token: string | null = null;
   
-  // 1. Приоритет: HTTP-only cookies (для безопасности)
+  // 1. HTTP-only cookies (для безопасности)
   const cookieToken = req.cookies.get('auth_token')?.value;
   if (cookieToken) {
     token = cookieToken;

@@ -279,9 +279,25 @@ export default function WaitingRoomProfessional({
     if (!isHost) return;
     
     try {
+      // ✅ ИСПРАВЛЕНО: Получаем Telegram WebApp данные
+      const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+      const telegramId = telegramUser?.id?.toString() || '';
+      const username = telegramUser?.username || telegramUser?.first_name || '';
+      
+      if (!telegramId) {
+        console.error('❌ Telegram WebApp не доступен');
+        return;
+      }
+      
+      console.log(`🤖 Добавляем бота от пользователя ${telegramId}...`);
+      
       const response = await fetch(`/api/rooms/${roomData.id}/bots`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-telegram-id': telegramId, // ✅ ДОБАВЛЕНО для авторизации
+          'x-username': username // ✅ ДОБАВЛЕНО для авторизации
+        },
         credentials: 'include',
         body: JSON.stringify({ action: 'add' })
       });
