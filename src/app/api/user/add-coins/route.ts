@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+import { supabase } from '@/lib/supabase';
 
 export async function POST(req: NextRequest) {
   try {
@@ -39,7 +34,7 @@ export async function POST(req: NextRequest) {
     
     // Получаем текущий баланс пользователя
     const { data: userData, error: fetchError } = await supabase
-      .from('pidr_users')
+      .from('_pidr_users')
       .select('coins')
       .eq('telegram_id', userId)
       .single();
@@ -57,7 +52,7 @@ export async function POST(req: NextRequest) {
     
     // Обновляем баланс в БД
     const { error: updateError } = await supabase
-      .from('pidr_users')
+      .from('_pidr_users')
       .update({ coins: newBalance })
       .eq('telegram_id', userId);
     
