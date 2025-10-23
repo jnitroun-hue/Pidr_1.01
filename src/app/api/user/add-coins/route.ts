@@ -19,9 +19,9 @@ export async function POST(req: NextRequest) {
     const userId = telegramIdHeader;
     console.log(`✅ [Add Coins] Авторизован пользователь: ${userId}`);
     
-    // Получаем сумму из тела запроса
+    // Получаем сумму и статистику из тела запроса
     const body = await req.json();
-    const { amount } = body;
+    const { amount, updateStats } = body;
     
     if (!amount || typeof amount !== 'number') {
       return NextResponse.json(
@@ -31,11 +31,14 @@ export async function POST(req: NextRequest) {
     }
     
     console.log(`💰 [Add Coins] Добавляем ${amount} монет пользователю ${userId}`);
+    if (updateStats) {
+      console.log(`📊 [Add Coins] Обновляем статистику:`, updateStats);
+    }
     
-    // Получаем текущий баланс пользователя
+    // Получаем текущие данные пользователя (баланс и статистика)
     const { data: userData, error: fetchError } = await supabase
       .from('_pidr_users')
-      .select('coins')
+      .select('coins, games_played, wins, losses')
       .eq('telegram_id', userId)
       .single();
     
@@ -50,10 +53,29 @@ export async function POST(req: NextRequest) {
     const currentCoins = userData.coins || 0;
     const newBalance = currentCoins + amount;
     
-    // Обновляем баланс в БД
+    // Формируем объект обновления
+    const updateData: any = { coins: newBalance };
+    
+    // ✅ Обновляем статистику если передана
+    if (updateStats) {
+      if (updateStats.gamesPlayed) {
+        updateData.games_played = (userData.games_played || 0) + 1;
+        console.log(`📊 Игр сыграно: ${userData.games_played || 0} → ${updateData.games_played}`);
+      }
+      if (updateStats.wins) {
+        updateData.wins = (userData.wins || 0) + 1;
+        console.log(`🏆 Побед: ${userData.wins || 0} → ${updateData.wins}`);
+      }
+      if (updateStats.losses) {
+        updateData.losses = (userData.losses || 0) + 1;
+        console.log(`💀 Поражений: ${userData.losses || 0} → ${updateData.losses}`);
+      }
+    }
+    
+    // Обновляем баланс и статистику в БД
     const { error: updateError } = await supabase
       .from('_pidr_users')
-      .update({ coins: newBalance })
+      .update(updateData)
       .eq('telegram_id', userId);
     
     if (updateError) {

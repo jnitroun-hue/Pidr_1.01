@@ -2452,31 +2452,39 @@ export const useGameStore = create<GameState>()(
             if (player.isUser || player.id === currentUserTelegramId) {
               // Пользователь
               if (place === 1) {
-                coinsEarned = 500; // Победитель
+                coinsEarned = 350; // 🥇 Победитель
                 ratingChange = 50;
               } else if (place === 2) {
-                coinsEarned = 300; // Второе место
+                coinsEarned = 250; // 🥈 Второе место
                 ratingChange = 25;
               } else if (place === 3) {
-                coinsEarned = 150; // Третье место
+                coinsEarned = 150; // 🥉 Третье место
                 ratingChange = 10;
+              } else if (place >= 4 && place <= 8) {
+                // 🎲 Места 4-8: рандом от 50 до 100 монет
+                coinsEarned = Math.floor(Math.random() * 51) + 50; // 50-100
+                ratingChange = 0;
               } else if (isLastPlace) {
-                coinsEarned = -100; // Штраф за последнее место
+                coinsEarned = 5; // 🎁 Утешительный приз за участие!
                 ratingChange = -25;
               }
             } else if (!player.isBot) {
               // Другие реальные игроки (НЕ боты)
               if (place === 1) {
-                coinsEarned = 500;
+                coinsEarned = 350; // 🥇 Победитель
                 ratingChange = 50;
               } else if (place === 2) {
-                coinsEarned = 300;
+                coinsEarned = 250; // 🥈 Второе место
                 ratingChange = 25;
               } else if (place === 3) {
-                coinsEarned = 150;
+                coinsEarned = 150; // 🥉 Третье место
                 ratingChange = 10;
+              } else if (place >= 4 && place <= 8) {
+                // 🎲 Места 4-8: рандом от 50 до 100 монет
+                coinsEarned = Math.floor(Math.random() * 51) + 50; // 50-100
+                ratingChange = 0;
               } else if (isLastPlace) {
-                coinsEarned = -100;
+                coinsEarned = 5; // 🎁 Утешительный приз за участие!
                 ratingChange = -25;
               }
             }
@@ -2496,8 +2504,18 @@ export const useGameStore = create<GameState>()(
           
           // ✅ ОБНОВЛЯЕМ СТАТИСТИКУ И БАЛАНС ПОЛЬЗОВАТЕЛЯ
           const userResult = results.find(r => r.isUser);
-          if (userResult && userResult.coinsEarned !== 0) {
-            // Обновляем баланс в БД через API
+          if (userResult) {
+            const isWin = userResult.place === 1;
+            const isLoss = userResult.place === results.length;
+            
+            console.log(`📊 [calculateAndShowGameResults] Обновляем статистику пользователя:`, {
+              place: userResult.place,
+              coins: userResult.coinsEarned,
+              isWin,
+              isLoss
+            });
+            
+            // Обновляем баланс и статистику в БД через API
             fetch('/api/user/add-coins', {
               method: 'POST',
               headers: {
@@ -2507,15 +2525,20 @@ export const useGameStore = create<GameState>()(
               },
               body: JSON.stringify({
                 amount: userResult.coinsEarned,
-                source: userResult.place === 1 ? 'game_win' : userResult.place === results.length ? 'game_loss' : 'game_finish'
+                source: isWin ? 'game_win' : isLoss ? 'game_loss' : 'game_finish',
+                updateStats: {
+                  gamesPlayed: true, // ✅ Всегда +1 к играм
+                  wins: isWin, // ✅ +1 к победам если 1-е место
+                  losses: isLoss // ✅ +1 к поражениям если последнее место
+                }
               })
             }).then(res => res.json())
               .then(data => {
                 if (data.success) {
-                  console.log(`✅ Баланс обновлен: ${userResult.coinsEarned} монет`);
+                  console.log(`✅ Баланс и статистика обновлены: ${userResult.coinsEarned} монет`);
                 }
               })
-              .catch(err => console.error('❌ Ошибка обновления баланса:', err));
+              .catch(err => console.error('❌ Ошибка обновления баланса и статистики:', err));
           }
           
           // Показываем модалку результатов
