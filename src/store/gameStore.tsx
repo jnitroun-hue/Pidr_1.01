@@ -119,7 +119,7 @@ interface GameState {
   // Состояние 2-й стадии (дурак)
   tableStack: Card[] // Стопка карт на столе (нижняя = первая, верхняя = последняя)
   selectedHandCard: Card | null // Выбранная карта в руке (для двойного клика)
-  stage2TurnPhase: 'selecting_card' | 'playing_card' | 'waiting_beat' | 'round_complete' // Фазы хода 2-й стадии
+  stage2TurnPhase: 'selecting_card' | 'card_selected' | 'playing_card' | 'waiting_beat' | 'round_complete' // Фазы хода 2-й стадии
   
   // Мультиплеер состояние
   multiplayerData: {
@@ -1276,17 +1276,15 @@ export const useGameStore = create<GameState>()(
             console.log('✅ [checkStage1End] Проверка "одна карта" после перехода во 2-ю стадию');
           }, 200);
           
-          // Даём время на обновление state и ЗАТЕМ запускаем ход
-          setTimeout(() => {
-            console.log(`🎮 [checkStage1End] Запускаем processPlayerTurn для ${players.find(p => p.id === startingPlayerId)?.name}`);
-            get().processPlayerTurn(startingPlayerId);
-          }, 300);
+          // ✅ ИСПРАВЛЕНО: НЕ вызываем processPlayerTurn вручную!
+          // AI useEffect автоматически сработает при изменении gameStage и currentPlayerId
+          console.log(`🎮 [checkStage1End] Стадия 2 инициализирована, AI должен автоматически начать ход`);
         }, 800);
       },
       
       // Обработка хода игрока (НОВАЯ логика)
       processPlayerTurn: (playerId: string) => {
-        const { gameStage, players, skipHandAnalysis, deck } = get();
+        const { gameStage, players, skipHandAnalysis, deck, stage2TurnPhase, currentPlayerId } = get();
         const currentPlayer = players.find(p => p.id === playerId);
         if (!currentPlayer) return;
         
@@ -1294,6 +1292,14 @@ export const useGameStore = create<GameState>()(
         if (gameStage === 2 || gameStage === 3) {
           // ✅ ОПТИМИЗАЦИЯ: Убрали лишний лог (слишком частый во 2-й стадии)
           // console.log(`🎮 [processPlayerTurn] Стадия ${gameStage}: ${currentPlayer.name} (${currentPlayer.cards.length} карт, ${currentPlayer.penki.length} пеньков)`);
+          
+          // ✅ КРИТИЧНО: НЕ сбрасываем stage2TurnPhase если уже выбрана карта!
+          // Это предотвращает race condition с AI ботами
+          if (stage2TurnPhase === 'card_selected' && currentPlayerId === playerId) {
+            console.log(`⚠️ [processPlayerTurn] Игрок ${currentPlayer.name} уже выбрал карту, не сбрасываем фазу`);
+            return;
+          }
+          
           set({ 
             currentPlayerId: currentPlayer.id,
             stage2TurnPhase: 'selecting_card'
@@ -1736,7 +1742,10 @@ export const useGameStore = create<GameState>()(
             get().playSelectedCard();
           } else {
             // Первый клик - выбираем карту
-            set({ selectedHandCard: card });
+            set({ 
+              selectedHandCard: card,
+              stage2TurnPhase: 'card_selected' // ✅ ИСПРАВЛЕНО: Устанавливаем фазу "карта выбрана"
+            });
           }
         },
          
