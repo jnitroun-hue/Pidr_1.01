@@ -408,36 +408,8 @@ function GamePageContentComponent({
     fetchUserData();
   }, []);
 
-  // Обновляем данные пользователя периодически (для обновления монет)
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      if (!userData) return;
-      
-      try {
-        const response = await fetch('/api/user/balance', {
-          method: 'GET',
-          credentials: 'include',
-        });
-        
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success && result.data) {
-            setUserData(prev => prev ? { 
-              ...prev, 
-              coins: result.data.balance 
-            } : { 
-              coins: result.data.balance, 
-              username: 'Игрок' 
-            });
-          }
-        }
-      } catch (error) {
-        console.error('❌ Ошибка обновления баланса:', error);
-      }
-    }, 30000); // Обновляем каждые 30 секунд
-
-    return () => clearInterval(interval);
-  }, [userData]);
+  // ✅ УДАЛЕНО: Периодическое обновление баланса (тормозило игру)
+  // Баланс обновляется только при явных действиях пользователя
 
   // Мониторинг tableStack убран - система работает корректно
 

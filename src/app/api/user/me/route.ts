@@ -7,13 +7,10 @@ export async function GET(req: NextRequest) {
   try {
     let userId: string | null = null;
 
-    // ✅ ПРИОРИТЕТ 1: Проверяем headers (Telegram WebApp)
     const telegramIdHeader = req.headers.get('x-telegram-id');
     if (telegramIdHeader) {
       userId = telegramIdHeader;
-      console.log('✅ [/api/user/me] Авторизован через headers:', userId);
     } else {
-      // ✅ ПРИОРИТЕТ 2: Проверяем cookie
       const cookieStore = await cookies();
       const sessionCookie = cookieStore.get('pidr_session');
 
@@ -25,15 +22,13 @@ export async function GET(req: NextRequest) {
             sessionData.telegramId ||
             sessionData.telegram_id ||
             sessionData.id;
-          console.log('✅ [/api/user/me] Авторизован через cookie:', userId);
         } catch (parseError) {
-          console.error('❌ [/api/user/me] Невалидная сессия в cookie');
+          // Невалидная сессия - игнорируем
         }
       }
     }
 
     if (!userId) {
-      console.error('❌ [/api/user/me] Не найден x-telegram-id header и pidr_session cookie');
       return NextResponse.json(
         { success: false, message: 'Требуется авторизация' },
         { status: 401 }
