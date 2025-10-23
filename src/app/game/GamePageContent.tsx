@@ -787,42 +787,8 @@ function GamePageContentComponent({
     };
   }, [isGameActive, currentPlayerId, gameStage, stage2TurnPhase, turnPhase]);
   
-  // Инициализация игры из gameStore
-  useEffect(() => {
-    if (!gameInitialized) {
-      if (isGameActive && players.length > 0 && dealt) {
-        // ВОССТАНОВЛЕНИЕ ТОЛЬКО ДЛЯ МУЛЬТИПЛЕЕРА!
-        // Для single player - сбрасываем игру при перезагрузке страницы
-        if (gameMode === 'single') {
-          console.log(`🎮 [SINGLE PLAYER] Сброс игры при перезагрузке страницы`);
-          resetGame();
-          setGameInitialized(true);
-          return;
-        }
-        
-        // МУЛЬТИПЛЕЕР: ВОССТАНАВЛИВАЕМ СОСТОЯНИЕ ПОСЛЕ REFRESH!
-        console.log(`🎮 [ВОССТАНОВЛЕНИЕ] Игра P.I.D.R. восстановлена: ${players.length} игроков`);
-        console.log(`🎮 [ВОССТАНОВЛЕНИЕ] Стадия: ${gameStage}, текущий игрок: ${currentPlayerId}`);
-        console.log(`🎮 [ВОССТАНОВЛЕНИЕ] Фаза хода: ${turnPhase}, stage2TurnPhase: ${stage2TurnPhase}`);
-        
-        setPlayerCount(players.length);
-        setGameInitialized(true);
-        
-        // Уведомляем о восстановлении
-        showNotification(`🔄 Игра восстановлена! Продолжаем с ${gameStage}-й стадии`, 'success', 3000);
-        
-        // Если сейчас ход бота - он автоматически продолжит через useEffect для AI
-        const currentTurnPlayer = players.find(p => p.id === currentPlayerId);
-        if (currentTurnPlayer?.isBot) {
-          console.log(`🤖 [ВОССТАНОВЛЕНИЕ] Бот ${currentTurnPlayer.name} должен продолжить ход`);
-        }
-      } else if (!isGameActive) {
-        // Игра не активна - просто инициализируем интерфейс
-        console.log('🎮 Ожидание запуска игры...');
-        setGameInitialized(true);
-      }
-    }
-  }, [gameInitialized, isGameActive, players.length, gameStage, currentPlayerId, turnPhase, stage2TurnPhase, dealt, showNotification]);
+  // ✅ УБРАН ЕБАНЫЙ БАГ: Больше НЕ СБРАСЫВАЕМ игру для single player!
+  // Этот useEffect УБИВАЛ только что созданную игру!
 
   // 🎲 Используем роскошный SVG стол (экипированный стол удален)
   // Функциональность выбора стола удалена - используем только luxury SVG table
@@ -1072,7 +1038,8 @@ function GamePageContentComponent({
 
   // Автоматически запускаем игру если она не активна
   useEffect(() => {
-    if (!isGameActive && !gameInitialized && userData) { // Ждем загрузки данных пользователя
+    if (!gameInitialized && userData) { // Ждем загрузки данных пользователя
+      console.log('🎮 [AUTOSTART] Запускаем игру автоматически...');
       if (isMultiplayer && multiplayerData) {
         // Для мультиплеера
         startGame('multiplayer', playerCount, null, {
@@ -1088,7 +1055,7 @@ function GamePageContentComponent({
       }
       setGameInitialized(true);
     }
-  }, [isGameActive, gameInitialized, isMultiplayer, multiplayerData, playerCount, startGame, userData]);
+  }, [gameInitialized, isMultiplayer, multiplayerData, playerCount, startGame, userData]);
 
   // Вычисляемые значения для UI
   const canDrawCard = turnPhase === 'deck_card_revealed' && currentTurnPlayer?.id === currentPlayerId;
