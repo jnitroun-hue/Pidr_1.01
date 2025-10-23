@@ -5,6 +5,7 @@ import PlayerProfileModal from '../../components/PlayerProfileModal';
 import PenaltyCardSelector from '../../components/PenaltyCardSelector';
 import WinnerModal from '../../components/WinnerModal';
 import LoserModal from '../../components/LoserModal';
+import GameResultsModal from '../../components/GameResultsModal';
 import styles from './GameTable.module.css';
 // Генераторы перенесены в отдельный проект pidr_generators
 import { getPremiumTable } from '@/utils/generatePremiumTable';
@@ -208,6 +209,7 @@ function GamePageContentComponent({
     penaltyDeck, gameCoins, playedCards,
     showPenaltyCardSelection, penaltyCardSelectionPlayerId,
     showWinnerModal, winnerModalData, showLoserModal, loserModalData,
+    showGameResultsModal, gameResults,
     startGame, endGame, resetGame,
     drawCard, makeMove, onDeckClick, placeCardOnSelfByRules,
     selectHandCard, playSelectedCard, takeTableCards, showNotification,
@@ -1981,6 +1983,38 @@ function GamePageContentComponent({
               showLoserModal: false,
               loserModalData: null
             });
+          }}
+        />
+      )}
+      
+      {/* 🏆 ФИНАЛЬНАЯ МОДАЛКА РЕЗУЛЬТАТОВ */}
+      {showGameResultsModal && gameResults && (
+        <GameResultsModal
+          results={gameResults}
+          isRanked={false}
+          onPlayAgain={() => {
+            // Закрываем модалку
+            useGameStore.setState({
+              showGameResultsModal: false,
+              gameResults: null
+            });
+            // Сбрасываем игру
+            resetGame();
+            // Начинаем новую игру с теми же настройками
+            startGame(gameMode);
+          }}
+          onMainMenu={() => {
+            // Закрываем модалку
+            useGameStore.setState({
+              showGameResultsModal: false,
+              gameResults: null
+            });
+            // Сбрасываем игру
+            resetGame();
+            // Переходим на главную (можно использовать роутер)
+            if (typeof window !== 'undefined') {
+              window.location.href = '/';
+            }
           }}
         />
       )}

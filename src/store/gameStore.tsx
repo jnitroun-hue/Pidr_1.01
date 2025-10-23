@@ -116,6 +116,17 @@ interface GameState {
   showLoserModal: boolean
   loserModalData: { playerName: string; avatar?: string } | null
   
+  // 🏆 ФИНАЛЬНАЯ МОДАЛКА РЕЗУЛЬТАТОВ
+  showGameResultsModal: boolean
+  gameResults: Array<{
+    place: number;
+    name: string;
+    avatar?: string;
+    coinsEarned: number;
+    ratingChange?: number;
+    isUser: boolean;
+  }> | null
+  
   // Состояние 2-й стадии (дурак)
   tableStack: Card[] // Стопка карт на столе (нижняя = первая, верхняя = последняя)
   selectedHandCard: Card | null // Выбранная карта в руке (для двойного клика)
@@ -193,6 +204,7 @@ interface GameState {
   checkStage3Transition: (playerId: string) => void
   activatePenki: (playerId: string) => void
   checkVictoryCondition: () => void
+  calculateAndShowGameResults: () => void // Подсчёт и отображение финальных результатов
   
   // Методы для системы "Одна карта!" и штрафов
   checkOneCardStatus: () => void // Проверяет кому нужно объявлять "одна карта"
@@ -318,6 +330,10 @@ export const useGameStore = create<GameState>()(
       winnerModalData: null,
       showLoserModal: false,
       loserModalData: null,
+      
+      // 🏆 ФИНАЛЬНАЯ МОДАЛКА РЕЗУЛЬТАТОВ
+      showGameResultsModal: false,
+      gameResults: null,
       
       // Состояние 2-й стадии (дурак)
       tableStack: [],
@@ -2389,8 +2405,124 @@ export const useGameStore = create<GameState>()(
                 );
               }, 3000);
               
+              // 🏆 ПОКАЗЫВАЕМ ФИНАЛЬНУЮ МОДАЛКУ РЕЗУЛЬТАТОВ ЧЕРЕЗ 7 СЕКУНД
+              setTimeout(() => {
+                get().calculateAndShowGameResults();
+              }, 7000);
+              
             }, newWinners.length > 0 ? 3000 : 1000); // Ждем объявления победителей
           }
+        },
+        
+        // 🏆 РАСЧЕТ И ОТОБРАЖЕНИЕ ФИНАЛЬНЫХ РЕЗУЛЬТАТОВ
+        calculateAndShowGameResults: () => {
+          const { players, gameMode } = get();
+          console.log('🏆 [calculateAndShowGameResults] Подсчёт финальных результатов...');
+          
+          // Получаем telegram_id текущего пользователя
+          const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+          const currentUserTelegramId = telegramUser?.id?.toString() || '';
+          
+          // Сортируем игроков по местам (winner first, loser last)
+          const sortedPlayers = [...players].sort((a, b) => {
+            // Победители (isWinner) идут первыми
+            if (a.isWinner && !b.isWinner) return -1;
+            if (!a.isWinner && b.isWinner) return 1;
+            
+            // Среди победителей сортируем по количеству карт (меньше = лучше)
+            const aTotal = a.cards.length + a.penki.length;
+            const bTotal = b.cards.length + b.penki.length;
+            
+            if (aTotal === 0 && bTotal > 0) return -1;
+            if (aTotal > 0 && bTotal === 0) return 1;
+            
+            return aTotal - bTotal;
+          });
+          
+          // Формируем результаты
+          const results = sortedPlayers.map((player, index) => {
+            const place = index + 1;
+            const isLastPlace = place === sortedPlayers.length;
+            const totalCards = player.cards.length + player.penki.length;
+            
+            // ✅ РАСЧЕТ НАГРАД (только для НЕ ботов)
+            let coinsEarned = 0;
+            let ratingChange = 0;
+            
+            if (player.isUser || player.id === currentUserTelegramId) {
+              // Пользователь
+              if (place === 1) {
+                coinsEarned = 500; // Победитель
+                ratingChange = 50;
+              } else if (place === 2) {
+                coinsEarned = 300; // Второе место
+                ratingChange = 25;
+              } else if (place === 3) {
+                coinsEarned = 150; // Третье место
+                ratingChange = 10;
+              } else if (isLastPlace) {
+                coinsEarned = -100; // Штраф за последнее место
+                ratingChange = -25;
+              }
+            } else if (!player.isBot) {
+              // Другие реальные игроки (НЕ боты)
+              if (place === 1) {
+                coinsEarned = 500;
+                ratingChange = 50;
+              } else if (place === 2) {
+                coinsEarned = 300;
+                ratingChange = 25;
+              } else if (place === 3) {
+                coinsEarned = 150;
+                ratingChange = 10;
+              } else if (isLastPlace) {
+                coinsEarned = -100;
+                ratingChange = -25;
+              }
+            }
+            // Боты не получают монеты/рейтинг
+            
+            return {
+              place,
+              name: player.name,
+              avatar: player.avatar,
+              coinsEarned,
+              ratingChange,
+              isUser: player.isUser || player.id === currentUserTelegramId
+            };
+          });
+          
+          console.log('🏆 [calculateAndShowGameResults] Результаты:', results);
+          
+          // ✅ ОБНОВЛЯЕМ СТАТИСТИКУ И БАЛАНС ПОЛЬЗОВАТЕЛЯ
+          const userResult = results.find(r => r.isUser);
+          if (userResult && userResult.coinsEarned !== 0) {
+            // Обновляем баланс в БД через API
+            fetch('/api/user/add-coins', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-telegram-id': currentUserTelegramId,
+                'x-username': telegramUser?.username || telegramUser?.first_name || ''
+              },
+              body: JSON.stringify({
+                amount: userResult.coinsEarned,
+                source: userResult.place === 1 ? 'game_win' : userResult.place === results.length ? 'game_loss' : 'game_finish'
+              })
+            }).then(res => res.json())
+              .then(data => {
+                if (data.success) {
+                  console.log(`✅ Баланс обновлен: ${userResult.coinsEarned} монет`);
+                }
+              })
+              .catch(err => console.error('❌ Ошибка обновления баланса:', err));
+          }
+          
+          // Показываем модалку результатов
+          set({
+            showGameResultsModal: true,
+            gameResults: results
+          });
         },
          
          // ===== МЕТОДЫ ДЛЯ СИСТЕМЫ "ОДНА КАРТА!" И ШТРАФОВ =====
