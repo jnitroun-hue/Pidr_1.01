@@ -3,6 +3,8 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import PlayerProfileModal from '../../components/PlayerProfileModal';
 import PenaltyCardSelector from '../../components/PenaltyCardSelector';
+import WinnerModal from '../../components/WinnerModal';
+import LoserModal from '../../components/LoserModal';
 import styles from './GameTable.module.css';
 // Генераторы перенесены в отдельный проект pidr_generators
 import { getPremiumTable } from '@/utils/generatePremiumTable';
@@ -205,6 +207,7 @@ function GamePageContentComponent({
     oneCardDeclarations, oneCardTimers, playersWithOneCard, pendingPenalty,
     penaltyDeck, gameCoins, playedCards,
     showPenaltyCardSelection, penaltyCardSelectionPlayerId,
+    showWinnerModal, winnerModalData, showLoserModal, loserModalData,
     startGame, endGame, resetGame,
     drawCard, makeMove, onDeckClick, placeCardOnSelfByRules,
     selectHandCard, playSelectedCard, takeTableCards, showNotification,
@@ -1636,6 +1639,32 @@ function GamePageContentComponent({
                                   animation: 'bounce 1s ease-in-out infinite',
                                 }}>⬇️</div>
                               )}
+                              
+                              {/* 🔢 ПОКАЗЫВАЕМ КОЛИЧЕСТВО КАРТ ВО 2-Й СТАДИИ (только для закрытых карт) */}
+                              {gameStage >= 2 && !showOpen && cardIndex === playerCards.length - 1 && (
+                                <div style={{
+                                  position: 'absolute',
+                                  top: '50%',
+                                  left: '50%',
+                                  transform: 'translate(-50%, -50%)',
+                                  background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.95) 0%, rgba(37, 99, 235, 0.95) 100%)',
+                                  color: 'white',
+                                  fontSize: '20px',
+                                  fontWeight: '900',
+                                  width: '36px',
+                                  height: '36px',
+                                  borderRadius: '50%',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  boxShadow: '0 4px 12px rgba(59, 130, 246, 0.6), 0 0 20px rgba(59, 130, 246, 0.3)',
+                                  border: '2px solid white',
+                                  zIndex: 20,
+                                  textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)'
+                                }}>
+                                  {playerCards.length}
+                                </div>
+                              )}
                             </div>
                           );
                         })}
@@ -1942,6 +1971,35 @@ function GamePageContentComponent({
 
       {/* МОДАЛЬНОЕ ОКНО ВЫБОРА КАРТЫ ДЛЯ ШТРАФА */}
       <PenaltyCardSelector />
+      
+      {/* 🎉 МОДАЛКА ПОБЕДИТЕЛЯ */}
+      {showWinnerModal && winnerModalData && (
+        <WinnerModal
+          playerName={winnerModalData.playerName}
+          place={winnerModalData.place}
+          avatar={winnerModalData.avatar}
+          onClose={() => {
+            useGameStore.setState({
+              showWinnerModal: false,
+              winnerModalData: null
+            });
+          }}
+        />
+      )}
+      
+      {/* 💀 МОДАЛКА ПРОИГРАВШЕГО */}
+      {showLoserModal && loserModalData && (
+        <LoserModal
+          playerName={loserModalData.playerName}
+          avatar={loserModalData.avatar}
+          onClose={() => {
+            useGameStore.setState({
+              showLoserModal: false,
+              loserModalData: null
+            });
+          }}
+        />
+      )}
     </div>
   );
 }

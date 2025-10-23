@@ -110,6 +110,12 @@ interface GameState {
     };
   } | null
   
+  // 🎉 МОДАЛКИ ПОБЕДИТЕЛЕЙ И ПРОИГРАВШЕГО
+  showWinnerModal: boolean
+  winnerModalData: { playerName: string; place: number; avatar?: string } | null
+  showLoserModal: boolean
+  loserModalData: { playerName: string; avatar?: string } | null
+  
   // Состояние 2-й стадии (дурак)
   tableStack: Card[] // Стопка карт на столе (нижняя = первая, верхняя = последняя)
   selectedHandCard: Card | null // Выбранная карта в руке (для двойного клика)
@@ -306,6 +312,12 @@ export const useGameStore = create<GameState>()(
       isRankedGame: false,
       showVictoryModal: false,
       victoryData: null,
+      
+      // 🎉 МОДАЛКИ ПОБЕДИТЕЛЕЙ И ПРОИГРАВШЕГО
+      showWinnerModal: false,
+      winnerModalData: null,
+      showLoserModal: false,
+      loserModalData: null,
       
       // Состояние 2-й стадии (дурак)
       tableStack: [],
@@ -1902,10 +1914,16 @@ export const useGameStore = create<GameState>()(
             
             // Проверяем условия победы
             get().checkVictoryCondition();
-            // ✅ ИСПРАВЛЕНО: Убрали дублирующий вызов checkOneCardStatus() - он уже вызывается в nextTurn()
             
-            // Игрок который завершил круг начинает новый раунд
-            setTimeout(() => get().nextTurn(), 330);
+            // ✅ ИСПРАВЛЕНО: Игрок который ЗАКРЫЛ круг ОСТАЕТСЯ ходить!
+            // Ход НЕ переходит к следующему игроку - победитель круга ходит снова
+            console.log(`🏆 [playSelectedCard] ${currentPlayer.name} закрыл круг и остается ходить!`);
+            
+            // Проверяем статус "одна карта"
+            setTimeout(() => {
+              get().checkOneCardStatus();
+            }, 100);
+            
             return;
           }
            
@@ -2221,7 +2239,27 @@ export const useGameStore = create<GameState>()(
                 7000
               );
               
-              // Если это пользователь - показываем модальное окно
+              // 🎉 ПОКАЗЫВАЕМ МОДАЛКУ ПОБЕДИТЕЛЯ ДЛЯ ВСЕХ (не только для пользователя)
+              setTimeout(() => {
+                set({
+                  showWinnerModal: true,
+                  winnerModalData: {
+                    playerName: winner.name,
+                    place: position,
+                    avatar: winner.avatar
+                  }
+                });
+                
+                // Автоматически скрываем модалку через 3 секунды
+                setTimeout(() => {
+                  set({
+                    showWinnerModal: false,
+                    winnerModalData: null
+                  });
+                }, 3000);
+              }, 500 + index * 200); // Задержка между модалками если несколько победителей одновременно
+              
+              // Если это пользователь - показываем также старое модальное окно
               if (winner.isUser) {
                 setTimeout(() => {
                   set({
@@ -2263,6 +2301,25 @@ export const useGameStore = create<GameState>()(
                   'error', 
                   5000
                 );
+                
+                // 💀 ПОКАЗЫВАЕМ МОДАЛКУ ПРОИГРАВШЕГО
+                setTimeout(() => {
+                  set({
+                    showLoserModal: true,
+                    loserModalData: {
+                      playerName: loser.name,
+                      avatar: loser.avatar
+                    }
+                  });
+                  
+                  // Автоматически скрываем модалку через 5 секунд
+                  setTimeout(() => {
+                    set({
+                      showLoserModal: false,
+                      loserModalData: null
+                    });
+                  }, 5000);
+                }, 1000);
                 
                 // Если проигравший - пользователь
                 if (loser.isUser) {
