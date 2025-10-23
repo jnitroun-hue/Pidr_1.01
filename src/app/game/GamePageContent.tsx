@@ -189,7 +189,7 @@ interface GamePageContentProps {
 }
 
 function GamePageContentComponent({ 
-  initialPlayerCount = 4, 
+  initialPlayerCount = 9, 
   isMultiplayer = false, 
   multiplayerData,
   onGameEnd 

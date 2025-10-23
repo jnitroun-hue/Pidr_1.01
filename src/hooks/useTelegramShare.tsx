@@ -123,7 +123,7 @@ export function useTelegramShare() {
     opponentCount?: number;
   }) => {
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-    const gameUrl = `${baseUrl}/game-setup`;
+    const gameUrl = `${baseUrl}/game`;
     
     const resultEmoji = gameResult.isWinner ? '🏆' : '😤';
     const resultText = gameResult.isWinner ? 'ПОБЕДА' : 'ПОРАЖЕНИЕ';
@@ -157,7 +157,7 @@ export function useTelegramShare() {
     emoji: string;
   }) => {
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-    const gameUrl = `${baseUrl}/game-setup`;
+    const gameUrl = `${baseUrl}/game`;
     
     const shareText = `${achievement.emoji} <b>Новое достижение!</b>\n\n` +
       `🏆 ${achievement.title}\n` +
