@@ -1104,10 +1104,9 @@ function GamePageContentComponent({
     };
   };
 
-  // Показываем загрузку если игра инициализируется
-  // ✅ УДАЛЁН ДУБЛИРУЮЩИЙ ЗАГРУЗОЧНЫЙ ЭКРАН - игра запускается автоматически через useEffect
-  // Если игра не активна и нет победителя, показываем минимальный лоадер
-  if (!isGameActive && !winner && players.length === 0) {
+  // ✅ УБРАН ЗАГРУЗОЧНЫЙ ЭКРАН - ИГРА ПОКАЗЫВАЕТСЯ СРАЗУ ПОСЛЕ СОЗДАНИЯ ИГРОКОВ!
+  // Показываем лоадер ТОЛЬКО если userData еще не загружена
+  if (isLoadingUserData) {
     return (
       <div className={styles.gameContainer} style={{
           display: 'flex',
