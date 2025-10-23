@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     console.log(`⚡ Активация: ${item_id} (${item_type})`);
     
     // Вызываем функцию БД для активации
-    const { data, error } = await supabase.rpc('_pidr_activate_shop_item', {
+    const { data, error } = await supabase.rpc('activate_shop_item', {
       p_user_id: userId,
       p_item_id: item_id,
       p_item_type: item_type

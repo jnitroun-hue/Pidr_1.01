@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Резервируем минт через SQL функцию
-    const { data, error } = await supabase.rpc('_pidr_reserve_nft_mint', {
+    const { data, error } = await supabase.rpc('reserve_nft_mint', {
       p_user_id: userId,
       p_card_id: card_id,
       p_wallet_address: wallet_address
@@ -129,7 +129,7 @@ export async function PUT(req: NextRequest) {
     }
 
     // Подтверждаем минт через SQL функцию
-    const { data, error } = await supabase.rpc('_pidr_confirm_nft_mint', {
+    const { data, error } = await supabase.rpc('confirm_nft_mint', {
       p_mint_id: mint_id,
       p_nft_address: nft_address,
       p_transaction_hash: transaction_hash,
