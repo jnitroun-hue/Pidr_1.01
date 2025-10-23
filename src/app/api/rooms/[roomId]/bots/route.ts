@@ -14,12 +14,27 @@ export async function POST(
       return NextResponse.json({ success: false, message: auth.error }, { status: 401 });
     }
 
-    const userId = auth.userId as string;
+    const telegramId = auth.userId as string; // ✅ Это telegram_id!
     const roomId = params.roomId;
     const body = await request.json();
     const { action } = body; // 'add' или 'remove'
 
-    console.log(`🤖 Управление ботами: userId=${userId}, roomId=${roomId}, action=${action}`);
+    console.log(`🤖 Управление ботами: telegramId=${telegramId}, roomId=${roomId}, action=${action}`);
+
+    // ✅ ПОЛУЧАЕМ UUID ПОЛЬЗОВАТЕЛЯ ПО TELEGRAM_ID
+    const { data: userData, error: userError } = await supabase
+      .from('_pidr_users')
+      .select('id')
+      .eq('telegram_id', telegramId)
+      .single();
+    
+    if (userError || !userData) {
+      console.error(`❌ [BOTS] Пользователь не найден:`, userError);
+      return NextResponse.json({ success: false, message: 'Пользователь не найден' }, { status: 404 });
+    }
+    
+    const userUUID = userData.id;
+    console.log(`👤 [BOTS] Пользователь найден: UUID=${userUUID}, telegram_id=${telegramId}`);
 
     // ПРОВЕРЯЕМ СУЩЕСТВОВАНИЕ КОМНАТЫ И ПРАВА ХОСТА
     const { data: room, error: roomError } = await supabase
@@ -32,10 +47,20 @@ export async function POST(
       return NextResponse.json({ success: false, message: 'Комната не найдена' }, { status: 404 });
     }
 
-    // ПРОВЕРЯЕМ ЯВЛЯЕТСЯ ЛИ ПОЛЬЗОВАТЕЛЬ ХОСТОМ
-    if (room.host_id !== userId) {
+    // ПРОВЕРЯЕМ ЯВЛЯЕТСЯ ЛИ ПОЛЬЗОВАТЕЛЬ ХОСТОМ (СРАВНИВАЕМ UUID С UUID!)
+    console.log(`🔍 [BOTS] Проверка хоста:`, {
+      'room.host_id (UUID)': room.host_id,
+      'userUUID (UUID)': userUUID,
+      'are_equal': room.host_id === userUUID,
+      'telegramId (для справки)': telegramId
+    });
+    
+    if (room.host_id !== userUUID) {
+      console.error(`❌ [BOTS] Пользователь ${telegramId} (UUID: ${userUUID}) НЕ является хостом комнаты (хост UUID: ${room.host_id})`);
       return NextResponse.json({ success: false, message: 'Только хост может управлять ботами' }, { status: 403 });
     }
+    
+    console.log(`✅ [BOTS] Пользователь ${telegramId} (UUID: ${userUUID}) является хостом комнаты ${roomId}`);
 
     if (action === 'add') {
       // ДОБАВЛЯЕМ БОТА

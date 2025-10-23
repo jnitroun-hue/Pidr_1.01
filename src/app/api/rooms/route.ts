@@ -148,16 +148,34 @@ export async function POST(req: NextRequest) {
       
       console.log('🆕 Создание новой комнаты...');
       
-      // 1. ПРОВЕРЯЕМ МОЖЕТ ЛИ ИГРОК СОЗДАТЬ КОМНАТУ
+      // 1. ПОЛУЧАЕМ ДАННЫЕ ПОЛЬЗОВАТЕЛЯ (ПО TELEGRAM_ID!) - СНАЧАЛА!
+      const { data: userData, error: userError } = await supabase
+        .from('_pidr_users')
+        .select('id, username') // ✅ ВАЖНО! Получаем UUID (id) для host_id
+        .eq('telegram_id', userId) // ✅ Ищем по telegram_id!
+        .single();
+      
+      if (userError || !userData?.username) {
+        console.error('❌ Не удалось получить данные пользователя:', userError);
+        return NextResponse.json({ 
+          success: false, 
+          message: 'Ошибка получения данных пользователя' 
+        }, { status: 500 });
+      }
+      
+      const userUUID = userData.id;
+      console.log(`👤 Пользователь найден: UUID=${userUUID}, telegram_id=${userId}`);
+      
+      // 2. ПРОВЕРЯЕМ МОЖЕТ ЛИ ИГРОК СОЗДАТЬ КОМНАТУ
       const currentRoomId = await getPlayerRoom(userId);
       
       if (currentRoomId) {
-        // Проверяем существует ли эта комната в БД
+        // Проверяем существует ли эта комната в БД (СРАВНИВАЕМ UUID С UUID!)
         const { data: existingRoom } = await supabase
           .from('_pidr_rooms')
           .select('id, name, room_code')
           .eq('id', currentRoomId)
-          .eq('host_id', userId)
+          .eq('host_id', userUUID) // ✅ Используем UUID!
           .in('status', ['waiting', 'playing'])
           .single();
         
@@ -171,21 +189,6 @@ export async function POST(req: NextRequest) {
           // Комната есть в Redis но не в БД - очищаем Redis
           await removePlayerFromAllRooms(userId);
         }
-      }
-      
-      // 2. ПОЛУЧАЕМ ДАННЫЕ ПОЛЬЗОВАТЕЛЯ
-      const { data: userData, error: userError } = await supabase
-        .from('_pidr_users')
-        .select('username')
-        .eq('id', userId)
-        .single();
-      
-      if (userError || !userData?.username) {
-        console.error('❌ Не удалось получить данные пользователя:', userError);
-        return NextResponse.json({ 
-          success: false, 
-          message: 'Ошибка получения данных пользователя' 
-        }, { status: 500 });
       }
       
       // 3. СОЗДАЕМ КОМНАТУ В БД
@@ -203,7 +206,7 @@ export async function POST(req: NextRequest) {
         .insert({
           room_code: roomCode,
           name: name || 'Новая комната',
-          host_id: userId,
+          host_id: userUUID, // ✅ ИСПОЛЬЗУЕМ UUID, А НЕ TELEGRAM_ID!
           max_players: maxPlayers || 6,
           current_players: 0, // Будет обновлено atomicJoinRoom
           status: 'waiting',
@@ -298,11 +301,11 @@ export async function POST(req: NextRequest) {
         }, { status: 403 });
       }
       
-      // 3. ПОЛУЧАЕМ ДАННЫЕ ПОЛЬЗОВАТЕЛЯ
+      // 3. ПОЛУЧАЕМ ДАННЫЕ ПОЛЬЗОВАТЕЛЯ (ПО TELEGRAM_ID!)
       const { data: userData, error: userError } = await supabase
         .from('_pidr_users')
-        .select('username')
-        .eq('id', userId)
+        .select('id, username') // ✅ Получаем UUID для сравнения с host_id
+        .eq('telegram_id', userId) // ✅ Ищем по telegram_id!
         .single();
       
       if (userError || !userData?.username) {
@@ -311,6 +314,8 @@ export async function POST(req: NextRequest) {
           message: 'Ошибка получения данных пользователя' 
         }, { status: 500 });
       }
+      
+      console.log(`👤 Пользователь найден: UUID=${userData.id}, telegram_id=${userId}`);
       
       // 4. ПРОВЕРЯЕМ МОЖЕТ ЛИ ИГРОК ПРИСОЕДИНИТЬСЯ
       const canJoin = await canPlayerJoinRoom(userId, room.id);
@@ -330,8 +335,8 @@ export async function POST(req: NextRequest) {
         }, { status: 400 });
       }
       
-      // 5. ОПРЕДЕЛЯЕМ ЯВЛЯЕТСЯ ЛИ ИГРОК ХОСТОМ
-      const isHost = room.host_id === userId;
+      // 5. ОПРЕДЕЛЯЕМ ЯВЛЯЕТСЯ ЛИ ИГРОК ХОСТОМ (СРАВНИВАЕМ UUID С UUID!)
+      const isHost = room.host_id === userData.id; // ✅ Сравниваем UUID с UUID!
       
       // 6. АТОМАРНО ПРИСОЕДИНЯЕМСЯ К КОМНАТЕ
       const joinResult = await atomicJoinRoom({
@@ -403,12 +408,21 @@ export async function POST(req: NextRequest) {
         .eq('id', roomId)
         .single();
       
-      if (room && room.host_id === userId && room.current_players === 0) {
-        console.log(`🗑️ Удаляем пустую комнату хоста ${roomId}`);
-        await supabase
-          .from('_pidr_rooms')
-          .delete()
-          .eq('id', roomId);
+      if (room && room.current_players === 0) {
+        // ✅ ПОЛУЧАЕМ UUID ПОЛЬЗОВАТЕЛЯ ПО TELEGRAM_ID ДЛЯ СРАВНЕНИЯ
+        const { data: userData } = await supabase
+          .from('_pidr_users')
+          .select('id')
+          .eq('telegram_id', userId)
+          .single();
+        
+        if (userData && room.host_id === userData.id) { // ✅ Сравниваем UUID с UUID!
+          console.log(`🗑️ Удаляем пустую комнату хоста ${roomId}`);
+          await supabase
+            .from('_pidr_rooms')
+            .delete()
+            .eq('id', roomId);
+        }
       }
       
       return NextResponse.json({ 
@@ -459,7 +473,7 @@ export async function DELETE(req: NextRequest) {
       }, { status: 401 });
     }
     
-    const userId = auth.userId as string;
+    const telegramId = auth.userId as string; // ✅ Это telegram_id!
     const { searchParams } = new URL(req.url);
     const roomId = searchParams.get('roomId');
     
@@ -470,7 +484,23 @@ export async function DELETE(req: NextRequest) {
       }, { status: 400 });
     }
     
-    // Проверяем что пользователь - хост комнаты
+    // ✅ ПОЛУЧАЕМ UUID ПОЛЬЗОВАТЕЛЯ ПО TELEGRAM_ID
+    const { data: userData, error: userError } = await supabase
+      .from('_pidr_users')
+      .select('id')
+      .eq('telegram_id', telegramId)
+      .single();
+    
+    if (userError || !userData) {
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Пользователь не найден' 
+      }, { status: 404 });
+    }
+    
+    const userUUID = userData.id;
+    
+    // Проверяем что пользователь - хост комнаты (СРАВНИВАЕМ UUID С UUID!)
     const { data: room } = await supabase
       .from('_pidr_rooms')
       .select('host_id')
@@ -484,7 +514,7 @@ export async function DELETE(req: NextRequest) {
       }, { status: 404 });
     }
     
-    if (room.host_id !== userId) {
+    if (room.host_id !== userUUID) { // ✅ Сравниваем UUID с UUID!
       return NextResponse.json({ 
         success: false, 
         message: 'Только хост может удалить комнату' 
@@ -504,7 +534,7 @@ export async function DELETE(req: NextRequest) {
       }, { status: 500 });
     }
     
-    console.log(`✅ Комната ${roomId} удалена хостом ${userId}`);
+    console.log(`✅ Комната ${roomId} удалена хостом ${telegramId} (UUID: ${userUUID})`);
     
     return NextResponse.json({ 
       success: true, 
