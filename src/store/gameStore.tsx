@@ -2424,20 +2424,43 @@ export const useGameStore = create<GameState>()(
           const currentUserTelegramId = telegramUser?.id?.toString() || '';
           
           // Сортируем игроков по местам (winner first, loser last)
+          // ✅ ДЕТЕРМИНИРОВАННАЯ СОРТИРОВКА для мультиплеера!
           const sortedPlayers = [...players].sort((a, b) => {
-            // Победители (isWinner) идут первыми
+            // 1️⃣ Победители (isWinner) идут первыми
             if (a.isWinner && !b.isWinner) return -1;
             if (!a.isWinner && b.isWinner) return 1;
             
-            // Среди победителей сортируем по количеству карт (меньше = лучше)
+            // 2️⃣ Среди победителей сортируем по количеству карт (меньше = лучше)
             const aTotal = a.cards.length + a.penki.length;
             const bTotal = b.cards.length + b.penki.length;
             
             if (aTotal === 0 && bTotal > 0) return -1;
             if (aTotal > 0 && bTotal === 0) return 1;
             
-            return aTotal - bTotal;
+            // 3️⃣ Если количество карт одинаковое - сортируем по ID (TIEBREAKER!)
+            // ✅ Это гарантирует ОДИНАКОВЫЙ порядок на ВСЕХ устройствах!
+            if (aTotal !== bTotal) {
+              return aTotal - bTotal;
+            }
+            
+            // 4️⃣ TIEBREAKER: Сравниваем по ID (лексикографически)
+            return a.id.localeCompare(b.id);
           });
+          
+          // ✅ ДЕТЕРМИНИРОВАННЫЙ РАНДОМ для мультиплеера
+          // Используем ID игрока как seed для рандома, чтобы все видели одинаковые награды
+          const seededRandom = (playerId: string, min: number, max: number): number => {
+            // Простая хеш-функция из ID игрока
+            let hash = 0;
+            for (let i = 0; i < playerId.length; i++) {
+              const char = playerId.charCodeAt(i);
+              hash = ((hash << 5) - hash) + char;
+              hash = hash & hash; // Convert to 32bit integer
+            }
+            // Нормализуем в диапазон min-max
+            const normalized = Math.abs(hash % (max - min + 1));
+            return min + normalized;
+          };
           
           // Формируем результаты
           const results = sortedPlayers.map((player, index) => {
@@ -2461,8 +2484,9 @@ export const useGameStore = create<GameState>()(
                 coinsEarned = 150; // 🥉 Третье место
                 ratingChange = 10;
               } else if (place >= 4 && place <= 8) {
-                // 🎲 Места 4-8: рандом от 50 до 100 монет
-                coinsEarned = Math.floor(Math.random() * 51) + 50; // 50-100
+                // 🎲 Места 4-8: детерминированный рандом от 50 до 100 монет
+                // Используем ID игрока для seed - все устройства увидят одинаковый результат!
+                coinsEarned = seededRandom(player.id, 50, 100);
                 ratingChange = 0;
               } else if (isLastPlace) {
                 coinsEarned = 5; // 🎁 Утешительный приз за участие!
@@ -2480,8 +2504,9 @@ export const useGameStore = create<GameState>()(
                 coinsEarned = 150; // 🥉 Третье место
                 ratingChange = 10;
               } else if (place >= 4 && place <= 8) {
-                // 🎲 Места 4-8: рандом от 50 до 100 монет
-                coinsEarned = Math.floor(Math.random() * 51) + 50; // 50-100
+                // 🎲 Места 4-8: детерминированный рандом от 50 до 100 монет
+                // Используем ID игрока для seed - все устройства увидят одинаковый результат!
+                coinsEarned = seededRandom(player.id, 50, 100);
                 ratingChange = 0;
               } else if (isLastPlace) {
                 coinsEarned = 5; // 🎁 Утешительный приз за участие!
@@ -2505,13 +2530,13 @@ export const useGameStore = create<GameState>()(
           // ✅ ОБНОВЛЯЕМ СТАТИСТИКУ И БАЛАНС ПОЛЬЗОВАТЕЛЯ
           const userResult = results.find(r => r.isUser);
           if (userResult) {
-            const isWin = userResult.place === 1;
+            const isWin = userResult.place >= 1 && userResult.place <= 3; // ✅ ТОП-3 = победа!
             const isLoss = userResult.place === results.length;
             
             console.log(`📊 [calculateAndShowGameResults] Обновляем статистику пользователя:`, {
               place: userResult.place,
               coins: userResult.coinsEarned,
-              isWin,
+              isWin: isWin ? `ДА (ТОП-3!)` : 'нет',
               isLoss
             });
             
