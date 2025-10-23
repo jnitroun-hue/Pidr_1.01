@@ -1119,23 +1119,7 @@ function GamePageContentComponent({
             {gameStage === 1 ? (
               <>🎴 Колода: {deck.length}</>
             ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ fontSize: '12px' }}>🗑️</span>
-                {/* ✅ ИСПРАВЛЕНО: Показываем 1 карту рубашкой + количество */}
-                {playedCards && playedCards.length > 0 && (
-                    <Image
-                      src="/img/cards/card_back.png"
-                      alt="Карта в бито"
-                    width={12}
-                    height={18}
-                      style={{ 
-                      opacity: 0.9,
-                      borderRadius: '2px'
-                      }}
-                    />
-                )}
-                <span style={{ fontSize: '11px', fontWeight: 700 }}>×{playedCards?.length || 0}</span>
-              </div>
+              <>🗑️ Бито: {playedCards?.length || 0}</>
             )}
           </div>
         </div>

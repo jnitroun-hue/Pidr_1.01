@@ -1924,6 +1924,12 @@ export const useGameStore = create<GameState>()(
               get().checkOneCardStatus();
             }, 100);
             
+            // ✅ КРИТИЧНО: Запускаем следующий ход для того же игрока!
+            setTimeout(() => {
+              console.log(`🎮 [playSelectedCard] Запускаем новый ход для ${currentPlayer.name}`);
+              get().processPlayerTurn(currentPlayer.id);
+            }, 500);
+            
             return;
           }
            
