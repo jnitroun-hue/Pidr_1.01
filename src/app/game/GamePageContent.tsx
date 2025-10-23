@@ -104,23 +104,8 @@ const getRectanglePosition = (index: number, totalPlayers: number, gameStage: nu
   // 4-5 → верхняя сторона (2 игрока) 
   // 6-8 → правая сторона (3 игрока)
   
-  // ✅ КРИТИЧНО: РАЗНЫЕ ПОЗИЦИИ ДЛЯ СТАДИЙ 1 И 2!
-  const positions = gameStage >= 2 ? [
-    // 📍 СТАДИЯ 2+: ИГРОКИ ПОДНЯТЫ ВЫШЕ (не перекрываются рукой)
-    { left: '5%', top: '58%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 } }, // 1: слева внизу
-    { left: '5%', top: '40%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 } }, // 2: слева центр
-    { left: '5%', top: '22%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 } }, // 3: слева вверху
-    
-    // ВЕРХНЯЯ СТОРОНА - 2 ИГРОКА (без изменений)
-    { left: '35%', top: '5%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 55 } }, // 4: сверху слева
-    { left: '65%', top: '5%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 55 } }, // 5: сверху справа
-    
-    // ПРАВАЯ СТОРОНА - 3 ИГРОКА
-    { left: '95%', top: '22%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 } }, // 6: справа вверху
-    { left: '95%', top: '40%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 } }, // 7: справа центр
-    { left: '95%', top: '58%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 } }, // 8: справа внизу
-  ] : [
-    // 📍 СТАДИЯ 1: ОРИГИНАЛЬНЫЕ ПОЗИЦИИ (как было)
+  // ✅ ОРИГИНАЛЬНЫЕ ПОЗИЦИИ ДЛЯ ВСЕХ СТАДИЙ
+  const positions = [
     { left: '5%', top: '70%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 } }, // 1: слева внизу
     { left: '5%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 } }, // 2: слева центр
     { left: '5%', top: '30%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 } }, // 3: слева вверху
@@ -1127,72 +1112,24 @@ function GamePageContentComponent({
   };
 
   // Показываем загрузку если игра инициализируется
-  if (!isGameActive && !winner) {
+  // ✅ УДАЛЁН ДУБЛИРУЮЩИЙ ЗАГРУЗОЧНЫЙ ЭКРАН - игра запускается автоматически через useEffect
+  // Если игра не активна и нет победителя, показываем минимальный лоадер
+  if (!isGameActive && !winner && players.length === 0) {
     return (
-      <div className={styles.gameContainer}>
+      <div className={styles.gameContainer} style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100vh'
+      }}>
         <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '100vh',
-          color: '#e2e8f0',
-          textAlign: 'center',
-          padding: '20px'
-        }}>
-          <h2 style={{ marginBottom: '20px', fontSize: '24px' }}>🎮 P.I.D.R. Game</h2>
-          {players.length === 0 && (
-          <div style={{
-            width: '40px',
-            height: '40px',
-            border: '4px solid rgba(99, 102, 241, 0.3)',
-            borderTop: '4px solid #6366f1',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
-            margin: '0 auto 20px'
-          }}></div>
-          )}
-          <button
-            onClick={() => {
-              console.log('🎮 Запуск новой игры...');
-              startGame('single', playerCount, null, {
-                avatar: userData?.avatar,
-                username: userData?.username
-              });
-              setGameInitialized(true);
-              setDealt(false);
-            }}
-            style={{
-              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '12px',
-              padding: '12px 24px',
-              fontSize: '16px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              transition: 'all 0.3s ease',
-              marginBottom: '10px'
-            }}
-          >
-            🚀 {players.length > 0 ? 'Играть снова' : 'Запустить игру'}
-          </button>
-          <button
-            onClick={() => typeof window !== 'undefined' && window.history.back()}
-            style={{
-              background: 'rgba(255, 255, 255, 0.1)',
-              color: '#e2e8f0',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              borderRadius: '12px',
-              padding: '8px 16px',
-              fontSize: '14px',
-              cursor: 'pointer',
-              transition: 'all 0.3s ease'
-            }}
-          >
-            ← Назад в меню
-          </button>
-        </div>
+          width: '60px',
+          height: '60px',
+          border: '6px solid rgba(99, 102, 241, 0.3)',
+          borderTop: '6px solid #6366f1',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite'
+        }}></div>
       </div>
     );
   }
@@ -1298,8 +1235,7 @@ function GamePageContentComponent({
       {isGameActive && (
         <div className={styles.tableWrapper}>
           {/* Прямоугольный стол */}
-          {/* ✅ УМЕНЬШАЕМ КОМПОНЕНТЫ ДО 80% ВО 2-Й СТАДИИ */}
-          <div className={`${styles.rectangularTable} ${gameStage >= 2 ? styles.stage2Scale : ''}`}>
+          <div className={styles.rectangularTable}>
             {/* СТОПКА КАРТ НА СТОЛЕ (2-я стадия) - ЗАМЕНЯЕТ КОЛОДУ */}
             {gameStage >= 2 && tableStack && tableStack.length > 0 && (
               <div style={{
@@ -1886,55 +1822,32 @@ function GamePageContentComponent({
               </button>
             )}
             
-            {/* Кнопка "Взять карту" - STAGE 2 */}
-            {(() => {
-              const isMyTurn = humanPlayer.id === currentPlayerId;
-              const hasCardsOnTable = tableStack && tableStack.length > 0;
-              
-              // ✅ ПОКАЗЫВАЕМ ТОЛЬКО ВО 2-Й СТАДИИ
-              if (gameStage !== 2 || !hasCardsOnTable) {
-                console.log(`🎴 [КНОПКА] СКРЫТА: stage=${gameStage}, hasCards=${hasCardsOnTable}`);
-                return null;
-              }
-              
-              console.log(`🎴 [КНОПКА] ПОКАЗАНА: stage=${gameStage}, tableStack=${tableStack.length}, isMyTurn=${isMyTurn}, currentPlayerId=${currentPlayerId}`);
-              
-              return (
-                <button
-                  onClick={() => {
-                    console.log('🎴 [КНОПКА ВЗЯТЬ КАРТУ] ===== КЛИК =====');
-                    console.log(`🎴 [КНОПКА] humanPlayer.id=${humanPlayer.id}, currentPlayerId=${currentPlayerId}`);
-                    console.log(`🎴 [КНОПКА] tableStack:`, tableStack);
-                    console.log(`🎴 [КНОПКА] Вызываем takeTableCards()...`);
-                    
-                    try {
-                      takeTableCards();
-                      console.log('✅ [КНОПКА] takeTableCards() выполнена успешно');
-                    } catch (error) {
-                      console.error('❌ [КНОПКА] Ошибка при вызове takeTableCards:', error);
-                    }
-                  }}
-                  style={{
-                    background: isMyTurn 
-                      ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' 
-                      : 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)',
-                    color: 'white',
-                    border: '2px solid ' + (isMyTurn ? '#f59e0b' : '#ef4444'),
-                    borderRadius: '6px',
-                    padding: '6px 12px',
-                    fontSize: '11px',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                    boxShadow: '0 2px 8px rgba(245, 158, 11, 0.4)',
-                    whiteSpace: 'nowrap',
-                    opacity: isMyTurn ? 1 : 0.6
-                  }}
-                  title={isMyTurn ? 'Взять карту со стола' : 'НЕ ТВОЙ ХОД!'}
-                >
-                  ⬇️ Взять карту {!isMyTurn && '(не твой ход!)'}
-                </button>
-              );
-            })()}
+            {/* ✅ КНОПКА "ВЗЯТЬ НИЖНЮЮ КАРТУ" - ТОЛЬКО В ТВОЙ ХОД */}
+            {gameStage >= 2 && 
+             tableStack && 
+             tableStack.length > 0 && 
+             humanPlayer.id === currentPlayerId && (
+              <button
+                onClick={() => {
+                  takeTableCards();
+                }}
+                style={{
+                  background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                  color: 'white',
+                  border: '2px solid #f59e0b',
+                  borderRadius: '6px',
+                  padding: '8px 16px',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(245, 158, 11, 0.6)',
+                  whiteSpace: 'nowrap',
+                  animation: 'pulse 2s ease-in-out infinite'
+                }}
+              >
+                ⬇️ Взять нижнюю карту ({tableStack.length})
+              </button>
+            )}
           </div>
           
           <div className={styles.handCards}>
