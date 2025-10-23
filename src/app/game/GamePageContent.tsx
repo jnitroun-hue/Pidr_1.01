@@ -95,7 +95,7 @@ const getRectanglePosition = (index: number, totalPlayers: number, gameStage: nu
   if (index === 0) {
     return { 
       left: '50%', 
-      top: '92%', // Самый низ
+      top: '85%', // ✅ ПОДНЯТО ВЫШЕ - не накладывается на системные кнопки телефона
       cardDirection: 'horizontal',
       cardOffset: { x: 0, y: -40 }
     };
