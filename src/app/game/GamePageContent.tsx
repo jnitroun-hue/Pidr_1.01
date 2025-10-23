@@ -1129,7 +1129,7 @@ function GamePageContentComponent({
   return (
     <div className={styles.gameContainer}>
       {/* ЗАГОЛОВОК ИГРЫ - СТАДИЯ И КОЛОДА/БИТКО */}
-      {isGameActive && (
+      {players.length > 0 && (
         <div className={styles.gameHeader}>
           <div className={styles.stageInfo}>
             <span className={styles.trumpIcon}>
@@ -1172,7 +1172,7 @@ function GamePageContentComponent({
       )}
 
       {/* БУРГЕР МЕНЮ */}
-      {isGameActive && (
+      {players.length > 0 && (
         <div className={styles.gameControls}>
           <div className={styles.burgerMenu}>
             <button className={styles.burgerButton}>
@@ -1224,7 +1224,7 @@ function GamePageContentComponent({
       )}
 
       {/* 🎮 ИГРОВОЙ СТОЛ И КАРТЫ */}
-      {isGameActive && (
+      {players.length > 0 && (
         <div className={styles.tableWrapper}>
           {/* Прямоугольный стол */}
           <div className={styles.rectangularTable}>
@@ -1685,7 +1685,7 @@ function GamePageContentComponent({
       {/* ПАНЕЛЬ КНОПОК ДЕЙСТВИЙ - УБРАНА, КНОПКА ПЕРЕНЕСЕНА В РУКУ ИГРОКА */}
 
       {/* Рука игрока внизу экрана - ТОЛЬКО СО 2-Й СТАДИИ! */}
-      {isGameActive && gameStage >= 2 && humanPlayer && humanPlayer.cards && humanPlayer.cards.length > 0 && (
+      {players.length > 0 && gameStage >= 2 && humanPlayer && humanPlayer.cards && humanPlayer.cards.length > 0 && (
         <div className={styles.playerHand}>
           {/* Кнопки компактно над картами игрока */}
           <div style={{
