@@ -348,17 +348,34 @@ function GamePageContentComponent({
       try {
         setIsLoadingUserData(true);
         
-        const response = await fetch('/api/auth', {
+        // ✅ ИСПРАВЛЕНО: Получаем telegramId из Telegram WebApp
+        const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+        const telegramId = telegramUser?.id?.toString() || '';
+        const username = telegramUser?.username || telegramUser?.first_name || '';
+        
+        if (!telegramId) {
+          console.error('❌ Telegram WebApp не доступен');
+          setUserData({ coins: 0, username: 'Игрок' });
+          setIsLoadingUserData(false);
+          return;
+        }
+        
+        console.log('🎮 [GamePageContent] Загружаем userData для:', telegramId);
+        
+        const response = await fetch('/api/user/me', {
           method: 'GET',
-          credentials: 'include', // Важно для cookies
+          credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
+            'x-telegram-id': telegramId,
+            'x-username': username
           }
         });
         
         if (!response.ok) {
           console.error('❌ Ошибка получения данных пользователя:', response.status);
-          setUserData({ coins: 0, username: 'Игрок' });
+          // ✅ Даже при ошибке устанавливаем дефолтные данные чтобы игра запустилась
+          setUserData({ coins: 0, username: username || 'Игрок', telegramId });
           return;
         }
         
@@ -368,17 +385,21 @@ function GamePageContentComponent({
           console.log('✅ Данные пользователя загружены из БД:', result.user);
           setUserData({
             coins: result.user.coins || 0,
-            avatar: result.user.avatar_url || '', // Из БД
-            username: result.user.username || result.user.firstName || 'Игрок',
-            telegramId: result.user.telegramId
+            avatar: result.user.avatar_url || '',
+            username: result.user.username || result.user.firstName || username || 'Игрок',
+            telegramId: result.user.telegramId || telegramId
           });
         } else {
-          console.error('❌ Пользователь не авторизован');
-          setUserData({ coins: 0, username: 'Игрок' });
+          console.warn('⚠️ Пользователь не найден в БД, используем дефолтные данные');
+          setUserData({ coins: 0, username: username || 'Игрок', telegramId });
         }
       } catch (error) {
         console.error('❌ Ошибка загрузки данных пользователя:', error);
-        setUserData({ coins: 0, username: 'Игрок' });
+        // ✅ Даже при ошибке устанавливаем дефолтные данные
+        const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+        const username = telegramUser?.username || telegramUser?.first_name || '';
+        const telegramId = telegramUser?.id?.toString() || '';
+        setUserData({ coins: 0, username: username || 'Игрок', telegramId });
       } finally {
         setIsLoadingUserData(false);
       }
@@ -1117,19 +1138,19 @@ function GamePageContentComponent({
   if (!isGameActive && !winner && players.length === 0) {
     return (
       <div className={styles.gameContainer} style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
         minHeight: '100vh'
-      }}>
-        <div style={{
+        }}>
+          <div style={{
           width: '60px',
           height: '60px',
           border: '6px solid rgba(99, 102, 241, 0.3)',
           borderTop: '6px solid #6366f1',
-          borderRadius: '50%',
+            borderRadius: '50%',
           animation: 'spin 1s linear infinite'
-        }}></div>
+          }}></div>
       </div>
     );
   }
@@ -1161,16 +1182,16 @@ function GamePageContentComponent({
                 <span style={{ fontSize: '12px' }}>🗑️</span>
                 {/* ✅ ИСПРАВЛЕНО: Показываем 1 карту рубашкой + количество */}
                 {playedCards && playedCards.length > 0 && (
-                  <Image
-                    src="/img/cards/card_back.png"
-                    alt="Карта в бито"
+                    <Image
+                      src="/img/cards/card_back.png"
+                      alt="Карта в бито"
                     width={12}
                     height={18}
-                    style={{ 
+                      style={{ 
                       opacity: 0.9,
                       borderRadius: '2px'
-                    }}
-                  />
+                      }}
+                    />
                 )}
                 <span style={{ fontSize: '11px', fontWeight: 700 }}>×{playedCards?.length || 0}</span>
               </div>
