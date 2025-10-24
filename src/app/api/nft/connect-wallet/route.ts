@@ -99,8 +99,8 @@ export async function GET(req: NextRequest) {
       .from('_pidr_player_wallets')
       .select('*')
       .eq('user_id', userId)
-      .order('is_primary', { ascending: false })
-      .order('connected_at', { ascending: false });
+      .order('is_active', { ascending: false }) // ✅ ИСПРАВЛЕНО: is_primary → is_active
+      .order('created_at', { ascending: false }); // ✅ ИСПРАВЛЕНО: connected_at → created_at
 
     if (error) {
       console.error('❌ Ошибка получения кошельков:', error);

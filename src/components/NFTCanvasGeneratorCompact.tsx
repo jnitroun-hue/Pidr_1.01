@@ -232,149 +232,162 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
           </div>
         </div>
 
-        {/* Ранг */}
+        {/* Ранг - 2 ряда */}
         <div>
           <label style={{ 
             display: 'block', 
             fontSize: '11px', 
-            color: '#6ee7b7', // ✅ Светло-зеленый
-            marginBottom: '8px', 
+            color: '#6ee7b7',
+            marginBottom: '6px', 
             fontWeight: 'bold', 
             textTransform: 'uppercase',
             letterSpacing: '1px'
           }}>
             РАНГ
           </label>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
-            {RANKS.map((rank) => (
-              <button
-                key={rank.value}
-                onClick={() => setSelectedRank(rank.value)}
-                disabled={isGenerating}
-                style={{
-                  padding: '8px 4px',
-                  borderRadius: '8px',
-                  background: selectedRank === rank.value 
-                    ? 'linear-gradient(135deg, #10b981, #059669)' // ✅ Зеленый градиент
-                    : 'rgba(6, 78, 59, 0.6)',
-                  border: selectedRank === rank.value 
-                    ? '3px solid #34d399' 
-                    : '2px solid rgba(16, 185, 129, 0.3)',
-                  cursor: 'pointer',
-                  fontSize: '16px',
-                  fontWeight: 'bold',
-                  color: selectedRank === rank.value ? '#fff' : '#6ee7b7',
-                  transition: 'all 0.3s',
-                  transform: selectedRank === rank.value ? 'scale(1.15)' : 'scale(1)',
-                  boxShadow: selectedRank === rank.value 
-                    ? '0 4px 16px rgba(16, 185, 129, 0.5)' 
-                    : 'none'
-                }}
-              >
-                {rank.display}
-              </button>
-            ))}
+          {/* ✅ 2 РЯДА: Первый ряд (2-8), Второй ряд (9-A) */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            {/* Первый ряд: 2-8 */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '3px' }}>
+              {RANKS.slice(0, 7).map((rank) => (
+                <button
+                  key={rank.value}
+                  onClick={() => setSelectedRank(rank.value)}
+                  disabled={isGenerating}
+                  style={{
+                    padding: '6px 3px',
+                    borderRadius: '6px',
+                    background: selectedRank === rank.value 
+                      ? 'linear-gradient(135deg, #10b981, #059669)'
+                      : 'rgba(6, 78, 59, 0.6)',
+                    border: selectedRank === rank.value 
+                      ? '2px solid #34d399' 
+                      : '1px solid rgba(16, 185, 129, 0.3)',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    color: selectedRank === rank.value ? '#fff' : '#6ee7b7',
+                    transition: 'all 0.2s',
+                    transform: selectedRank === rank.value ? 'scale(1.1)' : 'scale(1)',
+                    boxShadow: selectedRank === rank.value 
+                      ? '0 3px 12px rgba(16, 185, 129, 0.5)' 
+                      : 'none'
+                  }}
+                >
+                  {rank.display}
+                </button>
+              ))}
+            </div>
+            {/* Второй ряд: 9-A */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '3px' }}>
+              {RANKS.slice(7).map((rank) => (
+                <button
+                  key={rank.value}
+                  onClick={() => setSelectedRank(rank.value)}
+                  disabled={isGenerating}
+                  style={{
+                    padding: '6px 3px',
+                    borderRadius: '6px',
+                    background: selectedRank === rank.value 
+                      ? 'linear-gradient(135deg, #10b981, #059669)'
+                      : 'rgba(6, 78, 59, 0.6)',
+                    border: selectedRank === rank.value 
+                      ? '2px solid #34d399' 
+                      : '1px solid rgba(16, 185, 129, 0.3)',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    color: selectedRank === rank.value ? '#fff' : '#6ee7b7',
+                    transition: 'all 0.2s',
+                    transform: selectedRank === rank.value ? 'scale(1.1)' : 'scale(1)',
+                    boxShadow: selectedRank === rank.value 
+                      ? '0 3px 12px rgba(16, 185, 129, 0.5)' 
+                      : 'none'
+                  }}
+                >
+                  {rank.display}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* ✅ ЦЕНООБРАЗОВАНИЕ */}
+      {/* ✅ ЦЕНООБРАЗОВАНИЕ - КОМПАКТНАЯ ВЕРСИЯ */}
       <div style={{
-        marginBottom: '20px',
+        marginBottom: '14px',
         background: 'rgba(6, 78, 59, 0.4)',
-        borderRadius: '12px',
-        padding: '16px',
-        border: '2px solid rgba(16, 185, 129, 0.3)'
+        borderRadius: '10px',
+        padding: '12px',
+        border: '1px solid rgba(16, 185, 129, 0.3)'
       }}>
-        <div style={{ 
-          fontSize: '13px', 
-          fontWeight: 'bold', 
-          color: '#6ee7b7',
-          marginBottom: '12px',
-          textTransform: 'uppercase',
-          letterSpacing: '1px'
-        }}>
-          💰 Система цен
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+          <div style={{ display: 'flex', gap: '12px', fontSize: '12px' }}>
+            <div>
+              <span style={{ color: '#6ee7b7', fontSize: '10px' }}>РАНГ:</span>
+              <span style={{ color: '#10b981', fontWeight: 'bold', marginLeft: '4px' }}>{rankCost}🪙</span>
+            </div>
+            <div>
+              <span style={{ color: '#6ee7b7', fontSize: '10px' }}>МАСТЬ:</span>
+              <span style={{ color: '#10b981', fontWeight: 'bold', marginLeft: '4px' }}>+{suitCost}🪙</span>
+            </div>
+          </div>
         </div>
         
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
-          {/* Цена ранга */}
-          <div style={{
-            background: 'rgba(16, 185, 129, 0.1)',
-            padding: '12px',
-            borderRadius: '10px',
-            border: '1px solid rgba(16, 185, 129, 0.2)'
-          }}>
-            <div style={{ fontSize: '10px', color: '#6ee7b7', marginBottom: '4px' }}>РАНГ</div>
-            <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#10b981' }}>{rankCost} 🪙</div>
-          </div>
-
-          {/* Цена масти */}
-          <div style={{
-            background: 'rgba(16, 185, 129, 0.1)',
-            padding: '12px',
-            borderRadius: '10px',
-            border: '1px solid rgba(16, 185, 129, 0.2)'
-          }}>
-            <div style={{ fontSize: '10px', color: '#6ee7b7', marginBottom: '4px' }}>МАСТЬ</div>
-            <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#10b981' }}>+{suitCost} 🪙</div>
-          </div>
-        </div>
-
-        {/* Итого */}
+        {/* Итого - более компактный */}
         <div style={{
           background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.2))',
-          padding: '14px',
-          borderRadius: '12px',
-          border: '2px solid #10b981',
+          padding: '10px 12px',
+          borderRadius: '8px',
+          border: '1px solid #10b981',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center'
         }}>
-          <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#6ee7b7' }}>ИТОГО:</span>
-          <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#10b981', textShadow: '0 0 10px rgba(16, 185, 129, 0.5)' }}>
+          <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#6ee7b7' }}>ИТОГО:</span>
+          <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#10b981', textShadow: '0 0 8px rgba(16, 185, 129, 0.5)' }}>
             {currentCost} 🪙
           </span>
         </div>
       </div>
 
-      {/* Кнопки */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px', marginBottom: '16px' }}>
+      {/* Кнопки - КОМПАКТНАЯ ВЕРСИЯ */}
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '10px', marginBottom: '14px' }}>
         <motion.button
           onClick={handleGenerate}
           disabled={isGenerating || userCoins < currentCost}
-          whileHover={!isGenerating && userCoins >= currentCost ? { scale: 1.05 } : {}}
-          whileTap={!isGenerating && userCoins >= currentCost ? { scale: 0.95 } : {}}
+          whileHover={!isGenerating && userCoins >= currentCost ? { scale: 1.03 } : {}}
+          whileTap={!isGenerating && userCoins >= currentCost ? { scale: 0.97 } : {}}
           style={{
-            padding: '16px 20px',
-            borderRadius: '12px',
+            padding: '12px 16px',
+            borderRadius: '10px',
             background: isGenerating || userCoins < currentCost
               ? 'rgba(75, 85, 99, 0.6)'
-              : 'linear-gradient(135deg, #10b981, #059669)', // ✅ Зеленый градиент
-            border: '3px solid rgba(16, 185, 129, 0.5)',
+              : 'linear-gradient(135deg, #10b981, #059669)',
+            border: '2px solid rgba(16, 185, 129, 0.5)',
             cursor: isGenerating || userCoins < currentCost ? 'not-allowed' : 'pointer',
-            fontSize: '16px',
+            fontSize: '14px',
             fontWeight: 'bold',
             color: '#fff',
             opacity: isGenerating || userCoins < currentCost ? 0.5 : 1,
-            transition: 'all 0.3s',
+            transition: 'all 0.2s',
             boxShadow: isGenerating || userCoins < currentCost 
               ? 'none' 
-              : '0 6px 20px rgba(16, 185, 129, 0.4)'
+              : '0 4px 16px rgba(16, 185, 129, 0.4)'
           }}
         >
           {isGenerating ? '⏳ Генерация...' : '🎴 СГЕНЕРИРОВАТЬ'}
         </motion.button>
 
         <div style={{
-          padding: '16px',
-          borderRadius: '12px',
+          padding: '12px',
+          borderRadius: '10px',
           background: 'rgba(16, 185, 129, 0.1)',
-          border: '3px solid rgba(16, 185, 129, 0.4)',
+          border: '2px solid rgba(16, 185, 129, 0.4)',
           textAlign: 'center'
         }}>
-          <div style={{ fontSize: '10px', color: '#6ee7b7', marginBottom: '4px', fontWeight: 'bold' }}>БАЛАНС</div>
-          <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#10b981' }}>{userCoins.toLocaleString()}</div>
+          <div style={{ fontSize: '9px', color: '#6ee7b7', marginBottom: '2px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px' }}>БАЛАНС</div>
+          <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#10b981' }}>{userCoins.toLocaleString()}</div>
         </div>
       </div>
 
