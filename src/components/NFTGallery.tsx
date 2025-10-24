@@ -1,79 +1,50 @@
 'use client'
 
 /**
- * ✅ БЕЗОПАСНАЯ галерея NFT карт
- * 
- * ПРИНЦИПЫ БЕЗОПАСНОСТИ:
- * 1. NFT загружаются из блокчейна через TON Connect
- * 2. Приватные ключи НИКОГДА не используются
- * 3. Supabase - только для UI кеша публичных метаданных
- * 4. Владение проверяется в блокчейне
+ * 🎴 ГАЛЕРЕЯ NFT КАРТ P.I.D.R.
+ * Отображает заминченные карты игрока
  */
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
-import { FaGem, FaTimes, FaExternalLinkAlt, FaFire, FaShieldAlt } from 'react-icons/fa';
-import { useTonAddress } from '@tonconnect/ui-react';
-import { nftBlockchainService } from '../lib/nft/nft-blockchain-service';
+import { FaGem, FaTimes, FaCoins, FaWallet } from 'react-icons/fa';
 import styles from './NFTGallery.module.css';
 
 interface NFTCard {
-  nft_id: string;
-  nft_address: string;
-  token_id: string;
-  card_id: string;
-  card_name: string;
+  id: string;
+  user_id: string;
   card_rank: string;
   card_suit: string;
-  rarity: string;
   image_url: string;
-  minted_at: string;
-  acquired_via: string;
+  cost: number;
+  payment_method: string; // 'coins' или 'crypto'
+  created_at: string;
 }
 
 export default function NFTGallery() {
-  const userAddress = useTonAddress();
   const [collection, setCollection] = useState<NFTCard[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCard, setSelectedCard] = useState<NFTCard | null>(null);
-  const [filter, setFilter] = useState<string>('all');
 
   useEffect(() => {
-    if (userAddress) {
-      loadCollection();
-    }
-  }, [userAddress]);
+    loadCollection();
+  }, []);
 
   /**
-   * ✅ БЕЗОПАСНАЯ загрузка NFT из блокчейна
-   * Сначала загружаем из блокчейна, затем синхронизируем с Supabase для UI
+   * 📦 Загружаем коллекцию NFT карт пользователя
    */
   const loadCollection = async () => {
     setIsLoading(true);
     try {
-      if (!userAddress) {
-        setIsLoading(false);
-        return;
-      }
+      // Получаем данные пользователя из Telegram WebApp
+      const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+      const telegramId = telegramUser?.id?.toString() || '';
+      const username = telegramUser?.username || telegramUser?.first_name || '';
 
-      console.log('🔍 Загружаем NFT из блокчейна для:', userAddress);
+      console.log('🔍 [NFT Gallery] Загружаем коллекцию для:', telegramId);
 
-      // 1. Загружаем NFT напрямую из блокчейна (источник истины)
-      const blockchainNFTs = await nftBlockchainService.getUserNFTs(userAddress);
-      
-      // 2. Синхронизируем с Supabase для быстрого UI
-      if (blockchainNFTs.length > 0) {
-        await nftBlockchainService.syncNFTsToSupabase(userAddress, blockchainNFTs);
-      }
-
-      // Получаем данные пользователя из localStorage
-    // ✅ ИСПРАВЛЕНО: Берём telegramId из Telegram WebApp напрямую
-    const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
-    const telegramId = telegramUser?.id?.toString() || '';
-    const username = telegramUser?.username || telegramUser?.first_name || '';
-
-      // 3. Загружаем из Supabase для отображения
+      // Загружаем из Supabase
       const response = await fetch('/api/nft/collection', {
         method: 'GET',
         credentials: 'include',
@@ -85,54 +56,53 @@ export default function NFTGallery() {
 
       if (response.ok) {
         const result = await response.json();
+        console.log('📦 [NFT Gallery] Результат:', result);
         if (result.success) {
           setCollection(result.collection || []);
+          console.log(`✅ [NFT Gallery] Загружено ${result.collection?.length || 0} карт`);
+        } else {
+          console.error('❌ [NFT Gallery] Ошибка:', result.message);
         }
+      } else {
+        console.error('❌ [NFT Gallery] HTTP ошибка:', response.status);
       }
-
-      console.log(`✅ Загружено ${blockchainNFTs.length} NFT из блокчейна`);
     } catch (error) {
-      console.error('❌ Ошибка загрузки коллекции:', error);
+      console.error('❌ [NFT Gallery] Ошибка загрузки коллекции:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const getRarityColor = (rarity: string) => {
+  // 🎨 Цвета для мастей
+  const getSuitColor = (suit: string) => {
     const colors: Record<string, string> = {
-      common: '#94a3b8',
-      rare: '#3b82f6',
-      epic: '#a855f7',
-      legendary: '#f59e0b',
-      mythic: '#ec4899'
+      'hearts': '#ef4444',
+      'diamonds': '#f59e0b',
+      'clubs': '#22c55e',
+      'spades': '#3b82f6'
     };
-    return colors[rarity.toLowerCase()] || '#94a3b8';
+    return colors[suit.toLowerCase()] || '#94a3b8';
   };
 
-  const getRarityGradient = (rarity: string) => {
+  const getSuitGradient = (suit: string) => {
     const gradients: Record<string, string> = {
-      common: 'linear-gradient(135deg, #64748b, #475569)',
-      rare: 'linear-gradient(135deg, #3b82f6, #2563eb)',
-      epic: 'linear-gradient(135deg, #a855f7, #9333ea)',
-      legendary: 'linear-gradient(135deg, #f59e0b, #d97706)',
-      mythic: 'linear-gradient(135deg, #ec4899, #db2777)'
+      'hearts': 'linear-gradient(135deg, #ef4444, #dc2626)',
+      'diamonds': 'linear-gradient(135deg, #f59e0b, #d97706)',
+      'clubs': 'linear-gradient(135deg, #22c55e, #16a34a)',
+      'spades': 'linear-gradient(135deg, #3b82f6, #2563eb)'
     };
-    return gradients[rarity.toLowerCase()] || gradients.common;
+    return gradients[suit.toLowerCase()] || 'linear-gradient(135deg, #64748b, #475569)';
   };
 
-  const filteredCollection = filter === 'all' 
-    ? collection 
-    : collection.filter(card => card.rarity.toLowerCase() === filter);
-
-  if (!userAddress) {
-    return (
-      <div className={styles.emptyState}>
-        <FaGem className={styles.emptyIcon} />
-        <h3>Подключите TON кошелек</h3>
-        <p>Чтобы увидеть свою NFT коллекцию, подключите кошелек</p>
-      </div>
-    );
-  }
+  const getSuitSymbol = (suit: string) => {
+    const symbols: Record<string, string> = {
+      'hearts': '♥',
+      'diamonds': '♦',
+      'clubs': '♣',
+      'spades': '♠'
+    };
+    return symbols[suit.toLowerCase()] || '?';
+  };
 
   if (isLoading) {
     return (
@@ -155,35 +125,17 @@ export default function NFTGallery() {
 
   return (
     <div className={styles.container}>
-      {/* Фильтры */}
-      <div className={styles.filters}>
-        <button
-          className={`${styles.filterBtn} ${filter === 'all' ? styles.active : ''}`}
-          onClick={() => setFilter('all')}
-        >
-          Все ({collection.length})
-        </button>
-        {['common', 'rare', 'epic', 'legendary', 'mythic'].map((rarity) => {
-          const count = collection.filter(c => c.rarity.toLowerCase() === rarity).length;
-          if (count === 0) return null;
-          return (
-            <button
-              key={rarity}
-              className={`${styles.filterBtn} ${filter === rarity ? styles.active : ''}`}
-              onClick={() => setFilter(rarity)}
-              style={{ borderColor: getRarityColor(rarity) }}
-            >
-              {rarity.charAt(0).toUpperCase() + rarity.slice(1)} ({count})
-            </button>
-          );
-        })}
+      {/* Заголовок коллекции */}
+      <div className={styles.header}>
+        <h2>🎴 Моя NFT Коллекция</h2>
+        <p>Всего карт: {collection.length}</p>
       </div>
 
       {/* Сетка карт */}
       <div className={styles.grid}>
-        {filteredCollection.map((card, index) => (
+        {collection.map((card, index) => (
           <motion.div
-            key={card.nft_id}
+            key={card.id}
             className={styles.cardWrapper}
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -193,29 +145,31 @@ export default function NFTGallery() {
             <div 
               className={styles.card}
               style={{ 
-                borderColor: getRarityColor(card.rarity),
-                boxShadow: `0 4px 20px ${getRarityColor(card.rarity)}40`
+                borderColor: getSuitColor(card.card_suit),
+                boxShadow: `0 4px 20px ${getSuitColor(card.card_suit)}40`
               }}
             >
               <div className={styles.cardImage}>
                 <Image
                   src={card.image_url}
-                  alt={card.card_name}
+                  alt={`${card.card_rank} ${getSuitSymbol(card.card_suit)}`}
                   width={200}
                   height={300}
                   className={styles.image}
                 />
                 <div 
-                  className={styles.rarityBadge}
-                  style={{ background: getRarityGradient(card.rarity) }}
+                  className={styles.suitBadge}
+                  style={{ background: getSuitGradient(card.card_suit) }}
                 >
-                  <FaGem /> {card.rarity}
+                  {getSuitSymbol(card.card_suit)}
                 </div>
               </div>
               <div className={styles.cardInfo}>
-                <h3 className={styles.cardName}>{card.card_name}</h3>
+                <h3 className={styles.cardName}>
+                  {card.card_rank} {getSuitSymbol(card.card_suit)}
+                </h3>
                 <p className={styles.cardDetails}>
-                  {card.card_rank} of {card.card_suit}
+                  {card.payment_method === 'coins' ? '💰 За монеты' : '💎 За крипту'}
                 </p>
               </div>
             </div>
@@ -239,7 +193,10 @@ export default function NFTGallery() {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.8, y: 50 }}
               onClick={(e) => e.stopPropagation()}
-              style={{ borderColor: getRarityColor(selectedCard.rarity) }}
+              style={{ 
+                borderColor: getSuitColor(selectedCard.card_suit),
+                boxShadow: `0 0 40px ${getSuitColor(selectedCard.card_suit)}60`
+              }}
             >
               <button 
                 className={styles.closeBtn}
@@ -252,52 +209,70 @@ export default function NFTGallery() {
                 <div className={styles.modalImage}>
                   <Image
                     src={selectedCard.image_url}
-                    alt={selectedCard.card_name}
+                    alt={`${selectedCard.card_rank} ${getSuitSymbol(selectedCard.card_suit)}`}
                     width={300}
                     height={450}
                     className={styles.image}
                   />
                   <div 
-                    className={styles.modalRarityBadge}
-                    style={{ background: getRarityGradient(selectedCard.rarity) }}
+                    className={styles.modalSuitBadge}
+                    style={{ background: getSuitGradient(selectedCard.card_suit) }}
                   >
-                    <FaGem /> {selectedCard.rarity.toUpperCase()}
+                    {getSuitSymbol(selectedCard.card_suit)}
                   </div>
                 </div>
 
                 <div className={styles.modalInfo}>
-                  <h2 className={styles.modalTitle}>{selectedCard.card_name}</h2>
-                  <p className={styles.modalSubtitle}>
-                    {selectedCard.card_rank} of {selectedCard.card_suit}
+                  <h2 className={styles.modalTitle}>
+                    {selectedCard.card_rank} {getSuitSymbol(selectedCard.card_suit)}
+                  </h2>
+                  <p className={styles.modalSubtitle} style={{ color: getSuitColor(selectedCard.card_suit) }}>
+                    {selectedCard.card_suit.toUpperCase()}
                   </p>
 
                   <div className={styles.modalStats}>
                     <div className={styles.statItem}>
-                      <span className={styles.statLabel}>NFT Address:</span>
+                      <span className={styles.statLabel}>🎴 Ранг:</span>
                       <span className={styles.statValue}>
-                        {selectedCard.nft_address.slice(0, 8)}...{selectedCard.nft_address.slice(-6)}
+                        {selectedCard.card_rank}
                       </span>
                     </div>
                     <div className={styles.statItem}>
-                      <span className={styles.statLabel}>Minted:</span>
+                      <span className={styles.statLabel}>🃏 Масть:</span>
                       <span className={styles.statValue}>
-                        {new Date(selectedCard.minted_at).toLocaleDateString()}
+                        {selectedCard.card_suit} {getSuitSymbol(selectedCard.card_suit)}
                       </span>
                     </div>
                     <div className={styles.statItem}>
-                      <span className={styles.statLabel}>Acquired via:</span>
+                      <span className={styles.statLabel}>💰 Стоимость:</span>
                       <span className={styles.statValue}>
-                        {selectedCard.acquired_via}
+                        {selectedCard.cost} монет
+                      </span>
+                    </div>
+                    <div className={styles.statItem}>
+                      <span className={styles.statLabel}>💎 Заминчена:</span>
+                      <span className={styles.statValue}>
+                        {selectedCard.payment_method === 'coins' ? '💰 За монеты' : '💎 За крипту (TON)'}
+                      </span>
+                    </div>
+                    <div className={styles.statItem}>
+                      <span className={styles.statLabel}>📅 Дата:</span>
+                      <span className={styles.statValue}>
+                        {new Date(selectedCard.created_at).toLocaleDateString('ru-RU')}
                       </span>
                     </div>
                   </div>
 
-                  <button
-                    className={styles.viewOnChainBtn}
-                    onClick={() => window.open(`https://tonscan.org/nft/${selectedCard.nft_address}`, '_blank')}
-                  >
-                    <FaExternalLinkAlt /> View on TON Scan
-                  </button>
+                  {selectedCard.payment_method === 'crypto' && (
+                    <div className={styles.cryptoNote}>
+                      <FaWallet /> Карта заминчена за криптовалюту TON
+                    </div>
+                  )}
+                  {selectedCard.payment_method === 'coins' && (
+                    <div className={styles.coinsNote}>
+                      <FaCoins /> Карта заминчена за игровые монеты
+                    </div>
+                  )}
                 </div>
               </div>
             </motion.div>

@@ -23,15 +23,17 @@ export async function GET(req: NextRequest) {
     const userId = telegramIdHeader;
     console.log(`📦 Получаем NFT коллекцию пользователя ${userId} через headers...`);
 
-    // Вызываем SQL функцию для получения коллекции
-    const { data, error } = await supabase.rpc('get_user_nft_collection', {
-      p_user_id: userId
-    });
+    // ✅ ПРЯМОЙ ЗАПРОС к таблице _pidr_nft_cards (без RPC)
+    const { data, error } = await supabase
+      .from('_pidr_nft_cards')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
 
     if (error) {
       console.error('❌ Ошибка получения коллекции:', error);
       return NextResponse.json(
-        { success: false, message: 'Ошибка получения коллекции' },
+        { success: false, message: 'Ошибка получения коллекции', details: error.message },
         { status: 500 }
       );
     }
