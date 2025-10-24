@@ -1124,6 +1124,16 @@ function GamePageContentComponent({
               <>🗑️ Бито: {playedCards?.length || 0}</>
             )}
           </div>
+          {/* 💸 СЧЕТЧИК ШТРАФНОЙ СТОПКИ */}
+          {!!pendingPenalty && penaltyDeck.length > 0 && (
+            <div className={styles.deckInfo} style={{ 
+              background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.2))',
+              borderColor: 'rgba(239, 68, 68, 0.5)',
+              boxShadow: '0 2px 8px rgba(239, 68, 68, 0.4)'
+            }}>
+              💸 Штраф: {penaltyDeck.length}
+            </div>
+          )}
         </div>
       )}
 
@@ -1771,13 +1781,29 @@ function GamePageContentComponent({
             {!!pendingPenalty && pendingPenalty.contributorsNeeded.includes(humanPlayer.id) && (
               <button
                 onClick={() => {
-                  if (!pendingPenalty) return;
+                  console.log('🔥 [СДАТЬ ШТРАФ] Кнопка нажата!');
+                  console.log('🔥 [СДАТЬ ШТРАФ] pendingPenalty:', pendingPenalty);
+                  console.log('🔥 [СДАТЬ ШТРАФ] humanPlayer.id:', humanPlayer.id);
+                  console.log('🔥 [СДАТЬ ШТРАФ] contributorsNeeded:', pendingPenalty?.contributorsNeeded);
+                  
+                  if (!pendingPenalty) {
+                    console.log('❌ [СДАТЬ ШТРАФ] pendingPenalty is null!');
+                    return;
+                  }
                   
                   // ✅ ИСПРАВЛЕНО: Открываем модалку выбора карты ТОЛЬКО при клике на кнопку
+                  console.log('✅ [СДАТЬ ШТРАФ] Открываем модалку!');
                   useGameStore.setState({
                     showPenaltyCardSelection: true,
                     penaltyCardSelectionPlayerId: humanPlayer.id
                   });
+                  
+                  // Проверяем что состояние обновилось
+                  setTimeout(() => {
+                    const state = useGameStore.getState();
+                    console.log('✅ [СДАТЬ ШТРАФ] Модалка должна быть открыта:', state.showPenaltyCardSelection);
+                    console.log('✅ [СДАТЬ ШТРАФ] Player ID:', state.penaltyCardSelectionPlayerId);
+                  }, 100);
                 }}
                 style={{
                   background: 'linear-gradient(135deg, #ff1744 0%, #f50057 50%, #ff4081 100%)',

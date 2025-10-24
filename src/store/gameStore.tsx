@@ -2972,6 +2972,10 @@ export const useGameStore = create<GameState>()(
              
              // ВАЖНО: Обновляем статус "одна карта" после обновления состояния
              get().checkOneCardStatus();
+             
+             // ✅ КРИТИЧНО: Проверяем победу после сдачи штрафа!
+             // Если игрок остался без карт и без пеньков - он победил!
+             get().checkVictoryCondition();
            }, 100);
            
            get().showNotification(`✅ ${contributor.name} скинул карту штрафа!`, 'success', 2000);

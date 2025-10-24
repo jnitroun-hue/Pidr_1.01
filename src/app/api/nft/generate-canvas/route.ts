@@ -215,10 +215,55 @@ export async function POST(request: NextRequest) {
 
     if (saveError) {
       console.error('❌ [NFT Canvas] Ошибка сохранения в БД:', saveError);
+      console.error('❌ [NFT Canvas] Детали ошибки:', JSON.stringify(saveError, null, 2));
+      
+      // ✅ КРИТИЧНО: Возвращаем монеты если не удалось сохранить карту!
+      if (!isPartOfDeck && newBalance !== undefined) {
+        await supabase
+          .from('_pidr_users')
+          .update({ coins: user.coins })
+          .eq('id', user.id);
+      }
+      
+      // ✅ КРИТИЧНО: Удаляем файл из Storage!
+      await supabase.storage
+        .from(bucketName)
+        .remove([fileName]);
+      
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Ошибка сохранения карты в базу данных',
+          details: saveError.message || 'Неизвестная ошибка'
+        },
+        { status: 500 }
+      );
+    }
+    
+    if (!savedCard) {
+      console.error('❌ [NFT Canvas] Карта не сохранена - savedCard is null');
+      
+      // Возвращаем монеты
+      if (!isPartOfDeck && newBalance !== undefined) {
+        await supabase
+          .from('_pidr_users')
+          .update({ coins: user.coins })
+          .eq('id', user.id);
+      }
+      
+      // Удаляем файл
+      await supabase.storage
+        .from(bucketName)
+        .remove([fileName]);
+      
+      return NextResponse.json(
+        { success: false, error: 'Карта не была сохранена' },
+        { status: 500 }
+      );
     }
 
     // Также добавляем в _pidr_nft_ownership для отображения в галерее
-    await supabase
+    const { error: ownershipError } = await supabase
       .from('_pidr_nft_ownership')
       .insert([{
         user_telegram_id: userId,
@@ -233,8 +278,18 @@ export async function POST(request: NextRequest) {
         acquired_via: 'generation',
         minted_at: new Date().toISOString()
       }]);
+    
+    if (ownershipError) {
+      console.error('⚠️ [NFT Canvas] Ошибка добавления в ownership (не критично):', ownershipError);
+      // Не останавливаем процесс - карта уже сохранена в _pidr_nft_cards
+    }
 
-    console.log('✅ [NFT Canvas] Карта сохранена в БД');
+    console.log('✅ [NFT Canvas] Карта сохранена в БД:', {
+      cardId: savedCard.id,
+      userId: userId,
+      suit: suit,
+      rank: rank
+    });
 
     return NextResponse.json({
       success: true,
