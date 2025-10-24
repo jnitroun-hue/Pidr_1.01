@@ -862,13 +862,45 @@ export const useGameStore = create<GameState>()(
         );
         
         // КРИТИЧНО: Продолжаем игру после раздачи штрафа!
-        // Проверяем кто сейчас ходит
-        const currentPlayerId = get().currentPlayerId;
-        if (currentPlayerId && gameStage === 2) {
-          console.log(`⚠️ [distributePenaltyCards] Продолжаем ход игрока ${currentPlayerId}`);
+        // ✅ ПРАВИЛО: Ход продолжается с ТОГО ЖЕ ИГРОКА, который был до штрафа
+        // Пауза 5 секунд для сбора карт, затем игра продолжается
+        if (gameStage === 2) {
+          const { currentPlayerId } = get();
+          
+          if (!currentPlayerId) {
+            console.error(`❌ [distributePenaltyCards] Нет currentPlayerId!`);
+            return;
+          }
+          
+          const currentPlayer = get().players.find(p => p.id === currentPlayerId);
+          if (!currentPlayer) {
+            console.error(`❌ [distributePenaltyCards] Текущий игрок не найден!`);
+            return;
+          }
+          
+          console.log(`⏸️ [distributePenaltyCards] ПАУЗА 5 секунд для сбора штрафных карт...`);
+          console.log(`🎮 [distributePenaltyCards] После паузы ход продолжит: ${currentPlayer.name}`);
+          
+          // Пауза 5 секунд, затем продолжаем с того же игрока
           setTimeout(() => {
-            get().processPlayerTurn(currentPlayerId);
-          }, 1000);
+            const updatedPlayer = get().players.find(p => p.id === currentPlayerId);
+            
+            if (!updatedPlayer) {
+              console.error(`❌ [distributePenaltyCards] Игрок ${currentPlayerId} не найден после паузы!`);
+              return;
+            }
+            
+            const isActive = !updatedPlayer.isWinner && (updatedPlayer.cards.length > 0 || updatedPlayer.penki.length > 0);
+            
+            if (isActive) {
+              console.log(`🎮 [distributePenaltyCards] Продолжаем ход игрока: ${updatedPlayer.name}`);
+              get().processPlayerTurn(currentPlayerId);
+            } else {
+              console.log(`⚠️ [distributePenaltyCards] Игрок ${updatedPlayer.name} больше не активен, ищем следующего...`);
+              // Если игрок вышел, ищем следующего
+              get().nextTurn();
+            }
+          }, 5000); // ✅ ПАУЗА 5 СЕКУНД
         }
         
         // ✅ ВАЖНО: Проверяем статус "одна карта" после раздачи штрафа
@@ -2872,11 +2904,15 @@ export const useGameStore = create<GameState>()(
          // Игрок отдает карту за штраф
          contributePenaltyCard: (contributorId: string, cardId: string) => {
            const { players, pendingPenalty } = get();
-           if (!pendingPenalty) return;
+           if (!pendingPenalty) {
+             console.log(`⚠️ [contributePenaltyCard] Нет активного штрафа!`);
+             return;
+           }
            
-           // ЗАЩИТА: Проверяем что игрок еще в списке ожидающих (не отдал карту)
+           // ✅ ЗАЩИТА: Проверяем что игрок еще в списке ожидающих (не отдал карту)
            if (!pendingPenalty.contributorsNeeded.includes(contributorId)) {
              console.log(`⚠️ [contributePenaltyCard] Игрок ${contributorId} уже отдал карту или не должен участвовать в штрафе`);
+             console.log(`⚠️ [contributePenaltyCard] Список ожидающих:`, pendingPenalty.contributorsNeeded);
              return;
            }
            
@@ -2946,12 +2982,16 @@ export const useGameStore = create<GameState>()(
              }, 500);
            }
            
-          // Скрываем UI выбора карты для текущего игрока
+          // ✅ ИСПРАВЛЕНО: Закрываем модалку ТОЛЬКО для игрока который сдал карту
+          // НЕ закрываем модалку если она открыта для другого игрока!
+          const { showPenaltyCardSelection, penaltyCardSelectionPlayerId } = get();
+          const shouldCloseModal = showPenaltyCardSelection && penaltyCardSelectionPlayerId === contributorId;
+          
           set({ 
             players: newPlayers,
             pendingPenalty: newPendingPenalty,
-            showPenaltyCardSelection: false,
-            penaltyCardSelectionPlayerId: null
+            showPenaltyCardSelection: shouldCloseModal ? false : showPenaltyCardSelection,
+            penaltyCardSelectionPlayerId: shouldCloseModal ? null : penaltyCardSelectionPlayerId
           });
           
           // ✅ ИСПРАВЛЕНО: НЕ показываем модалку следующему автоматически
