@@ -21,7 +21,18 @@ export async function POST(req: NextRequest) {
     }
 
     const userId = telegramIdHeader;
-    console.log(`🔗 Пользователь ${userId} подключает TON кошелек через headers...`);
+    // ✅ Конвертируем в BIGINT для БД (foreign key требует BIGINT)
+    const userIdBigInt = parseInt(userId, 10);
+    
+    if (isNaN(userIdBigInt)) {
+      console.error('❌ [connect-wallet] Некорректный telegram_id:', userId);
+      return NextResponse.json(
+        { success: false, message: 'Некорректный ID пользователя' },
+        { status: 400 }
+      );
+    }
+    
+    console.log(`🔗 Пользователь ${userId} (BIGINT: ${userIdBigInt}) подключает TON кошелек через headers...`);
 
     const { wallet_address, wallet_type = 'ton', proof } = await req.json();
 
@@ -37,7 +48,7 @@ export async function POST(req: NextRequest) {
 
     // Вызываем SQL функцию для подключения кошелька
     const { data, error } = await supabase.rpc('connect_player_wallet', {
-      p_user_id: userId,
+      p_user_id: userIdBigInt, // ✅ Передаём BIGINT вместо STRING
       p_wallet_address: wallet_address,
       p_wallet_type: wallet_type
     });
@@ -93,12 +104,23 @@ export async function GET(req: NextRequest) {
     }
 
     const userId = telegramIdHeader;
-    console.log(`📋 Получаем кошельки пользователя ${userId} через headers...`);
+    // ✅ Конвертируем в BIGINT для БД (foreign key требует BIGINT)
+    const userIdBigInt = parseInt(userId, 10);
+    
+    if (isNaN(userIdBigInt)) {
+      console.error('❌ [connect-wallet GET] Некорректный telegram_id:', userId);
+      return NextResponse.json(
+        { success: false, message: 'Некорректный ID пользователя' },
+        { status: 400 }
+      );
+    }
+    
+    console.log(`📋 Получаем кошельки пользователя ${userId} (BIGINT: ${userIdBigInt}) через headers...`);
 
     const { data: wallets, error } = await supabase
       .from('_pidr_player_wallets')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_id', userIdBigInt) // ✅ Передаём BIGINT вместо STRING
       .order('is_active', { ascending: false }) // ✅ ИСПРАВЛЕНО: is_primary → is_active
       .order('created_at', { ascending: false }); // ✅ ИСПРАВЛЕНО: connected_at → created_at
 

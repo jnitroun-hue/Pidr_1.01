@@ -96,8 +96,22 @@ const Shop = () => {
       }
 
       // Получаем покупки из БД через API
+      // ✅ Получаем headers из Telegram WebApp
+      const telegramUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json'
+      };
+      
+      if (telegramUser?.id) {
+        headers['x-telegram-id'] = String(telegramUser.id);
+      }
+      if (telegramUser?.username) {
+        headers['x-username'] = telegramUser.username;
+      }
+      
       const purchasesResponse = await fetch('/api/shop/inventory', {
         method: 'GET',
+        headers,
         credentials: 'include'
       });
       

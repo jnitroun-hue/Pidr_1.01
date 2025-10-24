@@ -85,8 +85,23 @@ export default function ProfilePage() {
   const loadNFTCollection = async () => {
     try {
       console.log('🎴 Загружаем NFT коллекцию...');
+      
+      // ✅ Получаем headers из Telegram WebApp
+      const telegramUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json'
+      };
+      
+      if (telegramUser?.id) {
+        headers['x-telegram-id'] = String(telegramUser.id);
+      }
+      if (telegramUser?.username) {
+        headers['x-username'] = telegramUser.username;
+      }
+      
       const response = await fetch('/api/nft/collection', {
         method: 'GET',
+        headers,
         credentials: 'include'
       });
       
@@ -204,8 +219,23 @@ export default function ProfilePage() {
     const loadInventory = async () => {
       try {
         console.log('📦 Загружаем инвентарь пользователя...');
+        
+        // ✅ Получаем headers из Telegram WebApp
+        const telegramUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json'
+        };
+        
+        if (telegramUser?.id) {
+          headers['x-telegram-id'] = String(telegramUser.id);
+        }
+        if (telegramUser?.username) {
+          headers['x-username'] = telegramUser.username;
+        }
+        
         const response = await fetch('/api/shop/inventory', {
           method: 'GET',
+          headers,
           credentials: 'include'
         });
         
@@ -504,8 +534,22 @@ export default function ProfilePage() {
       setPurchasedItems(prev => [...prev, item.id]);
       
       // Перезагружаем инвентарь
+      // ✅ Получаем headers из Telegram WebApp
+      const telegramUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+      const inventoryHeaders: HeadersInit = {
+        'Content-Type': 'application/json'
+      };
+      
+      if (telegramUser?.id) {
+        inventoryHeaders['x-telegram-id'] = String(telegramUser.id);
+      }
+      if (telegramUser?.username) {
+        inventoryHeaders['x-username'] = telegramUser.username;
+      }
+      
       const inventoryResponse = await fetch('/api/shop/inventory', {
         method: 'GET',
+        headers: inventoryHeaders,
         credentials: 'include'
       });
       
@@ -557,8 +601,22 @@ export default function ProfilePage() {
       }
       
       // Перезагружаем инвентарь
+      // ✅ Получаем headers из Telegram WebApp
+      const telegramUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+      const inventoryHeaders: HeadersInit = {
+        'Content-Type': 'application/json'
+      };
+      
+      if (telegramUser?.id) {
+        inventoryHeaders['x-telegram-id'] = String(telegramUser.id);
+      }
+      if (telegramUser?.username) {
+        inventoryHeaders['x-username'] = telegramUser.username;
+      }
+      
       const inventoryResponse = await fetch('/api/shop/inventory', {
         method: 'GET',
+        headers: inventoryHeaders,
         credentials: 'include'
       });
       
