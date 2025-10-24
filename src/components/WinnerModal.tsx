@@ -11,6 +11,31 @@ interface WinnerModalProps {
 
 export default function WinnerModal({ playerName, place, avatar, onClose }: WinnerModalProps) {
   const [confetti, setConfetti] = useState<Array<{ id: number; x: number; delay: number; color: string }>>([]);
+  
+  // ✅ Адаптивные отступы в зависимости от размера экрана
+  const getResponsiveMargin = () => {
+    if (typeof window === 'undefined') return '120px';
+    const width = window.innerWidth;
+    if (width <= 480) return '60px 15px'; // Очень маленький экран
+    if (width <= 768) return '80px 20px'; // Мобильный
+    return '120px'; // Десктоп
+  };
+  
+  const getResponsiveWidth = () => {
+    if (typeof window === 'undefined') return 'calc(100% - 240px)';
+    const width = window.innerWidth;
+    if (width <= 480) return 'calc(100% - 30px)';
+    if (width <= 768) return 'calc(100% - 40px)';
+    return 'calc(100% - 240px)';
+  };
+  
+  const getResponsivePadding = () => {
+    if (typeof window === 'undefined') return '40px';
+    const width = window.innerWidth;
+    if (width <= 480) return '20px';
+    if (width <= 768) return '30px';
+    return '40px';
+  };
 
   useEffect(() => {
     // Генерируем конфетти
@@ -91,15 +116,16 @@ export default function WinnerModal({ playerName, place, avatar, onClose }: Winn
           style={{
             background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.95) 0%, rgba(255, 140, 0, 0.95) 100%)',
             borderRadius: '24px',
-            padding: '40px',
+            padding: getResponsivePadding(), // ✅ Адаптивный padding
             boxShadow: '0 20px 60px rgba(255, 215, 0, 0.5), 0 0 100px rgba(255, 140, 0, 0.3)',
             border: '3px solid rgba(255, 255, 255, 0.5)',
             textAlign: 'center',
             maxWidth: '400px',
-            width: '90%',
+            width: getResponsiveWidth(), // ✅ Адаптивная ширина
+            margin: getResponsiveMargin(), // ✅ Адаптивные отступы от края
             position: 'relative',
             overflow: 'hidden'
-          }}
+          } as React.CSSProperties}
         >
           {/* Блики */}
           <motion.div

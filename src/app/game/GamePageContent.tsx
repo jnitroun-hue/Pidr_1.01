@@ -1767,7 +1767,7 @@ function GamePageContentComponent({
               );
             })()}
             
-            {/* Кнопка "Сдать штраф" */}
+            {/* 🔥 ЯРКАЯ КНОПКА "СДАТЬ ШТРАФ" */}
             {!!pendingPenalty && pendingPenalty.contributorsNeeded.includes(humanPlayer.id) && (
               <button
                 onClick={() => {
@@ -1780,19 +1780,32 @@ function GamePageContentComponent({
                   });
                 }}
                 style={{
-                  background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                  background: 'linear-gradient(135deg, #ff1744 0%, #f50057 50%, #ff4081 100%)',
                   color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  padding: '6px 12px',
-                  fontSize: '11px',
-                  fontWeight: '700',
+                  border: '3px solid #ffffff',
+                  borderRadius: '12px',
+                  padding: '10px 20px',
+                  fontSize: '14px',
+                  fontWeight: '900',
                   cursor: 'pointer',
-                  boxShadow: '0 2px 8px rgba(239, 68, 68, 0.4)',
-                  whiteSpace: 'nowrap'
+                  boxShadow: '0 4px 20px rgba(255, 23, 68, 0.6), 0 0 40px rgba(255, 64, 129, 0.4)',
+                  whiteSpace: 'nowrap',
+                  textTransform: 'uppercase',
+                  letterSpacing: '1px',
+                  animation: 'pulse 1.5s ease-in-out infinite',
+                  transform: 'scale(1)',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.1)';
+                  e.currentTarget.style.boxShadow = '0 6px 30px rgba(255, 23, 68, 0.8), 0 0 60px rgba(255, 64, 129, 0.6)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.boxShadow = '0 4px 20px rgba(255, 23, 68, 0.6), 0 0 40px rgba(255, 64, 129, 0.4)';
                 }}
               >
-                ⚠️ Сдать штраф
+                🚨 СДАТЬ ШТРАФ 🚨
               </button>
             )}
             

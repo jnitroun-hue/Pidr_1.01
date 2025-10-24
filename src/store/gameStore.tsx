@@ -1868,8 +1868,10 @@ export const useGameStore = create<GameState>()(
            }
            
            // Добавляем карту на стол (поверх всех)
-           const playedCard = { ...selectedHandCard };
-           playedCard.open = true;
+           // ✅ КРИТИЧНО: НЕ создаем копию! Используем ту же ссылку на объект!
+           // Это гарантирует что карта ПЕРЕМЕЩАЕТСЯ, а не ДУБЛИРУЕТСЯ!
+           selectedHandCard.open = true;
+           const playedCard = selectedHandCard; // ✅ ТА ЖЕ ССЫЛКА!
            
            const newTableStack = [...tableStack, playedCard];
            const wasEmptyTable = tableStack.length === 0;
@@ -2279,6 +2281,75 @@ export const useGameStore = create<GameState>()(
             
             set({ players: updatedPlayers });
             
+            // ✅ ОБНОВЛЯЕМ СТАТИСТИКУ СРАЗУ ПРИ ВЫХОДЕ!
+            const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+            const currentUserTelegramId = telegramUser?.id?.toString() || '';
+            
+            newWinners.forEach((winner, index) => {
+              const position = existingWinners.length + index + 1;
+              const isUser = winner.isUser || winner.id === currentUserTelegramId;
+              
+              // ✅ ЕСЛИ ЭТО ПОЛЬЗОВАТЕЛЬ - ОБНОВЛЯЕМ СТАТИСТИКУ СРАЗУ!
+              if (isUser && currentUserTelegramId) {
+                // ✅ ДЕТЕРМИНИРОВАННЫЙ РАНДОМ для 4-8 мест (используем ID как seed)
+                const seededRandom = (playerId: string, min: number, max: number): number => {
+                  let hash = 0;
+                  for (let i = 0; i < playerId.length; i++) {
+                    const char = playerId.charCodeAt(i);
+                    hash = ((hash << 5) - hash) + char;
+                    hash = hash & hash;
+                  }
+                  const normalized = Math.abs(hash % (max - min + 1));
+                  return min + normalized;
+                };
+                
+                // Определяем награды
+                const isTopThree = position >= 1 && position <= 3;
+                let coinsEarned = 0;
+                
+                if (position === 1) coinsEarned = 350;
+                else if (position === 2) coinsEarned = 250;
+                else if (position === 3) coinsEarned = 150;
+                else if (position >= 4 && position <= 8) {
+                  coinsEarned = seededRandom(winner.id, 50, 100); // ✅ Рандом 50-100
+                }
+                // Для 9-го места (последнего) монеты начисляются в конце игры
+                
+                console.log(`📊 [checkVictoryCondition] СРАЗУ обновляем статистику для ${winner.name}:`, {
+                  position,
+                  isTopThree,
+                  coinsEarned
+                });
+                
+                // ✅ СРАЗУ ОТПРАВЛЯЕМ ЗАПРОС НА ОБНОВЛЕНИЕ!
+                fetch('/api/user/add-coins', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'x-telegram-id': currentUserTelegramId,
+                    'x-username': telegramUser?.username || telegramUser?.first_name || ''
+                  },
+                  body: JSON.stringify({
+                    amount: coinsEarned,
+                    source: 'game_finish',
+                    updateStats: {
+                      gamesPlayed: true,  // ✅ Всегда +1
+                      wins: isTopThree,   // ✅ +1 если ТОП-3
+                      losses: false       // ✅ Не последнее место
+                    }
+                  })
+                }).then(res => res.json())
+                  .then(data => {
+                    if (data.success) {
+                      console.log(`✅ СТАТИСТИКА ОБНОВЛЕНА СРАЗУ при выходе! +${coinsEarned} монет`);
+                    } else {
+                      console.error(`❌ Ошибка обновления статистики:`, data.error);
+                    }
+                  })
+                  .catch(err => console.error('❌ Ошибка fetch:', err));
+              }
+            });
+            
             // ✅ УЛУЧШЕННОЕ ОБЪЯВЛЕНИЕ ПОБЕДИТЕЛЕЙ С АНИМАЦИЕЙ
             newWinners.forEach((winner, index) => {
               const position = existingWinners.length + index + 1;
@@ -2493,7 +2564,8 @@ export const useGameStore = create<GameState>()(
           
           console.log('🏆 [calculateAndShowGameResults] Результаты:', results);
           
-          // ✅ ОБНОВЛЯЕМ СТАТИСТИКУ И БАЛАНС ПОЛЬЗОВАТЕЛЯ
+          // ✅ ОБНОВЛЯЕМ СТАТИСТИКУ ТОЛЬКО ДЛЯ ПОСЛЕДНЕГО ИГРОКА (ПРОИГРАВШЕГО)
+          // Остальные игроки уже обновили статистику при выходе!
           const userResult = results.find(r => r.isUser);
           
           console.log(`🔍 [calculateAndShowGameResults] Проверка пользователя:`, {
@@ -2503,59 +2575,63 @@ export const useGameStore = create<GameState>()(
           });
           
           if (userResult) {
-            const isWin = userResult.place >= 1 && userResult.place <= 3; // ✅ ТОП-3 = победа!
-            const isLoss = userResult.place === results.length;
+            const isLastPlace = userResult.place === results.length;
             
-            const requestBody = {
-              amount: userResult.coinsEarned,
-              source: isWin ? 'game_win' : isLoss ? 'game_loss' : 'game_finish',
-              updateStats: {
-                gamesPlayed: true, // ✅ Всегда +1 к играм
-                wins: isWin, // ✅ +1 к победам если ТОП-3
-                losses: isLoss // ✅ +1 к поражениям если последнее место
-              }
-            };
-            
-            console.log(`📊 [calculateAndShowGameResults] Обновляем статистику пользователя:`, {
-              place: userResult.place,
-              coins: userResult.coinsEarned,
-              isWin: isWin ? `ДА (ТОП-3!)` : 'нет',
-              isLoss,
-              telegramId: currentUserTelegramId,
-              requestBody
-            });
-            
-            // Обновляем баланс и статистику в БД через API
-            console.log(`🚀 [calculateAndShowGameResults] ОТПРАВЛЯЕМ FETCH на /api/user/add-coins`);
-            fetch('/api/user/add-coins', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'x-telegram-id': currentUserTelegramId,
-                'x-username': telegramUser?.username || telegramUser?.first_name || ''
-              },
-              body: JSON.stringify(requestBody)
-            })
-              .then(res => {
-                console.log(`📥 [calculateAndShowGameResults] Response status:`, res.status);
-                return res.json();
-              })
-              .then(data => {
-                console.log(`📥 [calculateAndShowGameResults] Response data:`, data);
-                if (data.success) {
-                  console.log(`✅✅✅ БАЛАНС И СТАТИСТИКА ОБНОВЛЕНЫ: +${userResult.coinsEarned} монет`);
-                } else {
-                  console.error(`❌ API вернул ошибку:`, data.error);
+            // ✅ ОБНОВЛЯЕМ СТАТИСТИКУ ТОЛЬКО ДЛЯ ПОСЛЕДНЕГО ИГРОКА!
+            // Все остальные (1-8 места) уже обновили при выходе!
+            if (isLastPlace) {
+              const requestBody = {
+                amount: userResult.coinsEarned, // 5 монет
+                source: 'game_loss',
+                updateStats: {
+                  gamesPlayed: true, // ✅ +1 к играм
+                  wins: false,       // ✅ Не победа
+                  losses: true       // ✅ +1 к поражениям
                 }
-              })
-              .catch(err => {
-                console.error('❌❌❌ КРИТИЧЕСКАЯ ОШИБКА ОБНОВЛЕНИЯ:', err);
-                console.error('Полная ошибка:', {
-                  message: err.message,
-                  stack: err.stack,
-                  name: err.name
-                });
+              };
+              
+              console.log(`📊 [calculateAndShowGameResults] ПОСЛЕДНИЙ ИГРОК! Обновляем статистику:`, {
+                place: userResult.place,
+                coins: userResult.coinsEarned,
+                isLastPlace: true,
+                telegramId: currentUserTelegramId,
+                requestBody
               });
+              
+              // Обновляем баланс и статистику в БД через API
+              console.log(`🚀 [calculateAndShowGameResults] ОТПРАВЛЯЕМ FETCH для последнего игрока`);
+              fetch('/api/user/add-coins', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'x-telegram-id': currentUserTelegramId,
+                  'x-username': telegramUser?.username || telegramUser?.first_name || ''
+                },
+                body: JSON.stringify(requestBody)
+              })
+                .then(res => {
+                  console.log(`📥 [calculateAndShowGameResults] Response status:`, res.status);
+                  return res.json();
+                })
+                .then(data => {
+                  console.log(`📥 [calculateAndShowGameResults] Response data:`, data);
+                  if (data.success) {
+                    console.log(`✅✅✅ СТАТИСТИКА ПОСЛЕДНЕГО ИГРОКА ОБНОВЛЕНА: +${userResult.coinsEarned} монет`);
+                  } else {
+                    console.error(`❌ API вернул ошибку:`, data.error);
+                  }
+                })
+                .catch(err => {
+                  console.error('❌❌❌ КРИТИЧЕСКАЯ ОШИБКА ОБНОВЛЕНИЯ:', err);
+                  console.error('Полная ошибка:', {
+                    message: err.message,
+                    stack: err.stack,
+                    name: err.name
+                  });
+                });
+            } else {
+              console.log(`✅ [calculateAndShowGameResults] Игрок на месте ${userResult.place} УЖЕ обновил статистику при выходе!`);
+            }
           } else {
             console.warn(`⚠️ [calculateAndShowGameResults] Пользователь не найден в результатах!`);
           }
@@ -2616,7 +2692,10 @@ export const useGameStore = create<GameState>()(
                  
                 // ===== ИСПРАВЛЕНО: БОТЫ АВТОМАТИЧЕСКИ ОБЪЯВЛЯЮТ И СПРАШИВАЮТ =====
                 if (player.isBot) {
-                  // БОТ АВТОМАТИЧЕСКИ ОБЪЯВЛЯЕТ "ОДНА КАРТА!" через 3.5 секунды
+                  // БОТ АВТОМАТИЧЕСКИ ОБЪЯВЛЯЕТ "ОДНА КАРТА!" через 2-5 секунд (рандом для тестирования)
+                  const botDelay = 2000 + Math.random() * 3000; // ✅ От 2 до 5 секунд
+                  console.log(`🤖 [checkOneCardStatus] Бот ${player.name} объявит "ОДНА КАРТА!" через ${(botDelay / 1000).toFixed(1)} сек`);
+                  
                   setTimeout(() => {
                     const { oneCardDeclarations } = get();
                     if (!oneCardDeclarations[player.id]) {
@@ -2624,7 +2703,7 @@ export const useGameStore = create<GameState>()(
                       get().showNotification(`🤖 ${player.name}: "ОДНА КАРТА!"`, 'info', 3000);
                       get().declareOneCard(player.id);
                     }
-                  }, 3500); // ✅ Задержка 3.5 секунды
+                  }, botDelay); // ✅ Задержка 2-5 секунд (рандом)
                 } else {
                   // Для человека - планируем вопрос ботов ТОЛЬКО ОДИН РАЗ
                   // ✅ ИСПРАВЛЕНО: Проверяем что не спрашивали ранее
@@ -2827,9 +2906,10 @@ export const useGameStore = create<GameState>()(
           console.log(`📊 [contributePenaltyCard] После: ${contributor.name} будет иметь ${newPlayers[contributorIndex].cards.length} карт`);
           
           // НОВАЯ МЕХАНИКА: Добавляем карту в штрафную стопку
-          const penaltyCard = { ...card, open: false };
-          console.log(`🗂️ [contributePenaltyCard] Добавляем карту ${penaltyCard.image} в штрафную стопку`);
-          get().addCardToPenaltyDeck(penaltyCard);
+          // ✅ КРИТИЧНО: НЕ создаем копию! Используем ту же ссылку!
+          card.open = false; // Закрываем карту
+          console.log(`🗂️ [contributePenaltyCard] Добавляем карту ${card.image} в штрафную стопку`);
+          get().addCardToPenaltyDeck(card);
            
            // НОВОЕ ПРАВИЛО: Если у отдающего осталась 1 карта - он должен объявить "одна карта!"
            if (newPlayers[contributorIndex].cards.filter(c => c.open).length === 1) {
