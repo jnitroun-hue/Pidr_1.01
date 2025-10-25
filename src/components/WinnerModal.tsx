@@ -76,7 +76,7 @@ export default function WinnerModal({ playerName, place, avatar, onClose }: Winn
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 9999,
+          zIndex: 10000, // ✅ ПОВЫШЕН z-index (выше LoserModal)
           overflow: 'hidden'
         }}
       >

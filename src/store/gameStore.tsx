@@ -2668,11 +2668,17 @@ export const useGameStore = create<GameState>()(
             console.warn(`⚠️ [calculateAndShowGameResults] Пользователь не найден в результатах!`);
           }
           
-          // Показываем модалку результатов
+          // ✅ КРИТИЧНО: Закрываем все старые модалки перед показом финальной!
           set({
+            showWinnerModal: false,
+            winnerModalData: null,
+            showLoserModal: false,
+            loserModalData: null,
             showGameResultsModal: true,
             gameResults: results
           });
+          
+          console.log('🎉 [calculateAndShowGameResults] Показываем финальную модалку результатов!');
         },
          
          // ===== МЕТОДЫ ДЛЯ СИСТЕМЫ "ОДНА КАРТА!" И ШТРАФОВ =====
@@ -2724,18 +2730,26 @@ export const useGameStore = create<GameState>()(
                  
                 // ===== ИСПРАВЛЕНО: БОТЫ АВТОМАТИЧЕСКИ ОБЪЯВЛЯЮТ И СПРАШИВАЮТ =====
                 if (player.isBot) {
-                  // БОТ АВТОМАТИЧЕСКИ ОБЪЯВЛЯЕТ "ОДНА КАРТА!" через 2-5 секунд (рандом для тестирования)
-                  const botDelay = 2000 + Math.random() * 3000; // ✅ От 2 до 5 секунд
-                  console.log(`🤖 [checkOneCardStatus] Бот ${player.name} объявит "ОДНА КАРТА!" через ${(botDelay / 1000).toFixed(1)} сек`);
-                  
-                  setTimeout(() => {
-                    const { oneCardDeclarations } = get();
-                    if (!oneCardDeclarations[player.id]) {
-                      console.log(`🤖 [checkOneCardStatus] Бот ${player.name} автоматически объявляет: "ОДНА КАРТА!"`);
-                      get().showNotification(`🤖 ${player.name}: "ОДНА КАРТА!"`, 'info', 3000);
-                      get().declareOneCard(player.id);
-                    }
-                  }, botDelay); // ✅ Задержка 2-5 секунд (рандом)
+                  // ✅ ИСПРАВЛЕНО: Проверяем что бот УЖЕ НЕ ОБЪЯВИЛ раньше
+                  if (!oneCardDeclarations[player.id]) {
+                    // БОТ АВТОМАТИЧЕСКИ ОБЪЯВЛЯЕТ "ОДНА КАРТА!" через 3.5-5 секунд (БОЛЬШЕ ВРЕМЕНИ для проверки!)
+                    const botDelay = 3500 + Math.random() * 1500; // ✅ От 3.5 до 5 секунд
+                    console.log(`🤖 [checkOneCardStatus] Бот ${player.name} объявит "ОДНА КАРТА!" через ${(botDelay / 1000).toFixed(1)} сек`);
+                    
+                    setTimeout(() => {
+                      const { oneCardDeclarations } = get();
+                      // ✅ ДВОЙНАЯ ПРОВЕРКА: может объявил за это время
+                      if (!oneCardDeclarations[player.id]) {
+                        console.log(`🤖 [checkOneCardStatus] Бот ${player.name} автоматически объявляет: "ОДНА КАРТА!"`);
+                        get().showNotification(`🤖 ${player.name}: "ОДНА КАРТА!"`, 'info', 3000);
+                        get().declareOneCard(player.id);
+                      } else {
+                        console.log(`🤖 [checkOneCardStatus] Бот ${player.name} УЖЕ ОБЪЯВИЛ - пропускаем`);
+                      }
+                    }, botDelay); // ✅ Задержка 3.5-5 секунд (БОЛЬШЕ ВРЕМЕНИ!)
+                  } else {
+                    console.log(`🤖 [checkOneCardStatus] Бот ${player.name} УЖЕ ОБЪЯВЛЯЛ "ОДНА КАРТА!" - пропускаем таймер`);
+                  }
                 } else {
                   // Для человека - планируем вопрос ботов ТОЛЬКО ОДИН РАЗ
                   // ✅ ИСПРАВЛЕНО: Проверяем что не спрашивали ранее
@@ -2776,6 +2790,12 @@ export const useGameStore = create<GameState>()(
           const { players, oneCardDeclarations, oneCardTimers, gameStage } = get();
           const player = players.find(p => p.id === playerId);
           if (!player) return;
+          
+          // ✅ КРИТИЧНО: Проверяем что игрок УЖЕ НЕ ОБЪЯВЛЯЛ (защита от дублирования!)
+          if (oneCardDeclarations[playerId]) {
+            console.log(`⚠️ [declareOneCard] ${player.name} УЖЕ объявил "одна карта" - игнорируем повторный вызов`);
+            return;
+          }
           
           const openCards = player.cards.filter(c => c.open);
           const totalCards = player.cards.length;
@@ -2950,19 +2970,31 @@ export const useGameStore = create<GameState>()(
            // НОВОЕ ПРАВИЛО: Если у отдающего осталась 1 карта - он должен объявить "одна карта!"
            if (newPlayers[contributorIndex].cards.filter(c => c.open).length === 1) {
              console.log(`🃏 [contributePenaltyCard] У ${contributor.name} осталась 1 открытая карта - нужно объявить!`);
-             setTimeout(() => {
-               if (contributor.isBot) {
-                 // Бот автоматически объявляет через 1.5 секунды
-                 get().showNotification(`🤖 ${contributor.name}: "ОДНА КАРТА!"`, 'info', 3000);
-                 setTimeout(() => {
-                   get().declareOneCard(contributorId);
-                 }, 1500); // Увеличено до 1.5 секунды
-               } else {
-                 // Для пользователя - НЕ АВТОМАТИЧЕСКИ! Только планируем проверку ботами
-                 console.log(`👤 [contributePenaltyCard] Пользователь ${contributor.name} должен сам объявить "одна карта!"`);
-                 // Боты будут спрашивать через checkOneCardStatus
-               }
-             }, 1000);
+             
+             // ✅ ИСПРАВЛЕНО: Проверяем что игрок ЕЩЁ НЕ ОБЪЯВИЛ
+             const { oneCardDeclarations } = get();
+             if (!oneCardDeclarations[contributorId]) {
+               setTimeout(() => {
+                 if (contributor.isBot) {
+                   // Бот автоматически объявляет через 1.5 секунды
+                   const { oneCardDeclarations: currentDeclarations } = get();
+                   if (!currentDeclarations[contributorId]) {
+                     get().showNotification(`🤖 ${contributor.name}: "ОДНА КАРТА!"`, 'info', 3000);
+                     setTimeout(() => {
+                       get().declareOneCard(contributorId);
+                     }, 1500); // Увеличено до 1.5 секунды
+                   } else {
+                     console.log(`⚠️ [contributePenaltyCard] Бот ${contributor.name} УЖЕ объявил - пропускаем`);
+                   }
+                 } else {
+                   // Для пользователя - НЕ АВТОМАТИЧЕСКИ! Только планируем проверку ботами
+                   console.log(`👤 [contributePenaltyCard] Пользователь ${contributor.name} должен сам объявить "одна карта!"`);
+                   // Боты будут спрашивать через checkOneCardStatus
+                 }
+               }, 1000);
+             } else {
+               console.log(`⚠️ [contributePenaltyCard] ${contributor.name} УЖЕ ОБЪЯВИЛ - пропускаем таймер`);
+             }
            }
            
            // Убираем игрока из списка ожидающих

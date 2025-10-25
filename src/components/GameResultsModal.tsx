@@ -52,7 +52,7 @@ export default function GameResultsModal({
 
   return (
     <div 
-      className={`fixed inset-0 z-[9999] flex items-center justify-center transition-all duration-500 ${
+      className={`fixed inset-0 z-[10001] flex items-center justify-center transition-all duration-500 ${
         isVisible ? 'opacity-100' : 'opacity-0'
       }`}
       style={{
