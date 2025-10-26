@@ -21,13 +21,14 @@ export async function GET(req: NextRequest) {
     }
 
     const userId = telegramIdHeader;
-    console.log(`📦 Получаем NFT коллекцию пользователя ${userId} через headers...`);
+    const userIdBigInt = parseInt(userId, 10); // ✅ Конвертируем в BIGINT
+    console.log(`📦 Получаем NFT коллекцию пользователя ${userId} (${userIdBigInt}) через headers...`);
 
     // ✅ ПРЯМОЙ ЗАПРОС к таблице _pidr_nft_cards (без RPC)
     const { data, error } = await supabase
       .from('_pidr_nft_cards')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_id', userIdBigInt) // ✅ Используем BIGINT
       .order('created_at', { ascending: false });
 
     if (error) {

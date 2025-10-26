@@ -190,11 +190,45 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ [NFT Canvas] Карта загружена в Storage:', publicUrl);
 
+    // ✅ КРИТИЧНО: Конвертируем userId (string) в BIGINT для БД!
+    const userIdBigInt = parseInt(userId, 10);
+    
+    if (isNaN(userIdBigInt)) {
+      console.error('❌ [NFT Canvas] Невалидный user_id:', userId);
+      
+      // Возвращаем монеты
+      if (!isPartOfDeck && newBalance !== undefined) {
+        await supabase
+          .from('_pidr_users')
+          .update({ coins: user.coins })
+          .eq('id', user.id);
+      }
+      
+      // Удаляем файл
+      await supabase.storage
+        .from(bucketName)
+        .remove([fileName]);
+      
+      return NextResponse.json(
+        { success: false, error: 'Невалидный ID пользователя' },
+        { status: 400 }
+      );
+    }
+    
+    console.log('💾 [NFT Canvas] Сохраняем карту в БД:', {
+      userId: userId,
+      userIdBigInt: userIdBigInt,
+      suit: suit,
+      rank: rank,
+      imageUrl: publicUrl,
+      storagePath: fileName
+    });
+    
     // Сохраняем в таблицу _pidr_nft_cards
     const { data: savedCard, error: saveError} = await supabase
       .from('_pidr_nft_cards')
       .insert([{
-        user_id: userId,
+        user_id: userIdBigInt, // ✅ ИСПРАВЛЕНО: Теперь BIGINT!
         suit: suit,
         rank: rank,
         rarity: 'custom', // ✅ Фиксированное значение вместо переменной редкости
@@ -216,9 +250,19 @@ export async function POST(request: NextRequest) {
     if (saveError) {
       console.error('❌ [NFT Canvas] Ошибка сохранения в БД:', saveError);
       console.error('❌ [NFT Canvas] Детали ошибки:', JSON.stringify(saveError, null, 2));
+      console.error('❌ [NFT Canvas] Данные которые пытались сохранить:', {
+        user_id: userIdBigInt,
+        user_id_type: typeof userIdBigInt,
+        suit: suit,
+        rank: rank,
+        rarity: 'custom',
+        image_url: publicUrl,
+        storage_path: fileName
+      });
       
       // ✅ КРИТИЧНО: Возвращаем монеты если не удалось сохранить карту!
       if (!isPartOfDeck && newBalance !== undefined) {
+        console.log('💰 [NFT Canvas] Возвращаем монеты обратно...');
         await supabase
           .from('_pidr_users')
           .update({ coins: user.coins })
@@ -226,6 +270,7 @@ export async function POST(request: NextRequest) {
       }
       
       // ✅ КРИТИЧНО: Удаляем файл из Storage!
+      console.log('🗑️ [NFT Canvas] Удаляем файл из Storage...');
       await supabase.storage
         .from(bucketName)
         .remove([fileName]);
@@ -234,7 +279,9 @@ export async function POST(request: NextRequest) {
         { 
           success: false, 
           error: 'Ошибка сохранения карты в базу данных',
-          details: saveError.message || 'Неизвестная ошибка'
+          details: saveError.message || 'Неизвестная ошибка',
+          hint: saveError.hint || null,
+          code: saveError.code || null
         },
         { status: 500 }
       );
@@ -266,7 +313,7 @@ export async function POST(request: NextRequest) {
     const { error: ownershipError } = await supabase
       .from('_pidr_nft_ownership')
       .insert([{
-        user_telegram_id: userId,
+        user_telegram_id: userIdBigInt, // ✅ ИСПРАВЛЕНО: Теперь BIGINT!
         nft_address: `local_${Date.now()}`,
         token_id: `${suit}_${rank}_custom`,
         card_id: `${rank}_of_${suit}`,
@@ -336,12 +383,13 @@ export async function GET(request: NextRequest) {
     };
 
     const userId = session.telegramId;
+    const userIdBigInt = parseInt(userId, 10); // ✅ Конвертируем в BIGINT
 
     // Получаем все карты пользователя
     const { data: cards, error } = await supabase
       .from('_pidr_nft_cards')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_id', userIdBigInt) // ✅ Используем BIGINT
       .order('created_at', { ascending: false });
 
     if (error) {
