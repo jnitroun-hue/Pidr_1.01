@@ -49,6 +49,13 @@ export interface GameSettings {
   difficulty: 'easy' | 'medium' | 'hard'
 }
 
+// Интерфейс для штрафной карты с информацией о том, кто её скинул
+export interface PenaltyCard {
+  card: Card
+  contributorId: string
+  contributorName: string
+}
+
 interface GameState {
   // Игровое состояние
   isGameActive: boolean
@@ -60,7 +67,8 @@ interface GameState {
   lastPlayedCard: Card | null
   
   // НОВАЯ МЕХАНИКА: Стопка штрафных карт
-  penaltyDeck: Card[]
+  penaltyDeck: PenaltyCard[]
+  showPenaltyDeckModal: boolean // Показывать ли модалку штрафной стопки
   
   // Состояние для стадий игры P.I.D.R
   gameStage: 1 | 2 | 3 | 4 // 4 = завершение игры
@@ -93,6 +101,7 @@ interface GameState {
   // Система рейтинга и результатов
   eliminationOrder: string[] // Порядок выбывания игроков (первый = последнее место)
   isRankedGame: boolean // Рейтинговая игра или нет
+  statsUpdatedThisGame: boolean // ✅ Флаг: статистика уже обновлена за эту игру (защита от дублирования)
   showVictoryModal: boolean // Показывать ли модальное окно победы
   victoryData: {
     position: number;
@@ -216,8 +225,9 @@ interface GameState {
   findWorstCardInHand: (cards: Card[], trumpSuit: string | null) => Card | null // Найти плохую карту
   
   // НОВЫЕ МЕТОДЫ ДЛЯ ШТРАФНОЙ СТОПКИ
-  addCardToPenaltyDeck: (card: Card) => void // Добавить карту в штрафную стопку
+  addCardToPenaltyDeck: (card: Card, contributorId: string, contributorName: string) => void // Добавить карту в штрафную стопку
   distributePenaltyCards: (targetPlayerId: string) => void // Раздать штрафные карты игроку
+  togglePenaltyDeckModal: (show: boolean) => void // Открыть/закрыть модалку штрафной стопки
   // Новые методы для ботов
   calculateAdaptiveDelay: () => number // Вычисляет адаптивную задержку в зависимости от FPS
   scheduleBotAskHowManyCards: (targetPlayerId: string) => void // Планирует вопрос бота "сколько карт?"
@@ -296,6 +306,7 @@ export const useGameStore = create<GameState>()(
       
       // НОВАЯ МЕХАНИКА: Стопка штрафных карт
       penaltyDeck: [],
+      showPenaltyDeckModal: false,
       
       // Состояние для стадий игры P.I.D.R
       gameStage: 1,
@@ -322,6 +333,7 @@ export const useGameStore = create<GameState>()(
       // Система рейтинга и результатов
       eliminationOrder: [],
       isRankedGame: false,
+      statsUpdatedThisGame: false, // ✅ Изначально не обновлена
       showVictoryModal: false,
       victoryData: null,
       
@@ -538,6 +550,13 @@ export const useGameStore = create<GameState>()(
           lastPlayerToDrawCard: null,
           trumpSuit: null,
           drawnHistory: [],
+          // ✅ СБРАСЫВАЕМ ФЛАГИ СТАТИСТИКИ И РЕЗУЛЬТАТОВ
+          statsUpdatedThisGame: false, // ✅ Новая игра = статистика не обновлена
+          eliminationOrder: [],
+          oneCardDeclarations: {},
+          oneCardTimers: {},
+          playersWithOneCard: [],
+          pendingPenalty: null,
           // Устанавливаем мультиплеер данные
           multiplayerData: mode === 'multiplayer' && multiplayerConfig ? {
             roomId: multiplayerConfig.roomId,
@@ -800,10 +819,16 @@ export const useGameStore = create<GameState>()(
       },
       
       // НОВЫЕ МЕТОДЫ ДЛЯ ШТРАФНОЙ СТОПКИ
-      addCardToPenaltyDeck: (card) => {
+      addCardToPenaltyDeck: (card, contributorId, contributorName) => {
         const { penaltyDeck } = get();
-        console.log(`⚠️ [addCardToPenaltyDeck] Добавляем карту ${card.image} в штрафную стопку`);
-        set({ penaltyDeck: [...penaltyDeck, card] });
+        console.log(`⚠️ [addCardToPenaltyDeck] ${contributorName} добавляет карту ${card.image} в штрафную стопку`);
+        set({ 
+          penaltyDeck: [...penaltyDeck, { card, contributorId, contributorName }] 
+        });
+      },
+      
+      togglePenaltyDeckModal: (show) => {
+        set({ showPenaltyDeckModal: show });
       },
       
       distributePenaltyCards: (targetPlayerId) => {
@@ -827,8 +852,8 @@ export const useGameStore = create<GameState>()(
             // Добавляем все штрафные карты в руку
             // ✅ ИСПРАВЛЕНО: Во 2-й стадии ВСЕ карты открыты (open: true) для логики игры!
             // Визуальное отображение контролируется в UI
-            const penaltyCardsForPlayer = penaltyDeck.map(card => ({ 
-              ...card, 
+            const penaltyCardsForPlayer = penaltyDeck.map(penaltyCard => ({ 
+              ...penaltyCard.card, // ✅ Извлекаем card из PenaltyCard
               open: true // ✅ Все карты открыты во 2-й стадии!
             }));
             const newCards = [...player.cards, ...penaltyCardsForPlayer];
@@ -2323,6 +2348,13 @@ export const useGameStore = create<GameState>()(
               
               // ✅ ЕСЛИ ЭТО ПОЛЬЗОВАТЕЛЬ - ОБНОВЛЯЕМ СТАТИСТИКУ СРАЗУ!
               if (isUser && currentUserTelegramId) {
+                // ✅ ЗАЩИТА ОТ ДУБЛИРОВАНИЯ: Проверяем что статистика ЕЩЁ НЕ ОБНОВЛЕНА!
+                const { statsUpdatedThisGame } = get();
+                if (statsUpdatedThisGame) {
+                  console.warn(`⚠️ [checkVictoryCondition] Статистика УЖЕ обновлена за эту игру! Пропускаем для ${winner.name}`);
+                  return; // ✅ КРИТИЧНО: Выходим чтобы не дублировать!
+                }
+                
                 // ✅ ДЕТЕРМИНИРОВАННЫЙ РАНДОМ для 4-8 мест (используем ID как seed)
                 const seededRandom = (playerId: string, min: number, max: number): number => {
                   let hash = 0;
@@ -2350,8 +2382,12 @@ export const useGameStore = create<GameState>()(
                 console.log(`📊 [checkVictoryCondition] СРАЗУ обновляем статистику для ${winner.name}:`, {
                   position,
                   isTopThree,
-                  coinsEarned
+                  coinsEarned,
+                  statsWasUpdated: statsUpdatedThisGame
                 });
+                
+                // ✅ УСТАНАВЛИВАЕМ ФЛАГ ЧТО СТАТИСТИКА ОБНОВЛЕНА!
+                set({ statsUpdatedThisGame: true });
                 
                 // ✅ СРАЗУ ОТПРАВЛЯЕМ ЗАПРОС НА ОБНОВЛЕНИЕ!
                 fetch('/api/user/add-coins', {
@@ -2612,27 +2648,36 @@ export const useGameStore = create<GameState>()(
             // ✅ ОБНОВЛЯЕМ СТАТИСТИКУ ТОЛЬКО ДЛЯ ПОСЛЕДНЕГО ИГРОКА!
             // Все остальные (1-8 места) уже обновили при выходе!
             if (isLastPlace) {
-              const requestBody = {
-                amount: userResult.coinsEarned, // 5 монет
-                source: 'game_loss',
-                updateStats: {
-                  gamesPlayed: true, // ✅ +1 к играм
-                  wins: false,       // ✅ Не победа
-                  losses: true       // ✅ +1 к поражениям
-                }
-              };
-              
-              console.log(`📊 [calculateAndShowGameResults] ПОСЛЕДНИЙ ИГРОК! Обновляем статистику:`, {
-                place: userResult.place,
-                coins: userResult.coinsEarned,
-                isLastPlace: true,
-                telegramId: currentUserTelegramId,
-                requestBody
-              });
-              
-              // Обновляем баланс и статистику в БД через API
-              console.log(`🚀 [calculateAndShowGameResults] ОТПРАВЛЯЕМ FETCH для последнего игрока`);
-              fetch('/api/user/add-coins', {
+              // ✅ ЗАЩИТА ОТ ДУБЛИРОВАНИЯ: Проверяем что статистика ЕЩЁ НЕ ОБНОВЛЕНА!
+              const { statsUpdatedThisGame } = get();
+              if (statsUpdatedThisGame) {
+                console.warn(`⚠️ [calculateAndShowGameResults] Статистика УЖЕ обновлена за эту игру! Пропускаем последнего игрока`);
+              } else {
+                const requestBody = {
+                  amount: userResult.coinsEarned, // 5 монет
+                  source: 'game_loss',
+                  updateStats: {
+                    gamesPlayed: true, // ✅ +1 к играм
+                    wins: false,       // ✅ Не победа
+                    losses: true       // ✅ +1 к поражениям
+                  }
+                };
+                
+                console.log(`📊 [calculateAndShowGameResults] ПОСЛЕДНИЙ ИГРОК! Обновляем статистику:`, {
+                  place: userResult.place,
+                  coins: userResult.coinsEarned,
+                  isLastPlace: true,
+                  telegramId: currentUserTelegramId,
+                  statsWasUpdated: statsUpdatedThisGame,
+                  requestBody
+                });
+                
+                // ✅ УСТАНАВЛИВАЕМ ФЛАГ ЧТО СТАТИСТИКА ОБНОВЛЕНА!
+                set({ statsUpdatedThisGame: true });
+                
+                // Обновляем баланс и статистику в БД через API
+                console.log(`🚀 [calculateAndShowGameResults] ОТПРАВЛЯЕМ FETCH для последнего игрока`);
+                fetch('/api/user/add-coins', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -2661,6 +2706,7 @@ export const useGameStore = create<GameState>()(
                     name: err.name
                   });
                 });
+              } // ✅ Закрываем else блок для statsUpdatedThisGame
             } else {
               console.log(`✅ [calculateAndShowGameResults] Игрок на месте ${userResult.place} УЖЕ обновил статистику при выходе!`);
             }
@@ -2965,7 +3011,7 @@ export const useGameStore = create<GameState>()(
           // ✅ КРИТИЧНО: НЕ создаем копию! Используем ту же ссылку!
           card.open = false; // Закрываем карту
           console.log(`🗂️ [contributePenaltyCard] Добавляем карту ${card.image} в штрафную стопку`);
-          get().addCardToPenaltyDeck(card);
+          get().addCardToPenaltyDeck(card, contributorId, contributor.name);
            
            // НОВОЕ ПРАВИЛО: Если у отдающего осталась 1 карта - он должен объявить "одна карта!"
            if (newPlayers[contributorIndex].cards.filter(c => c.open).length === 1) {

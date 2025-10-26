@@ -80,7 +80,7 @@ export default function GameResultsModal({
       </div>
 
       <div 
-        className={`relative max-w-3xl w-full mx-4 transform transition-all duration-700 ${
+        className={`relative max-w-3xl w-full transform transition-all duration-700 ${
           isVisible ? 'scale-100 translate-y-0' : 'scale-75 translate-y-10'
         }`}
         style={{
@@ -89,7 +89,8 @@ export default function GameResultsModal({
           border: '2px solid rgba(99, 102, 241, 0.3)',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 60px rgba(99, 102, 241, 0.2)',
           maxHeight: '90vh',
-          overflow: 'auto'
+          overflow: 'auto',
+          margin: '20px' // ✅ НОРМАЛЬНЫЕ ОТСТУПЫ!
         }}
       >
         {/* Header */}

@@ -6,6 +6,7 @@ import PenaltyCardSelector from '../../components/PenaltyCardSelector';
 import WinnerModal from '../../components/WinnerModal';
 import LoserModal from '../../components/LoserModal';
 import GameResultsModal from '../../components/GameResultsModal';
+import PenaltyDeckModal from '../../components/PenaltyDeckModal';
 import styles from './GameTable.module.css';
 // Генераторы перенесены в отдельный проект pidr_generators
 import { getPremiumTable } from '@/utils/generatePremiumTable';
@@ -210,10 +211,12 @@ function GamePageContentComponent({
     showPenaltyCardSelection, penaltyCardSelectionPlayerId,
     showWinnerModal, winnerModalData, showLoserModal, loserModalData,
     showGameResultsModal, gameResults,
+    showPenaltyDeckModal,
     startGame, endGame, resetGame,
     drawCard, makeMove, onDeckClick, placeCardOnSelfByRules,
     selectHandCard, playSelectedCard, takeTableCards, showNotification,
-    declareOneCard, askHowManyCards, contributePenaltyCard, cancelPenalty
+    declareOneCard, askHowManyCards, contributePenaltyCard, cancelPenalty,
+    togglePenaltyDeckModal
   } = useGameStore();
 
   // ИСПРАВЛЕНО: Получаем данные пользователя из Supabase БД
@@ -1121,7 +1124,34 @@ function GamePageContentComponent({
             {gameStage === 1 ? (
               <>🎴 Колода: {deck.length}</>
             ) : (
-              <>🗑️ Бито: {playedCards?.length || 0}</>
+              <button
+                onClick={() => togglePenaltyDeckModal(true)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'inherit',
+                  fontSize: 'inherit',
+                  fontFamily: 'inherit',
+                  cursor: penaltyDeck.length > 0 ? 'pointer' : 'default',
+                  padding: 0,
+                  margin: 0,
+                  transition: 'all 0.2s',
+                  textDecoration: penaltyDeck.length > 0 ? 'underline' : 'none'
+                }}
+                onMouseEnter={(e) => {
+                  if (penaltyDeck.length > 0) {
+                    e.currentTarget.style.transform = 'scale(1.05)';
+                    e.currentTarget.style.color = '#60a5fa';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.color = '';
+                }}
+                disabled={penaltyDeck.length === 0}
+              >
+                🗑️ Бито: {playedCards?.length || 0}
+              </button>
             )}
           </div>
           {/* 💸 СЧЕТЧИК ШТРАФНОЙ СТОПКИ */}
@@ -1746,14 +1776,12 @@ function GamePageContentComponent({
                     showPlayerMessage(targets[0].id, '🔍 Проверка...', 'warning', 3000);
                     askHowManyCards(humanPlayer.id, targets[0].id);
                   } else if (targets.length > 1) {
-                    // Показываем сообщения над всеми целями
+                    // ✅ ИСПРАВЛЕНО: Проверяем КАЖДОГО игрока!
                     targets.forEach(t => {
-                      showPlayerMessage(t.id, '🎯 Выберите цель', 'warning', 3000);
+                      showPlayerMessage(t.id, '🔍 Проверка...', 'warning', 3000);
+                      // ✅ Вызываем askHowManyCards для КАЖДОГО игрока!
+                      askHowManyCards(humanPlayer.id, t.id);
                     });
-                    // Старая система убрана - теперь модалка открывается автоматически через store
-                    // setPenaltyTargets(targets);
-                    // setSelectedCards({});
-                    // setShowPenaltyModal(true);
                   } else {
                     showNotification('Нет доступных целей для проверки', 'warning', 2000);
                   }
@@ -2057,6 +2085,17 @@ function GamePageContentComponent({
           }}
         />
       )}
+      
+      {/* 🗑️ МОДАЛКА ШТРАФНОЙ СТОПКИ */}
+      <PenaltyDeckModal
+        isOpen={showPenaltyDeckModal}
+        onClose={() => togglePenaltyDeckModal(false)}
+        penaltyCards={penaltyDeck.map(pc => ({
+          playerId: pc.contributorId,
+          playerName: pc.contributorName
+        }))}
+        totalCards={penaltyDeck.length}
+      />
     </div>
   );
 }
