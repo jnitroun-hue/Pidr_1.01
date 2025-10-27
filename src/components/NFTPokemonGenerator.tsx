@@ -422,8 +422,120 @@ export default function NFTPokemonGenerator({ userCoins, onBalanceUpdate }: NFTP
     }
   };
 
-  // ✅ НОВАЯ ФУНКЦИЯ: Рандомная карта с героем Наруто за 10000 монет
-  const handleRandomNaruto = async () => {
+  // ✅ НОВАЯ ФУНКЦИЯ: Полная колода Покемонов (52 карты) за 400000 монет
+  const handleFullDeck = async () => {
+    const cost = 400000;
+    
+    if (userCoins < cost) {
+      alert(`❌ Недостаточно монет!\n\nНужно: ${cost.toLocaleString()}\nУ вас: ${userCoins.toLocaleString()}`);
+      return;
+    }
+
+    const confirmed = confirm(`🎴 СОЗДАТЬ ПОЛНУЮ КОЛОДУ?\n\n52 уникальные карты с покемонами\nСтоимость: ${cost.toLocaleString()} монет\n\nЭто займет ~1-2 минуты.\nПродолжить?`);
+    
+    if (!confirmed) return;
+
+    setIsGenerating(true);
+
+    try {
+      const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString() || '';
+      const username = window.Telegram?.WebApp?.initDataUnsafe?.user?.username || 'User';
+
+      if (!telegramId) {
+        throw new Error('Telegram ID не найден');
+      }
+
+      let generatedCount = 0;
+      const totalCards = 52;
+      
+      // Показываем прогресс
+      alert(`⏳ Начинаем генерацию ${totalCards} карт...\n\nЭто может занять 1-2 минуты.\nПожалуйста, не закрывайте страницу!`);
+
+      // Генерируем все 52 карты (все комбинации мастей и рангов)
+      for (const suit of SUITS) {
+        for (const rank of RANKS) {
+          const randomPokemonId = Math.floor(Math.random() * 52) + 1;
+          
+          try {
+            const imageDataUrl = await generateCardImage(suit.value, rank.value, randomPokemonId);
+
+            const response = await fetch('/api/nft/generate-pokemon', {
+              method: 'POST',
+              credentials: 'include',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-telegram-id': telegramId,
+                'x-username': username
+              },
+              body: JSON.stringify({
+                action: 'deck',
+                suit: suit.value,
+                rank: rank.value,
+                rankCost: 0,
+                suitCost: 0,
+                totalCost: 0, // Стоимость списывается один раз в конце
+                pokemonId: randomPokemonId,
+                imageData: imageDataUrl
+              })
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+              generatedCount++;
+              console.log(`✅ Создана карта ${generatedCount}/${totalCards}: ${rank.display}${suit.label}`);
+            } else {
+              console.error(`❌ Ошибка создания карты: ${rank.display}${suit.label}`, result.error);
+            }
+
+            // Небольшая задержка чтобы не перегружать API
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+          } catch (cardError) {
+            console.error(`❌ Ошибка генерации карты ${rank.display}${suit.label}:`, cardError);
+          }
+        }
+      }
+
+      // После генерации всех карт списываем монеты
+      const deductResponse = await fetch('/api/user/add-coins', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-telegram-id': telegramId,
+          'x-username': username
+        },
+        body: JSON.stringify({
+          amount: -cost,
+          reason: `Покупка полной колоды Покемонов (${generatedCount} карт)`
+        })
+      });
+
+      const deductResult = await deductResponse.json();
+
+      if (!deductResponse.ok || !deductResult.success) {
+        throw new Error('Не удалось списать монеты');
+      }
+
+      if (deductResult.newBalance !== undefined) {
+        onBalanceUpdate(deductResult.newBalance);
+      }
+
+      await fetchUserCards();
+
+      alert(`🎉 КОЛОДА СОЗДАНА!\n\n✅ Создано карт: ${generatedCount}/${totalCards}\n💰 Списано: ${cost.toLocaleString()} монет\n💎 Остаток: ${deductResult.newBalance?.toLocaleString()} монет\n\nПроверьте свою коллекцию!`);
+
+    } catch (error: any) {
+      console.error('❌ Ошибка генерации колоды:', error);
+      alert(`❌ Ошибка создания колоды: ${error.message}\n\nМонеты не были списаны.`);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // УДАЛЕННАЯ ФУНКЦИЯ: handleRandomNaruto (больше не нужна)
+  const handleRandomNaruto_REMOVED = async () => {
     const cost = 10000;
     
     if (userCoins < cost) {
@@ -710,7 +822,7 @@ export default function NFTPokemonGenerator({ userCoins, onBalanceUpdate }: NFTP
         {isGenerating ? '⏳ Генерация...' : '✅ Создать карту'}
       </motion.button>
 
-      {/* СПЕЦИАЛЬНЫЕ КНОПКИ ЗА 10000 МОНЕТ */}
+      {/* СПЕЦИАЛЬНЫЕ КНОПКИ */}
       <div style={{ 
         background: 'rgba(251, 191, 36, 0.05)',
         border: '2px solid rgba(251, 191, 36, 0.2)',
@@ -725,10 +837,10 @@ export default function NFTPokemonGenerator({ userCoins, onBalanceUpdate }: NFTP
           textAlign: 'center',
           fontWeight: '700'
         }}>
-          ⭐ СПЕЦИАЛЬНЫЕ РАНДОМНЫЕ КАРТЫ ⭐
+          ⭐ СПЕЦИАЛЬНЫЕ ПРЕДЛОЖЕНИЯ ⭐
         </h4>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-          {/* ПОКЕМОН КАРТА */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {/* РАНДОМНАЯ ПОКЕМОН КАРТА - 10К */}
           <motion.button
             onClick={handleRandomPokemon}
             disabled={isGenerating || userCoins < 10000}
@@ -754,38 +866,42 @@ export default function NFTPokemonGenerator({ userCoins, onBalanceUpdate }: NFTP
             }}
           >
             <div style={{ fontSize: '1.5rem' }}>⚡</div>
-            <div>ПОКЕМОН</div>
-            <div style={{ fontSize: '0.75rem', opacity: 0.9 }}>10 000 монет</div>
+            <div>РАНДОМНАЯ ПОКЕМОН КАРТА</div>
+            <div style={{ fontSize: '0.75rem', opacity: 0.9 }}>💰 10 000 монет</div>
           </motion.button>
 
-          {/* НАРУТО КАРТА */}
+          {/* ПОЛНАЯ КОЛОДА ПОКЕМОНОВ - 400К */}
           <motion.button
-            onClick={handleRandomNaruto}
-            disabled={isGenerating || userCoins < 10000}
-            whileHover={userCoins >= 10000 && !isGenerating ? { scale: 1.02 } : {}}
-            whileTap={userCoins >= 10000 && !isGenerating ? { scale: 0.98 } : {}}
+            onClick={handleFullDeck}
+            disabled={isGenerating || userCoins < 400000}
+            whileHover={userCoins >= 400000 && !isGenerating ? { scale: 1.02 } : {}}
+            whileTap={userCoins >= 400000 && !isGenerating ? { scale: 0.98 } : {}}
             style={{
-              padding: '16px',
+              padding: '20px',
               borderRadius: '12px',
               border: 'none',
-              background: userCoins >= 10000 && !isGenerating
-                ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
+              background: userCoins >= 400000 && !isGenerating
+                ? 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #3b82f6 100%)'
                 : 'rgba(55, 65, 81, 0.6)',
               color: '#fff',
-              fontSize: '0.9rem',
+              fontSize: '0.95rem',
               fontWeight: '700',
-              cursor: userCoins >= 10000 && !isGenerating ? 'pointer' : 'not-allowed',
-              opacity: userCoins >= 10000 && !isGenerating ? 1 : 0.6,
+              cursor: userCoins >= 400000 && !isGenerating ? 'pointer' : 'not-allowed',
+              opacity: userCoins >= 400000 && !isGenerating ? 1 : 0.6,
               transition: 'all 0.3s ease',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              gap: '6px'
+              gap: '8px',
+              boxShadow: userCoins >= 400000 && !isGenerating 
+                ? '0 8px 32px rgba(139, 92, 246, 0.4)' 
+                : 'none'
             }}
           >
-            <div style={{ fontSize: '1.5rem' }}>🍥</div>
-            <div>НАРУТО</div>
-            <div style={{ fontSize: '0.75rem', opacity: 0.9 }}>10 000 монет</div>
+            <div style={{ fontSize: '2rem' }}>🎴✨</div>
+            <div>ПОЛНАЯ КОЛОДА ПОКЕМОНОВ</div>
+            <div style={{ fontSize: '0.85rem', opacity: 0.95 }}>52 уникальные карты</div>
+            <div style={{ fontSize: '0.85rem', fontWeight: '900', color: '#fbbf24' }}>💎 400 000 монет</div>
           </motion.button>
         </div>
       </div>

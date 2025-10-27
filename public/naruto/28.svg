@@ -4,29 +4,47 @@
   <defs>
     <linearGradient id="grad28" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#8EC5FC;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#1a1a2e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#E0C3FC;stop-opacity:1" />
     </linearGradient>
+    <filter id="shadow28">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+      <feOffset dx="0" dy="4" result="offsetblur"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.5"/>
+      </feComponentTransfer>
+      <feMerge> 
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/> 
+      </feMerge>
+    </filter>
   </defs>
   
-  <!-- Фон -->
+  <!-- Фон с градиентом -->
   <rect width="500" height="700" fill="url(#grad28)"/>
   
+  <!-- Декоративные круги -->
+  <circle cx="100" cy="100" r="80" fill="rgba(255,255,255,0.1)"/>
+  <circle cx="400" cy="600" r="100" fill="rgba(0,0,0,0.1)"/>
+  
   <!-- Рамка -->
-  <rect x="10" y="10" width="480" height="680" fill="none" stroke="white" stroke-width="8"/>
+  <rect x="15" y="15" width="470" height="670" fill="none" stroke="white" stroke-width="6" rx="20"/>
+  
+  <!-- Эмодзи (крупно) -->
+  <text x="250" y="300" font-family="Arial, sans-serif" font-size="180" fill="white" text-anchor="middle" filter="url(#shadow28)">🦈</text>
   
   <!-- Имя (English) -->
-  <text x="250" y="280" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="white" text-anchor="middle">KISAME HOSHIGAKI</text>
+  <text x="250" y="450" font-family="Arial, sans-serif" font-size="36" font-weight="bold" fill="white" text-anchor="middle" filter="url(#shadow28)">KISAME</text>
   
   <!-- Имя (Русское) -->
-  <text x="250" y="330" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="white" text-anchor="middle">Кисаме Хошигаки</text>
+  <text x="250" y="500" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="rgba(255,255,255,0.9)" text-anchor="middle">Кисаме Хошигаки</text>
   
-  <!-- Эмодзи (симуляция) -->
-  <circle cx="250" cy="420" r="60" fill="rgba(255,255,255,0.2)"/>
-  <text x="250" y="445" font-family="Arial, sans-serif" font-size="80" fill="white" text-anchor="middle">🍥</text>
+  <!-- Узор Узумаки (спираль) -->
+  <circle cx="250" cy="600" r="40" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="3"/>
+  <path d="M 250 560 Q 270 580 250 600 Q 230 580 250 560" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="3"/>
   
   <!-- Номер -->
-  <text x="250" y="580" font-family="Arial, sans-serif" font-size="40" font-weight="bold" fill="white" text-anchor="middle">#28</text>
+  <text x="250" y="640" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="white" text-anchor="middle" filter="url(#shadow28)">#{hero.id}</text>
   
   <!-- Бренд -->
-  <text x="250" y="650" font-family="Arial, sans-serif" font-size="20" fill="rgba(255,255,255,0.6)" text-anchor="middle">NARUTO COLLECTION</text>
+  <text x="250" y="670" font-family="Arial, sans-serif" font-size="18" fill="rgba(255,255,255,0.7)" text-anchor="middle">NARUTO COLLECTION</text>
 </svg>
