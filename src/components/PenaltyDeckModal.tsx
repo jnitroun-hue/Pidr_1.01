@@ -8,13 +8,15 @@ interface PenaltyDeckModalProps {
   onClose: () => void;
   penaltyCards: Array<{ playerId: string; playerName: string }>;
   totalCards: number;
+  targetPlayerName?: string; // ✅ Имя игрока который получит карты
 }
 
 export default function PenaltyDeckModal({ 
   isOpen, 
   onClose, 
   penaltyCards, 
-  totalCards 
+  totalCards,
+  targetPlayerName
 }: PenaltyDeckModalProps) {
   // Группируем карты по игрокам
   const contributorCounts = penaltyCards.reduce((acc, card) => {
@@ -115,7 +117,7 @@ export default function PenaltyDeckModal({
               </button>
             </div>
 
-            {/* Общее количество карт */}
+            {/* Общее количество карт и получатель */}
             <div style={{
               background: 'rgba(239, 68, 68, 0.1)',
               borderRadius: '12px',
@@ -127,10 +129,20 @@ export default function PenaltyDeckModal({
                 margin: 0,
                 fontSize: '16px',
                 color: '#f87171',
-                fontWeight: 'bold'
+                fontWeight: 'bold',
+                marginBottom: targetPlayerName ? '8px' : 0
               }}>
                 Всего штрафных карт: {totalCards}
               </p>
+              {targetPlayerName && (
+                <p style={{
+                  margin: 0,
+                  fontSize: '14px',
+                  color: '#fca5a5'
+                }}>
+                  → Получит: <strong>{targetPlayerName}</strong>
+                </p>
+              )}
             </div>
 
             {/* Список игроков */}

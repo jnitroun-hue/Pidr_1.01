@@ -558,6 +558,13 @@ export const useGameStore = create<GameState>()(
           oneCardTimers: {},
           playersWithOneCard: [],
           pendingPenalty: null,
+          // ✅ КРИТИЧНО: СБРАСЫВАЕМ ВСЕ МОДАЛКИ ПОБЕДЫ/ПОРАЖЕНИЯ!
+          showWinnerModal: false,
+          winnerModalData: null,
+          showLoserModal: false,
+          loserModalData: null,
+          showGameResultsModal: false,
+          gameResults: [],
           // Устанавливаем мультиплеер данные
           multiplayerData: mode === 'multiplayer' && multiplayerConfig ? {
             roomId: multiplayerConfig.roomId,
@@ -916,15 +923,28 @@ export const useGameStore = create<GameState>()(
               return;
             }
             
+            console.log(`🔍 [distributePenaltyCards] ПРОВЕРКА после паузы:`, {
+              playerName: updatedPlayer.name,
+              isWinner: updatedPlayer.isWinner,
+              cardsLength: updatedPlayer.cards.length,
+              penkiLength: updatedPlayer.penki.length
+            });
+            
             const isActive = !updatedPlayer.isWinner && (updatedPlayer.cards.length > 0 || updatedPlayer.penki.length > 0);
+            
+            console.log(`🔍 [distributePenaltyCards] isActive = ${isActive}`);
             
             if (isActive) {
               console.log(`🎮 [distributePenaltyCards] Продолжаем ход игрока: ${updatedPlayer.name}`);
+              console.log(`🔍 [distributePenaltyCards] ВЫЗЫВАЕМ processPlayerTurn(${currentPlayerId})`);
               get().processPlayerTurn(currentPlayerId);
+              console.log(`✅ [distributePenaltyCards] processPlayerTurn() ВЫЗВАН!`);
             } else {
               console.log(`⚠️ [distributePenaltyCards] Игрок ${updatedPlayer.name} больше не активен, ищем следующего...`);
+              console.log(`🔍 [distributePenaltyCards] ВЫЗЫВАЕМ nextTurn()`);
               // Если игрок вышел, ищем следующего
               get().nextTurn();
+              console.log(`✅ [distributePenaltyCards] nextTurn() ВЫЗВАН!`);
             }
           }, 5000); // ✅ ПАУЗА 5 СЕКУНД
         }
@@ -1360,12 +1380,19 @@ export const useGameStore = create<GameState>()(
       processPlayerTurn: (playerId: string) => {
         const { gameStage, players, skipHandAnalysis, deck, stage2TurnPhase, currentPlayerId } = get();
         const currentPlayer = players.find(p => p.id === playerId);
-        if (!currentPlayer) return;
+        
+        console.log(`🔍 [processPlayerTurn] ВЫЗВАН! playerId: ${playerId}, gameStage: ${gameStage}`);
+        
+        if (!currentPlayer) {
+          console.error(`❌ [processPlayerTurn] Игрок ${playerId} не найден!`);
+          return;
+        }
+        
+        console.log(`🔍 [processPlayerTurn] Игрок: ${currentPlayer.name}, isBot: ${currentPlayer.isBot}, isWinner: ${currentPlayer.isWinner}`);
         
         // ИСПРАВЛЕНО: Обрабатываем 2-ю и 3-ю стадии одинаково (правила дурака)
         if (gameStage === 2 || gameStage === 3) {
-          // ✅ ОПТИМИЗАЦИЯ: Убрали лишний лог (слишком частый во 2-й стадии)
-          // console.log(`🎮 [processPlayerTurn] Стадия ${gameStage}: ${currentPlayer.name} (${currentPlayer.cards.length} карт, ${currentPlayer.penki.length} пеньков)`);
+          console.log(`🎮 [processPlayerTurn] Стадия ${gameStage}: ${currentPlayer.name} (${currentPlayer.cards.length} карт, ${currentPlayer.penki.length} пеньков)`);
           
           // ✅ КРИТИЧНО: НЕ сбрасываем stage2TurnPhase если уже выбрана карта!
           // Это предотвращает race condition с AI ботами
@@ -1374,13 +1401,20 @@ export const useGameStore = create<GameState>()(
             return;
           }
           
+          console.log(`🔍 [processPlayerTurn] Устанавливаем currentPlayerId: ${currentPlayer.id}, stage2TurnPhase: 'selecting_card'`);
+          
           set({ 
             currentPlayerId: currentPlayer.id,
             stage2TurnPhase: 'selecting_card'
           });
           
+          console.log(`✅ [processPlayerTurn] set() ВЫЗВАН! Состояние обновлено`);
+          
           if (!currentPlayer.isBot) {
             get().showNotification(`${currentPlayer.name}: выберите карту для хода`, 'info', 5000);
+            console.log(`✅ [processPlayerTurn] Уведомление показано для пользователя ${currentPlayer.name}`);
+          } else {
+            console.log(`🤖 [processPlayerTurn] Бот ${currentPlayer.name} должен сейчас сделать ход через AI (управляется внешними компонентами)`);
           }
           // Примечание: AI для ботов в стадии 2 управляется через внешние компоненты (ViktorAI и др.)
           return;
@@ -2676,6 +2710,15 @@ export const useGameStore = create<GameState>()(
             if (isLastPlace) {
               // ✅ ЗАЩИТА ОТ ДУБЛИРОВАНИЯ: Проверяем что статистика ЕЩЁ НЕ ОБНОВЛЕНА!
               const { statsUpdatedThisGame } = get();
+              
+              console.log(`🔍🔍🔍 [calculateAndShowGameResults] ПРОВЕРКА ПОСЛЕДНЕГО ИГРОКА:`, {
+                isLastPlace,
+                place: userResult.place,
+                totalPlaces: results.length,
+                statsUpdatedThisGame,
+                shouldUpdate: !statsUpdatedThisGame
+              });
+              
               if (statsUpdatedThisGame) {
                 console.warn(`⚠️⚠️⚠️ [calculateAndShowGameResults] Статистика УЖЕ обновлена за эту игру! Пропускаем последнего игрока`);
               } else {
@@ -3407,7 +3450,9 @@ export const useGameStore = create<GameState>()(
       // ИСПРАВЛЕНО: Сохраняем ВСЁ ИГРОВОЕ СОСТОЯНИЕ для восстановления после refresh
       partialize: (state) => ({
         // Основное игровое состояние
-        isGameActive: state.isGameActive,
+        // ✅ КРИТИЧНО: При перезагрузке страницы НЕ восстанавливаем активную игру!
+        // Это предотвращает показ модалок победителей и другие артефакты
+        isGameActive: false, // ✅ Всегда false после перезагрузки!
         gameMode: state.gameMode,
         players: state.players,
         currentPlayerId: state.currentPlayerId,

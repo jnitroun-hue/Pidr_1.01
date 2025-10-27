@@ -1154,15 +1154,34 @@ function GamePageContentComponent({
               </button>
             )}
           </div>
-          {/* 💸 СЧЕТЧИК ШТРАФНОЙ СТОПКИ */}
-          {!!pendingPenalty && penaltyDeck.length > 0 && (
-            <div className={styles.deckInfo} style={{ 
-              background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.2))',
-              borderColor: 'rgba(239, 68, 68, 0.5)',
-              boxShadow: '0 2px 8px rgba(239, 68, 68, 0.4)'
-            }}>
+          {/* 💸 СЧЕТЧИК ШТРАФНОЙ СТОПКИ - КНОПКА! */}
+          {penaltyDeck.length > 0 && (
+            <button
+              className={styles.deckInfo}
+              onClick={() => {
+                console.log('🔥 [КНОПКА ШТРАФ] Клик! penaltyDeck.length:', penaltyDeck.length);
+                togglePenaltyDeckModal(true);
+              }}
+              style={{ 
+                background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.2))',
+                borderColor: 'rgba(239, 68, 68, 0.5)',
+                boxShadow: '0 2px 8px rgba(239, 68, 68, 0.4)',
+                cursor: 'pointer',
+                textDecoration: 'underline',
+                transition: 'all 0.2s',
+                zIndex: 1000 // ✅ ПОВЕРХ ВСЕХ ЭЛЕМЕНТОВ!
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'scale(1.05)';
+                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(220, 38, 38, 0.3))';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.2))';
+              }}
+            >
               💸 Штраф: {penaltyDeck.length}
-            </div>
+            </button>
           )}
         </div>
       )}
@@ -2095,6 +2114,11 @@ function GamePageContentComponent({
           playerName: pc.contributorName
         }))}
         totalCards={penaltyDeck.length}
+        targetPlayerName={
+          pendingPenalty
+            ? players.find(p => p.id === pendingPenalty.targetPlayerId)?.name || 'Неизвестный'
+            : undefined
+        }
       />
     </div>
   );
