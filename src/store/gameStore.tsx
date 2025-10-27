@@ -2400,14 +2400,22 @@ export const useGameStore = create<GameState>()(
                 // Определяем награды
                 const isTopThree = position >= 1 && position <= 3;
                 let coinsEarned = 0;
+                let ratingChange = 0;
                 
-                if (position === 1) coinsEarned = 350;
-                else if (position === 2) coinsEarned = 250;
-                else if (position === 3) coinsEarned = 150;
-                else if (position >= 4 && position <= 8) {
+                if (position === 1) {
+                  coinsEarned = 350;
+                  ratingChange = 50; // 🥇 Золото
+                } else if (position === 2) {
+                  coinsEarned = 250;
+                  ratingChange = 25; // 🥈 Серебро
+                } else if (position === 3) {
+                  coinsEarned = 150;
+                  ratingChange = 10; // 🥉 Бронза
+                } else if (position >= 4 && position <= 8) {
                   coinsEarned = seededRandom(winner.id, 50, 100); // ✅ Рандом 50-100
+                  ratingChange = 0; // Нейтрально
                 }
-                // Для 9-го места (последнего) монеты начисляются в конце игры
+                // Для 9-го места (последнего) монеты и рейтинг начисляются в конце игры
                 
                 // ✅ ГЕНЕРИРУЕМ УНИКАЛЬНЫЙ TRACE ID
                 const traceId = `WINNER_${position}_${Date.now()}`;
@@ -2469,6 +2477,12 @@ export const useGameStore = create<GameState>()(
                   .then(data => {
                     if (data.success) {
                       console.log(`✅✅✅ [${traceId}] СТАТИСТИКА ОБНОВЛЕНА! Место ${position}, Победа: ${isTopThree}, Монеты: +${coinsEarned}`);
+                      
+                      // ✅ ОБНОВЛЯЕМ РЕЙТИНГ ЕСЛИ ЭТО РЕЙТИНГОВАЯ ИГРА
+                      if (get().isRankedGame && ratingChange !== 0) {
+                        console.log(`🏆 [${traceId}] РЕЙТИНГОВАЯ ИГРА! Обновляем рейтинг: ${ratingChange > 0 ? '+' : ''}${ratingChange}`);
+                        get().updatePlayerRewards(0, 0, ratingChange);
+                      }
                     } else {
                       console.error(`❌❌❌ [${traceId}] Ошибка обновления статистики:`, data.error);
                     }
@@ -2763,8 +2777,10 @@ export const useGameStore = create<GameState>()(
                 console.log(`🔥🔥🔥 [${traceId}] [calculateAndShowGameResults] ПОСЛЕДНИЙ ИГРОК! Обновляем статистику:`, {
                   place: userResult.place,
                   coins: userResult.coinsEarned,
+                  rating: userResult.ratingChange,
                   isLastPlace: true,
                   telegramId: currentUserTelegramId,
+                  isRankedGame: get().isRankedGame,
                   statsWasUpdated: statsUpdatedThisGame,
                   requestBody
                 });
@@ -2792,6 +2808,12 @@ export const useGameStore = create<GameState>()(
                   console.log(`📥 [${traceId}] Response data:`, data);
                   if (data.success) {
                     console.log(`✅✅✅ [${traceId}] СТАТИСТИКА ПОСЛЕДНЕГО ИГРОКА ОБНОВЛЕНА: Поражение +1, Монеты: +${userResult.coinsEarned}`);
+                    
+                    // ✅ ОБНОВЛЯЕМ РЕЙТИНГ ЕСЛИ ЭТО РЕЙТИНГОВАЯ ИГРА
+                    if (get().isRankedGame && userResult.ratingChange !== undefined) {
+                      console.log(`🏆 [${traceId}] РЕЙТИНГОВАЯ ИГРА! Обновляем рейтинг: ${userResult.ratingChange > 0 ? '+' : ''}${userResult.ratingChange}`);
+                      get().updatePlayerRewards(0, 0, userResult.ratingChange);
+                    }
                   } else {
                     console.error(`❌❌❌ [${traceId}] API вернул ошибку:`, data.error);
                   }

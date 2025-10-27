@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Trophy, Eye, Home, Crown, Star, Sparkles } from 'lucide-react';
 
 interface WinnerModalProps {
   playerName: string;
@@ -12,41 +13,24 @@ interface WinnerModalProps {
   onExitToMenu?: () => void; // ✅ Кнопка "Выйти в главное меню"
 }
 
-export default function WinnerModal({ playerName, place, avatar, isCurrentUser, onClose, onContinueWatching, onExitToMenu }: WinnerModalProps) {
+export default function WinnerModal({ 
+  playerName, 
+  place, 
+  avatar, 
+  isCurrentUser, 
+  onClose, 
+  onContinueWatching, 
+  onExitToMenu 
+}: WinnerModalProps) {
   const [confetti, setConfetti] = useState<Array<{ id: number; x: number; delay: number; color: string }>>([]);
-  
-  // ✅ Адаптивные отступы в зависимости от размера экрана
-  const getResponsiveMargin = () => {
-    if (typeof window === 'undefined') return '120px';
-    const width = window.innerWidth;
-    if (width <= 480) return '60px 15px'; // Очень маленький экран
-    if (width <= 768) return '80px 20px'; // Мобильный
-    return '120px'; // Десктоп
-  };
-  
-  const getResponsiveWidth = () => {
-    if (typeof window === 'undefined') return 'calc(100% - 240px)';
-    const width = window.innerWidth;
-    if (width <= 480) return 'calc(100% - 30px)';
-    if (width <= 768) return 'calc(100% - 40px)';
-    return 'calc(100% - 240px)';
-  };
-  
-  const getResponsivePadding = () => {
-    if (typeof window === 'undefined') return '40px';
-    const width = window.innerWidth;
-    if (width <= 480) return '20px';
-    if (width <= 768) return '30px';
-    return '40px';
-  };
 
   useEffect(() => {
     // Генерируем конфетти
-    const newConfetti = Array.from({ length: 50 }, (_, i) => ({
+    const newConfetti = Array.from({ length: 60 }, (_, i) => ({
       id: i,
       x: Math.random() * 100,
-      delay: Math.random() * 0.5,
-      color: ['#FFD700', '#FF6B6B', '#4ECDC4', '#95E1D3', '#FFA07A'][Math.floor(Math.random() * 5)]
+      delay: Math.random() * 0.8,
+      color: ['#FFD700', '#FFA500', '#FF6B6B', '#4ECDC4', '#95E1D3', '#F38181'][Math.floor(Math.random() * 6)]
     }));
     setConfetti(newConfetti);
 
@@ -60,9 +44,45 @@ export default function WinnerModal({ playerName, place, avatar, isCurrentUser, 
     }
   }, [onClose, isCurrentUser]);
 
-  const medals = ['🥇', '🥈', '🥉', '🏅', '🏅', '🏅', '🏅', '🏅'];
-  const medal = medals[place - 1] || '🏅';
-  const placeText = place === 1 ? '1-е место' : place === 2 ? '2-е место' : place === 3 ? '3-е место' : `${place}-е место`;
+  // Определяем цвета и данные по месту
+  const getPlaceData = (place: number) => {
+    switch (place) {
+      case 1:
+        return {
+          gradient: 'linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FF8C00 100%)',
+          icon: <Crown size={48} className="text-white" strokeWidth={2.5} />,
+          glowColor: 'rgba(255, 215, 0, 0.6)',
+          title: '🏆 ПОБЕДА!',
+          subtitle: '1-е место'
+        };
+      case 2:
+        return {
+          gradient: 'linear-gradient(135deg, #E8E8E8 0%, #C0C0C0 50%, #A8A8A8 100%)',
+          icon: <Trophy size={44} className="text-white" strokeWidth={2.5} />,
+          glowColor: 'rgba(192, 192, 192, 0.5)',
+          title: '🥈 ОТЛИЧНО!',
+          subtitle: '2-е место'
+        };
+      case 3:
+        return {
+          gradient: 'linear-gradient(135deg, #CD7F32 0%, #B8732C 50%, #A0632A 100%)',
+          icon: <Star size={44} className="text-white" strokeWidth={2.5} />,
+          glowColor: 'rgba(205, 127, 50, 0.5)',
+          title: '🥉 МОЛОДЕЦ!',
+          subtitle: '3-е место'
+        };
+      default:
+        return {
+          gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #5e35b1 100%)',
+          icon: <Sparkles size={40} className="text-white" strokeWidth={2.5} />,
+          glowColor: 'rgba(102, 126, 234, 0.5)',
+          title: '🎉 ФИНИШ!',
+          subtitle: `${place}-е место`
+        };
+    }
+  };
+
+  const placeData = getPlaceData(place);
 
   return (
     <AnimatePresence>
@@ -70,265 +90,221 @@ export default function WinnerModal({ playerName, place, avatar, isCurrentUser, 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[10000] flex items-center justify-center overflow-hidden"
         style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.7)',
-          backdropFilter: 'blur(8px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 10000, // ✅ ПОВЫШЕН z-index (выше LoserModal)
-          overflow: 'hidden'
+          background: 'radial-gradient(circle at center, rgba(15, 23, 42, 0.95) 0%, rgba(0, 0, 0, 0.98) 100%)',
+          backdropFilter: 'blur(12px)'
         }}
       >
-        {/* Конфетти */}
-        {confetti.map((particle) => (
-          <motion.div
-            key={particle.id}
-            initial={{ y: -50, x: `${particle.x}vw`, opacity: 1, rotate: 0 }}
-            animate={{ 
-              y: '110vh', 
-              x: `${particle.x + (Math.random() - 0.5) * 20}vw`,
-              rotate: Math.random() * 720,
-              opacity: 0
-            }}
-            transition={{ 
-              duration: 2 + Math.random() * 2, 
-              delay: particle.delay,
-              ease: 'easeOut'
-            }}
-            style={{
-              position: 'absolute',
-              width: '10px',
-              height: '10px',
-              background: particle.color,
-              borderRadius: '50%',
-              pointerEvents: 'none'
-            }}
-          />
-        ))}
+        {/* Анимированный фон с частицами */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {confetti.map((particle) => (
+            <motion.div
+              key={particle.id}
+              initial={{ y: -20, x: `${particle.x}%`, opacity: 1, scale: 0 }}
+              animate={{ 
+                y: '120vh', 
+                x: `${particle.x + (Math.random() - 0.5) * 30}%`,
+                rotate: Math.random() * 720,
+                opacity: [0, 1, 1, 0],
+                scale: [0, 1, 1, 0.5]
+              }}
+              transition={{ 
+                duration: 3 + Math.random() * 2, 
+                delay: particle.delay,
+                ease: 'easeOut'
+              }}
+              className="absolute"
+              style={{
+                width: '12px',
+                height: '12px',
+                background: particle.color,
+                borderRadius: '50%',
+                boxShadow: `0 0 10px ${particle.color}`
+              }}
+            />
+          ))}
+        </div>
 
-        {/* Модальное окно */}
+        {/* Основная карточка */}
         <motion.div
-          initial={{ scale: 0, rotate: -180 }}
-          animate={{ scale: 1, rotate: 0 }}
-          exit={{ scale: 0, rotate: 180 }}
-          transition={{ type: 'spring', duration: 0.5 }}
+          initial={{ scale: 0.5, opacity: 0, rotateY: -180 }}
+          animate={{ scale: 1, opacity: 1, rotateY: 0 }}
+          exit={{ scale: 0.5, opacity: 0, rotateY: 180 }}
+          transition={{ type: 'spring', damping: 20, stiffness: 200 }}
+          className="relative max-w-md w-full mx-4"
           style={{
-            background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.95) 0%, rgba(255, 140, 0, 0.95) 100%)',
-            borderRadius: '24px',
-            padding: getResponsivePadding(), // ✅ Адаптивный padding
-            boxShadow: '0 20px 60px rgba(255, 215, 0, 0.5), 0 0 100px rgba(255, 140, 0, 0.3)',
-            border: '3px solid rgba(255, 255, 255, 0.5)',
-            textAlign: 'center',
-            maxWidth: '400px',
-            width: getResponsiveWidth(), // ✅ Адаптивная ширина
-            margin: getResponsiveMargin(), // ✅ Адаптивные отступы от края
-            position: 'relative',
-            overflow: 'hidden'
-          } as React.CSSProperties}
+            background: placeData.gradient,
+            borderRadius: '28px',
+            padding: '40px',
+            boxShadow: `0 30px 80px -20px ${placeData.glowColor}, 0 0 0 1px rgba(255, 255, 255, 0.2), inset 0 2px 4px rgba(255, 255, 255, 0.3)`,
+            border: '2px solid rgba(255, 255, 255, 0.4)'
+          }}
         >
-          {/* Блики */}
+          {/* Блик */}
           <motion.div
             animate={{ 
-              rotate: [0, 360],
-              scale: [1, 1.2, 1]
+              x: ['-100%', '200%'],
             }}
             transition={{ 
               duration: 3, 
               repeat: Infinity,
-              ease: 'linear'
+              ease: 'easeInOut',
+              repeatDelay: 1
             }}
+            className="absolute top-0 left-0 w-1/2 h-full pointer-events-none"
             style={{
-              position: 'absolute',
-              top: '-50%',
-              left: '-50%',
-              width: '200%',
-              height: '200%',
-              background: 'radial-gradient(circle, rgba(255, 255, 255, 0.3) 0%, transparent 70%)',
-              pointerEvents: 'none'
+              background: 'linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%)',
+              filter: 'blur(20px)'
             }}
           />
 
-          {/* Медаль */}
+          {/* Иконка места */}
           <motion.div
             animate={{ 
-              scale: [1, 1.2, 1],
-              rotate: [0, 10, -10, 0]
+              scale: [1, 1.15, 1],
+              rotate: [0, 5, -5, 0]
             }}
             transition={{ 
-              duration: 1, 
+              duration: 2, 
               repeat: Infinity,
               ease: 'easeInOut'
             }}
-            style={{ 
-              fontSize: '80px', 
-              marginBottom: '16px',
-              filter: 'drop-shadow(0 0 20px rgba(255, 215, 0, 0.8))'
+            className="flex justify-center mb-6"
+            style={{
+              filter: `drop-shadow(0 8px 24px ${placeData.glowColor})`
             }}
           >
-            {medal}
+            {placeData.icon}
           </motion.div>
 
-          {/* Аватар */}
-          {avatar && (
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.2 }}
-              style={{
-                width: '80px',
-                height: '80px',
-                borderRadius: '50%',
-                margin: '0 auto 16px',
-                overflow: 'hidden',
-                border: '4px solid white',
-                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)'
-              }}
-            >
-              <img 
-                src={avatar} 
-                alt={playerName}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
-            </motion.div>
-          )}
-
-          {/* Текст */}
+          {/* Заголовок */}
           <motion.h2
-            initial={{ y: 20, opacity: 0 }}
+            initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.3 }}
+            transition={{ delay: 0.2 }}
+            className="text-4xl font-black text-white text-center mb-2"
             style={{
-              fontSize: '32px',
-              fontWeight: '900',
-              color: 'white',
-              marginBottom: '8px',
-              textShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
-              textTransform: 'uppercase'
+              textShadow: '0 4px 12px rgba(0, 0, 0, 0.5), 0 2px 4px rgba(0, 0, 0, 0.3)'
             }}
           >
-            {placeText}!
+            {placeData.title}
           </motion.h2>
 
-          <motion.p
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
+          {/* Место */}
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}
+            className="text-xl font-bold text-white/90 text-center mb-6"
+            style={{
+              textShadow: '0 2px 8px rgba(0, 0, 0, 0.4)'
+            }}
+          >
+            {placeData.subtitle}
+          </motion.div>
+
+          {/* Аватар и имя */}
+          <motion.div
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.4 }}
-            style={{
-              fontSize: '24px',
-              fontWeight: '700',
-              color: 'rgba(255, 255, 255, 0.95)',
-              textShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
-            }}
+            className="flex flex-col items-center gap-4 mb-8"
           >
-            {playerName}
-          </motion.p>
+            {avatar && (
+              <div 
+                className="relative"
+                style={{
+                  width: '100px',
+                  height: '100px',
+                  borderRadius: '50%',
+                  padding: '4px',
+                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.3) 100%)',
+                  boxShadow: `0 8px 32px ${placeData.glowColor}, inset 0 2px 4px rgba(255, 255, 255, 0.5)`
+                }}
+              >
+                <img 
+                  src={avatar} 
+                  alt={playerName}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                    border: '3px solid rgba(255, 255, 255, 0.4)'
+                  }}
+                />
+              </div>
+            )}
+            <div className="text-2xl font-black text-white text-center px-4 py-2 rounded-xl"
+              style={{
+                background: 'rgba(0, 0, 0, 0.3)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                textShadow: '0 2px 8px rgba(0, 0, 0, 0.5)'
+              }}
+            >
+              {playerName}
+            </div>
+          </motion.div>
 
-          <motion.p
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.5 }}
-            style={{
-              fontSize: '16px',
-              fontWeight: '600',
-              color: 'rgba(255, 255, 255, 0.8)',
-              marginTop: '16px',
-              textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
-            }}
-          >
-            🎉 Поздравляем! 🎉
-          </motion.p>
-
-          {/* ✅ КНОПКИ ТОЛЬКО ДЛЯ ПОЛЬЗОВАТЕЛЯ! */}
-          {isCurrentUser && (
+          {/* Кнопки для ПОЛЬЗОВАТЕЛЯ */}
+          {isCurrentUser && onContinueWatching && onExitToMenu && (
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.6 }}
-              style={{
-                display: 'flex',
-                gap: '16px',
-                marginTop: '32px',
-                flexDirection: 'column',
-                width: '100%',
-                maxWidth: '400px'
-              }}
+              className="flex flex-col gap-3"
             >
-              {/* Кнопка "Продолжить просмотр" */}
-              <button
-                onClick={() => {
-                  console.log('👁️ [WinnerModal] Пользователь продолжает просмотр');
-                  if (onContinueWatching) onContinueWatching();
-                  onClose();
-                }}
+              <motion.button
+                whileHover={{ scale: 1.05, boxShadow: '0 12px 32px rgba(16, 185, 129, 0.4)' }}
+                whileTap={{ scale: 0.95 }}
+                onClick={onContinueWatching}
+                className="w-full py-4 px-6 rounded-xl font-bold text-lg text-white flex items-center justify-center gap-3 transition-all duration-200"
                 style={{
-                  padding: '16px 32px',
-                  fontSize: '18px',
-                  fontWeight: 'bold',
-                  color: 'white',
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  border: 'none',
-                  borderRadius: '12px',
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
-                  transition: 'all 0.3s ease',
-                  textTransform: 'uppercase',
-                  letterSpacing: '1px'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.6)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.4)';
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  boxShadow: '0 8px 24px rgba(16, 185, 129, 0.3), inset 0 1px 2px rgba(255, 255, 255, 0.3)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
                 }}
               >
-                👁️ Продолжить просмотр
-              </button>
+                <Eye size={24} strokeWidth={2.5} />
+                Продолжить просмотр
+              </motion.button>
 
-              {/* Кнопка "Выйти в главное меню" */}
-              <button
-                onClick={() => {
-                  console.log('🚪 [WinnerModal] Пользователь выходит в главное меню');
-                  if (onExitToMenu) onExitToMenu();
-                  onClose();
-                }}
+              <motion.button
+                whileHover={{ scale: 1.05, boxShadow: '0 12px 32px rgba(99, 102, 241, 0.4)' }}
+                whileTap={{ scale: 0.95 }}
+                onClick={onExitToMenu}
+                className="w-full py-4 px-6 rounded-xl font-bold text-lg text-white flex items-center justify-center gap-3 transition-all duration-200"
                 style={{
-                  padding: '16px 32px',
-                  fontSize: '18px',
-                  fontWeight: 'bold',
-                  color: 'white',
-                  background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-                  border: 'none',
-                  borderRadius: '12px',
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 15px rgba(245, 87, 108, 0.4)',
-                  transition: 'all 0.3s ease',
-                  textTransform: 'uppercase',
-                  letterSpacing: '1px'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(245, 87, 108, 0.6)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 4px 15px rgba(245, 87, 108, 0.4)';
+                  background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+                  boxShadow: '0 8px 24px rgba(99, 102, 241, 0.3), inset 0 1px 2px rgba(255, 255, 255, 0.3)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
                 }}
               >
-                🚪 Выйти в главное меню
-              </button>
+                <Home size={24} strokeWidth={2.5} />
+                Выйти в главное меню
+              </motion.button>
             </motion.div>
+          )}
+
+          {/* Индикатор автозакрытия для ботов */}
+          {!isCurrentUser && (
+            <motion.div
+              initial={{ scaleX: 0 }}
+              animate={{ scaleX: 1 }}
+              transition={{ duration: 3, ease: 'linear' }}
+              className="absolute bottom-0 left-0 right-0 h-1 rounded-b-[28px]"
+              style={{
+                background: 'linear-gradient(90deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.4) 100%)',
+                transformOrigin: 'left'
+              }}
+            />
           )}
         </motion.div>
       </motion.div>
     </AnimatePresence>
   );
 }
-

@@ -234,20 +234,63 @@ export default function NFTPokemonGenerator({ userCoins, onBalanceUpdate }: NFTP
 
     try {
       setIsGenerating(true);
-      console.log('🎨 Генерация NFT карты с покемоном...');
+      console.log('🎨 Генерация ПРОСТОЙ NFT карты (БЕЗ покемона)...');
 
       const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
       const telegramId = telegramUser?.id?.toString() || '';
       const username = telegramUser?.username || telegramUser?.first_name || '';
 
-      // ✅ РАНДОМНЫЙ ПОКЕМОН (1-52)
-      const randomPokemonId = Math.floor(Math.random() * 52) + 1;
-      console.log(`🎲 Выбран покемон #${randomPokemonId}`);
+      // ✅ ПРОСТАЯ КАРТА - БЕЗ ПОКЕМОНА!
+      // Генерируем простое изображение карты (белый фон + масть + ранг)
+      const canvas = document.createElement('canvas');
+      canvas.width = 300;
+      canvas.height = 420;
+      const ctx = canvas.getContext('2d');
+      
+      if (!ctx) throw new Error('Canvas не поддерживается');
 
-      // ✅ Генерируем изображение карты
-      const imageDataUrl = await generateCardImage(selectedSuit, selectedRank, randomPokemonId);
+      // Белый фон
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      console.log('✅ Изображение сгенерировано, отправляем на сервер...');
+      // Рамка
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(5, 5, canvas.width - 10, canvas.height - 10);
+
+      const suitData = SUITS.find(s => s.value === selectedSuit);
+      const rankData = RANKS.find(r => r.value === selectedRank);
+
+      if (!suitData || !rankData) throw new Error('Некорректные данные карты');
+
+      // Верхний левый угол
+      ctx.fillStyle = suitData.color;
+      ctx.font = 'bold 40px Arial';
+      ctx.textAlign = 'left';
+      ctx.fillText(rankData.display, 20, 50);
+      ctx.font = '50px Arial';
+      ctx.fillText(suitData.symbol, 20, 100);
+
+      // Центральный символ масти (крупный)
+      ctx.font = '120px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(suitData.symbol, canvas.width / 2, canvas.height / 2 + 40);
+
+      // Нижний правый угол (перевёрнуто)
+      ctx.save();
+      ctx.translate(canvas.width, canvas.height);
+      ctx.rotate(Math.PI);
+      ctx.fillStyle = suitData.color;
+      ctx.font = 'bold 40px Arial';
+      ctx.textAlign = 'left';
+      ctx.fillText(rankData.display, 20, 50);
+      ctx.font = '50px Arial';
+      ctx.fillText(suitData.symbol, 20, 100);
+      ctx.restore();
+
+      const imageDataUrl = canvas.toDataURL('image/png');
+
+      console.log('✅ Простое изображение сгенерировано, отправляем на сервер...');
 
       const response = await fetch('/api/nft/generate-pokemon', {
         method: 'POST',
@@ -258,13 +301,13 @@ export default function NFTPokemonGenerator({ userCoins, onBalanceUpdate }: NFTP
           'x-username': username
         },
         body: JSON.stringify({
-          action: 'single',
+          action: 'simple',
           suit: selectedSuit,
           rank: selectedRank,
           rankCost,
           suitCost,
           totalCost: currentCost,
-          pokemonId: randomPokemonId,
+          pokemonId: null, // ✅ НЕТ ПОКЕМОНА!
           imageData: imageDataUrl
         })
       });
@@ -285,7 +328,7 @@ export default function NFTPokemonGenerator({ userCoins, onBalanceUpdate }: NFTP
       // Перезагружаем список карт
       await fetchUserCards();
 
-      alert(`✅ NFT карта создана!\n\n${RANKS.find(r => r.value === selectedRank)?.display} ${SUITS.find(s => s.value === selectedSuit)?.label}\nПокемон #${randomPokemonId}\n\nСпискано: ${currentCost.toLocaleString()} монет\nОстаток: ${result.newBalance?.toLocaleString()} монет`);
+      alert(`✅ NFT карта создана!\n\n${RANKS.find(r => r.value === selectedRank)?.display} ${SUITS.find(s => s.value === selectedSuit)?.label}\n\nСпискано: ${currentCost.toLocaleString()} монет\nОстаток: ${result.newBalance?.toLocaleString()} монет`);
 
     } catch (error: any) {
       console.error('❌ Ошибка генерации NFT:', error);
