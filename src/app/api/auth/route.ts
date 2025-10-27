@@ -102,7 +102,8 @@ export async function GET(req: NextRequest) {
         coins: user.coins,
         rating: user.rating,
         gamesPlayed: user.games_played,
-        gamesWon: user.games_won,
+        wins: user.wins,        // ✅ ИСПРАВЛЕНО: wins вместо games_won!
+        losses: user.losses,    // ✅ ДОБАВЛЕНО: losses!
         status: user.status
       }
     });
@@ -276,7 +277,8 @@ export async function POST(req: NextRequest) {
         coins: user.coins,
         rating: user.rating,
         gamesPlayed: user.games_played,
-        gamesWon: user.games_won,
+        wins: user.wins,        // ✅ ИСПРАВЛЕНО: wins вместо games_won!
+        losses: user.losses,    // ✅ ДОБАВЛЕНО: losses!
         status: user.status
       }
     });
@@ -296,6 +298,11 @@ export async function POST(req: NextRequest) {
     console.log('✅ JWT токен создан и установлен в cookie');
     console.log('🔑 Токен (первые 50 символов):', token.substring(0, 50) + '...');
     console.log('🍪 Cookie настройки:', cookieSettings);
+    console.log('📊 Возвращаем статистику пользователя:', {
+      gamesPlayed: user.games_played,
+      wins: user.wins,
+      losses: user.losses
+    });
 
     return response;
 
