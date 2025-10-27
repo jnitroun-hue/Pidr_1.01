@@ -308,6 +308,215 @@ export default function NFTPokemonGenerator({ userCoins, onBalanceUpdate }: NFTP
     }, 300);
   };
 
+  // ✅ НОВАЯ ФУНКЦИЯ: Рандомная карта с покемоном за 10000 монет
+  const handleRandomPokemon = async () => {
+    const cost = 10000;
+    
+    if (userCoins < cost) {
+      alert(`❌ Недостаточно монет!\n\nТребуется: ${cost.toLocaleString()}\nУ вас: ${userCoins.toLocaleString()}`);
+      return;
+    }
+
+    const randomSuit = SUITS[Math.floor(Math.random() * SUITS.length)].value;
+    const randomRank = RANKS[Math.floor(Math.random() * RANKS.length)].value;
+    
+    setSelectedSuit(randomSuit);
+    setSelectedRank(randomRank);
+    
+    // Используем фиксированную цену 10000
+    try {
+      setIsGenerating(true);
+      console.log('🎲 Генерация РАНДОМНОЙ карты с покемоном за 10000 монет...');
+
+      const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+      const telegramId = telegramUser?.id?.toString() || '';
+      const username = telegramUser?.username || telegramUser?.first_name || '';
+
+      const randomPokemonId = Math.floor(Math.random() * 52) + 1;
+      console.log(`🎲 Выбран покемон #${randomPokemonId}`);
+
+      const imageDataUrl = await generateCardImage(randomSuit, randomRank, randomPokemonId);
+
+      const response = await fetch('/api/nft/generate-pokemon', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-telegram-id': telegramId,
+          'x-username': username
+        },
+        body: JSON.stringify({
+          action: 'random',
+          suit: randomSuit,
+          rank: randomRank,
+          rankCost: 0,
+          suitCost: 0,
+          totalCost: cost,
+          pokemonId: randomPokemonId,
+          imageData: imageDataUrl
+        })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Ошибка генерации NFT');
+      }
+
+      if (result.newBalance !== undefined) {
+        onBalanceUpdate(result.newBalance);
+      }
+
+      await fetchUserCards();
+
+      alert(`🎲 РАНДОМНАЯ ПОКЕМОН КАРТА!\n\n${RANKS.find(r => r.value === randomRank)?.display} ${SUITS.find(s => s.value === randomSuit)?.label}\nПокемон #${randomPokemonId}\n\nСпискано: ${cost.toLocaleString()} монет\nОстаток: ${result.newBalance?.toLocaleString()} монет`);
+
+    } catch (error: any) {
+      console.error('❌ Ошибка генерации:', error);
+      alert(`❌ Ошибка: ${error.message}`);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // ✅ НОВАЯ ФУНКЦИЯ: Рандомная карта с героем Наруто за 10000 монет
+  const handleRandomNaruto = async () => {
+    const cost = 10000;
+    
+    if (userCoins < cost) {
+      alert(`❌ Недостаточно монет!\n\nТребуется: ${cost.toLocaleString()}\nУ вас: ${userCoins.toLocaleString()}`);
+      return;
+    }
+
+    const randomSuit = SUITS[Math.floor(Math.random() * SUITS.length)].value;
+    const randomRank = RANKS[Math.floor(Math.random() * RANKS.length)].value;
+    
+    setSelectedSuit(randomSuit);
+    setSelectedRank(randomRank);
+    
+    try {
+      setIsGenerating(true);
+      console.log('🎲 Генерация РАНДОМНОЙ карты с героем Наруто за 10000 монет...');
+
+      const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+      const telegramId = telegramUser?.id?.toString() || '';
+      const username = telegramUser?.username || telegramUser?.first_name || '';
+
+      const randomNarutoId = Math.floor(Math.random() * 52) + 1;
+      console.log(`🎲 Выбран герой Наруто #${randomNarutoId}`);
+
+      // Генерируем карту с Наруто (используем /naruto/ вместо /pokemon/)
+      const canvas = document.createElement('canvas');
+      canvas.width = 300;
+      canvas.height = 420;
+      const ctx = canvas.getContext('2d');
+      
+      if (!ctx) throw new Error('Canvas не поддерживается');
+
+      // Белый фон
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Рамка
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(5, 5, canvas.width - 10, canvas.height - 10);
+
+      const suitData = SUITS.find(s => s.value === randomSuit);
+      const rankData = RANKS.find(r => r.value === randomRank);
+
+      if (!suitData || !rankData) throw new Error('Некорректные данные карты');
+
+      // Верхний левый угол
+      ctx.fillStyle = suitData.color;
+      ctx.font = 'bold 40px Arial';
+      ctx.textAlign = 'left';
+      ctx.fillText(rankData.display, 20, 50);
+      ctx.font = '50px Arial';
+      ctx.fillText(suitData.symbol, 20, 100);
+
+      // Нижний правый угол (перевёрнуто)
+      ctx.save();
+      ctx.translate(canvas.width, canvas.height);
+      ctx.rotate(Math.PI);
+      ctx.fillStyle = suitData.color;
+      ctx.font = 'bold 40px Arial';
+      ctx.textAlign = 'left';
+      ctx.fillText(rankData.display, 20, 50);
+      ctx.font = '50px Arial';
+      ctx.fillText(suitData.symbol, 20, 100);
+      ctx.restore();
+
+      // Загружаем героя Наруто
+      const imageDataUrl = await new Promise<string>((resolve) => {
+        const narutoImg = new Image();
+        narutoImg.crossOrigin = 'anonymous';
+        narutoImg.onload = () => {
+          const imgWidth = 200;
+          const imgHeight = 200;
+          const imgX = (canvas.width - imgWidth) / 2;
+          const imgY = (canvas.height - imgHeight) / 2;
+
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(imgX - 5, imgY - 5, imgWidth + 10, imgHeight + 10);
+          ctx.drawImage(narutoImg, imgX, imgY, imgWidth, imgHeight);
+
+          resolve(canvas.toDataURL('image/png'));
+        };
+        narutoImg.onerror = () => {
+          ctx.fillStyle = '#e5e7eb';
+          ctx.fillRect(50, 110, 200, 200);
+          ctx.fillStyle = '#9ca3af';
+          ctx.font = 'bold 24px Arial';
+          ctx.textAlign = 'center';
+          ctx.fillText(`НАРУТО #${randomNarutoId}`, canvas.width / 2, canvas.height / 2);
+          resolve(canvas.toDataURL('image/png'));
+        };
+        narutoImg.src = `/naruto/${randomNarutoId}.svg`;
+      });
+
+      const response = await fetch('/api/nft/generate-pokemon', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-telegram-id': telegramId,
+          'x-username': username
+        },
+        body: JSON.stringify({
+          action: 'random_naruto',
+          suit: randomSuit,
+          rank: randomRank,
+          rankCost: 0,
+          suitCost: 0,
+          totalCost: cost,
+          pokemonId: randomNarutoId, // используем то же поле для ID героя
+          imageData: imageDataUrl
+        })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Ошибка генерации NFT');
+      }
+
+      if (result.newBalance !== undefined) {
+        onBalanceUpdate(result.newBalance);
+      }
+
+      await fetchUserCards();
+
+      alert(`🍥 РАНДОМНАЯ НАРУТО КАРТА!\n\n${RANKS.find(r => r.value === randomRank)?.display} ${SUITS.find(s => s.value === randomSuit)?.label}\nГерой Наруто #${randomNarutoId}\n\nСпискано: ${cost.toLocaleString()} монет\nОстаток: ${result.newBalance?.toLocaleString()} монет`);
+
+    } catch (error: any) {
+      console.error('❌ Ошибка генерации:', error);
+      alert(`❌ Ошибка: ${error.message}`);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   return (
     <div style={{
       background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
@@ -432,53 +641,110 @@ export default function NFTPokemonGenerator({ userCoins, onBalanceUpdate }: NFTP
         </div>
       </div>
 
-      {/* КНОПКИ */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-        <motion.button
-          onClick={handleGenerateSingle}
-          disabled={isGenerating || userCoins < currentCost}
-          whileHover={userCoins >= currentCost && !isGenerating ? { scale: 1.02 } : {}}
-          whileTap={userCoins >= currentCost && !isGenerating ? { scale: 0.98 } : {}}
-          style={{
-            padding: '16px',
-            borderRadius: '12px',
-            border: 'none',
-            background: userCoins >= currentCost && !isGenerating
-              ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-              : 'rgba(55, 65, 81, 0.6)',
-            color: '#fff',
-            fontSize: '1rem',
-            fontWeight: '700',
-            cursor: userCoins >= currentCost && !isGenerating ? 'pointer' : 'not-allowed',
-            opacity: userCoins >= currentCost && !isGenerating ? 1 : 0.6,
-            transition: 'all 0.3s ease'
-          }}
-        >
-          {isGenerating ? '⏳ Генерация...' : '✅ Создать карту'}
-        </motion.button>
+      {/* КНОПКА СОЗДАНИЯ КАРТЫ */}
+      <motion.button
+        onClick={handleGenerateSingle}
+        disabled={isGenerating || userCoins < currentCost}
+        whileHover={userCoins >= currentCost && !isGenerating ? { scale: 1.02 } : {}}
+        whileTap={userCoins >= currentCost && !isGenerating ? { scale: 0.98 } : {}}
+        style={{
+          width: '100%',
+          padding: '16px',
+          borderRadius: '12px',
+          border: 'none',
+          background: userCoins >= currentCost && !isGenerating
+            ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+            : 'rgba(55, 65, 81, 0.6)',
+          color: '#fff',
+          fontSize: '1rem',
+          fontWeight: '700',
+          cursor: userCoins >= currentCost && !isGenerating ? 'pointer' : 'not-allowed',
+          opacity: userCoins >= currentCost && !isGenerating ? 1 : 0.6,
+          transition: 'all 0.3s ease',
+          marginBottom: '16px'
+        }}
+      >
+        {isGenerating ? '⏳ Генерация...' : '✅ Создать карту'}
+      </motion.button>
 
-        <motion.button
-          onClick={handleGenerateRandom}
-          disabled={isGenerating || userCoins < 1000}
-          whileHover={userCoins >= 1000 && !isGenerating ? { scale: 1.02 } : {}}
-          whileTap={userCoins >= 1000 && !isGenerating ? { scale: 0.98 } : {}}
-          style={{
-            padding: '16px',
-            borderRadius: '12px',
-            border: 'none',
-            background: userCoins >= 1000 && !isGenerating
-              ? 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)'
-              : 'rgba(55, 65, 81, 0.6)',
-            color: '#fff',
-            fontSize: '1rem',
-            fontWeight: '700',
-            cursor: userCoins >= 1000 && !isGenerating ? 'pointer' : 'not-allowed',
-            opacity: userCoins >= 1000 && !isGenerating ? 1 : 0.6,
-            transition: 'all 0.3s ease'
-          }}
-        >
-          🎲 Случайная карта
-        </motion.button>
+      {/* СПЕЦИАЛЬНЫЕ КНОПКИ ЗА 10000 МОНЕТ */}
+      <div style={{ 
+        background: 'rgba(251, 191, 36, 0.05)',
+        border: '2px solid rgba(251, 191, 36, 0.2)',
+        borderRadius: '16px',
+        padding: '16px',
+        marginBottom: '20px'
+      }}>
+        <h4 style={{ 
+          fontSize: '0.9rem', 
+          color: '#fbbf24', 
+          marginBottom: '12px', 
+          textAlign: 'center',
+          fontWeight: '700'
+        }}>
+          ⭐ СПЕЦИАЛЬНЫЕ РАНДОМНЫЕ КАРТЫ ⭐
+        </h4>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          {/* ПОКЕМОН КАРТА */}
+          <motion.button
+            onClick={handleRandomPokemon}
+            disabled={isGenerating || userCoins < 10000}
+            whileHover={userCoins >= 10000 && !isGenerating ? { scale: 1.02 } : {}}
+            whileTap={userCoins >= 10000 && !isGenerating ? { scale: 0.98 } : {}}
+            style={{
+              padding: '16px',
+              borderRadius: '12px',
+              border: 'none',
+              background: userCoins >= 10000 && !isGenerating
+                ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
+                : 'rgba(55, 65, 81, 0.6)',
+              color: '#fff',
+              fontSize: '0.9rem',
+              fontWeight: '700',
+              cursor: userCoins >= 10000 && !isGenerating ? 'pointer' : 'not-allowed',
+              opacity: userCoins >= 10000 && !isGenerating ? 1 : 0.6,
+              transition: 'all 0.3s ease',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <div style={{ fontSize: '1.5rem' }}>⚡</div>
+            <div>ПОКЕМОН</div>
+            <div style={{ fontSize: '0.75rem', opacity: 0.9 }}>10 000 монет</div>
+          </motion.button>
+
+          {/* НАРУТО КАРТА */}
+          <motion.button
+            onClick={handleRandomNaruto}
+            disabled={isGenerating || userCoins < 10000}
+            whileHover={userCoins >= 10000 && !isGenerating ? { scale: 1.02 } : {}}
+            whileTap={userCoins >= 10000 && !isGenerating ? { scale: 0.98 } : {}}
+            style={{
+              padding: '16px',
+              borderRadius: '12px',
+              border: 'none',
+              background: userCoins >= 10000 && !isGenerating
+                ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
+                : 'rgba(55, 65, 81, 0.6)',
+              color: '#fff',
+              fontSize: '0.9rem',
+              fontWeight: '700',
+              cursor: userCoins >= 10000 && !isGenerating ? 'pointer' : 'not-allowed',
+              opacity: userCoins >= 10000 && !isGenerating ? 1 : 0.6,
+              transition: 'all 0.3s ease',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <div style={{ fontSize: '1.5rem' }}>🍥</div>
+            <div>НАРУТО</div>
+            <div style={{ fontSize: '0.75rem', opacity: 0.9 }}>10 000 монет</div>
+          </motion.button>
+        </div>
       </div>
 
       {/* ВАШИ КАРТЫ */}

@@ -1890,85 +1890,50 @@ export default function ProfilePage() {
                   </div>
                 )}
 
-                {/* Кнопки минта */}
+                {/* Кнопки минта - ОБНОВЛЕНО! */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  {/* КНОПКА 1: РАНДОМНАЯ ПОКЕМОН КАРТА ЗА 10000 МОНЕТ */}
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    onClick={async () => {
-                      try {
-                        console.log('🎲 Генерация случайной NFT карты...');
-                        console.log('🔍 Текущее состояние connectedWallets:', connectedWallets);
-                        
-                        // Проверяем подключен ли кошелек
-                        const wallet_address = connectedWallets.ton || connectedWallets.solana;
-                        const network = connectedWallets.ton ? 'TON' : connectedWallets.solana ? 'SOL' : null;
-                        
-                        console.log('🔍 wallet_address:', wallet_address);
-                        console.log('🔍 network:', network);
-
-                        if (!wallet_address || !network) {
-                          console.error('❌ Кошелек не подключен! connectedWallets:', connectedWallets);
-                          alert('❌ Подключите кошелек!\n\n💎 TON Connect или Phantom (Solana) требуется для минта NFT.\n\nСкролльте вверх в разделе NFT КОЛЛЕКЦИЯ и нажмите "Подключить кошелек".');
-                          return;
-                        }
-
-                        const mintPrice = network === 'SOL' ? 0.1 : 0.5;
-                        
-                        if (!confirm(`🎲 Сгенерировать случайную NFT карту?\n\n💰 Цена: ${mintPrice} ${network}\n🎰 Редкость: Common (60%), Rare (25%), Epic (15%)\n🎲 Случайная масть и ранг\n\nПродолжить?`)) {
-                          return;
-                        }
-                        
-                        const response = await fetch('/api/nft/mint-random', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          credentials: 'include',
-                          body: JSON.stringify({
-                            wallet_address,
-                            network
-                          }),
-                        });
-                        
-                        const result = await response.json();
-                        
-                        if (!response.ok || !result.success) {
-                          throw new Error(result.error || 'Ошибка генерации NFT');
-                        }
-                        
-                        console.log('✅ Случайная NFT карта создана:', result.nft);
-                        
-                        // Перезагружаем NFT коллекцию
-                        await loadNFTCollection();
-                        
-                        alert(`🎉 Поздравляем! Вы получили ${result.nft.rarity} карту:\n${result.nft.rank} ${getSuitEmoji(result.nft.suit)}\n\n✅ Сохранено в кошелек: ${wallet_address.slice(0, 8)}...${wallet_address.slice(-6)}\n🌐 Сеть: ${network}`);
-                        
-                      } catch (error: any) {
-                        console.error('❌ Ошибка генерации случайной NFT:', error);
-                        alert(`❌ ${error.message}`);
+                    onClick={() => {
+                      // Вызываем функцию из NFTPokemonGenerator
+                      const generator = document.querySelector('[data-pokemon-generator]') as any;
+                      if (generator && generator.handleRandomPokemon) {
+                        generator.handleRandomPokemon();
+                      } else {
+                        alert('🔧 Генератор покемонов не найден. Обновите страницу!');
                       }
                     }}
                     style={{
-                      background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.8) 0%, rgba(124, 58, 237, 0.6) 100%)',
-                      border: '2px solid rgba(139, 92, 246, 0.3)',
+                      background: user && user.coins >= 10000
+                        ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.8) 0%, rgba(124, 58, 237, 0.6) 100%)'
+                        : 'linear-gradient(135deg, rgba(55, 65, 81, 0.6) 0%, rgba(31, 41, 55, 0.4) 100%)',
+                      border: user && user.coins >= 10000
+                        ? '2px solid rgba(139, 92, 246, 0.3)'
+                        : '2px solid rgba(100, 116, 139, 0.3)',
                       borderRadius: '16px',
                       padding: '20px',
                       color: '#fff',
                       fontSize: '1rem',
                       fontWeight: '700',
-                      cursor: 'pointer',
+                      cursor: user && user.coins >= 10000 ? 'pointer' : 'not-allowed',
                       textAlign: 'center',
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
-                      gap: '8px'
+                      gap: '8px',
+                      opacity: user && user.coins >= 10000 ? 1 : 0.6
                     }}
+                    disabled={!user || user.coins < 10000}
                   >
                     <div style={{ fontSize: '2rem' }}>🎲</div>
-                    <div>RANDOM MINT</div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: '900', color: '#fbbf24' }}>💎 0.5 TON / 0.1 SOL</div>
-                    <div style={{ fontSize: '0.7rem', opacity: 0.8 }}>Common-Epic</div>
+                    <div>ПОКЕМОН КАРТА</div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: '900', color: '#fbbf24' }}>💰 10 000 монет</div>
+                    <div style={{ fontSize: '0.7rem', opacity: 0.8 }}>Рандомная масть + ранг + покемон</div>
                   </motion.button>
 
+                  {/* КНОПКА 2: РАНДОМНАЯ НАРУТО КАРТА ЗА 10000 МОНЕТ */}
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
