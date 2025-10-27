@@ -150,7 +150,8 @@ export default function ProfilePage() {
             coins: result.user.coins,
             rating: result.user.rating,
             gamesPlayed: result.user.gamesPlayed,
-            gamesWon: result.user.gamesWon,
+            wins: result.user.wins,        // ✅ ИСПРАВЛЕНО: wins вместо gamesWon!
+            losses: result.user.losses,    // ✅ ДОБАВЛЕНО: losses из API
             status: result.user.status,
             avatar_url: result.user.avatar_url
           };
@@ -163,10 +164,10 @@ export default function ProfilePage() {
             ...prev,
             rating: userData.rating || 0,
             gamesPlayed: userData.gamesPlayed || 0,
-            wins: userData.gamesWon || 0,
-            losses: Math.max(0, (userData.gamesPlayed || 0) - (userData.gamesWon || 0)),
+            wins: userData.wins || 0,        // ✅ ИСПРАВЛЕНО: wins вместо gamesWon!
+            losses: userData.losses || 0,    // ✅ ИСПРАВЛЕНО: losses напрямую из БД!
             winRate: userData.gamesPlayed > 0 
-              ? Math.round(((userData.gamesWon || 0) / userData.gamesPlayed) * 100) 
+              ? Math.round(((userData.wins || 0) / userData.gamesPlayed) * 100)  // ✅ ИСПРАВЛЕНО!
               : 0
           }));
           

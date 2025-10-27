@@ -70,7 +70,8 @@ export async function GET(req: NextRequest) {
         coins: user.coins,
         rating: user.rating,
         gamesPlayed: user.games_played,
-        gamesWon: user.games_won,
+        wins: user.wins,           // ✅ ИСПРАВЛЕНО: wins вместо games_won!
+        losses: user.losses,       // ✅ ДОБАВЛЕНО: losses из БД
         status: user.status
       }
     });
