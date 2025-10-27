@@ -1,13 +1,13 @@
 'use client'
 
 /**
- * 🎴 ГАЛЕРЕЯ NFT КАРТ P.I.D.R. - ПРЕМИУМ ДИЗАЙН
- * Отображает заминченные карты игрока с красивой подсветкой
+ * 🎴 ГАЛЕРЕЯ NFT КАРТ P.I.D.R. - КОМПАКТНЫЙ ПРЕМИУМ ДИЗАЙН
+ * Отображает заминченные карты игрока в виде компактной сетки
  */
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Sparkles, Coins, Calendar, Hash } from 'lucide-react';
+import { X, Sparkles } from 'lucide-react';
 
 interface NFTCard {
   id: string;
@@ -30,9 +30,6 @@ export default function NFTGallery() {
     loadCollection();
   }, []);
 
-  /**
-   * 📦 Загружаем коллекцию NFT карт пользователя
-   */
   const loadCollection = async () => {
     setIsLoading(true);
     try {
@@ -51,27 +48,24 @@ export default function NFTGallery() {
         }
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        console.log('✅ NFT коллекция загружена:', result);
-        console.log('📦 Количество карт:', result.collection?.length || 0);
-        if (result.success && result.collection) {
-          setCollection(result.collection);
-        } else {
-          console.warn('⚠️ Коллекция пуста или не найдена');
-          setCollection([]);
-        }
+      const result = await response.json();
+      console.log('📦 Результат загрузки коллекции:', result);
+
+      if (result.success && result.collection) {
+        setCollection(result.collection || []);
+        console.log(`✅ Загружено ${result.collection.length} NFT карт`);
       } else {
-        console.error('❌ Ошибка загрузки, статус:', response.status);
+        console.error('❌ Ошибка загрузки коллекции:', result.error);
+        setCollection([]);
       }
     } catch (error) {
       console.error('❌ Ошибка загрузки коллекции:', error);
+      setCollection([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // 🎨 Цвета для мастей
   const getSuitColor = (suit: string) => {
     const colors: Record<string, string> = {
       'hearts': '#ef4444',
@@ -129,17 +123,17 @@ export default function NFTGallery() {
           transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
           className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full"
         />
-        <p className="mt-4 text-gray-400 font-semibold">Загружаем вашу коллекцию...</p>
+        <p className="mt-4 text-gray-400">Загружаем коллекцию...</p>
       </div>
     );
   }
 
   if (collection.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <Sparkles className="w-20 h-20 text-gray-600 mb-4" />
-        <h3 className="text-2xl font-black text-white mb-2">Коллекция пуста</h3>
-        <p className="text-gray-400">Создайте свою первую NFT карту!</p>
+      <div className="flex flex-col items-center justify-center py-20 px-4">
+        <div className="text-6xl mb-4">😔</div>
+        <h3 className="text-2xl font-bold text-white mb-2">Коллекция пуста</h3>
+        <p className="text-gray-400 text-center">Создайте свою первую NFT карту!</p>
       </div>
     );
   }
@@ -147,118 +141,74 @@ export default function NFTGallery() {
   return (
     <div className="w-full">
       {/* Заголовок */}
-      <div className="mb-8 text-center">
-        <h2 className="text-3xl font-black text-white mb-2 flex items-center justify-center gap-3">
-          <Sparkles className="text-yellow-400" size={32} />
-          🎴 МОЯ NFT КОЛЛЕКЦИЯ
-          <Sparkles className="text-yellow-400" size={32} />
+      <div className="mb-6 text-center">
+        <h2 className="text-2xl font-black text-white mb-1 flex items-center justify-center gap-2">
+          <Sparkles className="text-yellow-400" size={24} />
+          МОЯ NFT КОЛЛЕКЦИЯ
+          <Sparkles className="text-yellow-400" size={24} />
         </h2>
-        <p className="text-lg text-gray-400 font-semibold">
-          Всего карт: <span className="text-blue-400">{collection.length}</span>
+        <p className="text-sm text-gray-400">
+          Всего карт: <span className="text-blue-400 font-bold">{collection.length}</span>
         </p>
       </div>
 
-      {/* Сетка карт - УМЕНЬШЕНЫ В 2 РАЗА */}
-      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-3 p-4">
+      {/* КОМПАКТНАЯ СЕТКА КАРТ - УМЕНЬШЕНЫ В 5 РАЗ */}
+      <div className="grid grid-cols-5 sm:grid-cols-7 md:grid-cols-10 lg:grid-cols-12 xl:grid-cols-15 gap-2 p-2">
         {collection.map((card, index) => {
           const suitColor = getSuitColor(card.suit);
-          const suitGradient = getSuitGradient(card.suit);
           
           return (
-            <motion.div
+            <motion.button
               key={card.id}
-              initial={{ opacity: 0, scale: 0.8, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              transition={{ delay: index * 0.03, type: 'spring', stiffness: 200 }}
-              whileHover={{ scale: 1.05, y: -8 }}
+              initial={{ opacity: 0, scale: 0.5 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: index * 0.01 }}
+              whileHover={{ scale: 1.1, y: -4 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => setSelectedCard(card)}
-              className="cursor-pointer relative group"
+              className="relative group focus:outline-none"
               style={{
-                borderRadius: '16px',
-                background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.95) 100%)',
-                border: `2px solid ${suitColor}40`,
-                boxShadow: `0 4px 20px ${suitColor}30, 0 0 0 1px ${suitColor}20`,
-                transition: 'all 0.3s ease',
-                overflow: 'hidden'
+                borderRadius: '8px',
+                background: 'rgba(15, 23, 42, 0.8)',
+                border: `2px solid ${suitColor}60`,
+                boxShadow: `0 2px 8px ${suitColor}40`,
+                transition: 'all 0.2s ease',
+                overflow: 'hidden',
+                aspectRatio: '2/3'
               }}
             >
-              {/* Анимированный блик */}
-              <motion.div
-                className="absolute inset-0 pointer-events-none"
-                animate={{
-                  background: [
-                    `linear-gradient(45deg, transparent 30%, ${suitColor}40 50%, transparent 70%)`,
-                    `linear-gradient(225deg, transparent 30%, ${suitColor}40 50%, transparent 70%)`
-                  ]
-                }}
-                transition={{
-                  duration: 3,
-                  repeat: Infinity,
-                  ease: 'linear'
-                }}
-              />
-
               {/* Изображение карты */}
-              <div className="relative aspect-[2/3] overflow-hidden">
-                <img
-                  src={card.image_url}
-                  alt={`${card.rank} ${getSuitSymbol(card.suit)}`}
-                  className="w-full h-full object-cover"
-                  style={{
-                    filter: 'brightness(0.95) contrast(1.1)'
-                  }}
-                />
-                
-                {/* Бейдж масти */}
-                <div 
-                  className="absolute top-2 right-2 w-10 h-10 rounded-full flex items-center justify-center text-2xl font-bold text-white shadow-lg"
-                  style={{
-                    background: suitGradient,
-                    boxShadow: `0 4px 12px ${suitColor}60`
-                  }}
-                >
-                  {getSuitSymbol(card.suit)}
-                </div>
-
-                {/* Бейдж типа */}
-                <div 
-                  className="absolute bottom-2 left-2 px-2 py-1 rounded-lg text-xs font-bold text-white backdrop-blur-md"
-                  style={{
-                    background: 'rgba(0, 0, 0, 0.6)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)'
-                  }}
-                >
-                  {getRarityLabel(card.rarity)}
-                </div>
-              </div>
-
-              {/* Информация о карте */}
-              <div className="p-3 text-center">
-                <h3 
-                  className="text-xl font-black text-white mb-1"
-                  style={{ textShadow: `0 2px 8px ${suitColor}` }}
-                >
-                  {card.rank?.toUpperCase()} {getSuitSymbol(card.suit)}
-                </h3>
-                <p className="text-xs text-gray-400 font-semibold">
-                  {card.metadata?.cost ? `💰 ${card.metadata.cost} монет` : '🎴 NFT'}
-                </p>
-              </div>
-
-              {/* Свечение при наведении */}
-              <div 
-                className="absolute inset-0 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-300"
-                style={{
-                  background: `radial-gradient(circle at center, ${suitColor}20 0%, transparent 70%)`,
-                  boxShadow: `inset 0 0 40px ${suitColor}40`
-                }}
+              <img
+                src={card.image_url}
+                alt={`${card.rank} ${getSuitSymbol(card.suit)}`}
+                className="w-full h-full object-cover"
               />
-            </motion.div>
+              
+              {/* Значок масти (компактный) */}
+              <div 
+                className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                style={{
+                  background: getSuitGradient(card.suit),
+                  boxShadow: `0 2px 6px ${suitColor}80`
+                }}
+              >
+                {getSuitSymbol(card.suit)}
+              </div>
+
+              {/* Hover эффект */}
+              <div 
+                className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-end justify-center pb-1"
+              >
+                <span className="text-white text-[10px] font-bold">
+                  {card.rank?.toUpperCase()}
+                </span>
+              </div>
+            </motion.button>
           );
         })}
       </div>
 
-      {/* Модальное окно с деталями */}
+      {/* МОДАЛЬНОЕ ОКНО С ИНФОРМАЦИЕЙ О КАРТЕ */}
       <AnimatePresence>
         {selectedCard && (
           <motion.div
@@ -268,19 +218,19 @@ export default function NFTGallery() {
             onClick={() => setSelectedCard(null)}
             className="fixed inset-0 z-[10002] flex items-center justify-center p-4"
             style={{
-              background: 'rgba(0, 0, 0, 0.9)',
+              background: 'rgba(0, 0, 0, 0.92)',
               backdropFilter: 'blur(20px)'
             }}
           >
             <motion.div
-              initial={{ scale: 0.5, opacity: 0, rotateY: -180 }}
-              animate={{ scale: 1, opacity: 1, rotateY: 0 }}
-              exit={{ scale: 0.5, opacity: 0, rotateY: 180 }}
-              transition={{ type: 'spring', damping: 25 }}
+              initial={{ scale: 0.8, opacity: 0, y: 50 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.8, opacity: 0, y: 50 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative max-w-2xl w-full rounded-3xl overflow-hidden"
+              className="relative w-full max-w-md rounded-3xl overflow-hidden"
               style={{
-                background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%)',
+                background: 'linear-gradient(145deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.98) 100%)',
                 border: `3px solid ${getSuitColor(selectedCard.suit)}`,
                 boxShadow: `0 30px 80px ${getSuitColor(selectedCard.suit)}60, 0 0 100px ${getSuitColor(selectedCard.suit)}40`
               }}
@@ -288,32 +238,26 @@ export default function NFTGallery() {
               {/* Кнопка закрытия */}
               <button
                 onClick={() => setSelectedCard(null)}
-                className="absolute top-4 right-4 z-10 w-12 h-12 rounded-full flex items-center justify-center text-white backdrop-blur-xl transition-all duration-200 hover:scale-110 active:scale-95"
+                className="absolute top-3 right-3 z-10 w-10 h-10 rounded-full flex items-center justify-center text-white backdrop-blur-xl transition-all duration-200 hover:scale-110 active:scale-95"
                 style={{
-                  background: 'rgba(239, 68, 68, 0.8)',
-                  boxShadow: '0 4px 12px rgba(239, 68, 68, 0.5)'
+                  background: 'rgba(239, 68, 68, 0.9)',
+                  boxShadow: '0 4px 12px rgba(239, 68, 68, 0.6)'
                 }}
               >
-                <X size={24} strokeWidth={3} />
+                <X size={20} strokeWidth={3} />
               </button>
 
-              <div className="grid md:grid-cols-2 gap-6 p-8">
-                {/* Изображение карты - УВЕЛИЧЕНО В 2.5 РАЗА */}
+              <div className="p-6">
+                {/* Изображение карты */}
                 <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  animate={{ 
-                    boxShadow: [
-                      `0 0 40px ${getSuitColor(selectedCard.suit)}60`,
-                      `0 0 60px ${getSuitColor(selectedCard.suit)}80`,
-                      `0 0 40px ${getSuitColor(selectedCard.suit)}60`
-                    ]
-                  }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                  className="relative rounded-2xl overflow-hidden cursor-pointer"
+                  whileHover={{ scale: 1.02 }}
+                  className="relative rounded-2xl overflow-hidden mb-6"
                   style={{
                     border: `3px solid ${getSuitColor(selectedCard.suit)}`,
+                    boxShadow: `0 20px 50px ${getSuitColor(selectedCard.suit)}60`,
                     aspectRatio: '2/3',
-                    transform: 'scale(1.25)' // ✅ УВЕЛИЧЕНО В 2.5 РАЗА (было 1, стало 2.5, но для баланса 1.25)
+                    maxWidth: '280px',
+                    margin: '0 auto'
                   }}
                 >
                   <img
@@ -324,10 +268,11 @@ export default function NFTGallery() {
                 </motion.div>
 
                 {/* Информация */}
-                <div className="flex flex-col justify-between">
-                  <div>
+                <div className="space-y-4">
+                  {/* Ранг и масть */}
+                  <div className="text-center">
                     <h2 
-                      className="text-4xl font-black text-white mb-2 flex items-center gap-3"
+                      className="text-4xl font-black text-white mb-2 flex items-center justify-center gap-3"
                       style={{ textShadow: `0 4px 16px ${getSuitColor(selectedCard.suit)}` }}
                     >
                       {selectedCard.rank?.toUpperCase()} 
@@ -338,73 +283,95 @@ export default function NFTGallery() {
 
                     {/* Название героя */}
                     {getCharacterName(selectedCard) && (
-                      <h3 className="text-xl font-bold text-gray-300 mb-4">
+                      <p className="text-lg font-bold text-gray-300 mb-2">
                         {getCharacterName(selectedCard)}
-                      </h3>
+                      </p>
                     )}
 
-                    <div className="space-y-3">
-                      {/* Тип карты */}
-                      <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10">
-                        <Sparkles size={20} className="text-yellow-400" />
-                        <div>
-                          <p className="text-xs text-gray-400">Тип карты</p>
-                          <p className="text-sm font-bold text-white">{getRarityLabel(selectedCard.rarity)}</p>
-                        </div>
-                      </div>
-
-                      {/* Стоимость */}
-                      {selectedCard.metadata?.cost && (
-                        <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10">
-                          <Coins size={20} className="text-yellow-400" />
-                          <div>
-                            <p className="text-xs text-gray-400">Стоимость</p>
-                            <p className="text-sm font-bold text-white">{selectedCard.metadata.cost.toLocaleString()} монет</p>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Покемон/Наруто ID */}
-                      {selectedCard.metadata?.pokemonId && (
-                        <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10">
-                          <Hash size={20} className="text-blue-400" />
-                          <div>
-                            <p className="text-xs text-gray-400">ID персонажа</p>
-                            <p className="text-sm font-bold text-white">#{selectedCard.metadata.pokemonId}</p>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Дата создания */}
-                      <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10">
-                        <Calendar size={20} className="text-purple-400" />
-                        <div>
-                          <p className="text-xs text-gray-400">Создано</p>
-                          <p className="text-sm font-bold text-white">
-                            {new Date(selectedCard.created_at).toLocaleDateString('ru-RU', {
-                              day: 'numeric',
-                              month: 'long',
-                              year: 'numeric'
-                            })}
-                          </p>
-                        </div>
-                      </div>
+                    {/* Тип карты */}
+                    <div 
+                      className="inline-block px-4 py-2 rounded-lg font-bold text-sm"
+                      style={{
+                        background: getSuitGradient(selectedCard.suit),
+                        boxShadow: `0 4px 12px ${getSuitColor(selectedCard.suit)}50`
+                      }}
+                    >
+                      {getRarityLabel(selectedCard.rarity)}
                     </div>
                   </div>
 
-                  {/* Кнопка закрыть */}
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setSelectedCard(null)}
-                    className="mt-6 w-full py-4 px-6 rounded-xl font-bold text-lg text-white transition-all duration-200"
-                    style={{
-                      background: getSuitGradient(selectedCard.suit),
-                      boxShadow: `0 8px 24px ${getSuitColor(selectedCard.suit)}40`
-                    }}
-                  >
-                    Закрыть
-                  </motion.button>
+                  {/* Дата создания */}
+                  <div className="text-center">
+                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Создано</p>
+                    <p className="text-sm font-bold text-gray-300">
+                      {new Date(selectedCard.created_at).toLocaleDateString('ru-RU', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                      })}
+                    </p>
+                  </div>
+
+                  {/* Кнопки действий */}
+                  <div className="flex flex-col gap-2 pt-2">
+                    {/* Кнопка "Добавить в колоду" */}
+                    <motion.button
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={async () => {
+                        try {
+                          const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+                          const response = await fetch('/api/nft/add-to-deck', {
+                            method: 'POST',
+                            credentials: 'include',
+                            headers: {
+                              'Content-Type': 'application/json',
+                              'x-telegram-id': telegramUser?.id?.toString() || selectedCard.user_id,
+                              'x-username': telegramUser?.username || 'User'
+                            },
+                            body: JSON.stringify({
+                              nftId: selectedCard.id,
+                              suit: selectedCard.suit,
+                              rank: selectedCard.rank,
+                              imageUrl: selectedCard.image_url
+                            })
+                          });
+
+                          const result = await response.json();
+
+                          if (response.ok && result.success) {
+                            alert(`✅ Карта добавлена в игровую колоду!\n\nТеперь эта карта будет видна всем игрокам когда вы побьете верхнюю карту!`);
+                            setSelectedCard(null);
+                          } else {
+                            throw new Error(result.error || 'Ошибка добавления');
+                          }
+                        } catch (error: any) {
+                          alert(`❌ Ошибка: ${error.message}`);
+                        }
+                      }}
+                      className="w-full py-3 px-6 rounded-xl font-bold text-base text-white transition-all duration-200"
+                      style={{
+                        background: getSuitGradient(selectedCard.suit),
+                        boxShadow: `0 8px 24px ${getSuitColor(selectedCard.suit)}50`
+                      }}
+                    >
+                      🎴 Добавить в колоду
+                    </motion.button>
+
+                    {/* Кнопка "Закрыть" */}
+                    <motion.button
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => setSelectedCard(null)}
+                      className="w-full py-3 px-6 rounded-xl font-bold text-base text-white transition-all duration-200"
+                      style={{
+                        background: 'linear-gradient(135deg, #64748b 0%, #475569 100%)',
+                        boxShadow: '0 8px 24px rgba(100, 116, 139, 0.4)'
+                      }}
+                    >
+                      Закрыть
+                    </motion.button>
+                  </div>
                 </div>
               </div>
             </motion.div>

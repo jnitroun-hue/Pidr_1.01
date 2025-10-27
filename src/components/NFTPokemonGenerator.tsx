@@ -144,7 +144,114 @@ export default function NFTPokemonGenerator({ userCoins, onBalanceUpdate }: NFTP
     setPreviewImage(canvas.toDataURL('image/png'));
   };
 
-  const generateCardImage = (suit: string, rank: string, pokemonId: number) => {
+  // 🎨 ПАЛИТРА ИЗ 60 КРАСИВЫХ ГРАДИЕНТОВ (без красного и черного)
+  const GRADIENT_COLORS = [
+    // СИНИЕ
+    ['#3b82f6', '#1d4ed8'], ['#60a5fa', '#2563eb'], ['#38bdf8', '#0284c7'], ['#06b6d4', '#0891b2'],
+    // ФИОЛЕТОВЫЕ
+    ['#8b5cf6', '#6366f1'], ['#a78bfa', '#7c3aed'], ['#c084fc', '#9333ea'], ['#d946ef', '#a21caf'],
+    // ЗЕЛЕНЫЕ
+    ['#22c55e', '#16a34a'], ['#4ade80', '#22c55e'], ['#34d399', '#10b981'], ['#2dd4bf', '#14b8a6'],
+    // ЖЕЛТЫЕ/ЗОЛОТЫЕ
+    ['#fbbf24', '#f59e0b'], ['#fcd34d', '#fbbf24'], ['#fde047', '#facc15'], ['#fef08a', '#fde047'],
+    // ОРАНЖЕВЫЕ
+    ['#fb923c', '#f97316'], ['#fdba74', '#fb923c'], ['#fed7aa', '#fdba74'], ['#ffedd5', '#fed7aa'],
+    // РОЗОВЫЕ
+    ['#ec4899', '#db2777'], ['#f472b6', '#ec4899'], ['#f9a8d4', '#f472b6'], ['#fbcfe8', '#f9a8d4'],
+    // БИРЮЗОВЫЕ
+    ['#06b6d4', '#0891b2'], ['#22d3ee', '#06b6d4'], ['#67e8f9', '#22d3ee'], ['#a5f3fc', '#67e8f9'],
+    // ИНДИГО
+    ['#6366f1', '#4f46e5'], ['#818cf8', '#6366f1'], ['#a5b4fc', '#818cf8'], ['#c7d2fe', '#a5b4fc'],
+    // ИЗУМРУДНЫЕ
+    ['#10b981', '#059669'], ['#34d399', '#10b981'], ['#6ee7b7', '#34d399'], ['#a7f3d0', '#6ee7b7'],
+    // ЛАЙМОВЫЕ
+    ['#84cc16', '#65a30d'], ['#a3e635', '#84cc16'], ['#bef264', '#a3e635'], ['#d9f99d', '#bef264'],
+    // ЯНТАРНЫЕ
+    ['#f59e0b', '#d97706'], ['#fbbf24', '#f59e0b'], ['#fcd34d', '#fbbf24'], ['#fde68a', '#fcd34d'],
+    // ПУРПУРНЫЕ
+    ['#a855f7', '#9333ea'], ['#c084fc', '#a855f7'], ['#d8b4fe', '#c084fc'], ['#e9d5ff', '#d8b4fe'],
+    // ГОЛУБЫЕ
+    ['#0ea5e9', '#0284c7'], ['#38bdf8', '#0ea5e9'], ['#7dd3fc', '#38bdf8'], ['#bae6fd', '#7dd3fc'],
+    // МЯТНЫЕ
+    ['#14b8a6', '#0d9488'], ['#2dd4bf', '#14b8a6'], ['#5eead4', '#2dd4bf'], ['#99f6e4', '#5eead4'],
+    // СЕРЫЕ (светлые)
+    ['#94a3b8', '#64748b'], ['#cbd5e1', '#94a3b8'], ['#e2e8f0', '#cbd5e1'], ['#f1f5f9', '#e2e8f0']
+  ];
+
+  // 🎨 ГЕНЕРАЦИЯ ПРОСТОЙ КАРТЫ С ГРАДИЕНТОМ (БЕЗ ПОКЕМОНА)
+  const generateSimpleCardImage = (suit: string, rank: string): string => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 300;
+    canvas.height = 420;
+    const ctx = canvas.getContext('2d');
+    
+    if (!ctx) return '';
+
+    const suitData = SUITS.find(s => s.value === suit);
+    const rankData = RANKS.find(r => r.value === rank);
+
+    if (!suitData || !rankData) return '';
+
+    // ✅ РАНДОМНЫЙ ГРАДИЕНТ
+    const randomGradient = GRADIENT_COLORS[Math.floor(Math.random() * GRADIENT_COLORS.length)];
+    const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    gradient.addColorStop(0, randomGradient[0]);
+    gradient.addColorStop(1, randomGradient[1]);
+
+    // ✅ ФОН С ГРАДИЕНТОМ
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // ✅ БЕЛАЯ РАМКА
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(8, 8, canvas.width - 16, canvas.height - 16);
+
+    // ✅ ТЕНЬ ДЛЯ ТЕКСТА
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+    ctx.shadowBlur = 8;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 2;
+
+    // ✅ ВЕРХНИЙ ЛЕВЫЙ УГОЛ
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 48px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText(rankData.display, 25, 60);
+    
+    ctx.font = '60px Arial';
+    ctx.fillText(suitData.symbol, 25, 125);
+
+    // ✅ НИЖНИЙ ПРАВЫЙ УГОЛ (ПЕРЕВЁРНУТО)
+    ctx.save();
+    ctx.translate(canvas.width, canvas.height);
+    ctx.rotate(Math.PI);
+    
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 48px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText(rankData.display, 25, 60);
+    
+    ctx.font = '60px Arial';
+    ctx.fillText(suitData.symbol, 25, 125);
+    ctx.restore();
+
+    // ✅ ЦЕНТРАЛЬНЫЙ СИМВОЛ МАСТИ (ПОЛУПРОЗРАЧНЫЙ, БОЛЬШОЙ)
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.font = 'bold 120px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(suitData.symbol, canvas.width / 2, canvas.height / 2);
+
+    // Сброс теней
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+
+    return canvas.toDataURL('image/png');
+  };
+
+  // ⚡ ГЕНЕРАЦИЯ КАРТЫ С ПОКЕМОНОМ (для специальной кнопки)
+  const generatePokemonCardImage = (suit: string, rank: string, pokemonId: number) => {
     const canvas = document.createElement('canvas');
     canvas.width = 300;
     canvas.height = 420;
@@ -194,34 +301,26 @@ export default function NFTPokemonGenerator({ userCoins, onBalanceUpdate }: NFTP
       const pokemonImg = new Image();
       pokemonImg.crossOrigin = 'anonymous';
       pokemonImg.onload = () => {
-        // Рисуем покемона по центру
         const imgWidth = 200;
         const imgHeight = 200;
         const imgX = (canvas.width - imgWidth) / 2;
         const imgY = (canvas.height - imgHeight) / 2;
 
-        // Белый фон под покемоном для прозрачности
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(imgX - 5, imgY - 5, imgWidth + 10, imgHeight + 10);
-
-        // Рисуем покемона
         ctx.drawImage(pokemonImg, imgX, imgY, imgWidth, imgHeight);
 
         resolve(canvas.toDataURL('image/png'));
       };
       pokemonImg.onerror = () => {
-        // Если покемон не загрузился - рисуем placeholder
         ctx.fillStyle = '#e5e7eb';
         ctx.fillRect(50, 110, 200, 200);
-        
         ctx.fillStyle = '#9ca3af';
         ctx.font = 'bold 24px Arial';
         ctx.textAlign = 'center';
         ctx.fillText(`ПОКЕМОН #${pokemonId}`, canvas.width / 2, canvas.height / 2);
-
         resolve(canvas.toDataURL('image/png'));
       };
-      // ✅ ЗАГРУЖАЕМ ИЗ public/pokemon/
       pokemonImg.src = `/pokemon/${pokemonId}.png`;
     });
   };
@@ -234,63 +333,16 @@ export default function NFTPokemonGenerator({ userCoins, onBalanceUpdate }: NFTP
 
     try {
       setIsGenerating(true);
-      console.log('🎨 Генерация ПРОСТОЙ NFT карты (БЕЗ покемона)...');
+      console.log('🎨 Генерация ПРОСТОЙ NFT карты С ГРАДИЕНТОМ (БЕЗ покемона)...');
 
       const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
       const telegramId = telegramUser?.id?.toString() || '';
       const username = telegramUser?.username || telegramUser?.first_name || '';
 
-      // ✅ ПРОСТАЯ КАРТА - БЕЗ ПОКЕМОНА!
-      // Генерируем простое изображение карты (белый фон + масть + ранг)
-      const canvas = document.createElement('canvas');
-      canvas.width = 300;
-      canvas.height = 420;
-      const ctx = canvas.getContext('2d');
-      
-      if (!ctx) throw new Error('Canvas не поддерживается');
+      // ✅ ГЕНЕРАЦИЯ ПРОСТОЙ КАРТЫ С ГРАДИЕНТОМ (БЕЗ ПОКЕМОНА!)
+      const imageDataUrl = generateSimpleCardImage(selectedSuit, selectedRank);
 
-      // Белый фон
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      // Рамка
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 3;
-      ctx.strokeRect(5, 5, canvas.width - 10, canvas.height - 10);
-
-      const suitData = SUITS.find(s => s.value === selectedSuit);
-      const rankData = RANKS.find(r => r.value === selectedRank);
-
-      if (!suitData || !rankData) throw new Error('Некорректные данные карты');
-
-      // Верхний левый угол
-      ctx.fillStyle = suitData.color;
-      ctx.font = 'bold 40px Arial';
-      ctx.textAlign = 'left';
-      ctx.fillText(rankData.display, 20, 50);
-      ctx.font = '50px Arial';
-      ctx.fillText(suitData.symbol, 20, 100);
-
-      // Центральный символ масти (крупный)
-      ctx.font = '120px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText(suitData.symbol, canvas.width / 2, canvas.height / 2 + 40);
-
-      // Нижний правый угол (перевёрнуто)
-      ctx.save();
-      ctx.translate(canvas.width, canvas.height);
-      ctx.rotate(Math.PI);
-      ctx.fillStyle = suitData.color;
-      ctx.font = 'bold 40px Arial';
-      ctx.textAlign = 'left';
-      ctx.fillText(rankData.display, 20, 50);
-      ctx.font = '50px Arial';
-      ctx.fillText(suitData.symbol, 20, 100);
-      ctx.restore();
-
-      const imageDataUrl = canvas.toDataURL('image/png');
-
-      console.log('✅ Простое изображение сгенерировано, отправляем на сервер...');
+      console.log('✅ Простое изображение с градиентом сгенерировано, отправляем на сервер...');
 
       const response = await fetch('/api/nft/generate-pokemon', {
         method: 'POST',
@@ -378,7 +430,7 @@ export default function NFTPokemonGenerator({ userCoins, onBalanceUpdate }: NFTP
       const randomPokemonId = Math.floor(Math.random() * 52) + 1;
       console.log(`🎲 Выбран покемон #${randomPokemonId}`);
 
-      const imageDataUrl = await generateCardImage(randomSuit, randomRank, randomPokemonId);
+      const imageDataUrl = await generatePokemonCardImage(randomSuit, randomRank, randomPokemonId);
 
       const response = await fetch('/api/nft/generate-pokemon', {
         method: 'POST',
@@ -457,7 +509,7 @@ export default function NFTPokemonGenerator({ userCoins, onBalanceUpdate }: NFTP
           const randomPokemonId = Math.floor(Math.random() * 52) + 1;
           
           try {
-            const imageDataUrl = await generateCardImage(suit.value, rank.value, randomPokemonId);
+            const imageDataUrl = await generatePokemonCardImage(suit.value, rank.value, randomPokemonId);
 
             const response = await fetch('/api/nft/generate-pokemon', {
               method: 'POST',
