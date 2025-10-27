@@ -122,7 +122,7 @@ interface GameState {
   
   // 🎉 МОДАЛКИ ПОБЕДИТЕЛЕЙ И ПРОИГРАВШЕГО
   showWinnerModal: boolean
-  winnerModalData: { playerName: string; place: number; avatar?: string } | null
+  winnerModalData: { playerName: string; place: number; avatar?: string; isCurrentUser?: boolean } | null
   showLoserModal: boolean
   loserModalData: { playerName: string; avatar?: string } | null
   
@@ -2494,14 +2494,20 @@ export const useGameStore = create<GameState>()(
                 7000
               );
               
-              // 🎉 ПОКАЗЫВАЕМ МОДАЛКУ ПОБЕДИТЕЛЯ ДЛЯ ВСЕХ (не только для пользователя)
+              // ✅ ПРОВЕРЯЕМ: Это ПОЛЬЗОВАТЕЛЬ или БОТ?
+              const isWinnerUser = winner.isUser || winner.id === currentUserTelegramId;
+              
+              console.log(`🔍 [checkVictoryCondition] Победитель ${winner.name}: isUser=${winner.isUser}, isWinnerUser=${isWinnerUser}`);
+              
+              // 🎉 ПОКАЗЫВАЕМ МОДАЛКУ ПОБЕДИТЕЛЯ
               setTimeout(() => {
                 set({
                   showWinnerModal: true,
                   winnerModalData: {
                     playerName: winner.name,
                     place: position,
-                    avatar: winner.avatar
+                    avatar: winner.avatar,
+                    isCurrentUser: isWinnerUser // ✅ Передаём флаг!
                   }
                 });
                 
@@ -2511,6 +2517,20 @@ export const useGameStore = create<GameState>()(
                     showWinnerModal: false,
                     winnerModalData: null
                   });
+                  
+                  // ✅ КРИТИЧНО: ПРОДОЛЖАЕМ ИГРУ! Ищем следующего активного игрока
+                  const { players } = get();
+                  const activePlayers = players.filter(p => !p.isWinner && (p.cards.length > 0 || p.penki.length > 0));
+                  
+                  console.log(`🔄 [checkVictoryCondition] После закрытия модалки - активных игроков: ${activePlayers.length}`);
+                  
+                  if (activePlayers.length > 1) {
+                    // ✅ ИГРА ПРОДОЛЖАЕТСЯ! Передаём ход следующему активному игроку
+                    console.log(`✅ [checkVictoryCondition] Игра продолжается - передаём ход!`);
+                    get().nextTurn();
+                  } else {
+                    console.log(`🏁 [checkVictoryCondition] Остался 1 или меньше активных игроков - игра закончится`);
+                  }
                 }, 3000);
               }, 500 + index * 200); // Задержка между модалками если несколько победителей одновременно
             });

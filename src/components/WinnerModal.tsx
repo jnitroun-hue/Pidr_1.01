@@ -6,10 +6,13 @@ interface WinnerModalProps {
   playerName: string;
   place: number;
   avatar?: string;
+  isCurrentUser?: boolean; // ✅ Флаг что это ПОЛЬЗОВАТЕЛЬ победил (не бот)
   onClose: () => void;
+  onContinueWatching?: () => void; // ✅ Кнопка "Продолжить просмотр"
+  onExitToMenu?: () => void; // ✅ Кнопка "Выйти в главное меню"
 }
 
-export default function WinnerModal({ playerName, place, avatar, onClose }: WinnerModalProps) {
+export default function WinnerModal({ playerName, place, avatar, isCurrentUser, onClose, onContinueWatching, onExitToMenu }: WinnerModalProps) {
   const [confetti, setConfetti] = useState<Array<{ id: number; x: number; delay: number; color: string }>>([]);
   
   // ✅ Адаптивные отступы в зависимости от размера экрана
@@ -47,13 +50,15 @@ export default function WinnerModal({ playerName, place, avatar, onClose }: Winn
     }));
     setConfetti(newConfetti);
 
-    // Автозакрытие через 3 секунды
-    const timer = setTimeout(() => {
-      onClose();
-    }, 3000);
+    // ✅ АВТОЗАКРЫТИЕ ТОЛЬКО ДЛЯ БОТОВ (не для пользователя)!
+    if (!isCurrentUser) {
+      const timer = setTimeout(() => {
+        onClose();
+      }, 3000);
 
-    return () => clearTimeout(timer);
-  }, [onClose]);
+      return () => clearTimeout(timer);
+    }
+  }, [onClose, isCurrentUser]);
 
   const medals = ['🥇', '🥈', '🥉', '🏅', '🏅', '🏅', '🏅', '🏅'];
   const medal = medals[place - 1] || '🏅';
@@ -238,6 +243,89 @@ export default function WinnerModal({ playerName, place, avatar, onClose }: Winn
           >
             🎉 Поздравляем! 🎉
           </motion.p>
+
+          {/* ✅ КНОПКИ ТОЛЬКО ДЛЯ ПОЛЬЗОВАТЕЛЯ! */}
+          {isCurrentUser && (
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.6 }}
+              style={{
+                display: 'flex',
+                gap: '16px',
+                marginTop: '32px',
+                flexDirection: 'column',
+                width: '100%',
+                maxWidth: '400px'
+              }}
+            >
+              {/* Кнопка "Продолжить просмотр" */}
+              <button
+                onClick={() => {
+                  console.log('👁️ [WinnerModal] Пользователь продолжает просмотр');
+                  if (onContinueWatching) onContinueWatching();
+                  onClose();
+                }}
+                style={{
+                  padding: '16px 32px',
+                  fontSize: '18px',
+                  fontWeight: 'bold',
+                  color: 'white',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  border: 'none',
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
+                  transition: 'all 0.3s ease',
+                  textTransform: 'uppercase',
+                  letterSpacing: '1px'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.6)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.4)';
+                }}
+              >
+                👁️ Продолжить просмотр
+              </button>
+
+              {/* Кнопка "Выйти в главное меню" */}
+              <button
+                onClick={() => {
+                  console.log('🚪 [WinnerModal] Пользователь выходит в главное меню');
+                  if (onExitToMenu) onExitToMenu();
+                  onClose();
+                }}
+                style={{
+                  padding: '16px 32px',
+                  fontSize: '18px',
+                  fontWeight: 'bold',
+                  color: 'white',
+                  background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                  border: 'none',
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 15px rgba(245, 87, 108, 0.4)',
+                  transition: 'all 0.3s ease',
+                  textTransform: 'uppercase',
+                  letterSpacing: '1px'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(245, 87, 108, 0.6)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 15px rgba(245, 87, 108, 0.4)';
+                }}
+              >
+                🚪 Выйти в главное меню
+              </button>
+            </motion.div>
+          )}
         </motion.div>
       </motion.div>
     </AnimatePresence>

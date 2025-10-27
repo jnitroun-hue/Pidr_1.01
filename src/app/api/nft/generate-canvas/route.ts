@@ -170,6 +170,12 @@ export async function POST(request: NextRequest) {
     const fileName = `${userId}/${suit}_${rank}_${rarity}_${Date.now()}.png`;
     const bucketName = 'nft-cards';
 
+    console.log('📤 [NFT Canvas] Загружаем в Storage:', {
+      bucketName,
+      fileName,
+      bufferSize: buffer.length
+    });
+
     // Загружаем в Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from(bucketName)
@@ -181,6 +187,11 @@ export async function POST(request: NextRequest) {
 
     if (uploadError) {
       console.error('❌ [NFT Canvas] Ошибка загрузки в Storage:', uploadError);
+      console.error('❌ [NFT Canvas] Детали ошибки:', {
+        message: uploadError.message,
+        statusCode: (uploadError as any).statusCode,
+        error: (uploadError as any).error
+      });
       
       // Возвращаем монеты обратно
       await supabase
@@ -189,10 +200,16 @@ export async function POST(request: NextRequest) {
         .eq('id', user.id);
       
       return NextResponse.json(
-        { success: false, error: 'Ошибка загрузки изображения' },
+        { 
+          success: false, 
+          error: 'Ошибка загрузки изображения в Storage',
+          details: uploadError.message
+        },
         { status: 500 }
       );
     }
+    
+    console.log('✅ [NFT Canvas] Файл загружен в Storage:', uploadData);
 
     // Получаем публичный URL
     const { data: { publicUrl } } = supabase.storage

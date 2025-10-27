@@ -2050,11 +2050,23 @@ function GamePageContentComponent({
           playerName={winnerModalData.playerName}
           place={winnerModalData.place}
           avatar={winnerModalData.avatar}
+          isCurrentUser={winnerModalData.isCurrentUser}
           onClose={() => {
             useGameStore.setState({
               showWinnerModal: false,
               winnerModalData: null
             });
+          }}
+          onContinueWatching={() => {
+            console.log('👁️ [GamePageContent] Пользователь продолжает просмотр игры');
+            // ✅ Просто закрываем модалку, игра продолжится автоматически
+          }}
+          onExitToMenu={() => {
+            console.log('🚪 [GamePageContent] Пользователь выходит в главное меню');
+            // ✅ КРИТИЧНО: Сохраняем статистику и перенаправляем в меню
+            if (typeof window !== 'undefined') {
+              window.location.href = '/';
+            }
           }}
         />
       )}

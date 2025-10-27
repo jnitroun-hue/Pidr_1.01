@@ -20,11 +20,13 @@ export async function GET(req: NextRequest) {
     }
     
     const userId = telegramIdHeader;
-    console.log(`✅ [Shop Inventory] Авторизован пользователь через headers: ${userId}`);
+    const userIdBigInt = parseInt(userId, 10); // ✅ Конвертируем в BIGINT!
+    
+    console.log(`✅ [Shop Inventory] Авторизован пользователь через headers: ${userId} (${userIdBigInt})`);
     
     // Вызываем функцию БД для получения инвентаря
     const { data, error } = await supabase.rpc('get_user_inventory', {
-      p_user_id: userId
+      p_user_id: userIdBigInt // ✅ ИСПРАВЛЕНО: BIGINT вместо STRING!
     });
     
     if (error) {
