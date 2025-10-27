@@ -29,9 +29,20 @@ export async function POST(request: NextRequest) {
     };
 
     const userId = session.telegramId;
+    
+    // ✅ КРИТИЧНО: Проверяем что userId валидный ПЕРЕД любыми операциями!
+    const userIdBigInt = parseInt(userId, 10);
+    if (isNaN(userIdBigInt) || !userId) {
+      console.error('❌ [NFT Canvas] Невалидный userId:', { userId, userIdBigInt });
+      return NextResponse.json(
+        { success: false, error: 'Невалидный ID пользователя' },
+        { status: 400 }
+      );
+    }
 
     console.log('✅ [NFT Canvas] Авторизован через headers:', { 
       userId,
+      userIdBigInt,
       username: session.username 
     });
 
@@ -189,32 +200,8 @@ export async function POST(request: NextRequest) {
       .getPublicUrl(fileName);
 
     console.log('✅ [NFT Canvas] Карта загружена в Storage:', publicUrl);
-
-    // ✅ КРИТИЧНО: Конвертируем userId (string) в BIGINT для БД!
-    const userIdBigInt = parseInt(userId, 10);
     
-    if (isNaN(userIdBigInt)) {
-      console.error('❌ [NFT Canvas] Невалидный user_id:', userId);
-      
-      // Возвращаем монеты
-      if (!isPartOfDeck && newBalance !== undefined) {
-        await supabase
-          .from('_pidr_users')
-          .update({ coins: user.coins })
-          .eq('id', user.id);
-      }
-      
-      // Удаляем файл
-      await supabase.storage
-        .from(bucketName)
-        .remove([fileName]);
-      
-      return NextResponse.json(
-        { success: false, error: 'Невалидный ID пользователя' },
-        { status: 400 }
-      );
-    }
-    
+    // userIdBigInt уже проверен в начале функции!
     console.log('💾 [NFT Canvas] Сохраняем карту в БД:', {
       userId: userId,
       userIdBigInt: userIdBigInt,
