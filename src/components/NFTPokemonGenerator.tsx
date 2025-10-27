@@ -131,15 +131,17 @@ export default function NFTPokemonGenerator({ userCoins, onBalanceUpdate }: NFTP
     ctx.fillText(suit.symbol, 20, 100);
     ctx.restore();
 
-    // ✅ РАНДОМНЫЙ ПОКЕМОН ПО ЦЕНТРУ (PLACEHOLDER)
-    ctx.fillStyle = '#e5e7eb';
-    ctx.fillRect(50, 120, 200, 180);
-    
-    ctx.fillStyle = '#9ca3af';
-    ctx.font = 'bold 20px Arial';
+    // ✅ ПРЕВЬЮ ПРОСТОЙ КАРТЫ - ЦЕНТРАЛЬНЫЙ СИМВОЛ МАСТИ
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = 'rgba(100, 116, 139, 0.2)';
+    ctx.font = 'bold 140px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('ПОКЕМОН', canvas.width / 2, 200);
-    ctx.fillText('РАНДОМ', canvas.width / 2, 230);
+    ctx.textBaseline = 'middle';
+    ctx.fillText(suit.symbol, canvas.width / 2, canvas.height / 2);
+    
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
 
     setPreviewImage(canvas.toDataURL('image/png'));
   };

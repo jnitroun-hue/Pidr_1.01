@@ -104,7 +104,13 @@ export default function PenaltyCardSelector() {
                 style={{
                   cursor: 'pointer',
                   transition: 'all 0.3s ease',
-                  position: 'relative'
+                  position: 'relative',
+                  background: '#ffffff', // ✅ БЕЛЫЙ ФОН
+                  borderRadius: '10px',
+                  padding: '4px',
+                  boxShadow: isSelected 
+                    ? '0 0 20px rgba(16, 185, 129, 0.6)' 
+                    : '0 4px 12px rgba(0,0,0,0.3)'
                 }}
                 onClick={() => setSelectedCard(cardId)}
                 onMouseEnter={(e) => {
@@ -120,13 +126,11 @@ export default function PenaltyCardSelector() {
                   width={80}
                   height={120}
                   style={{ 
-                    borderRadius: '8px',
+                    borderRadius: '6px',
                     border: isSelected 
                       ? '3px solid #10b981' 
-                      : '2px solid rgba(255, 255, 255, 0.2)',
-                    boxShadow: isSelected 
-                      ? '0 0 20px rgba(16, 185, 129, 0.6)' 
-                      : '0 4px 12px rgba(0,0,0,0.3)'
+                      : '2px solid rgba(100, 116, 139, 0.3)',
+                    display: 'block'
                   }}
                 />
                 {isSelected && (
@@ -135,15 +139,17 @@ export default function PenaltyCardSelector() {
                     top: '50%',
                     left: '50%',
                     transform: 'translate(-50%, -50%)',
-                    background: 'rgba(16, 185, 129, 0.9)',
+                    background: 'rgba(16, 185, 129, 0.95)',
                     borderRadius: '50%',
-                    width: '30px',
-                    height: '30px',
+                    width: '32px',
+                    height: '32px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '18px',
-                    color: 'white'
+                    fontSize: '20px',
+                    fontWeight: 'bold',
+                    color: 'white',
+                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.8)'
                   }}>
                     ✓
                   </div>
