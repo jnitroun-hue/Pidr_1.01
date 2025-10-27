@@ -1,0 +1,526 @@
+'use client'
+
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+
+const SUITS = [
+  { value: 'hearts', label: '♥', color: '#ef4444', symbol: '♥' },
+  { value: 'diamonds', label: '♦', color: '#ef4444', symbol: '♦' },
+  { value: 'clubs', label: '♣', color: '#1f2937', symbol: '♣' },
+  { value: 'spades', label: '♠', color: '#000000', symbol: '♠' }
+];
+
+const RANKS = [
+  { value: '2', display: '2', cost: 1000 },
+  { value: '3', display: '3', cost: 1000 },
+  { value: '4', display: '4', cost: 1000 },
+  { value: '5', display: '5', cost: 1000 },
+  { value: '6', display: '6', cost: 1000 },
+  { value: '7', display: '7', cost: 1000 },
+  { value: '8', display: '8', cost: 1000 },
+  { value: '9', display: '9', cost: 1000 },
+  { value: '10', display: '10', cost: 2500 },
+  { value: 'j', display: 'J', cost: 2500 },
+  { value: 'q', display: 'Q', cost: 5000 },
+  { value: 'k', display: 'K', cost: 5000 },
+  { value: 'a', display: 'A', cost: 8000 }
+];
+
+// ✅ СИСТЕМА ЦЕНЫ: Ранг + Масть
+const SUIT_COSTS: Record<string, number> = {
+  'hearts': 500,
+  'diamonds': 500,
+  'clubs': 500,
+  'spades': 1000
+};
+
+interface NFTPokemonGeneratorProps {
+  userCoins: number;
+  onBalanceUpdate: (newBalance: number) => void;
+}
+
+export default function NFTPokemonGenerator({ userCoins, onBalanceUpdate }: NFTPokemonGeneratorProps) {
+  const [selectedSuit, setSelectedSuit] = useState('hearts');
+  const [selectedRank, setSelectedRank] = useState('a');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [userCards, setUserCards] = useState<any[]>([]);
+  const [previewImage, setPreviewImage] = useState<string>('');
+
+  // ✅ Вычисляем цену: Ранг + Масть
+  const rankCost = RANKS.find(r => r.value === selectedRank)?.cost || 1000;
+  const suitCost = SUIT_COSTS[selectedSuit] || 500;
+  const currentCost = rankCost + suitCost;
+
+  useEffect(() => {
+    fetchUserCards();
+  }, []);
+
+  // ✅ Обновляем превью при изменении выбора
+  useEffect(() => {
+    generatePreview();
+  }, [selectedSuit, selectedRank]);
+
+  const fetchUserCards = async () => {
+    try {
+      const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+      const telegramId = telegramUser?.id?.toString() || '';
+      const username = telegramUser?.username || telegramUser?.first_name || '';
+
+      const response = await fetch('/api/nft/generate-pokemon', {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'x-telegram-id': telegramId,
+          'x-username': username
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setUserCards(data.cards || []);
+        }
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки карт:', error);
+    }
+  };
+
+  const generatePreview = () => {
+    // Генерируем превью карты
+    const canvas = document.createElement('canvas');
+    canvas.width = 300;
+    canvas.height = 420;
+    const ctx = canvas.getContext('2d');
+    
+    if (!ctx) return;
+
+    // ✅ БЕЛЫЙ ФОН
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // ✅ РАМКА
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(5, 5, canvas.width - 10, canvas.height - 10);
+
+    const suit = SUITS.find(s => s.value === selectedSuit);
+    const rank = RANKS.find(r => r.value === selectedRank);
+
+    if (!suit || !rank) return;
+
+    // ✅ ВЕРХНИЙ ЛЕВЫЙ УГОЛ (Ранг + Масть)
+    ctx.fillStyle = suit.color;
+    ctx.font = 'bold 40px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText(rank.display, 20, 50);
+    
+    ctx.font = '50px Arial';
+    ctx.fillText(suit.symbol, 20, 100);
+
+    // ✅ НИЖНИЙ ПРАВЫЙ УГОЛ (Ранг + Масть - ПЕРЕВЁРНУТО)
+    ctx.save();
+    ctx.translate(canvas.width, canvas.height);
+    ctx.rotate(Math.PI);
+    
+    ctx.fillStyle = suit.color;
+    ctx.font = 'bold 40px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText(rank.display, 20, 50);
+    
+    ctx.font = '50px Arial';
+    ctx.fillText(suit.symbol, 20, 100);
+    ctx.restore();
+
+    // ✅ РАНДОМНЫЙ ПОКЕМОН ПО ЦЕНТРУ (PLACEHOLDER)
+    ctx.fillStyle = '#e5e7eb';
+    ctx.fillRect(50, 120, 200, 180);
+    
+    ctx.fillStyle = '#9ca3af';
+    ctx.font = 'bold 20px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('ПОКЕМОН', canvas.width / 2, 200);
+    ctx.fillText('РАНДОМ', canvas.width / 2, 230);
+
+    setPreviewImage(canvas.toDataURL('image/png'));
+  };
+
+  const generateCardImage = (suit: string, rank: string, pokemonId: number) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 300;
+    canvas.height = 420;
+    const ctx = canvas.getContext('2d');
+    
+    if (!ctx) return '';
+
+    // ✅ БЕЛЫЙ ФОН
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // ✅ РАМКА
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(5, 5, canvas.width - 10, canvas.height - 10);
+
+    const suitData = SUITS.find(s => s.value === suit);
+    const rankData = RANKS.find(r => r.value === rank);
+
+    if (!suitData || !rankData) return '';
+
+    // ✅ ВЕРХНИЙ ЛЕВЫЙ УГОЛ (Ранг + Масть)
+    ctx.fillStyle = suitData.color;
+    ctx.font = 'bold 40px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText(rankData.display, 20, 50);
+    
+    ctx.font = '50px Arial';
+    ctx.fillText(suitData.symbol, 20, 100);
+
+    // ✅ НИЖНИЙ ПРАВЫЙ УГОЛ (Ранг + Масть - ПЕРЕВЁРНУТО)
+    ctx.save();
+    ctx.translate(canvas.width, canvas.height);
+    ctx.rotate(Math.PI);
+    
+    ctx.fillStyle = suitData.color;
+    ctx.font = 'bold 40px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText(rankData.display, 20, 50);
+    
+    ctx.font = '50px Arial';
+    ctx.fillText(suitData.symbol, 20, 100);
+    ctx.restore();
+
+    // ✅ ЗАГРУЖАЕМ ПОКЕМОНА
+    return new Promise<string>((resolve) => {
+      const pokemonImg = new Image();
+      pokemonImg.crossOrigin = 'anonymous';
+      pokemonImg.onload = () => {
+        // Рисуем покемона по центру
+        const imgWidth = 200;
+        const imgHeight = 200;
+        const imgX = (canvas.width - imgWidth) / 2;
+        const imgY = (canvas.height - imgHeight) / 2;
+
+        // Белый фон под покемоном для прозрачности
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(imgX - 5, imgY - 5, imgWidth + 10, imgHeight + 10);
+
+        // Рисуем покемона
+        ctx.drawImage(pokemonImg, imgX, imgY, imgWidth, imgHeight);
+
+        resolve(canvas.toDataURL('image/png'));
+      };
+      pokemonImg.onerror = () => {
+        // Если покемон не загрузился - рисуем placeholder
+        ctx.fillStyle = '#e5e7eb';
+        ctx.fillRect(50, 110, 200, 200);
+        
+        ctx.fillStyle = '#9ca3af';
+        ctx.font = 'bold 24px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(`ПОКЕМОН #${pokemonId}`, canvas.width / 2, canvas.height / 2);
+
+        resolve(canvas.toDataURL('image/png'));
+      };
+      // ✅ ЗАГРУЖАЕМ ИЗ public/pokemon/
+      pokemonImg.src = `/pokemon/${pokemonId}.png`;
+    });
+  };
+
+  const handleGenerateSingle = async () => {
+    if (userCoins < currentCost) {
+      alert(`❌ Недостаточно монет!\n\nТребуется: ${currentCost.toLocaleString()}\nУ вас: ${userCoins.toLocaleString()}`);
+      return;
+    }
+
+    try {
+      setIsGenerating(true);
+      console.log('🎨 Генерация NFT карты с покемоном...');
+
+      const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+      const telegramId = telegramUser?.id?.toString() || '';
+      const username = telegramUser?.username || telegramUser?.first_name || '';
+
+      // ✅ РАНДОМНЫЙ ПОКЕМОН (1-52)
+      const randomPokemonId = Math.floor(Math.random() * 52) + 1;
+      console.log(`🎲 Выбран покемон #${randomPokemonId}`);
+
+      // ✅ Генерируем изображение карты
+      const imageDataUrl = await generateCardImage(selectedSuit, selectedRank, randomPokemonId);
+
+      console.log('✅ Изображение сгенерировано, отправляем на сервер...');
+
+      const response = await fetch('/api/nft/generate-pokemon', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-telegram-id': telegramId,
+          'x-username': username
+        },
+        body: JSON.stringify({
+          action: 'single',
+          suit: selectedSuit,
+          rank: selectedRank,
+          rankCost,
+          suitCost,
+          totalCost: currentCost,
+          pokemonId: randomPokemonId,
+          imageData: imageDataUrl
+        })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Ошибка генерации NFT');
+      }
+
+      console.log('✅ NFT карта успешно создана!');
+      
+      // Обновляем баланс
+      if (result.newBalance !== undefined) {
+        onBalanceUpdate(result.newBalance);
+      }
+
+      // Перезагружаем список карт
+      await fetchUserCards();
+
+      alert(`✅ NFT карта создана!\n\n${RANKS.find(r => r.value === selectedRank)?.display} ${SUITS.find(s => s.value === selectedSuit)?.label}\nПокемон #${randomPokemonId}\n\nСпискано: ${currentCost.toLocaleString()} монет\nОстаток: ${result.newBalance?.toLocaleString()} монет`);
+
+    } catch (error: any) {
+      console.error('❌ Ошибка генерации NFT:', error);
+      alert(`❌ Ошибка генерации NFT:\n${error.message}`);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleGenerateRandom = async () => {
+    const randomSuit = SUITS[Math.floor(Math.random() * SUITS.length)].value;
+    const randomRank = RANKS[Math.floor(Math.random() * RANKS.length)].value;
+    
+    setSelectedSuit(randomSuit);
+    setSelectedRank(randomRank);
+    
+    // Небольшая задержка для визуального эффекта
+    setTimeout(() => {
+      handleGenerateSingle();
+    }, 300);
+  };
+
+  return (
+    <div style={{
+      background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
+      borderRadius: '16px',
+      padding: '20px',
+      color: '#e2e8f0'
+    }}>
+      <h3 style={{
+        fontSize: '1.2rem',
+        fontWeight: '700',
+        marginBottom: '20px',
+        textAlign: 'center'
+      }}>
+        🎴 Генератор NFT карт с ПОКЕМОНАМИ
+      </h3>
+
+      {/* ПРЕВЬЮ КАРТЫ */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        marginBottom: '20px'
+      }}>
+        <div style={{
+          width: '200px',
+          height: '280px',
+          background: '#ffffff',
+          borderRadius: '16px',
+          border: '3px solid #000000',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.5)'
+        }}>
+          {previewImage && (
+            <img 
+              src={previewImage} 
+              alt={`${selectedRank} of ${selectedSuit}`}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover'
+              }}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* ВЫБОР МАСТИ */}
+      <div style={{ marginBottom: '20px' }}>
+        <h4 style={{ fontSize: '0.9rem', marginBottom: '10px', color: '#94a3b8' }}>Масть ({suitCost.toLocaleString()} монет)</h4>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
+          {SUITS.map((suit) => (
+            <motion.button
+              key={suit.value}
+              onClick={() => setSelectedSuit(suit.value)}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              style={{
+                padding: '15px',
+                borderRadius: '12px',
+                border: selectedSuit === suit.value ? '2px solid #10b981' : '1px solid rgba(255, 255, 255, 0.1)',
+                background: selectedSuit === suit.value ? 'rgba(16, 185, 129, 0.2)' : 'rgba(55, 65, 81, 0.6)',
+                cursor: 'pointer',
+                fontSize: '24px',
+                color: suit.color,
+                transition: 'all 0.3s ease'
+              }}
+            >
+              {suit.symbol}
+            </motion.button>
+          ))}
+        </div>
+      </div>
+
+      {/* ВЫБОР РАНГА */}
+      <div style={{ marginBottom: '20px' }}>
+        <h4 style={{ fontSize: '0.9rem', marginBottom: '10px', color: '#94a3b8' }}>Ранг ({rankCost.toLocaleString()} монет)</h4>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '8px' }}>
+          {RANKS.map((rank) => (
+            <motion.button
+              key={rank.value}
+              onClick={() => setSelectedRank(rank.value)}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              style={{
+                padding: '10px',
+                borderRadius: '8px',
+                border: selectedRank === rank.value ? '2px solid #10b981' : '1px solid rgba(255, 255, 255, 0.1)',
+                background: selectedRank === rank.value ? 'rgba(16, 185, 129, 0.2)' : 'rgba(55, 65, 81, 0.6)',
+                cursor: 'pointer',
+                fontSize: '16px',
+                fontWeight: '600',
+                color: '#e2e8f0',
+                transition: 'all 0.3s ease'
+              }}
+            >
+              {rank.display}
+            </motion.button>
+          ))}
+        </div>
+      </div>
+
+      {/* ЦЕНА */}
+      <div style={{
+        background: 'rgba(251, 191, 36, 0.1)',
+        border: '1px solid rgba(251, 191, 36, 0.3)',
+        borderRadius: '12px',
+        padding: '16px',
+        marginBottom: '20px',
+        textAlign: 'center'
+      }}>
+        <div style={{ fontSize: '0.9rem', color: '#94a3b8', marginBottom: '5px' }}>Итоговая стоимость:</div>
+        <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#fbbf24' }}>
+          💰 {currentCost.toLocaleString()} монет
+        </div>
+        <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '5px' }}>
+          У вас: {userCoins.toLocaleString()} монет
+        </div>
+        <div style={{ fontSize: '0.75rem', color: '#10b981', marginTop: '8px', fontWeight: '600' }}>
+          🎲 Рандомный покемон из 52 вариантов!
+        </div>
+      </div>
+
+      {/* КНОПКИ */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+        <motion.button
+          onClick={handleGenerateSingle}
+          disabled={isGenerating || userCoins < currentCost}
+          whileHover={userCoins >= currentCost && !isGenerating ? { scale: 1.02 } : {}}
+          whileTap={userCoins >= currentCost && !isGenerating ? { scale: 0.98 } : {}}
+          style={{
+            padding: '16px',
+            borderRadius: '12px',
+            border: 'none',
+            background: userCoins >= currentCost && !isGenerating
+              ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+              : 'rgba(55, 65, 81, 0.6)',
+            color: '#fff',
+            fontSize: '1rem',
+            fontWeight: '700',
+            cursor: userCoins >= currentCost && !isGenerating ? 'pointer' : 'not-allowed',
+            opacity: userCoins >= currentCost && !isGenerating ? 1 : 0.6,
+            transition: 'all 0.3s ease'
+          }}
+        >
+          {isGenerating ? '⏳ Генерация...' : '✅ Создать карту'}
+        </motion.button>
+
+        <motion.button
+          onClick={handleGenerateRandom}
+          disabled={isGenerating || userCoins < 1000}
+          whileHover={userCoins >= 1000 && !isGenerating ? { scale: 1.02 } : {}}
+          whileTap={userCoins >= 1000 && !isGenerating ? { scale: 0.98 } : {}}
+          style={{
+            padding: '16px',
+            borderRadius: '12px',
+            border: 'none',
+            background: userCoins >= 1000 && !isGenerating
+              ? 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)'
+              : 'rgba(55, 65, 81, 0.6)',
+            color: '#fff',
+            fontSize: '1rem',
+            fontWeight: '700',
+            cursor: userCoins >= 1000 && !isGenerating ? 'pointer' : 'not-allowed',
+            opacity: userCoins >= 1000 && !isGenerating ? 1 : 0.6,
+            transition: 'all 0.3s ease'
+          }}
+        >
+          🎲 Случайная карта
+        </motion.button>
+      </div>
+
+      {/* ВАШИ КАРТЫ */}
+      {userCards.length > 0 && (
+        <div style={{ marginTop: '20px' }}>
+          <h4 style={{ fontSize: '0.9rem', marginBottom: '10px', color: '#94a3b8' }}>
+            Ваши NFT карты ({userCards.length})
+          </h4>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))',
+            gap: '10px',
+            maxHeight: '200px',
+            overflowY: 'auto'
+          }}>
+            {userCards.map((card: any, index: number) => (
+              <div
+                key={index}
+                style={{
+                  aspectRatio: '2/3',
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                  border: '2px solid #000000',
+                  boxShadow: '0 4px 10px rgba(0, 0, 0, 0.3)',
+                  background: '#ffffff'
+                }}
+              >
+                <img
+                  src={card.image_url}
+                  alt={`${card.card_rank} of ${card.card_suit}`}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover'
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+

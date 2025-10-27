@@ -9,6 +9,8 @@ import { avatarFrames, getRarityColor, getRarityName } from '../../data/avatar-f
 import TonWalletConnect from '../../components/TonWalletConnect';
 import NFTGallery from '../../components/NFTGallery';
 import NFTCanvasGenerator from '../../components/NFTCanvasGeneratorCompact';
+import NFTImageGenerator from '../../components/NFTImageGenerator';
+import NFTPokemonGenerator from '../../components/NFTPokemonGenerator';
 
 // Компонент таймера для бонусов
 function BonusCooldownTimer({ bonus, onCooldownEnd }: { bonus: any; onCooldownEnd: () => void }) {
@@ -1825,25 +1827,14 @@ export default function ProfilePage() {
                   />
                 </div>
 
-                {/* NFT Canvas Generator */}
+                {/* NFT Pokemon Generator - ГЕНЕРАТОР С ПОКЕМОНАМИ */}
                 <div style={{
                   background: 'rgba(30, 41, 59, 0.6)',
                   border: '2px solid rgba(251, 191, 36, 0.3)',
                   borderRadius: '16px',
                   padding: '20px'
                 }}>
-                  <h4 style={{ 
-                    color: '#fbbf24', 
-                    fontSize: '1.1rem', 
-                    fontWeight: '700', 
-                    margin: '0 0 16px 0',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px'
-                  }}>
-                    <Sparkles size={24} /> Генератор NFT карт
-                  </h4>
-                  <NFTCanvasGenerator 
+                  <NFTPokemonGenerator 
                     userCoins={user?.coins || 0}
                     onBalanceUpdate={(newBalance) => {
                       if (user) {
