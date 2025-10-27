@@ -32,13 +32,8 @@ export default function GameResultsModal({
     setTimeout(() => setIsVisible(true), 100);
   }, []);
 
-  const getMedalEmoji = (place: number) => {
-    switch (place) {
-      case 1: return '🥇';
-      case 2: return '🥈';
-      case 3: return '🥉';
-      default: return place <= 5 ? '🏅' : '💀';
-    }
+  const getMedalText = (place: number) => {
+    return `${place}`;
   };
 
   const getPlaceColor = (place: number) => {
@@ -60,37 +55,21 @@ export default function GameResultsModal({
         backdropFilter: 'blur(20px)'
       }}
     >
-      {/* Confetti Background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(50)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute animate-float"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `-${Math.random() * 20}%`,
-              animationDelay: `${Math.random() * 3}s`,
-              animationDuration: `${3 + Math.random() * 2}s`,
-              opacity: 0.6
-            }}
-          >
-            {['🎉', '🎊', '⭐', '✨', '🏆'][Math.floor(Math.random() * 5)]}
-          </div>
-        ))}
-      </div>
-
       <div 
-        className={`relative max-w-3xl w-full transform transition-all duration-700 ${
+        className={`relative transform transition-all duration-700 ${
           isVisible ? 'scale-100 translate-y-0' : 'scale-75 translate-y-10'
         }`}
         style={{
-          background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%)',
-          borderRadius: '24px',
-          border: '2px solid rgba(99, 102, 241, 0.3)',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 60px rgba(99, 102, 241, 0.2)',
-          maxHeight: '90vh',
+          background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%)',
+          borderRadius: '20px',
+          border: '2px solid rgba(99, 102, 241, 0.4)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 40px rgba(99, 102, 241, 0.3)',
+          width: '50%', // ✅ ПОЛОВИНА ЭКРАНА!
+          maxWidth: '700px',
+          minWidth: '320px',
+          maxHeight: '70vh', // ✅ НЕ ВО ВЕСЬ ЭКРАН!
           overflow: 'auto',
-          margin: '20px' // ✅ НОРМАЛЬНЫЕ ОТСТУПЫ!
+          margin: '40px', // ✅ БОЛЬШИЕ ОТСТУПЫ ОТ КРАЁВ!
         }}
       >
         {/* Header */}
@@ -108,7 +87,7 @@ export default function GameResultsModal({
                 textShadow: '0 4px 12px rgba(99, 102, 241, 0.4)'
               }}
             >
-              🎮 РЕЗУЛЬТАТЫ ИГРЫ
+              РЕЗУЛЬТАТЫ ИГРЫ
             </h2>
             <Trophy className="text-yellow-400" size={36} strokeWidth={2.5} />
           </div>
@@ -149,7 +128,7 @@ export default function GameResultsModal({
                     className={`w-14 h-14 rounded-full flex items-center justify-center bg-gradient-to-br ${getPlaceColor(player.place)} shadow-lg`}
                   >
                     <span className="text-2xl font-black text-white drop-shadow-lg">
-                      {getMedalEmoji(player.place)}
+                      {getMedalText(player.place)}
                     </span>
                   </div>
 

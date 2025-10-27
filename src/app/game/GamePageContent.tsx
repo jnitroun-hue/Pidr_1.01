@@ -216,7 +216,7 @@ function GamePageContentComponent({
     drawCard, makeMove, onDeckClick, placeCardOnSelfByRules,
     selectHandCard, playSelectedCard, takeTableCards, showNotification,
     declareOneCard, askHowManyCards, contributePenaltyCard, cancelPenalty,
-    togglePenaltyDeckModal
+    togglePenaltyDeckModal, nextTurn
   } = useGameStore();
 
   // ИСПРАВЛЕНО: Получаем данные пользователя из Supabase БД
@@ -2059,7 +2059,25 @@ function GamePageContentComponent({
           }}
           onContinueWatching={() => {
             console.log('👁️ [GamePageContent] Пользователь продолжает просмотр игры');
-            // ✅ Просто закрываем модалку, игра продолжится автоматически
+            
+            // ✅ ЗАКРЫВАЕМ МОДАЛКУ
+            useGameStore.setState({
+              showWinnerModal: false,
+              winnerModalData: null
+            });
+            
+            // ✅ ПРОДОЛЖАЕМ ИГРУ! Ищем следующего активного игрока
+            const { players } = useGameStore.getState();
+            const activePlayers = players.filter(p => !p.isWinner && (p.cards.length > 0 || p.penki.length > 0));
+            
+            console.log(`🔄 [GamePageContent] После закрытия модалки - активных игроков: ${activePlayers.length}`);
+            
+            if (activePlayers.length > 1) {
+              console.log(`✅ [GamePageContent] Игра продолжается - передаём ход!`);
+              nextTurn();
+            } else {
+              console.log(`🏁 [GamePageContent] Остался 1 или меньше активных игроков - игра закончится`);
+            }
           }}
           onExitToMenu={() => {
             console.log('🚪 [GamePageContent] Пользователь выходит в главное меню');
