@@ -30,6 +30,7 @@ export interface Player {
   isBot?: boolean // Является ли игрок ботом
   difficulty?: 'easy' | 'medium' | 'hard' // Сложность бота
   isWinner?: boolean // Является ли игрок победителем (для зрителей)
+  finishTime?: number // ✅ Время выхода игрока (timestamp) для правильного определения мест
 }
 
 export interface GameStats {
@@ -1850,25 +1851,17 @@ export const useGameStore = create<GameState>()(
           const currentPlayer = players.find(p => p.id === currentPlayerId);
           if (!currentPlayer) return;
           
-          console.log(`🃏 [playSelectedCard P.I.D.R.] Игрок ${currentPlayer.name} играет картой: ${selectedHandCard?.image}`);
-          console.log(`📊 [playSelectedCard P.I.D.R.] У ${currentPlayer.name}: ${currentPlayer.cards.length} карт в руке, ${currentPlayer.penki.length} пеньков`);
-          console.log(`🃏 [playSelectedCard P.I.D.R.] - tableStack.length: ${tableStack.length}`);
-          console.log(`🃏 [playSelectedCard P.I.D.R.] - roundInProgress: ${roundInProgress}`);
+          // Логи для стадии 2 убраны (слишком много)
            
            // ПРАВИЛА P.I.D.R.: Проверяем можем ли побить верхнюю карту (если есть карты на столе)
            if (tableStack.length > 0) {
              const topCard = tableStack[tableStack.length - 1];
-             console.log(`🃏 [playSelectedCard P.I.D.R.] Пытаемся побить верхнюю карту: ${topCard?.image}`);
              
              const canBeat = get().canBeatCard(topCard, selectedHandCard, trumpSuit || '');
              if (!canBeat) {
                get().showNotification('Эта карта не может побить верхнюю карту на столе!', 'error', 3000);
-               console.log(`🃏 [playSelectedCard P.I.D.R.] ❌ НЕ МОЖЕТ ПОБИТЬ!`);
                return; // Блокируем неправильный ход
              }
-             console.log(`🃏 [playSelectedCard P.I.D.R.] ✅ ПОБИЛ ВЕРХНЮЮ КАРТУ!`);
-           } else {
-             console.log(`🃏 [playSelectedCard P.I.D.R.] 🆕 Первая карта на стол (начало раунда)`);
            }
            
            // УБРАНА СТАРАЯ НЕПРАВИЛЬНАЯ ЛОГИКА ЛИМИТА КАРТ
@@ -1893,36 +1886,15 @@ export const useGameStore = create<GameState>()(
            
            console.log(`🏆 [playSelectedCard] Проверка победы для ${currentPlayer.name}: карт=${cardsLeft}, пеньков=${penkiLeft}, всего=${totalCardsLeft}, стадия=${gameStage}`);
            
-           if (gameStage >= 2 && totalCardsLeft === 0 && cardsLeft === 0 && penkiLeft === 0) {
-             console.log(`🎉 [playSelectedCard] 🏆 ИГРОК ${currentPlayer.name} ИЗБАВИЛСЯ ОТ ВСЕХ КАРТ И ПЕНЬКОВ ВО 2-Й СТАДИИ!`);
-             
-             // КРИТИЧНО: Помечаем игрока как победителя НЕМЕДЛЕННО
-             const updatedPlayers = players.map(p => 
-               p.id === currentPlayer.id ? { ...p, isWinner: true } : p
-             );
-             set({ players: updatedPlayers });
-             
-             // Добавляем игрока в порядок выбывания (первые места)
-             const { eliminationOrder } = get();
-             const newEliminationOrder = [...eliminationOrder];
-             if (!newEliminationOrder.includes(currentPlayer.id)) {
-               newEliminationOrder.unshift(currentPlayer.id); // Добавляем в начало (лучшие места)
-               set({ eliminationOrder: newEliminationOrder });
-             }
-             
-             // Показываем модальное окно победы на 3.5 секунды
-             const position = newEliminationOrder.length; // Место игрока (1-й, 2-й, 3-й...)
-             const positionText = position === 1 ? '1-е место' : position === 2 ? '2-е место' : position === 3 ? '3-е место' : `${position}-е место`;
-             
-             get().showNotification(`🏆 ${currentPlayer.name} - ${positionText}!`, 'success', 3500);
-             
-             console.log(`🏆 [playSelectedCard] ${currentPlayer.name} занял ${position}-е место`);
-             
-             // КРИТИЧНО: Принудительно вызываем проверку победы
-             setTimeout(() => {
-               get().checkVictoryCondition();
-             }, 100);
-           }
+          if (gameStage >= 2 && totalCardsLeft === 0 && cardsLeft === 0 && penkiLeft === 0) {
+            console.log(`🎉 [playSelectedCard] 🏆 ИГРОК ${currentPlayer.name} ИЗБАВИЛСЯ ОТ ВСЕХ КАРТ И ПЕНЬКОВ ВО 2-Й СТАДИИ!`);
+            
+            // ✅ НЕ ОПРЕДЕЛЯЕМ МЕСТО ЗДЕСЬ! Место определится в checkVictoryCondition по finishTime!
+            // КРИТИЧНО: Вызываем проверку победы немедленно
+            setTimeout(() => {
+              get().checkVictoryCondition();
+            }, 100);
+          }
            
            // Добавляем карту на стол (поверх всех)
            // ✅ КРИТИЧНО: НЕ создаем копию! Используем ту же ссылку на объект!
@@ -2057,7 +2029,6 @@ export const useGameStore = create<GameState>()(
           // ✅ ИСПРАВЛЕНО: Убрали дублирующий вызов checkOneCardStatus() - он уже вызывается в nextTurn()
           
           // ПРАВИЛА P.I.D.R.: Ход переходит к следующему игроку (УСКОРЕНО)
-          console.log(`🃏 [playSelectedCard P.I.D.R.] ✅ Ход к следующему игроку`);
           setTimeout(() => get().nextTurn(), 200);
          },
          
@@ -2328,10 +2299,20 @@ export const useGameStore = create<GameState>()(
           if (newWinners.length > 0) {
             console.log(`🎉 [checkVictoryCondition] ОБЪЯВЛЯЕМ НОВЫХ ПОБЕДИТЕЛЕЙ!`);
             
+            // ✅ КРИТИЧНО: Присваиваем время выхода КАЖДОМУ новому победителю
+            const now = Date.now();
+            newWinners.forEach((winner, idx) => {
+              if (!winner.finishTime) {
+                winner.finishTime = now + idx; // ✅ Добавляем idx чтобы порядок был правильный если вышли одновременно
+                console.log(`⏰ [checkVictoryCondition] ${winner.name} закончил игру в ${winner.finishTime}`);
+              }
+            });
+            
             // Помечаем новых победителей
             const updatedPlayers = players.map(player => {
-              if (newWinners.some(w => w.id === player.id)) {
-                return { ...player, isWinner: true };
+              const newWinner = newWinners.find(w => w.id === player.id);
+              if (newWinner) {
+                return { ...player, isWinner: true, finishTime: newWinner.finishTime };
               }
               return player;
             });
@@ -2342,8 +2323,23 @@ export const useGameStore = create<GameState>()(
             const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
             const currentUserTelegramId = telegramUser?.id?.toString() || '';
             
+            // ✅ КРИТИЧНО: Объединяем ВСЕ победителей и сортируем по времени выхода!
+            const allWinnersSorted = [...existingWinners, ...newWinners].sort((a, b) => {
+              const timeA = a.finishTime || 0;
+              const timeB = b.finishTime || 0;
+              return timeA - timeB; // Сначала тот кто вышел раньше
+            });
+            
+            console.log(`🏆 [checkVictoryCondition] СУЩЕСТВУЮЩИЕ ПОБЕДИТЕЛИ:`, 
+              existingWinners.map(w => `${w.name} (finishTime: ${w.finishTime})`));
+            console.log(`🏆 [checkVictoryCondition] НОВЫЕ ПОБЕДИТЕЛИ:`, 
+              newWinners.map(w => `${w.name} (finishTime: ${w.finishTime})`));
+            console.log(`🏆 [checkVictoryCondition] ПОРЯДОК ПОБЕДИТЕЛЕЙ (по времени):`, 
+              allWinnersSorted.map((w, idx) => `${idx + 1}. ${w.name} (finishTime: ${w.finishTime})`));
+            
             newWinners.forEach((winner, index) => {
-              const position = existingWinners.length + index + 1;
+              // ✅ ИСПРАВЛЕНО: Находим РЕАЛЬНУЮ позицию по отсортированному списку!
+              const position = allWinnersSorted.findIndex(w => w.id === winner.id) + 1;
               const isUser = winner.isUser || winner.id === currentUserTelegramId;
               
               // ✅ ЕСЛИ ЭТО ПОЛЬЗОВАТЕЛЬ - ОБНОВЛЯЕМ СТАТИСТИКУ СРАЗУ!
@@ -2382,12 +2378,27 @@ export const useGameStore = create<GameState>()(
                 // ✅ ГЕНЕРИРУЕМ УНИКАЛЬНЫЙ TRACE ID
                 const traceId = `WINNER_${position}_${Date.now()}`;
                 
-                console.log(`🔥🔥🔥 [${traceId}] [checkVictoryCondition] СРАЗУ обновляем статистику для ${winner.name}:`, {
+                // ✅ КРИТИЧНО: Детальная проверка isTopThree
+                console.log(`🔍 [${traceId}] РАСЧЁТ isTopThree:`, {
                   position,
+                  'position >= 1': position >= 1,
+                  'position <= 3': position <= 3,
+                  isTopThree,
+                  calculation: `${position} >= 1 && ${position} <= 3 = ${isTopThree}`
+                });
+                
+                console.log(`🔥🔥🔥 [${traceId}] [checkVictoryCondition] СРАЗУ обновляем статистику для ${winner.name}:`, {
+                  winnerId: winner.id,
+                  winnerName: winner.name,
+                  isUser: isUser,
+                  position,
+                  finishTime: winner.finishTime,
                   isTopThree,
                   coinsEarned,
                   statsWasUpdated: statsUpdatedThisGame,
-                  traceId
+                  traceId,
+                  allWinnersCount: allWinnersSorted.length,
+                  telegramId: currentUserTelegramId
                 });
                 
                 // ✅ УСТАНАВЛИВАЕМ ФЛАГ ЧТО СТАТИСТИКА ОБНОВЛЕНА!
@@ -2411,7 +2422,14 @@ export const useGameStore = create<GameState>()(
                       wins: isTopThree,   // ✅ +1 если ТОП-3
                       losses: false       // ✅ Не последнее место
                     },
-                    traceId: traceId // ✅ Передаем trace ID
+                    traceId: traceId, // ✅ Передаем trace ID
+                    // ✅ Дополнительная информация для отладки
+                    debug: {
+                      position,
+                      isTopThree,
+                      playerName: winner.name,
+                      finishTime: winner.finishTime
+                    }
                   })
                 }).then(res => res.json())
                   .then(data => {
@@ -2427,12 +2445,13 @@ export const useGameStore = create<GameState>()(
             
             // ✅ УЛУЧШЕННОЕ ОБЪЯВЛЕНИЕ ПОБЕДИТЕЛЕЙ С АНИМАЦИЕЙ
             newWinners.forEach((winner, index) => {
-              const position = existingWinners.length + index + 1;
+              // ✅ ИСПРАВЛЕНО: Используем тот же отсортированный список!
+              const position = allWinnersSorted.findIndex(w => w.id === winner.id) + 1;
               const medals = ['🥇', '🥈', '🥉', '🏅', '🏅', '🏅'];
               const medal = medals[position - 1] || '🏅';
               const positionText = position === 1 ? '1-е место' : position === 2 ? '2-е место' : position === 3 ? '3-е место' : `${position}-е место`;
               
-              console.log(`🎉 ОБЪЯВЛЯЕМ ПОБЕДИТЕЛЯ: ${winner.name} - ${positionText}`);
+              console.log(`🎉 ОБЪЯВЛЯЕМ ПОБЕДИТЕЛЯ: ${winner.name} - ${positionText} (finishTime: ${winner.finishTime})`);
               
               // ✅ КРАСИВОЕ УВЕДОМЛЕНИЕ С МЕДАЛЬЮ
               get().showNotification(

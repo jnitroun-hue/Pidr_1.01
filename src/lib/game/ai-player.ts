@@ -367,9 +367,6 @@ export class AIPlayer {
     const attackRank = this.getCardRank(attackCard);
     const attackSuit = this.getCardSuit(attackCard);
     
-    console.log(`🤖 [findBestDefenseCard] Ищем защиту от: ${attackCard.image} (${attackSuit}, ранг ${attackRank})`);
-    console.log(`🤖 [findBestDefenseCard] Козырь: ${trumpSuit}`);
-    
     // Подходящие карты для защиты
     const validDefenseCards: Card[] = [];
     
@@ -394,15 +391,11 @@ export class AIPlayer {
       }
       
       if (canBeat) {
-        console.log(`🤖 [findBestDefenseCard] ✅ Подходящая карта: ${card.image} (${cardSuit}, ранг ${cardRank})`);
         validDefenseCards.push(card);
-      } else {
-        console.log(`🤖 [findBestDefenseCard] ❌ Не подходит: ${card.image} (${cardSuit}, ранг ${cardRank})`);
       }
     });
     
     if (validDefenseCards.length === 0) {
-      console.log(`🤖 [findBestDefenseCard] Нет подходящих карт для защиты`);
       return null;
     }
     
@@ -433,7 +426,6 @@ export class AIPlayer {
         bestCard = validDefenseCards[0];
     }
     
-    console.log(`🤖 [findBestDefenseCard] Выбранная карта: ${bestCard.image}`);
     return bestCard;
   }
   
