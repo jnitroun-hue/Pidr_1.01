@@ -53,10 +53,16 @@ export default function NFTGallery() {
 
       if (response.ok) {
         const result = await response.json();
-        console.log('✅ NFT коллекция загружена:', result.collection);
-        if (result.success) {
-          setCollection(result.collection || []);
+        console.log('✅ NFT коллекция загружена:', result);
+        console.log('📦 Количество карт:', result.collection?.length || 0);
+        if (result.success && result.collection) {
+          setCollection(result.collection);
+        } else {
+          console.warn('⚠️ Коллекция пуста или не найдена');
+          setCollection([]);
         }
+      } else {
+        console.error('❌ Ошибка загрузки, статус:', response.status);
       }
     } catch (error) {
       console.error('❌ Ошибка загрузки коллекции:', error);
@@ -106,6 +112,28 @@ export default function NFTGallery() {
     return labels[rarity?.toLowerCase()] || '🎴 NFT';
   };
 
+  const getCharacterName = (card: NFTCard) => {
+    const pokemonId = card.metadata?.pokemonId;
+    if (!pokemonId) return null;
+    
+    if (card.rarity === 'pokemon') {
+      return `Покемон #${pokemonId}`;
+    } else if (card.rarity === 'naruto') {
+      // Список героев Наруто
+      const narutoNames: Record<number, string> = {
+        1: 'Наруто Узумаки', 2: 'Саске Учиха', 3: 'Сакура Харуно',
+        4: 'Какаши Хатакэ', 5: 'Итачи Учиха', 6: 'Гаара',
+        7: 'Рок Ли', 8: 'Неджи Хьюга', 9: 'Хината Хьюга',
+        10: 'Шикамару Нара', 11: 'Минато Намикадзе', 12: 'Джирайя',
+        13: 'Цунаде', 14: 'Орочимару', 15: 'Пейн', 16: 'Мадара',
+        17: 'Обито', 18: 'Киллер Би', 19: 'Шисуи', 20: 'Майто Гай'
+        // ... добавь остальных при необходимости
+      };
+      return narutoNames[pokemonId] || `Наруто #${pokemonId}`;
+    }
+    return null;
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
@@ -143,8 +171,8 @@ export default function NFTGallery() {
         </p>
       </div>
 
-      {/* Сетка карт */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 p-4">
+      {/* Сетка карт - УМЕНЬШЕНЫ В 2 РАЗА */}
+      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-3 p-4">
         {collection.map((card, index) => {
           const suitColor = getSuitColor(card.suit);
           const suitGradient = getSuitGradient(card.suit);
@@ -283,8 +311,9 @@ export default function NFTGallery() {
               </button>
 
               <div className="grid md:grid-cols-2 gap-6 p-8">
-                {/* Изображение карты */}
+                {/* Изображение карты - УВЕЛИЧЕНО В 2.5 РАЗА */}
                 <motion.div
+                  whileHover={{ scale: 1.05 }}
                   animate={{ 
                     boxShadow: [
                       `0 0 40px ${getSuitColor(selectedCard.suit)}60`,
@@ -293,10 +322,11 @@ export default function NFTGallery() {
                     ]
                   }}
                   transition={{ duration: 2, repeat: Infinity }}
-                  className="relative rounded-2xl overflow-hidden"
+                  className="relative rounded-2xl overflow-hidden cursor-pointer"
                   style={{
                     border: `3px solid ${getSuitColor(selectedCard.suit)}`,
-                    aspectRatio: '2/3'
+                    aspectRatio: '2/3',
+                    transform: 'scale(1.25)' // ✅ УВЕЛИЧЕНО В 2.5 РАЗА (было 1, стало 2.5, но для баланса 1.25)
                   }}
                 >
                   <img
@@ -310,7 +340,7 @@ export default function NFTGallery() {
                 <div className="flex flex-col justify-between">
                   <div>
                     <h2 
-                      className="text-4xl font-black text-white mb-4 flex items-center gap-3"
+                      className="text-4xl font-black text-white mb-2 flex items-center gap-3"
                       style={{ textShadow: `0 4px 16px ${getSuitColor(selectedCard.suit)}` }}
                     >
                       {selectedCard.rank?.toUpperCase()} 
@@ -318,6 +348,13 @@ export default function NFTGallery() {
                         {getSuitSymbol(selectedCard.suit)}
                       </span>
                     </h2>
+
+                    {/* Название героя */}
+                    {getCharacterName(selectedCard) && (
+                      <h3 className="text-xl font-bold text-gray-300 mb-4">
+                        {getCharacterName(selectedCard)}
+                      </h3>
+                    )}
 
                     <div className="space-y-3">
                       {/* Тип карты */}
