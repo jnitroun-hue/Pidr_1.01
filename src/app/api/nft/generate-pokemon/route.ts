@@ -199,13 +199,15 @@ export async function POST(req: NextRequest) {
         user_id: userIdBigInt,
         suit: suit,
         rank: rank,
+        rarity: 'pokemon', // ✅ Тип карты
         image_url: imageUrl,
         storage_path: fileName,
-        cost: totalCost,
-        payment_method: 'coins',
         metadata: {
           pokemonId: pokemonId,
-          generator: 'pokemon'
+          generator: action === 'random_pokemon' ? 'random_pokemon' : action === 'random_naruto' ? 'random_naruto' : 'simple',
+          cost: totalCost,
+          payment_method: 'coins',
+          generated_at: new Date().toISOString()
         },
         created_at: new Date().toISOString()
       }])
