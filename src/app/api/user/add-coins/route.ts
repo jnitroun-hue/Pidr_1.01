@@ -3,8 +3,6 @@ import { supabase } from '@/lib/supabase';
 
 export async function POST(req: NextRequest) {
   try {
-    console.log('💰 [Add Coins] Запрос на добавление монет');
-    
     // ✅ Авторизация через Telegram WebApp headers
     const telegramIdHeader = req.headers.get('x-telegram-id');
     
@@ -17,11 +15,13 @@ export async function POST(req: NextRequest) {
     }
     
     const userId = telegramIdHeader;
-    console.log(`✅ [Add Coins] Авторизован пользователь: ${userId}`);
     
     // Получаем сумму и статистику из тела запроса
     const body = await req.json();
-    const { amount, updateStats } = body;
+    const { amount, updateStats, traceId } = body;
+    
+    // ✅ ЛОГИРУЕМ С TRACE ID
+    console.log(`💰💰💰 [${traceId || 'NO_TRACE'}] [Add Coins] Запрос на добавление монет от пользователя: ${userId}`);
     
     if (!amount || typeof amount !== 'number') {
       return NextResponse.json(
@@ -30,9 +30,16 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    console.log(`💰 [Add Coins] Добавляем ${amount} монет пользователю ${userId}`);
+    console.log(`💰 [${traceId || 'NO_TRACE'}] [Add Coins] Добавляем ${amount} монет пользователю ${userId}`);
     if (updateStats) {
-      console.log(`📊 [Add Coins] Обновляем статистику:`, updateStats);
+      console.log(`📊 [${traceId || 'NO_TRACE'}] [Add Coins] Обновляем статистику:`, JSON.stringify(updateStats, null, 2));
+      console.log(`📊 [${traceId || 'NO_TRACE'}] [Add Coins] ДЕТАЛИ ЗАПРОСА:`, {
+        gamesPlayed: updateStats.gamesPlayed,
+        wins: updateStats.wins,
+        losses: updateStats.losses,
+        source: body.source || 'unknown',
+        traceId: traceId
+      });
     }
     
     // Получаем текущие данные пользователя (баланс и статистика)
@@ -58,18 +65,31 @@ export async function POST(req: NextRequest) {
     
     // ✅ Обновляем статистику если передана
     if (updateStats) {
+      console.log(`🔍 [${traceId || 'NO_TRACE'}] [Add Coins] НАЧАЛО ОБНОВЛЕНИЯ СТАТИСТИКИ`);
+      console.log(`📊 [${traceId || 'NO_TRACE'}] [Add Coins] Текущие значения в БД:`, {
+        games_played: userData.games_played || 0,
+        wins: userData.wins || 0,
+        losses: userData.losses || 0
+      });
+      
       if (updateStats.gamesPlayed) {
         updateData.games_played = (userData.games_played || 0) + 1;
-        console.log(`📊 Игр сыграно: ${userData.games_played || 0} → ${updateData.games_played}`);
+        console.log(`📊 [${traceId || 'NO_TRACE'}] Игр сыграно: ${userData.games_played || 0} → ${updateData.games_played}`);
       }
       if (updateStats.wins) {
         updateData.wins = (userData.wins || 0) + 1;
-        console.log(`🏆 Побед: ${userData.wins || 0} → ${updateData.wins}`);
+        console.log(`🏆 [${traceId || 'NO_TRACE'}] Побед: ${userData.wins || 0} → ${updateData.wins}`);
       }
       if (updateStats.losses) {
         updateData.losses = (userData.losses || 0) + 1;
-        console.log(`💀 Поражений: ${userData.losses || 0} → ${updateData.losses}`);
+        console.log(`💀 [${traceId || 'NO_TRACE'}] Поражений: ${userData.losses || 0} → ${updateData.losses}`);
       }
+      
+      console.log(`📊 [${traceId || 'NO_TRACE'}] [Add Coins] ИТОГОВЫЕ значения для записи:`, {
+        games_played: updateData.games_played,
+        wins: updateData.wins,
+        losses: updateData.losses
+      });
     }
     
     // Обновляем баланс и статистику в БД
@@ -86,7 +106,10 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    console.log(`✅ [Add Coins] Баланс обновлён: ${currentCoins} → ${newBalance}`);
+    console.log(`✅✅✅ [${traceId || 'NO_TRACE'}] [Add Coins] Баланс обновлён: ${currentCoins} → ${newBalance}`);
+    if (updateStats) {
+      console.log(`✅✅✅ [${traceId || 'NO_TRACE'}] [Add Coins] СТАТИСТИКА УСПЕШНО ОБНОВЛЕНА В БД!`);
+    }
     
     return NextResponse.json({
       success: true,

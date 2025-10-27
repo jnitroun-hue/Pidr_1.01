@@ -2379,17 +2379,23 @@ export const useGameStore = create<GameState>()(
                 }
                 // Для 9-го места (последнего) монеты начисляются в конце игры
                 
-                console.log(`📊 [checkVictoryCondition] СРАЗУ обновляем статистику для ${winner.name}:`, {
+                // ✅ ГЕНЕРИРУЕМ УНИКАЛЬНЫЙ TRACE ID
+                const traceId = `WINNER_${position}_${Date.now()}`;
+                
+                console.log(`🔥🔥🔥 [${traceId}] [checkVictoryCondition] СРАЗУ обновляем статистику для ${winner.name}:`, {
                   position,
                   isTopThree,
                   coinsEarned,
-                  statsWasUpdated: statsUpdatedThisGame
+                  statsWasUpdated: statsUpdatedThisGame,
+                  traceId
                 });
                 
                 // ✅ УСТАНАВЛИВАЕМ ФЛАГ ЧТО СТАТИСТИКА ОБНОВЛЕНА!
                 set({ statsUpdatedThisGame: true });
+                console.log(`🚩 [${traceId}] ФЛАГ statsUpdatedThisGame УСТАНОВЛЕН В TRUE!`);
                 
                 // ✅ СРАЗУ ОТПРАВЛЯЕМ ЗАПРОС НА ОБНОВЛЕНИЕ!
+                console.log(`📤 [${traceId}] ОТПРАВЛЯЕМ FETCH для победителя места ${position}`);
                 fetch('/api/user/add-coins', {
                   method: 'POST',
                   headers: {
@@ -2399,22 +2405,23 @@ export const useGameStore = create<GameState>()(
                   },
                   body: JSON.stringify({
                     amount: coinsEarned,
-                    source: 'game_finish',
+                    source: `game_finish_place_${position}`,
                     updateStats: {
                       gamesPlayed: true,  // ✅ Всегда +1
                       wins: isTopThree,   // ✅ +1 если ТОП-3
                       losses: false       // ✅ Не последнее место
-                    }
+                    },
+                    traceId: traceId // ✅ Передаем trace ID
                   })
                 }).then(res => res.json())
                   .then(data => {
                     if (data.success) {
-                      console.log(`✅ СТАТИСТИКА ОБНОВЛЕНА СРАЗУ при выходе! +${coinsEarned} монет`);
+                      console.log(`✅✅✅ [${traceId}] СТАТИСТИКА ОБНОВЛЕНА! Место ${position}, Победа: ${isTopThree}, Монеты: +${coinsEarned}`);
                     } else {
-                      console.error(`❌ Ошибка обновления статистики:`, data.error);
+                      console.error(`❌❌❌ [${traceId}] Ошибка обновления статистики:`, data.error);
                     }
                   })
-                  .catch(err => console.error('❌ Ошибка fetch:', err));
+                  .catch(err => console.error(`❌❌❌ [${traceId}] Ошибка fetch:`, err));
               }
             });
             
@@ -2651,8 +2658,11 @@ export const useGameStore = create<GameState>()(
               // ✅ ЗАЩИТА ОТ ДУБЛИРОВАНИЯ: Проверяем что статистика ЕЩЁ НЕ ОБНОВЛЕНА!
               const { statsUpdatedThisGame } = get();
               if (statsUpdatedThisGame) {
-                console.warn(`⚠️ [calculateAndShowGameResults] Статистика УЖЕ обновлена за эту игру! Пропускаем последнего игрока`);
+                console.warn(`⚠️⚠️⚠️ [calculateAndShowGameResults] Статистика УЖЕ обновлена за эту игру! Пропускаем последнего игрока`);
               } else {
+                // ✅ ГЕНЕРИРУЕМ УНИКАЛЬНЫЙ TRACE ID
+                const traceId = `LOSER_${userResult.place}_${Date.now()}`;
+                
                 const requestBody = {
                   amount: userResult.coinsEarned, // 5 монет
                   source: 'game_loss',
@@ -2660,10 +2670,11 @@ export const useGameStore = create<GameState>()(
                     gamesPlayed: true, // ✅ +1 к играм
                     wins: false,       // ✅ Не победа
                     losses: true       // ✅ +1 к поражениям
-                  }
+                  },
+                  traceId: traceId // ✅ Передаем trace ID
                 };
                 
-                console.log(`📊 [calculateAndShowGameResults] ПОСЛЕДНИЙ ИГРОК! Обновляем статистику:`, {
+                console.log(`🔥🔥🔥 [${traceId}] [calculateAndShowGameResults] ПОСЛЕДНИЙ ИГРОК! Обновляем статистику:`, {
                   place: userResult.place,
                   coins: userResult.coinsEarned,
                   isLastPlace: true,
@@ -2674,9 +2685,10 @@ export const useGameStore = create<GameState>()(
                 
                 // ✅ УСТАНАВЛИВАЕМ ФЛАГ ЧТО СТАТИСТИКА ОБНОВЛЕНА!
                 set({ statsUpdatedThisGame: true });
+                console.log(`🚩 [${traceId}] ФЛАГ statsUpdatedThisGame УСТАНОВЛЕН В TRUE!`);
                 
                 // Обновляем баланс и статистику в БД через API
-                console.log(`🚀 [calculateAndShowGameResults] ОТПРАВЛЯЕМ FETCH для последнего игрока`);
+                console.log(`📤 [${traceId}] ОТПРАВЛЯЕМ FETCH для последнего игрока`);
                 fetch('/api/user/add-coins', {
                 method: 'POST',
                 headers: {
@@ -2691,15 +2703,15 @@ export const useGameStore = create<GameState>()(
                   return res.json();
                 })
                 .then(data => {
-                  console.log(`📥 [calculateAndShowGameResults] Response data:`, data);
+                  console.log(`📥 [${traceId}] Response data:`, data);
                   if (data.success) {
-                    console.log(`✅✅✅ СТАТИСТИКА ПОСЛЕДНЕГО ИГРОКА ОБНОВЛЕНА: +${userResult.coinsEarned} монет`);
+                    console.log(`✅✅✅ [${traceId}] СТАТИСТИКА ПОСЛЕДНЕГО ИГРОКА ОБНОВЛЕНА: Поражение +1, Монеты: +${userResult.coinsEarned}`);
                   } else {
-                    console.error(`❌ API вернул ошибку:`, data.error);
+                    console.error(`❌❌❌ [${traceId}] API вернул ошибку:`, data.error);
                   }
                 })
                 .catch(err => {
-                  console.error('❌❌❌ КРИТИЧЕСКАЯ ОШИБКА ОБНОВЛЕНИЯ:', err);
+                  console.error(`❌❌❌ [${traceId}] КРИТИЧЕСКАЯ ОШИБКА ОБНОВЛЕНИЯ:`, err);
                   console.error('Полная ошибка:', {
                     message: err.message,
                     stack: err.stack,
