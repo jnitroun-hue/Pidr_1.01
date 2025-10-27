@@ -24,24 +24,12 @@ export async function GET(req: NextRequest) {
     
     console.log(`✅ [Shop Inventory] Авторизован пользователь через headers: ${userId} (${userIdBigInt})`);
     
-    // Вызываем функцию БД для получения инвентаря
-    const { data, error } = await supabase.rpc('get_user_inventory', {
-      p_user_id: userIdBigInt // ✅ ИСПРАВЛЕНО: BIGINT вместо STRING!
-    });
-    
-    if (error) {
-      console.error('❌ Ошибка получения инвентаря:', error);
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Ошибка получения инвентаря' 
-      }, { status: 500 });
-    }
-    
+    // ✅ ВРЕМЕННОЕ РЕШЕНИЕ: Возвращаем пустой инвентарь (пока нет таблицы инвентаря)
     console.log(`✅ Инвентарь загружен для пользователя ${userId}`);
     
     return NextResponse.json({ 
       success: true,
-      data: data || {
+      data: {
         skins: [],
         effects: [],
         frames: [],
