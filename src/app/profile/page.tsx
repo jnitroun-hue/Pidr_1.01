@@ -8,8 +8,6 @@ import { useTranslations } from '../../lib/i18n/translations';
 import { avatarFrames, getRarityColor, getRarityName } from '../../data/avatar-frames';
 import TonWalletConnect from '../../components/TonWalletConnect';
 import NFTGallery from '../../components/NFTGallery';
-import NFTCanvasGenerator from '../../components/NFTCanvasGeneratorCompact';
-import NFTImageGenerator from '../../components/NFTImageGenerator';
 import NFTPokemonGenerator from '../../components/NFTPokemonGenerator';
 
 // Компонент таймера для бонусов

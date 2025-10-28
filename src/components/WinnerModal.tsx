@@ -90,10 +90,12 @@ export default function WinnerModal({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[10000] flex items-center justify-center overflow-hidden"
+        className="fixed inset-0 flex items-center justify-center overflow-hidden"
         style={{
-          background: 'radial-gradient(circle at center, rgba(15, 23, 42, 0.95) 0%, rgba(0, 0, 0, 0.98) 100%)',
-          backdropFilter: 'blur(12px)'
+          background: 'rgba(0, 0, 0, 0.95)',
+          backdropFilter: 'blur(20px)',
+          zIndex: 99999,
+          pointerEvents: 'auto'
         }}
       >
         {/* Анимированный фон с частицами */}

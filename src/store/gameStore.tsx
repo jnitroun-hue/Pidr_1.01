@@ -916,35 +916,48 @@ export const useGameStore = create<GameState>()(
           
           // Пауза 5 секунд, затем продолжаем с того же игрока
           setTimeout(() => {
-            const updatedPlayer = get().players.find(p => p.id === currentPlayerId);
-            
-            if (!updatedPlayer) {
-              console.error(`❌ [distributePenaltyCards] Игрок ${currentPlayerId} не найден после паузы!`);
-              return;
-            }
-            
-            console.log(`🔍 [distributePenaltyCards] ПРОВЕРКА после паузы:`, {
-              playerName: updatedPlayer.name,
-              isWinner: updatedPlayer.isWinner,
-              cardsLength: updatedPlayer.cards.length,
-              penkiLength: updatedPlayer.penki.length
-            });
-            
-            const isActive = !updatedPlayer.isWinner && (updatedPlayer.cards.length > 0 || updatedPlayer.penki.length > 0);
-            
-            console.log(`🔍 [distributePenaltyCards] isActive = ${isActive}`);
-            
-            if (isActive) {
-              console.log(`🎮 [distributePenaltyCards] Продолжаем ход игрока: ${updatedPlayer.name}`);
-              console.log(`🔍 [distributePenaltyCards] ВЫЗЫВАЕМ processPlayerTurn(${currentPlayerId})`);
-              get().processPlayerTurn(currentPlayerId);
-              console.log(`✅ [distributePenaltyCards] processPlayerTurn() ВЫЗВАН!`);
-            } else {
-              console.log(`⚠️ [distributePenaltyCards] Игрок ${updatedPlayer.name} больше не активен, ищем следующего...`);
-              console.log(`🔍 [distributePenaltyCards] ВЫЗЫВАЕМ nextTurn()`);
-              // Если игрок вышел, ищем следующего
+            try {
+              const state = get();
+              const updatedPlayer = state.players.find(p => p.id === currentPlayerId);
+              
+              if (!updatedPlayer) {
+                console.error(`❌ [distributePenaltyCards] Игрок ${currentPlayerId} не найден после паузы! Вызываем nextTurn()`);
+                get().nextTurn();
+                return;
+              }
+              
+              console.log(`🔍 [distributePenaltyCards] ПРОВЕРКА после паузы:`, {
+                playerName: updatedPlayer.name,
+                isWinner: updatedPlayer.isWinner,
+                cardsLength: updatedPlayer.cards.length,
+                penkiLength: updatedPlayer.penki.length,
+                gameStage: state.gameStage,
+                currentPlayerId: state.currentPlayerId
+              });
+              
+              const isActive = !updatedPlayer.isWinner && (updatedPlayer.cards.length > 0 || updatedPlayer.penki.length > 0);
+              
+              console.log(`🔍 [distributePenaltyCards] isActive = ${isActive}`);
+              
+              if (isActive && state.gameStage === 2) {
+                console.log(`🎮 [distributePenaltyCards] Продолжаем ход игрока: ${updatedPlayer.name}`);
+                console.log(`🔍 [distributePenaltyCards] ВЫЗЫВАЕМ processPlayerTurn(${currentPlayerId})`);
+                
+                // ✅ КРИТИЧНО: Сбрасываем фазу перед вызовом processPlayerTurn
+                set({ stage2TurnPhase: 'selecting_card' });
+                
+                get().processPlayerTurn(currentPlayerId);
+                console.log(`✅ [distributePenaltyCards] processPlayerTurn() ВЫЗВАН!`);
+              } else {
+                console.log(`⚠️ [distributePenaltyCards] Игрок ${updatedPlayer.name} больше не активен или игра не в стадии 2, ищем следующего...`);
+                console.log(`🔍 [distributePenaltyCards] ВЫЗЫВАЕМ nextTurn()`);
+                get().nextTurn();
+                console.log(`✅ [distributePenaltyCards] nextTurn() ВЫЗВАН!`);
+              }
+            } catch (error) {
+              console.error(`❌ [distributePenaltyCards] Ошибка при продолжении игры после штрафа:`, error);
+              // Аварийный nextTurn в случае ошибки
               get().nextTurn();
-              console.log(`✅ [distributePenaltyCards] nextTurn() ВЫЗВАН!`);
             }
           }, 5000); // ✅ ПАУЗА 5 СЕКУНД
         }
@@ -1314,16 +1327,29 @@ export const useGameStore = create<GameState>()(
           p.isCurrentPlayer = p.id === startingPlayerId;
           p.playerStage = 2; // Все переходят во 2-ю стадию
           
-          // ✅ ИСПРАВЛЕНО: Пеньки ОСТАЮТСЯ в penki[] при переходе во 2-ю стадию!
-          // Они активируются ТОЛЬКО когда закончатся карты в руке (переход в 3-ю стадию)
           console.log(`🃏 [checkStage1End] ${p.name}: ${p.cards.length} карт в руке, ${p.penki.length} пеньков`);
           
           // ✅ ИСПРАВЛЕНО: ВСЕ карты во 2-й стадии - ОТКРЫТЫЕ (open: true)!
-          // Визуальное отображение (рубашкой вверх для других игроков) контролируется в UI
           p.cards = p.cards.map(card => ({
             ...card,
             open: true // ✅ ВСЕ карты открыты (для логики игры)
           }));
+          
+          // ✅ КРИТИЧНО: ОТКРЫВАЕМ ПЕНЬКИ при переходе во 2-ю стадию!
+          // Если у игрока НЕТ открытых карт в руке, но ЕСТЬ пеньки - открываем их!
+          if (p.cards.length === 0 && p.penki.length > 0) {
+            console.log(`🔓 [checkStage1End] ОТКРЫВАЕМ ПЕНЬКИ для ${p.name}: ${p.penki.length} карт`);
+            p.penki = p.penki.map(card => ({
+              ...card,
+              open: true
+            }));
+            // Перемещаем пеньки в руку для игры
+            p.cards = [...p.penki];
+            p.penki = [];
+            p.playerStage = 3; // Сразу переходим в стадию 3
+            console.log(`✅ [checkStage1End] ${p.name} теперь в стадии 3 с ${p.cards.length} картами`);
+          }
+          
           console.log(`✅ [checkStage1End] ${p.name}: ${p.cards.length} карт (open=true), ${p.penki.length} пеньков`)
         });
         

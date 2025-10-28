@@ -1,841 +1,276 @@
 'use client'
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Coins, Star, Sparkles, Zap, Gift, Crown, Palette, Wand2, ShoppingBag, Wallet, Plus, TrendingUp, Award, Flame, Diamond, Shield } from 'lucide-react';
-import { useLanguage } from '../../components/LanguageSwitcher';
-import { useTranslations } from '../../lib/i18n/translations';
+import { motion } from 'framer-motion';
+import { ArrowLeft, TrendingUp, DollarSign, Users } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import NFTMarketplace from '../../components/NFTMarketplace';
 
-interface ShopItem {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  originalPrice?: number;
-  category: 'featured' | 'skins' | 'effects' | 'boosters' | 'bundles' | 'crypto';
-  rarity: 'common' | 'rare' | 'epic' | 'legendary' | 'mythic';
-  image: string;
-  owned?: boolean;
-  discount?: number;
-  featured?: boolean;
-  new?: boolean;
-  popular?: boolean;
-  limitedTime?: boolean;
-}
-
-interface CryptoPackage {
-  id: string;
-  name: string;
+interface User {
+  telegram_id: number;
+  username: string;
+  first_name: string;
   coins: number;
-  price: number;
-  bonus?: number;
-  popular?: boolean;
-  bestValue?: boolean;
-  icon: string;
-  color: string;
-  description: string;
+  rating: number;
+  wins: number;
+  losses: number;
 }
 
-export default function UltraPremiumShop() {
-  const { language } = useLanguage();
-  const t = useTranslations(language);
-  
-  const [selectedCategory, setSelectedCategory] = useState('featured');
-  const [coins, setCoins] = useState(1500);
+export default function ShopPage() {
+  const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
-  const [purchasedItems, setPurchasedItems] = useState<string[]>(['golden-skin']);
+  const [stats, setStats] = useState({
+    totalListings: 0,
+    totalSales: 0,
+    avgPrice: 0,
+    activeUsers: 0
+  });
 
-  // Ультра-премиум категории
-  const categories = [
-    { 
-      id: 'featured', 
-      name: t.shop.featured, 
-      icon: Star, 
-      color: 'from-yellow-400 via-orange-400 to-red-500',
-      description: 'Handpicked exclusives'
-    },
-    { 
-      id: 'skins', 
-      name: t.shop.skins, 
-      icon: Palette, 
-      color: 'from-purple-400 via-pink-400 to-rose-500',
-      description: 'Visual masterpieces'
-    },
-    { 
-      id: 'effects', 
-      name: t.shop.effects, 
-      icon: Wand2, 
-      color: 'from-blue-400 via-cyan-400 to-teal-500',
-      description: 'Magical powers'
-    },
-    { 
-      id: 'boosters', 
-      name: t.shop.boosters, 
-      icon: Zap, 
-      color: 'from-green-400 via-emerald-400 to-lime-500',
-      description: 'Performance enhancers'
-    },
-    { 
-      id: 'bundles', 
-      name: t.shop.bundles, 
-      icon: Gift, 
-      color: 'from-indigo-400 via-purple-400 to-pink-500',
-      description: 'Value collections'
-    },
-    { 
-      id: 'crypto', 
-      name: t.shop.crypto, 
-      icon: Wallet, 
-      color: 'from-amber-400 via-yellow-400 to-orange-500',
-      description: 'Premium coins'
-    },
-  ];
-
-  // Функция перевода названий и описаний товаров
-  const translateItem = (id: string, field: 'name' | 'description') => {
-    const translations: Record<string, Record<string, { ru: string; en: string }>> = {
-      'mythic-royal': {
-        name: { ru: 'Королевское восхождение', en: 'Royal Ascendancy' },
-        description: { 
-          ru: 'Легендарная коллекция с золотыми анимациями, эффектами частиц и эксклюзивными праздниками победы',
-          en: 'Legendary collection featuring golden animations, particle effects, and exclusive victory celebrations'
-        }
-      },
-      'diamond-prestige': {
-        name: { ru: 'Алмазный престиж', en: 'Diamond Prestige' },
-        description: { 
-          ru: 'Кристаллический дизайн карт с голографическими эффектами и премиум звуковым оформлением',
-          en: 'Crystalline card designs with holographic effects and premium sound design'
-        }
-      },
-      'neon-cyberpunk': {
-        name: { ru: 'Киберпанк 2077', en: 'Cyberpunk 2077' },
-        description: { 
-          ru: 'Футуристическая неоновая эстетика с эффектами глитча и электронными саундтреками',
-          en: 'Futuristic neon aesthetics with glitch effects and electronic soundtracks'
-        }
-      },
-      'phoenix-flames': {
-        name: { ru: 'Восходящий Феникс', en: 'Phoenix Rising' },
-        description: { 
-          ru: 'Величественные огненные эффекты с анимацией крыльев и эпическими последовательностями победы',
-          en: 'Majestic fire effects with wing animations and epic victory sequences'
-        }
-      },
-      'quantum-boost': {
-        name: { ru: 'Квантовый ускоритель', en: 'Quantum Accelerator' },
-        description: { 
-          ru: '5x множитель монет с эффектами частиц и визуальными искажениями времени',
-          en: '5x coin multiplier with particle effects and time distortion visuals'
-        }
-      },
-    };
-    
-    const translation = translations[id]?.[field]?.[language];
-    if (translation) return translation;
-    
-    // Fallback: если перевода нет, возвращаем английский текст или пустую строку
-    return translations[id]?.[field]?.en || '';
+  // Telegram WebApp headers
+  const getTelegramWebAppHeaders = () => {
+    if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
+      const user = window.Telegram.WebApp.initDataUnsafe?.user;
+      if (user) {
+        return {
+          'x-telegram-id': user.id.toString(),
+          'x-username': user.username || user.first_name || 'User'
+        };
+      }
+    }
+    return {};
   };
 
-  // Премиум товары с реальными описаниями
-  const shopItems: ShopItem[] = [
-    {
-      id: 'mythic-royal',
-      name: translateItem('mythic-royal', 'name'),
-      description: translateItem('mythic-royal', 'description'),
-      price: 2500,
-      originalPrice: 3500,
-      category: 'featured',
-      rarity: 'mythic',
-      image: '/shop/mythic-royal.webp',
-      discount: 30,
-      featured: true,
-      new: true,
-      limitedTime: true
-    },
-    {
-      id: 'diamond-prestige',
-      name: translateItem('diamond-prestige', 'name'),
-      description: translateItem('diamond-prestige', 'description'),
-      price: 1800,
-      category: 'featured',
-      rarity: 'legendary',
-      image: '/shop/diamond-prestige.webp',
-      featured: true,
-      popular: true
-    },
-    {
-      id: 'neon-cyberpunk',
-      name: translateItem('neon-cyberpunk', 'name'),
-      description: translateItem('neon-cyberpunk', 'description'),
-      price: 1200,
-      category: 'skins',
-      rarity: 'epic',
-      image: '/shop/cyberpunk.webp',
-      new: true
-    },
-    {
-      id: 'phoenix-flames',
-      name: translateItem('phoenix-flames', 'name'),
-      description: translateItem('phoenix-flames', 'description'),
-      price: 1400,
-      category: 'effects',
-      rarity: 'legendary',
-      image: '/shop/phoenix.webp',
-      popular: true
-    },
-    {
-      id: 'quantum-boost',
-      name: translateItem('quantum-boost', 'name'),
-      description: translateItem('quantum-boost', 'description'),
-      price: 800,
-      category: 'boosters',
-      rarity: 'epic',
-      image: '/shop/quantum.webp'
-    },
-    {
-      id: 'ultimate-collection',
-      name: 'Ultimate Collection',
-      description: 'Complete premium package with all skins, effects, and exclusive content',
-      price: 4999,
-      originalPrice: 7500,
-      category: 'bundles',
-      rarity: 'mythic',
-      image: '/shop/ultimate.webp',
-      discount: 35,
-      limitedTime: true
-    }
-  ];
-
-  // Премиум крипто-пакеты
-  const cryptoPackages: CryptoPackage[] = [
-    {
-      id: 'starter',
-      name: 'Starter Pack',
-      coins: 1000,
-      price: 0.99,
-      icon: '💫',
-      color: 'from-slate-400 to-slate-600',
-      description: 'Perfect for beginners'
-    },
-    {
-      id: 'gamer',
-      name: 'Gamer Pack',
-      coins: 2500,
-      price: 1.99,
-      bonus: 15,
-      icon: '🎮',
-      color: 'from-blue-400 to-blue-600',
-      description: 'Most popular choice'
-    },
-    {
-      id: 'pro',
-      name: 'Pro Pack',
-      coins: 6000,
-      price: 3.99,
-      bonus: 25,
-      bestValue: true,
-      icon: '💎',
-      color: 'from-purple-400 to-purple-600',
-      description: 'Best value for money'
-    },
-    {
-      id: 'elite',
-      name: 'Elite Pack',
-      coins: 12000,
-      price: 6.99,
-      bonus: 35,
-      popular: true,
-      icon: '👑',
-      color: 'from-yellow-400 to-orange-500',
-      description: 'For serious players'
-    },
-    {
-      id: 'legendary',
-      name: 'Legendary',
-      coins: 30000,
-      price: 14.99,
-      bonus: 50,
-      icon: '🔥',
-      color: 'from-red-400 to-pink-500',
-      description: 'Ultimate experience'
-    }
-  ];
-
+  // Загрузка пользователя
   useEffect(() => {
-    const loadUserData = async () => {
+    const loadUser = async () => {
       try {
-        setLoading(true);
-        const response = await fetch('/api/auth', {
-          method: 'GET',
-          credentials: 'include'
+        const response = await fetch('/api/user/me', {
+          headers: getTelegramWebAppHeaders()
         });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.user) {
-            setCoins(data.user.coins || 0);
-          }
+        const data = await response.json();
+        
+        if (data.success && data.user) {
+          setUser(data.user);
         }
       } catch (error) {
-        console.error('Error loading user data:', error);
+        console.error('Ошибка загрузки пользователя:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    loadUserData();
-
-    const handleCoinsUpdate = (event: CustomEvent) => {
-      setCoins(event.detail.newBalance);
-    };
-
-    window.addEventListener('coinsUpdated', handleCoinsUpdate as EventListener);
-    return () => window.removeEventListener('coinsUpdated', handleCoinsUpdate as EventListener);
+    loadUser();
   }, []);
 
-  const filteredItems = selectedCategory === 'featured' 
-    ? shopItems.filter(item => item.featured)
-    : selectedCategory === 'crypto'
-    ? []
-    : shopItems.filter(item => item.category === selectedCategory);
-
-  const handlePurchase = async (itemId: string, price: number) => {
-    if (coins >= price && !purchasedItems.includes(itemId)) {
+  // Загрузка статистики маркетплейса
+  useEffect(() => {
+    const loadStats = async () => {
       try {
-        const response = await fetch('/api/shop/purchase', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ itemId, price })
+        const response = await fetch('/api/marketplace/list?limit=1000', {
+          headers: getTelegramWebAppHeaders()
         });
+        const data = await response.json();
+        
+        if (data.success) {
+          const listings = data.listings || [];
+          const avgPrice = listings.length > 0
+            ? Math.floor(
+                listings
+                  .filter((l: any) => l.price_coins)
+                  .reduce((sum: number, l: any) => sum + l.price_coins, 0) / listings.length
+              )
+            : 0;
 
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            setCoins(data.newBalance);
-            setPurchasedItems(prev => [...prev, itemId]);
-            window.dispatchEvent(new CustomEvent('coinsUpdated', {
-              detail: { newBalance: data.newBalance }
-            }));
-          }
+          setStats({
+            totalListings: listings.length,
+            totalSales: 0, // TODO: добавить подсчёт продаж
+            avgPrice,
+            activeUsers: new Set(listings.map((l: any) => l.seller_user_id)).size
+          });
         }
       } catch (error) {
-        console.error('Purchase error:', error);
-      }
-    }
-  };
-
-  const getRarityConfig = (rarity: string) => {
-    const configs = {
-      mythic: {
-        gradient: 'from-pink-500 via-purple-500 to-indigo-500',
-        glow: 'shadow-2xl shadow-pink-500/50',
-        border: 'border-pink-400/50',
-        text: 'text-pink-300',
-        bg: 'bg-gradient-to-br from-pink-900/20 to-purple-900/20'
-      },
-      legendary: {
-        gradient: 'from-yellow-500 via-orange-500 to-red-500',
-        glow: 'shadow-2xl shadow-yellow-500/50',
-        border: 'border-yellow-400/50',
-        text: 'text-yellow-300',
-        bg: 'bg-gradient-to-br from-yellow-900/20 to-orange-900/20'
-      },
-      epic: {
-        gradient: 'from-purple-500 via-indigo-500 to-blue-500',
-        glow: 'shadow-xl shadow-purple-500/30',
-        border: 'border-purple-400/50',
-        text: 'text-purple-300',
-        bg: 'bg-gradient-to-br from-purple-900/20 to-indigo-900/20'
-      },
-      rare: {
-        gradient: 'from-blue-500 via-cyan-500 to-teal-500',
-        glow: 'shadow-lg shadow-blue-500/20',
-        border: 'border-blue-400/50',
-        text: 'text-blue-300',
-        bg: 'bg-gradient-to-br from-blue-900/20 to-cyan-900/20'
-      },
-      common: {
-        gradient: 'from-gray-500 to-gray-600',
-        glow: 'shadow-md shadow-gray-500/10',
-        border: 'border-gray-400/30',
-        text: 'text-gray-300',
-        bg: 'bg-gradient-to-br from-gray-900/20 to-gray-800/20'
+        console.error('Ошибка загрузки статистики:', error);
       }
     };
-    return configs[rarity as keyof typeof configs] || configs.common;
+
+    loadStats();
+  }, []);
+
+  const handleBalanceUpdate = (newBalance: number) => {
+    if (user) {
+      setUser({ ...user, coins: newBalance });
+    }
   };
 
   if (loading) {
     return (
-      <div className="shop-loading-screen">
-        <div className="loading-content">
-          {/* Иконка магазина */}
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
-            className="shop-logo-container"
-          >
-            <div className="shop-logo-circle">
-              <ShoppingBag className="shop-logo-icon" />
-            </div>
-          </motion.div>
-
-          {/* Название */}
-          <motion.h1
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="shop-title"
-          >
-            МАГАЗИН
-          </motion.h1>
-
-          {/* Прогресс бар */}
-          <motion.div
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: "100%", opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            className="shop-progress-container"
-          >
-            <div className="shop-progress-track">
-              <div 
-                className="shop-progress-fill"
-                style={{ width: '75%' }}
-              />
-            </div>
-            <span className="shop-progress-text">75%</span>
-          </motion.div>
-
-          {/* Загрузочный текст */}
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.6 }}
-            className="shop-loading-message"
-          >
-            Загрузка магазина...
-          </motion.p>
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'white'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            width: '60px',
+            height: '60px',
+            border: '4px solid rgba(251, 191, 36, 0.3)',
+            borderTop: '4px solid #fbbf24',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 20px'
+          }} />
+          <p style={{ color: '#94a3b8' }}>Загрузка...</p>
         </div>
-
-        <style jsx>{`
-          .shop-loading-screen {
-            position: fixed;
-            inset: 0;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-          }
-
-          .loading-content {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-            padding: 2rem;
-            max-width: 400px;
-            width: 100%;
-          }
-
-          .shop-logo-container {
-            margin-bottom: 2rem;
-          }
-
-          .shop-logo-circle {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 
-              0 20px 25px -5px rgba(0, 0, 0, 0.1),
-              0 10px 10px -5px rgba(0, 0, 0, 0.04),
-              0 0 0 1px rgba(124, 58, 237, 0.1);
-            position: relative;
-            overflow: hidden;
-          }
-
-          .shop-logo-circle::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%);
-            animation: shimmer 2s ease-in-out infinite;
-          }
-
-          .shop-logo-icon {
-            width: 2rem;
-            height: 2rem;
-            color: white;
-            z-index: 1;
-            position: relative;
-          }
-
-          .shop-title {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: white;
-            margin: 0 0 3rem 0;
-            letter-spacing: 0.1em;
-            background: linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-          }
-
-          .shop-progress-container {
-            width: 100%;
-            margin-bottom: 1.5rem;
-          }
-
-          .shop-progress-track {
-            width: 100%;
-            height: 4px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 2px;
-            overflow: hidden;
-            margin-bottom: 0.75rem;
-            position: relative;
-          }
-
-          .shop-progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #7c3aed 0%, #5b21b6 100%);
-            border-radius: 2px;
-            transition: width 0.3s ease-out;
-            position: relative;
-            overflow: hidden;
-          }
-
-          .shop-progress-fill::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%);
-            animation: progressShimmer 1.5s ease-in-out infinite;
-          }
-
-          .shop-progress-text {
-            font-size: 0.875rem;
-            font-weight: 600;
-            color: rgba(255, 255, 255, 0.7);
-            font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', monospace;
-          }
-
-          .shop-loading-message {
-            font-size: 1rem;
-            color: rgba(255, 255, 255, 0.6);
-            margin: 0;
-            font-weight: 500;
-          }
-
-          @keyframes shimmer {
-            0% {
-              transform: translateX(-100%) rotate(45deg);
-            }
-            100% {
-              transform: translateX(200%) rotate(45deg);
-            }
-          }
-
-          @keyframes progressShimmer {
-            0% {
-              transform: translateX(-100%);
-            }
-            100% {
-              transform: translateX(100%);
-            }
-          }
-
-          /* Адаптивность */
-          @media (max-width: 480px) {
-            .loading-content {
-              padding: 1.5rem;
-            }
-            
-            .shop-logo-circle {
-              width: 64px;
-              height: 64px;
-            }
-            
-            .shop-logo-icon {
-              width: 1.5rem;
-              height: 1.5rem;
-            }
-            
-            .shop-title {
-              font-size: 2rem;
-              margin-bottom: 2rem;
-            }
-          }
-        `}</style>
       </div>
     );
   }
 
   return (
-    <div className="main-menu-container">
-      <div className="main-menu-inner">
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+      padding: '20px',
+      paddingBottom: '100px'
+    }}>
+      <div style={{
+        maxWidth: '1400px',
+        margin: '0 auto'
+      }}>
         {/* Header */}
-        <div className="menu-header">
-          <button onClick={() => window.history.back()} className="px-3 py-1 rounded-lg border border-red-400 text-red-200 font-semibold text-base hover:bg-red-400/10 transition-all">
-            <ArrowLeft className="inline w-4 h-4 mr-1" />
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '30px',
+          flexWrap: 'wrap',
+          gap: '20px'
+        }}>
+          {/* Back Button */}
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => router.push('/menu')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '12px 20px',
+              borderRadius: '12px',
+              border: 'none',
+              background: 'rgba(51, 65, 85, 0.6)',
+              color: '#e2e8f0',
+              fontWeight: 'bold',
+              fontSize: '16px',
+              cursor: 'pointer'
+            }}
+          >
+            <ArrowLeft size={20} />
             Назад
-          </button>
-          <span className="menu-title">МАГАЗИН</span>
-          <div className="shop-balance">
-            <Coins className="balance-icon" />
-            <span className="balance-amount">{coins.toLocaleString()}</span>
-          </div>
+          </motion.button>
+
+          {/* User Info */}
+          {user && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '16px',
+              background: 'rgba(30, 41, 59, 0.8)',
+              padding: '12px 20px',
+              borderRadius: '12px',
+              border: '2px solid rgba(251, 191, 36, 0.3)'
+            }}>
+              <div style={{ textAlign: 'right' }}>
+                <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '4px' }}>
+                  @{user.username || user.first_name}
+                </p>
+                <p style={{ color: '#fbbf24', fontWeight: 'bold', fontSize: '18px' }}>
+                  💰 {user.coins.toLocaleString()} монет
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Shop Categories */}
-        <div style={{ width: '100%', margin: '20px 0' }}>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
-            gap: '10px',
-            padding: '0 20px'
-          }}>
-            {categories.map((category) => {
-              const Icon = category.icon;
-              const isActive = selectedCategory === category.id;
-              
-              return (
-                <motion.button
-                  key={category.id}
-                  onClick={() => {
-                    console.log('Выбрана категория:', category.id);
-                    setSelectedCategory(category.id);
-                  }}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  style={{
-                    background: isActive ? 
-                      'linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.8) 100%)' : 
-                      'linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.6) 100%)',
-                    border: '1px solid',
-                    borderColor: isActive ? 'rgba(255, 215, 0, 0.6)' : 'rgba(34, 197, 94, 0.3)',
-                    borderRadius: '12px',
-                    boxShadow: isActive ? 
-                      '0 8px 32px rgba(0, 0, 0, 0.3), 0 0 20px rgba(255, 215, 0, 0.2)' : 
-                      '0 4px 20px rgba(0, 0, 0, 0.2)',
-                    backdropFilter: 'blur(10px)',
-                    padding: '12px 8px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '6px',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease',
-                    color: 'white'
-                  }}
-                >
-                  <Icon style={{ 
-                    fontSize: '1.2rem', 
-                    color: isActive ? '#ffd700' : '#22c55e',
-                    transition: 'all 0.3s ease'
-                  }} />
-                  <span style={{ 
-                    color: isActive ? '#ffd700' : '#e2e8f0',
-                    fontSize: '0.7rem', 
-                    fontWeight: '600', 
-                    letterSpacing: '0.5px',
-                    transition: 'color 0.3s ease'
-                  }}>
-                    {category.name}
-                  </span>
-                </motion.button>
-              );
-            })}
-          </div>
+        {/* Stats Cards */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+          gap: '16px',
+          marginBottom: '30px'
+        }}>
+          <StatCard
+            icon={<TrendingUp size={32} />}
+            label="Активных лотов"
+            value={stats.totalListings}
+            color="#10b981"
+          />
+          <StatCard
+            icon={<DollarSign size={32} />}
+            label="Средняя цена"
+            value={`${stats.avgPrice.toLocaleString()} 💰`}
+            color="#fbbf24"
+          />
+          <StatCard
+            icon={<Users size={32} />}
+            label="Активных продавцов"
+            value={stats.activeUsers}
+            color="#3b82f6"
+          />
         </div>
 
-        {/* Special Offers Section */}
-        {selectedCategory === 'crypto' && (
-          <div className="special-offers-section">
-            <div className="offers-title">
-              <Sparkles className="offers-icon" />
-              <span>СПЕЦИАЛЬНЫЕ ПРЕДЛОЖЕНИЯ</span>
-            </div>
-            <div className="offers-grid">
-              {cryptoPackages.map((pkg, index) => (
-                <motion.div
-                  key={pkg.id}
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  whileHover={{ scale: 1.02 }}
-                  className={`offer-card ${pkg.popular ? 'featured' : ''}`}
-                >
-                  {pkg.popular && (
-                    <div className="offer-badge">ПОПУЛЯРНЫЙ</div>
-                  )}
-                  {pkg.bestValue && (
-                    <div className="offer-badge">ЛУЧШАЯ ЦЕНА</div>
-                  )}
-                  
-                  <div className="offer-header">
-                    <div className="offer-icon-container">
-                      <span className="offer-icon">{pkg.icon}</span>
-                    </div>
-                    <div className="offer-info">
-                      <h3 className="offer-name">{pkg.name}</h3>
-                      <p className="offer-description">{pkg.description}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="offer-pricing">
-                    <div className="current-price">
-                      <Coins className="price-icon" />
-                      <span>{pkg.coins.toLocaleString()}</span>
-                    </div>
-                    <div className="text-2xl font-bold text-white">${pkg.price}</div>
-                  </div>
-                  
-                  {pkg.bonus && (
-                    <div style={{ 
-                      background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(22, 163, 74, 0.1) 100%)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
-                      color: '#22c55e',
-                      padding: '8px 16px',
-                      borderRadius: '12px',
-                      fontSize: '0.8rem',
-                      fontWeight: '700',
-                      textAlign: 'center' as const,
-                      margin: '16px 0'
-                    }}>
-                      +{pkg.bonus}% БОНУС
-                    </div>
-                  )}
-                  
-                  <button className="offer-btn">
-                    {t.shop.buy}
-                  </button>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Shop Items Section */}
-        {selectedCategory !== 'crypto' && (
-          <div className="shop-items-section">
-            <div className="shop-items-grid">
-              <AnimatePresence>
-                {filteredItems.map((item, index) => {
-                  const isOwned = purchasedItems.includes(item.id);
-                  
-                  return (
-                    <motion.div
-                      key={item.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      transition={{ delay: index * 0.1 }}
-                      whileHover={{ y: -5 }}
-                      className={`shop-item-card ${item.rarity} ${isOwned ? 'purchased' : ''}`}
-                    >
-                      {/* Item Header */}
-                      <div className="item-header">
-                        <div className={`item-icon-container ${item.rarity}`} style={{
-                          background: item.rarity === 'legendary' ? 'linear-gradient(135deg, #ffd700, #f59e0b)' :
-                                     item.rarity === 'epic' ? 'linear-gradient(135deg, #a855f7, #7c3aed)' :
-                                     item.rarity === 'rare' ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' :
-                                     item.rarity === 'mythic' ? 'linear-gradient(135deg, #ec4899, #be185d)' :
-                                     'linear-gradient(135deg, #22c55e, #16a34a)'
-                        }}>
-                          <div className="item-icon">
-                            {item.category === 'skins' ? '🎨' : 
-                             item.category === 'effects' ? '✨' : 
-                             item.category === 'boosters' ? '⚡' : 
-                             item.category === 'bundles' ? '🎁' : '💎'}
-                          </div>
-                        </div>
-                        <div className={`rarity-badge ${item.rarity}`}>
-                          {item.rarity.toUpperCase()}
-                        </div>
-                      </div>
-
-                      {/* Item Content */}
-                      <div className="item-content">
-                        <h3 className="item-name">{item.name}</h3>
-                        <p className="item-description">{item.description}</p>
-                        
-                        <div className="item-footer">
-                          <div className="item-price">
-                            <Coins className="price-icon" />
-                            <span className="price-value">{item.price.toLocaleString()}</span>
-                            {item.originalPrice && (
-                              <span className="text-sm text-gray-500 line-through ml-2">
-                                {item.originalPrice.toLocaleString()}
-                              </span>
-                            )}
-                          </div>
-                          
-                          {isOwned ? (
-                            <button className="purchase-btn purchased">
-                              {t.shop.purchased}
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => handlePurchase(item.id, item.price)}
-                              disabled={coins < item.price}
-                              className={`purchase-btn ${coins >= item.price ? 'available' : 'disabled'}`}
-                            >
-                              {coins >= item.price ? t.shop.buy : t.shop.insufficient}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Purchased Overlay */}
-                      {isOwned && (
-                        <div className="purchased-overlay">
-                          <Shield className="purchased-icon" />
-                        </div>
-                      )}
-
-                      {/* Item Badges */}
-                      {(item.new || item.popular || item.limitedTime || item.discount) && (
-                        <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
-                          {item.new && (
-                            <span className="bg-green-500 text-white px-2 py-1 rounded-md text-xs font-bold">
-                              НОВОЕ
-                            </span>
-                          )}
-                          {item.popular && (
-                            <span className="bg-red-500 text-white px-2 py-1 rounded-md text-xs font-bold">
-                              ТОП
-                            </span>
-                          )}
-                          {item.limitedTime && (
-                            <span className="bg-orange-500 text-white px-2 py-1 rounded-md text-xs font-bold">
-                              ЛИМИТ
-                            </span>
-                          )}
-                          {item.discount && (
-                            <span className="bg-purple-500 text-white px-2 py-1 rounded-md text-xs font-bold">
-                              -{item.discount}%
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </motion.div>
-                  );
-                })}
-              </AnimatePresence>
-            </div>
-          </div>
-        )}
+        {/* Marketplace Component */}
+        <NFTMarketplace
+          userCoins={user?.coins || 0}
+          onBalanceUpdate={handleBalanceUpdate}
+        />
       </div>
+
+      {/* Animated Background */}
+      <style jsx>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
+  );
+}
+
+// Stat Card Component
+function StatCard({ icon, label, value, color }: {
+  icon: React.ReactNode;
+  label: string;
+  value: string | number;
+  color: string;
+}) {
+  return (
+    <motion.div
+      whileHover={{ scale: 1.03, y: -5 }}
+      style={{
+        background: 'rgba(30, 41, 59, 0.8)',
+        borderRadius: '16px',
+        border: `2px solid ${color}40`,
+        padding: '20px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '16px',
+        boxShadow: `0 4px 20px ${color}20`
+      }}
+    >
+      <div style={{ color, opacity: 0.9 }}>
+        {icon}
+      </div>
+      <div>
+        <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '4px' }}>
+          {label}
+        </p>
+        <p style={{ color: '#e2e8f0', fontSize: '24px', fontWeight: 'bold' }}>
+          {value}
+        </p>
+      </div>
+    </motion.div>
   );
 }
