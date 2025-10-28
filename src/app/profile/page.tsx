@@ -1844,24 +1844,13 @@ export default function ProfilePage() {
                   />
                 </div>
 
-                {/* NFT Gallery */}
+                {/* NFT Gallery - КОМПАКТНАЯ ГАЛЕРЕЯ */}
                 <div style={{
                   background: 'rgba(30, 41, 59, 0.6)',
                   border: '2px solid rgba(0, 136, 204, 0.3)',
                   borderRadius: '16px',
                   padding: '20px'
                 }}>
-                  <h4 style={{ 
-                    color: '#e2e8f0', 
-                    fontSize: '1.1rem', 
-                    fontWeight: '700', 
-                    margin: '0 0 16px 0',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px'
-                  }}>
-                    <Trophy size={24} /> Моя NFT коллекция
-                  </h4>
                   <NFTGallery />
                 </div>
 
