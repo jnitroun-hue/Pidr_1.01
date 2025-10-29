@@ -55,11 +55,11 @@ export async function POST(request: NextRequest) {
     const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
     const imageBuffer = Buffer.from(base64Data, 'base64');
 
-    // Генерируем уникальное имя файла
+    // ✅ Генерируем имя файла С ПРИВЯЗКОЙ К USER_ID!
     const timestamp = Date.now();
     const random = Math.random().toString(36).substring(2, 9);
     const fileName = `${theme}_${rank}_${suit}_${themeId}_${timestamp}_${random}.png`;
-    const filePath = `nft-cards/${fileName}`;
+    const filePath = `${userId}/${fileName}`; // ✅ Папка по user_id!
 
     // Загружаем в Supabase Storage
     console.log(`📤 Загружаем файл: ${filePath}`);
