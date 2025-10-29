@@ -65,7 +65,7 @@ export default function ProfilePage() {
   const t = useTranslations(language);
   
   // ✅ Telegram WebApp Headers Helper
-  const getTelegramWebAppHeaders = () => {
+  const getTelegramWebAppHeaders = (): Record<string, string> => {
     if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
       const user = window.Telegram.WebApp.initDataUnsafe?.user;
       if (user) {
@@ -75,7 +75,10 @@ export default function ProfilePage() {
         };
       }
     }
-    return {};
+    return {
+      'x-telegram-id': '',
+      'x-username': ''
+    };
   };
   
   const [stats, setStats] = useState({

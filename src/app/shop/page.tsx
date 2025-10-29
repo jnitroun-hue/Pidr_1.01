@@ -26,7 +26,7 @@ export default function ShopPage() {
     activeUsers: 0
   });
 
-  // Telegram WebApp headers
+  // Telegram WebApp headers - FIXED TypeScript
   const getTelegramWebAppHeaders = (): Record<string, string> => {
     if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
       const user = window.Telegram.WebApp.initDataUnsafe?.user;

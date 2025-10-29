@@ -63,7 +63,7 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
   const [sellCurrency, setSellCurrency] = useState<'TON' | 'SOL'>('TON');
 
   // Helper функции
-  const getTelegramWebAppHeaders = () => {
+  const getTelegramWebAppHeaders = (): Record<string, string> => {
     if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
       const user = window.Telegram.WebApp.initDataUnsafe?.user;
       if (user) {
@@ -73,7 +73,10 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
         };
       }
     }
-    return {};
+    return {
+      'x-telegram-id': '',
+      'x-username': ''
+    };
   };
 
   const getSuitColor = (suit: string) => {
