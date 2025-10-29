@@ -137,6 +137,42 @@ export default function NFTGallery() {
     window.location.href = '/shop';
   };
 
+  const handleDelete = async (card: NFTCard) => {
+    if (!confirm(`⚠️ Вы уверены, что хотите УДАЛИТЬ эту карту?\n\n${card.rank.toUpperCase()} ${getSuitSymbol(card.suit)}\nТема: ${getRarityLabel(card.rarity)}\n\nЭто действие НЕОБРАТИМО!`)) {
+      return;
+    }
+
+    try {
+      const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+      const telegramId = telegramUser?.id?.toString() || '';
+
+      const response = await fetch('/api/nft/delete', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-telegram-id': telegramId
+        },
+        body: JSON.stringify({
+          nftId: card.id
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert('✅ Карта успешно удалена!');
+        setSelectedCard(null);
+        // Перезагружаем коллекцию
+        loadCollection();
+      } else {
+        alert(`❌ ${result.error}`);
+      }
+    } catch (error) {
+      console.error('❌ Ошибка удаления карты:', error);
+      alert('❌ Ошибка удаления карты');
+    }
+  };
+
   if (isLoading) {
     return (
       <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
@@ -397,12 +433,67 @@ export default function NFTGallery() {
               </div>
 
               {/* Кнопки действий */}
-              <div style={{ display: 'flex', gap: '10px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {/* Первый ряд кнопок */}
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button
+                    onClick={() => handleAddToDeck(selectedCard)}
+                    style={{
+                      flex: 1,
+                      background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                      border: 'none',
+                      borderRadius: '10px',
+                      padding: '12px',
+                      color: '#ffffff',
+                      fontSize: '1rem',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'scale(1.05)';
+                      e.currentTarget.style.boxShadow = '0 4px 20px rgba(59, 130, 246, 0.5)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'scale(1)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
+                  >
+                    🎴 Добавить в колоду
+                  </button>
+                  <button
+                    onClick={() => handleSell(selectedCard)}
+                    style={{
+                      flex: 1,
+                      background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                      border: 'none',
+                      borderRadius: '10px',
+                      padding: '12px',
+                      color: '#ffffff',
+                      fontSize: '1rem',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'scale(1.05)';
+                      e.currentTarget.style.boxShadow = '0 4px 20px rgba(245, 158, 11, 0.5)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'scale(1)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
+                  >
+                    💰 Продать
+                  </button>
+                </div>
+                
+                {/* Второй ряд - кнопка удаления */}
                 <button
-                  onClick={() => handleAddToDeck(selectedCard)}
+                  onClick={() => handleDelete(selectedCard)}
                   style={{
-                    flex: 1,
-                    background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                    width: '100%',
+                    background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
                     border: 'none',
                     borderRadius: '10px',
                     padding: '12px',
@@ -414,39 +505,14 @@ export default function NFTGallery() {
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = 'scale(1.05)';
-                    e.currentTarget.style.boxShadow = '0 4px 20px rgba(59, 130, 246, 0.5)';
+                    e.currentTarget.style.boxShadow = '0 4px 20px rgba(239, 68, 68, 0.5)';
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.transform = 'scale(1)';
                     e.currentTarget.style.boxShadow = 'none';
                   }}
                 >
-                  🎴 Добавить в колоду
-                </button>
-                <button
-                  onClick={() => handleSell(selectedCard)}
-                  style={{
-                    flex: 1,
-                    background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                    border: 'none',
-                    borderRadius: '10px',
-                    padding: '12px',
-                    color: '#ffffff',
-                    fontSize: '1rem',
-                    fontWeight: 'bold',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'scale(1.05)';
-                    e.currentTarget.style.boxShadow = '0 4px 20px rgba(245, 158, 11, 0.5)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'scale(1)';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }}
-                >
-                  💰 Продать
+                  🗑️ Удалить карту
                 </button>
               </div>
             </motion.div>

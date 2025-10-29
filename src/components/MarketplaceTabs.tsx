@@ -291,9 +291,10 @@ export function SellTab({ mySales, onCancel, getSuitColor, getSuitSymbol, getRan
 interface MyNFTsTabProps extends HelperFunctions {
   nfts: NFTCard[];
   onSellClick: (nft: NFTCard) => void;
+  onDeleteClick: (nft: NFTCard) => void;
 }
 
-export function MyNFTsTab({ nfts, onSellClick, getSuitColor, getSuitSymbol, getRankDisplay }: MyNFTsTabProps) {
+export function MyNFTsTab({ nfts, onSellClick, onDeleteClick, getSuitColor, getSuitSymbol, getRankDisplay }: MyNFTsTabProps) {
   if (nfts.length === 0) {
     return (
       <div style={{ textAlign: 'center', padding: '60px 20px' }}>
@@ -399,7 +400,7 @@ export function MyNFTsTab({ nfts, onSellClick, getSuitColor, getSuitSymbol, getR
             {getRankDisplay(nft.rank)} {getSuitSymbol(nft.suit)}
           </div>
 
-          {/* Sell Button - КОМПАКТНАЯ ВЕРСИЯ */}
+          {/* Sell Button */}
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -413,10 +414,31 @@ export function MyNFTsTab({ nfts, onSellClick, getSuitColor, getSuitSymbol, getR
               color: '#0f172a',
               fontWeight: 'bold',
               fontSize: '11px',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              marginBottom: '4px'
             }}
           >
             💰 Продать
+          </motion.button>
+          
+          {/* Delete Button */}
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => onDeleteClick(nft)}
+            style={{
+              width: '100%',
+              padding: '6px',
+              borderRadius: '6px',
+              border: 'none',
+              background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+              color: '#ffffff',
+              fontWeight: 'bold',
+              fontSize: '11px',
+              cursor: 'pointer'
+            }}
+          >
+            🗑️ Удалить
           </motion.button>
         </motion.div>
       ))}

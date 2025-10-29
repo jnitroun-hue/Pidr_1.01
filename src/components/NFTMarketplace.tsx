@@ -268,6 +268,38 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
     }
   };
 
+  const handleDeleteNFT = async (nft: NFTCard) => {
+    if (!confirm(`⚠️ Вы уверены, что хотите УДАЛИТЬ эту карту?\n\n${nft.rank.toUpperCase()} ${getSuitSymbol(nft.suit)}\n\nЭто действие НЕОБРАТИМО!`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/nft/delete', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getTelegramWebAppHeaders()
+        },
+        body: JSON.stringify({
+          nftId: nft.id
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert('✅ Карта успешно удалена!');
+        loadMyNFTs();
+        loadMySales();
+      } else {
+        alert(`❌ Ошибка: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Ошибка удаления:', error);
+      alert('Ошибка при удалении карты');
+    }
+  };
+
   const handleCancelListing = async (listingId: number) => {
     if (!confirm('Снять карту с продажи?')) {
       return;
@@ -406,6 +438,7 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
                 setSelectedNFT(nft);
                 setShowSellModal(true);
               }}
+              onDeleteClick={handleDeleteNFT}
               getSuitColor={getSuitColor}
               getSuitSymbol={getSuitSymbol}
               getRankDisplay={getRankDisplay}
