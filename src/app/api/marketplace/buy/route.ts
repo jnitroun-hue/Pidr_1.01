@@ -1,15 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-function getSupabaseClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !supabaseServiceKey) {
-    throw new Error('Supabase credentials not configured');
-  }
-  return createClient(supabaseUrl, supabaseServiceKey);
-}
+import { supabase } from '@/lib/supabase';
 
 /**
  * POST /api/marketplace/buy
@@ -27,8 +17,6 @@ function getSupabaseClient() {
  */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = getSupabaseClient();
-    
     // Получаем пользователя
     const telegramIdHeader = request.headers.get('x-telegram-id');
     

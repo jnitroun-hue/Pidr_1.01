@@ -81,8 +81,8 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
       const randomRank = RANKS[Math.floor(Math.random() * RANKS.length)];
       const randomId = Math.floor(Math.random() * themeConfig.total) + 1;
 
-      // Генерируем изображение
-      const imageData = generateThemeCardImage(randomSuit, randomRank, randomId, theme);
+      // ✅ КРИТИЧНО: Генерируем изображение АСИНХРОННО с ожиданием загрузки!
+      const imageData = await generateThemeCardImage(randomSuit, randomRank, randomId, theme);
 
       // Отправляем на сервер
       const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
@@ -155,7 +155,8 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
           // 🎲 ЖЕСТКИЙ РАНДОМ: случайная картинка из темы (1 → total)
           const themeId = Math.floor(Math.random() * themeConfig.total) + 1;
           
-          const imageData = generateThemeCardImage(suit, rank, themeId, theme);
+          // ✅ КРИТИЧНО: Ждем загрузки изображения!
+          const imageData = await generateThemeCardImage(suit, rank, themeId, theme);
 
           const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
           
@@ -224,57 +225,66 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
     }
   };
 
-  // Генерация изображения карты с темой
-  const generateThemeCardImage = (suit: string, rank: string, themeId: number, theme: keyof typeof THEMES): string => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 300;
-    canvas.height = 420;
-    const ctx = canvas.getContext('2d')!;
+  // ✅ КРИТИЧНО: Генерация изображения карты с темой АСИНХРОННО!
+  const generateThemeCardImage = (suit: string, rank: string, themeId: number, theme: keyof typeof THEMES): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 300;
+      canvas.height = 420;
+      const ctx = canvas.getContext('2d')!;
 
-    // Белый фон
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, 300, 420);
+      // Белый фон
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, 300, 420);
 
-    // Черная рамка
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 8;
-    ctx.strokeRect(4, 4, 292, 412);
+      // Черная рамка
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 8;
+      ctx.strokeRect(4, 4, 292, 412);
 
-    const themeConfig = THEMES[theme];
+      const themeConfig = THEMES[theme];
 
-    // Ранг и масть в углах
-    ctx.fillStyle = getSuitColor(suit);
-    ctx.font = 'bold 40px Arial';
-    ctx.fillText(rank.toUpperCase(), 20, 50);
-    ctx.fillText(rank.toUpperCase(), 260, 400);
+      // Ранг и масть в углах
+      ctx.fillStyle = getSuitColor(suit);
+      ctx.font = 'bold 40px Arial';
+      ctx.fillText(rank.toUpperCase(), 20, 50);
+      ctx.fillText(rank.toUpperCase(), 260, 400);
 
-    ctx.font = 'bold 36px Arial';
-    ctx.fillText(getSuitSymbol(suit), 20, 90);
-    ctx.fillText(getSuitSymbol(suit), 260, 360);
+      ctx.font = 'bold 36px Arial';
+      ctx.fillText(getSuitSymbol(suit), 20, 90);
+      ctx.fillText(getSuitSymbol(suit), 260, 360);
 
-    // Центр: путь к изображению темы с префиксом
-    const fileName = `${themeConfig.prefix}${themeId}.png`;
-    ctx.fillStyle = '#333';
-    ctx.font = 'bold 16px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText(`${themeConfig.folder}/${fileName}`, 150, 210);
-
-    // ✅ ВАЖНО: Загружаем реальное изображение
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.src = `/${themeConfig.folder}/${fileName}`;
-    
-    // Рисуем изображение в центре (если оно загрузилось)
-    img.onload = () => {
-      const imgWidth = 200;
-      const imgHeight = 200;
-      const imgX = (300 - imgWidth) / 2;
-      const imgY = 110;
+      // ✅ ВАЖНО: Загружаем РЕАЛЬНОЕ изображение из public/
+      const fileName = `${themeConfig.prefix}${themeId}.png`;
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.src = `/${themeConfig.folder}/${fileName}`;
       
-      ctx.drawImage(img, imgX, imgY, imgWidth, imgHeight);
-    };
+      // ✅ КРИТИЧНО: Ждем загрузки изображения, ЗАТЕМ возвращаем dataURL!
+      img.onload = () => {
+        try {
+          const imgWidth = 200;
+          const imgHeight = 200;
+          const imgX = (300 - imgWidth) / 2;
+          const imgY = 110;
+          
+          // Рисуем изображение в центре
+          ctx.drawImage(img, imgX, imgY, imgWidth, imgHeight);
+          
+          // ✅ ВОЗВРАЩАЕМ dataURL ПОСЛЕ загрузки!
+          resolve(canvas.toDataURL('image/png'));
+        } catch (error) {
+          console.error('❌ Ошибка при рисовании изображения:', error);
+          reject(error);
+        }
+      };
 
-    return canvas.toDataURL('image/png');
+      img.onerror = (error) => {
+        console.error(`❌ Не удалось загрузить изображение: /${themeConfig.folder}/${fileName}`, error);
+        // Возвращаем canvas без изображения (только текст)
+        resolve(canvas.toDataURL('image/png'));
+      };
+    });
   };
 
   const getSuitColor = (suit: string) => {
