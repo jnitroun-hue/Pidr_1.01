@@ -252,7 +252,6 @@ export default function NFTGallery() {
                 justifyContent: 'center',
                 overflow: 'hidden',
                 borderRadius: '12px',
-                marginBottom: '12px',
                 background: '#f8fafc',
                 border: `2px solid ${suitColor}20`
               }}>
@@ -267,38 +266,6 @@ export default function NFTGallery() {
                   }}
                   loading="lazy"
                 />
-              </div>
-
-              {/* ИНФО ПОД КАРТОЙ */}
-              <div style={{ 
-                textAlign: 'center',
-                padding: '12px',
-                background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%)',
-                borderRadius: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '12px',
-                border: `2px solid ${suitColor}40`
-              }}>
-                <span style={{ 
-                  color: suitColor,
-                  fontSize: '2rem',
-                  fontWeight: 'black',
-                  textShadow: `0 0 15px ${suitColor}aa, 0 0 30px ${suitColor}60`,
-                  filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
-                }}>
-                  {getSuitSymbol(card.suit)}
-                </span>
-                <span style={{
-                  color: '#ffffff',
-                  fontSize: '1.6rem',
-                  fontWeight: 'black',
-                  letterSpacing: '2px',
-                  textShadow: '0 2px 8px rgba(0,0,0,0.5)'
-                }}>
-                  {card.rank?.toUpperCase()}
-                </span>
               </div>
             </motion.div>
           );
