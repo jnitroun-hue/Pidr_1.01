@@ -8,7 +8,7 @@ import { useTranslations } from '../../lib/i18n/translations';
 import { avatarFrames, getRarityColor, getRarityName } from '../../data/avatar-frames';
 import TonWalletConnect from '../../components/TonWalletConnect';
 import NFTGallery from '../../components/NFTGallery';
-import NFTPokemonGenerator from '../../components/NFTPokemonGenerator';
+import NFTThemeGenerator from '../../components/NFTThemeGenerator';
 
 // Компонент таймера для бонусов
 function BonusCooldownTimer({ bonus, onCooldownEnd }: { bonus: any; onCooldownEnd: () => void }) {
@@ -1825,14 +1825,14 @@ export default function ProfilePage() {
                   />
                 </div>
 
-                {/* NFT Pokemon Generator - ГЕНЕРАТОР С ПОКЕМОНАМИ */}
+                {/* NFT Theme Generator - ГЕНЕРАТОР ТЕМАТИЧЕСКИХ КАРТ */}
                 <div style={{
                   background: 'rgba(30, 41, 59, 0.6)',
                   border: '2px solid rgba(251, 191, 36, 0.3)',
                   borderRadius: '16px',
                   padding: '20px'
                 }}>
-                  <NFTPokemonGenerator 
+                  <NFTThemeGenerator 
                     userCoins={user?.coins || 0}
                     onBalanceUpdate={(newBalance) => {
                       if (user) {
@@ -1877,175 +1877,6 @@ export default function ProfilePage() {
                   </div>
                 )}
 
-                {/* Кнопки минта - ОБНОВЛЕНО! */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  {/* КНОПКА 1: РАНДОМНАЯ ПОКЕМОН КАРТА ЗА 10000 МОНЕТ */}
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => {
-                      // Вызываем функцию из NFTPokemonGenerator
-                      const generator = document.querySelector('[data-pokemon-generator]') as any;
-                      if (generator && generator.handleRandomPokemon) {
-                        generator.handleRandomPokemon();
-                      } else {
-                        alert('🔧 Генератор покемонов не найден. Обновите страницу!');
-                      }
-                    }}
-                    style={{
-                      background: user && user.coins >= 10000
-                        ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.8) 0%, rgba(124, 58, 237, 0.6) 100%)'
-                        : 'linear-gradient(135deg, rgba(55, 65, 81, 0.6) 0%, rgba(31, 41, 55, 0.4) 100%)',
-                      border: user && user.coins >= 10000
-                        ? '2px solid rgba(139, 92, 246, 0.3)'
-                        : '2px solid rgba(100, 116, 139, 0.3)',
-                      borderRadius: '16px',
-                      padding: '20px',
-                      color: '#fff',
-                      fontSize: '1rem',
-                      fontWeight: '700',
-                      cursor: user && user.coins >= 10000 ? 'pointer' : 'not-allowed',
-                      textAlign: 'center',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: '8px',
-                      opacity: user && user.coins >= 10000 ? 1 : 0.6
-                    }}
-                    disabled={!user || user.coins < 10000}
-                  >
-                    <div style={{ fontSize: '2rem' }}>🎲</div>
-                    <div>ПОКЕМОН КАРТА</div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: '900', color: '#fbbf24' }}>💰 10 000 монет</div>
-                    <div style={{ fontSize: '0.7rem', opacity: 0.8 }}>Рандомная масть + ранг + покемон</div>
-                  </motion.button>
-
-                  {/* КНОПКА 2: РАНДОМНАЯ НАРУТО КАРТА ЗА 10000 МОНЕТ */}
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={async () => {
-                      try {
-                        console.log('🎨 Генерация кастомной NFT карты...');
-                        console.log('🔍 Текущее состояние connectedWallets:', connectedWallets);
-                        
-                        // Проверяем подключен ли кошелек
-                        const wallet_address = connectedWallets.ton || connectedWallets.solana;
-                        const network = connectedWallets.ton ? 'TON' : connectedWallets.solana ? 'SOL' : null;
-                        
-                        console.log('🔍 wallet_address:', wallet_address);
-                        console.log('🔍 network:', network);
-
-                        if (!wallet_address || !network) {
-                          console.error('❌ Кошелек не подключен! connectedWallets:', connectedWallets);
-                          alert('❌ Подключите кошелек!\n\n💎 TON Connect или Phantom (Solana) требуется для минта NFT.\n\nСкролльте вверх в разделе NFT КОЛЛЕКЦИЯ и нажмите "Подключить кошелек".');
-                          return;
-                        }
-
-                        const mintPrice = network === 'SOL' ? 0.5 : 3.0;
-                        
-                        if (!confirm(`🎨 Сгенерировать улучшенную NFT карту?\n\n💰 Цена: ${mintPrice} ${network}\n✨ Гарантия: Rare (50%), Epic (35%), Legendary (15%)\n🎨 Премиум эффекты\n\nПродолжить?`)) {
-                          return;
-                        }
-                        
-                        const response = await fetch('/api/nft/mint-custom', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          credentials: 'include',
-                          body: JSON.stringify({
-                            wallet_address,
-                            network,
-                            custom_style: 'premium',
-                            effects: ['glow', 'particles']
-                          }),
-                        });
-                        
-                        const result = await response.json();
-                        
-                        if (!response.ok || !result.success) {
-                          throw new Error(result.error || 'Ошибка генерации NFT');
-                        }
-                        
-                        console.log('✅ Кастомная NFT карта создана:', result.nft);
-                        
-                        // Перезагружаем NFT коллекцию
-                        await loadNFTCollection();
-                        
-                        alert(`✨ Поздравляем! Вы получили ${result.nft.rarity} карту:\n${result.nft.rank} ${getSuitEmoji(result.nft.suit)}\n\n✨ Эффекты: ${result.nft.effects.join(', ')}\n✅ Сохранено в кошелек: ${wallet_address.slice(0, 8)}...${wallet_address.slice(-6)}\n🌐 Сеть: ${network}`);
-                        
-                      } catch (error: any) {
-                        console.error('❌ Ошибка генерации кастомной NFT:', error);
-                        alert(`❌ ${error.message}`);
-                      }
-                    }}
-                    style={{
-                      background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.8) 0%, rgba(217, 119, 6, 0.6) 100%)',
-                      border: '2px solid rgba(245, 158, 11, 0.3)',
-                      borderRadius: '16px',
-                      padding: '20px',
-                      color: '#fff',
-                      fontSize: '1rem',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                      textAlign: 'center',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: '8px'
-                    }}
-                  >
-                    <div style={{ fontSize: '2rem' }}>🎨</div>
-                    <div>CUSTOM MINT</div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: '900', color: '#fbbf24' }}>💎 3 TON / 0.5 SOL</div>
-                    <div style={{ fontSize: '0.7rem', opacity: 0.8 }}>Rare-Legendary</div>
-                  </motion.button>
-                </div>
-
-                {/* 3-я кнопка - BURNING MINT за монеты */}
-                <motion.button
-                  whileHover={user && user.coins >= 20000 ? { scale: 1.02 } : {}}
-                  whileTap={user && user.coins >= 20000 ? { scale: 0.98 } : {}}
-                  onClick={handleBurningMint}
-                  style={{
-                    background: user && user.coins >= 20000 
-                      ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.8) 0%, rgba(220, 38, 38, 0.6) 100%)'
-                      : 'linear-gradient(135deg, rgba(55, 65, 81, 0.6) 0%, rgba(31, 41, 55, 0.4) 100%)',
-                    border: user && user.coins >= 20000 
-                      ? '2px solid rgba(239, 68, 68, 0.3)'
-                      : '2px solid rgba(100, 116, 139, 0.3)',
-                    borderRadius: '16px',
-                    padding: '20px',
-                    color: '#fff',
-                    fontSize: '1.1rem',
-                    fontWeight: '700',
-                    cursor: user && user.coins >= 20000 ? 'pointer' : 'not-allowed',
-                    textAlign: 'center',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '12px',
-                    boxShadow: user && user.coins >= 20000 
-                      ? '0 0 30px rgba(239, 68, 68, 0.3)'
-                      : 'none',
-                    opacity: user && user.coins >= 20000 ? 1 : 0.6
-                  }}
-                  disabled={!user || user.coins < 20000}
-                >
-                  <div style={{ fontSize: '3rem' }}>🔥</div>
-                  <div>BURNING CARD MINT</div>
-                  <div style={{ 
-                    fontSize: '1rem', 
-                    fontWeight: '900', 
-                    color: user && user.coins >= 20000 ? '#fbbf24' : '#94a3b8',
-                    textShadow: user && user.coins >= 20000 ? '0 0 10px rgba(251, 191, 36, 0.5)' : 'none'
-                  }}>
-                    💰 20 000 монет
-                  </div>
-                  <div style={{ fontSize: '0.75rem', opacity: 0.9, lineHeight: '1.3' }}>
-                    Уникальная карта с горящей мастью!<br/>
-                    Случайная масть, ранг и цвет огня (Legendary)
-                  </div>
-                </motion.button>
 
                 {/* Информация о NFT */}
                 <div style={{

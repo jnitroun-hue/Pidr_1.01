@@ -148,15 +148,39 @@ export async function POST(req: NextRequest) {
       
       console.log('🆕 Создание новой комнаты...');
       
-      // 1. ПОЛУЧАЕМ ДАННЫЕ ПОЛЬЗОВАТЕЛЯ (ПО TELEGRAM_ID!) - СНАЧАЛА!
-      const { data: userData, error: userError } = await supabase
-        .from('_pidr_users')
-        .select('id, username') // ✅ ВАЖНО! Получаем UUID (id) для host_id
-        .eq('telegram_id', userId) // ✅ Ищем по telegram_id!
-        .single();
+      // 1. ПОЛУЧАЕМ ДАННЫЕ ПОЛЬЗОВАТЕЛЯ
+      // ✅ userId может быть либо UUID (из JWT), либо telegram_id (из headers)
+      // Сначала пробуем найти по telegram_id, потом по id
+      let userData: any = null;
+      let userError: any = null;
       
-      if (userError || !userData?.username) {
+      // Попытка 1: ищем по telegram_id
+      const telegramIdResult = await supabase
+        .from('_pidr_users')
+        .select('id, username, telegram_id')
+        .eq('telegram_id', userId)
+        .maybeSingle();
+      
+      if (telegramIdResult.data) {
+        userData = telegramIdResult.data;
+      } else {
+        // Попытка 2: ищем по UUID (если userId это UUID)
+        const uuidResult = await supabase
+          .from('_pidr_users')
+          .select('id, username, telegram_id')
+          .eq('id', userId)
+          .maybeSingle();
+        
+        if (uuidResult.data) {
+          userData = uuidResult.data;
+        } else {
+          userError = telegramIdResult.error || uuidResult.error;
+        }
+      }
+      
+      if (!userData || !userData.username) {
         console.error('❌ Не удалось получить данные пользователя:', userError);
+        console.error('❌ userId:', userId);
         return NextResponse.json({ 
           success: false, 
           message: 'Ошибка получения данных пользователя' 
@@ -164,10 +188,12 @@ export async function POST(req: NextRequest) {
       }
       
       const userUUID = userData.id;
-      console.log(`👤 Пользователь найден: UUID=${userUUID}, telegram_id=${userId}`);
+      const userTelegramId = userData.telegram_id;
+      console.log(`👤 Пользователь найден: UUID=${userUUID}, telegram_id=${userTelegramId}`);
       
       // 2. ПРОВЕРЯЕМ МОЖЕТ ЛИ ИГРОК СОЗДАТЬ КОМНАТУ
-      const currentRoomId = await getPlayerRoom(userId);
+      // ✅ Используем telegram_id для Redis (string)
+      const currentRoomId = await getPlayerRoom(userTelegramId.toString());
       
       if (currentRoomId) {
         // Проверяем существует ли эта комната в БД (СРАВНИВАЕМ UUID С UUID!)
@@ -187,7 +213,7 @@ export async function POST(req: NextRequest) {
           }, { status: 400 });
         } else {
           // Комната есть в Redis но не в БД - очищаем Redis
-          await removePlayerFromAllRooms(userId);
+          await removePlayerFromAllRooms(userTelegramId.toString());
         }
       }
       
@@ -227,8 +253,9 @@ export async function POST(req: NextRequest) {
       }
       
       // 4. АТОМАРНО ДОБАВЛЯЕМ ХОСТА В КОМНАТУ
+      // ✅ Используем telegram_id для Redis
       const joinResult = await atomicJoinRoom({
-        userId,
+        userId: userTelegramId.toString(),
         username: userData.username,
         roomId: room.id,
         roomCode,
@@ -301,24 +328,42 @@ export async function POST(req: NextRequest) {
         }, { status: 403 });
       }
       
-      // 3. ПОЛУЧАЕМ ДАННЫЕ ПОЛЬЗОВАТЕЛЯ (ПО TELEGRAM_ID!)
-      const { data: userData, error: userError } = await supabase
-        .from('_pidr_users')
-        .select('id, username') // ✅ Получаем UUID для сравнения с host_id
-        .eq('telegram_id', userId) // ✅ Ищем по telegram_id!
-        .single();
+      // 3. ПОЛУЧАЕМ ДАННЫЕ ПОЛЬЗОВАТЕЛЯ
+      // ✅ userId может быть либо UUID, либо telegram_id
+      let userData2: any = null;
       
-      if (userError || !userData?.username) {
+      const telegramIdResult2 = await supabase
+        .from('_pidr_users')
+        .select('id, username, telegram_id')
+        .eq('telegram_id', userId)
+        .maybeSingle();
+      
+      if (telegramIdResult2.data) {
+        userData2 = telegramIdResult2.data;
+      } else {
+        const uuidResult2 = await supabase
+          .from('_pidr_users')
+          .select('id, username, telegram_id')
+          .eq('id', userId)
+          .maybeSingle();
+        
+        userData2 = uuidResult2.data;
+      }
+      
+      if (!userData2 || !userData2.username) {
         return NextResponse.json({ 
           success: false, 
           message: 'Ошибка получения данных пользователя' 
         }, { status: 500 });
       }
       
-      console.log(`👤 Пользователь найден: UUID=${userData.id}, telegram_id=${userId}`);
+      const userUUID2 = userData2.id;
+      const userTelegramId2 = userData2.telegram_id;
+      console.log(`👤 Пользователь найден: UUID=${userUUID2}, telegram_id=${userTelegramId2}`);
       
       // 4. ПРОВЕРЯЕМ МОЖЕТ ЛИ ИГРОК ПРИСОЕДИНИТЬСЯ
-      const canJoin = await canPlayerJoinRoom(userId, room.id);
+      // ✅ Используем telegram_id для Redis
+      const canJoin = await canPlayerJoinRoom(userTelegramId2.toString(), room.id);
       
       if (!canJoin.canJoin && canJoin.currentRoomId !== room.id) {
         // Игрок уже в другой комнате
@@ -336,12 +381,13 @@ export async function POST(req: NextRequest) {
       }
       
       // 5. ОПРЕДЕЛЯЕМ ЯВЛЯЕТСЯ ЛИ ИГРОК ХОСТОМ (СРАВНИВАЕМ UUID С UUID!)
-      const isHost = room.host_id === userData.id; // ✅ Сравниваем UUID с UUID!
+      const isHost = room.host_id === userUUID2; // ✅ Сравниваем UUID с UUID!
       
       // 6. АТОМАРНО ПРИСОЕДИНЯЕМСЯ К КОМНАТЕ
+      // ✅ Используем telegram_id для Redis
       const joinResult = await atomicJoinRoom({
-        userId,
-        username: userData.username,
+        userId: userTelegramId2.toString(),
+        username: userData2.username,
         roomId: room.id,
         roomCode: room.room_code,
         maxPlayers: room.max_players,
@@ -356,7 +402,7 @@ export async function POST(req: NextRequest) {
         }, { status: 400 });
       }
       
-      console.log(`✅ Игрок ${userId} присоединился к комнате ${room.room_code} на позиции ${joinResult.position}`);
+      console.log(`✅ Игрок ${userTelegramId2} присоединился к комнате ${room.room_code} на позиции ${joinResult.position}`);
       
       return NextResponse.json({ 
         success: true, 
@@ -386,9 +432,24 @@ export async function POST(req: NextRequest) {
       
       console.log(`🚶 Выход из комнаты: ${roomId}`);
       
+      // ✅ ПОЛУЧАЕМ telegram_id для Redis
+      let userTelegramId3: string = userId;
+      
+      // Если userId это UUID, получаем telegram_id
+      const uuidCheck = await supabase
+        .from('_pidr_users')
+        .select('telegram_id')
+        .eq('id', userId)
+        .maybeSingle();
+      
+      if (uuidCheck.data) {
+        userTelegramId3 = uuidCheck.data.telegram_id.toString();
+      }
+      
       // АТОМАРНО ВЫХОДИМ ИЗ КОМНАТЫ
+      // ✅ Используем telegram_id для Redis
       const leaveResult = await atomicLeaveRoom({
-        userId,
+        userId: userTelegramId3,
         roomId,
       });
       
@@ -399,7 +460,7 @@ export async function POST(req: NextRequest) {
         }, { status: 500 });
       }
       
-      console.log(`✅ Игрок ${userId} вышел из комнаты ${roomId}`);
+      console.log(`✅ Игрок ${userTelegramId3} вышел из комнаты ${roomId}`);
       
       // Проверяем нужно ли удалить комнату (если хост вышел и комната пустая)
       const { data: room } = await supabase
