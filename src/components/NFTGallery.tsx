@@ -226,25 +226,29 @@ export default function NFTGallery() {
                 />
               </div>
 
-              {/* СНИЗУ: МАСТЬ + РАНГ */}
+              {/* СНИЗУ: МАСТЬ + РАНГ (БЕЗ ОВАЛА!) */}
               <div style={{ 
                 textAlign: 'center',
-                padding: '8px',
-                background: 'rgba(15, 23, 42, 0.8)',
-                borderRadius: '8px'
+                padding: '8px 4px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px'
               }}>
-                <div style={{
+                <span style={{ 
                   color: suitColor,
-                  fontSize: '1.3rem',
-                  fontWeight: 'black',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px'
+                  fontSize: '1.5rem',
+                  fontWeight: 'bold'
                 }}>
-                  <span style={{ fontSize: '1.5rem' }}>{getSuitSymbol(card.suit)}</span>
-                  <span>{card.rank?.toUpperCase()}</span>
-                </div>
+                  {getSuitSymbol(card.suit)}
+                </span>
+                <span style={{
+                  color: suitColor,
+                  fontSize: '1.2rem',
+                  fontWeight: 'black'
+                }}>
+                  {card.rank?.toUpperCase()}
+                </span>
               </div>
             </motion.div>
           );

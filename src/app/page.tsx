@@ -29,14 +29,14 @@ function HomeWithParams() {
   const [loading, setLoading] = useState(true);
   const [showMainMenu, setShowMainMenu] = useState(false);
   const [error, setError] = useState<string>('');
-  const [initialized, setInitialized] = useState(false); // Флаг инициализации
+  const initialized = useRef(false); // ✅ useRef - НЕ СБРАСЫВАЕТСЯ при рендере
   const { user: telegramUser, isReady } = useTelegram();
   const { language } = useLanguage();
   const router = useRouter();
 
   useEffect(() => {
     // ✅ ЗАЩИТА ОТ ПОВТОРНОГО ЗАПУСКА
-    if (initialized) {
+    if (initialized.current) {
       console.log('🛡️ Уже инициализировано - пропускаем');
       return;
     }
@@ -78,7 +78,7 @@ function HomeWithParams() {
             };
             
             setUser(existingUser);
-            setInitialized(true); // ✅ Устанавливаем флаг
+            initialized.current = true; // ✅ Устанавливаем флаг
             setTimeout(() => {
               setLoading(false);
               setTimeout(() => setShowMainMenu(true), 100);
