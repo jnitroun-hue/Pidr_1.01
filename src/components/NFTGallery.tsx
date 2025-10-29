@@ -197,26 +197,29 @@ export default function NFTGallery() {
   return (
     <div style={{ width: '100%' }}>
       {/* Заголовок */}
-      <div style={{ marginBottom: '20px', textAlign: 'center' }}>
+      <div style={{ marginBottom: '30px', textAlign: 'center' }}>
         <h3 style={{ 
           color: '#ffffff', 
-          fontSize: '1.2rem', 
-          fontWeight: 'bold', 
-          marginBottom: '8px' 
+          fontSize: '2rem', 
+          fontWeight: 'black', 
+          marginBottom: '12px',
+          textShadow: '0 0 20px rgba(59, 130, 246, 0.5)'
         }}>
           🎴 МОЯ NFT КОЛЛЕКЦИЯ
         </h3>
-        <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>
-          Всего карт: <span style={{ color: '#3b82f6', fontWeight: 'bold' }}>{collection.length}</span>
+        <p style={{ color: '#94a3b8', fontSize: '1.1rem' }}>
+          Всего карт: <span style={{ color: '#3b82f6', fontWeight: 'bold', fontSize: '1.3rem' }}>{collection.length}</span>
         </p>
       </div>
 
-      {/* СЕТКА: 4 КАРТЫ В РЯД */}
+      {/* СЕТКА: КРУПНЫЕ КАРТЫ! */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
-        gap: '20px',
-        padding: '10px'
+        gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+        gap: '24px',
+        padding: '20px',
+        maxWidth: '1400px',
+        margin: '0 auto'
       }}>
         {collection.map((card) => {
           const suitColor = getSuitColor(card.suit);
@@ -226,29 +229,32 @@ export default function NFTGallery() {
               key={card.id}
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              whileHover={{ scale: 1.05, y: -5 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={{ scale: 1.08, y: -10, rotate: 3 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => setSelectedCard(card)}
               style={{
                 background: '#ffffff',
-                border: `3px solid ${suitColor}`,
-                borderRadius: '12px',
-                padding: '8px',
+                border: `4px solid ${suitColor}`,
+                borderRadius: '16px',
+                padding: '12px',
                 cursor: 'pointer',
-                boxShadow: `0 4px 15px ${suitColor}40`,
-                transition: 'all 0.3s ease',
+                boxShadow: `0 10px 30px ${suitColor}60, 0 0 50px ${suitColor}30`,
+                transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
                 position: 'relative',
                 overflow: 'hidden'
               }}
             >
-              {/* ТОЛЬКО ИЗОБРАЖЕНИЕ */}
+              {/* ИЗОБРАЖЕНИЕ КАРТЫ */}
               <div style={{
                 aspectRatio: '2/3',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 overflow: 'hidden',
-                marginBottom: '8px'
+                borderRadius: '12px',
+                marginBottom: '12px',
+                background: '#f8fafc',
+                border: `2px solid ${suitColor}20`
               }}>
                 <img
                   src={card.image_url}
@@ -256,32 +262,40 @@ export default function NFTGallery() {
                   style={{
                     width: '100%',
                     height: '100%',
-                    objectFit: 'contain'
+                    objectFit: 'contain',
+                    display: 'block'
                   }}
                   loading="lazy"
                 />
               </div>
 
-              {/* СНИЗУ: МАСТЬ + РАНГ (БЕЗ ОВАЛА!) */}
+              {/* ИНФО ПОД КАРТОЙ */}
               <div style={{ 
                 textAlign: 'center',
-                padding: '8px 4px',
+                padding: '12px',
+                background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%)',
+                borderRadius: '12px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '6px'
+                gap: '12px',
+                border: `2px solid ${suitColor}40`
               }}>
                 <span style={{ 
                   color: suitColor,
-                  fontSize: '1.5rem',
-                  fontWeight: 'bold'
+                  fontSize: '2rem',
+                  fontWeight: 'black',
+                  textShadow: `0 0 15px ${suitColor}aa, 0 0 30px ${suitColor}60`,
+                  filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
                 }}>
                   {getSuitSymbol(card.suit)}
                 </span>
                 <span style={{
-                  color: suitColor,
-                  fontSize: '1.2rem',
-                  fontWeight: 'black'
+                  color: '#ffffff',
+                  fontSize: '1.6rem',
+                  fontWeight: 'black',
+                  letterSpacing: '2px',
+                  textShadow: '0 2px 8px rgba(0,0,0,0.5)'
                 }}>
                   {card.rank?.toUpperCase()}
                 </span>
