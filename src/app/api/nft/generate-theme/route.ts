@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     console.log(`📤 Загружаем файл: ${filePath}`);
     
     const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('game-assets')
+      .from('nft-cards')
       .upload(filePath, buffer, {
         contentType: 'image/png',
         upsert: false
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
 
     // Получаем публичный URL
     const { data: urlData } = supabase.storage
-      .from('game-assets')
+      .from('nft-cards')
       .getPublicUrl(filePath);
 
     if (!urlData || !urlData.publicUrl) {
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
       
       // Удаляем файл из Storage
       await supabase.storage
-        .from('game-assets')
+        .from('nft-cards')
         .remove([filePath]);
       
       throw new Error(`Ошибка сохранения: ${dbError.message}`);

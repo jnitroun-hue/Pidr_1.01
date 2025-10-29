@@ -622,17 +622,35 @@ export function SellModal({
             position: 'relative',
             borderRadius: '10px',
             overflow: 'hidden',
-            background: '#1e293b',
-            flexShrink: 0
+            background: '#ffffff',
+            flexShrink: 0,
+            border: `2px solid ${getSuitColor(nft.suit)}`
           }}>
             {nft.image_url ? (
-              <Image
+              <img
                 src={nft.image_url}
                 alt={`${nft.rank} of ${nft.suit}`}
-                fill
-                style={{ objectFit: 'contain' }}
+                style={{ 
+                  width: '100%', 
+                  height: '100%', 
+                  objectFit: 'contain',
+                  display: 'block'
+                }}
+                loading="lazy"
               />
-            ) : null}
+            ) : (
+              <div style={{
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#94a3b8',
+                fontSize: '0.9rem'
+              }}>
+                No Image
+              </div>
+            )}
           </div>
           <div>
             <h4 style={{ fontSize: '20px', fontWeight: 'bold', color: getSuitColor(nft.suit), marginBottom: '8px' }}>
