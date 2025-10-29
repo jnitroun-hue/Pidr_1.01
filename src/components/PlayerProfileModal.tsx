@@ -1,171 +1,291 @@
-'use client';
-
-import React from 'react';
+'use client'
 import { motion, AnimatePresence } from 'framer-motion';
-import styles from './PlayerProfileModal.module.css';
-
-interface PlayerProfileData {
-  id: string;
-  name: string;
-  avatar: string;
-  isBot: boolean;
-  isUser?: boolean;
-  // Статистика
-  level?: number;
-  rating?: number;
-  gamesPlayed?: number;
-  winRate?: number;
-  bestStreak?: number;
-  // Дополнительно
-  status?: string;
-  joinedDate?: string;
-}
+import { X, Trophy, Target, Award, TrendingUp, Star } from 'lucide-react';
 
 interface PlayerProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
-  playerData: PlayerProfileData | null;
-  onAddFriend?: (playerId: string) => void;
+  player: {
+    name: string;
+    avatar?: string;
+    isBot?: boolean;
+    rating?: number;
+    gamesPlayed?: number;
+    wins?: number;
+    losses?: number;
+    winRate?: number;
+  };
 }
 
-export default function PlayerProfileModal({
-  isOpen,
-  onClose,
-  playerData,
-  onAddFriend
-}: PlayerProfileModalProps) {
-  if (!playerData) return null;
+export default function PlayerProfileModal({ isOpen, onClose, player }: PlayerProfileModalProps) {
+  if (!isOpen) return null;
 
-  const handleAddFriend = () => {
-    if (onAddFriend && playerData.id) {
-      onAddFriend(playerData.id);
-    }
-  };
+  const winRate = player.winRate || (player.wins && player.gamesPlayed 
+    ? Math.round((player.wins / player.gamesPlayed) * 100) 
+    : 0);
 
   return (
     <AnimatePresence>
-      {isOpen && (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.85)',
+          backdropFilter: 'blur(10px)',
+          zIndex: 999999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px'
+        }}
+      >
         <motion.div
-          className={styles.overlay}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onClose}
+          initial={{ scale: 0.8, y: 50 }}
+          animate={{ scale: 1, y: 0 }}
+          exit={{ scale: 0.8, y: 50 }}
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)',
+            border: '3px solid #3b82f6',
+            borderRadius: '24px',
+            padding: '30px',
+            maxWidth: '420px',
+            width: '100%',
+            position: 'relative',
+            boxShadow: '0 20px 60px rgba(59, 130, 246, 0.3)'
+          }}
         >
-          {/* Modal */}
-          <motion.div
-            className={styles.modal}
-            initial={{ opacity: 0, scale: 0.85, y: 30 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.85, y: 30 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            onClick={(e) => e.stopPropagation()}
+          {/* Кнопка закрытия */}
+          <button
+            onClick={onClose}
+            style={{
+              position: 'absolute',
+              top: '20px',
+              right: '20px',
+              background: 'rgba(255, 255, 255, 0.1)',
+              border: 'none',
+              borderRadius: '50%',
+              width: '44px',
+              height: '44px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: '#ffffff',
+              transition: 'all 0.3s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
+              e.currentTarget.style.transform = 'rotate(90deg)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+              e.currentTarget.style.transform = 'rotate(0deg)';
+            }}
           >
-            {/* Header */}
-            <div className={styles.header}>
-              <h2 className={styles.title}>
-                {playerData.isUser ? '👤 Ваш профиль' : '🎮 Профиль игрока'}
-              </h2>
-              <button className={styles.closeButton} onClick={onClose}>
-                ✕
-              </button>
+            <X size={24} />
+          </button>
+
+          {/* Аватар */}
+          <div style={{
+            textAlign: 'center',
+            marginBottom: '25px'
+          }}>
+            <div style={{
+              width: '120px',
+              height: '120px',
+              margin: '0 auto',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '64px',
+              border: '4px solid rgba(59, 130, 246, 0.3)',
+              boxShadow: '0 10px 30px rgba(59, 130, 246, 0.4)',
+              marginBottom: '15px'
+            }}>
+              {player.avatar || '👤'}
             </div>
+            
+            <h2 style={{
+              color: '#ffffff',
+              fontSize: '28px',
+              fontWeight: 'black',
+              marginBottom: '8px',
+              textShadow: '0 2px 10px rgba(0,0,0,0.3)'
+            }}>
+              {player.name}
+            </h2>
 
-            {/* Avatar */}
-            <div className={styles.avatarContainer}>
-              <div className={styles.avatarWrapper}>
-                {playerData.avatar ? (
-                  <img 
-                    src={playerData.avatar} 
-                    alt={playerData.name}
-                    className={styles.avatar}
-                  />
-                ) : (
-                  <div className={styles.avatarPlaceholder}>👤</div>
-                )}
-                {playerData.isBot && (
-                  <div className={styles.botBadge}>🤖 BOT</div>
-                )}
-                {playerData.isUser && (
-                  <div className={styles.userBadge}>⭐ YOU</div>
-                )}
+            {player.isBot && (
+              <div style={{
+                display: 'inline-block',
+                background: 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)',
+                padding: '6px 16px',
+                borderRadius: '20px',
+                fontSize: '13px',
+                fontWeight: 'bold',
+                color: '#ffffff',
+                marginTop: '8px'
+              }}>
+                🤖 БОТ
               </div>
-              <h3 className={styles.playerName}>{playerData.name}</h3>
-              {playerData.status && (
-                <p className={styles.status}>{playerData.status}</p>
-              )}
-            </div>
+            )}
+          </div>
 
-            {/* Stats Grid */}
-            <div className={styles.statsGrid}>
-              <div className={styles.statCard}>
-                <div className={styles.statIcon}>🏆</div>
-                <div className={styles.statValue}>{playerData.level || 1}</div>
-                <div className={styles.statLabel}>Уровень</div>
-              </div>
-
-              <div className={styles.statCard}>
-                <div className={styles.statIcon}>⭐</div>
-                <div className={styles.statValue}>{playerData.rating || 0}</div>
-                <div className={styles.statLabel}>Рейтинг</div>
-              </div>
-
-              <div className={styles.statCard}>
-                <div className={styles.statIcon}>🎮</div>
-                <div className={styles.statValue}>{playerData.gamesPlayed || 0}</div>
-                <div className={styles.statLabel}>Игр</div>
-              </div>
-
-              <div className={styles.statCard}>
-                <div className={styles.statIcon}>📊</div>
-                <div className={styles.statValue}>
-                  {playerData.winRate ? `${playerData.winRate}%` : '0%'}
+          {/* Статистика */}
+          {!player.isBot && (
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(2, 1fr)',
+              gap: '15px',
+              marginTop: '25px'
+            }}>
+              {/* Рейтинг */}
+              <div style={{
+                background: 'rgba(59, 130, 246, 0.1)',
+                border: '2px solid rgba(59, 130, 246, 0.3)',
+                borderRadius: '16px',
+                padding: '16px',
+                textAlign: 'center'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  marginBottom: '8px'
+                }}>
+                  <TrendingUp size={20} color="#3b82f6" />
+                  <span style={{ color: '#94a3b8', fontSize: '13px', fontWeight: '600' }}>
+                    Рейтинг
+                  </span>
                 </div>
-                <div className={styles.statLabel}>Побед</div>
-              </div>
-            </div>
-
-            {/* Additional Info */}
-            <div className={styles.additionalInfo}>
-              <div className={styles.infoRow}>
-                <span className={styles.infoLabel}>🔥 Лучшая серия:</span>
-                <span className={styles.infoValue}>{playerData.bestStreak || 0} побед</span>
-              </div>
-              {playerData.joinedDate && (
-                <div className={styles.infoRow}>
-                  <span className={styles.infoLabel}>📅 В игре с:</span>
-                  <span className={styles.infoValue}>{playerData.joinedDate}</span>
+                <div style={{
+                  color: '#3b82f6',
+                  fontSize: '28px',
+                  fontWeight: 'black'
+                }}>
+                  {player.rating || 1000}
                 </div>
-              )}
-            </div>
+              </div>
 
-            {/* Actions */}
-            <div className={styles.actions}>
-              {playerData.isBot && !playerData.isUser && (
-                <motion.button
-                  className={styles.addFriendButton}
-                  onClick={handleAddFriend}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <span className={styles.buttonIcon}>👥</span>
-                  Добавить в друзья
-                </motion.button>
-              )}
-              
-              <motion.button
-                className={styles.closeButtonBottom}
-                onClick={onClose}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                Закрыть
-              </motion.button>
+              {/* Игры */}
+              <div style={{
+                background: 'rgba(139, 92, 246, 0.1)',
+                border: '2px solid rgba(139, 92, 246, 0.3)',
+                borderRadius: '16px',
+                padding: '16px',
+                textAlign: 'center'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  marginBottom: '8px'
+                }}>
+                  <Target size={20} color="#8b5cf6" />
+                  <span style={{ color: '#94a3b8', fontSize: '13px', fontWeight: '600' }}>
+                    Игры
+                  </span>
+                </div>
+                <div style={{
+                  color: '#8b5cf6',
+                  fontSize: '28px',
+                  fontWeight: 'black'
+                }}>
+                  {player.gamesPlayed || 0}
+                </div>
+              </div>
+
+              {/* Победы */}
+              <div style={{
+                background: 'rgba(34, 197, 94, 0.1)',
+                border: '2px solid rgba(34, 197, 94, 0.3)',
+                borderRadius: '16px',
+                padding: '16px',
+                textAlign: 'center'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  marginBottom: '8px'
+                }}>
+                  <Trophy size={20} color="#22c55e" />
+                  <span style={{ color: '#94a3b8', fontSize: '13px', fontWeight: '600' }}>
+                    Победы
+                  </span>
+                </div>
+                <div style={{
+                  color: '#22c55e',
+                  fontSize: '28px',
+                  fontWeight: 'black'
+                }}>
+                  {player.wins || 0}
+                </div>
+              </div>
+
+              {/* Винрейт */}
+              <div style={{
+                background: 'rgba(251, 191, 36, 0.1)',
+                border: '2px solid rgba(251, 191, 36, 0.3)',
+                borderRadius: '16px',
+                padding: '16px',
+                textAlign: 'center'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  marginBottom: '8px'
+                }}>
+                  <Star size={20} color="#fbbf24" />
+                  <span style={{ color: '#94a3b8', fontSize: '13px', fontWeight: '600' }}>
+                    Винрейт
+                  </span>
+                </div>
+                <div style={{
+                  color: '#fbbf24',
+                  fontSize: '28px',
+                  fontWeight: 'black'
+                }}>
+                  {winRate}%
+                </div>
+              </div>
             </div>
-          </motion.div>
+          )}
+
+          {/* Для ботов */}
+          {player.isBot && (
+            <div style={{
+              background: 'rgba(139, 92, 246, 0.1)',
+              border: '2px solid rgba(139, 92, 246, 0.3)',
+              borderRadius: '16px',
+              padding: '20px',
+              textAlign: 'center',
+              marginTop: '20px'
+            }}>
+              <Award size={48} color="#8b5cf6" style={{ marginBottom: '12px' }} />
+              <p style={{
+                color: '#94a3b8',
+                fontSize: '15px',
+                lineHeight: '1.6'
+              }}>
+                Это компьютерный игрок с искусственным интеллектом
+              </p>
+            </div>
+          )}
         </motion.div>
-      )}
+      </motion.div>
     </AnimatePresence>
   );
 }
-

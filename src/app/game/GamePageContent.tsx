@@ -318,12 +318,6 @@ function GamePageContentComponent({
     setIsProfileModalOpen(true);
   };
 
-  // Обработчик добавления в друзья
-  const handleAddFriend = (playerId: string) => {
-    console.log('🤝 Добавить в друзья:', playerId);
-    alert(`Запрос в друзья отправлен! (В разработке)`);
-    setIsProfileModalOpen(false);
-  };
 
   // Обновляем currentCard из revealedDeckCard
   useEffect(() => {
@@ -1553,26 +1547,40 @@ function GamePageContentComponent({
                         </div>
                       )}
                       
+                      {/* ✅ ТОЛЬКО АВАТАР ВО ВЕСЬ КОНТЕЙНЕР - ПРИ КЛИКЕ МОДАЛКА */}
                       <div 
                         className={styles.avatarContainer}
                         onClick={(e) => {
                           e.stopPropagation();
                           handlePlayerClick(player);
                         }}
-                        style={{ cursor: 'pointer' }}
+                        style={{ 
+                          cursor: 'pointer',
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
                       >
-                          <Image 
-                        src={playerAvatars[player.id] || player.avatar || '/images/default-avatar.png'}
-                        alt={player.name}
-                        width={40}
-                        height={40}
-                            className={styles.avatar}
-                          />
-                      {player.isBot && (
-                        <div className={styles.botBadge}>🤖</div>
+                        <Image 
+                          src={playerAvatars[player.id] || player.avatar || '/images/default-avatar.png'}
+                          alt={player.name}
+                          width={56}
+                          height={56}
+                          className={styles.avatar}
+                          style={{
+                            width: '56px',
+                            height: '56px',
+                            borderRadius: '50%',
+                            boxShadow: `0 4px 12px ${currentPlayer?.id === player.id ? 'rgba(34, 197, 94, 0.6)' : 'rgba(0, 0, 0, 0.3)'}`,
+                            border: `3px solid ${currentPlayer?.id === player.id ? '#22c55e' : 'rgba(255, 255, 255, 0.2)'}`,
+                            transition: 'all 0.3s ease'
+                          }}
+                        />
+                        {player.isBot && (
+                          <div className={styles.botBadge}>🤖</div>
                         )}
-                          </div>
-                    <span className={styles.playerName}>{player.name}</span>
+                      </div>
                     </div>
                     
                   {/* Карты игрока */}
@@ -2034,12 +2042,14 @@ function GamePageContentComponent({
       )}
 
       {/* Модальное окно профиля игрока */}
-      <PlayerProfileModal
-        isOpen={isProfileModalOpen}
-        onClose={() => setIsProfileModalOpen(false)}
-        playerData={selectedPlayerProfile}
-        onAddFriend={handleAddFriend}
-      />
+      {/* ✅ МОДАЛКА ПРОФИЛЯ ИГРОКА */}
+      {selectedPlayerProfile && (
+        <PlayerProfileModal
+          isOpen={isProfileModalOpen}
+          onClose={() => setIsProfileModalOpen(false)}
+          player={selectedPlayerProfile}
+        />
+      )}
 
       {/* МОДАЛЬНОЕ ОКНО ВЫБОРА КАРТЫ ДЛЯ ШТРАФА */}
       <PenaltyCardSelector />
