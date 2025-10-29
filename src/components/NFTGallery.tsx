@@ -139,21 +139,21 @@ export default function NFTGallery() {
   }
 
   return (
-    <div className="w-full">
-      {/* Заголовок */}
-      <div className="mb-6 text-center">
-        <h2 className="text-2xl font-black text-white mb-1 flex items-center justify-center gap-2">
-          <Sparkles className="text-yellow-400" size={24} />
-          МОЯ NFT КОЛЛЕКЦИЯ
-          <Sparkles className="text-yellow-400" size={24} />
+    <div className="w-full" data-nft-gallery-component="unique-v2">
+      {/* Заголовок - МОБИЛЬНАЯ ОПТИМИЗАЦИЯ */}
+      <div className="mb-4 sm:mb-6 text-center px-2">
+        <h2 className="text-lg sm:text-xl md:text-2xl font-black text-white mb-1 flex items-center justify-center gap-2 flex-wrap">
+          <Sparkles className="text-yellow-400" size={20} />
+          <span className="text-base sm:text-lg md:text-2xl">МОЯ NFT КОЛЛЕКЦИЯ</span>
+          <Sparkles className="text-yellow-400" size={20} />
         </h2>
-        <p className="text-sm text-gray-400">
+        <p className="text-xs sm:text-sm text-gray-400">
           Всего карт: <span className="text-blue-400 font-bold">{collection.length}</span>
         </p>
       </div>
 
-      {/* КОМПАКТНАЯ СЕТКА КАРТ - УМЕНЬШЕНЫ В 5 РАЗ */}
-      <div className="grid grid-cols-5 sm:grid-cols-7 md:grid-cols-10 lg:grid-cols-12 xl:grid-cols-15 gap-2 p-2">
+      {/* КОМПАКТНАЯ СЕТКА КАРТ - МОБИЛЬНАЯ ОПТИМИЗАЦИЯ */}
+      <div className="grid grid-cols-4 xs:grid-cols-5 sm:grid-cols-7 md:grid-cols-9 lg:grid-cols-11 xl:grid-cols-13 gap-1.5 sm:gap-2 p-1 sm:p-2">
         {collection.map((card, index) => {
           const suitColor = getSuitColor(card.suit);
           
@@ -163,18 +163,20 @@ export default function NFTGallery() {
               initial={{ opacity: 0, scale: 0.5 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: index * 0.01 }}
-              whileHover={{ scale: 1.1, y: -4 }}
+              whileHover={{ scale: 1.08, y: -2 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => setSelectedCard(card)}
-              className="relative group focus:outline-none"
+              className="relative group focus:outline-none touch-manipulation"
               style={{
-                borderRadius: '8px',
+                borderRadius: '6px',
                 background: 'rgba(15, 23, 42, 0.8)',
-                border: `2px solid ${suitColor}60`,
-                boxShadow: `0 2px 8px ${suitColor}40`,
+                border: `1.5px solid ${suitColor}60`,
+                boxShadow: `0 2px 6px ${suitColor}40`,
                 transition: 'all 0.2s ease',
                 overflow: 'hidden',
-                aspectRatio: '2/3'
+                aspectRatio: '2/3',
+                minWidth: 0,
+                WebkitTapHighlightColor: 'transparent'
               }}
             >
               {/* Изображение карты */}
@@ -228,11 +230,13 @@ export default function NFTGallery() {
               exit={{ scale: 0.8, opacity: 0, y: 50 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-md rounded-3xl overflow-hidden"
+              className="relative w-full max-w-[95vw] sm:max-w-md rounded-2xl sm:rounded-3xl overflow-hidden"
               style={{
                 background: 'linear-gradient(145deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.98) 100%)',
-                border: `3px solid ${getSuitColor(selectedCard.suit)}`,
-                boxShadow: `0 30px 80px ${getSuitColor(selectedCard.suit)}60, 0 0 100px ${getSuitColor(selectedCard.suit)}40`
+                border: `2px solid ${getSuitColor(selectedCard.suit)}`,
+                boxShadow: `0 20px 60px ${getSuitColor(selectedCard.suit)}60, 0 0 80px ${getSuitColor(selectedCard.suit)}40`,
+                maxHeight: '90vh',
+                overflowY: 'auto'
               }}
             >
               {/* Кнопка закрытия */}
@@ -247,16 +251,16 @@ export default function NFTGallery() {
                 <X size={20} strokeWidth={3} />
               </button>
 
-              <div className="p-6">
-                {/* Изображение карты */}
+              <div className="p-4 sm:p-6">
+                {/* Изображение карты - МОБИЛЬНАЯ ОПТИМИЗАЦИЯ */}
                 <motion.div
                   whileHover={{ scale: 1.02 }}
-                  className="relative rounded-2xl overflow-hidden mb-6"
+                  className="relative rounded-xl sm:rounded-2xl overflow-hidden mb-4 sm:mb-6"
                   style={{
-                    border: `3px solid ${getSuitColor(selectedCard.suit)}`,
-                    boxShadow: `0 20px 50px ${getSuitColor(selectedCard.suit)}60`,
+                    border: `2px solid ${getSuitColor(selectedCard.suit)}`,
+                    boxShadow: `0 15px 40px ${getSuitColor(selectedCard.suit)}60`,
                     aspectRatio: '2/3',
-                    maxWidth: '280px',
+                    maxWidth: 'min(280px, 80vw)',
                     margin: '0 auto'
                   }}
                 >
@@ -267,16 +271,16 @@ export default function NFTGallery() {
                   />
                 </motion.div>
 
-                {/* Информация */}
-                <div className="space-y-4">
+                {/* Информация - МОБИЛЬНАЯ ОПТИМИЗАЦИЯ */}
+                <div className="space-y-3 sm:space-y-4">
                   {/* Ранг и масть */}
                   <div className="text-center">
                     <h2 
-                      className="text-4xl font-black text-white mb-2 flex items-center justify-center gap-3"
-                      style={{ textShadow: `0 4px 16px ${getSuitColor(selectedCard.suit)}` }}
+                      className="text-3xl sm:text-4xl font-black text-white mb-2 flex items-center justify-center gap-2 sm:gap-3 flex-wrap"
+                      style={{ textShadow: `0 3px 12px ${getSuitColor(selectedCard.suit)}` }}
                     >
-                      {selectedCard.rank?.toUpperCase()} 
-                      <span style={{ color: getSuitColor(selectedCard.suit) }}>
+                      <span className="text-2xl sm:text-4xl">{selectedCard.rank?.toUpperCase()}</span>
+                      <span style={{ color: getSuitColor(selectedCard.suit) }} className="text-3xl sm:text-4xl">
                         {getSuitSymbol(selectedCard.suit)}
                       </span>
                     </h2>
