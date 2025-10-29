@@ -200,7 +200,7 @@ function HomeWithParams() {
           
           setUser(newUser);
           
-          setInitialized(true); // ✅ Устанавливаем флаг
+          initialized.current = true; // ✅ Устанавливаем флаг через useRef
           setTimeout(() => {
             setLoading(false);
             setTimeout(() => setShowMainMenu(true), 100);
