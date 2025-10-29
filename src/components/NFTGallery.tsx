@@ -395,54 +395,43 @@ export default function NFTGallery() {
               </div>
 
               {/* Информация о карте */}
-              <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+              <div style={{ textAlign: 'center', marginBottom: '30px' }}>
                 <h2 style={{
                   color: '#ffffff',
-                  fontSize: '2rem',
-                  fontWeight: 'bold',
-                  marginBottom: '10px'
+                  fontSize: '2.5rem',
+                  fontWeight: 'black',
+                  marginBottom: '15px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '15px'
                 }}>
-                  {selectedCard.rank?.toUpperCase()} {getSuitSymbol(selectedCard.suit)}
-                </h2>
-                <p style={{
-                  color: getSuitColor(selectedCard.suit),
-                  fontSize: '1.2rem',
-                  fontWeight: '600'
-                }}>
-                  {getRarityLabel(selectedCard.rarity)}
-                </p>
-              </div>
-
-              {/* Дополнительная информация */}
-              <div style={{
-                background: 'rgba(255, 255, 255, 0.05)',
-                borderRadius: '12px',
-                padding: '15px',
-                marginBottom: '20px'
-              }}>
-                <div style={{ marginBottom: '10px' }}>
-                  <span style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Масть: </span>
                   <span style={{ 
-                    color: getSuitColor(selectedCard.suit), 
-                    fontSize: '1rem', 
-                    fontWeight: 'bold' 
+                    color: getSuitColor(selectedCard.suit),
+                    fontSize: '3rem',
+                    textShadow: `0 0 20px ${getSuitColor(selectedCard.suit)}aa`
                   }}>
                     {getSuitSymbol(selectedCard.suit)}
                   </span>
-                </div>
-                <div style={{ marginBottom: '10px' }}>
-                  <span style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Ранг: </span>
-                  <span style={{ color: '#ffffff', fontSize: '1rem', fontWeight: 'bold' }}>
-                    {selectedCard.rank?.toUpperCase()}
-                  </span>
-                </div>
-                {selectedCard.metadata?.pokemonId && (
-                  <div>
-                    <span style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Покемон ID: </span>
-                    <span style={{ color: '#fbbf24', fontSize: '1rem', fontWeight: 'bold' }}>
-                      #{selectedCard.metadata.pokemonId}
-                    </span>
-                  </div>
+                  <span>{selectedCard.rank?.toUpperCase()}</span>
+                </h2>
+                <p style={{
+                  color: getSuitColor(selectedCard.suit),
+                  fontSize: '1.3rem',
+                  fontWeight: '700',
+                  textTransform: 'uppercase',
+                  letterSpacing: '2px'
+                }}>
+                  {getRarityLabel(selectedCard.rarity)}
+                </p>
+                {selectedCard.metadata?.themeId && (
+                  <p style={{
+                    color: '#94a3b8',
+                    fontSize: '1rem',
+                    marginTop: '10px'
+                  }}>
+                    ID персонажа: <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>#{selectedCard.metadata.themeId}</span>
+                  </p>
                 )}
               </div>
 
