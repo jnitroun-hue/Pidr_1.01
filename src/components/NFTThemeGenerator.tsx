@@ -81,7 +81,10 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
       const randomRank = RANKS[Math.floor(Math.random() * RANKS.length)];
       const randomId = Math.floor(Math.random() * themeConfig.total) + 1;
 
-      // ✅ ОТПРАВЛЯЕМ ТОЛЬКО ПАРАМЕТРЫ - ГЕНЕРАЦИЯ НА СЕРВЕРЕ С SHARP!
+      // ✅ ГЕНЕРИРУЕМ ИЗОБРАЖЕНИЕ НА КЛИЕНТЕ С РЕАЛЬНЫМИ PNG!
+      console.log(`🎨 [Client] Генерируем карту: ${theme}, ID: ${randomId}`);
+      const imageData = await generateThemeCardImage(randomSuit, randomRank, randomId, theme);
+      
       const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
       
       const response = await fetch('/api/nft/generate-theme', {
@@ -95,6 +98,7 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
         body: JSON.stringify({
           suit: randomSuit,
           rank: randomRank,
+          imageData,
           theme,
           themeId: randomId,
           action: `random_${theme}`,
@@ -152,7 +156,9 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
           // 🎲 ЖЕСТКИЙ РАНДОМ: случайная картинка из темы (1 → total)
           const themeId = Math.floor(Math.random() * themeConfig.total) + 1;
           
-          // ✅ ОТПРАВЛЯЕМ ТОЛЬКО ПАРАМЕТРЫ - ГЕНЕРАЦИЯ НА СЕРВЕРЕ!
+          // ✅ ГЕНЕРИРУЕМ ИЗОБРАЖЕНИЕ НА КЛИЕНТЕ!
+          const imageData = await generateThemeCardImage(suit, rank, themeId, theme);
+          
           const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
           
           const response = await fetch('/api/nft/generate-theme', {
@@ -166,6 +172,7 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
             body: JSON.stringify({
               suit,
               rank,
+              imageData,
               theme,
               themeId,
               action: `deck_${theme}`,
@@ -219,7 +226,85 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
     }
   };
 
-  // ✅ КЛИЕНТСКАЯ ГЕНЕРАЦИЯ УДАЛЕНА - ВСЁ ПРОИСХОДИТ НА СЕРВЕРЕ!
+  // ✅ КЛИЕНТСКАЯ ГЕНЕРАЦИЯ С ПРАВИЛЬНОЙ ЗАГРУЗКОЙ ИЗОБРАЖЕНИЙ!
+  const generateThemeCardImage = (suit: string, rank: string, themeId: number, theme: keyof typeof THEMES): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 300;
+      canvas.height = 420;
+      const ctx = canvas.getContext('2d')!;
+
+      const themeConfig = THEMES[theme];
+      const fileName = `${themeConfig.prefix}${themeId}.png`;
+      const imagePath = `/${themeConfig.folder}/${fileName}`;
+
+      console.log(`🖼️ [Client] Загружаем изображение: ${imagePath}`);
+
+      // Загружаем изображение темы
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.src = imagePath;
+
+      img.onload = () => {
+        try {
+          // Белый фон
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, 300, 420);
+
+          // Черная рамка
+          ctx.strokeStyle = '#000000';
+          ctx.lineWidth = 8;
+          ctx.strokeRect(4, 4, 292, 412);
+
+          // Цвет масти
+          const suitColor = (suit === 'hearts' || suit === 'diamonds') ? '#ef4444' : '#000000';
+          const suitSymbol = { hearts: '♥', diamonds: '♦', clubs: '♣', spades: '♠' }[suit] || suit;
+
+          // Ранг и масть в углах
+          ctx.fillStyle = suitColor;
+          ctx.font = 'bold 40px Arial';
+          ctx.fillText(rank.toUpperCase(), 20, 50);
+          ctx.fillText(rank.toUpperCase(), 260, 400);
+
+          ctx.font = 'bold 36px Arial';
+          ctx.fillText(suitSymbol, 20, 90);
+          ctx.fillText(suitSymbol, 260, 360);
+
+          // ✅ РИСУЕМ ИЗОБРАЖЕНИЕ В ЦЕНТРЕ!
+          const imgWidth = 200;
+          const imgHeight = 200;
+          const imgX = (300 - imgWidth) / 2;
+          const imgY = 110;
+
+          ctx.drawImage(img, imgX, imgY, imgWidth, imgHeight);
+
+          console.log(`✅ [Client] Изображение нарисовано: ${imagePath}`);
+          resolve(canvas.toDataURL('image/png'));
+        } catch (error) {
+          console.error(`❌ [Client] Ошибка рисования:`, error);
+          reject(error);
+        }
+      };
+
+      img.onerror = (error) => {
+        console.error(`❌ [Client] Не удалось загрузить: ${imagePath}`, error);
+        // Возвращаем canvas без изображения
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, 300, 420);
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 8;
+        ctx.strokeRect(4, 4, 292, 412);
+        
+        ctx.fillStyle = '#ff0000';
+        ctx.font = 'bold 16px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Image not found', 150, 210);
+        ctx.fillText(imagePath, 150, 230);
+        
+        resolve(canvas.toDataURL('image/png'));
+      };
+    });
+  };
 
   const getSuitSymbol = (suit: string) => {
     const symbols: Record<string, string> = {

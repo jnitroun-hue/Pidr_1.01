@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
 
     // Получаем данные
     const body = await request.json();
-    const { suit, rank, theme, themeId, action, skipCoinDeduction } = body;
+    const { suit, rank, imageData, theme, themeId, action, skipCoinDeduction } = body;
 
     // Получаем user_id из headers
     const telegramIdHeader = request.headers.get('x-telegram-id');
@@ -51,8 +51,9 @@ export async function POST(request: NextRequest) {
     console.log(`👤 Пользователь: ${userId}`);
     console.log(`🎨 Тема: ${theme}, ID: ${themeId}, Карта: ${rank}${suit}`);
 
-    // ✅ ГЕНЕРИРУЕМ ИЗОБРАЖЕНИЕ НА СЕРВЕРЕ!
-    const imageBuffer = await generateThemeCardImage(suit, rank, themeId, theme);
+    // ✅ КОНВЕРТИРУЕМ BASE64 ИЗ КЛИЕНТА!
+    const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
+    const imageBuffer = Buffer.from(base64Data, 'base64');
 
     // Генерируем уникальное имя файла
     const timestamp = Date.now();
