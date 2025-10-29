@@ -12,25 +12,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-// ✅ Ленивая инициализация Supabase клиента
-function getSupabaseClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !supabaseServiceKey) {
-    throw new Error('Supabase credentials not configured');
-  }
-
-  return createClient(supabaseUrl, supabaseServiceKey);
-}
+import { supabase } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
     console.log('🎴 [add-to-deck] Получен запрос на добавление NFT в колоду');
-    
-    const supabase = getSupabaseClient();
 
     // Получаем данные из запроса
     const body = await request.json();
