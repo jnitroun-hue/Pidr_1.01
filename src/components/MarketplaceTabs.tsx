@@ -307,9 +307,9 @@ export function MyNFTsTab({ nfts, onSellClick, getSuitColor, getSuitSymbol, getR
   return (
     <div style={{
       display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fill, minmax(60px, 1fr))',
-      gap: '8px',
-      padding: '8px'
+      gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+      gap: '12px',
+      padding: '12px'
     }}>
       {nfts.map((nft, index) => (
         <motion.div
@@ -319,9 +319,9 @@ export function MyNFTsTab({ nfts, onSellClick, getSuitColor, getSuitSymbol, getR
           transition={{ delay: index * 0.03 }}
           style={{
             background: 'rgba(30, 41, 59, 0.8)',
-            borderRadius: '6px',
-            border: `1px solid ${getSuitColor(nft.suit)}40`,
-            padding: '4px',
+            borderRadius: '8px',
+            border: `2px solid ${getSuitColor(nft.suit)}40`,
+            padding: '8px',
             textAlign: 'center'
           }}
         >
@@ -330,19 +330,73 @@ export function MyNFTsTab({ nfts, onSellClick, getSuitColor, getSuitSymbol, getR
             width: '100%',
             aspectRatio: '0.7',
             position: 'relative',
-            borderRadius: '4px',
+            borderRadius: '6px',
             overflow: 'hidden',
-            marginBottom: '0',
-            background: '#1e293b'
+            marginBottom: '8px',
+            background: '#ffffff',
+            border: '1px solid rgba(255,255,255,0.1)'
           }}>
             {nft.image_url ? (
-              <Image
+              <img
                 src={nft.image_url}
                 alt={`${nft.rank} of ${nft.suit}`}
-                fill
-                style={{ objectFit: 'contain' }}
+                loading="lazy"
+                style={{ 
+                  width: '100%', 
+                  height: '100%', 
+                  objectFit: 'contain',
+                  display: 'block'
+                }}
+                onError={(e) => {
+                  // Fallback на масть и ранг
+                  e.currentTarget.style.display = 'none';
+                  const parent = e.currentTarget.parentElement;
+                  if (parent) {
+                    parent.innerHTML = `
+                      <div style="
+                        width: 100%; 
+                        height: 100%; 
+                        display: flex; 
+                        flex-direction: column;
+                        align-items: center; 
+                        justify-content: center;
+                        color: ${getSuitColor(nft.suit)};
+                        font-size: 32px;
+                        font-weight: bold;
+                      ">
+                        <div>${getSuitSymbol(nft.suit)}</div>
+                        <div style="font-size: 20px;">${getRankDisplay(nft.rank)}</div>
+                      </div>
+                    `;
+                  }
+                }}
               />
-            ) : null}
+            ) : (
+              <div style={{
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: getSuitColor(nft.suit),
+                fontSize: '32px',
+                fontWeight: 'bold'
+              }}>
+                <div>{getSuitSymbol(nft.suit)}</div>
+                <div style={{ fontSize: '20px' }}>{getRankDisplay(nft.rank)}</div>
+              </div>
+            )}
+          </div>
+
+          {/* Rank and Suit Info */}
+          <div style={{
+            fontSize: '12px',
+            fontWeight: 'bold',
+            color: getSuitColor(nft.suit),
+            marginBottom: '6px'
+          }}>
+            {getRankDisplay(nft.rank)} {getSuitSymbol(nft.suit)}
           </div>
 
           {/* Sell Button - КОМПАКТНАЯ ВЕРСИЯ */}
@@ -350,21 +404,19 @@ export function MyNFTsTab({ nfts, onSellClick, getSuitColor, getSuitSymbol, getR
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => onSellClick(nft)}
-            title={`${getRankDisplay(nft.rank)} ${getSuitSymbol(nft.suit)}`}
             style={{
               width: '100%',
-              padding: '4px',
-              marginTop: '4px',
-              borderRadius: '4px',
+              padding: '6px',
+              borderRadius: '6px',
               border: 'none',
               background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
               color: '#0f172a',
               fontWeight: 'bold',
-              fontSize: '10px',
+              fontSize: '11px',
               cursor: 'pointer'
             }}
           >
-            💰
+            💰 Продать
           </motion.button>
         </motion.div>
       ))}

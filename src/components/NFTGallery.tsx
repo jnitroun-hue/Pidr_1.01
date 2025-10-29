@@ -152,8 +152,8 @@ export default function NFTGallery() {
         </p>
       </div>
 
-      {/* КОМПАКТНАЯ СЕТКА КАРТ - ОЧЕНЬ МЕЛКИЕ КАРТЫ (В 10 РАЗ МЕНЬШЕ) */}
-      <div className="grid grid-cols-8 xs:grid-cols-10 sm:grid-cols-12 md:grid-cols-15 lg:grid-cols-18 xl:grid-cols-20 gap-1 p-1">
+      {/* КОМПАКТНАЯ СЕТКА КАРТ - МЕЛКИЕ С УВЕЛИЧЕНИЕМ */}
+      <div className="grid grid-cols-6 xs:grid-cols-8 sm:grid-cols-10 md:grid-cols-12 lg:grid-cols-14 xl:grid-cols-16 gap-2 p-2">
         {collection.map((card, index) => {
           const suitColor = getSuitColor(card.suit);
           
@@ -163,27 +163,33 @@ export default function NFTGallery() {
               initial={{ opacity: 0, scale: 0.5 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: index * 0.01 }}
-              whileHover={{ scale: 1.08, y: -2 }}
+              whileHover={{ scale: 1.15, y: -4 }} // ✅ Увеличиваем при наведении
               whileTap={{ scale: 0.95 }}
               onClick={() => setSelectedCard(card)}
               className="relative group focus:outline-none touch-manipulation"
               style={{
-                borderRadius: '6px',
-                background: 'rgba(15, 23, 42, 0.8)',
-                border: `1.5px solid ${suitColor}60`,
-                boxShadow: `0 2px 6px ${suitColor}40`,
-                transition: 'all 0.2s ease',
+                borderRadius: '8px',
+                background: '#ffffff', // ✅ БЕЛЫЙ ФОН для видимости карт
+                border: `2px solid ${suitColor}`,
+                boxShadow: `0 4px 12px ${suitColor}60`,
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 overflow: 'hidden',
                 aspectRatio: '2/3',
                 minWidth: 0,
-                WebkitTapHighlightColor: 'transparent'
+                WebkitTapHighlightColor: 'transparent',
+                cursor: 'pointer'
               }}
             >
               {/* Изображение карты */}
               <img
                 src={card.image_url}
                 alt={`${card.rank} ${getSuitSymbol(card.suit)}`}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain" // ✅ contain вместо cover
+                loading="lazy"
+                style={{
+                  display: 'block',
+                  padding: '2px'
+                }}
               />
               
               {/* Значок масти (компактный) */}
@@ -218,10 +224,16 @@ export default function NFTGallery() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setSelectedCard(null)}
-            className="fixed inset-0 z-[10002] flex items-center justify-center p-4"
+            className="fixed inset-0 flex items-center justify-center p-4"
             style={{
               background: 'rgba(0, 0, 0, 0.92)',
-              backdropFilter: 'blur(20px)'
+              backdropFilter: 'blur(20px)',
+              zIndex: 999999, // ✅ КРИТИЧНО: МАКСИМАЛЬНЫЙ Z-INDEX!
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0
             }}
           >
             <motion.div
