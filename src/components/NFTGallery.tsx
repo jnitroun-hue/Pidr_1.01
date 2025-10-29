@@ -152,8 +152,8 @@ export default function NFTGallery() {
         </p>
       </div>
 
-      {/* КОМПАКТНАЯ СЕТКА КАРТ - МЕЛКИЕ */}
-      <div className="grid grid-cols-5 xs:grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 xl:grid-cols-14 gap-2 p-2">
+      {/* НОРМАЛЬНАЯ СЕТКА КАРТ */}
+      <div className="grid grid-cols-3 xs:grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 gap-4 p-4">
         {collection.map((card, index) => {
           const suitColor = getSuitColor(card.suit);
           
@@ -168,11 +168,11 @@ export default function NFTGallery() {
               onClick={() => setSelectedCard(card)}
               className="relative group focus:outline-none touch-manipulation"
               style={{
-                borderRadius: '8px',
+                borderRadius: '12px',
                 background: 'linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)',
-                border: `2px solid ${suitColor}`,
-                boxShadow: `0 3px 10px ${suitColor}30, 0 1px 4px rgba(0,0,0,0.1)`,
-                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                border: `3px solid ${suitColor}`,
+                boxShadow: `0 8px 24px ${suitColor}40, 0 4px 12px rgba(0,0,0,0.15)`,
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 overflow: 'hidden',
                 aspectRatio: '2/3',
                 minWidth: 0,
@@ -194,37 +194,41 @@ export default function NFTGallery() {
                 loading="lazy"
                 style={{
                   display: 'block',
-                  padding: '2px'
+                  padding: '4px'
                 }}
               />
               
-              {/* Значок масти - компактный */}
+              {/* Значок масти - крупный */}
               <div 
-                className="absolute top-0.5 right-0.5 w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold text-white shadow"
+                className="absolute top-2 right-2 w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-sm sm:text-base font-bold text-white shadow-lg"
                 style={{
                   background: getSuitGradient(card.suit),
-                  boxShadow: `0 2px 6px ${suitColor}80`
+                  boxShadow: `0 4px 12px ${suitColor}80, inset 0 1px 3px rgba(255,255,255,0.3)`
                 }}
               >
                 {getSuitSymbol(card.suit)}
               </div>
 
-              {/* Ранг карты - компактный */}
+              {/* Ранг карты - крупный и читаемый */}
               <div 
-                className="absolute bottom-0.5 left-0.5 px-1 py-0.5 rounded text-[10px] sm:text-xs font-bold text-white shadow"
+                className="absolute bottom-2 left-2 px-2.5 py-1 rounded-lg text-sm sm:text-base font-black text-white shadow-lg"
                 style={{
-                  background: `linear-gradient(135deg, ${suitColor}dd 0%, ${suitColor}99 100%)`,
-                  backdropFilter: 'blur(4px)'
+                  background: `linear-gradient(135deg, ${suitColor}ee 0%, ${suitColor}aa 100%)`,
+                  backdropFilter: 'blur(8px)',
+                  border: '1px solid rgba(255,255,255,0.2)'
                 }}
               >
                 {card.rank?.toUpperCase()}
               </div>
 
-              {/* Hover эффект - минимальный */}
+              {/* Hover эффект с информацией */}
               <div 
-                className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-end justify-center pb-1 pointer-events-none"
+                className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-end pb-3 pointer-events-none"
               >
-                <span className="text-white text-[10px] font-bold drop-shadow-md">
+                <span className="text-white text-xs sm:text-sm font-bold drop-shadow-lg mb-1">
+                  {card.rank?.toUpperCase()} {getSuitSymbol(card.suit)}
+                </span>
+                <span className="text-white/90 text-[10px] sm:text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(0,0,0,0.5)' }}>
                   {getRarityLabel(card.rarity)}
                 </span>
               </div>
