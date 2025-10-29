@@ -152,8 +152,8 @@ export default function NFTGallery() {
         </p>
       </div>
 
-      {/* КРАСИВАЯ СЕТКА КАРТ - ОПТИМАЛЬНЫЙ РАЗМЕР */}
-      <div className="grid grid-cols-4 xs:grid-cols-5 sm:grid-cols-6 md:grid-cols-7 lg:grid-cols-8 xl:grid-cols-9 gap-3 p-2">
+      {/* КОМПАКТНАЯ СЕТКА КАРТ - МЕЛКИЕ */}
+      <div className="grid grid-cols-5 xs:grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 xl:grid-cols-14 gap-2 p-2">
         {collection.map((card, index) => {
           const suitColor = getSuitColor(card.suit);
           
@@ -163,23 +163,21 @@ export default function NFTGallery() {
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: index * 0.02, duration: 0.3 }}
-              whileHover={{ scale: 1.08, y: -6, rotateY: 5 }}
+              whileHover={{ scale: 1.1, y: -4 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => setSelectedCard(card)}
               className="relative group focus:outline-none touch-manipulation"
               style={{
-                borderRadius: '12px',
+                borderRadius: '8px',
                 background: 'linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)',
-                border: `3px solid ${suitColor}`,
-                boxShadow: `0 6px 20px ${suitColor}40, 0 2px 8px rgba(0,0,0,0.1)`,
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                border: `2px solid ${suitColor}`,
+                boxShadow: `0 3px 10px ${suitColor}30, 0 1px 4px rgba(0,0,0,0.1)`,
+                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                 overflow: 'hidden',
-                aspectRatio: '5/7',
+                aspectRatio: '2/3',
                 minWidth: 0,
                 WebkitTapHighlightColor: 'transparent',
-                cursor: 'pointer',
-                transformStyle: 'preserve-3d',
-                perspective: '1000px'
+                cursor: 'pointer'
               }}
             >
               {/* Глянцевый эффект сверху */}
@@ -196,24 +194,24 @@ export default function NFTGallery() {
                 loading="lazy"
                 style={{
                   display: 'block',
-                  padding: '4px'
+                  padding: '2px'
                 }}
               />
               
-              {/* Значок масти - элегантный */}
+              {/* Значок масти - компактный */}
               <div 
-                className="absolute top-1 right-1 w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-lg"
+                className="absolute top-0.5 right-0.5 w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold text-white shadow"
                 style={{
                   background: getSuitGradient(card.suit),
-                  boxShadow: `0 3px 10px ${suitColor}80, inset 0 1px 2px rgba(255,255,255,0.3)`
+                  boxShadow: `0 2px 6px ${suitColor}80`
                 }}
               >
                 {getSuitSymbol(card.suit)}
               </div>
 
-              {/* Ранг карты - видимый */}
+              {/* Ранг карты - компактный */}
               <div 
-                className="absolute bottom-1 left-1 px-2 py-0.5 rounded-md text-xs sm:text-sm font-black text-white shadow-md"
+                className="absolute bottom-0.5 left-0.5 px-1 py-0.5 rounded text-[10px] sm:text-xs font-bold text-white shadow"
                 style={{
                   background: `linear-gradient(135deg, ${suitColor}dd 0%, ${suitColor}99 100%)`,
                   backdropFilter: 'blur(4px)'
@@ -222,14 +220,11 @@ export default function NFTGallery() {
                 {card.rank?.toUpperCase()}
               </div>
 
-              {/* Hover эффект с информацией */}
+              {/* Hover эффект - минимальный */}
               <div 
-                className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-end pb-2 pointer-events-none"
+                className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-end justify-center pb-1 pointer-events-none"
               >
-                <span className="text-white text-xs sm:text-sm font-bold drop-shadow-lg">
-                  {card.rank?.toUpperCase()} {getSuitSymbol(card.suit)}
-                </span>
-                <span className="text-white/80 text-[10px] mt-0.5">
+                <span className="text-white text-[10px] font-bold drop-shadow-md">
                   {getRarityLabel(card.rarity)}
                 </span>
               </div>
