@@ -212,13 +212,13 @@ export default function NFTGallery() {
         </p>
       </div>
 
-      {/* СЕТКА: 4 КАРТЫ В РЯД */}
+      {/* СЕТКА: 4 КРУПНЫЕ КАРТЫ В РЯД */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(4, 1fr)',
-        gap: '20px',
-        padding: '20px',
-        maxWidth: '1200px',
+        gap: '30px',
+        padding: '30px',
+        maxWidth: '100%',
         margin: '0 auto'
       }}>
         {collection.map((card) => {
@@ -229,16 +229,16 @@ export default function NFTGallery() {
               key={card.id}
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              whileHover={{ scale: 1.08, y: -10, rotate: 3 }}
+              whileHover={{ scale: 1.05, y: -10, rotate: 2 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => setSelectedCard(card)}
               style={{
                 background: '#ffffff',
-                border: `4px solid ${suitColor}`,
-                borderRadius: '16px',
-                padding: '12px',
+                border: `6px solid ${suitColor}`,
+                borderRadius: '20px',
+                padding: '20px',
                 cursor: 'pointer',
-                boxShadow: `0 10px 30px ${suitColor}60, 0 0 50px ${suitColor}30`,
+                boxShadow: `0 15px 40px ${suitColor}60, 0 0 60px ${suitColor}30`,
                 transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
                 position: 'relative',
                 overflow: 'hidden'
@@ -251,9 +251,9 @@ export default function NFTGallery() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 overflow: 'hidden',
-                borderRadius: '12px',
+                borderRadius: '16px',
                 background: '#f8fafc',
-                border: `2px solid ${suitColor}20`
+                border: `3px solid ${suitColor}30`
               }}>
                 <img
                   src={card.image_url}

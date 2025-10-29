@@ -59,13 +59,19 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Проверяем владельца
-    if (nft.user_id !== userId) {
+    console.log(`🔍 Проверка владельца: nft.user_id=${nft.user_id} (${typeof nft.user_id}), userId=${userId} (${typeof userId})`);
+
+    // Проверяем владельца (приводим оба значения к числу для сравнения)
+    const nftUserId = typeof nft.user_id === 'string' ? parseInt(nft.user_id, 10) : nft.user_id;
+    if (nftUserId !== userId) {
+      console.error(`❌ НЕ ВЛАДЕЛЕЦ! nftUserId=${nftUserId}, userId=${userId}`);
       return NextResponse.json(
         { success: false, error: 'Вы не владелец этой карты' },
         { status: 403 }
       );
     }
+
+    console.log('✅ Проверка владельца пройдена!');
 
     // Проверяем, не выставлена ли карта на продажу
     const { data: activeListing } = await supabase

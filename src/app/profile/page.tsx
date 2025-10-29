@@ -646,7 +646,8 @@ export default function ProfilePage() {
         console.log('🔍 [Profile] Загружаем сохраненные кошельки...');
         const response = await fetch('/api/nft/connect-wallet', {
           method: 'GET',
-          credentials: 'include'
+          credentials: 'include',
+          headers: getTelegramWebAppHeaders()
         });
         
         if (response.ok) {
