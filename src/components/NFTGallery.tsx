@@ -194,10 +194,10 @@ export default function NFTGallery() {
               whileTap={{ scale: 0.98 }}
               onClick={() => setSelectedCard(card)}
               style={{
-                background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)',
-                border: `2px solid ${suitColor}`,
+                background: '#ffffff',
+                border: `3px solid ${suitColor}`,
                 borderRadius: '12px',
-                padding: '12px',
+                padding: '8px',
                 cursor: 'pointer',
                 boxShadow: `0 4px 15px ${suitColor}40`,
                 transition: 'all 0.3s ease',
@@ -205,17 +205,14 @@ export default function NFTGallery() {
                 overflow: 'hidden'
               }}
             >
-              {/* Изображение */}
+              {/* ТОЛЬКО ИЗОБРАЖЕНИЕ */}
               <div style={{
-                background: '#ffffff',
-                borderRadius: '8px',
-                padding: '8px',
-                marginBottom: '10px',
                 aspectRatio: '2/3',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                overflow: 'hidden'
+                overflow: 'hidden',
+                marginBottom: '8px'
               }}>
                 <img
                   src={card.image_url}
@@ -229,22 +226,24 @@ export default function NFTGallery() {
                 />
               </div>
 
-              {/* Информация */}
-              <div style={{ textAlign: 'center' }}>
-                <div style={{
-                  color: '#ffffff',
-                  fontSize: '1.1rem',
-                  fontWeight: 'bold',
-                  marginBottom: '4px'
-                }}>
-                  {card.rank?.toUpperCase()} {getSuitSymbol(card.suit)}
-                </div>
+              {/* СНИЗУ: МАСТЬ + РАНГ */}
+              <div style={{ 
+                textAlign: 'center',
+                padding: '8px',
+                background: 'rgba(15, 23, 42, 0.8)',
+                borderRadius: '8px'
+              }}>
                 <div style={{
                   color: suitColor,
-                  fontSize: '0.85rem',
-                  fontWeight: '600'
+                  fontSize: '1.3rem',
+                  fontWeight: 'black',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
                 }}>
-                  {getRarityLabel(card.rarity)}
+                  <span style={{ fontSize: '1.5rem' }}>{getSuitSymbol(card.suit)}</span>
+                  <span>{card.rank?.toUpperCase()}</span>
                 </div>
               </div>
             </motion.div>
