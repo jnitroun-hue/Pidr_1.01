@@ -64,6 +64,20 @@ export default function ProfilePage() {
   const { language } = useLanguage();
   const t = useTranslations(language);
   
+  // ✅ Telegram WebApp Headers Helper
+  const getTelegramWebAppHeaders = () => {
+    if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
+      const user = window.Telegram.WebApp.initDataUnsafe?.user;
+      if (user) {
+        return {
+          'x-telegram-id': user.id.toString(),
+          'x-username': user.username || user.first_name || 'User'
+        };
+      }
+    }
+    return {};
+  };
+  
   const [stats, setStats] = useState({
     rating: 0,
     gamesPlayed: 0,

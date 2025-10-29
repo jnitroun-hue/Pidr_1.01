@@ -212,16 +212,14 @@ export default function NFTGallery() {
         </p>
       </div>
 
-      {/* СЕТКА: 4 КРУПНЫЕ КАРТЫ В РЯД */}
+      {/* СЕТКА КАРТ - КАК В МАГАЗИНЕ */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
-        gap: '30px',
-        padding: '30px',
-        maxWidth: '100%',
-        margin: '0 auto'
+        gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+        gap: '12px',
+        padding: '12px'
       }}>
-        {collection.map((card) => {
+        {collection.map((card, index) => {
           const suitColor = getSuitColor(card.suit);
           
           return (
@@ -229,43 +227,89 @@ export default function NFTGallery() {
               key={card.id}
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              whileHover={{ scale: 1.05, y: -10, rotate: 2 }}
-              whileTap={{ scale: 0.95 }}
+              transition={{ delay: index * 0.03 }}
               onClick={() => setSelectedCard(card)}
               style={{
-                background: '#ffffff',
-                border: `6px solid ${suitColor}`,
-                borderRadius: '20px',
-                padding: '20px',
-                cursor: 'pointer',
-                boxShadow: `0 15px 40px ${suitColor}60, 0 0 60px ${suitColor}30`,
-                transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-                position: 'relative',
-                overflow: 'hidden'
+                background: 'rgba(30, 41, 59, 0.8)',
+                borderRadius: '8px',
+                border: `2px solid ${suitColor}40`,
+                padding: '8px',
+                textAlign: 'center',
+                cursor: 'pointer'
               }}
             >
               {/* ИЗОБРАЖЕНИЕ КАРТЫ */}
               <div style={{
-                aspectRatio: '2/3',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                width: '100%',
+                aspectRatio: '0.7',
+                position: 'relative',
+                borderRadius: '6px',
                 overflow: 'hidden',
-                borderRadius: '16px',
-                background: '#f8fafc',
-                border: `3px solid ${suitColor}30`
+                marginBottom: '8px',
+                background: '#ffffff',
+                border: '1px solid rgba(255,255,255,0.1)',
+                pointerEvents: 'none'
               }}>
-                <img
-                  src={card.image_url}
-                  alt={`${card.rank} ${getSuitSymbol(card.suit)}`}
-                  style={{
+                {card.image_url ? (
+                  <img
+                    src={card.image_url}
+                    alt={`${card.rank} of ${card.suit}`}
+                    loading="lazy"
+                    style={{ 
+                      width: '100%', 
+                      height: '100%', 
+                      objectFit: 'contain',
+                      display: 'block'
+                    }}
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      const parent = e.currentTarget.parentElement;
+                      if (parent) {
+                        parent.innerHTML = `
+                          <div style="
+                            width: 100%;
+                            height: 100%;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            color: ${suitColor};
+                            font-size: 32px;
+                            font-weight: bold;
+                          ">
+                            <div>${getSuitSymbol(card.suit)}</div>
+                            <div style="font-size: 20px;">${card.rank?.toUpperCase()}</div>
+                          </div>
+                        `;
+                      }
+                    }}
+                  />
+                ) : (
+                  <div style={{
                     width: '100%',
                     height: '100%',
-                    objectFit: 'contain',
-                    display: 'block'
-                  }}
-                  loading="lazy"
-                />
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: suitColor,
+                    fontSize: '32px',
+                    fontWeight: 'bold'
+                  }}>
+                    <div>{getSuitSymbol(card.suit)}</div>
+                    <div style={{ fontSize: '20px' }}>{card.rank?.toUpperCase()}</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Rank and Suit Info */}
+              <div style={{
+                fontSize: '12px',
+                fontWeight: 'bold',
+                color: suitColor,
+                marginBottom: '6px'
+              }}>
+                {card.rank?.toUpperCase()} {getSuitSymbol(card.suit)}
               </div>
             </motion.div>
           );
