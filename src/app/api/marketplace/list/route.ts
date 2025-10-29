@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     
     // Базовый запрос
     let query = supabase
-      .from('_pidr_nft_marketplace')
+      .from('_pidr_nft_marketplace_listings')
       .select(`
         *,
         nft_card:_pidr_nft_cards(
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
           image_url,
           metadata
         ),
-        seller:_pidr_users!_pidr_nft_marketplace_seller_user_id_fkey(
+        seller:_pidr_users!_pidr_nft_marketplace_listings_seller_user_id_fkey(
           telegram_id,
           username,
           first_name

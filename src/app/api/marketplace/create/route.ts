@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
     
     // Проверяем что карта еще не выставлена на продажу
     const { data: existingListing } = await supabase
-      .from('_pidr_nft_marketplace')
+      .from('_pidr_nft_marketplace_listings')
       .select('id')
       .eq('nft_card_id', nft_card_id)
       .eq('status', 'active')
@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
     
     // Создаем лот
     const { data: listing, error: insertError } = await supabase
-      .from('_pidr_nft_marketplace')
+      .from('_pidr_nft_marketplace_listings')
       .insert({
         nft_card_id,
         seller_user_id: userId,
