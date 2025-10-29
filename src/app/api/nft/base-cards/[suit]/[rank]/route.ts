@@ -19,7 +19,7 @@ const supabase = supabaseUrl && supabaseKey
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { suit: string; rank: string } }
+  context: { params: Promise<{ suit: string; rank: string }> }
 ) {
   try {
     // Проверяем наличие Supabase
@@ -30,7 +30,8 @@ export async function GET(
       );
     }
 
-    const { suit, rank } = params;
+    // ✅ Next.js 15: params is now a Promise
+    const { suit, rank } = await context.params;
 
     // Путь к карте в Supabase Storage
     const filePath = `base-cards/${suit}/${rank}.png`;

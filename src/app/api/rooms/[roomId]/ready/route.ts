@@ -5,9 +5,10 @@ import { requireAuth } from '@/lib/auth-utils';
 // 🔴 API ДЛЯ УПРАВЛЕНИЯ ГОТОВНОСТЬЮ ИГРОКОВ
 export async function POST(
   request: NextRequest,
-  { params }: { params: { roomId: string } }
+  context: { params: Promise<{ roomId: string }> }
 ) {
   try {
+    const params = await context.params;
     // ПРОВЕРЯЕМ АВТОРИЗАЦИЮ
     const auth = await requireAuth(request);
     if (auth.error) {
@@ -70,9 +71,10 @@ export async function POST(
 // 🔍 ПОЛУЧИТЬ СТАТУС ГОТОВНОСТИ ВСЕХ ИГРОКОВ
 export async function GET(
   request: NextRequest,
-  { params }: { params: { roomId: string } }
+  context: { params: Promise<{ roomId: string }> }
 ) {
   try {
+    const params = await context.params;
     const roomId = params.roomId;
 
     // ПОЛУЧАЕМ ВСЕХ ИГРОКОВ С ИХ ГОТОВНОСТЬЮ

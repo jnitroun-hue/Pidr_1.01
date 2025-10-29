@@ -4,9 +4,9 @@ import { supabase } from '@/lib/supabase';
 // ✅ SSE ENDPOINT ДЛЯ REAL-TIME ОБНОВЛЕНИЙ КОМНАТЫ
 export async function GET(
   request: NextRequest,
-  { params }: { params: { roomId: string } }
+  context: { params: Promise<{ roomId: string }> }
 ) {
-  const roomId = params.roomId;
+  const { roomId } = await context.params;
   
   console.log(`🔌 [SSE] Подключение к комнате ${roomId}`);
   

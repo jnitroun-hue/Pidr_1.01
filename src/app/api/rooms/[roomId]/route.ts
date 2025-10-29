@@ -3,8 +3,9 @@ import { supabase } from '@/lib/supabase';
 import { requireAuth } from '@/lib/auth-utils';
 
 // DELETE /api/rooms/[roomId] - удалить конкретную комнату
-export async function DELETE(req: NextRequest, { params }: { params: { roomId: string } }) {
+export async function DELETE(req: NextRequest, context: { params: Promise<{ roomId: string }> }) {
   try {
+    const params = await context.params;
     const auth = requireAuth(req);
     if (auth.error) {
       return NextResponse.json({ success: false, message: auth.error }, { status: 401 });

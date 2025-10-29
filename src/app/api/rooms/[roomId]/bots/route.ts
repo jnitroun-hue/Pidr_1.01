@@ -5,9 +5,10 @@ import { requireAuth } from '@/lib/auth-utils';
 // 🤖 API ДЛЯ УПРАВЛЕНИЯ БОТАМИ В КОМНАТЕ
 export async function POST(
   request: NextRequest,
-  { params }: { params: { roomId: string } }
+  context: { params: Promise<{ roomId: string }> }
 ) {
   try {
+    const params = await context.params;
     // ПРОВЕРЯЕМ АВТОРИЗАЦИЮ
     const auth = await requireAuth(request);
     if (auth.error) {
