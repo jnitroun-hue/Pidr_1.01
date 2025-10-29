@@ -1,5 +1,6 @@
 'use client'
-import { motion } from 'framer-motion';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import { ShoppingBag, X, TrendingUp, Calendar, Check } from 'lucide-react';
 
@@ -295,6 +296,8 @@ interface MyNFTsTabProps extends HelperFunctions {
 }
 
 export function MyNFTsTab({ nfts, onSellClick, onDeleteClick, getSuitColor, getSuitSymbol, getRankDisplay }: MyNFTsTabProps) {
+  const [selectedNFT, setSelectedNFT] = useState<NFTCard | null>(null);
+
   if (nfts.length === 0) {
     return (
       <div style={{ textAlign: 'center', padding: '60px 20px' }}>
@@ -306,6 +309,171 @@ export function MyNFTsTab({ nfts, onSellClick, onDeleteClick, getSuitColor, getS
   }
 
   return (
+    <>
+      {/* МОДАЛКА ПРИ КЛИКЕ НА КАРТУ */}
+      <AnimatePresence>
+        {selectedNFT && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelectedNFT(null)}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0, 0, 0, 0.9)',
+              backdropFilter: 'blur(10px)',
+              zIndex: 999999,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '20px'
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.8, y: 50 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.8, y: 50 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)',
+                border: `3px solid ${getSuitColor(selectedNFT.suit)}`,
+                borderRadius: '20px',
+                padding: '20px',
+                maxWidth: '340px',
+                width: '100%',
+                maxHeight: '90vh',
+                overflowY: 'auto',
+                position: 'relative'
+              }}
+            >
+              {/* Кнопка закрытия */}
+              <button
+                onClick={() => setSelectedNFT(null)}
+                style={{
+                  position: 'absolute',
+                  top: '15px',
+                  right: '15px',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '40px',
+                  height: '40px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: '#ffffff'
+                }}
+              >
+                <X size={24} />
+              </button>
+
+              {/* Изображение карты */}
+              <div style={{
+                background: '#ffffff',
+                borderRadius: '12px',
+                padding: '10px',
+                marginBottom: '15px',
+                aspectRatio: '2/3',
+                maxWidth: '200px',
+                margin: '0 auto 15px'
+              }}>
+                <img
+                  src={selectedNFT.image_url}
+                  alt={`${selectedNFT.rank} ${getSuitSymbol(selectedNFT.suit)}`}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain'
+                  }}
+                />
+              </div>
+
+              {/* Информация о карте */}
+              <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                <h2 style={{
+                  color: '#ffffff',
+                  fontSize: '2rem',
+                  fontWeight: 'black',
+                  marginBottom: '10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '15px'
+                }}>
+                  <span style={{ 
+                    color: getSuitColor(selectedNFT.suit),
+                    fontSize: '2.5rem',
+                    textShadow: `0 0 20px ${getSuitColor(selectedNFT.suit)}aa`
+                  }}>
+                    {getSuitSymbol(selectedNFT.suit)}
+                  </span>
+                  <span>{getRankDisplay(selectedNFT.rank)}</span>
+                </h2>
+                <p style={{
+                  color: getSuitColor(selectedNFT.suit),
+                  fontSize: '1.1rem',
+                  fontWeight: '700',
+                  textTransform: 'uppercase',
+                  letterSpacing: '2px'
+                }}>
+                  {selectedNFT.rarity === 'pokemon' && '⚡ Покемон'}
+                  {selectedNFT.rarity === 'halloween' && '🎃 Хеллоуин'}
+                  {selectedNFT.rarity === 'starwars' && '⚔️ Star Wars'}
+                  {!['pokemon', 'halloween', 'starwars'].includes(selectedNFT.rarity) && selectedNFT.rarity}
+                </p>
+              </div>
+
+              {/* Кнопки действий */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button
+                    onClick={() => {
+                      setSelectedNFT(null);
+                      onSellClick(selectedNFT);
+                    }}
+                    style={{
+                      flex: 1,
+                      background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                      border: 'none',
+                      borderRadius: '10px',
+                      padding: '12px',
+                      color: '#ffffff',
+                      fontSize: '1rem',
+                      fontWeight: 'bold',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    💰 Продать
+                  </button>
+                </div>
+                <button
+                  onClick={() => {
+                    setSelectedNFT(null);
+                    onDeleteClick(selectedNFT);
+                  }}
+                  style={{
+                    width: '100%',
+                    background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                    border: 'none',
+                    borderRadius: '10px',
+                    padding: '12px',
+                    color: '#ffffff',
+                    fontSize: '1rem',
+                    fontWeight: 'bold',
+                    cursor: 'pointer'
+                  }}
+                >
+                  🗑️ Удалить
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* СЕТКА КАРТ */}
     <div style={{
       display: 'grid',
       gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
@@ -318,12 +486,14 @@ export function MyNFTsTab({ nfts, onSellClick, onDeleteClick, getSuitColor, getS
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: index * 0.03 }}
+          onClick={() => setSelectedNFT(nft)}
           style={{
             background: 'rgba(30, 41, 59, 0.8)',
             borderRadius: '8px',
             border: `2px solid ${getSuitColor(nft.suit)}40`,
             padding: '8px',
-            textAlign: 'center'
+            textAlign: 'center',
+            cursor: 'pointer'
           }}
         >
           {/* Image */}
@@ -335,7 +505,8 @@ export function MyNFTsTab({ nfts, onSellClick, onDeleteClick, getSuitColor, getS
             overflow: 'hidden',
             marginBottom: '8px',
             background: '#ffffff',
-            border: '1px solid rgba(255,255,255,0.1)'
+            border: '1px solid rgba(255,255,255,0.1)',
+            pointerEvents: 'none'
           }}>
             {nft.image_url ? (
               <img
@@ -404,7 +575,10 @@ export function MyNFTsTab({ nfts, onSellClick, onDeleteClick, getSuitColor, getS
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => onSellClick(nft)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSellClick(nft);
+            }}
             style={{
               width: '100%',
               padding: '6px',
@@ -425,7 +599,10 @@ export function MyNFTsTab({ nfts, onSellClick, onDeleteClick, getSuitColor, getS
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => onDeleteClick(nft)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDeleteClick(nft);
+            }}
             style={{
               width: '100%',
               padding: '6px',
@@ -443,6 +620,7 @@ export function MyNFTsTab({ nfts, onSellClick, onDeleteClick, getSuitColor, getS
         </motion.div>
       ))}
     </div>
+    </>
   );
 }
 

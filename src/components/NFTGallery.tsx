@@ -212,13 +212,13 @@ export default function NFTGallery() {
         </p>
       </div>
 
-      {/* СЕТКА: КРУПНЫЕ КАРТЫ! */}
+      {/* СЕТКА: 4 КАРТЫ В РЯД */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-        gap: '24px',
+        gridTemplateColumns: 'repeat(4, 1fr)',
+        gap: '20px',
         padding: '20px',
-        maxWidth: '1400px',
+        maxWidth: '1200px',
         margin: '0 auto'
       }}>
         {collection.map((card) => {
@@ -334,8 +334,8 @@ export default function NFTGallery() {
                 background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)',
                 border: `3px solid ${getSuitColor(selectedCard.suit)}`,
                 borderRadius: '20px',
-                padding: '30px',
-                maxWidth: '500px',
+                padding: '20px',
+                maxWidth: '340px',
                 width: '100%',
                 maxHeight: '90vh',
                 overflowY: 'auto',
@@ -377,11 +377,11 @@ export default function NFTGallery() {
               <div style={{
                 background: '#ffffff',
                 borderRadius: '12px',
-                padding: '15px',
-                marginBottom: '20px',
+                padding: '10px',
+                marginBottom: '15px',
                 aspectRatio: '2/3',
-                maxWidth: '300px',
-                margin: '0 auto 20px'
+                maxWidth: '200px',
+                margin: '0 auto 15px'
               }}>
                 <img
                   src={selectedCard.image_url}

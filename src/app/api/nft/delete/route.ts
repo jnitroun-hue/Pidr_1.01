@@ -86,9 +86,14 @@ export async function DELETE(request: NextRequest) {
     if (nft.storage_path) {
       console.log(`📤 Удаляем файл из Storage: ${nft.storage_path}`);
       
+      // ✅ Формируем правильный путь (может быть как с userId/, так и без)
+      const storagePath = nft.storage_path.startsWith('nft-cards/') 
+        ? nft.storage_path.replace('nft-cards/', '') 
+        : nft.storage_path;
+      
       const { error: storageError } = await supabase.storage
         .from('nft-cards')
-        .remove([nft.storage_path]);
+        .remove([storagePath]);
 
       if (storageError) {
         console.error('⚠️ Ошибка удаления из Storage:', storageError);
