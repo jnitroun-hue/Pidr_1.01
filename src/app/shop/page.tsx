@@ -27,7 +27,7 @@ export default function ShopPage() {
   });
 
   // Telegram WebApp headers
-  const getTelegramWebAppHeaders = () => {
+  const getTelegramWebAppHeaders = (): Record<string, string> => {
     if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
       const user = window.Telegram.WebApp.initDataUnsafe?.user;
       if (user) {
@@ -37,7 +37,10 @@ export default function ShopPage() {
         };
       }
     }
-    return {};
+    return {
+      'x-telegram-id': '',
+      'x-username': ''
+    };
   };
 
   // Загрузка пользователя
@@ -152,7 +155,14 @@ export default function ShopPage() {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => router.push('/menu')}
+            onClick={() => {
+              try {
+                router.back();
+              } catch (error) {
+                console.error('Ошибка навигации:', error);
+                window.location.href = '/';
+              }
+            }}
             style={{
               display: 'flex',
               alignItems: 'center',

@@ -960,45 +960,6 @@ export default function NFTPokemonGenerator({ userCoins, onBalanceUpdate }: NFTP
         </div>
       </div>
 
-      {/* ВАШИ КАРТЫ */}
-      {userCards.length > 0 && (
-        <div style={{ marginTop: '20px' }}>
-          <h4 style={{ fontSize: '0.9rem', marginBottom: '10px', color: '#94a3b8' }}>
-            Ваши NFT карты ({userCards.length})
-          </h4>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))',
-            gap: '10px',
-            maxHeight: '200px',
-            overflowY: 'auto'
-          }}>
-            {userCards.map((card: any, index: number) => (
-              <div
-                key={index}
-                style={{
-                  aspectRatio: '2/3',
-                  borderRadius: '8px',
-                  overflow: 'hidden',
-                  border: '2px solid #000000',
-                  boxShadow: '0 4px 10px rgba(0, 0, 0, 0.3)',
-                  background: '#ffffff'
-                }}
-              >
-                <img
-                  src={card.image_url}
-                  alt={`${card.card_rank} of ${card.card_suit}`}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover'
-                  }}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
