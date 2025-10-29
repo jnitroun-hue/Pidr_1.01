@@ -139,76 +139,98 @@ export default function NFTGallery() {
   }
 
   return (
-    <div className="w-full" data-nft-gallery-component="unique-v2">
-      {/* Заголовок - МОБИЛЬНАЯ ОПТИМИЗАЦИЯ */}
-      <div className="mb-4 sm:mb-6 text-center px-2">
-        <h2 className="text-lg sm:text-xl md:text-2xl font-black text-white mb-1 flex items-center justify-center gap-2 flex-wrap">
-          <Sparkles className="text-yellow-400" size={20} />
-          <span className="text-base sm:text-lg md:text-2xl">МОЯ NFT КОЛЛЕКЦИЯ</span>
-          <Sparkles className="text-yellow-400" size={20} />
-        </h2>
-        <p className="text-xs sm:text-sm text-gray-400">
-          Всего карт: <span className="text-blue-400 font-bold">{collection.length}</span>
+    <div className="w-full" data-nft-gallery-component="unique-v3">
+      {/* Заголовок - КОМПАКТНЫЙ */}
+      <div className="mb-3 text-center">
+        <h3 className="text-sm sm:text-base font-bold text-white mb-1 flex items-center justify-center gap-2">
+          <Sparkles className="text-yellow-400" size={16} />
+          <span>МОЯ NFT КОЛЛЕКЦИЯ</span>
+          <Sparkles className="text-yellow-400" size={16} />
+        </h3>
+        <p className="text-xs text-gray-400">
+          Всего: <span className="text-blue-400 font-semibold">{collection.length}</span>
         </p>
       </div>
 
-      {/* КОМПАКТНАЯ СЕТКА КАРТ - МЕЛКИЕ С УВЕЛИЧЕНИЕМ */}
-      <div className="grid grid-cols-6 xs:grid-cols-8 sm:grid-cols-10 md:grid-cols-12 lg:grid-cols-14 xl:grid-cols-16 gap-2 p-2">
+      {/* КРАСИВАЯ СЕТКА КАРТ - ОПТИМАЛЬНЫЙ РАЗМЕР */}
+      <div className="grid grid-cols-4 xs:grid-cols-5 sm:grid-cols-6 md:grid-cols-7 lg:grid-cols-8 xl:grid-cols-9 gap-3 p-2">
         {collection.map((card, index) => {
           const suitColor = getSuitColor(card.suit);
           
           return (
             <motion.button
               key={card.id}
-              initial={{ opacity: 0, scale: 0.5 }}
+              initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: index * 0.01 }}
-              whileHover={{ scale: 1.15, y: -4 }} // ✅ Увеличиваем при наведении
+              transition={{ delay: index * 0.02, duration: 0.3 }}
+              whileHover={{ scale: 1.08, y: -6, rotateY: 5 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => setSelectedCard(card)}
               className="relative group focus:outline-none touch-manipulation"
               style={{
-                borderRadius: '8px',
-                background: '#ffffff', // ✅ БЕЛЫЙ ФОН для видимости карт
-                border: `2px solid ${suitColor}`,
-                boxShadow: `0 4px 12px ${suitColor}60`,
+                borderRadius: '12px',
+                background: 'linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)',
+                border: `3px solid ${suitColor}`,
+                boxShadow: `0 6px 20px ${suitColor}40, 0 2px 8px rgba(0,0,0,0.1)`,
                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 overflow: 'hidden',
-                aspectRatio: '2/3',
+                aspectRatio: '5/7',
                 minWidth: 0,
                 WebkitTapHighlightColor: 'transparent',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                transformStyle: 'preserve-3d',
+                perspective: '1000px'
               }}
             >
+              {/* Глянцевый эффект сверху */}
+              <div 
+                className="absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-transparent opacity-60 pointer-events-none"
+                style={{ borderRadius: '10px' }}
+              />
+
               {/* Изображение карты */}
               <img
                 src={card.image_url}
                 alt={`${card.rank} ${getSuitSymbol(card.suit)}`}
-                className="w-full h-full object-contain" // ✅ contain вместо cover
+                className="w-full h-full object-contain"
                 loading="lazy"
                 style={{
                   display: 'block',
-                  padding: '2px'
+                  padding: '4px'
                 }}
               />
               
-              {/* Значок масти (компактный) */}
+              {/* Значок масти - элегантный */}
               <div 
-                className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                className="absolute top-1 right-1 w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-lg"
                 style={{
                   background: getSuitGradient(card.suit),
-                  boxShadow: `0 2px 6px ${suitColor}80`
+                  boxShadow: `0 3px 10px ${suitColor}80, inset 0 1px 2px rgba(255,255,255,0.3)`
                 }}
               >
                 {getSuitSymbol(card.suit)}
               </div>
 
-              {/* Hover эффект */}
+              {/* Ранг карты - видимый */}
               <div 
-                className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-end justify-center pb-1"
+                className="absolute bottom-1 left-1 px-2 py-0.5 rounded-md text-xs sm:text-sm font-black text-white shadow-md"
+                style={{
+                  background: `linear-gradient(135deg, ${suitColor}dd 0%, ${suitColor}99 100%)`,
+                  backdropFilter: 'blur(4px)'
+                }}
               >
-                <span className="text-white text-[10px] font-bold">
-                  {card.rank?.toUpperCase()}
+                {card.rank?.toUpperCase()}
+              </div>
+
+              {/* Hover эффект с информацией */}
+              <div 
+                className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-end pb-2 pointer-events-none"
+              >
+                <span className="text-white text-xs sm:text-sm font-bold drop-shadow-lg">
+                  {card.rank?.toUpperCase()} {getSuitSymbol(card.suit)}
+                </span>
+                <span className="text-white/80 text-[10px] mt-0.5">
+                  {getRarityLabel(card.rarity)}
                 </span>
               </div>
             </motion.button>
