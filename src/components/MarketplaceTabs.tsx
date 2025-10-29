@@ -307,9 +307,9 @@ export function MyNFTsTab({ nfts, onSellClick, getSuitColor, getSuitSymbol, getR
   return (
     <div style={{
       display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-      gap: '16px',
-      padding: '10px'
+      gridTemplateColumns: 'repeat(auto-fill, minmax(60px, 1fr))',
+      gap: '8px',
+      padding: '8px'
     }}>
       {nfts.map((nft, index) => (
         <motion.div
@@ -319,9 +319,9 @@ export function MyNFTsTab({ nfts, onSellClick, getSuitColor, getSuitSymbol, getR
           transition={{ delay: index * 0.03 }}
           style={{
             background: 'rgba(30, 41, 59, 0.8)',
-            borderRadius: '12px',
-            border: `2px solid ${getSuitColor(nft.suit)}40`,
-            padding: '12px',
+            borderRadius: '6px',
+            border: `1px solid ${getSuitColor(nft.suit)}40`,
+            padding: '4px',
             textAlign: 'center'
           }}
         >
@@ -330,9 +330,9 @@ export function MyNFTsTab({ nfts, onSellClick, getSuitColor, getSuitSymbol, getR
             width: '100%',
             aspectRatio: '0.7',
             position: 'relative',
-            borderRadius: '10px',
+            borderRadius: '4px',
             overflow: 'hidden',
-            marginBottom: '10px',
+            marginBottom: '0',
             background: '#1e293b'
           }}>
             {nft.image_url ? (
@@ -342,49 +342,29 @@ export function MyNFTsTab({ nfts, onSellClick, getSuitColor, getSuitSymbol, getR
                 fill
                 style={{ objectFit: 'contain' }}
               />
-            ) : (
-              <div style={{
-                width: '100%',
-                height: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '48px',
-                color: getSuitColor(nft.suit)
-              }}>
-                {getSuitSymbol(nft.suit)}
-              </div>
-            )}
+            ) : null}
           </div>
 
-          {/* Info */}
-          <h4 style={{
-            fontSize: '16px',
-            fontWeight: 'bold',
-            color: getSuitColor(nft.suit),
-            marginBottom: '8px'
-          }}>
-            {getRankDisplay(nft.rank)} {getSuitSymbol(nft.suit)}
-          </h4>
-
-          {/* Sell Button */}
+          {/* Sell Button - КОМПАКТНАЯ ВЕРСИЯ */}
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => onSellClick(nft)}
+            title={`${getRankDisplay(nft.rank)} ${getSuitSymbol(nft.suit)}`}
             style={{
               width: '100%',
-              padding: '8px',
-              borderRadius: '8px',
+              padding: '4px',
+              marginTop: '4px',
+              borderRadius: '4px',
               border: 'none',
               background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
               color: '#0f172a',
               fontWeight: 'bold',
-              fontSize: '14px',
+              fontSize: '10px',
               cursor: 'pointer'
             }}
           >
-            💰 Продать
+            💰
           </motion.button>
         </motion.div>
       ))}

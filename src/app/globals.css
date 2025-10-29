@@ -1072,6 +1072,8 @@ input:focus, textarea:focus, select:focus {
   grid-template-columns: 1fr 1fr;
   gap: 18px;
   width: 100%;
+  align-items: start; /* ✅ Выравниваем по верху */
+  grid-auto-rows: minmax(120px, auto); /* ✅ Минимальная высота строки */
 }
 
 .menu-action-card {
@@ -1088,6 +1090,9 @@ input:focus, textarea:focus, select:focus {
   cursor: pointer;
   position: relative;
   overflow: hidden;
+  z-index: 50; /* ✅ КРИТИЧНО: Гарантируем что кнопки НАД фоном! */
+  touch-action: manipulation; /* ✅ Для мобильных устройств */
+  user-select: none; /* ✅ Отключаем выделение текста */
 }
 
 .menu-action-card::before {
@@ -1152,6 +1157,9 @@ input:focus, textarea:focus, select:focus {
   border: 1px solid rgba(59, 130, 246, 0.4);
   border-radius: 16px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  z-index: 50; /* ✅ КРИТИЧНО */
+  touch-action: manipulation;
+  user-select: none;
   backdrop-filter: blur(10px);
   padding: 18px 20px;
   display: flex;

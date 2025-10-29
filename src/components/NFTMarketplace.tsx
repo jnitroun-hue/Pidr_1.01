@@ -160,6 +160,24 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
     }
   }, [activeTab, loadMarketplace, loadMySales, loadMyNFTs]);
 
+  // ✅ АВТОМАТИЧЕСКОЕ ОТКРЫТИЕ МОДАЛКИ ПРОДАЖИ ИЗ КОЛЛЕКЦИИ
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const nftToSell = sessionStorage.getItem('nft_to_sell');
+      if (nftToSell) {
+        try {
+          const nft = JSON.parse(nftToSell);
+          setSelectedNFT(nft);
+          setShowSellModal(true);
+          setActiveTab('my-nfts');
+          sessionStorage.removeItem('nft_to_sell');
+        } catch (error) {
+          console.error('Ошибка парсинга NFT для продажи:', error);
+        }
+      }
+    }
+  }, []);
+
   // Обработчики
   const handleBuyNFT = async (listing: Listing) => {
     if (!listing.price_coins) {

@@ -467,7 +467,7 @@ export const useGameStore = create<GameState>()(
             const imageName = shuffledImages[cardIndex];
             
             const card: Card = {
-              id: `card_${i}_${j}`,
+              id: `card_${Date.now()}_${i}_${j}_${Math.random().toString(36).substr(2, 9)}`, // ✅ УНИКАЛЬНЫЙ ID
               type: 'normal',
               title: `Карта ${j + 1}`,
               description: '',
@@ -508,7 +508,7 @@ export const useGameStore = create<GameState>()(
         
         // Оставшиеся карты в колоде
         const remainingCards: Card[] = shuffledImages.slice(playersCount * cardsPerPlayer).map((imageName, index) => ({
-          id: `deck_card_${index}`,
+          id: `deck_${Date.now()}_${index}_${Math.random().toString(36).substr(2, 9)}`, // ✅ УНИКАЛЬНЫЙ ID
           type: 'normal',
           title: `Карта колоды`,
           description: '',

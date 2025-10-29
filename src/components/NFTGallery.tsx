@@ -152,8 +152,8 @@ export default function NFTGallery() {
         </p>
       </div>
 
-      {/* КОМПАКТНАЯ СЕТКА КАРТ - МОБИЛЬНАЯ ОПТИМИЗАЦИЯ */}
-      <div className="grid grid-cols-4 xs:grid-cols-5 sm:grid-cols-7 md:grid-cols-9 lg:grid-cols-11 xl:grid-cols-13 gap-1.5 sm:gap-2 p-1 sm:p-2">
+      {/* КОМПАКТНАЯ СЕТКА КАРТ - ОЧЕНЬ МЕЛКИЕ КАРТЫ (В 10 РАЗ МЕНЬШЕ) */}
+      <div className="grid grid-cols-8 xs:grid-cols-10 sm:grid-cols-12 md:grid-cols-15 lg:grid-cols-18 xl:grid-cols-20 gap-1 p-1">
         {collection.map((card, index) => {
           const suitColor = getSuitColor(card.suit);
           
@@ -317,7 +317,7 @@ export default function NFTGallery() {
                   </div>
 
                   {/* Кнопки действий */}
-                  <div className="flex flex-col gap-2 pt-2">
+                  <div className="grid grid-cols-2 gap-2 pt-2">
                     {/* Кнопка "Добавить в колоду" */}
                     <motion.button
                       whileHover={{ scale: 1.03 }}
@@ -353,29 +353,56 @@ export default function NFTGallery() {
                           alert(`❌ Ошибка: ${error.message}`);
                         }
                       }}
-                      className="w-full py-3 px-6 rounded-xl font-bold text-base text-white transition-all duration-200"
+                      className="w-full py-3 px-4 rounded-xl font-bold text-sm text-white transition-all duration-200"
                       style={{
                         background: getSuitGradient(selectedCard.suit),
                         boxShadow: `0 8px 24px ${getSuitColor(selectedCard.suit)}50`
                       }}
                     >
-                      🎴 Добавить в колоду
+                      🎴 В колоду
                     </motion.button>
 
-                    {/* Кнопка "Закрыть" */}
+                    {/* Кнопка "Продать" - НОВАЯ! */}
                     <motion.button
                       whileHover={{ scale: 1.03 }}
                       whileTap={{ scale: 0.97 }}
-                      onClick={() => setSelectedCard(null)}
-                      className="w-full py-3 px-6 rounded-xl font-bold text-base text-white transition-all duration-200"
+                      onClick={() => {
+                        // Перенаправляем в магазин с автоматическим открытием модалки продажи
+                        if (typeof window !== 'undefined') {
+                          sessionStorage.setItem('nft_to_sell', JSON.stringify({
+                            id: selectedCard.id,
+                            suit: selectedCard.suit,
+                            rank: selectedCard.rank,
+                            image_url: selectedCard.image_url,
+                            rarity: selectedCard.rarity
+                          }));
+                          window.location.href = '/shop';
+                        }
+                      }}
+                      className="w-full py-3 px-4 rounded-xl font-bold text-sm text-white transition-all duration-200"
                       style={{
-                        background: 'linear-gradient(135deg, #64748b 0%, #475569 100%)',
-                        boxShadow: '0 8px 24px rgba(100, 116, 139, 0.4)'
+                        background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
+                        boxShadow: '0 8px 24px rgba(251, 191, 36, 0.5)'
                       }}
                     >
-                      Закрыть
+                      💰 Продать
                     </motion.button>
+
                   </div>
+
+                  {/* Кнопка "Закрыть" - ОТДЕЛЬНО НА ВСЮ ШИРИНУ */}
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setSelectedCard(null)}
+                    className="w-full py-3 px-6 rounded-xl font-bold text-base text-white transition-all duration-200 mt-2"
+                    style={{
+                      background: 'linear-gradient(135deg, #64748b 0%, #475569 100%)',
+                      boxShadow: '0 8px 24px rgba(100, 116, 139, 0.4)'
+                    }}
+                  >
+                    Закрыть
+                  </motion.button>
                 </div>
               </div>
             </motion.div>

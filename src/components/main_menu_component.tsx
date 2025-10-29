@@ -95,7 +95,8 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
         </div>
         <div className="menu-actions-grid">
           <button 
-         onClick={() => {
+         onClick={(e) => {
+           e.stopPropagation(); // ✅ КРИТИЧНО: Останавливаем всплытие события!
            console.log('Кнопка ИГРАТЬ нажата');
            hapticFeedback('medium');
            try {
@@ -114,6 +115,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
               }
             }} 
             className="menu-action-card"
+            style={{ zIndex: 50 }}
           >
             <Play className="menu-action-icon" />
             <span className="menu-action-label">{t.mainMenu.play.toUpperCase()}</span>
@@ -121,7 +123,8 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
           
 
           <button 
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation(); // ✅ КРИТИЧНО
               console.log('Кнопка ОНЛАЙН нажата');
               hapticFeedback('medium');
               try {
@@ -132,6 +135,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
               }
             }} 
             className="menu-action-card multiplayer-card"
+            style={{ zIndex: 50 }}
           >
             <Users className="menu-action-icon" />
             <span className="menu-action-label">
@@ -139,7 +143,8 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
             </span>
           </button>
           <button 
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation(); // ✅ КРИТИЧНО
               console.log('Кнопка МАГАЗИН нажата');
               hapticFeedback('medium');
               try {
@@ -150,12 +155,14 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
               }
             }} 
             className="menu-action-card"
+            style={{ zIndex: 50 }}
           >
             <Store className="menu-action-icon" />
             <span className="menu-action-label">{t.mainMenu.shop}</span>
           </button>
           <button 
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation(); // ✅ КРИТИЧНО
               console.log('Кнопка ПРОФИЛЬ нажата');
               hapticFeedback('medium');
               try {
@@ -166,6 +173,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
               }
             }} 
             className="menu-action-card"
+            style={{ zIndex: 50 }}
           >
             <User className="menu-action-icon" />
             <span className="menu-action-label">{t.mainMenu.profile}</span>
@@ -175,7 +183,8 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
         {/* Кнопка Правила игры */}
         <div className="rules-section">
           <button 
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation(); // ✅ КРИТИЧНО
               console.log('Кнопка ПРАВИЛА нажата');
               hapticFeedback('medium');
               try {
@@ -186,6 +195,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
               }
             }} 
             className="rules-button"
+            style={{ zIndex: 50 }}
           >
             <Book className="rules-icon" />
             <span className="rules-label">{t.mainMenu.rules}</span>
