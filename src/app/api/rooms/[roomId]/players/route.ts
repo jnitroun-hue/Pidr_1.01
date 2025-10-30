@@ -11,9 +11,9 @@ import { supabase } from '../../../../../lib/supabase';
 import { getRoomPlayers, getRoomDetails } from '../../../../../lib/multiplayer/player-state-manager';
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     roomId: string;
-  };
+  }>;
 }
 
 export async function GET(
@@ -21,7 +21,7 @@ export async function GET(
   { params }: RouteParams
 ) {
   try {
-    const { roomId } = params;
+    const { roomId } = await params; // ✅ AWAIT для Next.js 15!
     if (!roomId) {
       return NextResponse.json({ success: false, message: 'Room ID обязателен' }, { status: 400 });
     }
