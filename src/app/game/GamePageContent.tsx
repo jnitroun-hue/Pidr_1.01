@@ -1572,8 +1572,8 @@ function GamePageContentComponent({
                             width: '56px',
                             height: '56px',
                             borderRadius: '50%',
-                            boxShadow: `0 4px 12px ${currentPlayer?.id === player.id ? 'rgba(34, 197, 94, 0.6)' : 'rgba(0, 0, 0, 0.3)'}`,
-                            border: `3px solid ${currentPlayer?.id === player.id ? '#22c55e' : 'rgba(255, 255, 255, 0.2)'}`,
+                            boxShadow: `0 4px 12px ${currentPlayerId === player.id ? 'rgba(34, 197, 94, 0.6)' : 'rgba(0, 0, 0, 0.3)'}`,
+                            border: `3px solid ${currentPlayerId === player.id ? '#22c55e' : 'rgba(255, 255, 255, 0.2)'}`,
                             transition: 'all 0.3s ease'
                           }}
                         />
