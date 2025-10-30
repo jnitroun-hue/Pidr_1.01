@@ -206,7 +206,7 @@ function GamePageContentComponent({
     isGameActive, gameMode, gameStage, turnPhase, stage2TurnPhase,
     players, currentPlayerId, deck, availableTargets,
     selectedHandCard, revealedDeckCard, tableStack, trumpSuit,
-    oneCardDeclarations, oneCardTimers, playersWithOneCard, pendingPenalty,
+    oneCardDeclarations, playersWithOneCard, pendingPenalty,
     penaltyDeck, gameCoins, playedCards,
     showPenaltyCardSelection, penaltyCardSelectionPlayerId,
     showWinnerModal, winnerModalData, showLoserModal, loserModalData,
