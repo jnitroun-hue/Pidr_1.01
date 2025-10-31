@@ -105,7 +105,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       zombieCount: zombieUsers?.length || 0,
-      zombies: zombieUsers?.map(u => ({
+      zombies: zombieUsers?.map((u: any) => ({
         id: u.id,
         username: u.username,
         lastSeen: new Date(u.last_seen).toLocaleString('ru-RU', { 
