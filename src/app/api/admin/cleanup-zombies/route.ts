@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
       success: true,
       message: `Очистка завершена. Переведено в offline: ${zombieUsers?.length || 0}`,
       zombiesCleared: zombieUsers?.length || 0,
-      zombieUsers: zombieUsers?.map(u => ({
+      zombieUsers: zombieUsers?.map((u: any) => ({
         id: u.id,
         username: u.username,
         lastSeen: u.last_seen,
