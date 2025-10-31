@@ -100,8 +100,8 @@ export async function GET(req: NextRequest) {
 
     // Проверяем наличие нужных полей
     const requiredFields = ['status', 'last_seen', 'avatar_url'];
-    const missingFields = requiredFields.filter(field => 
-      !columns?.some(col => col.column_name === field)
+    const missingFields = requiredFields.filter((field: string) => 
+      !columns?.some((col: any) => col.column_name === field)
     );
 
     return NextResponse.json({

@@ -215,7 +215,7 @@ export async function GET(req: NextRequest) {
     
     // Проверяем доступность бонусов
     const today = new Date().toDateString();
-    const dailyBonusToday = recentBonuses?.find(b => 
+    const dailyBonusToday = recentBonuses?.find((b: any) => 
       b.bonus_type === 'daily' && 
       new Date(b.created_at).toDateString() === today
     );

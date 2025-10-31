@@ -118,8 +118,8 @@ export async function POST(request: NextRequest) {
       message: 'Прегенерация завершена',
       results,
       total: CARDS_TO_GENERATE.length,
-      successful: results.filter(r => r.status === 'success').length,
-      failed: results.filter(r => r.status === 'error').length
+      successful: results.filter((r: any) => r.status === 'success').length,
+      failed: results.filter((r: any) => r.status === 'error').length
     });
 
   } catch (error: any) {

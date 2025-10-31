@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
         nodeEnv: process.env.NODE_ENV
       },
       request: {
-        cookies: cookies.map(c => ({ name: c.name, hasValue: !!c.value })),
+        cookies: cookies.map((c: any) => ({ name: c.name, hasValue: !!c.value })),
         authCookie: authCookie ? { hasValue: !!authCookie.value, length: authCookie.value?.length } : null,
         authHeader: authHeader ? { hasValue: true, type: authHeader.startsWith('Bearer ') ? 'Bearer' : 'Other' } : null,
         url: req.url,

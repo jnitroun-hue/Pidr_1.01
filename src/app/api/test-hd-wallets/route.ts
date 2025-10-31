@@ -81,8 +81,8 @@ export async function GET(req: NextRequest) {
       dbError: dbError?.message || null,
       summary: {
         total: supportedCoins.length,
-        successful: results.filter(r => r.status === 'success').length,
-        failed: results.filter(r => r.status === 'error').length
+        successful: results.filter((r: any) => r.status === 'success').length,
+        failed: results.filter((r: any) => r.status === 'error').length
       }
     });
 
@@ -161,8 +161,8 @@ export async function POST(req: NextRequest) {
       dbError: dbError?.message || null,
       summary: {
         tested: coinsToTest.length,
-        successful: results.filter(r => r.success).length,
-        existing: results.filter(r => r.existing).length,
+        successful: results.filter((r: any) => r.success).length,
+        existing: results.filter((r: any) => r.existing).length,
         totalInDB: userAddresses?.length || 0
       }
     });

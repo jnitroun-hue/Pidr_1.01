@@ -101,7 +101,7 @@ export async function POST(
       ];
       
       const usedNames = currentPlayers.map((p: any) => p.username).filter((name: string) => name?.includes('_БОТ'));
-      const availableNames = botNames.filter(name => !usedNames.includes(name));
+      const availableNames = botNames.filter((name: string) => !usedNames.includes(name));
       const botName = availableNames[0] || `БОТ_${nextPosition}`;
 
       console.log(`🤖 Добавляем бота: id=${botId}, name=${botName}, position=${nextPosition}`);

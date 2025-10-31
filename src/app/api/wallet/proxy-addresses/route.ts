@@ -81,7 +81,7 @@ export async function GET(req: NextRequest) {
 
     for (const coin of coins) {
       // Проверяем, есть ли уже адрес для этой монеты
-      const existing = existingAddresses?.find(addr => addr.coin === coin);
+      const existing = existingAddresses?.find((addr: any) => addr.coin === coin);
       
       if (existing) {
         addresses.push({

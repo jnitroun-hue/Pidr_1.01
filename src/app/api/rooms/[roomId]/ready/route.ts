@@ -92,7 +92,7 @@ export async function GET(
       }, { status: 500 });
     }
 
-    const readyCount = players?.filter(p => p.is_ready).length || 0;
+    const readyCount = players?.filter((p: any) => p.is_ready).length || 0;
     const totalCount = players?.length || 0;
     const allReady = readyCount === totalCount && totalCount > 1;
 

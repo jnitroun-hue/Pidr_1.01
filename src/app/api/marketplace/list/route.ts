@@ -92,13 +92,13 @@ export async function GET(request: NextRequest) {
     let filteredData = data || [];
     
     if (suit) {
-      filteredData = filteredData.filter(item => 
+      filteredData = filteredData.filter((item: any) => 
         item.nft_card?.suit === suit
       );
     }
-    
+
     if (rarity) {
-      filteredData = filteredData.filter(item => 
+      filteredData = filteredData.filter((item: any) => 
         item.nft_card?.rarity === rarity
       );
     }
