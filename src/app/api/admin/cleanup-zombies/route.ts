@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     const { data: stats } = await supabase
       .from('_pidr_users')
       .select('status')
-      .then(({ data, error }) => {
+      .then(({ data, error }: { data: any; error: any }) => {
         if (error) return { data: null };
         
         const statusCounts = data?.reduce((acc: any, user: any) => {
