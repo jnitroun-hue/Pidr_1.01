@@ -237,7 +237,7 @@ function HomeWithParams() {
     };
 
     initializePlayer();
-  }, [isReady, telegramUser]);
+  }, []); // ✅ ПУСТОЙ МАССИВ - запускается ТОЛЬКО ОДИН РАЗ!
 
   const handleLogout = async () => {
     try {
