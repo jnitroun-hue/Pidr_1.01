@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react';
-import Image from 'next/Image';
+import Image from 'next/image';
 import { useGameStore } from '../store/gameStore';
 
 const CARDS_PATH = '/img/cards/';
