@@ -2954,11 +2954,17 @@ export const useGameStore = create<GameState>()(
          
        // Спросить "сколько карт?" у другого игрока
        askHowManyCards: (askerPlayerId: string, targetPlayerId: string) => {
-          const { players, oneCardDeclarations } = get();
+          const { players, oneCardDeclarations, pendingPenalty } = get();
           const asker = players.find(p => p.id === askerPlayerId);
           const target = players.find(p => p.id === targetPlayerId);
           
           if (!asker || !target) return;
+          
+          // ✅ ЗАЩИТА: Если уже идет штраф, не проверяем снова!
+          if (pendingPenalty) {
+            console.log(`⚠️ [askHowManyCards] Уже идет штраф для ${pendingPenalty.targetPlayerId} - пропускаем проверку`);
+            return;
+          }
           
           const targetTotalCards = target.cards.length;
           
@@ -3030,7 +3036,23 @@ export const useGameStore = create<GameState>()(
              if (player?.isBot) {
               // Для ботов - автоматически выбираем худшие карты с задержкой
                setTimeout(() => {
-                 const openCards = player.cards.filter(c => c.open);
+                 // ✅ КРИТИЧНО: Проверяем что штраф ЕЩЕ АКТИВЕН!
+                 const currentPenalty = get().pendingPenalty;
+                 if (!currentPenalty || currentPenalty.targetPlayerId !== forgetfulPlayerId) {
+                   console.log(`⚠️ [startPenaltyProcess] Штраф уже завершен или изменен - бот ${player.name} не скидывает карту`);
+                   return;
+                 }
+                 
+                 // ✅ КРИТИЧНО: Проверяем что бот ЕЩЕ НЕ СКИНУЛ карту!
+                 if (currentPenalty.contributorsCompleted.includes(playerId)) {
+                   console.log(`⚠️ [startPenaltyProcess] Бот ${player.name} УЖЕ скинул карту - пропускаем`);
+                   return;
+                 }
+                 
+                 const currentPlayer = get().players.find(p => p.id === playerId);
+                 if (!currentPlayer) return;
+                 
+                 const openCards = currentPlayer.cards.filter(c => c.open);
                  const worstCard = get().findWorstCardInHand(openCards, get().trumpSuit);
                  if (worstCard) {
                    console.log(`🤖 [startPenaltyProcess] Бот ${player.name} автоматически выбирает худшую карту для штрафа`);
