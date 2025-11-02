@@ -20,7 +20,6 @@ import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { useGameStore } from '@/store/gameStore';
 import { AIPlayer, AIDifficulty } from '@/lib/game/ai-player';
 import MultiplayerGame from '@/components/MultiplayerGame';
-import WinnerScreen from '@/components/WinnerScreen';
 import { useLanguage } from '../../components/LanguageSwitcher';
 import { useTranslations } from '../../lib/i18n/translations';
 import { useWebSocket } from '@/hooks/useWebSocket';
@@ -419,14 +418,6 @@ function GamePageContentComponent({
 
   const [playerCount, setPlayerCount] = useState(initialPlayerCount);
   
-  // Состояние экрана победителя
-  const [winner, setWinner] = useState<{
-    name: string;
-    isUser: boolean;
-    id: string;
-  } | null>(null);
-  const [showWinnerScreen, setShowWinnerScreen] = useState(false);
-  
   // Состояние мультиплеера (используем пропсы)
   const [multiplayerRoom, setMultiplayerRoom] = useState<{
     id: string;
@@ -457,38 +448,14 @@ function GamePageContentComponent({
     }
   }, [multiplayerData]);
 
-  // ✅ ИСПРАВЛЕНО: Отслеживаем завершение игры и показываем экран победителя
+  // ❌ УДАЛЕНО: Старая логика WinnerScreen - теперь используем WinnerModal из gameStore
+  // Отслеживаем завершение игры для мультиплеера
   useEffect(() => {
-    // Если игра была активна, а теперь неактивна - игра завершилась
-    if (!isGameActive && players.length > 0) {
-      console.log('🎮 [GamePageContent] Игра завершена, ищем победителя...');
-      
-      // Находим игрока без карт (победителя)
-      const gameWinner = players.find(player => {
-        const totalCards = player.cards.length + (player.penki?.length || 0);
-        return totalCards === 0;
-      });
-      
-      if (gameWinner) {
-        console.log('🏆 Найден победитель:', gameWinner.name);
-        setWinner({
-          name: gameWinner.name,
-          isUser: gameWinner.isUser || false,
-          id: gameWinner.id
-        });
-        setShowWinnerScreen(true);
-      } else {
-        console.log('⚠️ Победитель не найден, возможно ничья');
-        // Можно добавить обработку ничьей
-      }
-    }
-    
-    // Отслеживаем завершение игры для мультиплеера
     if (isMultiplayer && !isGameActive && onGameEnd) {
       console.log('🎮 [GamePageContent] Игра завершена в мультиплеере, вызываем onGameEnd');
       onGameEnd();
     }
-  }, [isGameActive, players, isMultiplayer, onGameEnd]);
+  }, [isGameActive, isMultiplayer, onGameEnd]);
   
   // Проверяем что все необходимые функции доступны
   useEffect(() => {
@@ -2017,23 +1984,6 @@ function GamePageContentComponent({
           onGameStateUpdate={(gameState) => {
             console.log('🔄 [Multiplayer] Получено обновление состояния:', gameState);
             // Здесь можно обновить локальное состояние игры
-          }}
-        />
-      )}
-      
-      {/* Экран победителя */}
-      {winner && (
-        <WinnerScreen
-          winner={winner}
-          isVisible={showWinnerScreen}
-          onClose={() => {
-            setShowWinnerScreen(false);
-            setWinner(null);
-          }}
-          onPlayAgain={() => {
-            setShowWinnerScreen(false);
-            setWinner(null);
-            handleStartGame();
           }}
         />
       )}
