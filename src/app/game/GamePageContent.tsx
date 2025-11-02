@@ -242,24 +242,39 @@ function GamePageContentComponent({
   // Функция генерации профиля игрока
   const generatePlayerProfile = async (player: any) => {
     if (player.isUser) {
-      // Реальный игрок - данные из БД
+      // ✅ ИСПРАВЛЕНО: Реальный игрок - данные ИЗ БД через /api/user/me
       try {
-        const response = await fetch('/api/auth', {
+        const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+        const telegramId = telegramUser?.id?.toString() || '';
+        const username = telegramUser?.username || telegramUser?.first_name || '';
+        
+        console.log('📋 [generatePlayerProfile] Загружаем профиль из БД:', { telegramId, username });
+        
+        const response = await fetch('/api/user/me', {
+          method: 'GET',
           credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-telegram-id': telegramId,
+            'x-username': username
+          }
         });
         
         if (response.ok) {
           const result = await response.json();
+          console.log('✅ [generatePlayerProfile] Данные из БД:', result);
+          
           if (result.success && result.user) {
             return {
               id: player.id,
-              name: result.user.username || userData?.username || 'Игрок',
+              name: result.user.username || result.user.firstName || username || 'Игрок',
               avatar: result.user.avatar_url || userData?.avatar || '',
               isBot: false,
               isUser: true,
               level: Math.floor((result.user.experience || 0) / 1000) + 1,
               rating: result.user.rating || 0,
               gamesPlayed: result.user.games_played || 0,
+              wins: result.user.wins || 0,
               winRate: result.user.games_played > 0 
                 ? Math.round((result.user.wins / result.user.games_played) * 100) 
                 : 0,
@@ -272,10 +287,11 @@ function GamePageContentComponent({
           }
         }
       } catch (error) {
-        console.error('Ошибка загрузки профиля:', error);
+        console.error('❌ [generatePlayerProfile] Ошибка загрузки профиля:', error);
       }
       
       // Fallback для реального игрока
+      console.warn('⚠️ [generatePlayerProfile] Используем fallback данные');
       return {
         id: player.id,
         name: userData?.username || 'Игрок',
@@ -285,6 +301,7 @@ function GamePageContentComponent({
         level: 1,
         rating: 0,
         gamesPlayed: 0,
+        wins: 0,
         winRate: 0,
         bestStreak: 0,
         status: '🟢 Online',

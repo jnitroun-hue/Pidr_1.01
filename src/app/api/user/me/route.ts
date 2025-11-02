@@ -69,10 +69,13 @@ export async function GET(req: NextRequest) {
         telegramId: user.telegram_id,
         coins: user.coins,
         rating: user.rating,
-        gamesPlayed: user.games_played,
-        wins: user.wins,           // ✅ ИСПРАВЛЕНО: wins вместо games_won!
-        losses: user.losses,       // ✅ ДОБАВЛЕНО: losses из БД
-        status: user.status
+        experience: user.experience || 0,
+        games_played: user.games_played || 0,
+        wins: user.wins || 0,
+        losses: user.losses || 0,
+        best_win_streak: user.best_win_streak || 0,
+        status: user.status,
+        created_at: user.created_at
       }
     });
   } catch (error: any) {
