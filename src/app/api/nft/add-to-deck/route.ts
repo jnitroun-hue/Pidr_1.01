@@ -17,6 +17,7 @@ import { supabase } from '@/lib/supabase';
 export async function POST(request: NextRequest) {
   try {
     console.log('🎴 [add-to-deck] Получен запрос на добавление NFT в колоду');
+    console.log('🔍 [add-to-deck] Headers:', request.headers.get('x-telegram-id'));
 
     // Получаем данные из запроса
     const body = await request.json();
@@ -44,21 +45,58 @@ export async function POST(request: NextRequest) {
     console.log(`👤 Пользователь: ${userId}`);
     console.log(`🎴 NFT ID: ${nftId}, ${rank}${suit}`);
 
-    // Проверяем что карта принадлежит пользователю
-    const { data: nftCard, error: nftError } = await supabase
+    // ✅ ИСПРАВЛЕНО: Проверяем что карта принадлежит пользователю (user_id = telegram_id!)
+    let { data: nftCard, error: nftError } = await supabase
       .from('_pidr_nft_cards')
       .select('*')
       .eq('id', nftId)
-      .eq('user_id', userId)
+      .eq('user_id', userId) // user_id в _pidr_nft_cards = telegram_id
       .single();
 
-    if (nftError || !nftCard) {
-      console.error('❌ Карта не найдена или не принадлежит пользователю:', nftError);
+    if (nftError) {
+      console.error('❌ Ошибка запроса карты:', nftError);
+      console.log('🔍 Попытка найти карту без проверки владельца...');
+      
+      // Пробуем найти карту без проверки владельца для отладки
+      const { data: anyCard, error: anyError } = await supabase
+        .from('_pidr_nft_cards')
+        .select('*')
+        .eq('id', nftId)
+        .single();
+      
+      if (anyCard) {
+        console.log('🔍 Карта найдена, но user_id не совпадает:', {
+          cardUserId: anyCard.user_id,
+          requestUserId: userId,
+          match: anyCard.user_id === userId
+        });
+        
+        // ✅ ЕСЛИ КАРТА СУЩЕСТВУЕТ - ДОБАВЛЯЕМ В КОЛОДУ (владелец уже проверен при генерации!)
+        if (anyCard.user_id == userId || anyCard.user_id === userId) {
+          nftCard = anyCard;
+          console.log('✅ Карта принадлежит пользователю, продолжаем...');
+        } else {
+          return NextResponse.json(
+            { success: false, error: 'Эта карта вам не принадлежит' },
+            { status: 403 }
+          );
+        }
+      } else {
+        return NextResponse.json(
+          { success: false, error: 'Карта не найдена' },
+          { status: 404 }
+        );
+      }
+    }
+
+    if (!nftCard) {
       return NextResponse.json(
         { success: false, error: 'Карта не найдена' },
         { status: 404 }
       );
     }
+    
+    console.log('✅ Карта найдена и принадлежит пользователю');
 
     // Проверяем существует ли уже запись в _pidr_user_nft_deck
     const { data: existing, error: checkError } = await supabase
