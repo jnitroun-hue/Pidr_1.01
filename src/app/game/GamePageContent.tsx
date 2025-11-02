@@ -313,7 +313,9 @@ function GamePageContentComponent({
 
   // Обработчик клика на игрока
   const handlePlayerClick = async (player: any) => {
+    console.log('👤 [handlePlayerClick] Клик на игрока:', player);
     const profile = await generatePlayerProfile(player);
+    console.log('📋 [handlePlayerClick] Сгенерированный профиль:', profile);
     setSelectedPlayerProfile(profile);
     setIsProfileModalOpen(true);
   };
@@ -1562,11 +1564,10 @@ function GamePageContentComponent({
                           justifyContent: 'center'
                         }}
                       >
-                        <Image 
+                        {/* ✅ ИСПРАВЛЕНО: Используем <img> вместо <Image> для поддержки SVG data URLs */}
+                        <img 
                           src={playerAvatars[player.id] || player.avatar || '/images/default-avatar.png'}
                           alt={player.name}
-                          width={56}
-                          height={56}
                           className={styles.avatar}
                           style={{
                             width: '56px',
@@ -1574,7 +1575,8 @@ function GamePageContentComponent({
                             borderRadius: '50%',
                             boxShadow: `0 4px 12px ${currentPlayerId === player.id ? 'rgba(34, 197, 94, 0.6)' : 'rgba(0, 0, 0, 0.3)'}`,
                             border: `3px solid ${currentPlayerId === player.id ? '#22c55e' : 'rgba(255, 255, 255, 0.2)'}`,
-                            transition: 'all 0.3s ease'
+                            transition: 'all 0.3s ease',
+                            objectFit: 'cover'
                           }}
                         />
                         {player.isBot && (
