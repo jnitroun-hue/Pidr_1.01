@@ -93,9 +93,9 @@ interface GameState {
   oneCardDeclarations: {[playerId: string]: boolean} // Кто объявил "одна карта"
   playersWithOneCard: string[] // Игроки у которых 1 карта (для проверки штрафов)
   pendingPenalty: {
-    targetPlayerId: string
+    targetPlayerId: string | string[] // ✅ НОВОЕ: Может быть массив штрафников!
     contributorsNeeded: string[]
-    contributorsCompleted: string[] // ✅ НОВОЕ: Кто уже скинул карту
+    contributorsCompleted: {[contributorId: string]: {[targetId: string]: string}} // ✅ НОВОЕ: contributorId -> {targetId -> cardId}
   } | null // Ожидающий штраф
   isGamePaused: boolean // ✅ НОВОЕ: Пауза игры при сборе штрафных карт
   
@@ -224,8 +224,8 @@ interface GameState {
   checkOneCardStatus: () => void // Проверяет кому нужно объявлять "одна карта"
   declareOneCard: (playerId: string) => void // Игрок объявляет "одна карта"
   askHowManyCards: (askerPlayerId: string, targetPlayerId: string) => void // Спросить сколько карт
-  startPenaltyProcess: (forgetfulPlayerId: string) => void // Начать процесс штрафа
-  contributePenaltyCard: (contributorId: string, cardId: string) => void // Отдать карту за штраф
+  startPenaltyProcess: (forgetfulPlayerIds: string | string[]) => void // ✅ НОВОЕ: Может принимать массив штрафников!
+  contributePenaltyCard: (contributorId: string, cardId: string, targetId: string) => void // ✅ НОВОЕ: Указываем кому отдаем!
   cancelPenalty: () => void // Отменить штраф
   findWorstCardInHand: (cards: Card[], trumpSuit: string | null) => Card | null // Найти плохую карту
   
@@ -2997,36 +2997,43 @@ export const useGameStore = create<GameState>()(
            }
          },
          
-         // Начать процесс штрафа - каждый игрок должен выбрать карту
-         startPenaltyProcess: (forgetfulPlayerId: string) => {
+         // ✅ НОВАЯ ЛОГИКА: Начать процесс штрафа - ОДНОВРЕМЕННО ДЛЯ ВСЕХ ШТРАФНИКОВ!
+         startPenaltyProcess: (forgetfulPlayerIds: string | string[]) => {
            const { players } = get();
-           const forgetfulPlayer = players.find(p => p.id === forgetfulPlayerId);
-           if (!forgetfulPlayer) return;
            
-           // Определяем кто должен отдать карты (все кроме штрафуемого)
+           // ✅ КРИТИЧНО: Поддерживаем как одного штрафника, так и массив!
+           const targetIds = Array.isArray(forgetfulPlayerIds) ? forgetfulPlayerIds : [forgetfulPlayerIds];
+           
+           if (targetIds.length === 0) return;
+           
+           const forgetfulPlayers = players.filter(p => targetIds.includes(p.id));
+           if (forgetfulPlayers.length === 0) return;
+           
+           // Определяем кто должен отдать карты (все кроме штрафуемых)
            const contributorsNeeded = players
-             .filter(p => p.id !== forgetfulPlayerId && p.cards.length > 0)
+             .filter(p => !targetIds.includes(p.id) && p.cards.length > 0)
              .map(p => p.id);
            
            if (contributorsNeeded.length === 0) {
-             get().showNotification(`⚠️ Никто не может скинуть карты ${forgetfulPlayer.name}`, 'warning', 3000);
+             get().showNotification(`⚠️ Никто не может скинуть карты штрафникам`, 'warning', 3000);
              return;
            }
            
-           console.log(`💸 [startPenaltyProcess] Начинаем штраф для ${forgetfulPlayer.name}, участники: ${contributorsNeeded.length}`);
+           const namesText = forgetfulPlayers.map(p => p.name).join(', ');
+           console.log(`💸 [startPenaltyProcess] Начинаем штраф для ${forgetfulPlayers.length} игроков: ${namesText}`);
            console.log(`⏸️ [startPenaltyProcess] ✅ ОСТАНАВЛИВАЕМ ИГРУ! (isGamePaused = true)`);
            
            // ✅ НОВАЯ ЛОГИКА: ОСТАНАВЛИВАЕМ ИГРУ!
            set({ 
              isGamePaused: true, // ✅ КРИТИЧНО: ПАУЗА!
              pendingPenalty: {
-               targetPlayerId: forgetfulPlayerId,
+               targetPlayerId: targetIds.length === 1 ? targetIds[0] : targetIds, // ✅ Массив если несколько!
                contributorsNeeded: [...contributorsNeeded],
-               contributorsCompleted: [] // ✅ НОВОЕ: Пока никто не скинул
+               contributorsCompleted: {} // ✅ НОВОЕ: Пустой объект для отслеживания
              }
            });
            
-           get().showNotification(`⏸️ ИГРА НА ПАУЗЕ! Все должны скинуть карты для штрафа ${forgetfulPlayer.name}!`, 'warning', 7000);
+           get().showNotification(`⏸️ ИГРА НА ПАУЗЕ! Все должны скинуть карты для штрафа (${forgetfulPlayers.length} игроков)!`, 'warning', 7000);
            
           // ✅ Боты автоматически отдают карты, люди НЕ получают модалку автоматически!
           // Модалка открывается ТОЛЬКО когда игрок нажимает кнопку "Сдать штраф"
@@ -3038,14 +3045,14 @@ export const useGameStore = create<GameState>()(
                setTimeout(() => {
                  // ✅ КРИТИЧНО: Проверяем что штраф ЕЩЕ АКТИВЕН!
                  const currentPenalty = get().pendingPenalty;
-                 if (!currentPenalty || currentPenalty.targetPlayerId !== forgetfulPlayerId) {
-                   console.log(`⚠️ [startPenaltyProcess] Штраф уже завершен или изменен - бот ${player.name} не скидывает карту`);
+                 if (!currentPenalty) {
+                   console.log(`⚠️ [startPenaltyProcess] Штраф уже завершен - бот ${player.name} не скидывает карту`);
                    return;
                  }
                  
-                 // ✅ КРИТИЧНО: Проверяем что бот ЕЩЕ НЕ СКИНУЛ карту!
-                 if (currentPenalty.contributorsCompleted.includes(playerId)) {
-                   console.log(`⚠️ [startPenaltyProcess] Бот ${player.name} УЖЕ скинул карту - пропускаем`);
+                 // ✅ КРИТИЧНО: Проверяем что бот ЕЩЕ НЕ СКИНУЛ карты!
+                 if (currentPenalty.contributorsCompleted[playerId]) {
+                   console.log(`⚠️ [startPenaltyProcess] Бот ${player.name} УЖЕ скинул карты - пропускаем`);
                    return;
                  }
                  
@@ -3053,11 +3060,21 @@ export const useGameStore = create<GameState>()(
                  if (!currentPlayer) return;
                  
                  const openCards = currentPlayer.cards.filter(c => c.open);
-                 const worstCard = get().findWorstCardInHand(openCards, get().trumpSuit);
-                 if (worstCard) {
-                   console.log(`🤖 [startPenaltyProcess] Бот ${player.name} автоматически выбирает худшую карту для штрафа`);
-                   get().contributePenaltyCard(playerId, worstCard.id);
-                 }
+                 const cardsToGive = Math.min(openCards.length, targetIds.length);
+                 
+                 // ✅ НОВАЯ ЛОГИКА: Бот выбирает худшие карты и распределяет их по штрафникам
+                 const sortedWorstCards = openCards
+                   .map(card => ({ card, rank: get().getCardRank(card.image || '') }))
+                   .sort((a, b) => a.rank - b.rank) // Сортируем от худшей к лучшей
+                   .slice(0, cardsToGive)
+                   .map(item => item.card);
+                 
+                 // Распределяем карты по штрафникам (по кругу)
+                 sortedWorstCards.forEach((card, cardIndex) => {
+                   const targetId = targetIds[cardIndex % targetIds.length];
+                   console.log(`🤖 [startPenaltyProcess] Бот ${player.name} отдает карту ${card.image} игроку ${targetId}`);
+                   get().contributePenaltyCard(playerId, card.id, targetId);
+                 });
               }, (index + 1) * 1000); // Боты отдают карты с задержкой
              }
             // Для людей - НЕ показываем модалку автоматически!
@@ -3065,23 +3082,22 @@ export const useGameStore = create<GameState>()(
            });
          },
          
-         // Игрок отдает карту за штраф
-         contributePenaltyCard: (contributorId: string, cardId: string) => {
+         // ✅ НОВАЯ ЛОГИКА: Игрок отдает карту за штраф КОНКРЕТНОМУ ШТРАФНИКУ
+         contributePenaltyCard: (contributorId: string, cardId: string, targetId: string) => {
            const { players, pendingPenalty } = get();
            if (!pendingPenalty) {
              console.log(`⚠️ [contributePenaltyCard] Нет активного штрафа!`);
              return;
            }
            
-           // ✅ ЗАЩИТА: Проверяем что игрок еще в списке ожидающих (не отдал карту)
+           // ✅ ЗАЩИТА: Проверяем что игрок еще в списке ожидающих
            if (!pendingPenalty.contributorsNeeded.includes(contributorId)) {
-             console.log(`⚠️ [contributePenaltyCard] Игрок ${contributorId} уже отдал карту или не должен участвовать в штрафе`);
-             console.log(`⚠️ [contributePenaltyCard] Список ожидающих:`, pendingPenalty.contributorsNeeded);
+             console.log(`⚠️ [contributePenaltyCard] Игрок ${contributorId} уже отдал все карты или не должен участвовать в штрафе`);
              return;
            }
            
            const contributor = players.find(p => p.id === contributorId);
-           const targetPlayer = players.find(p => p.id === pendingPenalty.targetPlayerId);
+           const targetPlayer = players.find(p => p.id === targetId);
            if (!contributor || !targetPlayer) return;
            
            // Находим карту у отдающего игрока
@@ -3094,22 +3110,22 @@ export const useGameStore = create<GameState>()(
              return;
            }
            
-          console.log(`💸 [contributePenaltyCard] ${contributor.name} отдает карту ${card.image} в штрафную стопку для ${targetPlayer.name}`);
+          console.log(`💸 [contributePenaltyCard] ${contributor.name} отдает карту ${card.image} игроку ${targetPlayer.name}`);
           console.log(`📊 [contributePenaltyCard] До: ${contributor.name} имеет ${contributor.cards.length} карт`);
           
           // Создаем новое состояние
           const newPlayers = players.map(player => ({ ...player, cards: [...player.cards] }));
           const contributorIndex = newPlayers.findIndex(p => p.id === contributorId);
+          const targetIndex = newPlayers.findIndex(p => p.id === targetId);
           
           // Убираем карту у отдающего
           newPlayers[contributorIndex].cards.splice(cardIndex, 1);
           console.log(`📊 [contributePenaltyCard] После: ${contributor.name} будет иметь ${newPlayers[contributorIndex].cards.length} карт`);
           
-          // НОВАЯ МЕХАНИКА: Добавляем карту в штрафную стопку
-          // ✅ КРИТИЧНО: НЕ создаем копию! Используем ту же ссылку!
-          card.open = false; // Закрываем карту
-          console.log(`🗂️ [contributePenaltyCard] Добавляем карту ${card.image} в штрафную стопку`);
-          get().addCardToPenaltyDeck(card, contributorId, contributor.name);
+          // ✅ НОВАЯ МЕХАНИКА: Карта сразу идет к штрафнику (НЕ в стопку!)
+          card.open = true; // ✅ Карта остается открытой во 2-й стадии!
+          newPlayers[targetIndex].cards.push(card);
+          console.log(`📊 [contributePenaltyCard] ${targetPlayer.name} получил карту! Теперь ${newPlayers[targetIndex].cards.length} карт`);
            
            // НОВОЕ ПРАВИЛО: Если у отдающего осталась 1 карта - он должен объявить "одна карта!"
            if (newPlayers[contributorIndex].cards.filter(c => c.open).length === 1) {
@@ -3142,83 +3158,101 @@ export const useGameStore = create<GameState>()(
            }
            
            // ✅ НОВАЯ ЛОГИКА: Добавляем в contributorsCompleted
-           const newContributorsCompleted = [...pendingPenalty.contributorsCompleted, contributorId];
-           console.log(`✅ [contributePenaltyCard] ${contributor.name} скинул карту! (${newContributorsCompleted.length}/${pendingPenalty.contributorsNeeded.length})`);
+           const newContributorsCompleted = { ...pendingPenalty.contributorsCompleted };
+           if (!newContributorsCompleted[contributorId]) {
+             newContributorsCompleted[contributorId] = {};
+           }
+           newContributorsCompleted[contributorId][targetId] = cardId;
+           
+           // Проверяем сколько карт отдал этот игрок
+           const targetIds = Array.isArray(pendingPenalty.targetPlayerId) 
+             ? pendingPenalty.targetPlayerId 
+             : [pendingPenalty.targetPlayerId];
+           const cardsGivenByContributor = Object.keys(newContributorsCompleted[contributorId] || {}).length;
+           const cardsNeededByContributor = Math.min(contributor.cards.length + 1, targetIds.length); // +1 потому что мы уже убрали карту
+           
+           console.log(`✅ [contributePenaltyCard] ${contributor.name} отдал ${cardsGivenByContributor}/${cardsNeededByContributor} карт`);
+           
+           // Проверяем: ВСЕ ли игроки отдали нужное количество карт?
+           const allContributorsCompleted = pendingPenalty.contributorsNeeded.every(contribId => {
+             const contribPlayer = players.find(p => p.id === contribId);
+             if (!contribPlayer) return true; // Игрок не найден - считаем что завершил
+             
+             const cardsGiven = Object.keys(newContributorsCompleted[contribId] || {}).length;
+             const cardsNeeded = Math.min(contribPlayer.cards.length, targetIds.length);
+             return cardsGiven >= cardsNeeded;
+           });
            
            let newPendingPenalty = null;
-           // ✅ Проверяем: ВСЕ скинули?
-           if (newContributorsCompleted.length >= pendingPenalty.contributorsNeeded.length) {
-             // ✅ ВСЕ СКИНУЛИ! Раздаём штраф!
-             console.log(`✅ [contributePenaltyCard] ВСЕ СКИНУЛИ! Раздаем штраф ${targetPlayer.name}`);
-             setTimeout(() => {
-               get().distributePenaltyCards(pendingPenalty.targetPlayerId);
-             }, 500);
+           if (allContributorsCompleted) {
+             // ✅ ВСЕ СКИНУЛИ! ШТРАФ ЗАВЕРШЕН!
+             console.log(`✅ [contributePenaltyCard] ВСЕ СКИНУЛИ! Штраф завершен для ${targetIds.length} игроков`);
+             // НЕ вызываем distributePenaltyCards - карты уже розданы!
            } else {
              // Ждём остальных
              newPendingPenalty = {
                ...pendingPenalty,
                contributorsCompleted: newContributorsCompleted
              };
-             console.log(`⏳ [contributePenaltyCard] Ждём ещё ${pendingPenalty.contributorsNeeded.length - newContributorsCompleted.length} игроков...`);
+             const remaining = pendingPenalty.contributorsNeeded.filter(id => {
+               const p = players.find(pl => pl.id === id);
+               if (!p) return false;
+               const given = Object.keys(newContributorsCompleted[id] || {}).length;
+               const needed = Math.min(p.cards.length, targetIds.length);
+               return given < needed;
+             });
+             console.log(`⏳ [contributePenaltyCard] Ждём ещё ${remaining.length} игроков...`);
            }
            
-          // ✅ ИСПРАВЛЕНО: Закрываем модалку ТОЛЬКО для игрока который сдал карту
-          // НЕ закрываем модалку если она открыта для другого игрока!
+          // ✅ ИСПРАВЛЕНО: Закрываем модалку ТОЛЬКО если игрок отдал ВСЕ нужные карты
           const { showPenaltyCardSelection, penaltyCardSelectionPlayerId } = get();
-          const shouldCloseModal = showPenaltyCardSelection && penaltyCardSelectionPlayerId === contributorId;
+          const shouldCloseModal = showPenaltyCardSelection 
+            && penaltyCardSelectionPlayerId === contributorId 
+            && cardsGivenByContributor >= cardsNeededByContributor;
           
           set({ 
             players: newPlayers,
             pendingPenalty: newPendingPenalty,
+            isGamePaused: newPendingPenalty !== null, // ✅ ВОЗОБНОВЛЯЕМ ИГРУ если штраф завершен!
             showPenaltyCardSelection: shouldCloseModal ? false : showPenaltyCardSelection,
             penaltyCardSelectionPlayerId: shouldCloseModal ? null : penaltyCardSelectionPlayerId
           });
           
-          // ✅ ИСПРАВЛЕНО: НЕ показываем модалку следующему автоматически
-          // Каждый игрок должен САМ нажать кнопку "Сдать штраф"
+          if (shouldCloseModal) {
+            console.log(`✅ [contributePenaltyCard] ${contributor.name} отдал все карты - закрываем модалку`);
+          }
           
-          // ✅ ПРОВЕРЯЕМ что карта действительно убралась
-          setTimeout(() => {
-            const updatedContributor = get().players.find(p => p.id === contributorId);
-            if (updatedContributor) {
-              console.log(`✅ [contributePenaltyCard] ПРОВЕРКА: ${updatedContributor.name} теперь имеет ${updatedContributor.cards.length} карт`);
+          // ✅ ЕСЛИ ШТРАФ ЗАВЕРШЕН - ВОЗОБНОВЛЯЕМ ИГРУ!
+          if (allContributorsCompleted) {
+            console.log(`▶️ [contributePenaltyCard] ✅ ШТРАФ ЗАВЕРШЕН! ИГРА ВОЗОБНОВЛЕНА! (isGamePaused = false)`);
+            get().showNotification(`✅ Штраф завершен! Игра продолжается!`, 'success', 3000);
+            
+            // Продолжаем игру с того же игрока
+            const { currentPlayerId, gameStage } = get();
+            if (gameStage === 2 && currentPlayerId) {
+              setTimeout(() => {
+                set({ stage2TurnPhase: 'selecting_card' });
+                get().processPlayerTurn(currentPlayerId);
+              }, 1000);
             }
-          }, 100);
+          }
           
           // КРИТИЧНО: Принудительно обновляем состояние для React
           setTimeout(() => {
-            const currentPlayers = get().players;
-             set({ players: [...currentPlayers] });
-             
              // ВАЖНО: Обновляем статус "одна карта" после обновления состояния
              get().checkOneCardStatus();
              
              // ✅ КРИТИЧНО: Проверяем победу после сдачи штрафа!
-             // Если игрок остался без карт и без пеньков - он победил!
              get().checkVictoryCondition();
+             
+             // Проверяем активацию пеньков для ВСЕХ игроков
+             const currentPlayers = get().players;
+             currentPlayers.forEach(player => {
+               get().checkStage3Transition(player.id);
+             });
            }, 100);
            
-           get().showNotification(`✅ ${contributor.name} скинул карту штрафа!`, 'success', 2000);
-           
-          // ❌ СТАРЫЙ КОД УДАЛЕН - логика перенесена в новую систему выше
-             
-             // Проверяем статус "одна карта" - ВАЖНО: обновляем после изменения карт
-             setTimeout(() => {
-               const finalPlayers = get().players;
-               const finalTarget = finalPlayers.find(p => p.id === pendingPenalty.targetPlayerId);
-               console.log(`💸 [contributePenaltyCard] ИТОГО: ${finalTarget?.name} имеет ${finalTarget?.cards.length} карт (${finalTarget?.cards.filter(c => c.open).length} открытых)`);
-               
-               // ИСПРАВЛЕНО: Проверяем активацию пеньков для ВСЕХ игроков после штрафа
-               finalPlayers.forEach(player => {
-                 get().checkStage3Transition(player.id);
-               });
-               
-               get().checkOneCardStatus();
-               
-               // КРИТИЧНО: Принудительно обновляем состояние для синхронизации UI
-               const updatedPlayers = get().players;
-               set({ players: [...updatedPlayers] });
-             }, 1000);
+           get().showNotification(`✅ ${contributor.name} отдал карту ${targetPlayer.name}!`, 'success', 2000);
          },
          
          // Отменить штраф (если что-то пошло не так)
