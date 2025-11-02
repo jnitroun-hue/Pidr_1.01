@@ -67,10 +67,10 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await requireAuth(request);
-    if (!authResult.authenticated || !authResult.userId) {
+    const authResult = requireAuth(request);
+    if (authResult.error || !authResult.userId) {
       return NextResponse.json(
-        { error: 'Не авторизован' },
+        { error: authResult.error || 'Не авторизован' },
         { status: 401 }
       );
     }

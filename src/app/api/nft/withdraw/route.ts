@@ -8,7 +8,14 @@ import { requireAuth } from '../../../../lib/auth-utils';
  */
 export async function POST(req: NextRequest) {
   try {
-    const userId = await requireAuth(req);
+    const authResult = requireAuth(req);
+    if (authResult.error || !authResult.userId) {
+      return NextResponse.json({ 
+        success: false, 
+        message: authResult.error || 'Не авторизован' 
+      }, { status: 401 });
+    }
+    const userId = authResult.userId;
     console.log(`💸 Пользователь ${userId} запрашивает вывод NFT...`);
 
     const { nft_ownership_id, to_wallet_address } = await req.json();
@@ -92,7 +99,14 @@ export async function POST(req: NextRequest) {
  */
 export async function PUT(req: NextRequest) {
   try {
-    const userId = await requireAuth(req);
+    const authResult = requireAuth(req);
+    if (authResult.error || !authResult.userId) {
+      return NextResponse.json({ 
+        success: false, 
+        message: authResult.error || 'Не авторизован' 
+      }, { status: 401 });
+    }
+    const userId = authResult.userId;
     console.log(`✅ Подтверждение вывода NFT для пользователя ${userId}...`);
 
     const { withdrawal_id, transaction_hash } = await req.json();

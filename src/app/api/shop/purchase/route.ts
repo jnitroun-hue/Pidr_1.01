@@ -7,7 +7,14 @@ export async function POST(req: NextRequest) {
   console.log('🛒 POST /api/shop/purchase - Покупка товара...');
   
   try {
-    const userId = await requireAuth(req);
+    const authResult = requireAuth(req);
+    if (authResult.error || !authResult.userId) {
+      return NextResponse.json({ 
+        success: false, 
+        message: authResult.error || 'Не авторизован' 
+      }, { status: 401 });
+    }
+    const userId = authResult.userId;
     console.log(`✅ Авторизован пользователь: ${userId}`);
     
     const body = await req.json();

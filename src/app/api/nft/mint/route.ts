@@ -9,7 +9,14 @@ import { getNFTService } from '../../../../lib/ton/nft-service';
  */
 export async function POST(req: NextRequest) {
   try {
-    const userId = await requireAuth(req);
+    const authResult = requireAuth(req);
+    if (authResult.error || !authResult.userId) {
+      return NextResponse.json({ 
+        success: false, 
+        message: authResult.error || 'Не авторизован' 
+      }, { status: 401 });
+    }
+    const userId = authResult.userId;
     console.log(`🎨 Пользователь ${userId} запрашивает минт NFT...`);
 
     const { card_id, wallet_address } = await req.json();
@@ -101,7 +108,14 @@ export async function POST(req: NextRequest) {
  */
 export async function PUT(req: NextRequest) {
   try {
-    const userId = await requireAuth(req);
+    const authResult = requireAuth(req);
+    if (authResult.error || !authResult.userId) {
+      return NextResponse.json({ 
+        success: false, 
+        message: authResult.error || 'Не авторизован' 
+      }, { status: 401 });
+    }
+    const userId = authResult.userId;
     console.log(`✅ Подтверждение минта для пользователя ${userId}...`);
 
     const { mint_id, nft_address, transaction_hash, token_id } = await req.json();

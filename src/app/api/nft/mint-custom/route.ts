@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     const authContext = await requireAuth(request);
     if (!authContext.authenticated || !authContext.userId) {
       return NextResponse.json(
-        { success: false, error: 'Не авторизован' },
+        { success: false, error: authContext.error || 'Не авторизован' },
         { status: 401 }
       );
     }
