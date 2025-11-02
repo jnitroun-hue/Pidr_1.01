@@ -43,6 +43,15 @@ function HomeWithParams() {
     
     console.log('🎮 P.I.D.R. GAME - АВТОМАТИЧЕСКАЯ АВТОРИЗАЦИЯ');
     
+    // ✅ ПРОВЕРКА ПЕРВОГО ВХОДА - ПЕРЕНАПРАВЛЕНИЕ НА WELCOME
+    const isFirstVisit = typeof window !== 'undefined' && !localStorage.getItem('pidr_visited');
+    if (isFirstVisit) {
+      console.log('👋 Первый визит - перенаправление на welcome');
+      localStorage.setItem('pidr_visited', 'true');
+      router.push('/welcome');
+      return;
+    }
+    
     const initializePlayer = async () => {
       if (typeof window === 'undefined') {
         setLoading(false);
