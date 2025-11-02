@@ -28,7 +28,7 @@ const nextConfig = {
   
   // ✅ ЭКСПЕРИМЕНТАЛЬНЫЕ ФИЧИ ДЛЯ СКОРОСТИ
   experimental: {
-    optimizeCss: true,
+    // optimizeCss: true, // ❌ ОТКЛЮЧЕНО - вызывает ошибку "Cannot find module 'critters'" на Vercel
     optimizePackageImports: ['framer-motion', 'lucide-react'],
   },
   
