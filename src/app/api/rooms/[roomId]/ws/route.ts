@@ -61,7 +61,7 @@ export async function GET(
             }
           }
         )
-        .subscribe((status) => {
+        .subscribe((status: any) => {
           console.log(`📡 [SSE] Статус подписки для комнаты ${roomId}:`, status);
         });
       
