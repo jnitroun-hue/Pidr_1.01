@@ -13,10 +13,10 @@ export async function GET(req: NextRequest) {
   try {
     // Проверяем авторизацию
     const auth = requireAuth(req);
-    if (auth.error) {
+    if (auth.error || !auth.userId) {
       return NextResponse.json({ 
         success: false, 
-        message: auth.error 
+        message: auth.error || 'Не авторизован' 
       }, { status: 401 });
     }
 
