@@ -106,12 +106,44 @@ export async function POST(
 
       console.log(`🤖 Добавляем бота: id=${botId}, name=${botName}, position=${nextPosition}`);
 
-      // ДОБАВЛЯЕМ БОТА В БАЗУ
+      // ✅ СНАЧАЛА СОЗДАЕМ БОТА В _pidr_users (если не существует)
+      const { data: existingBot } = await supabase
+        .from('_pidr_users')
+        .select('telegram_id')
+        .eq('telegram_id', botId)
+        .single();
+
+      if (!existingBot) {
+        // Создаем бота в _pidr_users
+        const { error: createBotError } = await supabase
+          .from('_pidr_users')
+          .insert({
+            telegram_id: botId,
+            username: botName,
+            first_name: botName,
+            last_name: '',
+            coins: 0,
+            rating: 1000,
+            is_bot: true,
+            status: 'online'
+          });
+
+        if (createBotError) {
+          console.error('❌ Ошибка создания бота в _pidr_users:', createBotError);
+          return NextResponse.json({ 
+            success: false, 
+            message: 'Ошибка создания бота: ' + createBotError.message 
+          }, { status: 500 });
+        }
+        console.log(`✅ Бот ${botName} создан в _pidr_users с telegram_id=${botId}`);
+      }
+
+      // ДОБАВЛЯЕМ БОТА В КОМНАТУ
       const { error: botError } = await supabase
         .from('_pidr_room_players')
         .insert({
           room_id: roomId,
-          user_id: botId.toString(), // ОТРИЦАТЕЛЬНЫЙ ID КАК СТРОКА
+          user_id: botId, // ✅ ТЕПЕРЬ ЭТО СУЩЕСТВУЮЩИЙ telegram_id!
           username: botName,
           position: nextPosition,
           is_ready: true, // БОТЫ ВСЕГДА ГОТОВЫ
