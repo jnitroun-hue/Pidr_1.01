@@ -911,13 +911,8 @@ function GamePageContentComponent({
       if (playersWithOneCard && playersWithOneCard.length > 0) {
         setShowAskCardsButton(false); // Скрываем сначала
         
-        // Показываем сообщение над игроками у которых 1 карта
-        playersWithOneCard.forEach(playerId => {
-          const player = players.find(p => p.id === playerId);
-          if (player && !player.isUser) {
-            showPlayerMessage(playerId, '⚠️ 1 карта!', 'warning', 5000);
-          }
-        });
+        // ❌ УБРАНО: НЕ показываем сообщение "1 карта!" автоматически
+        // Сообщение должно появляться ТОЛЬКО после объявления игроком!
         
         // Показываем кнопку через 2 секунды
         setTimeout(() => {
