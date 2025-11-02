@@ -45,6 +45,21 @@ export async function POST(request: NextRequest) {
     console.log(`👤 Пользователь: ${userId}`);
     console.log(`🎴 NFT ID: ${nftId}, ${rank}${suit}`);
 
+    // ✅ СНАЧАЛА ПРОВЕРЯЕМ ВСЕ КАРТЫ ПОЛЬЗОВАТЕЛЯ
+    const { data: allUserCards, error: allCardsError } = await supabase
+      .from('_pidr_nft_cards')
+      .select('id, user_id, suit, rank')
+      .eq('user_id', userId);
+    
+    console.log('📋 [add-to-deck] Все карты пользователя:', allUserCards);
+    console.log('📋 [add-to-deck] Количество карт:', allUserCards?.length || 0);
+    
+    if (allUserCards && allUserCards.length > 0) {
+      console.log('🔍 [add-to-deck] Ищем карту с ID:', nftId);
+      const foundCard = allUserCards.find((c: any) => c.id === nftId);
+      console.log('🔍 [add-to-deck] Карта найдена в списке?', foundCard ? 'ДА' : 'НЕТ');
+    }
+
     // ✅ ИСПРАВЛЕНО: Проверяем что карта принадлежит пользователю (user_id = telegram_id!)
     let { data: nftCard, error: nftError } = await supabase
       .from('_pidr_nft_cards')

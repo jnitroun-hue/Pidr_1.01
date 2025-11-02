@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Проверяем что NFT принадлежит пользователю
+    // ✅ ИСПРАВЛЕНО: Проверяем что NFT принадлежит пользователю (user_id = telegram_id!)
     const { data: nftCard, error: nftError } = await supabase
       .from('_pidr_nft_cards')
       .select('id, user_id')
@@ -87,12 +87,22 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    if (nftCard.user_id !== userId) {
+    console.log('🔍 [Marketplace Create] Проверка владельца:', {
+      cardUserId: nftCard.user_id,
+      requestUserId: userId,
+      match: nftCard.user_id == userId
+    });
+    
+    // ✅ ИСПРАВЛЕНО: Используем нестрогое сравнение для поддержки string/number
+    if (nftCard.user_id != userId && nftCard.user_id !== userId) {
+      console.error('❌ [Marketplace Create] Карта не принадлежит пользователю');
       return NextResponse.json(
         { success: false, error: 'Эта карта вам не принадлежит' },
         { status: 403 }
       );
     }
+    
+    console.log('✅ [Marketplace Create] Карта принадлежит пользователю');
     
     // Проверяем что карта еще не выставлена на продажу
     const { data: existingListing } = await supabase
