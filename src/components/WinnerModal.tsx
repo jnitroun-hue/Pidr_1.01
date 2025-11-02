@@ -128,14 +128,17 @@ export default function WinnerModal({
           ))}
         </div>
 
-        {/* Основная карточка */}
+        {/* Основная карточка - 60% ЭКРАНА */}
         <motion.div
           initial={{ scale: 0.5, opacity: 0, rotateY: -180 }}
           animate={{ scale: 1, opacity: 1, rotateY: 0 }}
           exit={{ scale: 0.5, opacity: 0, rotateY: 180 }}
           transition={{ type: 'spring', damping: 20, stiffness: 200 }}
-          className="relative max-w-md w-full mx-4"
+          className="relative mx-4"
           style={{
+            width: '60vw',
+            maxWidth: '600px',
+            minWidth: '320px',
             background: placeData.gradient,
             borderRadius: '28px',
             padding: '40px',
