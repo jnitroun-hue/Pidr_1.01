@@ -150,7 +150,15 @@ export default function CardGenerator({
           suit,
           rarity,
           imageData,
-          metadata: { rank, suit, rarity },
+          publicMetadata: {
+            name: `${rank} of ${suit}`,
+            description: `${rarity} card`,
+            attributes: [
+              { trait_type: 'Rank', value: rank },
+              { trait_type: 'Suit', value: suit },
+              { trait_type: 'Rarity', value: rarity }
+            ]
+          },
           timestamp: Date.now()
         });
         console.log('💾 Карта сохранена в кеш:', cardId);

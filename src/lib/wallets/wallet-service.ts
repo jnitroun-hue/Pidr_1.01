@@ -78,10 +78,10 @@ export class WalletService {
           return tonWallet?.account.address || null;
         
         case 'SOL':
-          return await solanaConnector.getAddress();
+          return solanaConnector.getConnectedAddress();
         
         case 'ETH':
-          return await ethereumConnector.getAddress();
+          return ethereumConnector.getConnectedAddress();
         
         default:
           return null;

@@ -129,12 +129,12 @@ const RectangularGameTable: React.FC<RectangularGameTableProps> = ({
               <motion.div
                 key={`${card.suit}-${card.rank}-${index}`}
                 className={styles.playedCard}
-                initial={{ scale: 0, rotation: Math.random() * 20 - 10 }}
-                animate={{ scale: 1, rotation: Math.random() * 10 - 5 }}
+                initial={{ scale: 0, rotate: Math.random() * 20 - 10 }}
+                animate={{ scale: 1, rotate: Math.random() * 10 - 5 }}
                 transition={{ delay: index * 0.1 }}
                 style={{
                   zIndex: index + 1,
-                  transform: `translate(${Math.random() * 20 - 10}px, ${Math.random() * 20 - 10}px) rotate(${Math.random() * 10 - 5}deg)`
+                  transform: `translate(${Math.random() * 20 - 10}px, ${Math.random() * 20 - 10}px)`
                 }}
               >
                 <img 
@@ -192,17 +192,14 @@ const RectangularGameTable: React.FC<RectangularGameTableProps> = ({
               <div className={styles.playerInfo}>
                 <div className={styles.playerName}>{player.name}</div>
                 <div className={styles.playerStats}>
-                  <span className={styles.cardCount}>{player.hand.length} карт</span>
-                  {player.coins !== undefined && (
-                    <span className={styles.coins}>💰 {player.coins}</span>
-                  )}
+                  <span className={styles.cardCount}>{player.cards.length} карт</span>
                 </div>
               </div>
 
               {/* Карты игрока (для неосновных игроков показываем рубашки) */}
               {!isCurrentPlayer && (
                 <div className={styles.playerCards}>
-                  {player.hand.slice(0, Math.min(3, player.hand.length)).map((_, cardIndex) => (
+                  {player.cards.slice(0, Math.min(3, player.cards.length)).map((_, cardIndex) => (
                     <div 
                       key={cardIndex}
                       className={styles.playerCard}
@@ -218,21 +215,13 @@ const RectangularGameTable: React.FC<RectangularGameTableProps> = ({
                       />
                     </div>
                   ))}
-                  {player.hand.length > 3 && (
-                    <div className={styles.moreCards}>+{player.hand.length - 3}</div>
+                  {player.cards.length > 3 && (
+                    <div className={styles.moreCards}>+{player.cards.length - 3}</div>
                   )}
                 </div>
               )}
 
-              {/* Статус игрока */}
-              {player.status && (
-                <div className={`${styles.playerStatus} ${styles[player.status]}`}>
-                  {player.status === 'thinking' && '🤔'}
-                  {player.status === 'waiting' && '⏳'}
-                  {player.status === 'ready' && '✅'}
-                  {player.status === 'disconnected' && '❌'}
-                </div>
-              )}
+              {/* Статус игрока - УДАЛЕНО, Player не имеет status */}
             </motion.div>
           );
         })}

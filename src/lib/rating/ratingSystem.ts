@@ -47,7 +47,7 @@ export function calculateRatingRewards(
 
   // Адаптируем награды под количество игроков
   const rewards = adaptRewardsForPlayerCount(totalPlayers);
-  const reward = rewards[position] || { experience: -30, coins: 0, isWinner: false };
+  const reward = rewards[position as keyof typeof rewards] || { experience: -30, coins: 0, isWinner: false };
 
   return {
     experience: reward.experience,

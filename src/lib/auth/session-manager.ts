@@ -247,7 +247,7 @@ export class SessionManager {
         return [];
       }
 
-      return (sessions || []).map(s => ({
+      return (sessions || []).map((s: any) => ({
         sessionId: s.id.toString(),
         userId,
         deviceInfo: s.device_info,

@@ -7,7 +7,7 @@ export interface GameTable {
   id: string;
   name: string;
   description: string;
-  style: 'luxury' | 'neon' | 'classic' | 'royal' | 'diamond' | 'space' | 'forest';
+  style: 'luxury' | 'neon' | 'classic' | 'royal' | 'diamond' | 'space' | 'forest' | 'fantasy';
   rarity: 'common' | 'rare' | 'epic' | 'legendary' | 'mythic';
   price: number;
   currency: 'coins' | 'gems' | 'premium';

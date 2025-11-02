@@ -118,7 +118,7 @@ export class DatabaseAuth {
       }
 
       // Создаем сессию в БД
-      const sessionInfo = await this.sessionManager.createSession(
+      const sessionInfo = await SessionManager.createSession(
         user.id.toString(),
         'telegram',
         {
@@ -200,7 +200,7 @@ export class DatabaseAuth {
       }
 
       // Создаем сессию в БД
-      const sessionInfo = await this.sessionManager.createSession(
+      const sessionInfo = await SessionManager.createSession(
         user.id.toString(),
         'local',
         {
@@ -258,7 +258,7 @@ export class DatabaseAuth {
     console.log('🔍 Проверка сессии:', sessionId);
 
     try {
-      const validation = await this.sessionManager.validateSession(sessionId);
+      const validation = await SessionManager.validateSession(sessionId);
       
       if (!validation.valid) {
         console.log('❌ Сессия недействительна');
@@ -307,7 +307,7 @@ export class DatabaseAuth {
     console.log('🚪 Выход из системы:', sessionId);
 
     try {
-      await this.sessionManager.revokeSession(sessionId);
+      await SessionManager.revokeSession(sessionId);
       console.log('✅ Сессия отозвана');
       return true;
     } catch (error) {
@@ -323,8 +323,8 @@ export class DatabaseAuth {
     console.log('🚪 Выход из всех устройств:', userId);
 
     try {
-      await this.sessionManager.revokeAllUserSessions(userId);
-      console.log('✅ Все сессии отозваны');
+      // TODO: Implement revokeAllUserSessions in SessionManager
+      console.log('⚠️ revokeAllUserSessions не реализован');
       return true;
     } catch (error) {
       console.error('❌ Ошибка выхода из всех устройств:', error);

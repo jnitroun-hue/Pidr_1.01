@@ -71,7 +71,7 @@ const ProfessionalGameTable: React.FC<ProfessionalGameTableProps> = ({
       return;
     }
 
-    const card = currentPlayer.hand[index];
+    const card = currentPlayer.cards[index];
     if (!canPlayCard?.(card, index)) {
       addNotification('Эту карту нельзя сыграть!', 'error');
       return;
@@ -101,7 +101,7 @@ const ProfessionalGameTable: React.FC<ProfessionalGameTableProps> = ({
       {/* Рука игрока */}
       {currentPlayer && (
         <PlayerHand
-          cards={currentPlayer.hand}
+          cards={currentPlayer.cards}
           selectedCardIndex={selectedCardIndex || null}
           onCardSelect={handleCardSelect}
           onCardPlay={handleCardPlay}
@@ -140,7 +140,7 @@ const ProfessionalGameTable: React.FC<ProfessionalGameTableProps> = ({
               </motion.button>
             )}
 
-            {gameActions?.onDeclareOneCard && currentPlayer?.hand.length === 1 && (
+            {gameActions?.onDeclareOneCard && currentPlayer?.cards.length === 1 && (
               <motion.button
                 className={`${styles.actionButton} ${styles.oneCardAction}`}
                 onClick={gameActions.onDeclareOneCard}

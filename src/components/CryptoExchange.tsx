@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Box, VStack, HStack, Text, Input, Button, Select, Alert } from '@chakra-ui/react';
+import { Box, VStack, HStack, Text, Input, Button, Alert } from '@chakra-ui/react';
 import { FaExchangeAlt, FaCoins, FaBitcoin, FaEthereum } from 'react-icons/fa';
 import { SiSolana } from 'react-icons/si';
 import { useWalletStore } from '../store/walletStore';
@@ -104,27 +104,28 @@ export default function CryptoExchange({ onSuccess }: CryptoExchangeProps) {
           <Text mb={3} fontWeight="600" color="#e2e8f0">
             Выберите криптовалюту
           </Text>
-          <Select
+          <select
             value={selectedCrypto}
             onChange={(e) => setSelectedCrypto(e.target.value as CryptoType)}
-            bg="linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.6) 100%)"
-            backdropFilter="blur(10px)"
-            border="1px solid"
-            borderColor="rgba(34, 197, 94, 0.3)"
-            borderRadius="12px"
-            color="#e2e8f0"
-            _hover={{ borderColor: 'rgba(255, 215, 0, 0.4)' }}
-            _focus={{ 
-              borderColor: 'rgba(255, 215, 0, 0.6)', 
-              boxShadow: '0 0 20px rgba(255, 215, 0, 0.1)' 
+            style={{
+              width: '100%',
+              background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.6) 100%)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(34, 197, 94, 0.3)',
+              borderRadius: '12px',
+              color: '#e2e8f0',
+              padding: '12px 16px',
+              fontSize: '16px',
+              fontWeight: '600',
+              cursor: 'pointer'
             }}
           >
             {exchangeRates.map((rate) => (
-              <option key={rate.crypto} value={rate.crypto}>
+              <option key={rate.crypto} value={rate.crypto} style={{ background: '#1e293b', color: '#e2e8f0' }}>
                 {rate.crypto} (1 = {rate.rate} монет)
               </option>
             ))}
-          </Select>
+          </select>
         </Box>
 
         {/* Amount Input */}
