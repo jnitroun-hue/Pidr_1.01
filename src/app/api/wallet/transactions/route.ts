@@ -3,10 +3,13 @@ import { supabase } from '../../../../lib/supabase';
 import { requireAuth } from '../../../../lib/auth-utils';
 
 // Используем единую функцию авторизации из auth-utils
-async function getUserIdFromRequest(req: NextRequest): Promise<string | null> {
+function getUserIdFromRequest(req: NextRequest): string | null {
   try {
-    const userId = await requireAuth(req);
-    return userId;
+    const authResult = requireAuth(req);
+    if (authResult.error || !authResult.userId) {
+      return null;
+    }
+    return authResult.userId;
   } catch {
     return null;
   }
@@ -14,7 +17,7 @@ async function getUserIdFromRequest(req: NextRequest): Promise<string | null> {
 
 // GET /api/wallet/transactions - Получить транзакции пользователя
 export async function GET(req: NextRequest) {
-  const userId = await getUserIdFromRequest(req);
+  const userId = getUserIdFromRequest(req);
   if (!userId) {
     return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
   }
@@ -87,7 +90,7 @@ export async function GET(req: NextRequest) {
 
 // POST /api/wallet/transactions - Создать новую транзакцию
 export async function POST(req: NextRequest) {
-  const userId = await getUserIdFromRequest(req);
+  const userId = getUserIdFromRequest(req);
   if (!userId) {
     return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
   }
