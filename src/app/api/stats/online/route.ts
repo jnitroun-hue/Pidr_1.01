@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
     const { data: statusStats, error: statusError } = await supabase
       .from('_pidr_users')
       .select('status')
-      .then(({ data, error }) => {
+      .then(({ data, error }: { data: any; error: any }) => {
         if (error) return { data: null, error };
         
         const stats = data?.reduce((acc: any, user: any) => {
