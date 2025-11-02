@@ -31,7 +31,7 @@ export async function GET(
             table: '_pidr_room_players',
             filter: `room_id=eq.${roomId}`
           },
-          async (payload) => {
+          async (payload: any) => {
             console.log(`📡 [SSE] Изменение в комнате ${roomId}:`, payload.eventType);
             
             // Получаем актуальные данные комнаты
