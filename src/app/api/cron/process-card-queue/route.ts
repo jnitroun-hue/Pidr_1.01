@@ -142,6 +142,11 @@ export async function GET(request: NextRequest) {
  * Генерация изображения карты
  */
 async function generateCardImage(job: any): Promise<string> {
+  // ✅ ПРОВЕРКА: supabase должен быть инициализирован
+  if (!supabase) {
+    throw new Error('Supabase not configured');
+  }
+
   // TODO: Здесь можно использовать AI генерацию или Canvas на сервере
   // Пока возвращаем путь к базовой карте
   const fileName = `${job.suit}_${job.rank}_${job.rarity}_${Date.now()}.png`;
