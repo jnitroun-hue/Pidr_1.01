@@ -180,6 +180,11 @@ async function generateCardImage(job: any): Promise<string> {
  * Загрузка метаданных в Supabase Storage
  */
 async function uploadMetadata(jobId: string, metadata: any): Promise<string> {
+  // ✅ ПРОВЕРКА: supabase должен быть инициализирован
+  if (!supabase) {
+    throw new Error('Supabase not configured');
+  }
+
   const fileName = `metadata_${jobId}.json`;
   const metadataBlob = new Blob([JSON.stringify(metadata, null, 2)], {
     type: 'application/json'
