@@ -1427,6 +1427,26 @@ export const useGameStore = create<GameState>()(
         if (gameStage === 2 || gameStage === 3) {
           console.log(`🎮 [processPlayerTurn] Стадия ${gameStage}: ${currentPlayer.name} (${currentPlayer.cards.length} карт, ${currentPlayer.penki.length} пеньков)`);
           
+          // ✅ КРИТИЧНО: СРАЗУ ПРОВЕРЯЕМ АКТИВАЦИЮ ПЕНЬКОВ!
+          if (currentPlayer.cards.length === 0 && currentPlayer.penki.length > 0) {
+            console.log(`🃏 [processPlayerTurn] У ${currentPlayer.name} нет карт, но есть пеньки - активируем!`);
+            get().checkStage3Transition(playerId);
+            // Перезапускаем ход после активации пеньков
+            setTimeout(() => {
+              get().processPlayerTurn(playerId);
+            }, 300);
+            return;
+          }
+          
+          // ✅ КРИТИЧНО: Если у игрока нет карт и нет пеньков - передаем ход!
+          if (currentPlayer.cards.length === 0 && currentPlayer.penki.length === 0) {
+            console.log(`⚠️ [processPlayerTurn] У ${currentPlayer.name} нет карт и пеньков - передаем ход`);
+            setTimeout(() => {
+              get().nextTurn();
+            }, 300);
+            return;
+          }
+          
           // ✅ КРИТИЧНО: НЕ сбрасываем stage2TurnPhase если уже выбрана карта!
           // Это предотвращает race condition с AI ботами
           if (stage2TurnPhase === 'card_selected' && currentPlayerId === playerId) {
@@ -3222,6 +3242,22 @@ export const useGameStore = create<GameState>()(
             console.log(`✅ [contributePenaltyCard] ${contributor.name} отдал все карты - закрываем модалку`);
           }
           
+          // ✅ КРИТИЧНО: СРАЗУ ПРОВЕРЯЕМ ПЕНЬКИ ДЛЯ ВСЕХ ИГРОКОВ!
+          // Это нужно делать ДО продолжения игры!
+          console.log(`🔍 [contributePenaltyCard] Проверяем активацию пеньков для всех игроков...`);
+          newPlayers.forEach(player => {
+            if (player.cards.length === 0 && player.penki.length > 0) {
+              console.log(`🃏 [contributePenaltyCard] ${player.name} без карт - активируем пеньки!`);
+              get().checkStage3Transition(player.id);
+            }
+          });
+          
+          // Проверяем победу СРАЗУ (до продолжения игры)
+          get().checkVictoryCondition();
+          
+          // Обновляем статус "одна карта" СРАЗУ
+          get().checkOneCardStatus();
+          
           // ✅ ЕСЛИ ШТРАФ ЗАВЕРШЕН - ВОЗОБНОВЛЯЕМ ИГРУ!
           if (allContributorsCompleted) {
             console.log(`▶️ [contributePenaltyCard] ✅ ШТРАФ ЗАВЕРШЕН! ИГРА ВОЗОБНОВЛЕНА! (isGamePaused = false)`);
@@ -3230,27 +3266,21 @@ export const useGameStore = create<GameState>()(
             // Продолжаем игру с того же игрока
             const { currentPlayerId, gameStage } = get();
             if (gameStage === 2 && currentPlayerId) {
-              setTimeout(() => {
-                set({ stage2TurnPhase: 'selecting_card' });
-                get().processPlayerTurn(currentPlayerId);
-              }, 1000);
+              // ✅ КРИТИЧНО: Проверяем что у текущего игрока ЕСТЬ КАРТЫ!
+              const currentPlayerData = get().players.find(p => p.id === currentPlayerId);
+              if (currentPlayerData && currentPlayerData.cards.length === 0 && currentPlayerData.penki.length === 0) {
+                console.log(`⚠️ [contributePenaltyCard] У ${currentPlayerData.name} нет карт - передаем ход`);
+                setTimeout(() => {
+                  get().nextTurn();
+                }, 500);
+              } else {
+                setTimeout(() => {
+                  set({ stage2TurnPhase: 'selecting_card' });
+                  get().processPlayerTurn(currentPlayerId);
+                }, 1000);
+              }
             }
           }
-          
-          // КРИТИЧНО: Принудительно обновляем состояние для React
-          setTimeout(() => {
-             // ВАЖНО: Обновляем статус "одна карта" после обновления состояния
-             get().checkOneCardStatus();
-             
-             // ✅ КРИТИЧНО: Проверяем победу после сдачи штрафа!
-             get().checkVictoryCondition();
-             
-             // Проверяем активацию пеньков для ВСЕХ игроков
-             const currentPlayers = get().players;
-             currentPlayers.forEach(player => {
-               get().checkStage3Transition(player.id);
-             });
-           }, 100);
            
            get().showNotification(`✅ ${contributor.name} отдал карту ${targetPlayer.name}!`, 'success', 2000);
          },
