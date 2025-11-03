@@ -199,7 +199,7 @@ export class RoomManager {
         schema: 'public',
         table: '_pidr_room_players',
         filter: `room_id=eq.${roomId}`
-      }, (payload) => {
+      }, (payload: any) => {
         console.log('✅ [RoomManager] Игрок присоединился:', payload.new);
         if (callbacks.onPlayerJoin) {
           callbacks.onPlayerJoin(payload.new as RoomPlayer);
@@ -210,7 +210,7 @@ export class RoomManager {
         schema: 'public',
         table: '_pidr_room_players',
         filter: `room_id=eq.${roomId}`
-      }, (payload) => {
+      }, (payload: any) => {
         console.log('👋 [RoomManager] Игрок покинул комнату:', payload.old);
         if (callbacks.onPlayerLeave && payload.old) {
           callbacks.onPlayerLeave((payload.old as any).user_id);
@@ -221,7 +221,7 @@ export class RoomManager {
         schema: 'public',
         table: '_pidr_room_players',
         filter: `room_id=eq.${roomId}`
-      }, (payload) => {
+      }, (payload: any) => {
         console.log('🔄 [RoomManager] Игрок обновил статус:', payload.new);
         if (callbacks.onPlayerReady && payload.new) {
           const player = payload.new as RoomPlayer;
@@ -233,14 +233,14 @@ export class RoomManager {
         schema: 'public',
         table: '_pidr_rooms',
         filter: `id=eq.${roomId}`
-      }, (payload) => {
+      }, (payload: any) => {
         console.log('🎮 [RoomManager] Комната обновлена:', payload.new);
         const room = payload.new as Room;
         if (room.status === 'playing' && callbacks.onGameStart) {
           callbacks.onGameStart();
         }
       })
-      .on('broadcast', { event: 'game-state' }, (payload) => {
+      .on('broadcast', { event: 'game-state' }, (payload: any) => {
         console.log('🔄 [RoomManager] Обновление состояния игры:', payload);
         if (callbacks.onGameStateUpdate) {
           callbacks.onGameStateUpdate(payload.payload);

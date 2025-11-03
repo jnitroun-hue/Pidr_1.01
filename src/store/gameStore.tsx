@@ -3398,12 +3398,12 @@ export const useGameStore = create<GameState>()(
                  }
                  break;
                  
-               case 'penalty_card_contributed':
-                 // Игрок отдал штрафную карту
-                 if (moveData.contributorId && moveData.cardId) {
-                   get().contributePenaltyCard(moveData.contributorId, moveData.cardId);
-                 }
-                 break;
+              case 'penalty_card_contributed':
+                // Игрок отдал штрафную карту
+                if (moveData.contributorId && moveData.cardId && moveData.targetId) {
+                  get().contributePenaltyCard(moveData.contributorId, moveData.cardId, moveData.targetId);
+                }
+                break;
                  
                default:
                  console.warn(`🌐 [Multiplayer] Неизвестный тип хода:`, moveData.type);
