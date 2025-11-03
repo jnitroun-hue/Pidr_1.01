@@ -198,14 +198,14 @@ const RectangularGameTable: React.FC<RectangularGameTableProps> = ({
 
               {/* Карты игрока (для неосновных игроков показываем рубашки) */}
               {!isCurrentPlayer && (
-                <div className={styles.playerCards}>
+                <div className={`${styles.playerCards} ${position.position === 'left' ? styles.playerCardsLeft : position.position === 'right' ? styles.playerCardsRight : ''}`}>
                   {player.cards.slice(0, Math.min(3, player.cards.length)).map((_, cardIndex) => (
                     <div 
                       key={cardIndex}
                       className={styles.playerCard}
                       style={{
                         zIndex: cardIndex,
-                        transform: `translateX(${cardIndex * 3}px) rotate(${(cardIndex - 1) * 5}deg)`
+                        transform: `translateX(${(position.position === 'right' ? -cardIndex : cardIndex) * 3}px) rotate(${(cardIndex - 1) * 5}deg)`
                       }}
                     >
                       <img 

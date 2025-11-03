@@ -334,7 +334,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-top: 5px;
+  margin-top: 2px; /* ✅ УМЕНЬШЕНО: Карты ближе к аватару */
+}
+
+/* Карты слева направо (для левых игроков) */
+.playerCardsLeft {
+  flex-direction: row; /* ✅ НОВОЕ: Карты растут вправо */
+}
+
+/* Карты справа налево (для правых игроков) */
+.playerCardsRight {
+  flex-direction: row-reverse; /* ✅ НОВОЕ: Карты растут влево */
 }
 
 .playerCard {
