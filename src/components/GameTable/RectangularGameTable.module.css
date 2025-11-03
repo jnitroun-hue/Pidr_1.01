@@ -248,6 +248,7 @@
   overflow: hidden;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   transition: all 0.3s ease;
+  z-index: 1; /* ✅ НОВОЕ: Аватар НИЖЕ карт */
 }
 
 .avatarImage {
@@ -335,6 +336,7 @@
   align-items: center;
   justify-content: center;
   margin-top: 2px; /* ✅ УМЕНЬШЕНО: Карты ближе к аватару */
+  z-index: 10; /* ✅ НОВОЕ: Карты ВЫШЕ аватара */
 }
 
 /* Карты слева направо (для левых игроков) */
@@ -349,11 +351,12 @@
 
 .playerCard {
   position: relative;
-  width: 20px;
-  height: 28px;
+  width: 15px; /* ✅ УМЕНЬШЕНО: В 2 раза меньше (было 20px) */
+  height: 21px; /* ✅ УМЕНЬШЕНО: В 2 раза меньше (было 28px) */
   border-radius: 3px;
   overflow: hidden;
   transition: all 0.3s ease;
+  z-index: 11; /* ✅ НОВОЕ: Карты выше всего */
 }
 
 .cardBackImage {
