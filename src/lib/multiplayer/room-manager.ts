@@ -188,6 +188,7 @@ export class RoomManager {
     onPlayerReady?: (userId: string, isReady: boolean) => void;
     onGameStart?: () => void;
     onGameStateUpdate?: (gameState: any) => void;
+    onPlayerMove?: (moveData: any) => void; // ✅ НОВОЕ: Колбэк для ходов
   }): void {
     console.log('📡 [RoomManager] Подписка на комнату:', roomId);
     this.roomId = roomId;
@@ -246,6 +247,12 @@ export class RoomManager {
           callbacks.onGameStateUpdate(payload.payload);
         }
       })
+      .on('broadcast', { event: 'player-move' }, (payload: any) => {
+        console.log('🎮 [RoomManager] Получен ход игрока:', payload);
+        if (callbacks.onPlayerMove) {
+          callbacks.onPlayerMove(payload.payload);
+        }
+      })
       .subscribe();
 
     console.log('✅ [RoomManager] Подписка активна');
@@ -266,6 +273,26 @@ export class RoomManager {
       event: 'game-state',
       payload: gameState
     });
+  }
+
+  /**
+   * ✅ НОВОЕ: Отправить ход игрока (broadcast)
+   */
+  async broadcastMove(roomId: string, moveData: any): Promise<void> {
+    if (!this.channel && this.roomId !== roomId) {
+      console.warn('❌ [RoomManager] Канал не инициализирован или не та комната');
+      return;
+    }
+
+    console.log('📤 [RoomManager] Отправка хода игрока:', moveData);
+    
+    if (this.channel) {
+      this.channel.send({
+        type: 'broadcast',
+        event: 'player-move',
+        payload: moveData
+      });
+    }
   }
 
   /**
