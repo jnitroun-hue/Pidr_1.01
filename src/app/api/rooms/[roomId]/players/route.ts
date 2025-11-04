@@ -12,6 +12,21 @@ export async function GET(
 
     console.log(`📋 [GET /api/rooms/${roomId}/players] Получение списка игроков`);
 
+    // ✅ СНАЧАЛА ПОЛУЧАЕМ ИНФОРМАЦИЮ О КОМНАТЕ (max_players!)
+    const { data: room, error: roomError } = await supabase
+      .from('_pidr_rooms')
+      .select('max_players, current_players, status')
+      .eq('id', roomId)
+      .single();
+
+    if (roomError || !room) {
+      console.error('❌ [GET /api/rooms/players] Комната не найдена:', roomError);
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Комната не найдена: ' + (roomError?.message || 'Unknown error')
+      }, { status: 404 });
+    }
+
     // Получаем список игроков из БД
     const { data: players, error } = await supabase
       .from('_pidr_room_players')
@@ -27,11 +42,14 @@ export async function GET(
       }, { status: 500 });
     }
 
-    console.log(`✅ [GET /api/rooms/players] Найдено игроков: ${players?.length || 0}`);
+    console.log(`✅ [GET /api/rooms/players] Найдено игроков: ${players?.length || 0}, max: ${room.max_players}`);
 
     return NextResponse.json({ 
       success: true, 
-      players: players || []
+      players: players || [],
+      maxPlayers: room.max_players, // ✅ ДОБАВЛЕНО!
+      currentPlayers: players?.length || 0,
+      roomStatus: room.status
     });
 
   } catch (error) {

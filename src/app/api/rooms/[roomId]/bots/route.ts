@@ -94,15 +94,31 @@ export async function POST(
       const maxPosition = currentPlayers[0]?.position || 0;
       const nextPosition = maxPosition + 1;
 
-      // СПИСОК ИМЕН БОТОВ
-      const botNames = [
-        'Андрей_БОТ', 'Максим_БОТ', 'Дмитрий_БОТ', 'Алексей_БОТ', 
-        'Сергей_БОТ', 'Владимир_БОТ', 'Николай_БОТ', 'Игорь_БОТ'
+      // ✅ УЛУЧШЕННАЯ ГЕНЕРАЦИЯ ИМЁН БОТОВ БЕЗ ДУБЛИКАТОВ
+      const botFirstNames = [
+        'Андрей', 'Максим', 'Дмитрий', 'Алексей', 
+        'Сергей', 'Владимир', 'Николай', 'Игорь',
+        'Артём', 'Денис', 'Евгений', 'Михаил'
       ];
       
-      const usedNames = currentPlayers.map((p: any) => p.username).filter((name: string) => name?.includes('_БОТ'));
-      const availableNames = botNames.filter((name: string) => !usedNames.includes(name));
-      const botName = availableNames[0] || `БОТ_${nextPosition}`;
+      // Получаем уже используемые имена (включая ботов)
+      const usedNames = currentPlayers.map((p: any) => p.username);
+      console.log(`🤖 Используемые имена:`, usedNames);
+      
+      // Находим первое свободное имя
+      let botName = '';
+      for (const firstName of botFirstNames) {
+        const candidateName = `${firstName}_БОТ`;
+        if (!usedNames.includes(candidateName)) {
+          botName = candidateName;
+          break;
+        }
+      }
+      
+      // Если все имена заняты, генерируем уникальное
+      if (!botName) {
+        botName = `БОТ_${Date.now() % 10000}`;
+      }
 
       console.log(`🤖 Добавляем бота: id=${botId}, name=${botName}, position=${nextPosition}`);
 

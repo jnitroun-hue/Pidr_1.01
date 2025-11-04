@@ -253,6 +253,12 @@ export class RoomManager {
           callbacks.onPlayerMove(payload.payload);
         }
       })
+      .on('broadcast', { event: 'player-ready' }, (payload: any) => {
+        console.log('✅ [RoomManager] Получен broadcast готовности:', payload);
+        if (callbacks.onPlayerReady && payload.payload) {
+          callbacks.onPlayerReady(payload.payload.userId, payload.payload.isReady);
+        }
+      })
       .subscribe();
 
     console.log('✅ [RoomManager] Подписка активна');
@@ -312,6 +318,16 @@ export class RoomManager {
       }
 
       console.log('✅ [RoomManager] Готовность обновлена:', { userId, isReady });
+      
+      // ✅ МГНОВЕННАЯ СИНХРОНИЗАЦИЯ ЧЕРЕЗ BROADCAST!
+      if (this.channel) {
+        console.log('📤 [RoomManager] Отправка broadcast готовности:', { userId, isReady });
+        this.channel.send({
+          type: 'broadcast',
+          event: 'player-ready',
+          payload: { userId, isReady }
+        });
+      }
     } catch (error) {
       console.error('❌ [RoomManager] Ошибка setPlayerReady:', error);
       throw error;

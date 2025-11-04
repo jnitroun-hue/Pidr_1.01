@@ -114,9 +114,12 @@ export default function MultiplayerLobby({
 
       if (data.success && data.players) {
         console.log('📋 [MultiplayerLobby] Игроки загружены:', data.players);
+        console.log('📋 [MultiplayerLobby] max_players:', data.maxPlayers);
+        
         setLobbyState(prev => ({
           ...prev,
           players: data.players,
+          maxPlayers: data.maxPlayers || 9, // ✅ ОБНОВЛЯЕМ max_players ИЗ БД!
           canStart: data.players.length >= 2 && data.players.every((p: LobbyPlayer) => p.is_ready)
         }));
       }
