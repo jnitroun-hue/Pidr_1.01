@@ -1,8 +1,23 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Публичные переменные (для клиентской стороны)
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
+// ✅ ЛЕНИВАЯ ИНИЦИАЛИЗАЦИЯ - ПЕРЕМЕННЫЕ ЧИТАЮТСЯ ТОЛЬКО ПРИ ВЫЗОВЕ!
+function getSupabaseUrl(): string {
+  // На сервере
+  if (typeof window === 'undefined') {
+    return process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
+  }
+  // На клиенте - читаем из window (Next.js автоматически инжектит NEXT_PUBLIC_*)
+  return process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+}
+
+function getSupabaseAnonKey(): string {
+  // На сервере
+  if (typeof window === 'undefined') {
+    return process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
+  }
+  // На клиенте
+  return process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+}
 
 // Серверные переменные (только для API routes)
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -12,6 +27,9 @@ let supabaseClient: any = null;
 
 function getSupabaseClient() {
   if (!supabaseClient) {
+    const supabaseUrl = getSupabaseUrl();
+    const supabaseAnonKey = getSupabaseAnonKey();
+
     if (typeof window === 'undefined') {
       // Серверная сторона - проверяем переменные
       console.log('🔍 Supabase config check:', {
@@ -23,7 +41,25 @@ function getSupabaseClient() {
     }
 
     if (!supabaseUrl || !supabaseAnonKey) {
-      console.error('❌ Missing Supabase environment variables');
+      const isClient = typeof window !== 'undefined';
+      const errorMsg = `❌ КРИТИЧНО! Supabase не настроен!\n\n` +
+        `На ${isClient ? 'КЛИЕНТЕ' : 'СЕРВЕРЕ'} отсутствуют переменные окружения:\n` +
+        `- NEXT_PUBLIC_SUPABASE_URL: ${supabaseUrl ? '✅' : '❌ ОТСУТСТВУЕТ'}\n` +
+        `- NEXT_PUBLIC_SUPABASE_ANON_KEY: ${supabaseAnonKey ? '✅' : '❌ ОТСУТСТВУЕТ'}\n\n` +
+        `РЕШЕНИЕ:\n` +
+        `1. Открой Vercel Dashboard → Settings → Environment Variables\n` +
+        `2. Добавь переменные NEXT_PUBLIC_SUPABASE_URL и NEXT_PUBLIC_SUPABASE_ANON_KEY\n` +
+        `3. Redeploy проект`;
+      
+      console.error(errorMsg);
+      
+      // На клиенте показываем алерт
+      if (isClient) {
+        setTimeout(() => {
+          alert('⚠️ ОШИБКА КОНФИГУРАЦИИ!\n\nSupabase не настроен на Vercel.\nСвяжись с разработчиком!');
+        }, 1000);
+      }
+      
       // Возвращаем mock клиент для сборки
       return {
         from: () => ({
@@ -36,6 +72,11 @@ function getSupabaseClient() {
           limit: function() { return this; },
           single: function() { return this; },
           or: function() { return this; }
+        }),
+        channel: () => ({
+          on: function() { return this; },
+          subscribe: () => {},
+          send: () => {}
         })
       };
     }
@@ -55,8 +96,14 @@ function getSupabaseClient() {
   return supabaseClient;
 }
 
-// Публичный клиент (для обычных операций с RLS)
-export const supabase = getSupabaseClient();
+// ✅ ПУБЛИЧНЫЙ КЛИЕНТ ТЕПЕРЬ СОЗДАЁТСЯ ЧЕРЕЗ PROXY
+export const supabase = new Proxy({} as any, {
+  get(target, prop) {
+    const client = getSupabaseClient();
+    const value = (client as any)[prop];
+    return typeof value === 'function' ? value.bind(client) : value;
+  }
+});
 
 // Админский клиент (для серверных операций, минует RLS)
 let supabaseAdminClient: any = null;

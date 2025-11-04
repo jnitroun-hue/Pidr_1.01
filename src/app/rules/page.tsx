@@ -112,7 +112,7 @@ export default function RulesPage() {
         margin: '0 auto'
       }}>
         {/* Заголовок */}
-        <motion.div
+        <motion.div 
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           style={{
@@ -162,7 +162,7 @@ export default function RulesPage() {
           gap: '15px'
         }}>
           {rules.map((rule, index) => (
-            <motion.div
+        <motion.div 
               key={index}
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -202,7 +202,7 @@ export default function RulesPage() {
                     filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))'
                   }}>
                     {rule.icon}
-                  </div>
+                </div>
                   <h3 style={{
                     color: '#f1f5f9',
                     fontSize: '20px',
@@ -211,7 +211,7 @@ export default function RulesPage() {
                   }}>
                     {rule.title}
                   </h3>
-                </div>
+                    </div>
                 <motion.div
                   animate={{ rotate: expandedSection === index ? 180 : 0 }}
                   transition={{ duration: 0.3 }}
@@ -267,18 +267,18 @@ export default function RulesPage() {
                               fontWeight: '700'
                             }}>
                               ▸
-                            </span>
+                      </span>
                             {item}
                           </motion.li>
-                        ))}
+                    ))}
                       </ul>
-                    </div>
+                  </div>
                   </motion.div>
                 )}
               </AnimatePresence>
             </motion.div>
           ))}
-        </div>
+              </div>
 
         {/* Кнопка "Начать играть" */}
         <motion.button
@@ -308,4 +308,4 @@ export default function RulesPage() {
       </div>
     </div>
   );
-}
+} 
