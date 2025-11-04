@@ -3092,8 +3092,19 @@ export const useGameStore = create<GameState>()(
            
            get().showNotification(`⏸️ ИГРА НА ПАУЗЕ! Все должны скинуть карты для штрафа (${forgetfulPlayers.length} игроков)!`, 'warning', 7000);
            
-          // ✅ Боты автоматически отдают карты, люди НЕ получают модалку автоматически!
-          // Модалка открывается ТОЛЬКО когда игрок нажимает кнопку "Сдать штраф"
+          // ✅ ИСПРАВЛЕНО: Для ЛЮДЕЙ открываем модалку автоматически!
+          const humanContributors = contributorsNeeded.filter(id => {
+            const p = players.find(player => player.id === id);
+            return p && !p.isBot;
+          });
+          
+          if (humanContributors.length > 0) {
+            // ✅ АВТОМАТИЧЕСКИ ОТКРЫВАЕМ МОДАЛКУ ДЛЯ ЛЮДЕЙ!
+            set({ showPenaltyCardSelection: true });
+            console.log(`🎯 [startPenaltyProcess] Открыта модалка штрафа для ${humanContributors.length} игроков`);
+          }
+          
+          // Боты автоматически отдают карты с задержкой
            contributorsNeeded.forEach((playerId, index) => {
              const player = players.find(p => p.id === playerId);
             
