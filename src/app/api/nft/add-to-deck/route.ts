@@ -21,7 +21,10 @@ export async function POST(request: NextRequest) {
 
     // Получаем данные из запроса
     const body = await request.json();
-    const { nftId, suit, rank, imageUrl } = body;
+    // ✅ ИСПРАВЛЕНО: Принимаем nft_card_id или nftId (совместимость)
+    const { nft_card_id, nftId, suit, rank, image_url, imageUrl } = body;
+    const cardId = nft_card_id || nftId;
+    const cardImageUrl = image_url || imageUrl;
 
     // Получаем user_id из headers
     const telegramIdHeader = request.headers.get('x-telegram-id');
@@ -43,7 +46,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`👤 Пользователь: ${userId}`);
-    console.log(`🎴 NFT ID: ${nftId}, ${rank}${suit}`);
+    console.log(`🎴 NFT ID: ${cardId}, ${rank}${suit}`);
 
     // ✅ СНАЧАЛА ПРОВЕРЯЕМ ВСЕ КАРТЫ ПОЛЬЗОВАТЕЛЯ
     const { data: allUserCards, error: allCardsError } = await supabase
@@ -55,8 +58,8 @@ export async function POST(request: NextRequest) {
     console.log('📋 [add-to-deck] Количество карт:', allUserCards?.length || 0);
     
     if (allUserCards && allUserCards.length > 0) {
-      console.log('🔍 [add-to-deck] Ищем карту с ID:', nftId);
-      const foundCard = allUserCards.find((c: any) => c.id === nftId);
+      console.log('🔍 [add-to-deck] Ищем карту с ID:', cardId);
+      const foundCard = allUserCards.find((c: any) => c.id === cardId);
       console.log('🔍 [add-to-deck] Карта найдена в списке?', foundCard ? 'ДА' : 'НЕТ');
     }
 
@@ -64,7 +67,7 @@ export async function POST(request: NextRequest) {
     let { data: nftCard, error: nftError } = await supabase
       .from('_pidr_nft_cards')
       .select('*')
-      .eq('id', nftId)
+      .eq('id', cardId)
       .eq('user_id', userId) // user_id в _pidr_nft_cards = telegram_id
       .single();
 

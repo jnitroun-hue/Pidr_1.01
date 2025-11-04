@@ -14,7 +14,9 @@ export async function DELETE(request: NextRequest) {
     console.log('🗑️ [delete-nft] Удаление NFT карты');
 
     const body = await request.json();
-    const { nftId } = body;
+    // ✅ ИСПРАВЛЕНО: Принимаем nft_card_id или nftId (совместимость)
+    const { nft_card_id, nftId } = body;
+    const cardId = nft_card_id || nftId;
 
     // Получаем user_id из headers
     const telegramIdHeader = request.headers.get('x-telegram-id');
@@ -35,20 +37,20 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    if (!nftId) {
+    if (!cardId) {
       return NextResponse.json(
-        { success: false, error: 'nftId обязателен' },
+        { success: false, error: 'nft_card_id обязателен' },
         { status: 400 }
       );
     }
 
-    console.log(`👤 Пользователь: ${userId}, NFT ID: ${nftId}`);
+    console.log(`👤 Пользователь: ${userId}, NFT ID: ${cardId}`);
 
     // Получаем NFT для проверки владельца и storage_path
     const { data: nft, error: fetchError } = await supabase
       .from('_pidr_nft_cards')
       .select('id, user_id, storage_path')
-      .eq('id', nftId)
+      .eq('id', cardId)
       .single();
 
     if (fetchError || !nft) {
@@ -77,7 +79,7 @@ export async function DELETE(request: NextRequest) {
     const { data: activeListing } = await supabase
       .from('_pidr_nft_marketplace')
       .select('id')
-      .eq('nft_card_id', nftId)
+      .eq('nft_card_id', cardId)
       .eq('status', 'active')
       .single();
 
@@ -113,7 +115,7 @@ export async function DELETE(request: NextRequest) {
     const { error: deleteError } = await supabase
       .from('_pidr_nft_cards')
       .delete()
-      .eq('id', nftId);
+      .eq('id', cardId);
 
     if (deleteError) {
       console.error('❌ Ошибка удаления из БД:', deleteError);
@@ -123,7 +125,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    console.log(`✅ NFT ${nftId} удалена`);
+    console.log(`✅ NFT ${cardId} удалена`);
 
     return NextResponse.json({
       success: true,
