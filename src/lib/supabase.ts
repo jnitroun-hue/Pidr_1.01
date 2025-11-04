@@ -1,59 +1,24 @@
 import { createClient } from '@supabase/supabase-js';
 
-// ✅ КЭШИРУЕМ КОНФИГ ЗАГРУЖЕННЫЙ С API (только на клиенте)
-let clientConfig: { url: string; key: string } | null = null;
-let configPromise: Promise<void> | null = null;
-
-// ✅ ЗАГРУЖАЕМ КОНФИГ С API (только на клиенте)
-async function loadClientConfig(): Promise<void> {
-  if (typeof window === 'undefined') return; // Только для клиента
-  if (clientConfig) return; // Уже загружено
-  if (configPromise) return configPromise; // Уже загружается
-
-  configPromise = (async () => {
-    try {
-      console.log('🔄 [Supabase] Загружаем конфиг с /api/config...');
-      const response = await fetch('/api/config');
-      if (!response.ok) {
-        throw new Error(`Config API error: ${response.status}`);
-      }
-      const data = await response.json();
-      clientConfig = {
-        url: data.supabaseUrl,
-        key: data.supabaseAnonKey
-      };
-      console.log('✅ [Supabase] Конфиг загружен с API!');
-    } catch (error) {
-      console.error('❌ [Supabase] Не удалось загрузить конфиг:', error);
-      // Fallback на переменные окружения (если они есть)
-      clientConfig = {
-        url: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-        key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-      };
-    } finally {
-      configPromise = null;
-    }
-  })();
-
-  return configPromise;
-}
-
+// ✅ ПРОСТОЕ ЧТЕНИЕ ПЕРЕМЕННЫХ (БЕЗ ASYNC)
 function getSupabaseUrl(): string {
-  // На сервере - читаем из process.env
+  // Поддержка обоих форматов: NEXT_PUBLIC_* и без префикса
   if (typeof window === 'undefined') {
+    // На сервере
     return process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
   }
-  // На клиенте - используем загруженный конфиг или fallback
-  return clientConfig?.url || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  // На клиенте - только NEXT_PUBLIC_* (Next.js ограничение)
+  return process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 }
 
 function getSupabaseAnonKey(): string {
-  // На сервере - читаем из process.env
+  // Поддержка обоих форматов: NEXT_PUBLIC_* и без префикса
   if (typeof window === 'undefined') {
+    // На сервере
     return process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
   }
-  // На клиенте - используем загруженный конфиг или fallback
-  return clientConfig?.key || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+  // На клиенте - только NEXT_PUBLIC_* (Next.js ограничение)
+  return process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 }
 
 // Серверные переменные (только для API routes)
@@ -62,25 +27,20 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 // Проверяем переменные только в рантайме, не при сборке
 let supabaseClient: any = null;
 
-async function getSupabaseClient() {
-  // ✅ НА КЛИЕНТЕ ЗАГРУЖАЕМ КОНФИГ С API ПЕРЕД СОЗДАНИЕМ КЛИЕНТА
-  if (typeof window !== 'undefined' && !clientConfig) {
-    await loadClientConfig();
+// ✅ ПУБЛИЧНЫЙ КЛИЕНТ ЧЕРЕЗ ПРОСТОЙ PROXY (СИНХРОННЫЙ)
+export const supabase = new Proxy({} as any, {
+  get(target, prop) {
+    const client = getSupabaseClientSync(); // ✅ СИНХРОННЫЙ ВЫЗОВ!
+    const value = (client as any)[prop];
+    return typeof value === 'function' ? value.bind(client) : value;
   }
+});
 
+// ✅ СИНХРОННАЯ ВЕРСИЯ (БЕЗ AWAIT)
+function getSupabaseClientSync() {
   if (!supabaseClient) {
     const supabaseUrl = getSupabaseUrl();
     const supabaseAnonKey = getSupabaseAnonKey();
-
-    if (typeof window === 'undefined') {
-      // Серверная сторона - проверяем переменные
-      console.log('🔍 Supabase config check:', {
-        hasUrl: !!supabaseUrl,
-        hasKey: !!supabaseAnonKey,
-        urlStart: supabaseUrl?.substring(0, 20),
-        keyStart: supabaseAnonKey?.substring(0, 20),
-      });
-    }
 
     if (!supabaseUrl || !supabaseAnonKey) {
       const isClient = typeof window !== 'undefined';
@@ -88,21 +48,11 @@ async function getSupabaseClient() {
         `На ${isClient ? 'КЛИЕНТЕ' : 'СЕРВЕРЕ'} отсутствуют переменные окружения:\n` +
         `- NEXT_PUBLIC_SUPABASE_URL: ${supabaseUrl ? '✅' : '❌ ОТСУТСТВУЕТ'}\n` +
         `- NEXT_PUBLIC_SUPABASE_ANON_KEY: ${supabaseAnonKey ? '✅' : '❌ ОТСУТСТВУЕТ'}\n\n` +
-        `РЕШЕНИЕ:\n` +
-        `1. Открой Vercel Dashboard → Settings → Environment Variables\n` +
-        `2. Добавь переменные NEXT_PUBLIC_SUPABASE_URL и NEXT_PUBLIC_SUPABASE_ANON_KEY\n` +
-        `3. Redeploy проект`;
+        `РЕШЕНИЕ: Проверь что переменные добавлены на Vercel и redeploy!`;
       
       console.error(errorMsg);
       
-      // На клиенте показываем алерт
-      if (isClient) {
-        setTimeout(() => {
-          alert('⚠️ ОШИБКА КОНФИГУРАЦИИ!\n\nSupabase не настроен на Vercel.\nСвяжись с разработчиком!');
-        }, 1000);
-      }
-      
-      // Возвращаем mock клиент для сборки
+      // Возвращаем mock клиент
       return {
         from: () => ({
           select: () => ({ data: null, error: { message: 'Supabase not configured' } }),
@@ -123,35 +73,15 @@ async function getSupabaseClient() {
       };
     }
 
-    if (supabaseUrl && !supabaseUrl.startsWith('https://') && !supabaseUrl.startsWith('postgresql://')) {
-      console.error('❌ Invalid SUPABASE_URL format');
-      throw new Error('SUPABASE_URL must start with https:// or postgresql://');
-    }
-
     supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
-        persistSession: false, // Отключаем автосессии для API роутов
+        persistSession: false,
       },
     });
   }
 
   return supabaseClient;
 }
-
-// ✅ ПУБЛИЧНЫЙ КЛИЕНТ ТЕПЕРЬ СОЗДАЁТСЯ ЧЕРЕЗ ASYNC PROXY
-export const supabase = new Proxy({} as any, {
-  get(target, prop) {
-    // Все методы теперь возвращают Promise
-    return async (...args: any[]) => {
-      const client = await getSupabaseClient();
-      const value = (client as any)[prop];
-      if (typeof value === 'function') {
-        return value.bind(client)(...args);
-      }
-      return value;
-    };
-  }
-});
 
 // Админский клиент (для серверных операций, минует RLS)
 let supabaseAdminClient: any = null;
