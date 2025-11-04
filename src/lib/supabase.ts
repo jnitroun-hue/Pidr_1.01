@@ -111,6 +111,8 @@ let supabaseAdminClient: any = null;
 export function getSupabaseAdmin() {
   if (!supabaseAdminClient && typeof window === 'undefined') {
     // Только на сервере
+    const supabaseUrl = getSupabaseUrl(); // ✅ ИСПОЛЬЗУЕМ ФУНКЦИЮ!
+    
     if (!supabaseUrl || !supabaseServiceKey) {
       console.error('❌ Missing Supabase admin credentials');
       return null;
