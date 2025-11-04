@@ -70,11 +70,27 @@ export default function MultiplayerLobby({
     roomManager.subscribeToRoom(roomId, {
       onPlayerJoin: (player) => {
         console.log('👥 [MultiplayerLobby] Игрок присоединился:', player);
-        loadRoomPlayers();
+        // ✅ ДОБАВЛЯЕМ ИГРОКА ЛОКАЛЬНО БЕЗ ПЕРЕЗАГРУЗКИ!
+        setLobbyState(prev => {
+          // Проверяем что игрока ещё нет
+          if (prev.players.some(p => p.user_id === player.user_id)) {
+            console.log('⚠️ [onPlayerJoin] Игрок уже есть в списке:', player.user_id);
+            return prev;
+          }
+          console.log('✅ [onPlayerJoin] Добавляем игрока в локальный state:', player.username);
+          return {
+            ...prev,
+            players: [...prev.players, player]
+          };
+        });
       },
       onPlayerLeave: (userId) => {
         console.log('👋 [MultiplayerLobby] Игрок покинул:', userId);
-        loadRoomPlayers();
+        // ✅ УДАЛЯЕМ ИГРОКА ЛОКАЛЬНО БЕЗ ПЕРЕЗАГРУЗКИ!
+        setLobbyState(prev => ({
+          ...prev,
+          players: prev.players.filter(p => p.user_id !== userId)
+        }));
       },
       onPlayerReady: (userId, isReady) => {
         console.log('✅ [MultiplayerLobby] Готовность обновлена:', userId, isReady);
@@ -251,10 +267,11 @@ export default function MultiplayerLobby({
 
       if (data.success) {
         console.log('✅ Бот добавлен:', data.bot);
-        // Перезагружаем список игроков
-        await loadRoomPlayers();
+        // ❌ НЕ ПЕРЕЗАГРУЖАЕМ! Realtime уже обновит через onPlayerJoin
+        // await loadRoomPlayers();
       } else {
         console.error('❌ Ошибка добавления бота:', data.message);
+        alert(`Ошибка добавления бота: ${data.message}`);
       }
     } catch (error) {
       console.error('❌ Ошибка добавления бота:', error);
