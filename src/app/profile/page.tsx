@@ -961,90 +961,8 @@ export default function ProfilePage() {
             gap: '12px',
             width: '100%'
           }}>
-            {/* СКИНЫ */}
-            <motion.button
-              onClick={() => setShowModal('skins')}
-              whileHover={{ scale: 1.05, y: -2 }}
-              whileTap={{ scale: 0.95 }}
-              style={{
-                background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.8) 0%, rgba(147, 51, 234, 0.6) 100%)',
-                border: '1px solid rgba(168, 85, 247, 0.4)',
-                borderRadius: '16px',
-                padding: '16px 12px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '8px',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                backdropFilter: 'blur(10px)',
-                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(255, 215, 0, 0.6)';
-                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(147, 51, 234, 0.9) 0%, rgba(126, 34, 206, 0.8) 100%)';
-                e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.3), 0 0 20px rgba(255, 215, 0, 0.1)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(168, 85, 247, 0.4)';
-                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(168, 85, 247, 0.8) 0%, rgba(147, 51, 234, 0.6) 100%)';
-                e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.2)';
-              }}
-            >
-              <Palette style={{ fontSize: '1.5rem', color: '#e2e8f0', filter: 'drop-shadow(0 2px 4px rgba(168, 85, 247, 0.3))' }} />
-              <span style={{ 
-                color: '#e2e8f0', 
-                fontSize: '0.8rem', 
-                fontWeight: '600', 
-                letterSpacing: '0.5px',
-                textAlign: 'center'
-              }}>
-                СКИНЫ
-              </span>
-            </motion.button>
-
-            {/* ЭФФЕКТЫ */}
-            <motion.button
-              onClick={() => setShowModal('effects')}
-              whileHover={{ scale: 1.05, y: -2 }}
-              whileTap={{ scale: 0.95 }}
-              style={{
-                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.8) 0%, rgba(37, 99, 235, 0.6) 100%)',
-                border: '1px solid rgba(59, 130, 246, 0.4)',
-                borderRadius: '16px',
-                padding: '16px 12px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '8px',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                backdropFilter: 'blur(10px)',
-                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(255, 215, 0, 0.6)';
-                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(37, 99, 235, 0.9) 0%, rgba(29, 78, 216, 0.8) 100%)';
-                e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.3), 0 0 20px rgba(255, 215, 0, 0.1)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.4)';
-                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(59, 130, 246, 0.8) 0%, rgba(37, 99, 235, 0.6) 100%)';
-                e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.2)';
-              }}
-            >
-              <Sparkles style={{ fontSize: '1.5rem', color: '#e2e8f0', filter: 'drop-shadow(0 2px 4px rgba(59, 130, 246, 0.3))' }} />
-              <span style={{ 
-                color: '#e2e8f0', 
-                fontSize: '0.8rem', 
-                fontWeight: '600', 
-                letterSpacing: '0.5px',
-                textAlign: 'center'
-              }}>
-                ЭФФЕКТЫ
-              </span>
-            </motion.button>
-
+            {/* ❌ КНОПКИ "СКИНЫ" И "ЭФФЕКТЫ" УДАЛЕНЫ */}
+            
             {/* РАМКА АВАТАР */}
             <motion.button
               onClick={() => setShowModal('frames')}
@@ -1399,8 +1317,6 @@ export default function ProfilePage() {
                 fontWeight: '700',
                 margin: 0
               }}>
-                {showModal === 'skins' && '🎨 СКИНЫ КАРТ'}
-                {showModal === 'effects' && '✨ ИГРОВЫЕ ЭФФЕКТЫ'}
                 {showModal === 'bonuses' && '🎁 БОНУСЫ'}
                 {showModal === 'frames' && '🖼️ РАМКИ АВАТАРОВ'}
                 {showModal === 'nft' && '🎴 NFT КОЛЛЕКЦИЯ'}
@@ -1433,7 +1349,8 @@ export default function ProfilePage() {
             </div>
 
             {/* Содержимое модального окна */}
-            {showModal === 'skins' && (
+            {/* ❌ УДАЛЕНО: showModal === 'skins' */}
+            {false && showModal === 'skins' && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 {cardSkins.map((skin) => (
                   <motion.div
@@ -1529,7 +1446,8 @@ export default function ProfilePage() {
               </div>
             )}
 
-            {showModal === 'effects' && (
+            {/* ❌ УДАЛЕНО: showModal === 'effects' */}
+            {false && showModal === 'effects' && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 {gameEffects.map((effect) => (
                   <motion.div
