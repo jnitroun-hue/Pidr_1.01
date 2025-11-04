@@ -1540,7 +1540,9 @@ function GamePageContentComponent({
                           width: '100%',
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center'
+                          justifyContent: 'center',
+                          overflow: 'hidden', // ✅ СКРЫВАЕМ ЕБАНЫЙ ТЕКСТ URL!
+                          position: 'relative'
                         }}
                       >
                         {/* ✅ ИСПРАВЛЕНО: Используем <img> вместо <Image> для поддержки SVG data URLs */}
@@ -1555,7 +1557,9 @@ function GamePageContentComponent({
                             boxShadow: `0 4px 12px ${currentPlayerId === player.id ? 'rgba(34, 197, 94, 0.6)' : 'rgba(0, 0, 0, 0.3)'}`,
                             border: `3px solid ${currentPlayerId === player.id ? '#22c55e' : 'rgba(255, 255, 255, 0.2)'}`,
                             transition: 'all 0.3s ease',
-                            objectFit: 'cover'
+                            objectFit: 'cover',
+                            position: 'relative', // ✅ НА ПЕРЕДНИЙ ПЛАН
+                            zIndex: 10
                           }}
                         />
                         {player.isBot && (

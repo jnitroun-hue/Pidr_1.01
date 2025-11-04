@@ -264,26 +264,7 @@ export default function PlayerProfileModal({ isOpen, onClose, player }: PlayerPr
             </div>
           )}
 
-          {/* Для ботов */}
-          {player.isBot && (
-            <div style={{
-              background: 'rgba(139, 92, 246, 0.1)',
-              border: '2px solid rgba(139, 92, 246, 0.3)',
-              borderRadius: '16px',
-              padding: '20px',
-              textAlign: 'center',
-              marginTop: '20px'
-            }}>
-              <Award size={48} color="#8b5cf6" style={{ marginBottom: '12px' }} />
-              <p style={{
-                color: '#94a3b8',
-                fontSize: '15px',
-                lineHeight: '1.6'
-              }}>
-                Это компьютерный игрок с искусственным интеллектом
-              </p>
-            </div>
-          )}
+          {/* ✅ ДЛЯ БОТОВ УБРАЛИ ЕБАНУЮ НАДПИСЬ */}
         </motion.div>
       </motion.div>
     </AnimatePresence>

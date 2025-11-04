@@ -335,7 +335,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-top: 2px; /* ✅ УМЕНЬШЕНО: Карты ближе к аватару */
+  margin-top: -8px; /* ✅ ОТРИЦАТЕЛЬНЫЙ ОТСТУП: Карты ПОВЕРХ аватара */
   z-index: 10; /* ✅ НОВОЕ: Карты ВЫШЕ аватара */
 }
 
