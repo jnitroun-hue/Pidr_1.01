@@ -156,7 +156,8 @@ export default function ProfessionalMultiplayer({ onBack }: ProfessionalMultipla
       const response = await fetch('/api/rooms', {
         method: 'POST',
         headers: { 
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'x-telegram-id': user?.id?.toString() || '' // ✅ ДОБАВЛЕНО!
         },
         credentials: 'include', // Важно для передачи cookies
         body: JSON.stringify({
@@ -197,7 +198,8 @@ export default function ProfessionalMultiplayer({ onBack }: ProfessionalMultipla
       const response = await fetch('/api/rooms', {
         method: 'POST',
         headers: { 
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'x-telegram-id': user?.id?.toString() || '' // ✅ ДОБАВЛЕНО!
         },
         credentials: 'include', // Используем HTTP-only cookies
         body: JSON.stringify({

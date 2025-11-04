@@ -155,7 +155,8 @@ export const ProperMultiplayer: React.FC = () => {
         method: 'POST',
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'x-telegram-id': user?.id?.toString() || '' // ✅ ДОБАВЛЕНО!
         },
         body: JSON.stringify({
           action: 'create',
@@ -242,7 +243,8 @@ export const ProperMultiplayer: React.FC = () => {
         method: 'POST',
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'x-telegram-id': user?.id?.toString() || '' // ✅ ДОБАВЛЕНО!
         },
         body: JSON.stringify({
           action: 'join',
