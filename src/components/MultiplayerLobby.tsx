@@ -1,8 +1,8 @@
 'use client'
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Copy, Check, Crown, Play, Clock, Wifi, WifiOff, UserPlus, Settings } from 'lucide-react';
-import { useWebSocket } from '../hooks/useWebSocket';
+import { Users, Copy, Check, Crown, Play, Clock, Wifi, WifiOff, UserPlus, Settings, Bot } from 'lucide-react';
+import { RoomManager } from '../lib/multiplayer/room-manager';
 import { useTelegram } from '../hooks/useTelegram';
 
 interface MultiplayerLobbyProps {
@@ -14,15 +14,11 @@ interface MultiplayerLobbyProps {
 }
 
 interface LobbyPlayer {
-  userId: string;
-  username?: string;
-  firstName?: string;
-  lastName?: string;
-  photoUrl?: string;
-  isReady: boolean;
-  isHost: boolean;
-  joinTime: string;
-  isBot?: boolean;
+  user_id: string;
+  username: string;
+  position: number;
+  is_ready: boolean;
+  avatar_url?: string;
 }
 
 interface LobbyState {
@@ -40,6 +36,8 @@ export default function MultiplayerLobby({
   onLeaveRoom 
 }: MultiplayerLobbyProps) {
   const { user } = useTelegram();
+  const roomManagerRef = useRef<RoomManager | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
   const [lobbyState, setLobbyState] = useState<LobbyState>({
     players: [],
     maxPlayers: 9,
@@ -50,103 +48,81 @@ export default function MultiplayerLobby({
   const [gameSettings, setGameSettings] = useState({
     gameMode: 'classic',
     maxPlayers: 9,
-    timeLimit: 0, // 0 = без лимита времени
+    timeLimit: 0,
     allowBots: true
   });
 
   const [codeCopied, setCodeCopied] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [isAddingBot, setIsAddingBot] = useState(false);
 
-  const {
-    isConnected,
-    isConnecting,
-    messages,
-    onlineUsers,
-    setPlayerReady,
-    startGame,
-    leaveRoom
-  } = useWebSocket({
-    userId: user?.id?.toString(),
-    roomId: roomId,
-    autoConnect: true
-  });
-
-  // Обработка сообщений WebSocket
+  // ✅ ИНИЦИАЛИЗАЦИЯ RoomManager при монтировании
   useEffect(() => {
-    const latestMessage = messages[messages.length - 1];
-    if (!latestMessage) return;
-
-    console.log(`🎮 [MultiplayerLobby] Получено сообщение:`, latestMessage);
-
-    switch (latestMessage.type) {
-      case 'room-state':
-        updateLobbyState(latestMessage.data);
-        break;
-        
-      case 'player-joined':
-        handlePlayerJoined(latestMessage.data);
-        break;
-        
-      case 'player-left':
-        handlePlayerLeft(latestMessage.data);
-        break;
-        
-      case 'player-ready-sync':
-        handlePlayerReadyUpdate(latestMessage.data);
-        break;
-        
-      case 'game-started':
-        handleGameStarted(latestMessage.data);
-        break;
-        
-      default:
-        console.log(`🎮 [MultiplayerLobby] Неизвестный тип сообщения:`, latestMessage.type);
+    if (!roomManagerRef.current) {
+      roomManagerRef.current = new RoomManager();
     }
-  }, [messages]);
 
-  // Обновить состояние лобби
-  const updateLobbyState = (roomData: any) => {
-    console.log(`🏠 [MultiplayerLobby] Обновление состояния лобби:`, roomData);
-    
-    setLobbyState({
-      players: roomData.players || [],
-      maxPlayers: roomData.maxPlayers || 9,
-      gameInProgress: roomData.gameInProgress || false,
-      canStart: roomData.canStart || false
+    const roomManager = roomManagerRef.current;
+
+    console.log('📡 [MultiplayerLobby] Подписываемся на комнату:', roomId);
+
+    // Подписываемся на обновления комнаты
+    roomManager.subscribeToRoom(roomId, {
+      onPlayerJoin: (player) => {
+        console.log('👥 [MultiplayerLobby] Игрок присоединился:', player);
+        loadRoomPlayers();
+      },
+      onPlayerLeave: (userId) => {
+        console.log('👋 [MultiplayerLobby] Игрок покинул:', userId);
+        loadRoomPlayers();
+      },
+      onPlayerReady: (userId, isReady) => {
+        console.log('✅ [MultiplayerLobby] Готовность обновлена:', userId, isReady);
+        // ✅ ОБНОВЛЯЕМ ЛОКАЛЬНОЕ СОСТОЯНИЕ СРАЗУ!
+        setLobbyState(prev => ({
+          ...prev,
+          players: prev.players.map(p => 
+            p.user_id === userId 
+              ? { ...p, is_ready: isReady }
+              : p
+          )
+        }));
+      },
+      onGameStart: () => {
+        console.log('🚀 [MultiplayerLobby] Игра началась!');
+        handleGameStarted({});
+      }
     });
-  };
 
-  // Обработка присоединения игрока
-  const handlePlayerJoined = (data: any) => {
-    console.log(`👥 [MultiplayerLobby] Игрок присоединился:`, data);
-    
-    if (data.roomInfo) {
-      updateLobbyState(data.roomInfo);
+    setIsConnected(true);
+
+    // Загружаем список игроков
+    loadRoomPlayers();
+
+    // Очистка при размонтировании
+    return () => {
+      console.log('🔌 [MultiplayerLobby] Отключаемся от комнаты');
+      // RoomManager автоматически отключится при unsubscribe
+    };
+  }, [roomId]);
+
+  // ✅ ЗАГРУЗКА СПИСКА ИГРОКОВ ИЗ БД
+  const loadRoomPlayers = async () => {
+    try {
+      const response = await fetch(`/api/rooms/${roomId}/players`);
+      const data = await response.json();
+
+      if (data.success && data.players) {
+        console.log('📋 [MultiplayerLobby] Игроки загружены:', data.players);
+        setLobbyState(prev => ({
+          ...prev,
+          players: data.players,
+          canStart: data.players.length >= 2 && data.players.every((p: LobbyPlayer) => p.is_ready)
+        }));
+      }
+    } catch (error) {
+      console.error('❌ [MultiplayerLobby] Ошибка загрузки игроков:', error);
     }
-  };
-
-  // Обработка покидания игроком лобби
-  const handlePlayerLeft = (data: any) => {
-    console.log(`👥 [MultiplayerLobby] Игрок покинул лобби:`, data);
-    
-    setLobbyState(prev => ({
-      ...prev,
-      players: prev.players.filter(p => p.userId !== data.userId)
-    }));
-  };
-
-  // Обработка обновления готовности игрока
-  const handlePlayerReadyUpdate = (data: any) => {
-    console.log(`✅ [MultiplayerLobby] Обновление готовности:`, data);
-    
-    setLobbyState(prev => ({
-      ...prev,
-      players: prev.players.map(p => 
-        p.userId === data.userId 
-          ? { ...p, isReady: data.isReady }
-          : p
-      )
-    }));
   };
 
   // Обработка начала игры
@@ -177,55 +153,115 @@ export default function MultiplayerLobby({
     }
   };
 
-  // Изменить готовность игрока
-  const toggleReady = () => {
+  // ✅ ИЗМЕНИТЬ ГОТОВНОСТЬ ЧЕРЕЗ API
+  const toggleReady = async () => {
     if (!user?.id) return;
     
-    const currentPlayer = lobbyState.players.find(p => p.userId === user.id.toString());
-    const newReadyState = !currentPlayer?.isReady;
+    const currentPlayer = lobbyState.players.find(p => p.user_id === user.id.toString());
+    const newReadyState = !currentPlayer?.is_ready;
     
     console.log(`🎯 [MultiplayerLobby] Изменение готовности на:`, newReadyState);
-    setPlayerReady(newReadyState);
+
+    try {
+      const roomManager = roomManagerRef.current;
+      if (!roomManager) return;
+
+      await roomManager.setPlayerReady(roomId, user.id.toString(), newReadyState);
+      
+      // ✅ ОБНОВЛЯЕМ ЛОКАЛЬНО СРАЗУ (не ждем callback)
+      setLobbyState(prev => ({
+        ...prev,
+        players: prev.players.map(p => 
+          p.user_id === user.id.toString() 
+            ? { ...p, is_ready: newReadyState }
+            : p
+        )
+      }));
+
+      console.log('✅ [MultiplayerLobby] Готовность обновлена');
+    } catch (error) {
+      console.error('❌ [MultiplayerLobby] Ошибка обновления готовности:', error);
+    }
   };
 
-  // Запустить игру (только хост)
-  const handleStartGame = () => {
+  // ✅ ЗАПУСК ИГРЫ ЧЕРЕЗ API
+  const handleStartGame = async () => {
     if (!isHost || !lobbyState.canStart) return;
     
     console.log(`🚀 [MultiplayerLobby] Хост запускает игру`);
-    
-    const finalGameSettings = {
-      ...gameSettings,
-      roomId,
-      roomCode,
-      players: lobbyState.players,
-      startTime: Date.now()
-    };
-    
-    startGame(finalGameSettings);
-  };
 
-  // Покинуть лобби
-  const handleLeaveRoom = () => {
-    console.log(`🚪 [MultiplayerLobby] Покидаем лобби`);
-    
-    if (user?.id) {
-      leaveRoom(roomId, user.id.toString());
+    try {
+      const roomManager = roomManagerRef.current;
+      if (!roomManager || !user?.id) return;
+
+      await roomManager.startGame(roomId, user.id.toString());
+      
+      console.log('✅ [MultiplayerLobby] Игра запущена');
+    } catch (error) {
+      console.error('❌ [MultiplayerLobby] Ошибка запуска игры:', error);
     }
-    
-    onLeaveRoom();
   };
 
-  // Добавить бота (только хост)
-  const addBot = () => {
-    if (!isHost || !gameSettings.allowBots) return;
-    
-    // TODO: Реализовать добавление бота
-    console.log(`🤖 [MultiplayerLobby] Добавление бота`);
+  // ✅ ПОКИНУТЬ ЛОББИ ЧЕРЕЗ API
+  const handleLeaveRoom = async () => {
+    console.log(`🚪 [MultiplayerLobby] Покидаем лобби`);
+
+    try {
+      if (!user?.id) return;
+
+      const response = await fetch(`/api/rooms/${roomId}/leave`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-telegram-id': user.id.toString()
+        }
+      });
+
+      if (!response.ok) {
+        console.error('❌ [MultiplayerLobby] Ошибка покидания комнаты');
+      }
+    } catch (error) {
+      console.error('❌ [MultiplayerLobby] Ошибка покидания комнаты:', error);
+    } finally {
+      onLeaveRoom();
+    }
   };
 
-  const currentPlayer = lobbyState.players.find(p => p.userId === user?.id?.toString());
-  const readyPlayersCount = lobbyState.players.filter(p => p.isReady).length;
+  // ✅ ДОБАВИТЬ БОТА ЧЕРЕЗ API
+  const addBot = async () => {
+    if (!isHost || !gameSettings.allowBots || isAddingBot) return;
+    
+    setIsAddingBot(true);
+    console.log(`🤖 Добавляем бота от пользователя ${user?.id}...`);
+
+    try {
+      const response = await fetch(`/api/rooms/${roomId}/bots`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-telegram-id': user?.id?.toString() || ''
+        },
+        body: JSON.stringify({ action: 'add' })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        console.log('✅ Бот добавлен:', data.bot);
+        // Перезагружаем список игроков
+        await loadRoomPlayers();
+      } else {
+        console.error('❌ Ошибка добавления бота:', data.message);
+      }
+    } catch (error) {
+      console.error('❌ Ошибка добавления бота:', error);
+    } finally {
+      setIsAddingBot(false);
+    }
+  };
+
+  const currentPlayer = lobbyState.players.find(p => p.user_id === user?.id?.toString());
+  const readyPlayersCount = lobbyState.players.filter(p => p.is_ready).length;
 
   return (
     <div className="multiplayer-lobby">
@@ -271,48 +307,55 @@ export default function MultiplayerLobby({
         
         <div className="players-list">
           <AnimatePresence>
-            {lobbyState.players.map((player, index) => (
-              <motion.div
-                key={player.userId}
-                className={`player-item ${player.isReady ? 'ready' : 'not-ready'} ${player.isHost ? 'host' : ''}`}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3, delay: index * 0.1 }}
-              >
-                <div className="player-info">
-                  {player.photoUrl && (
-                    <img 
-                      src={player.photoUrl} 
-                      alt={player.firstName || player.username || 'Игрок'}
-                      className="player-avatar"
-                    />
-                  )}
-                  <div className="player-details">
-                    <div className="player-name">
-                      {player.firstName || player.username || `Игрок ${index + 1}`}
-                      {player.isHost && <Crown className="host-crown" />}
-                      {player.isBot && <span className="bot-badge">БОТ</span>}
-                    </div>
-                    <div className="player-status">
-                      {player.isReady ? 'Готов' : 'Не готов'}
+            {lobbyState.players.map((player, index) => {
+              const isBot = player.user_id.startsWith('-') || parseInt(player.user_id) < 0;
+              const isCurrentUser = player.user_id === user?.id?.toString();
+              const isHostPlayer = index === 0; // Первый игрок = хост
+
+              return (
+                <motion.div
+                  key={player.user_id}
+                  className={`player-item ${player.is_ready ? 'ready' : 'not-ready'} ${isHostPlayer ? 'host' : ''}`}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3, delay: index * 0.1 }}
+                >
+                  <div className="player-info">
+                    {player.avatar_url && (
+                      <img 
+                        src={player.avatar_url} 
+                        alt={player.username}
+                        className="player-avatar"
+                      />
+                    )}
+                    <div className="player-details">
+                      <div className="player-name">
+                        {player.username || `Игрок ${index + 1}`}
+                        {isHostPlayer && <Crown className="host-crown" />}
+                        {isBot && <Bot className="bot-icon" />}
+                        {isCurrentUser && <span className="you-badge">ВЫ</span>}
+                      </div>
+                      <div className="player-status">
+                        {player.is_ready ? '✅ Готов' : '⏳ Не готов'}
+                      </div>
                     </div>
                   </div>
-                </div>
-                
-                <div className="player-actions">
-                  {player.isReady ? (
-                    <div className="ready-indicator">
-                      <Check className="ready-check" />
-                    </div>
-                  ) : (
-                    <div className="waiting-indicator">
-                      <Clock className="waiting-clock" />
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-            ))}
+                  
+                  <div className="player-actions">
+                    {player.is_ready ? (
+                      <div className="ready-indicator green">
+                        <Check className="ready-check" />
+                      </div>
+                    ) : (
+                      <div className="waiting-indicator red">
+                        <Clock className="waiting-clock" />
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
           </AnimatePresence>
           
           {/* Пустые слоты */}
@@ -346,6 +389,14 @@ export default function MultiplayerLobby({
               <select 
                 value={gameSettings.gameMode}
                 onChange={(e) => setGameSettings(prev => ({ ...prev, gameMode: e.target.value }))}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  border: '2px solid rgba(255, 255, 255, 0.2)',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  color: 'white',
+                  fontSize: '14px'
+                }}
               >
                 <option value="classic">Классический</option>
                 <option value="fast">Быстрый</option>
@@ -358,10 +409,21 @@ export default function MultiplayerLobby({
               <select 
                 value={gameSettings.maxPlayers}
                 onChange={(e) => setGameSettings(prev => ({ ...prev, maxPlayers: parseInt(e.target.value) }))}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  border: '2px solid rgba(255, 255, 255, 0.2)',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  color: 'white',
+                  fontSize: '14px'
+                }}
               >
                 <option value={4}>4 игрока</option>
                 <option value={5}>5 игроков</option>
                 <option value={6}>6 игроков</option>
+                <option value={7}>7 игроков</option>
+                <option value={8}>8 игроков</option>
+                <option value={9}>9 игроков</option>
               </select>
             </div>
             
@@ -383,13 +445,13 @@ export default function MultiplayerLobby({
       <div className="lobby-actions">
         {/* Кнопка готовности */}
         <motion.button
-          className={`ready-button ${currentPlayer?.isReady ? 'ready' : 'not-ready'}`}
+          className={`ready-button ${currentPlayer?.is_ready ? 'ready' : 'not-ready'}`}
           onClick={toggleReady}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          disabled={isConnecting || !isConnected}
+          disabled={!isConnected}
         >
-          {currentPlayer?.isReady ? 'Не готов' : 'Готов!'}
+          {currentPlayer?.is_ready ? '❌ Не готов' : '✅ Готов!'}
         </motion.button>
 
         {/* Добавить бота (только хост) */}
@@ -397,10 +459,11 @@ export default function MultiplayerLobby({
           <motion.button
             className="add-bot-button"
             onClick={addBot}
+            disabled={isAddingBot}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            Добавить бота
+            {isAddingBot ? '⏳ Добавление...' : '🤖 Добавить бота'}
           </motion.button>
         )}
 
@@ -409,12 +472,12 @@ export default function MultiplayerLobby({
           <motion.button
             className={`start-game-button ${lobbyState.canStart ? 'can-start' : 'cannot-start'}`}
             onClick={handleStartGame}
-            disabled={!lobbyState.canStart || isConnecting || !isConnected}
+            disabled={!lobbyState.canStart || !isConnected}
             whileHover={lobbyState.canStart ? { scale: 1.05 } : {}}
             whileTap={lobbyState.canStart ? { scale: 0.95 } : {}}
           >
             <Play className="start-icon" />
-            {lobbyState.canStart ? 'Начать игру!' : `Ждем игроков (${readyPlayersCount}/${lobbyState.players.length})`}
+            {lobbyState.canStart ? '🚀 Начать игру!' : `⏳ Ждем готовности (${readyPlayersCount}/${lobbyState.players.length})`}
           </motion.button>
         )}
 
@@ -425,7 +488,7 @@ export default function MultiplayerLobby({
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
-          Покинуть лобби
+          🚪 Покинуть лобби
         </motion.button>
       </div>
 
@@ -448,13 +511,244 @@ export default function MultiplayerLobby({
       {/* Статус подключения */}
       {!isConnected && (
         <div className="connection-status">
-          {isConnecting ? (
-            <div className="connecting">Подключение к серверу...</div>
-          ) : (
-            <div className="disconnected">Нет соединения с сервером</div>
-          )}
+          <div className="disconnected">Нет соединения с сервером</div>
         </div>
       )}
+
+      <style jsx>{`
+        .multiplayer-lobby {
+          padding: 20px;
+          max-width: 800px;
+          margin: 0 auto;
+        }
+
+        .lobby-header {
+          margin-bottom: 30px;
+        }
+
+        .lobby-title {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          font-size: 24px;
+          font-weight: bold;
+          margin-bottom: 15px;
+        }
+
+        .connection-icon {
+          width: 20px;
+          height: 20px;
+        }
+
+        .connection-icon.connected {
+          color: #10b981;
+        }
+
+        .connection-icon.disconnected {
+          color: #ef4444;
+        }
+
+        .room-code-container {
+          cursor: pointer;
+          padding: 15px;
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+
+        .room-code {
+          font-size: 24px;
+          font-weight: bold;
+          color: #10b981;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .players-section {
+          margin-bottom: 30px;
+        }
+
+        .players-header {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 15px;
+          font-size: 18px;
+          font-weight: bold;
+        }
+
+        .players-list {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .player-item {
+          padding: 15px;
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 12px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          border: 2px solid transparent;
+        }
+
+        .player-item.ready {
+          border-color: #10b981;
+        }
+
+        .player-item.not-ready {
+          border-color: #ef4444;
+        }
+
+        .player-item.host {
+          background: rgba(251, 191, 36, 0.1);
+        }
+
+        .player-info {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .player-avatar {
+          width: 48px;
+          height: 48px;
+          border-radius: 50%;
+          object-fit: cover;
+        }
+
+        .player-name {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-weight: bold;
+        }
+
+        .host-crown {
+          color: #fbbf24;
+          width: 16px;
+          height: 16px;
+        }
+
+        .bot-icon {
+          color: #8b5cf6;
+          width: 16px;
+          height: 16px;
+        }
+
+        .you-badge {
+          background: #3b82f6;
+          padding: 2px 8px;
+          border-radius: 6px;
+          font-size: 10px;
+        }
+
+        .ready-indicator, .waiting-indicator {
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .ready-indicator.green {
+          background: #10b981;
+        }
+
+        .waiting-indicator.red {
+          background: #ef4444;
+        }
+
+        .empty-slot {
+          opacity: 0.5;
+          border-style: dashed;
+        }
+
+        .lobby-actions {
+          display: flex;
+          flex-direction: column;
+          gap: 15px;
+        }
+
+        .ready-button, .add-bot-button, .start-game-button, .leave-button {
+          padding: 15px 30px;
+          border-radius: 12px;
+          font-size: 16px;
+          font-weight: bold;
+          border: none;
+          cursor: pointer;
+          transition: all 0.3s;
+        }
+
+        .ready-button.not-ready {
+          background: #10b981;
+          color: white;
+        }
+
+        .ready-button.ready {
+          background: #ef4444;
+          color: white;
+        }
+
+        .add-bot-button {
+          background: #8b5cf6;
+          color: white;
+        }
+
+        .start-game-button {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+        }
+
+        .start-game-button.can-start {
+          background: #10b981;
+          color: white;
+        }
+
+        .start-game-button.cannot-start {
+          background: #6b7280;
+          color: white;
+          cursor: not-allowed;
+        }
+
+        .leave-button {
+          background: #ef4444;
+          color: white;
+        }
+
+        .game-countdown {
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background: rgba(0, 0, 0, 0.9);
+          padding: 40px;
+          border-radius: 20px;
+          text-align: center;
+          z-index: 1000;
+        }
+
+        .countdown-number {
+          font-size: 72px;
+          font-weight: bold;
+          color: #10b981;
+        }
+
+        .connection-status {
+          margin-top: 20px;
+          padding: 15px;
+          background: rgba(239, 68, 68, 0.2);
+          border-radius: 12px;
+          text-align: center;
+          color: #ef4444;
+        }
+      `}</style>
     </div>
   );
 }
