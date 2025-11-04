@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     
     console.log('📋 [Marketplace List] Параметры:', { sort, filter, suit, rarity, limit, offset });
     
-    // Базовый запрос
+    // Базовый запрос (БЕЗ seller для отладки)
     let query = supabase
       .from('_pidr_nft_marketplace')
       .select(`
@@ -40,11 +40,6 @@ export async function GET(request: NextRequest) {
           rarity,
           image_url,
           metadata
-        ),
-        seller:_pidr_users!_pidr_nft_marketplace_seller_user_id_fkey(
-          telegram_id,
-          username,
-          first_name
         )
       `)
       .eq('status', 'active');
@@ -53,8 +48,12 @@ export async function GET(request: NextRequest) {
     if (filter === 'coins') {
       query = query.not('price_coins', 'is', null);
     } else if (filter === 'crypto') {
+      // ✅ ИСПРАВЛЕНО: Правильный синтаксис для .or()
       query = query.or('price_ton.not.is.null,price_sol.not.is.null');
     }
+    
+    // ✅ ОТЛАДКА: Убираем лимит на foreign key (может быть NULL)
+    // Если foreign key не настроен, просто загружаем все поля
     
     // Сортировка
     switch (sort) {

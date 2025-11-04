@@ -24,12 +24,29 @@ export async function GET(req: NextRequest) {
     const userIdBigInt = parseInt(userId, 10); // ✅ Конвертируем в BIGINT
     console.log(`📦 Получаем NFT коллекцию пользователя ${userId} (${userIdBigInt}) через headers...`);
 
-    // ✅ ПРЯМОЙ ЗАПРОС к таблице _pidr_nft_cards (без RPC)
-    const { data, error } = await supabase
+    // ✅ ПОЛУЧАЕМ ID КАРТ, КОТОРЫЕ ВЫСТАВЛЕНЫ НА ПРОДАЖУ
+    const { data: activeListings } = await supabase
+      .from('_pidr_nft_marketplace')
+      .select('nft_card_id')
+      .eq('seller_user_id', userIdBigInt)
+      .eq('status', 'active');
+    
+    const listedCardIds = (activeListings || []).map((listing: any) => listing.nft_card_id);
+    console.log(`🛒 [collection] Карты на продаже (${listedCardIds.length}):`, listedCardIds);
+
+    // ✅ ПРЯМОЙ ЗАПРОС к таблице _pidr_nft_cards (ИСКЛЮЧАЕМ КАРТЫ НА ПРОДАЖЕ!)
+    let query = supabase
       .from('_pidr_nft_cards')
       .select('*')
-      .eq('user_id', userIdBigInt) // ✅ Используем BIGINT
+      .eq('user_id', userIdBigInt)
       .order('created_at', { ascending: false });
+    
+    // ✅ ФИЛЬТРУЕМ: Убираем карты, которые на продаже
+    if (listedCardIds.length > 0) {
+      query = query.not('id', 'in', `(${listedCardIds.join(',')})`);
+    }
+    
+    const { data, error } = await query;
 
     if (error) {
       console.error('❌ Ошибка получения коллекции:', error);
@@ -40,7 +57,7 @@ export async function GET(req: NextRequest) {
     }
 
     const collection = data || [];
-    console.log(`✅ Найдено ${collection.length} NFT карт для пользователя ${userId}`);
+    console.log(`✅ Найдено ${collection.length} NFT карт для пользователя ${userId} (исключая ${listedCardIds.length} карт на продаже)`);
 
     return NextResponse.json({
       success: true,

@@ -58,9 +58,9 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
   // Модальные окна
   const [showSellModal, setShowSellModal] = useState(false);
   const [selectedNFT, setSelectedNFT] = useState<NFTCard | null>(null);
-  const [sellPriceCoins, setSellPriceCoins] = useState('');
-  const [sellPriceCrypto, setSellPriceCrypto] = useState('');
-  const [sellCurrency, setSellCurrency] = useState<'TON' | 'SOL'>('TON');
+  // ✅ НОВАЯ СИСТЕМА: ОДИН ИНПУТ + ВАЛЮТА
+  const [sellPrice, setSellPrice] = useState('');
+  const [sellCurrency, setSellCurrency] = useState<'COINS' | 'TON' | 'SOL'>('COINS');
 
   // Helper функции
   const getTelegramWebAppHeaders = (): Record<string, string> => {
@@ -229,12 +229,26 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
   const handleSellNFT = async () => {
     if (!selectedNFT) return;
 
-    const priceCoins = parseInt(sellPriceCoins) || null;
-    const priceCrypto = parseFloat(sellPriceCrypto) || null;
-
-    if (!priceCoins && !priceCrypto) {
-      alert('Укажите хотя бы одну цену!');
+    const price = parseFloat(sellPrice);
+    
+    if (!price || price <= 0) {
+      alert('Укажите корректную цену!');
       return;
+    }
+
+    // ✅ НОВАЯ ЛОГИКА: В зависимости от валюты заполняем нужное поле
+    const requestBody: any = {
+      nft_card_id: selectedNFT.id,
+      price_coins: null,
+      price_crypto: null,
+      crypto_currency: null
+    };
+
+    if (sellCurrency === 'COINS') {
+      requestBody.price_coins = Math.floor(price); // Монеты только целые
+    } else {
+      requestBody.price_crypto = price;
+      requestBody.crypto_currency = sellCurrency;
     }
 
     try {
@@ -244,12 +258,7 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
           'Content-Type': 'application/json',
           ...getTelegramWebAppHeaders()
         },
-        body: JSON.stringify({
-          nft_card_id: selectedNFT.id,
-          price_coins: priceCoins,
-          price_crypto: priceCrypto,
-          crypto_currency: priceCrypto ? sellCurrency : null
-        })
+        body: JSON.stringify(requestBody)
       });
 
       const data = await response.json();
@@ -258,8 +267,8 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
         alert('✅ NFT выставлена на продажу!');
         setShowSellModal(false);
         setSelectedNFT(null);
-        setSellPriceCoins('');
-        setSellPriceCrypto('');
+        setSellPrice('');
+        setSellCurrency('COINS');
         loadMySales();
         loadMyNFTs();
       } else {
@@ -454,10 +463,8 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
       {showSellModal && selectedNFT && (
         <SellModal
           nft={selectedNFT}
-          sellPriceCoins={sellPriceCoins}
-          setSellPriceCoins={setSellPriceCoins}
-          sellPriceCrypto={sellPriceCrypto}
-          setSellPriceCrypto={setSellPriceCrypto}
+          sellPrice={sellPrice}
+          setSellPrice={setSellPrice}
           sellCurrency={sellCurrency}
           setSellCurrency={setSellCurrency}
           onClose={() => {

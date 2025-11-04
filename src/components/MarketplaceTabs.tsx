@@ -741,24 +741,21 @@ function SoldCard({ listing, getSuitColor, getSuitSymbol, getRankDisplay }: any)
 // ====================================================================
 // SELL MODAL - Модальное окно продажи
 // ====================================================================
+// ✅ НОВЫЙ ИНТЕРФЕЙС: ОДИН ИНПУТ + ВАЛЮТА
 interface SellModalProps extends HelperFunctions {
   nft: NFTCard;
-  sellPriceCoins: string;
-  setSellPriceCoins: (value: string) => void;
-  sellPriceCrypto: string;
-  setSellPriceCrypto: (value: string) => void;
-  sellCurrency: 'TON' | 'SOL';
-  setSellCurrency: (value: 'TON' | 'SOL') => void;
+  sellPrice: string;
+  setSellPrice: (value: string) => void;
+  sellCurrency: 'COINS' | 'TON' | 'SOL';
+  setSellCurrency: (value: 'COINS' | 'TON' | 'SOL') => void;
   onClose: () => void;
   onConfirm: () => void;
 }
 
 export function SellModal({
   nft,
-  sellPriceCoins,
-  setSellPriceCoins,
-  sellPriceCrypto,
-  setSellPriceCrypto,
+  sellPrice,
+  setSellPrice,
   sellCurrency,
   setSellCurrency,
   onClose,
@@ -862,16 +859,14 @@ export function SellModal({
           </div>
         </div>
 
-        {/* Price Inputs */}
+        {/* ✅ НОВАЯ СИСТЕМА: ОДИН ИНПУТ + ВЫБОР ВАЛЮТЫ */}
         <div style={{ marginBottom: '20px' }}>
           <label style={{ display: 'block', color: '#cbd5e1', marginBottom: '8px', fontWeight: 'bold' }}>
-            💰 Цена в монетах (необязательно)
+            💎 Выберите валюту:
           </label>
-          <input
-            type="number"
-            value={sellPriceCoins}
-            onChange={(e) => setSellPriceCoins(e.target.value)}
-            placeholder="0"
+          <select
+            value={sellCurrency}
+            onChange={(e) => setSellCurrency(e.target.value as 'COINS' | 'TON' | 'SOL')}
             style={{
               width: '100%',
               padding: '12px',
@@ -879,49 +874,42 @@ export function SellModal({
               border: '2px solid rgba(251, 191, 36, 0.3)',
               background: 'rgba(15, 23, 42, 0.6)',
               color: '#e2e8f0',
-              fontSize: '16px'
+              fontSize: '16px',
+              cursor: 'pointer',
+              marginBottom: '12px'
             }}
-          />
+          >
+            <option value="COINS">💰 Монеты (COINS)</option>
+            <option value="TON">💎 TON</option>
+            <option value="SOL">☀️ SOL</option>
+          </select>
         </div>
 
         <div style={{ marginBottom: '24px' }}>
           <label style={{ display: 'block', color: '#cbd5e1', marginBottom: '8px', fontWeight: 'bold' }}>
-            ₿ Цена в крипте (необязательно)
+            💵 Цена:
           </label>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <input
-              type="number"
-              step="0.001"
-              value={sellPriceCrypto}
-              onChange={(e) => setSellPriceCrypto(e.target.value)}
-              placeholder="0.0"
-              style={{
-                flex: 1,
-                padding: '12px',
-                borderRadius: '10px',
-                border: '2px solid rgba(96, 165, 250, 0.3)',
-                background: 'rgba(15, 23, 42, 0.6)',
-                color: '#e2e8f0',
-                fontSize: '16px'
-              }}
-            />
-            <select
-              value={sellCurrency}
-              onChange={(e) => setSellCurrency(e.target.value as 'TON' | 'SOL')}
-              style={{
-                padding: '12px',
-                borderRadius: '10px',
-                border: '2px solid rgba(96, 165, 250, 0.3)',
-                background: 'rgba(15, 23, 42, 0.6)',
-                color: '#e2e8f0',
-                fontSize: '16px',
-                cursor: 'pointer'
-              }}
-            >
-              <option value="TON">TON</option>
-              <option value="SOL">SOL</option>
-            </select>
-          </div>
+          <input
+            type="number"
+            step={sellCurrency === 'COINS' ? '1' : '0.001'}
+            value={sellPrice}
+            onChange={(e) => setSellPrice(e.target.value)}
+            placeholder={sellCurrency === 'COINS' ? '1000' : '0.5'}
+            style={{
+              width: '100%',
+              padding: '12px',
+              borderRadius: '10px',
+              border: '2px solid rgba(96, 165, 250, 0.3)',
+              background: 'rgba(15, 23, 42, 0.6)',
+              color: '#e2e8f0',
+              fontSize: '16px'
+            }}
+          />
+          <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '8px' }}>
+            {sellCurrency === 'COINS' && '💰 Монеты - внутриигровая валюта'}
+            {sellCurrency === 'TON' && '💎 TON - криптовалюта Telegram'}
+            {sellCurrency === 'SOL' && '☀️ SOL - Solana криптовалюта'}
+          </p>
         </div>
 
         {/* Buttons */}
