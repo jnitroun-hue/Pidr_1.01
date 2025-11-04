@@ -329,8 +329,9 @@ export default function MultiplayerLobby({
         <div className="players-list">
           <AnimatePresence>
             {lobbyState.players.map((player, index) => {
-              const isBot = player.user_id.startsWith('-') || parseInt(player.user_id) < 0;
-              const isCurrentUser = player.user_id === user?.id?.toString();
+              const userIdStr = String(player.user_id || ''); // ✅ КОНВЕРТИРУЕМ В СТРОКУ!
+              const isBot = userIdStr.startsWith('-') || parseInt(userIdStr) < 0;
+              const isCurrentUser = userIdStr === user?.id?.toString();
               const isHostPlayer = index === 0; // Первый игрок = хост
 
               return (

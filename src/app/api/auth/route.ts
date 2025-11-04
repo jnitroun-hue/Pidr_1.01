@@ -126,8 +126,8 @@ export async function POST(req: NextRequest) {
     console.log('🔍 Проверка переменных окружения:');
     console.log('- JWT_SECRET:', !!JWT_SECRET ? 'ЕСТЬ' : '❌ НЕТ');
     console.log('- SESSION_SECRET:', !!SESSION_SECRET ? 'ЕСТЬ' : '❌ НЕТ');
-    console.log('- SUPABASE_URL:', process.env.SUPABASE_URL ? 'ЕСТЬ' : '❌ НЕТ');
-    console.log('- SUPABASE_ANON_KEY:', process.env.SUPABASE_ANON_KEY ? 'ЕСТЬ' : '❌ НЕТ');
+    console.log('- SUPABASE_URL:', (process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL) ? 'ЕСТЬ' : '❌ НЕТ');
+    console.log('- SUPABASE_ANON_KEY:', (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY) ? 'ЕСТЬ' : '❌ НЕТ');
 
     if (!JWT_SECRET) {
       console.error('❌ JWT_SECRET не настроен');

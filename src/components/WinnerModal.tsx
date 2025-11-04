@@ -128,7 +128,7 @@ export default function WinnerModal({
           ))}
         </div>
 
-        {/* Основная карточка - 60% ЭКРАНА */}
+        {/* Основная карточка - 60% ЭКРАНА (КАК ИГРОВОЙ СТОЛ!) */}
         <motion.div
           initial={{ scale: 0.5, opacity: 0, rotateY: -180 }}
           animate={{ scale: 1, opacity: 1, rotateY: 0 }}
@@ -136,8 +136,9 @@ export default function WinnerModal({
           transition={{ type: 'spring', damping: 20, stiffness: 200 }}
           className="relative mx-4"
           style={{
-            width: '60vw',
-            maxWidth: '600px',
+            width: 'min(60vw, 800px)', // ✅ ОГРАНИЧЕНИЕ ПО ШИРИНЕ
+            maxHeight: '60vh', // ✅ ОГРАНИЧЕНИЕ ПО ВЫСОТЕ (КАК ИГРОВОЙ СТОЛ)
+            overflow: 'auto', // ✅ СКРОЛЛ ЕСЛИ КОНТЕНТ НЕ ВЛЕЗАЕТ
             minWidth: '320px',
             background: placeData.gradient,
             borderRadius: '28px',

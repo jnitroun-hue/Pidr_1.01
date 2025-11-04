@@ -1,22 +1,59 @@
 import { createClient } from '@supabase/supabase-js';
 
-// ✅ ЛЕНИВАЯ ИНИЦИАЛИЗАЦИЯ - ПЕРЕМЕННЫЕ ЧИТАЮТСЯ ТОЛЬКО ПРИ ВЫЗОВЕ!
+// ✅ КЭШИРУЕМ КОНФИГ ЗАГРУЖЕННЫЙ С API (только на клиенте)
+let clientConfig: { url: string; key: string } | null = null;
+let configPromise: Promise<void> | null = null;
+
+// ✅ ЗАГРУЖАЕМ КОНФИГ С API (только на клиенте)
+async function loadClientConfig(): Promise<void> {
+  if (typeof window === 'undefined') return; // Только для клиента
+  if (clientConfig) return; // Уже загружено
+  if (configPromise) return configPromise; // Уже загружается
+
+  configPromise = (async () => {
+    try {
+      console.log('🔄 [Supabase] Загружаем конфиг с /api/config...');
+      const response = await fetch('/api/config');
+      if (!response.ok) {
+        throw new Error(`Config API error: ${response.status}`);
+      }
+      const data = await response.json();
+      clientConfig = {
+        url: data.supabaseUrl,
+        key: data.supabaseAnonKey
+      };
+      console.log('✅ [Supabase] Конфиг загружен с API!');
+    } catch (error) {
+      console.error('❌ [Supabase] Не удалось загрузить конфиг:', error);
+      // Fallback на переменные окружения (если они есть)
+      clientConfig = {
+        url: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+        key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+      };
+    } finally {
+      configPromise = null;
+    }
+  })();
+
+  return configPromise;
+}
+
 function getSupabaseUrl(): string {
-  // На сервере
+  // На сервере - читаем из process.env
   if (typeof window === 'undefined') {
     return process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
   }
-  // На клиенте - читаем из window (Next.js автоматически инжектит NEXT_PUBLIC_*)
-  return process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  // На клиенте - используем загруженный конфиг или fallback
+  return clientConfig?.url || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 }
 
 function getSupabaseAnonKey(): string {
-  // На сервере
+  // На сервере - читаем из process.env
   if (typeof window === 'undefined') {
     return process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
   }
-  // На клиенте
-  return process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+  // На клиенте - используем загруженный конфиг или fallback
+  return clientConfig?.key || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 }
 
 // Серверные переменные (только для API routes)
@@ -25,7 +62,12 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 // Проверяем переменные только в рантайме, не при сборке
 let supabaseClient: any = null;
 
-function getSupabaseClient() {
+async function getSupabaseClient() {
+  // ✅ НА КЛИЕНТЕ ЗАГРУЖАЕМ КОНФИГ С API ПЕРЕД СОЗДАНИЕМ КЛИЕНТА
+  if (typeof window !== 'undefined' && !clientConfig) {
+    await loadClientConfig();
+  }
+
   if (!supabaseClient) {
     const supabaseUrl = getSupabaseUrl();
     const supabaseAnonKey = getSupabaseAnonKey();
@@ -96,12 +138,18 @@ function getSupabaseClient() {
   return supabaseClient;
 }
 
-// ✅ ПУБЛИЧНЫЙ КЛИЕНТ ТЕПЕРЬ СОЗДАЁТСЯ ЧЕРЕЗ PROXY
+// ✅ ПУБЛИЧНЫЙ КЛИЕНТ ТЕПЕРЬ СОЗДАЁТСЯ ЧЕРЕЗ ASYNC PROXY
 export const supabase = new Proxy({} as any, {
   get(target, prop) {
-    const client = getSupabaseClient();
-    const value = (client as any)[prop];
-    return typeof value === 'function' ? value.bind(client) : value;
+    // Все методы теперь возвращают Promise
+    return async (...args: any[]) => {
+      const client = await getSupabaseClient();
+      const value = (client as any)[prop];
+      if (typeof value === 'function') {
+        return value.bind(client)(...args);
+      }
+      return value;
+    };
   }
 });
 

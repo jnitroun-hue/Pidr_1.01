@@ -7,8 +7,8 @@ export async function GET(req: NextRequest) {
   try {
     // Проверяем переменные окружения
     const hasJwtSecret = !!process.env.JWT_SECRET;
-    const hasSupabaseUrl = !!process.env.SUPABASE_URL;
-    const hasSupabaseKey = !!process.env.SUPABASE_ANON_KEY;
+    const hasSupabaseUrl = !!(process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL);
+    const hasSupabaseKey = !!(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY);
     
     // Проверяем cookies
     const cookies = req.cookies.getAll();

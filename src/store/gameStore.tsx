@@ -432,10 +432,15 @@ export const useGameStore = create<GameState>()(
           'ace_of_clubs.png','ace_of_diamonds.png','ace_of_hearts.png','ace_of_spades.png'
         ];
         
-        // Проверяем что у нас ровно 52 карты
+        // ✅ ПРОВЕРЯЕМ ЧТО У НАС РОВНО 52 КАРТЫ!
+        console.log(`🃏 [startGame] ПРОВЕРКА КОЛОДЫ: ${standardDeck.length} карт`);
+        if (standardDeck.length !== 52) {
+          console.error(`❌ [startGame] ОШИБКА! В колоде ${standardDeck.length} карт вместо 52!`);
+        }
         
         // Перемешиваем колоду
         const shuffledImages = [...standardDeck].sort(() => Math.random() - 0.5);
+        console.log(`🔀 [startGame] Колода перемешана: ${shuffledImages.length} карт`);
         
         const players: Player[] = []
         const cardsPerPlayer = 3;
@@ -640,6 +645,8 @@ export const useGameStore = create<GameState>()(
         if (playedCard.rarity === 'legendary') scoreBonus = 100
         
         currentPlayer.score += scoreBonus
+        
+        console.log(`🗑️ [playedCards] Добавляем карту в БИТО: ${playedCard.image}. Было: ${playedCards.length}, Стало: ${newPlayedCards.length}`);
         
         set({
           players: [...players],

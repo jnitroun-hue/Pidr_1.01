@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     console.log('✅ [mint-burning] Авторизован:', { userId, username: session.username });
 
     // Ленивая инициализация Supabase
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!supabaseUrl || !supabaseKey) {

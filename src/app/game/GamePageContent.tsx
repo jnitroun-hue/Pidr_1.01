@@ -1735,15 +1735,15 @@ function GamePageContentComponent({
                 // ИСПРАВЛЕНО: Во 2-й стадии считаем ВСЕ карты, а не только открытые!
                 const totalCards = humanPlayer.cards.length;
                 
-                if (totalCards === 1) {
+                if (totalCards === 1 && !oneCardDeclarations[humanPlayer.id]) {
                   declareOneCard(humanPlayer.id);
                   showPlayerMessage(humanPlayer.id, '☝️ ОДНА КАРТА!', 'success', 4000);
+                } else if (oneCardDeclarations[humanPlayer.id]) {
+                  showPlayerMessage(humanPlayer.id, '✅ Уже объявлено!', 'info', 2000);
                 } else {
                   showPlayerMessage(humanPlayer.id, `❌ У вас ${totalCards} ${totalCards === 1 ? 'карта' : totalCards < 5 ? 'карты' : 'карт'}!`, 'error', 3000);
-                  showNotification(`Нельзя объявлять "одна карта" - у вас ${totalCards} ${totalCards === 1 ? 'карта' : totalCards < 5 ? 'карты' : 'карт'}`, 'error', 3000);
                 }
               }}
-              disabled={humanPlayer.cards.length !== 1 || oneCardDeclarations[humanPlayer.id]}
               style={{
                 background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                 color: 'white',
@@ -1756,7 +1756,7 @@ function GamePageContentComponent({
                 whiteSpace: 'nowrap',
                 opacity: humanPlayer.cards.length === 1 && !oneCardDeclarations[humanPlayer.id] ? 1 : 0.3, // ✅ ПРОЗРАЧНОСТЬ!
                 transition: 'opacity 0.3s ease',
-                pointerEvents: humanPlayer.cards.length === 1 && !oneCardDeclarations[humanPlayer.id] ? 'auto' : 'none'
+                pointerEvents: 'auto' // ✅ ВСЕГДА КЛИКАБЕЛЬНА!
               }}
             >
               ☝️ Одна карта!
@@ -1775,7 +1775,10 @@ function GamePageContentComponent({
               return (
               <button
                 onClick={() => {
-                  if (!isActive) return;
+                  if (!isActive) {
+                    showPlayerMessage(humanPlayer.id, '⏳ Недоступно сейчас', 'warning', 2000);
+                    return;
+                  }
                   
                   showPlayerMessage(humanPlayer.id, '❓ Сколько карт?', 'info', 2000);
                   
@@ -1793,7 +1796,6 @@ function GamePageContentComponent({
                     showNotification('Нет доступных целей для проверки', 'warning', 2000);
                   }
                 }}
-                disabled={!isActive}
                 style={{
                   background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
                   color: 'white',
@@ -1806,7 +1808,7 @@ function GamePageContentComponent({
                   whiteSpace: 'nowrap',
                   opacity: isActive ? 1 : 0.3, // ✅ ПРОЗРАЧНОСТЬ!
                   transition: 'opacity 0.3s ease',
-                  pointerEvents: isActive ? 'auto' : 'none'
+                  pointerEvents: 'auto' // ✅ ВСЕГДА КЛИКАБЕЛЬНА!
                 }}
               >
                 ❓ Сколько карт?
@@ -1817,7 +1819,10 @@ function GamePageContentComponent({
             {/* КОМПАКТНАЯ КНОПКА "ШТРАФ" - ВСЕГДА ВИДНА, ПРОЗРАЧНАЯ */}
             <button
               onClick={() => {
-                if (!pendingPenalty || !pendingPenalty.contributorsNeeded.includes(humanPlayer.id)) return;
+                if (!pendingPenalty || !pendingPenalty.contributorsNeeded.includes(humanPlayer.id)) {
+                  showPlayerMessage(humanPlayer.id, '⏳ Нет активного штрафа', 'warning', 2000);
+                  return;
+                }
                 
                 console.log('🔥 [СДАТЬ ШТРАФ] Кнопка нажата!');
                 useGameStore.setState({
@@ -1825,7 +1830,6 @@ function GamePageContentComponent({
                   penaltyCardSelectionPlayerId: humanPlayer.id
                 });
               }}
-              disabled={!pendingPenalty || !pendingPenalty.contributorsNeeded.includes(humanPlayer.id)}
               style={{
                 background: 'linear-gradient(135deg, #ff1744 0%, #f50057 100%)',
                 color: 'white',
@@ -1838,7 +1842,7 @@ function GamePageContentComponent({
                 whiteSpace: 'nowrap',
                 opacity: (pendingPenalty && pendingPenalty.contributorsNeeded.includes(humanPlayer.id)) ? 1 : 0.3, // ✅ ПРОЗРАЧНОСТЬ!
                 transition: 'opacity 0.3s ease',
-                pointerEvents: (pendingPenalty && pendingPenalty.contributorsNeeded.includes(humanPlayer.id)) ? 'auto' : 'none'
+                pointerEvents: 'auto' // ✅ ВСЕГДА КЛИКАБЕЛЬНА!
               }}
             >
               💸 Штраф
@@ -1847,11 +1851,20 @@ function GamePageContentComponent({
             {/* КОМПАКТНАЯ КНОПКА "ВЗЯТЬ" - ВСЕГДА ВИДНА, ПРОЗРАЧНАЯ */}
             <button
               onClick={() => {
-                if (gameStage >= 2 && tableStack && tableStack.length > 0 && humanPlayer.id === currentPlayerId) {
-                  takeTableCards();
+                if (gameStage < 2) {
+                  showPlayerMessage(humanPlayer.id, '⏳ Доступно со 2-й стадии', 'warning', 2000);
+                  return;
                 }
+                if (!tableStack || tableStack.length === 0) {
+                  showPlayerMessage(humanPlayer.id, '❌ Нет карт на столе', 'warning', 2000);
+                  return;
+                }
+                if (humanPlayer.id !== currentPlayerId) {
+                  showPlayerMessage(humanPlayer.id, '⏳ Не ваш ход', 'warning', 2000);
+                  return;
+                }
+                takeTableCards();
               }}
-              disabled={!(gameStage >= 2 && tableStack && tableStack.length > 0 && humanPlayer.id === currentPlayerId)}
               style={{
                 background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
                 color: 'white',
@@ -1864,7 +1877,7 @@ function GamePageContentComponent({
                 whiteSpace: 'nowrap',
                 opacity: (gameStage >= 2 && tableStack && tableStack.length > 0 && humanPlayer.id === currentPlayerId) ? 1 : 0.3, // ✅ ПРОЗРАЧНОСТЬ!
                 transition: 'opacity 0.3s ease',
-                pointerEvents: (gameStage >= 2 && tableStack && tableStack.length > 0 && humanPlayer.id === currentPlayerId) ? 'auto' : 'none'
+                pointerEvents: 'auto' // ✅ ВСЕГДА КЛИКАБЕЛЬНА!
               }}
             >
               ⬇️ Взять {tableStack && tableStack.length > 0 ? `(${tableStack.length})` : ''}

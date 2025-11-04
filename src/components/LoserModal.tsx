@@ -98,7 +98,7 @@ export default function LoserModal({ playerName, avatar, onClose }: LoserModalPr
           }}
         />
 
-        {/* Модальное окно - 60% ЭКРАНА */}
+        {/* Модальное окно - 60% ЭКРАНА (КАК ИГРОВОЙ СТОЛ!) */}
         <motion.div
           initial={{ scale: 0, rotate: 180 }}
           animate={{ scale: 1, rotate: 0 }}
@@ -111,11 +111,11 @@ export default function LoserModal({ playerName, avatar, onClose }: LoserModalPr
             boxShadow: '0 20px 60px rgba(139, 0, 0, 0.8), 0 0 100px rgba(255, 0, 0, 0.3), inset 0 0 30px rgba(0, 0, 0, 0.5)',
             border: '3px solid rgba(139, 0, 0, 0.6)',
             textAlign: 'center',
-            width: '60vw',
-            maxWidth: '600px',
+            width: 'min(60vw, 800px)', // ✅ ОГРАНИЧЕНИЕ ПО ШИРИНЕ
+            maxHeight: '60vh', // ✅ ОГРАНИЧЕНИЕ ПО ВЫСОТЕ (КАК ИГРОВОЙ СТОЛ)
+            overflow: 'auto', // ✅ СКРОЛЛ ЕСЛИ КОНТЕНТ НЕ ВЛЕЗАЕТ
             minWidth: '320px',
-            position: 'relative',
-            overflow: 'hidden'
+            position: 'relative'
           }}
         >
           {/* Кровавые блики */}
