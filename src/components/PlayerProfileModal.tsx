@@ -107,9 +107,23 @@ export default function PlayerProfileModal({ isOpen, onClose, player }: PlayerPr
               fontSize: '64px',
               border: '4px solid rgba(59, 130, 246, 0.3)',
               boxShadow: '0 10px 30px rgba(59, 130, 246, 0.4)',
-              marginBottom: '15px'
+              marginBottom: '15px',
+              overflow: 'hidden', // ✅ СКРЫВАЕМ ПЕРЕПОЛНЕНИЕ
+              position: 'relative'
             }}>
-              {player.avatar || '👤'}
+              {player.avatar && (player.avatar.startsWith('http') || player.avatar.startsWith('data:')) ? (
+                <img 
+                  src={player.avatar}
+                  alt={player.name}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover'
+                  }}
+                />
+              ) : (
+                <span style={{ fontSize: '64px' }}>{player.avatar || '👤'}</span>
+              )}
             </div>
             
             <h2 style={{
