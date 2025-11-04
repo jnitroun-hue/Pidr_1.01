@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import WaitingRoomProfessional from './WaitingRoomProfessional'; // Исправил импорт - default export
+import MultiplayerLobby from './MultiplayerLobby'; // ✅ ИСПОЛЬЗУЕМ НОВЫЙ КОМПОНЕНТ!
 import styles from './ProperMultiplayer.module.css';
 
 interface Room {
@@ -415,12 +415,12 @@ export const ProperMultiplayer: React.FC = () => {
   // Рендер комнаты ожидания
   if (view === 'waiting' && currentRoom) {
     return (
-      <WaitingRoomProfessional
-        roomData={currentRoom}
-        currentUserId={user?.id?.toString() || 'anonymous'}
+      <MultiplayerLobby
+        roomId={currentRoom.id.toString()}
+        roomCode={currentRoom.code}
+        isHost={currentRoom.hostId === user?.id?.toString()}
+        onGameStart={handleStartGame}
         onLeaveRoom={handleLeaveRoom}
-        onStartGame={handleStartGame}
-        onUpdateRoom={handleUpdateRoom}
       />
     );
   }
