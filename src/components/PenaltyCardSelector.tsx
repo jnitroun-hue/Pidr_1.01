@@ -172,12 +172,13 @@ export default function PenaltyCardSelector() {
                   onClick={() => toggleCardSelection(cardId)}
                   style={{
                     position: 'relative',
-                    background: isSelected ? 'rgba(16, 185, 129, 0.2)' : 'rgba(30, 41, 59, 0.5)',
+                    background: '#ffffff', /* ✅ БЕЛЫЙ ФОН КАК У ВЫБРАННОЙ КАРТЫ! */
                     borderRadius: '8px',
                     padding: '4px',
                     border: isSelected ? '3px solid #10b981' : '2px solid rgba(100, 116, 139, 0.3)',
                     cursor: 'pointer',
-                    transition: 'all 0.2s ease'
+                    transition: 'all 0.2s ease',
+                    boxShadow: isSelected ? '0 0 15px rgba(16, 185, 129, 0.5)' : '0 2px 8px rgba(0, 0, 0, 0.3)'
                   }}
                   onMouseEnter={(e) => {
                     if (!isSelected) {

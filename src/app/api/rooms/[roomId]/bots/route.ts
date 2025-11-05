@@ -64,12 +64,12 @@ export async function POST(
     console.log(`✅ [BOTS] Пользователь ${telegramId} (UUID: ${userUUID}) является хостом комнаты ${roomId}`);
 
     if (action === 'add') {
-      // ДОБАВЛЯЕМ БОТА
+      // ✅ ДОБАВЛЯЕМ БОТА: СНАЧАЛА ИЩЕМ СВОБОДНОГО ИЗ БД, ПОТОМ СОЗДАЁМ НОВОГО
       
-      // ПОЛУЧАЕМ ТЕКУЩЕЕ КОЛИЧЕСТВО ИГРОКОВ
+      // ПОЛУЧАЕМ ТЕКУЩИХ ИГРОКОВ В КОМНАТЕ
       const { data: currentPlayers, error: playersError } = await supabase
         .from('_pidr_room_players')
-        .select('position')
+        .select('position, user_id')
         .eq('room_id', roomId)
         .order('position', { ascending: false });
 
@@ -81,7 +81,7 @@ export async function POST(
         }, { status: 500 });
       }
 
-      // ПРОВЕРЯЕМ НЕ ПРЕВЫШЕН ЛИ ЛИМИТ
+      // ПРОВЕРЯЕМ ЛИМИТ
       if (currentPlayers.length >= room.max_players) {
         return NextResponse.json({ 
           success: false, 
@@ -89,59 +89,73 @@ export async function POST(
         }, { status: 400 });
       }
 
-      // ГЕНЕРИРУЕМ УНИКАЛЬНЫЙ ID ДЛЯ БОТА (ОТРИЦАТЕЛЬНЫЙ)
-      const botId = -(Date.now() + Math.floor(Math.random() * 1000));
       const maxPosition = currentPlayers[0]?.position || 0;
       const nextPosition = maxPosition + 1;
-
-      // ✅ УЛУЧШЕННАЯ ГЕНЕРАЦИЯ ИМЁН БОТОВ БЕЗ ДУБЛИКАТОВ
-      const botFirstNames = [
-        'Андрей', 'Максим', 'Дмитрий', 'Алексей', 
-        'Сергей', 'Владимир', 'Николай', 'Игорь',
-        'Артём', 'Денис', 'Евгений', 'Михаил'
-      ];
       
-      // Получаем уже используемые имена (включая ботов)
-      const usedNames = currentPlayers.map((p: any) => p.username);
-      console.log(`🤖 Используемые имена:`, usedNames);
+      // ✅ ПОЛУЧАЕМ TELEGRAM_ID ВСЕХ ИГРОКОВ УЖЕ В КОМНАТЕ
+      const usedBotIds = currentPlayers
+        .map((p: any) => p.user_id)
+        .filter((id: any) => parseInt(id) < 0); // Только боты (отрицательные ID)
       
-      // Находим первое свободное имя
-      let botName = '';
-      for (const firstName of botFirstNames) {
-        const candidateName = `${firstName}_БОТ`;
-        if (!usedNames.includes(candidateName)) {
-          botName = candidateName;
-          break;
-        }
-      }
-      
-      // Если все имена заняты, генерируем уникальное
-      if (!botName) {
-        botName = `БОТ_${Date.now() % 10000}`;
-      }
+      console.log(`🤖 [ADD BOT] Боты уже в комнате:`, usedBotIds);
 
-      console.log(`🤖 Добавляем бота: id=${botId}, name=${botName}, position=${nextPosition}`);
-
-      // ✅ СНАЧАЛА СОЗДАЕМ БОТА В _pidr_users (если не существует)
-      const { data: existingBot } = await supabase
+      // ✅ ШАГ 1: ИЩЕМ СВОБОДНОГО БОТА ИЗ БД (НЕ ЗАНЯТОГО В ЭТОЙ КОМНАТЕ)
+      const { data: availableBots, error: botsError } = await supabase
         .from('_pidr_users')
-        .select('telegram_id')
-        .eq('telegram_id', botId)
-        .single();
+        .select('telegram_id, username, first_name, avatar')
+        .eq('is_bot', true)
+        .not('telegram_id', 'in', `(${usedBotIds.length > 0 ? usedBotIds.join(',') : '0'})`)
+        .order('telegram_id', { ascending: true })
+        .limit(1);
 
-      if (!existingBot) {
+      if (botsError) {
+        console.error('❌ Ошибка получения ботов из БД:', botsError);
+      }
+
+      let botId: number;
+      let botName: string;
+      let botAvatar: string | null;
+
+      if (availableBots && availableBots.length > 0) {
+        // ✅ НАШЛИ СВОБОДНОГО БОТА!
+        const selectedBot = availableBots[0];
+        botId = selectedBot.telegram_id;
+        botName = selectedBot.username || selectedBot.first_name;
+        botAvatar = selectedBot.avatar;
+        
+        console.log(`✅ [ADD BOT] Используем бота из БД: ${botName} (ID: ${botId})`);
+      } else {
+        // ❌ СВОБОДНЫХ БОТОВ НЕТ - СОЗДАЁМ НОВОГО
+        console.log(`⚠️ [ADD BOT] Свободных ботов нет, создаём нового...`);
+        
+        // Генерируем уникальный ID
+        botId = -(Date.now() + Math.floor(Math.random() * 1000));
+        
+        const botFirstNames = [
+          'Александр', 'Дмитрий', 'Максим', 'Артём', 'Никита',
+          'Владислав', 'Андрей', 'Иван', 'Егор', 'Михаил',
+          'Даниил', 'Кирилл', 'Сергей', 'Павел', 'Роман'
+        ];
+        
+        const randomName = botFirstNames[Math.floor(Math.random() * botFirstNames.length)];
+        botName = `${randomName}_БОТ`;
+        botAvatar = '🤖';
+        
         // Создаем бота в _pidr_users
         const { error: createBotError } = await supabase
           .from('_pidr_users')
           .insert({
             telegram_id: botId,
             username: botName,
-            first_name: botName,
-            last_name: '',
-            coins: 0,
-            rating: 1000,
+            first_name: randomName,
+            last_name: 'БОТ',
+            coins: 5000,
+            rating: 1000 + Math.floor(Math.random() * 500),
+            wins: Math.floor(Math.random() * 50),
+            losses: Math.floor(Math.random() * 50),
             is_bot: true,
-            status: 'online'
+            status: 'offline',
+            avatar: botAvatar
           });
 
         if (createBotError) {
@@ -151,23 +165,24 @@ export async function POST(
             message: 'Ошибка создания бота: ' + createBotError.message 
           }, { status: 500 });
         }
-        console.log(`✅ Бот ${botName} создан в _pidr_users с telegram_id=${botId}`);
+        
+        console.log(`✅ [ADD BOT] Создан новый бот: ${botName} (ID: ${botId})`);
       }
 
-      // ДОБАВЛЯЕМ БОТА В КОМНАТУ
+      // ✅ ДОБАВЛЯЕМ БОТА В КОМНАТУ
       const { error: botError } = await supabase
         .from('_pidr_room_players')
         .insert({
           room_id: roomId,
-          user_id: botId, // ✅ ТЕПЕРЬ ЭТО СУЩЕСТВУЮЩИЙ telegram_id!
+          user_id: botId,
           username: botName,
           position: nextPosition,
-          is_ready: true, // БОТЫ ВСЕГДА ГОТОВЫ
-          avatar_url: null
+          is_ready: true,
+          avatar_url: botAvatar
         });
 
       if (botError) {
-        console.error('❌ Ошибка добавления бота:', botError);
+        console.error('❌ Ошибка добавления бота в комнату:', botError);
         return NextResponse.json({ 
           success: false, 
           message: 'Ошибка добавления бота: ' + botError.message 

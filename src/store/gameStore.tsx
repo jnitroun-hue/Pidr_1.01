@@ -3311,6 +3311,10 @@ export const useGameStore = create<GameState>()(
             console.log(`▶️ [contributePenaltyCard] ✅ ШТРАФ ЗАВЕРШЕН! ИГРА ВОЗОБНОВЛЕНА! (isGamePaused = false)`);
             get().showNotification(`✅ Штраф завершен! Игра продолжается!`, 'success', 3000);
             
+            // ✅ КРИТИЧНО: ПРИНУДИТЕЛЬНО СНИМАЕМ ПАУЗУ!
+            set({ isGamePaused: false });
+            console.log(`🔓 [contributePenaltyCard] isGamePaused = false УСТАНОВЛЕНО!`);
+            
             // Продолжаем игру с того же игрока
             const { currentPlayerId, gameStage } = get();
             if (gameStage === 2 && currentPlayerId) {
@@ -3327,6 +3331,9 @@ export const useGameStore = create<GameState>()(
                   get().processPlayerTurn(currentPlayerId);
                 }, 1000);
               }
+            } else if (gameStage === 1 && currentPlayerId) {
+              // ✅ ЕСЛИ 1-Я СТАДИЯ - ПРОСТО ПРОДОЛЖАЕМ ИГРУ
+              console.log(`▶️ [contributePenaltyCard] Стадия 1: игра продолжается автоматически`);
             }
           }
            
@@ -3425,8 +3432,9 @@ export const useGameStore = create<GameState>()(
                 // Обновляем данные бота/других игроков
                 return {
                   ...localPlayer,
-                  cards: remotePlayer.cards || localPlayer.cards,
-                  penki: remotePlayer.penki || localPlayer.penki,
+                  // ✅ ФИКС: Проверяем что массивы НЕ ПУСТЫЕ!
+                  cards: (remotePlayer.cards && remotePlayer.cards.length > 0) ? remotePlayer.cards : localPlayer.cards,
+                  penki: (remotePlayer.penki && remotePlayer.penki.length > 0) ? remotePlayer.penki : localPlayer.penki,
                   isWinner: remotePlayer.isWinner !== undefined ? remotePlayer.isWinner : localPlayer.isWinner,
                   finishTime: remotePlayer.finishTime || localPlayer.finishTime
                 };
