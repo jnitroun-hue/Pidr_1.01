@@ -106,15 +106,15 @@ export default function LoserModal({ playerName, avatar, onClose }: LoserModalPr
           transition={{ type: 'spring', duration: 0.6 }}
           style={{
             background: 'linear-gradient(135deg, rgba(60, 20, 20, 0.95) 0%, rgba(20, 10, 10, 0.98) 100%)',
-            borderRadius: '24px',
-            padding: '40px',
-            boxShadow: '0 20px 60px rgba(139, 0, 0, 0.8), 0 0 100px rgba(255, 0, 0, 0.3), inset 0 0 30px rgba(0, 0, 0, 0.5)',
-            border: '3px solid rgba(139, 0, 0, 0.6)',
+            borderRadius: '20px',
+            padding: '30px 24px',
+            boxShadow: '0 20px 60px rgba(139, 0, 0, 0.8), 0 0 80px rgba(255, 0, 0, 0.3), inset 0 0 20px rgba(0, 0, 0, 0.6)',
+            border: '2px solid rgba(139, 0, 0, 0.6)',
             textAlign: 'center',
-            width: 'min(60vw, 800px)', // ✅ ОГРАНИЧЕНИЕ ПО ШИРИНЕ
-            maxHeight: '60vh', // ✅ ОГРАНИЧЕНИЕ ПО ВЫСОТЕ (КАК ИГРОВОЙ СТОЛ)
+            width: 'min(40vw, 500px)', // ✅ 40% ЭКРАНА!
+            maxHeight: '70vh', // ✅ ОГРАНИЧЕНИЕ ПО ВЫСОТЕ
             overflow: 'auto', // ✅ СКРОЛЛ ЕСЛИ КОНТЕНТ НЕ ВЛЕЗАЕТ
-            minWidth: '320px',
+            minWidth: '300px',
             position: 'relative'
           }}
         >

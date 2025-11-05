@@ -128,23 +128,24 @@ export default function WinnerModal({
           ))}
         </div>
 
-        {/* Основная карточка - 60% ЭКРАНА (КАК ИГРОВОЙ СТОЛ!) */}
+        {/* Основная карточка - 40% ЭКРАНА, ПО ЦЕНТРУ */}
         <motion.div
-          initial={{ scale: 0.5, opacity: 0, rotateY: -180 }}
-          animate={{ scale: 1, opacity: 1, rotateY: 0 }}
-          exit={{ scale: 0.5, opacity: 0, rotateY: 180 }}
-          transition={{ type: 'spring', damping: 20, stiffness: 200 }}
-          className="relative mx-4"
+          initial={{ scale: 0.8, opacity: 0, y: 50 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.8, opacity: 0, y: 50 }}
+          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+          className="relative mx-auto"
           style={{
-            width: 'min(60vw, 800px)', // ✅ ОГРАНИЧЕНИЕ ПО ШИРИНЕ
-            maxHeight: '60vh', // ✅ ОГРАНИЧЕНИЕ ПО ВЫСОТЕ (КАК ИГРОВОЙ СТОЛ)
+            width: 'min(40vw, 500px)', // ✅ 40% ЭКРАНА!
+            maxHeight: '70vh', // ✅ ОГРАНИЧЕНИЕ ПО ВЫСОТЕ
             overflow: 'auto', // ✅ СКРОЛЛ ЕСЛИ КОНТЕНТ НЕ ВЛЕЗАЕТ
-            minWidth: '320px',
+            minWidth: '300px',
             background: placeData.gradient,
-            borderRadius: '28px',
-            padding: '40px',
-            boxShadow: `0 30px 80px -20px ${placeData.glowColor}, 0 0 0 1px rgba(255, 255, 255, 0.2), inset 0 2px 4px rgba(255, 255, 255, 0.3)`,
-            border: '2px solid rgba(255, 255, 255, 0.4)'
+            borderRadius: '20px',
+            padding: '30px 24px',
+            boxShadow: `0 20px 60px -10px ${placeData.glowColor}, 0 0 0 1px rgba(255, 255, 255, 0.2), inset 0 1px 3px rgba(255, 255, 255, 0.3)`,
+            border: '2px solid rgba(255, 255, 255, 0.4)',
+            textAlign: 'center'
           }}
         >
           {/* Блик */}
@@ -168,17 +169,18 @@ export default function WinnerModal({
           {/* Иконка места */}
           <motion.div
             animate={{ 
-              scale: [1, 1.15, 1],
-              rotate: [0, 5, -5, 0]
+              scale: [1, 1.1, 1],
+              rotate: [0, 3, -3, 0]
             }}
             transition={{ 
               duration: 2, 
               repeat: Infinity,
               ease: 'easeInOut'
             }}
-            className="flex justify-center mb-6"
+            className="flex justify-center mb-4"
             style={{
-              filter: `drop-shadow(0 8px 24px ${placeData.glowColor})`
+              filter: `drop-shadow(0 6px 20px ${placeData.glowColor})`,
+              transform: 'scale(0.7)' // ✅ УМЕНЬШАЕМ ИКОНКИ!
             }}
           >
             {placeData.icon}
@@ -221,12 +223,12 @@ export default function WinnerModal({
               <div 
                 className="relative"
                 style={{
-                  width: '100px',
-                  height: '100px',
+                  width: '70px', // ✅ УМЕНЬШАЕМ АВАТАР!
+                  height: '70px',
                   borderRadius: '50%',
-                  padding: '4px',
-                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.3) 100%)',
-                  boxShadow: `0 8px 32px ${placeData.glowColor}, inset 0 2px 4px rgba(255, 255, 255, 0.5)`
+                  padding: '3px',
+                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.5) 100%)',
+                  boxShadow: `0 6px 24px ${placeData.glowColor}, inset 0 1px 3px rgba(255, 255, 255, 0.6)`
                 }}
               >
                 <img 
@@ -237,7 +239,7 @@ export default function WinnerModal({
                     height: '100%',
                     borderRadius: '50%',
                     objectFit: 'cover',
-                    border: '3px solid rgba(255, 255, 255, 0.4)'
+                    border: '2px solid rgba(255, 255, 255, 0.5)'
                   }}
                 />
               </div>
@@ -263,34 +265,36 @@ export default function WinnerModal({
               className="flex flex-col gap-3"
             >
               <motion.button
-                whileHover={{ scale: 1.05, boxShadow: '0 12px 32px rgba(16, 185, 129, 0.4)' }}
-                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.05, y: -2, boxShadow: '0 16px 40px rgba(16, 185, 129, 0.5)' }}
+                whileTap={{ scale: 0.98, y: 0 }}
                 onClick={onContinueWatching}
-                className="w-full py-4 px-6 rounded-xl font-bold text-lg text-white flex items-center justify-center gap-3 transition-all duration-200"
+                className="w-full py-3 px-5 rounded-xl font-bold text-base text-white flex items-center justify-center gap-2 transition-all duration-200"
                 style={{
-                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                  boxShadow: '0 8px 24px rgba(16, 185, 129, 0.3), inset 0 1px 2px rgba(255, 255, 255, 0.3)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
+                  background: 'linear-gradient(145deg, #10b981 0%, #059669 100%)',
+                  boxShadow: '0 8px 20px rgba(16, 185, 129, 0.35), inset 0 2px 4px rgba(255, 255, 255, 0.4), inset 0 -2px 4px rgba(0, 0, 0, 0.2)',
+                  border: '2px solid rgba(255, 255, 255, 0.3)',
+                  textShadow: '0 2px 6px rgba(0, 0, 0, 0.4)',
+                  cursor: 'pointer'
                 }}
               >
-                <Eye size={24} strokeWidth={2.5} />
+                <Eye size={20} strokeWidth={2.5} />
                 Продолжить просмотр
               </motion.button>
 
               <motion.button
-                whileHover={{ scale: 1.05, boxShadow: '0 12px 32px rgba(99, 102, 241, 0.4)' }}
-                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.05, y: -2, boxShadow: '0 16px 40px rgba(99, 102, 241, 0.5)' }}
+                whileTap={{ scale: 0.98, y: 0 }}
                 onClick={onExitToMenu}
-                className="w-full py-4 px-6 rounded-xl font-bold text-lg text-white flex items-center justify-center gap-3 transition-all duration-200"
+                className="w-full py-3 px-5 rounded-xl font-bold text-base text-white flex items-center justify-center gap-2 transition-all duration-200"
                 style={{
-                  background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
-                  boxShadow: '0 8px 24px rgba(99, 102, 241, 0.3), inset 0 1px 2px rgba(255, 255, 255, 0.3)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
+                  background: 'linear-gradient(145deg, #6366f1 0%, #4f46e5 100%)',
+                  boxShadow: '0 8px 20px rgba(99, 102, 241, 0.35), inset 0 2px 4px rgba(255, 255, 255, 0.4), inset 0 -2px 4px rgba(0, 0, 0, 0.2)',
+                  border: '2px solid rgba(255, 255, 255, 0.3)',
+                  textShadow: '0 2px 6px rgba(0, 0, 0, 0.4)',
+                  cursor: 'pointer'
                 }}
               >
-                <Home size={24} strokeWidth={2.5} />
+                <Home size={20} strokeWidth={2.5} />
                 Выйти в главное меню
               </motion.button>
             </motion.div>

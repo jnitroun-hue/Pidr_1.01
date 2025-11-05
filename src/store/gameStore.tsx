@@ -2715,15 +2715,23 @@ export const useGameStore = create<GameState>()(
             if (a.isWinner && !b.isWinner) return -1;
             if (!a.isWinner && b.isWinner) return 1;
             
-            // 2️⃣ Среди победителей сортируем по количеству карт (меньше = лучше)
+            // 2️⃣ Сортируем по количеству карт (меньше = лучше)
             const aTotal = a.cards.length + a.penki.length;
             const bTotal = b.cards.length + b.penki.length;
+            
+            // ✅ ЕСЛИ У ОБОИХ 0 КАРТ - СОРТИРУЕМ ПО finishTime (КТО РАНЬШЕ ВЫШЕЛ)!
+            if (aTotal === 0 && bTotal === 0) {
+              if (a.finishTime && b.finishTime) {
+                return a.finishTime - b.finishTime; // Раньше = лучше место
+              }
+              // Если нет finishTime - сравниваем по ID
+              return a.id.localeCompare(b.id);
+            }
             
             if (aTotal === 0 && bTotal > 0) return -1;
             if (aTotal > 0 && bTotal === 0) return 1;
             
-            // 3️⃣ Если количество карт одинаковое - сортируем по ID (TIEBREAKER!)
-            // ✅ Это гарантирует ОДИНАКОВЫЙ порядок на ВСЕХ устройствах!
+            // 3️⃣ Если количество карт разное - сортируем по количеству
             if (aTotal !== bTotal) {
               return aTotal - bTotal;
             }
