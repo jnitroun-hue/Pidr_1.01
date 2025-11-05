@@ -278,10 +278,48 @@ export default function ProfilePage() {
         console.warn('⚠️ Не удалось загрузить инвентарь:', error);
       }
     };
+
+    // ✅ ФУНКЦИЯ ЗАГРУЗКИ КОЛОДЫ
+    const loadDeckCards = async () => {
+      try {
+        setIsLoadingDeck(true);
+        console.log('🎴 Загружаем колоду пользователя...');
+        
+        const telegramUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json'
+        };
+        
+        if (telegramUser?.id) {
+          headers['x-telegram-id'] = String(telegramUser.id);
+        }
+        
+        const response = await fetch('/api/user/deck', {
+          method: 'GET',
+          headers,
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.deck) {
+            console.log(`✅ Колода загружена: ${result.deck.length} карт`);
+            setDeckCards(result.deck);
+          }
+        } else {
+          console.error('❌ Ошибка загрузки колоды:', response.status);
+        }
+      } catch (error) {
+        console.error('❌ Не удалось загрузить колоду:', error);
+      } finally {
+        setIsLoadingDeck(false);
+      }
+    };
     
     loadUserData();
     loadBonuses();
     loadInventory();
+    loadDeckCards();
   }, []);
   const [activeSection, setActiveSection] = useState('stats'); // 'stats', 'achievements', 'wallet'
   const [showModal, setShowModal] = useState<'skins' | 'effects' | 'bonuses' | 'frames' | 'nft' | 'deck' | null>(null);
@@ -290,6 +328,8 @@ export default function ProfilePage() {
   const [selectedFrame, setSelectedFrame] = useState('default');
   const [purchasedItems, setPurchasedItems] = useState<string[]>([]);
   const [inventory, setInventory] = useState<any[]>([]);
+  const [deckCards, setDeckCards] = useState<any[]>([]);
+  const [isLoadingDeck, setIsLoadingDeck] = useState(false);
 
   // Скины для карт
   const cardSkins = [
@@ -649,6 +689,44 @@ export default function ProfilePage() {
       
     } catch (error: any) {
       console.error('❌ Ошибка активации:', error);
+      alert(`❌ ${error.message}`);
+    }
+  };
+
+  // ✅ УДАЛЕНИЕ КАРТЫ ИЗ КОЛОДЫ
+  const handleRemoveFromDeck = async (deckCardId: number) => {
+    if (!confirm('Удалить эту карту из колоды?')) {
+      return;
+    }
+
+    try {
+      const telegramUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json'
+      };
+      
+      if (telegramUser?.id) {
+        headers['x-telegram-id'] = String(telegramUser.id);
+      }
+
+      const response = await fetch('/api/user/deck', {
+        method: 'DELETE',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({ deckCardId })
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        alert('✅ Карта удалена из колоды!');
+        // Перезагружаем колоду
+        setDeckCards(prev => prev.filter(card => card.id !== deckCardId));
+      } else {
+        alert(`❌ Ошибка: ${result.error}`);
+      }
+    } catch (error: any) {
+      console.error('❌ Ошибка удаления из колоды:', error);
       alert(`❌ ${error.message}`);
     }
   };
@@ -1905,15 +1983,128 @@ export default function ProfilePage() {
                   textAlign: 'center',
                   marginBottom: '10px'
                 }}>
-                  Здесь отображаются NFT карты, добавленные в вашу игровую колоду
+                  NFT карты, добавленные в вашу игровую колоду ({deckCards.length})
                 </div>
                 
-                {/* ✅ ЗАГРУЗКА КОЛОДЫ БУДЕТ ДОБАВЛЕНА ПОЗЖЕ */}
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-                  gap: '16px'
-                }}>
+                {/* ✅ ЗАГРУЗКА */}
+                {isLoadingDeck && (
+                  <div style={{
+                    textAlign: 'center',
+                    color: '#64748b',
+                    padding: '40px'
+                  }}>
+                    ⏳ Загрузка...
+                  </div>
+                )}
+
+                {/* ✅ КАРТЫ ИЗ КОЛОДЫ */}
+                {!isLoadingDeck && deckCards.length > 0 && (
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+                    gap: '16px'
+                  }}>
+                    {deckCards.map((card: any) => {
+                      const nftCard = card.nft_card || card;
+                      const suitColor = (nftCard.suit === 'hearts' || nftCard.suit === 'diamonds') ? '#ef4444' : '#1e293b';
+                      const suitSymbols: { [key: string]: string } = {
+                        'hearts': '♥',
+                        'diamonds': '♦',
+                        'clubs': '♣',
+                        'spades': '♠'
+                      };
+                      const suitSymbol = suitSymbols[nftCard.suit] || '?';
+
+                      return (
+                        <motion.div
+                          key={card.id}
+                          whileHover={{ scale: 1.05, y: -5 }}
+                          style={{
+                            background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%)',
+                            border: '2px solid rgba(139, 92, 246, 0.4)',
+                            borderRadius: '12px',
+                            padding: '12px',
+                            cursor: 'pointer',
+                            position: 'relative',
+                            overflow: 'hidden'
+                          }}
+                        >
+                          {/* ИЗОБРАЖЕНИЕ КАРТЫ */}
+                          {nftCard.image_url && (
+                            <img
+                              src={nftCard.image_url}
+                              alt={`${nftCard.rank} of ${nftCard.suit}`}
+                              style={{
+                                width: '100%',
+                                height: '180px',
+                                objectFit: 'cover',
+                                borderRadius: '8px',
+                                marginBottom: '10px'
+                              }}
+                            />
+                          )}
+
+                          {/* ИНФОРМАЦИЯ О КАРТЕ */}
+                          <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: '8px'
+                          }}>
+                            <span style={{
+                              color: suitColor,
+                              fontSize: '1.2rem',
+                              fontWeight: 'bold'
+                            }}>
+                              {nftCard.rank}{suitSymbol}
+                            </span>
+                            <span style={{
+                              background: 'rgba(139, 92, 246, 0.2)',
+                              color: '#a78bfa',
+                              padding: '2px 8px',
+                              borderRadius: '6px',
+                              fontSize: '0.7rem',
+                              textTransform: 'uppercase'
+                            }}>
+                              {nftCard.rarity || 'Common'}
+                            </span>
+                          </div>
+
+                          {/* КНОПКА УДАЛЕНИЯ */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveFromDeck(card.id);
+                            }}
+                            style={{
+                              width: '100%',
+                              background: 'rgba(239, 68, 68, 0.8)',
+                              border: '1px solid rgba(239, 68, 68, 0.4)',
+                              borderRadius: '8px',
+                              color: '#fff',
+                              padding: '8px',
+                              fontSize: '0.85rem',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = 'rgba(239, 68, 68, 1)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.8)';
+                            }}
+                          >
+                            🗑️ Удалить
+                          </button>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* ✅ ПУСТАЯ КОЛОДА */}
+                {!isLoadingDeck && deckCards.length === 0 && (
                   <div style={{
                     background: 'rgba(30, 41, 59, 0.6)',
                     border: '2px dashed rgba(100, 116, 139, 0.4)',
@@ -1926,7 +2117,7 @@ export default function ProfilePage() {
                     Пока нет карт в колоде.<br/>
                     Добавьте NFT карты из маркетплейса!
                   </div>
-                </div>
+                )}
               </div>
             )}
           </motion.div>
