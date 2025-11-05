@@ -20,6 +20,8 @@ interface Listing {
   nft_card_id: number;
   seller_user_id: number;
   price_coins: number | null;
+  price_ton: number | null; // ✅ ДОБАВЛЕНО!
+  price_sol: number | null; // ✅ ДОБАВЛЕНО!
   price_crypto: number | null;
   crypto_currency: string | null;
   status: string;
@@ -183,46 +185,88 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
 
   // Обработчики
   const handleBuyNFT = async (listing: Listing) => {
-    if (!listing.price_coins) {
-      alert('Покупка за крипту пока недоступна');
-      return;
-    }
-
-    if (userCoins < listing.price_coins) {
-      alert(`Недостаточно монет! Требуется: ${listing.price_coins}, есть: ${userCoins}`);
-      return;
-    }
-
-    if (!confirm(`Купить эту карту за ${listing.price_coins} монет?`)) {
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/marketplace/buy', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...getTelegramWebAppHeaders()
-        },
-        body: JSON.stringify({
-          listing_id: listing.id,
-          payment_method: 'coins'
-        })
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        alert('✅ NFT успешно куплена!');
-        const newBalance = userCoins - listing.price_coins;
-        onBalanceUpdate?.(newBalance);
-        loadMarketplace();
-      } else {
-        alert(`❌ Ошибка: ${data.error}`);
+    // ✅ ПРОВЕРЯЕМ СПОСОБ ОПЛАТЫ
+    const isCrypto = (listing.price_ton || listing.price_sol);
+    
+    if (listing.price_coins) {
+      // ОПЛАТА МОНЕТАМИ
+      if (userCoins < listing.price_coins) {
+        alert(`Недостаточно монет! Требуется: ${listing.price_coins}, есть: ${userCoins}`);
+        return;
       }
-    } catch (error) {
-      console.error('Ошибка покупки:', error);
-      alert('Ошибка при покупке');
+
+      if (!confirm(`Купить эту карту за ${listing.price_coins} монет?`)) {
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/marketplace/buy', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...getTelegramWebAppHeaders()
+          },
+          body: JSON.stringify({
+            listing_id: listing.id,
+            payment_method: 'coins'
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          alert('✅ NFT успешно куплена!');
+          const newBalance = userCoins - listing.price_coins;
+          onBalanceUpdate?.(newBalance);
+          loadMarketplace();
+        } else {
+          alert(`❌ Ошибка: ${data.error}`);
+        }
+      } catch (error) {
+        console.error('Ошибка покупки:', error);
+        alert('Ошибка при покупке');
+      }
+    } else if (isCrypto) {
+      // ✅ ОПЛАТА КРИПТОВАЛЮТОЙ ЧЕРЕЗ TELEGRAM WALLET
+      const currency = listing.price_ton ? 'TON' : 'SOL';
+      const amount = listing.price_ton || listing.price_sol;
+
+      if (!confirm(`Купить эту карту за ${amount} ${currency}?\n\nВы будете перенаправлены в Telegram кошелёк для оплаты.`)) {
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/marketplace/telegram-payment', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...getTelegramWebAppHeaders()
+          },
+          body: JSON.stringify({
+            listingId: listing.id,
+            currency,
+            amount
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.invoiceUrl) {
+          // ✅ ОТКРЫВАЕМ TELEGRAM INVOICE
+          if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
+            window.Telegram.WebApp.openTelegramLink(data.invoiceUrl);
+          } else {
+            window.open(data.invoiceUrl, '_blank');
+          }
+        } else {
+          alert(`❌ Ошибка: ${data.error}`);
+        }
+      } catch (error) {
+        console.error('Ошибка оплаты:', error);
+        alert('Ошибка при создании платежа');
+      }
+    } else {
+      alert('Цена не указана!');
     }
   };
 
@@ -240,15 +284,19 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
     const requestBody: any = {
       nft_card_id: selectedNFT.id,
       price_coins: null,
-      price_crypto: null,
+      price_ton: null,
+      price_sol: null,
       crypto_currency: null
     };
 
     if (sellCurrency === 'COINS') {
       requestBody.price_coins = Math.floor(price); // Монеты только целые
-    } else {
-      requestBody.price_crypto = price;
-      requestBody.crypto_currency = sellCurrency;
+    } else if (sellCurrency === 'TON') {
+      requestBody.price_ton = price;
+      requestBody.crypto_currency = 'TON';
+    } else if (sellCurrency === 'SOL') {
+      requestBody.price_sol = price;
+      requestBody.crypto_currency = 'SOL';
     }
 
     try {

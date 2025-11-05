@@ -19,7 +19,9 @@ interface Listing {
   nft_card_id: number;
   seller_user_id: number;
   price_coins: number | null;
-  price_crypto: number | null;
+  price_ton: number | null; // ✅ ДОБАВЛЕНО!
+  price_sol: number | null; // ✅ ДОБАВЛЕНО!
+  price_crypto: number | null; // Устаревшее поле (для обратной совместимости)
   crypto_currency: string | null;
   status: string;
   created_at: string;
@@ -156,31 +158,69 @@ export function BuyTab({ listings, onBuy, userCoins, getSuitColor, getSuitSymbol
             </span>
           </div>
 
-          {/* Price */}
+          {/* Price + Seller Info */}
           <div style={{
             padding: '12px',
             background: 'rgba(251, 191, 36, 0.1)',
             borderRadius: '10px',
             marginBottom: '12px'
           }}>
+            {/* Продавец */}
+            <div style={{
+              fontSize: '11px',
+              color: '#94a3b8',
+              marginBottom: '8px',
+              textAlign: 'center'
+            }}>
+              Продавец: <span style={{ color: '#cbd5e1', fontWeight: 'bold' }}>
+                @{listing.seller?.username || listing.seller?.first_name || 'Unknown'}
+              </span>
+            </div>
+            
+            {/* Цена */}
             {listing.price_coins && (
+              <div style={{
+                fontSize: '22px',
+                fontWeight: 'black',
+                color: '#fbbf24',
+                textAlign: 'center',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px'
+              }}>
+                <span style={{ fontSize: '24px' }}>💰</span>
+                {listing.price_coins.toLocaleString()}
+              </div>
+            )}
+            {listing.price_ton && (
               <div style={{
                 fontSize: '20px',
                 fontWeight: 'bold',
-                color: '#fbbf24',
-                textAlign: 'center'
-              }}>
-                💰 {listing.price_coins.toLocaleString()} монет
-              </div>
-            )}
-            {listing.price_crypto && (
-              <div style={{
-                fontSize: '16px',
                 color: '#60a5fa',
                 textAlign: 'center',
-                marginTop: '4px'
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px'
               }}>
-                ₿ {listing.price_crypto} {listing.crypto_currency}
+                <span style={{ fontSize: '22px' }}>💎</span>
+                {listing.price_ton} TON
+              </div>
+            )}
+            {listing.price_sol && (
+              <div style={{
+                fontSize: '20px',
+                fontWeight: 'bold',
+                color: '#f59e0b',
+                textAlign: 'center',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px'
+              }}>
+                <span style={{ fontSize: '22px' }}>☀️</span>
+                {listing.price_sol} SOL
               </div>
             )}
           </div>
