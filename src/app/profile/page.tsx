@@ -1004,6 +1004,48 @@ export default function ProfilePage() {
                 РАМКА АВАТАР
               </span>
             </motion.button>
+
+            {/* МОЯ КОЛОДА - НОВАЯ КНОПКА! */}
+            <motion.button
+              onClick={() => setShowModal('deck')}
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.95 }}
+              style={{
+                background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.8) 0%, rgba(124, 58, 237, 0.6) 100%)',
+                border: '1px solid rgba(139, 92, 246, 0.4)',
+                borderRadius: '16px',
+                padding: '16px 12px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                backdropFilter: 'blur(10px)',
+                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(168, 85, 247, 0.6)';
+                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(124, 58, 237, 0.9) 0%, rgba(109, 40, 217, 0.8) 100%)';
+                e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.3), 0 0 20px rgba(139, 92, 246, 0.2)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.4)';
+                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(139, 92, 246, 0.8) 0%, rgba(124, 58, 237, 0.6) 100%)';
+                e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.2)';
+              }}
+            >
+              <Sparkles style={{ fontSize: '1.5rem', color: '#e2e8f0', filter: 'drop-shadow(0 2px 4px rgba(139, 92, 246, 0.3))' }} />
+              <span style={{ 
+                color: '#e2e8f0', 
+                fontSize: '0.8rem', 
+                fontWeight: '600', 
+                letterSpacing: '0.5px',
+                textAlign: 'center'
+              }}>
+                МОЯ КОЛОДА
+              </span>
+            </motion.button>
           </div>
 
           {/* БОНУСЫ - ВЫТЯНУТАЯ КНОПКА ПОД ТРЕМЯ */}
