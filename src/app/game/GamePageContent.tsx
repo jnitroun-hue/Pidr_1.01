@@ -1731,16 +1731,24 @@ function GamePageContentComponent({
           }}>
             {/* Кнопка "Одна карта!" - ВСЕГДА ВИДНА, ПРОЗРАЧНАЯ */}
             <button
-              onClick={() => {
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('🔘 [ОДНА КАРТА] Кнопка НАЖАТА!');
+                
                 // ИСПРАВЛЕНО: Во 2-й стадии считаем ВСЕ карты, а не только открытые!
                 const totalCards = humanPlayer.cards.length;
+                console.log(`🔘 [ОДНА КАРТА] Всего карт: ${totalCards}, объявлено: ${oneCardDeclarations[humanPlayer.id]}`);
                 
                 if (totalCards === 1 && !oneCardDeclarations[humanPlayer.id]) {
+                  console.log('✅ [ОДНА КАРТА] Объявляем!');
                   declareOneCard(humanPlayer.id);
                   showPlayerMessage(humanPlayer.id, '☝️ ОДНА КАРТА!', 'success', 4000);
                 } else if (oneCardDeclarations[humanPlayer.id]) {
+                  console.log('⚠️ [ОДНА КАРТА] Уже объявлено!');
                   showPlayerMessage(humanPlayer.id, '✅ Уже объявлено!', 'info', 2000);
                 } else {
+                  console.log(`❌ [ОДНА КАРТА] Недоступно: ${totalCards} карт`);
                   showPlayerMessage(humanPlayer.id, `❌ У вас ${totalCards} ${totalCards === 1 ? 'карта' : totalCards < 5 ? 'карты' : 'карт'}!`, 'error', 3000);
                 }
               }}
@@ -1774,25 +1782,35 @@ function GamePageContentComponent({
               
               return (
               <button
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log('🔘 [СКОЛЬКО КАРТ] Кнопка НАЖАТА!');
+                  console.log(`🔘 [СКОЛЬКО КАРТ] isActive: ${isActive}, targets: ${targetsNotDeclared.length}`);
+                  
                   if (!isActive) {
+                    console.log('⚠️ [СКОЛЬКО КАРТ] Недоступно');
                     showPlayerMessage(humanPlayer.id, '⏳ Недоступно сейчас', 'warning', 2000);
                     return;
                   }
                   
+                  console.log('✅ [СКОЛЬКО КАРТ] Спрашиваем...');
                   showPlayerMessage(humanPlayer.id, '❓ Сколько карт?', 'info', 2000);
                   
                   const targets = targetsNotDeclared;
                   
                   if (targets.length === 1) {
+                    console.log(`🎯 [СКОЛЬКО КАРТ] Проверка 1 игрока: ${targets[0].name}`);
                     showPlayerMessage(targets[0].id, '🔍 Проверка...', 'warning', 3000);
                     askHowManyCards(humanPlayer.id, targets[0].id);
                   } else if (targets.length > 1) {
+                    console.log(`🎯 [СКОЛЬКО КАРТ] Проверка ${targets.length} игроков`);
                     targets.forEach(t => {
                       showPlayerMessage(t.id, '🔍 Проверка...', 'warning', 3000);
                       askHowManyCards(humanPlayer.id, t.id);
                     });
                   } else {
+                    console.log('❌ [СКОЛЬКО КАРТ] Нет целей');
                     showNotification('Нет доступных целей для проверки', 'warning', 2000);
                   }
                 }}
@@ -1818,13 +1836,19 @@ function GamePageContentComponent({
             
             {/* КОМПАКТНАЯ КНОПКА "ШТРАФ" - ВСЕГДА ВИДНА, ПРОЗРАЧНАЯ */}
             <button
-              onClick={() => {
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('🔘 [ШТРАФ] Кнопка НАЖАТА!');
+                console.log(`🔘 [ШТРАФ] pendingPenalty:`, pendingPenalty);
+                
                 if (!pendingPenalty || !pendingPenalty.contributorsNeeded.includes(humanPlayer.id)) {
+                  console.log('⚠️ [ШТРАФ] Нет активного штрафа');
                   showPlayerMessage(humanPlayer.id, '⏳ Нет активного штрафа', 'warning', 2000);
                   return;
                 }
                 
-                console.log('🔥 [СДАТЬ ШТРАФ] Кнопка нажата!');
+                console.log('✅ [ШТРАФ] Открываем модалку штрафа');
                 useGameStore.setState({
                   showPenaltyCardSelection: true,
                   penaltyCardSelectionPlayerId: humanPlayer.id
@@ -1850,19 +1874,28 @@ function GamePageContentComponent({
             
             {/* КОМПАКТНАЯ КНОПКА "ВЗЯТЬ" - ВСЕГДА ВИДНА, ПРОЗРАЧНАЯ */}
             <button
-              onClick={() => {
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('🔘 [ВЗЯТЬ] Кнопка НАЖАТА!');
+                console.log(`🔘 [ВЗЯТЬ] gameStage: ${gameStage}, tableStack: ${tableStack?.length}, currentPlayerId: ${currentPlayerId}, humanPlayer: ${humanPlayer.id}`);
+                
                 if (gameStage < 2) {
+                  console.log('⚠️ [ВЗЯТЬ] Недоступно до 2-й стадии');
                   showPlayerMessage(humanPlayer.id, '⏳ Доступно со 2-й стадии', 'warning', 2000);
                   return;
                 }
                 if (!tableStack || tableStack.length === 0) {
+                  console.log('⚠️ [ВЗЯТЬ] Нет карт на столе');
                   showPlayerMessage(humanPlayer.id, '❌ Нет карт на столе', 'warning', 2000);
                   return;
                 }
                 if (humanPlayer.id !== currentPlayerId) {
+                  console.log('⚠️ [ВЗЯТЬ] Не ваш ход');
                   showPlayerMessage(humanPlayer.id, '⏳ Не ваш ход', 'warning', 2000);
                   return;
                 }
+                console.log('✅ [ВЗЯТЬ] Берем карты со стола!');
                 takeTableCards();
               }}
               style={{
@@ -1916,10 +1949,23 @@ function GamePageContentComponent({
                 <div
                   key={`hand-${index}-${cardImage}`}
                   className={`${styles.handCard} ${isSelected ? styles.selected : ''} ${canPlay ? styles.playable : ''} ${!isMyTurn ? styles.disabled : ''}`}
+                  draggable={isMyTurn && canPlay} // ✅ DRAG только в свой ход и если можно играть!
+                  onDragStart={(e) => {
+                    if (!isMyTurn || !canPlay) {
+                      e.preventDefault();
+                      return;
+                    }
+                    console.log(`🖱️ [DRAG START] Начало перетаскивания: ${cardImage}`);
+                    const cardObj = typeof card === 'string' 
+                      ? { image: cardImage, open: true, id: `card-${index}` }
+                      : { ...card, id: card.id || `card-${index}` };
+                    e.dataTransfer.setData('card', JSON.stringify(cardObj));
+                    e.dataTransfer.effectAllowed = 'move';
+                  }}
                   style={{
                     marginLeft: index > 0 ? '-24px' : '0', // 40% перекрытие для руки (60px * 0.4 = 24px)
                     zIndex: isSelected ? 100 : index + 1, // Правая карта поверх левой
-                    cursor: isMyTurn ? 'pointer' : 'not-allowed',
+                    cursor: isMyTurn && canPlay ? 'grab' : isMyTurn ? 'pointer' : 'not-allowed', // ✅ GRAB курсор!
                     position: 'relative',
                   }}
                   onClick={() => {
