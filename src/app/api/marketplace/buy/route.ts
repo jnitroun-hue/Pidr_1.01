@@ -131,6 +131,10 @@ export async function POST(request: NextRequest) {
       }
     }
     
+    // ✅ РАССЧИТЫВАЕМ КОМИССИЮ (ДЛЯ ОБОИХ ТИПОВ ОПЛАТЫ)
+    const platformFee = Math.floor(price * 0.05);
+    const sellerAmount = price - platformFee;
+
     // ✅ РАЗНАЯ ЛОГИКА ДЛЯ COINS И CRYPTO!
     if (payment_method === 'coins') {
       // ===== ОПЛАТА МОНЕТАМИ - МОМЕНТАЛЬНАЯ =====
@@ -149,8 +153,6 @@ export async function POST(request: NextRequest) {
       }
 
       // 2. Начисляем монеты продавцу (минус 5% комиссия)
-      const platformFee = Math.floor(price * 0.05);
-      const sellerAmount = price - platformFee;
       
       const { data: seller } = await supabase
         .from('_pidr_users')

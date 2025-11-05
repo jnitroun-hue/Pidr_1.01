@@ -92,10 +92,11 @@ export default function WinnerModal({
         exit={{ opacity: 0 }}
         className="fixed inset-0 flex items-center justify-center overflow-hidden"
         style={{
-          background: 'rgba(0, 0, 0, 0.95)',
-          backdropFilter: 'blur(20px)',
+          background: 'rgba(0, 0, 0, 0.7)',
+          backdropFilter: 'blur(8px)',
           zIndex: 99999,
-          pointerEvents: 'auto'
+          pointerEvents: 'auto',
+          padding: '20px'
         }}
       >
         {/* Анимированный фон с частицами */}
@@ -128,21 +129,20 @@ export default function WinnerModal({
           ))}
         </div>
 
-        {/* Основная карточка - АДАПТИВНАЯ ПОД ЭКРАН */}
+        {/* Основная карточка - СТРОГО ПО ЦЕНТРУ */}
         <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
+          initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.9, opacity: 0 }}
-          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="relative mx-auto"
+          exit={{ scale: 0.95, opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="relative"
           style={{
-            width: 'min(90vw, 420px)',
-            maxHeight: '80vh',
-            minWidth: '280px',
+            width: '400px',
+            maxWidth: '90vw',
             background: placeData.gradient,
-            borderRadius: '24px',
-            padding: '28px 20px',
-            overflow: 'auto',
+            borderRadius: '20px',
+            padding: '24px 20px',
+            margin: 'auto',
             boxShadow: `0 20px 60px -10px ${placeData.glowColor}, 0 0 0 1px rgba(255, 255, 255, 0.2), inset 0 1px 3px rgba(255, 255, 255, 0.3)`,
             border: '2px solid rgba(255, 255, 255, 0.4)',
             textAlign: 'center'
