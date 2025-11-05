@@ -128,7 +128,7 @@ export default function WinnerModal({
           ))}
         </div>
 
-        {/* Основная карточка - 40% ЭКРАНА, ПО ЦЕНТРУ */}
+        {/* Основная карточка - АДАПТИВНАЯ ПОД ЭКРАН */}
         <motion.div
           initial={{ scale: 0.8, opacity: 0, y: 50 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -136,13 +136,12 @@ export default function WinnerModal({
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
           className="relative mx-auto"
           style={{
-            width: 'min(40vw, 500px)', // ✅ 40% ЭКРАНА!
-            maxHeight: '70vh', // ✅ ОГРАНИЧЕНИЕ ПО ВЫСОТЕ
-            overflow: 'auto', // ✅ СКРОЛЛ ЕСЛИ КОНТЕНТ НЕ ВЛЕЗАЕТ
-            minWidth: '300px',
+            width: 'min(90vw, 420px)', // ✅ 90% НА МОБИЛЬНОМ, МАКС 420px!
+            maxHeight: 'fit-content', // ✅ НЕ РАСТЯГИВАЕМ!
+            minWidth: '280px',
             background: placeData.gradient,
-            borderRadius: '20px',
-            padding: '30px 24px',
+            borderRadius: '24px',
+            padding: '28px 20px',
             boxShadow: `0 20px 60px -10px ${placeData.glowColor}, 0 0 0 1px rgba(255, 255, 255, 0.2), inset 0 1px 3px rgba(255, 255, 255, 0.3)`,
             border: '2px solid rgba(255, 255, 255, 0.4)',
             textAlign: 'center'
@@ -169,44 +168,53 @@ export default function WinnerModal({
           {/* Иконка места */}
           <motion.div
             animate={{ 
-              scale: [1, 1.1, 1],
-              rotate: [0, 3, -3, 0]
+              scale: [1, 1.08, 1],
+              rotate: [0, 2, -2, 0]
             }}
             transition={{ 
-              duration: 2, 
+              duration: 2.5, 
               repeat: Infinity,
               ease: 'easeInOut'
             }}
-            className="flex justify-center mb-4"
+            className="flex justify-center mb-3"
             style={{
-              filter: `drop-shadow(0 6px 20px ${placeData.glowColor})`,
-              transform: 'scale(0.7)' // ✅ УМЕНЬШАЕМ ИКОНКИ!
+              filter: `drop-shadow(0 8px 24px ${placeData.glowColor})`,
+              transform: 'scale(0.65)' // ✅ ЕЩЁ МЕНЬШЕ ИКОНКИ!
             }}
           >
             {placeData.icon}
           </motion.div>
 
-          {/* Заголовок */}
+          {/* Заголовок - СТИЛЬ ПОКЕРА */}
           <motion.h2
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.2 }}
-            className="text-4xl font-black text-white text-center mb-2"
+            className="text-3xl font-black text-white text-center mb-2"
             style={{
-              textShadow: '0 4px 12px rgba(0, 0, 0, 0.5), 0 2px 4px rgba(0, 0, 0, 0.3)'
+              textShadow: '0 6px 16px rgba(0, 0, 0, 0.6), 0 2px 4px rgba(0, 0, 0, 0.4), 0 0 20px rgba(255, 255, 255, 0.3)',
+              letterSpacing: '0.05em',
+              fontFamily: 'system-ui, -apple-system, sans-serif',
+              WebkitTextStroke: '1px rgba(0, 0, 0, 0.3)'
             }}
           >
             {placeData.title}
           </motion.h2>
 
-          {/* Место */}
+          {/* Место - ОБЪЁМНОЕ */}
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}
-            className="text-xl font-bold text-white/90 text-center mb-6"
+            className="text-lg font-bold text-white/95 text-center mb-5"
             style={{
-              textShadow: '0 2px 8px rgba(0, 0, 0, 0.4)'
+              textShadow: '0 3px 10px rgba(0, 0, 0, 0.5)',
+              background: 'rgba(0, 0, 0, 0.25)',
+              padding: '6px 16px',
+              borderRadius: '12px',
+              display: 'inline-block',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255, 255, 255, 0.2)'
             }}
           >
             {placeData.subtitle}
@@ -217,18 +225,34 @@ export default function WinnerModal({
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.4 }}
-            className="flex flex-col items-center gap-4 mb-8"
+            className="flex flex-col items-center gap-3 mb-6"
           >
             {avatar && (
-              <div 
+              <motion.div 
+                animate={{ 
+                  scale: [1, 1.05, 1],
+                  rotate: [0, 5, -5, 0]
+                }}
+                transition={{ 
+                  duration: 2, 
+                  repeat: Infinity,
+                  ease: 'easeInOut'
+                }}
                 className="relative"
                 style={{
-                  width: '70px', // ✅ УМЕНЬШАЕМ АВАТАР!
-                  height: '70px',
+                  width: '80px', // ✅ АВАТАР В КРУЖОЧКЕ!
+                  height: '80px',
                   borderRadius: '50%',
-                  padding: '3px',
-                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.5) 100%)',
-                  boxShadow: `0 6px 24px ${placeData.glowColor}, inset 0 1px 3px rgba(255, 255, 255, 0.6)`
+                  padding: '4px',
+                  background: place === 1 
+                    ? 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)'
+                    : place === 2
+                    ? 'linear-gradient(135deg, #E8E8E8 0%, #C0C0C0 100%)'
+                    : place === 3
+                    ? 'linear-gradient(135deg, #CD7F32 0%, #A0632A 100%)'
+                    : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  boxShadow: `0 8px 30px ${placeData.glowColor}, inset 0 2px 4px rgba(255, 255, 255, 0.6)`,
+                  border: '3px solid rgba(255, 255, 255, 0.8)'
                 }}
               >
                 <img 
@@ -238,15 +262,14 @@ export default function WinnerModal({
                     width: '100%',
                     height: '100%',
                     borderRadius: '50%',
-                    objectFit: 'cover',
-                    border: '2px solid rgba(255, 255, 255, 0.5)'
+                    objectFit: 'cover'
                   }}
                 />
-              </div>
+              </motion.div>
             )}
-            <div className="text-2xl font-black text-white text-center px-4 py-2 rounded-xl"
+            <div className="text-xl font-black text-white text-center px-4 py-2 rounded-xl"
               style={{
-                background: 'rgba(0, 0, 0, 0.3)',
+                background: 'rgba(0, 0, 0, 0.4)',
                 backdropFilter: 'blur(10px)',
                 border: '1px solid rgba(255, 255, 255, 0.2)',
                 textShadow: '0 2px 8px rgba(0, 0, 0, 0.5)'
