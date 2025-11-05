@@ -769,7 +769,9 @@ function SoldCard({ listing, getSuitColor, getSuitSymbol, getRankDisplay }: any)
             Покупатель: @{listing.buyer?.username || listing.buyer?.first_name}
           </p>
           <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#10b981' }}>
-            ✅ Продано за {listing.price_coins?.toLocaleString()} монет
+            {listing.price_coins && `✅ Продано за ${listing.price_coins.toLocaleString()} 💰 монет`}
+            {listing.price_ton && `✅ Продано за ${listing.price_ton} 💎 TON`}
+            {listing.price_sol && `✅ Продано за ${listing.price_sol} ☀️ SOL`}
           </div>
         </div>
       </div>
