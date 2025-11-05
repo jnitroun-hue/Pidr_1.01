@@ -253,8 +253,8 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
           // ✅ ОТКРЫВАЕМ КОШЕЛЁК С ТОЧНОЙ СУММОЙ!
           console.log(`💎 [Marketplace] Открываем кошелёк ${data.crypto_currency}: ${data.payment_url}`);
           
-          if (typeof window !== 'undefined' && window.Telegram?.WebApp?.openLink) {
-            window.Telegram.WebApp.openLink(data.payment_url);
+          if (typeof window !== 'undefined' && window.Telegram?.WebApp?.openTelegramLink) {
+            window.Telegram.WebApp.openTelegramLink(data.payment_url);
           } else {
             window.open(data.payment_url, '_blank');
           }
