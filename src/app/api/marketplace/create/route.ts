@@ -10,8 +10,9 @@ import { supabase } from '@/lib/supabase';
  * {
  *   nft_card_id: number,
  *   price_coins?: number,
- *   price_crypto?: number,
- *   crypto_currency?: 'TON' | 'SOL' | 'USDT'
+ *   price_ton?: number,
+ *   price_sol?: number,
+ *   crypto_currency?: 'TON' | 'SOL'
  * }
  * 
  * Headers:
@@ -40,13 +41,14 @@ export async function POST(request: NextRequest) {
     
     // Парсим body
     const body = await request.json();
-    const { nft_card_id, price_coins, price_crypto, crypto_currency } = body;
+    const { nft_card_id, price_coins, price_ton, price_sol, crypto_currency } = body;
     
     console.log('🏷️ [Marketplace Create] Создание лота:', { 
       userId, 
       nft_card_id, 
       price_coins, 
-      price_crypto, 
+      price_ton,
+      price_sol,
       crypto_currency 
     });
     
@@ -58,16 +60,10 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    if (!price_coins && !price_crypto) {
+    // ✅ Проверяем price_coins, price_ton или price_sol
+    if (!price_coins && !price_ton && !price_sol) {
       return NextResponse.json(
-        { success: false, error: 'Укажите хотя бы одну цену (price_coins или price_crypto)' },
-        { status: 400 }
-      );
-    }
-    
-    if (price_crypto && !crypto_currency) {
-      return NextResponse.json(
-        { success: false, error: 'При указании price_crypto требуется crypto_currency' },
+        { success: false, error: 'Укажите хотя бы одну цену (price_coins, price_ton или price_sol)' },
         { status: 400 }
       );
     }
@@ -126,8 +122,9 @@ export async function POST(request: NextRequest) {
         nft_card_id,
         seller_user_id: userId,
         price_coins: price_coins || null,
-        price_ton: crypto_currency === 'TON' ? price_crypto : null,
-        price_sol: crypto_currency === 'SOL' ? price_crypto : null,
+        price_ton: price_ton || null,
+        price_sol: price_sol || null,
+        crypto_currency: price_ton ? 'TON' : price_sol ? 'SOL' : null,
         status: 'active'
       })
       .select()

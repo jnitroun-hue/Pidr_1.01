@@ -83,7 +83,21 @@ export async function POST(request: NextRequest) {
     }
     
     // Проверяем доступность оплаты
-    const price = payment_method === 'coins' ? listing.price_coins : listing.price_crypto;
+    let price: number | null = null;
+    let cryptoCurrency: string | null = null;
+    
+    if (payment_method === 'coins') {
+      price = listing.price_coins;
+    } else if (payment_method === 'crypto') {
+      // Определяем валюту и цену
+      if (listing.price_ton) {
+        price = listing.price_ton;
+        cryptoCurrency = 'TON';
+      } else if (listing.price_sol) {
+        price = listing.price_sol;
+        cryptoCurrency = 'SOL';
+      }
+    }
     
     if (!price) {
       return NextResponse.json(
@@ -198,8 +212,9 @@ export async function POST(request: NextRequest) {
         nft_card_id: listing.nft_card_id,
         transaction_type: payment_method,
         amount_coins: payment_method === 'coins' ? price : null,
-        amount_crypto: payment_method === 'crypto' ? price : null,
-        crypto_currency: payment_method === 'crypto' ? listing.crypto_currency : null,
+        amount_ton: (payment_method === 'crypto' && cryptoCurrency === 'TON') ? price : null,
+        amount_sol: (payment_method === 'crypto' && cryptoCurrency === 'SOL') ? price : null,
+        crypto_currency: cryptoCurrency,
         platform_fee_coins: payment_method === 'coins' ? platformFee : null,
         platform_fee_crypto: payment_method === 'crypto' ? (price * 0.05) : null,
         status: 'completed',
@@ -208,12 +223,31 @@ export async function POST(request: NextRequest) {
     
     console.log('✅ [Marketplace Buy] Покупка завершена!');
     
+    // Генерируем payment URL для крипты
+    let paymentUrl: string | undefined = undefined;
+    
+    if (payment_method === 'crypto' && cryptoCurrency) {
+      if (cryptoCurrency === 'TON') {
+        // TON Payment URL (Tonkeeper)
+        const tonReceiverAddress = process.env.TON_RECEIVER_ADDRESS || 'EQBxxxx';
+        const amountNano = Math.floor(price * 1000000000); // TON в нанотоны
+        paymentUrl = `https://app.tonkeeper.com/transfer/${tonReceiverAddress}?amount=${amountNano}&text=NFT_${listing_id}_${buyerId}`;
+      } else if (cryptoCurrency === 'SOL') {
+        // Solana Pay URL
+        const solReceiverAddress = process.env.SOLANA_RECEIVER_ADDRESS || '';
+        paymentUrl = `solana:${solReceiverAddress}?amount=${price}&label=NFT_${listing_id}&message=NFT_Purchase`;
+      }
+    }
+    
     return NextResponse.json({
       success: true,
       message: 'NFT успешно куплена!',
       nft_card: listing.nft_card,
       paid: price,
-      platform_fee: platformFee
+      platform_fee: platformFee,
+      payment_method,
+      crypto_currency: cryptoCurrency,
+      payment_url: paymentUrl
     });
     
   } catch (error: any) {

@@ -20,9 +20,8 @@ interface Listing {
   nft_card_id: number;
   seller_user_id: number;
   price_coins: number | null;
-  price_ton: number | null; // ✅ ДОБАВЛЕНО!
-  price_sol: number | null; // ✅ ДОБАВЛЕНО!
-  price_crypto: number | null;
+  price_ton: number | null;
+  price_sol: number | null;
   crypto_currency: string | null;
   status: string;
   created_at: string;
@@ -227,43 +226,47 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
         alert('Ошибка при покупке');
       }
     } else if (isCrypto) {
-      // ✅ ОПЛАТА КРИПТОВАЛЮТОЙ ЧЕРЕЗ TELEGRAM WALLET
+      // ✅ ОПЛАТА КРИПТОВАЛЮТОЙ (TON/SOL)
       const currency = listing.price_ton ? 'TON' : 'SOL';
       const amount = listing.price_ton || listing.price_sol;
 
-      if (!confirm(`Купить эту карту за ${amount} ${currency}?\n\nВы будете перенаправлены в Telegram кошелёк для оплаты.`)) {
+      if (!confirm(`Купить эту карту за ${amount} ${currency}?\n\nВы будете перенаправлены в ${currency === 'TON' ? 'Tonkeeper' : 'Phantom'} кошелёк для оплаты.`)) {
         return;
       }
 
       try {
-        const response = await fetch('/api/marketplace/telegram-payment', {
+        const response = await fetch('/api/marketplace/buy', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             ...getTelegramWebAppHeaders()
           },
           body: JSON.stringify({
-            listingId: listing.id,
-            currency,
-            amount
+            listing_id: listing.id,
+            payment_method: 'crypto'
           })
         });
 
         const data = await response.json();
 
-        if (data.success && data.invoiceUrl) {
-          // ✅ ОТКРЫВАЕМ TELEGRAM INVOICE
-          if (typeof window !== 'undefined' && window.Telegram?.WebApp?.openTelegramLink) {
-            window.Telegram.WebApp.openTelegramLink(data.invoiceUrl);
+        if (data.success && data.payment_url) {
+          // ✅ ОТКРЫВАЕМ КОШЕЛЁК С ТОЧНОЙ СУММОЙ!
+          console.log(`💎 [Marketplace] Открываем кошелёк ${data.crypto_currency}: ${data.payment_url}`);
+          
+          if (typeof window !== 'undefined' && window.Telegram?.WebApp?.openLink) {
+            window.Telegram.WebApp.openLink(data.payment_url);
           } else {
-            window.open(data.invoiceUrl, '_blank');
+            window.open(data.payment_url, '_blank');
           }
+          
+          alert(`🔗 Откройте ${currency === 'TON' ? 'Tonkeeper' : 'Phantom'} для завершения оплаты ${amount} ${currency}`);
+          loadMarketplace(); // ✅ ОБНОВЛЯЕМ МАРКЕТПЛЕЙС
         } else {
           alert(`❌ Ошибка: ${data.error}`);
         }
       } catch (error) {
-        console.error('Ошибка оплаты:', error);
-        alert('Ошибка при создании платежа');
+        console.error('Ошибка покупки крипты:', error);
+        alert('Ошибка при покупке');
       }
     } else {
       alert('Цена не указана!');

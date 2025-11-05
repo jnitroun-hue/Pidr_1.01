@@ -19,9 +19,8 @@ interface Listing {
   nft_card_id: number;
   seller_user_id: number;
   price_coins: number | null;
-  price_ton: number | null; // ✅ ДОБАВЛЕНО!
-  price_sol: number | null; // ✅ ДОБАВЛЕНО!
-  price_crypto: number | null; // Устаревшее поле (для обратной совместимости)
+  price_ton: number | null;
+  price_sol: number | null;
   crypto_currency: string | null;
   status: string;
   created_at: string;

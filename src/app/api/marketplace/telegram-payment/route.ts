@@ -17,37 +17,41 @@ export async function POST(request: NextRequest) {
 
     console.log(`💳 [TELEGRAM PAYMENT] Пользователь ${telegramId} оплачивает лот ${listingId}: ${amount} ${currency}`);
 
-    // ✅ СОЗДАЁМ TELEGRAM INVOICE
-    const invoicePayload = JSON.stringify({
-      listingId,
-      buyerId: telegramId,
-      currency,
-      amount,
-      timestamp: Date.now()
-    });
+    // ✅ ДЛЯ TON - ИСПОЛЬЗУЕМ TON CONNECT
+    if (currency === 'TON') {
+      // Генерируем TON payment URL для @wallet
+      const tonPaymentUrl = `https://app.tonkeeper.com/transfer/${process.env.TON_RECEIVER_ADDRESS || 'EQBxxxx'}?amount=${Math.floor(amount * 1000000000)}&text=NFT_${listingId}_${telegramId}`;
+      
+      console.log(`✅ [TON PAYMENT] TON Payment URL: ${tonPaymentUrl}`);
+      
+      return NextResponse.json({
+        success: true,
+        paymentUrl: tonPaymentUrl,
+        paymentMethod: 'TON_WALLET',
+        message: 'Откройте TON кошелёк для оплаты'
+      });
+    }
 
-    // ФОРМИРУЕМ INVOICE LINK
-    const botUsername = process.env.TELEGRAM_BOT_USERNAME || 'your_bot'; // ✅ ТВОЙ БОТ!
-    const title = `Покупка NFT карты`;
-    const description = `Лот #${listingId} - ${amount} ${currency}`;
-    const prices = [
-      {
-        label: `NFT Card ${listingId}`,
-        amount: Math.floor(amount * 1000000000) // ✅ В НАНОСТАРСАХ (1 TON = 10^9)
-      }
-    ];
+    // ✅ ДЛЯ SOL - ИСПОЛЬЗУЕМ SOLANA PAY
+    if (currency === 'SOL') {
+      // Генерируем Solana Pay URL
+      const solanaPayUrl = `solana:${process.env.SOLANA_RECEIVER_ADDRESS || ''}?amount=${amount}&label=NFT_${listingId}&message=NFT_Card_Purchase`;
+      
+      console.log(`✅ [SOL PAYMENT] Solana Pay URL: ${solanaPayUrl}`);
+      
+      return NextResponse.json({
+        success: true,
+        paymentUrl: solanaPayUrl,
+        paymentMethod: 'SOLANA_PAY',
+        message: 'Откройте Solana кошелёк для оплаты'
+      });
+    }
 
-    // ✅ TELEGRAM INVOICE URL
-    const invoiceUrl = `https://t.me/${botUsername}?start=pay_${listingId}`;
-
-    console.log(`✅ [TELEGRAM PAYMENT] Invoice URL: ${invoiceUrl}`);
-
-    return NextResponse.json({
-      success: true,
-      invoiceUrl,
-      invoicePayload,
-      message: 'Откройте ссылку для оплаты'
-    });
+    // ❌ НЕИЗВЕСТНАЯ ВАЛЮТА
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Неподдерживаемая валюта' 
+    }, { status: 400 });
 
   } catch (error: any) {
     console.error('❌ [TELEGRAM PAYMENT] Ошибка:', error);
