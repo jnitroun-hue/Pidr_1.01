@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     
     console.log('📋 [Marketplace List] Параметры:', { sort, filter, suit, rarity, limit, offset });
     
-    // Базовый запрос (БЕЗ seller для отладки)
+    // ✅ Базовый запрос С ПРОДАВЦОМ
     let query = supabase
       .from('_pidr_nft_marketplace')
       .select(`
@@ -40,6 +40,12 @@ export async function GET(request: NextRequest) {
           rarity,
           image_url,
           metadata
+        ),
+        seller:_pidr_users!seller_user_id(
+          telegram_id,
+          username,
+          first_name,
+          last_name
         )
       `)
       .eq('status', 'active');

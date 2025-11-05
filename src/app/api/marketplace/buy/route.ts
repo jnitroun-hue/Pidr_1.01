@@ -131,9 +131,10 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    // Начинаем транзакцию
-    // 1. Списываем монеты у покупателя
+    // ✅ РАЗНАЯ ЛОГИКА ДЛЯ COINS И CRYPTO!
     if (payment_method === 'coins') {
+      // ===== ОПЛАТА МОНЕТАМИ - МОМЕНТАЛЬНАЯ =====
+      // 1. Списываем монеты у покупателя
       const { error: deductError } = await supabase
         .from('_pidr_users')
         .update({ coins: buyer.coins - price })
@@ -146,13 +147,11 @@ export async function POST(request: NextRequest) {
           { status: 500 }
         );
       }
-    }
-    
-    // 2. Начисляем монеты продавцу (минус 5% комиссия)
-    const platformFee = Math.floor(price * 0.05);
-    const sellerAmount = price - platformFee;
-    
-    if (payment_method === 'coins') {
+
+      // 2. Начисляем монеты продавцу (минус 5% комиссия)
+      const platformFee = Math.floor(price * 0.05);
+      const sellerAmount = price - platformFee;
+      
       const { data: seller } = await supabase
         .from('_pidr_users')
         .select('coins')
@@ -165,61 +164,87 @@ export async function POST(request: NextRequest) {
           .update({ coins: seller.coins + sellerAmount })
           .eq('telegram_id', listing.seller_user_id);
       }
-    }
-    
-    // 3. Переносим NFT к покупателю
-    const { error: transferError } = await supabase
-      .from('_pidr_nft_cards')
-      .update({ user_id: buyerId })
-      .eq('id', listing.nft_card_id);
-    
-    if (transferError) {
-      console.error('❌ [Marketplace Buy] Ошибка переноса NFT:', transferError);
-      // Откатываем монеты
-      if (payment_method === 'coins') {
+
+      // 3. Переносим NFT к покупателю
+      const { error: transferError } = await supabase
+        .from('_pidr_nft_cards')
+        .update({ user_id: buyerId })
+        .eq('id', listing.nft_card_id);
+      
+      if (transferError) {
+        console.error('❌ [Marketplace Buy] Ошибка переноса NFT:', transferError);
+        // Откатываем монеты
         await supabase
           .from('_pidr_users')
           .update({ coins: buyer.coins })
           .eq('telegram_id', buyerId);
+        return NextResponse.json(
+          { success: false, error: 'Ошибка переноса NFT' },
+          { status: 500 }
+        );
       }
-      return NextResponse.json(
-        { success: false, error: 'Ошибка переноса NFT' },
-        { status: 500 }
-      );
+
+      // 4. Обновляем статус лота
+      await supabase
+        .from('_pidr_nft_marketplace')
+        .update({
+          status: 'sold',
+          buyer_user_id: buyerId,
+          sold_at: new Date().toISOString()
+        })
+        .eq('id', listing_id);
+
+      // 5. Создаем запись транзакции
+      await supabase
+        .from('_pidr_marketplace_transactions')
+        .insert({
+          marketplace_listing_id: listing_id,
+          seller_user_id: listing.seller_user_id,
+          buyer_user_id: buyerId,
+          nft_card_id: listing.nft_card_id,
+          transaction_type: payment_method,
+          amount_coins: price,
+          amount_ton: null,
+          amount_sol: null,
+          crypto_currency: null,
+          platform_fee_coins: platformFee,
+          platform_fee_crypto: null,
+          status: 'completed',
+          completed_at: new Date().toISOString()
+        });
+    } else if (payment_method === 'crypto') {
+      // ===== ОПЛАТА КРИПТОЙ - ТОЛЬКО РЕЗЕРВИРУЕМ =====
+      console.log(`💎 [Marketplace Buy] Резервируем лот ${listing_id} для покупателя ${buyerId}`);
+      
+      // НЕ переносим карту! Только резервируем лот
+      await supabase
+        .from('_pidr_nft_marketplace')
+        .update({
+          status: 'pending', // ✅ НОВЫЙ СТАТУС: ждём оплаты
+          buyer_user_id: buyerId,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', listing_id);
+
+      // Создаем запись транзакции со статусом "pending"
+      await supabase
+        .from('_pidr_marketplace_transactions')
+        .insert({
+          marketplace_listing_id: listing_id,
+          seller_user_id: listing.seller_user_id,
+          buyer_user_id: buyerId,
+          nft_card_id: listing.nft_card_id,
+          transaction_type: payment_method,
+          amount_coins: null,
+          amount_ton: cryptoCurrency === 'TON' ? price : null,
+          amount_sol: cryptoCurrency === 'SOL' ? price : null,
+          crypto_currency: cryptoCurrency,
+          platform_fee_coins: null,
+          platform_fee_crypto: price * 0.05,
+          status: 'pending', // ✅ ЖДЁМ ПОДТВЕРЖДЕНИЯ!
+          created_at: new Date().toISOString()
+        });
     }
-    
-    // 4. Обновляем статус лота
-    const { error: updateError } = await supabase
-      .from('_pidr_nft_marketplace')
-      .update({
-        status: 'sold',
-        buyer_user_id: buyerId,
-        sold_at: new Date().toISOString()
-      })
-      .eq('id', listing_id);
-    
-    if (updateError) {
-      console.error('❌ [Marketplace Buy] Ошибка обновления лота:', updateError);
-    }
-    
-    // 5. Создаем запись транзакции
-    await supabase
-      .from('_pidr_marketplace_transactions')
-      .insert({
-        marketplace_listing_id: listing_id,
-        seller_user_id: listing.seller_user_id,
-        buyer_user_id: buyerId,
-        nft_card_id: listing.nft_card_id,
-        transaction_type: payment_method,
-        amount_coins: payment_method === 'coins' ? price : null,
-        amount_ton: (payment_method === 'crypto' && cryptoCurrency === 'TON') ? price : null,
-        amount_sol: (payment_method === 'crypto' && cryptoCurrency === 'SOL') ? price : null,
-        crypto_currency: cryptoCurrency,
-        platform_fee_coins: payment_method === 'coins' ? platformFee : null,
-        platform_fee_crypto: payment_method === 'crypto' ? (price * 0.05) : null,
-        status: 'completed',
-        completed_at: new Date().toISOString()
-      });
     
     console.log('✅ [Marketplace Buy] Покупка завершена!');
     
