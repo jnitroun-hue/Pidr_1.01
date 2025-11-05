@@ -284,7 +284,7 @@ export default function ProfilePage() {
     loadInventory();
   }, []);
   const [activeSection, setActiveSection] = useState('stats'); // 'stats', 'achievements', 'wallet'
-  const [showModal, setShowModal] = useState<'skins' | 'effects' | 'bonuses' | 'frames' | 'nft' | null>(null);
+  const [showModal, setShowModal] = useState<'skins' | 'effects' | 'bonuses' | 'frames' | 'nft' | 'deck' | null>(null);
   const [selectedSkin, setSelectedSkin] = useState('classic');
   const [selectedEffect, setSelectedEffect] = useState('none');
   const [selectedFrame, setSelectedFrame] = useState('default');
@@ -1362,6 +1362,7 @@ export default function ProfilePage() {
                 {showModal === 'bonuses' && '🎁 БОНУСЫ'}
                 {showModal === 'frames' && '🖼️ РАМКИ АВАТАРОВ'}
                 {showModal === 'nft' && '🎴 NFT КОЛЛЕКЦИЯ'}
+                {showModal === 'deck' && '🎴 МОЯ КОЛОДА'}
               </h3>
               <button
                 onClick={() => setShowModal(null)}
@@ -1886,6 +1887,45 @@ export default function ProfilePage() {
                     <li>Рандомный минт: 2-10 = 95%, J-K = 4%, A = 1%</li>
                     <li>Кастомный минт: выберите масть, ранг и стиль</li>
                   </ul>
+                </div>
+              </div>
+            )}
+
+            {/* 🎴 МОЯ КОЛОДА - МОДАЛКА */}
+            {showModal === 'deck' && (
+              <div style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: '20px',
+                padding: '10px'
+              }}>
+                <div style={{
+                  color: '#94a3b8',
+                  fontSize: '0.95rem',
+                  textAlign: 'center',
+                  marginBottom: '10px'
+                }}>
+                  Здесь отображаются NFT карты, добавленные в вашу игровую колоду
+                </div>
+                
+                {/* ✅ ЗАГРУЗКА КОЛОДЫ БУДЕТ ДОБАВЛЕНА ПОЗЖЕ */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+                  gap: '16px'
+                }}>
+                  <div style={{
+                    background: 'rgba(30, 41, 59, 0.6)',
+                    border: '2px dashed rgba(100, 116, 139, 0.4)',
+                    borderRadius: '12px',
+                    padding: '40px 20px',
+                    textAlign: 'center',
+                    color: '#64748b',
+                    fontSize: '0.9rem'
+                  }}>
+                    Пока нет карт в колоде.<br/>
+                    Добавьте NFT карты из маркетплейса!
+                  </div>
                 </div>
               </div>
             )}
