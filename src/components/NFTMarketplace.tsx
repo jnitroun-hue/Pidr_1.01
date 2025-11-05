@@ -253,7 +253,7 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
 
         if (data.success && data.invoiceUrl) {
           // ✅ ОТКРЫВАЕМ TELEGRAM INVOICE
-          if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
+          if (typeof window !== 'undefined' && window.Telegram?.WebApp?.openTelegramLink) {
             window.Telegram.WebApp.openTelegramLink(data.invoiceUrl);
           } else {
             window.open(data.invoiceUrl, '_blank');
