@@ -500,8 +500,9 @@ function GamePageContentComponent({
   const currentTurnPlayer = useMemo(() => players.find(p => p.id === currentPlayerId), [players, currentPlayerId]);
   const currentPlayerIndex = useMemo(() => players.findIndex(p => p.id === currentPlayerId), [players, currentPlayerId]);
   
-  // Получаем пользователя-человека (для UI контейнера карт) (МЕМОИЗИРОВАНО)
-  const humanPlayer = useMemo(() => players.find(p => p.isUser), [players]);
+  // ✅ ИСПРАВЛЕНО: Находим РЕАЛЬНОГО ИГРОКА (не бота)
+  const myPlayer = useMemo(() => players.find(p => !p.isBot), [players]);
+  const isMyTurn = currentPlayerId === myPlayer?.id;
   
   // ОТЛАДКА убрана - логи были слишком многословные
   
@@ -911,16 +912,16 @@ function GamePageContentComponent({
 
   // Показать количество карт у всех соперников (ОБНОВЛЕННАЯ ЛОГИКА)
   const showOpponentsCardCount = () => {
-    if (!humanPlayer) return;
+    if (!myPlayer) return;
     
     console.log('🔢 [showOpponentsCardCount] Запрашиваем количество карт у соперников');
     
     // Показываем сообщение над игроком который спросил
-    showPlayerMessage(humanPlayer.id, '🔍 Сколько карт?', 'info', 2000);
+    showPlayerMessage(myPlayer.id, '🔍 Сколько карт?', 'info', 2000);
     
     // Проверяем каждого соперника через новую систему
     const opponentsWithOneCard = players.filter(p => 
-      p.id !== humanPlayer.id && 
+      p.id !== myPlayer.id && 
       playersWithOneCard.includes(p.id)
     );
     
@@ -928,11 +929,11 @@ function GamePageContentComponent({
       // Если есть игроки с 1 картой, спрашиваем у первого через новую систему
       const targetPlayer = opponentsWithOneCard[0];
       console.log(`🎯 [showOpponentsCardCount] Проверяем штраф у ${targetPlayer.name} через новую систему`);
-      askHowManyCards(humanPlayer.id, targetPlayer.id);
+      askHowManyCards(myPlayer.id, targetPlayer.id);
     } else {
       // Если нет игроков с 1 картой, показываем обычную информацию  
       players
-        .filter(p => p.id !== humanPlayer.id)
+        .filter(p => p.id !== myPlayer.id)
         .forEach((player, index) => {
           const openCards = player.cards.filter(c => c.open).length;
           
@@ -950,22 +951,22 @@ function GamePageContentComponent({
 
   // Объявить что у игрока последняя карта (ОБНОВЛЕННАЯ ЛОГИКА)
   const announceLastCard = () => {
-    if (!humanPlayer) return;
+    if (!myPlayer) return;
     
-    const openCards = humanPlayer.cards.filter(c => c.open);
+    const openCards = myPlayer.cards.filter(c => c.open);
     console.log('1️⃣ [announceLastCard] Объявление последней карты:', openCards.length);
     
     if (openCards.length === 1) {
       // Используем новую системную функцию
-      declareOneCard(humanPlayer.id);
+      declareOneCard(myPlayer.id);
       
       // Показываем сообщение над игроком который объявил
-      showPlayerMessage(humanPlayer.id, '☝️ ОДНА КАРТА!', 'success', 4000);
+      showPlayerMessage(myPlayer.id, '☝️ ОДНА КАРТА!', 'success', 4000);
       
-      console.log(`📢 [announceLastCard] ${humanPlayer.name} объявил последнюю карту через новую систему!`);
+      console.log(`📢 [announceLastCard] ${myPlayer.name} объявил последнюю карту через новую систему!`);
     } else {
       // Показываем ошибку над игроком
-      showPlayerMessage(humanPlayer.id, `❌ У вас ${openCards.length} карт!`, 'error', 3000);
+      showPlayerMessage(myPlayer.id, `❌ У вас ${openCards.length} карт!`, 'error', 3000);
       showNotification(`Нельзя объявлять "одна карта" - у вас ${openCards.length} карт`, 'error', 3000);
       console.warn(`⚠️ [announceLastCard] Неправильное объявление: ${openCards.length} карт вместо 1`);
     }
@@ -1320,8 +1321,8 @@ function GamePageContentComponent({
                       transition: 'transform 0.2s ease'
                     }}
                     onClick={() => {
-                      const humanPlayer = players.find(p => p.isUser);
-                      if (turnPhase === 'waiting_deck_action' && availableTargets.length > 0 && currentPlayerId === humanPlayer?.id) {
+                      const myPlayer = players.find(p => p.isUser);
+                      if (turnPhase === 'waiting_deck_action' && availableTargets.length > 0 && currentPlayerId === myPlayer?.id) {
                         // Автоматически ходим на первую доступную цель
                         const targetIndex = availableTargets[0];
                         const targetPlayer = players[targetIndex];
@@ -1394,19 +1395,19 @@ function GamePageContentComponent({
                       : 'none',
                   }}
                   onClick={() => {
-                    const humanPlayer = players.find(p => p.isUser);
-                    if (currentPlayerId === humanPlayer?.id && (turnPhase === 'showing_deck_hint' || turnPhase === 'waiting_deck_action')) {
+                    const myPlayer = players.find(p => p.isUser);
+                    if (currentPlayerId === myPlayer?.id && (turnPhase === 'showing_deck_hint' || turnPhase === 'waiting_deck_action')) {
                       console.log('🎴 [КЛИК НА КОЛОДУ] Игрок кликнул на колоду');
                       onDeckClick();
-                    } else if (currentPlayerId !== humanPlayer?.id) {
+                    } else if (currentPlayerId !== myPlayer?.id) {
                       console.log('⛔ [КЛИК НА КОЛОДУ] Сейчас не ваш ход');
                     } else {
                       showNotification('Сначала попробуйте сходить из руки!', 'warning', 2000);
                     }
                   }}
                   onMouseEnter={(e) => {
-                    const humanPlayer = players.find(p => p.isUser);
-                    if (currentPlayerId === humanPlayer?.id && (turnPhase === 'showing_deck_hint' || turnPhase === 'waiting_deck_action')) {
+                    const myPlayer = players.find(p => p.isUser);
+                    if (currentPlayerId === myPlayer?.id && (turnPhase === 'showing_deck_hint' || turnPhase === 'waiting_deck_action')) {
                       e.currentTarget.style.transform = 'scale(1.15)';
                     }
                   }}
@@ -1719,7 +1720,10 @@ function GamePageContentComponent({
       {/* ПАНЕЛЬ КНОПОК ДЕЙСТВИЙ - УБРАНА, КНОПКА ПЕРЕНЕСЕНА В РУКУ ИГРОКА */}
 
       {/* Рука игрока внизу экрана - ТОЛЬКО СО 2-Й СТАДИИ! */}
-      {players.length > 0 && gameStage >= 2 && humanPlayer && humanPlayer.cards && humanPlayer.cards.length > 0 && (
+      {(() => {
+        console.log('🔍 [RENDER CHECK] players:', players.length, 'gameStage:', gameStage, 'myPlayer:', myPlayer?.id, 'cards:', myPlayer?.cards?.length);
+        return players.length > 0 && gameStage >= 2 && myPlayer && myPlayer.cards && myPlayer.cards.length > 0;
+      })() && (
         <div className={styles.playerHand}>
           {/* Кнопки компактно над картами игрока */}
           <div style={{
@@ -1728,6 +1732,9 @@ function GamePageContentComponent({
             justifyContent: 'center',
             marginBottom: '8px',
             flexWrap: 'wrap',
+            position: 'relative', // ✅ КРИТИЧНО!
+            zIndex: 100, // ✅ КРИТИЧНО: КНОПКИ ПОВЕРХ ВСЕГО!
+            pointerEvents: 'auto', // ✅ КРИТИЧНО: ВКЛЮЧАЕМ КЛИКИ!
           }}>
             {/* Кнопка "Одна карта!" - ВСЕГДА ВИДНА, ПРОЗРАЧНАЯ */}
             <button
@@ -1736,20 +1743,25 @@ function GamePageContentComponent({
                 e.stopPropagation();
                 console.log('🔘 [ОДНА КАРТА] Кнопка НАЖАТА!');
                 
-                // ИСПРАВЛЕНО: Во 2-й стадии считаем ВСЕ карты, а не только открытые!
-                const totalCards = humanPlayer.cards.length;
-                console.log(`🔘 [ОДНА КАРТА] Всего карт: ${totalCards}, объявлено: ${oneCardDeclarations[humanPlayer.id]}`);
+                if (!myPlayer) {
+                  console.error('❌ [ОДНА КАРТА] myPlayer не найден!');
+                  return;
+                }
                 
-                if (totalCards === 1 && !oneCardDeclarations[humanPlayer.id]) {
+                // ИСПРАВЛЕНО: Во 2-й стадии считаем ВСЕ карты, а не только открытые!
+                const totalCards = myPlayer.cards.length;
+                console.log(`🔘 [ОДНА КАРТА] Всего карт: ${totalCards}, объявлено: ${oneCardDeclarations[myPlayer.id]}`);
+                
+                if (totalCards === 1 && !oneCardDeclarations[myPlayer.id]) {
                   console.log('✅ [ОДНА КАРТА] Объявляем!');
-                  declareOneCard(humanPlayer.id);
-                  showPlayerMessage(humanPlayer.id, '☝️ ОДНА КАРТА!', 'success', 4000);
-                } else if (oneCardDeclarations[humanPlayer.id]) {
+                  declareOneCard(myPlayer.id);
+                  showPlayerMessage(myPlayer.id, '☝️ ОДНА КАРТА!', 'success', 4000);
+                } else if (oneCardDeclarations[myPlayer.id]) {
                   console.log('⚠️ [ОДНА КАРТА] Уже объявлено!');
-                  showPlayerMessage(humanPlayer.id, '✅ Уже объявлено!', 'info', 2000);
+                  showPlayerMessage(myPlayer.id, '✅ Уже объявлено!', 'info', 2000);
                 } else {
                   console.log(`❌ [ОДНА КАРТА] Недоступно: ${totalCards} карт`);
-                  showPlayerMessage(humanPlayer.id, `❌ У вас ${totalCards} ${totalCards === 1 ? 'карта' : totalCards < 5 ? 'карты' : 'карт'}!`, 'error', 3000);
+                  showPlayerMessage(myPlayer.id, `❌ У вас ${totalCards} ${totalCards === 1 ? 'карта' : totalCards < 5 ? 'карты' : 'карт'}!`, 'error', 3000);
                 }
               }}
               style={{
@@ -1760,11 +1772,12 @@ function GamePageContentComponent({
                 padding: '6px 12px',
                 fontSize: '11px',
                 fontWeight: '700',
-                cursor: humanPlayer.cards.length === 1 && !oneCardDeclarations[humanPlayer.id] ? 'pointer' : 'not-allowed',
+                cursor: 'pointer',
                 whiteSpace: 'nowrap',
-                opacity: humanPlayer.cards.length === 1 && !oneCardDeclarations[humanPlayer.id] ? 1 : 0.3, // ✅ ПРОЗРАЧНОСТЬ!
+                opacity: myPlayer && myPlayer.cards.length === 1 && !oneCardDeclarations[myPlayer.id] ? 1 : 0.3,
                 transition: 'opacity 0.3s ease',
-                pointerEvents: 'auto' // ✅ ВСЕГДА КЛИКАБЕЛЬНА!
+                pointerEvents: 'auto',
+                zIndex: 9999,
               }}
             >
               ☝️ Одна карта!
@@ -1772,9 +1785,11 @@ function GamePageContentComponent({
             
             {/* Кнопка "Сколько карт?" - ВСЕГДА ВИДНА, ПРОЗРАЧНАЯ */}
             {(() => {
+              if (!myPlayer) return null; // ✅ ЗАЩИТА ОТ undefined
+              
               const targetsNotDeclared = players.filter(p => 
                 playersWithOneCard.includes(p.id) && 
-                p.id !== humanPlayer.id &&
+                p.id !== myPlayer.id &&
                 !oneCardDeclarations[p.id]
               );
               
@@ -1790,24 +1805,24 @@ function GamePageContentComponent({
                   
                   if (!isActive) {
                     console.log('⚠️ [СКОЛЬКО КАРТ] Недоступно');
-                    showPlayerMessage(humanPlayer.id, '⏳ Недоступно сейчас', 'warning', 2000);
+                    showPlayerMessage(myPlayer.id, '⏳ Недоступно сейчас', 'warning', 2000);
                     return;
                   }
                   
                   console.log('✅ [СКОЛЬКО КАРТ] Спрашиваем...');
-                  showPlayerMessage(humanPlayer.id, '❓ Сколько карт?', 'info', 2000);
+                  showPlayerMessage(myPlayer.id, '❓ Сколько карт?', 'info', 2000);
                   
                   const targets = targetsNotDeclared;
                   
                   if (targets.length === 1) {
                     console.log(`🎯 [СКОЛЬКО КАРТ] Проверка 1 игрока: ${targets[0].name}`);
                     showPlayerMessage(targets[0].id, '🔍 Проверка...', 'warning', 3000);
-                    askHowManyCards(humanPlayer.id, targets[0].id);
+                    askHowManyCards(myPlayer.id, targets[0].id);
                   } else if (targets.length > 1) {
                     console.log(`🎯 [СКОЛЬКО КАРТ] Проверка ${targets.length} игроков`);
                     targets.forEach(t => {
                       showPlayerMessage(t.id, '🔍 Проверка...', 'warning', 3000);
-                      askHowManyCards(humanPlayer.id, t.id);
+                      askHowManyCards(myPlayer.id, t.id);
                     });
                   } else {
                     console.log('❌ [СКОЛЬКО КАРТ] Нет целей');
@@ -1835,6 +1850,7 @@ function GamePageContentComponent({
             })()}
             
             {/* КОМПАКТНАЯ КНОПКА "ШТРАФ" - ВСЕГДА ВИДНА, ПРОЗРАЧНАЯ */}
+            {myPlayer && (
             <button
               onClick={(e) => {
                 e.preventDefault();
@@ -1842,16 +1858,16 @@ function GamePageContentComponent({
                 console.log('🔘 [ШТРАФ] Кнопка НАЖАТА!');
                 console.log(`🔘 [ШТРАФ] pendingPenalty:`, pendingPenalty);
                 
-                if (!pendingPenalty || !pendingPenalty.contributorsNeeded.includes(humanPlayer.id)) {
+                if (!pendingPenalty || !pendingPenalty.contributorsNeeded.includes(myPlayer.id)) {
                   console.log('⚠️ [ШТРАФ] Нет активного штрафа');
-                  showPlayerMessage(humanPlayer.id, '⏳ Нет активного штрафа', 'warning', 2000);
+                  showPlayerMessage(myPlayer.id, '⏳ Нет активного штрафа', 'warning', 2000);
                   return;
                 }
                 
                 console.log('✅ [ШТРАФ] Открываем модалку штрафа');
                 useGameStore.setState({
                   showPenaltyCardSelection: true,
-                  penaltyCardSelectionPlayerId: humanPlayer.id
+                  penaltyCardSelectionPlayerId: myPlayer.id
                 });
               }}
               style={{
@@ -1862,37 +1878,39 @@ function GamePageContentComponent({
                 padding: '6px 12px',
                 fontSize: '11px',
                 fontWeight: '700',
-                cursor: (pendingPenalty && pendingPenalty.contributorsNeeded.includes(humanPlayer.id)) ? 'pointer' : 'not-allowed',
+                cursor: (pendingPenalty && pendingPenalty.contributorsNeeded.includes(myPlayer.id)) ? 'pointer' : 'not-allowed',
                 whiteSpace: 'nowrap',
-                opacity: (pendingPenalty && pendingPenalty.contributorsNeeded.includes(humanPlayer.id)) ? 1 : 0.3, // ✅ ПРОЗРАЧНОСТЬ!
+                opacity: (pendingPenalty && pendingPenalty.contributorsNeeded.includes(myPlayer.id)) ? 1 : 0.3,
                 transition: 'opacity 0.3s ease',
-                pointerEvents: 'auto' // ✅ ВСЕГДА КЛИКАБЕЛЬНА!
+                pointerEvents: 'auto'
               }}
             >
               💸 Штраф
             </button>
+            )}
             
             {/* КОМПАКТНАЯ КНОПКА "ВЗЯТЬ" - ВСЕГДА ВИДНА, ПРОЗРАЧНАЯ */}
+            {myPlayer && (
             <button
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 console.log('🔘 [ВЗЯТЬ] Кнопка НАЖАТА!');
-                console.log(`🔘 [ВЗЯТЬ] gameStage: ${gameStage}, tableStack: ${tableStack?.length}, currentPlayerId: ${currentPlayerId}, humanPlayer: ${humanPlayer.id}`);
+                console.log(`🔘 [ВЗЯТЬ] gameStage: ${gameStage}, tableStack: ${tableStack?.length}, currentPlayerId: ${currentPlayerId}, myPlayer: ${myPlayer.id}`);
                 
                 if (gameStage < 2) {
                   console.log('⚠️ [ВЗЯТЬ] Недоступно до 2-й стадии');
-                  showPlayerMessage(humanPlayer.id, '⏳ Доступно со 2-й стадии', 'warning', 2000);
+                  showPlayerMessage(myPlayer.id, '⏳ Доступно со 2-й стадии', 'warning', 2000);
                   return;
                 }
                 if (!tableStack || tableStack.length === 0) {
                   console.log('⚠️ [ВЗЯТЬ] Нет карт на столе');
-                  showPlayerMessage(humanPlayer.id, '❌ Нет карт на столе', 'warning', 2000);
+                  showPlayerMessage(myPlayer.id, '❌ Нет карт на столе', 'warning', 2000);
                   return;
                 }
-                if (humanPlayer.id !== currentPlayerId) {
+                if (myPlayer.id !== currentPlayerId) {
                   console.log('⚠️ [ВЗЯТЬ] Не ваш ход');
-                  showPlayerMessage(humanPlayer.id, '⏳ Не ваш ход', 'warning', 2000);
+                  showPlayerMessage(myPlayer.id, '⏳ Не ваш ход', 'warning', 2000);
                   return;
                 }
                 console.log('✅ [ВЗЯТЬ] Берем карты со стола!');
@@ -1906,26 +1924,27 @@ function GamePageContentComponent({
                 padding: '6px 12px',
                 fontSize: '11px',
                 fontWeight: '700',
-                cursor: (gameStage >= 2 && tableStack && tableStack.length > 0 && humanPlayer.id === currentPlayerId) ? 'pointer' : 'not-allowed',
+                cursor: (gameStage >= 2 && tableStack && tableStack.length > 0 && myPlayer.id === currentPlayerId) ? 'pointer' : 'not-allowed',
                 whiteSpace: 'nowrap',
-                opacity: (gameStage >= 2 && tableStack && tableStack.length > 0 && humanPlayer.id === currentPlayerId) ? 1 : 0.3, // ✅ ПРОЗРАЧНОСТЬ!
+                opacity: (gameStage >= 2 && tableStack && tableStack.length > 0 && myPlayer.id === currentPlayerId) ? 1 : 0.3,
                 transition: 'opacity 0.3s ease',
-                pointerEvents: 'auto' // ✅ ВСЕГДА КЛИКАБЕЛЬНА!
+                pointerEvents: 'auto'
               }}
             >
               ⬇️ Взять {tableStack && tableStack.length > 0 ? `(${tableStack.length})` : ''}
             </button>
+            )}
           </div>
           
           <div className={styles.handCards}>
-            {humanPlayer.cards.map((card: any, index: number) => {
+            {myPlayer && myPlayer.cards.map((card: any, index: number) => {
               // Карта может быть строкой "7_of_spades.png(open)" или объектом {rank, suit, image}
               const cardImage = typeof card === 'string' 
                 ? card.replace('(open)', '').replace('(closed)', '')
                 : card.image || `${card.rank}_of_${card.suit}.png`;
               
               // Проверяем можно ли сыграть эту карту
-              const isMyTurn = humanPlayer.id === currentPlayerId;
+              const isMyTurn = myPlayer.id === currentPlayerId;
               const isSelected = selectedHandCard?.id === card.id || selectedHandCard?.image === cardImage;
               
               // Логика подсветки: карта доступна если это ваш ход и либо стол пустой, либо карта может побить верхнюю

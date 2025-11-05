@@ -174,6 +174,31 @@ const RectangularGameTable: React.FC<RectangularGameTableProps> = ({
               transition={{ delay: index * 0.1 }}
               whileHover={{ scale: 1.05 }}
             >
+              {/* ✅ КАРТЫ СЛЕВА ОТ АВАТАРА (для игроков справа) */}
+              {!isCurrentPlayer && position.position === 'right' && (
+                <div className={`${styles.playerCards} ${styles.playerCardsRight}`} style={{ order: -1 }}>
+                  {player.cards.slice(0, Math.min(3, player.cards.length)).map((_, cardIndex) => (
+                    <div 
+                      key={cardIndex}
+                      className={styles.playerCard}
+                      style={{
+                        zIndex: cardIndex,
+                        transform: `translateX(${-cardIndex * 3}px) rotate(${(cardIndex - 1) * 5}deg)`
+                      }}
+                    >
+                      <img 
+                        src="/img/cards/back.png" 
+                        alt="Card back"
+                        className={styles.cardBackImage}
+                      />
+                    </div>
+                  ))}
+                  {player.cards.length > 3 && (
+                    <div className={styles.moreCards}>+{player.cards.length - 3}</div>
+                  )}
+                </div>
+              )}
+
               {/* Аватар игрока */}
               <div className={styles.playerAvatar}>
                 <img 
@@ -196,16 +221,16 @@ const RectangularGameTable: React.FC<RectangularGameTableProps> = ({
                 </div>
               </div>
 
-              {/* Карты игрока (для неосновных игроков показываем рубашки) */}
-              {!isCurrentPlayer && (
-                <div className={`${styles.playerCards} ${position.position === 'left' ? styles.playerCardsLeft : position.position === 'right' ? styles.playerCardsRight : ''}`}>
+              {/* ✅ КАРТЫ СПРАВА ОТ АВАТАРА (для остальных игроков) */}
+              {!isCurrentPlayer && position.position !== 'right' && (
+                <div className={`${styles.playerCards} ${position.position === 'left' ? styles.playerCardsLeft : ''}`}>
                   {player.cards.slice(0, Math.min(3, player.cards.length)).map((_, cardIndex) => (
                     <div 
                       key={cardIndex}
                       className={styles.playerCard}
                       style={{
                         zIndex: cardIndex,
-                        transform: `translateX(${(position.position === 'right' ? -cardIndex : cardIndex) * 3}px) rotate(${(cardIndex - 1) * 5}deg)`
+                        transform: `translateX(${cardIndex * 3}px) rotate(${(cardIndex - 1) * 5}deg)`
                       }}
                     >
                       <img 

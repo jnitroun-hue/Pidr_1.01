@@ -218,6 +218,12 @@
   z-index: 10;
 }
 
+/* ✅ НОВОЕ: Игроки справа - карты СЛЕВА от аватара! */
+.playerSeat:has(.playerCardsRight) {
+  flex-direction: row-reverse !important; /* ✅ КАРТЫ СЛЕВА! */
+  gap: 12px;
+}
+
 .playerSeat:hover {
   transform: scale(1.05) !important;
 }
