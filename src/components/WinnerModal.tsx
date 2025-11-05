@@ -130,18 +130,19 @@ export default function WinnerModal({
 
         {/* Основная карточка - АДАПТИВНАЯ ПОД ЭКРАН */}
         <motion.div
-          initial={{ scale: 0.8, opacity: 0, y: 50 }}
-          animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.8, opacity: 0, y: 50 }}
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.9, opacity: 0 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
           className="relative mx-auto"
           style={{
-            width: 'min(90vw, 420px)', // ✅ 90% НА МОБИЛЬНОМ, МАКС 420px!
-            maxHeight: 'fit-content', // ✅ НЕ РАСТЯГИВАЕМ!
+            width: 'min(90vw, 420px)',
+            maxHeight: '80vh',
             minWidth: '280px',
             background: placeData.gradient,
             borderRadius: '24px',
             padding: '28px 20px',
+            overflow: 'auto',
             boxShadow: `0 20px 60px -10px ${placeData.glowColor}, 0 0 0 1px rgba(255, 255, 255, 0.2), inset 0 1px 3px rgba(255, 255, 255, 0.3)`,
             border: '2px solid rgba(255, 255, 255, 0.4)',
             textAlign: 'center'

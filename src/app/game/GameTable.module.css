@@ -1661,22 +1661,21 @@
   z-index: 10;
 }
 
-/* Карта игрока - увеличенный размер для лучшей видимости */
+/* Карта игрока - УМЕНЬШЕНО В 3 РАЗА */
 .cardOnPenki {
-  width: 82px; /* Увеличено в 1.5 раза */
-  height: 120px; /* Увеличено в 1.5 раза */
+  width: 27px; /* ✅ УМЕНЬШЕНО В 3 РАЗА (82/3 ≈ 27) */
+  height: 40px; /* ✅ УМЕНЬШЕНО В 3 РАЗА (120/3 = 40) */
   display: flex;
   align-items: center;
   justify-content: center;
   background: white;
-  border: 2px solid #e2e8f0;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
   padding: 0;
   transition: all 0.3s ease;
-  border-radius: 8px;
+  border-radius: 4px;
   cursor: pointer;
   transform-style: preserve-3d;
-  border-radius: 8px;
 }
 
 .cardOnPenki:hover {

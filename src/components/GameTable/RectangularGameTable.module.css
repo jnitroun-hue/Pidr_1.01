@@ -244,17 +244,17 @@
   box-shadow: 0 0 20px rgba(40, 167, 69, 0.6);
 }
 
-/* Аватар игрока - УМЕНЬШЕН В 5 РАЗ */
+/* Аватар игрока - УМЕНЬШЕН В 3 РАЗА */
 .playerAvatar {
   position: relative;
-  width: 24px; /* ✅ УМЕНЬШЕНО В 5 РАЗ (было ~120px изначально)! */
-  height: 24px;
+  width: 40px; /* ✅ УМЕНЬШЕНО В 3 РАЗА (было ~120px изначально)! */
+  height: 40px;
   border-radius: 50%;
-  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.3);
   overflow: hidden;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   transition: all 0.3s ease;
-  z-index: 1; /* ✅ НОВОЕ: Аватар НИЖЕ карт */
+  z-index: 1;
 }
 
 .avatarImage {
