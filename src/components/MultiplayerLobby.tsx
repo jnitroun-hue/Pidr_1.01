@@ -80,15 +80,8 @@ export default function MultiplayerLobby({
       },
       onPlayerReady: (userId, isReady) => {
         console.log('✅ [MultiplayerLobby] Готовность обновлена:', userId, isReady);
-        // ✅ ОБНОВЛЯЕМ ЛОКАЛЬНОЕ СОСТОЯНИЕ СРАЗУ!
-        setLobbyState(prev => ({
-          ...prev,
-          players: prev.players.map(p => 
-            p.user_id === userId 
-              ? { ...p, is_ready: isReady }
-              : p
-          )
-        }));
+        // ✅ ЗАГРУЖАЕМ ИЗ БД (ИСТОЧНИК ИСТИНЫ!)
+        loadRoomPlayers();
       },
       onGameStart: () => {
         console.log('🚀 [MultiplayerLobby] Игра началась!');
@@ -98,13 +91,20 @@ export default function MultiplayerLobby({
 
     setIsConnected(true);
 
-    // Загружаем список игроков
+    // ✅ ЗАГРУЖАЕМ ИЗ БД ПРИ МОНТИРОВАНИИ
     loadRoomPlayers();
+
+    // ✅ АВТООБНОВЛЕНИЕ КАЖДЫЕ 2 СЕКУНДЫ (НА СЛУЧАЙ ЕСЛИ REALTIME НЕ СРАБОТАЛ)
+    const interval = setInterval(() => {
+      console.log('🔄 [MultiplayerLobby] Автообновление из БД...');
+      loadRoomPlayers();
+    }, 2000);
 
     // Очистка при размонтировании
     return () => {
       console.log('🔌 [MultiplayerLobby] Отключаемся от комнаты');
-      // RoomManager автоматически отключится при unsubscribe
+      clearInterval(interval);
+      roomManager.unsubscribe();
     };
   }, [roomId]);
 
@@ -189,15 +189,8 @@ export default function MultiplayerLobby({
 
       await roomManager.setPlayerReady(roomId, user.id.toString(), newReadyState);
       
-      // ✅ ОБНОВЛЯЕМ ЛОКАЛЬНО СРАЗУ (не ждем callback)
-      setLobbyState(prev => ({
-        ...prev,
-        players: prev.players.map(p => 
-          p.user_id === user.id.toString() 
-            ? { ...p, is_ready: newReadyState }
-            : p
-        )
-      }));
+      // ✅ ПЕРЕЗАГРУЖАЕМ ИЗ БД (ИСТОЧНИК ИСТИНЫ!)
+      await loadRoomPlayers();
 
       console.log('✅ [MultiplayerLobby] Готовность обновлена');
     } catch (error) {

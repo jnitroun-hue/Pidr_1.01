@@ -488,36 +488,28 @@ export class RoomManager {
   }
 
   /**
-   * Начать игру (только хост)
+   * Начать игру (только хост) - ЧЕРЕЗ API!
    */
   async startGame(roomId: string, hostId: string): Promise<void> {
     try {
-      // Проверяем что пользователь - хост
-      const { data: room } = await supabase
-        .from('_pidr_rooms')
-        .select('host_id')
-        .eq('id', roomId)
-        .single();
+      console.log(`🚀 [RoomManager] Запуск игры через API: комната ${roomId}, хост ${hostId}`);
 
-      if (!room || room.host_id !== hostId) {
-        throw new Error('Только хост может начать игру');
+      // ✅ ВЫЗЫВАЕМ API /start (ПРОВЕРЯЕТ ВСЁ!)
+      const response = await fetch(`/api/rooms/${roomId}/start`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-telegram-id': hostId
+        }
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Ошибка старта игры');
       }
 
-      // Обновляем статус комнаты
-      const { error } = await supabase
-        .from('_pidr_rooms')
-        .update({
-          status: 'playing',
-          last_activity: new Date().toISOString()
-        })
-        .eq('id', roomId);
-
-      if (error) {
-        console.error('❌ [RoomManager] Ошибка начала игры:', error);
-        throw error;
-      }
-
-      console.log('✅ [RoomManager] Игра началась');
+      const data = await response.json();
+      console.log('✅ [RoomManager] Игра началась через API:', data);
     } catch (error) {
       console.error('❌ [RoomManager] Ошибка startGame:', error);
       throw error;

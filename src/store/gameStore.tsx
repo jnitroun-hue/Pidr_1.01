@@ -2698,7 +2698,7 @@ export const useGameStore = create<GameState>()(
             }, newWinners.length > 0 ? 3000 : 1000); // Ждем объявления победителей
           }
         },
-        
+         
         // 🏆 РАСЧЕТ И ОТОБРАЖЕНИЕ ФИНАЛЬНЫХ РЕЗУЛЬТАТОВ
         calculateAndShowGameResults: () => {
           const { players, gameMode } = get();
@@ -2914,13 +2914,13 @@ export const useGameStore = create<GameState>()(
                     message: err.message,
                     stack: err.stack,
                     name: err.name
+                    });
                   });
-                });
               } // ✅ Закрываем else блок для statsUpdatedThisGame
             } else {
               console.log(`✅ [calculateAndShowGameResults] Игрок на месте ${userResult.place} УЖЕ обновил статистику при выходе!`);
-            }
-          } else {
+               }
+            } else {
             console.warn(`⚠️ [calculateAndShowGameResults] Пользователь не найден в результатах!`);
           }
           
@@ -2968,14 +2968,14 @@ export const useGameStore = create<GameState>()(
                 delete newOneCardDeclarations[player.id];
               }
             }
-          });
-          
-          // Обновляем состояние
-          set({ 
-            oneCardDeclarations: newOneCardDeclarations,
-            playersWithOneCard: newPlayersWithOneCard
-          });
-        },
+           });
+           
+           // Обновляем состояние
+           set({ 
+             oneCardDeclarations: newOneCardDeclarations,
+             playersWithOneCard: newPlayersWithOneCard
+           });
+         },
          
         // Игрок объявляет "одна карта"
         declareOneCard: (playerId: string) => {
@@ -3337,8 +3337,8 @@ export const useGameStore = create<GameState>()(
                 setTimeout(() => {
                   set({ stage2TurnPhase: 'selecting_card' });
                   get().processPlayerTurn(currentPlayerId);
-                }, 1000);
-              }
+             }, 1000);
+           }
             } else if (gameStage === 1 && currentPlayerId) {
               // ✅ ЕСЛИ 1-Я СТАДИЯ - ПРОСТО ПРОДОЛЖАЕМ ИГРУ
               console.log(`▶️ [contributePenaltyCard] Стадия 1: игра продолжается автоматически`);
@@ -3410,64 +3410,64 @@ export const useGameStore = create<GameState>()(
          // ===== МУЛЬТИПЛЕЕР МЕТОДЫ =====
          
         // ✅ УЛУЧШЕНО: Синхронизация состояния игры от сервера
-        syncGameState: (remoteGameState) => {
+         syncGameState: (remoteGameState) => {
           const { multiplayerData, currentPlayerId } = get();
-          if (!multiplayerData) return;
-          
+           if (!multiplayerData) return;
+           
           console.log(`🌐 [syncGameState] Синхронизация состояния игры:`, remoteGameState);
-          
-          // Осторожно обновляем состояние, проверяя каждое поле
-          const stateUpdates: any = {};
-          
-          // Синхронизируем базовые поля игры
-          if (remoteGameState.gameStage !== undefined) stateUpdates.gameStage = remoteGameState.gameStage;
-          if (remoteGameState.currentPlayerId !== undefined) stateUpdates.currentPlayerId = remoteGameState.currentPlayerId;
-          if (remoteGameState.trumpSuit !== undefined) stateUpdates.trumpSuit = remoteGameState.trumpSuit;
-          if (remoteGameState.tableStack !== undefined) stateUpdates.tableStack = [...remoteGameState.tableStack];
-          if (remoteGameState.stage2TurnPhase !== undefined) stateUpdates.stage2TurnPhase = remoteGameState.stage2TurnPhase;
+           
+           // Осторожно обновляем состояние, проверяя каждое поле
+           const stateUpdates: any = {};
+           
+           // Синхронизируем базовые поля игры
+           if (remoteGameState.gameStage !== undefined) stateUpdates.gameStage = remoteGameState.gameStage;
+           if (remoteGameState.currentPlayerId !== undefined) stateUpdates.currentPlayerId = remoteGameState.currentPlayerId;
+           if (remoteGameState.trumpSuit !== undefined) stateUpdates.trumpSuit = remoteGameState.trumpSuit;
+           if (remoteGameState.tableStack !== undefined) stateUpdates.tableStack = [...remoteGameState.tableStack];
+           if (remoteGameState.stage2TurnPhase !== undefined) stateUpdates.stage2TurnPhase = remoteGameState.stage2TurnPhase;
           if (remoteGameState.roundInProgress !== undefined) stateUpdates.roundInProgress = remoteGameState.roundInProgress;
           if (remoteGameState.currentRoundInitiator !== undefined) stateUpdates.currentRoundInitiator = remoteGameState.currentRoundInitiator;
           if (remoteGameState.roundFinisher !== undefined) stateUpdates.roundFinisher = remoteGameState.roundFinisher;
           if (remoteGameState.deck !== undefined && Array.isArray(remoteGameState.deck)) stateUpdates.deck = [...remoteGameState.deck];
           if (remoteGameState.playedCards !== undefined && Array.isArray(remoteGameState.playedCards)) stateUpdates.playedCards = [...remoteGameState.playedCards];
-          
-          // Синхронизируем игроков (осторожно, не перезаписывая локального пользователя)
-          if (remoteGameState.players && Array.isArray(remoteGameState.players)) {
-            const { players } = get();
-            const updatedPlayers = players.map(localPlayer => {
-              const remotePlayer = remoteGameState.players.find((p: any) => p.id === localPlayer.id);
-              if (remotePlayer && !localPlayer.isUser) {
-                // Обновляем данные бота/других игроков
-                return {
-                  ...localPlayer,
+           
+           // Синхронизируем игроков (осторожно, не перезаписывая локального пользователя)
+           if (remoteGameState.players && Array.isArray(remoteGameState.players)) {
+             const { players } = get();
+             const updatedPlayers = players.map(localPlayer => {
+               const remotePlayer = remoteGameState.players.find((p: any) => p.id === localPlayer.id);
+               if (remotePlayer && !localPlayer.isUser) {
+                 // Обновляем данные бота/других игроков
+                 return {
+                   ...localPlayer,
                   // ✅ ФИКС: Проверяем что массивы НЕ ПУСТЫЕ!
                   cards: (remotePlayer.cards && remotePlayer.cards.length > 0) ? remotePlayer.cards : localPlayer.cards,
                   penki: (remotePlayer.penki && remotePlayer.penki.length > 0) ? remotePlayer.penki : localPlayer.penki,
                   isWinner: remotePlayer.isWinner !== undefined ? remotePlayer.isWinner : localPlayer.isWinner,
                   finishTime: remotePlayer.finishTime || localPlayer.finishTime
-                };
-              }
-              return localPlayer;
-            });
-            stateUpdates.players = updatedPlayers;
-          }
-          
-          // Применяем обновления
-          set(stateUpdates);
+                 };
+               }
+               return localPlayer;
+             });
+             stateUpdates.players = updatedPlayers;
+           }
+           
+           // Применяем обновления
+           set(stateUpdates);
           
           console.log(`✅ [syncGameState] Состояние синхронизировано:`, Object.keys(stateUpdates));
-        },
+         },
          
         // ✅ РЕАЛИЗОВАНО: Отправка хода игрока через Supabase Realtime
         sendPlayerMove: async (moveData) => {
-          const { multiplayerData } = get();
+           const { multiplayerData } = get();
           if (!multiplayerData) {
             console.warn(`🌐 [sendPlayerMove] Нет данных мультиплеера!`);
             return;
           }
-          
-          console.log(`🌐 [Multiplayer] Отправляем ход игрока:`, moveData);
-          
+           
+           console.log(`🌐 [Multiplayer] Отправляем ход игрока:`, moveData);
+           
           try {
             // Инициализируем RoomManager если не создан
             if (!roomManager) {
@@ -3488,7 +3488,7 @@ export const useGameStore = create<GameState>()(
           } catch (error) {
             console.error(`❌ [sendPlayerMove] Ошибка отправки хода:`, error);
           }
-        },
+         },
          
          // Применение хода от удаленного игрока
          applyRemoteMove: (moveData) => {
@@ -3498,11 +3498,11 @@ export const useGameStore = create<GameState>()(
            if (!multiplayerData) return;
            
            try {
-            // Обрабатываем различные типы ходов
-            switch (moveData.type) {
-              case 'card_played':
+             // Обрабатываем различные типы ходов
+             switch (moveData.type) {
+               case 'card_played':
                 // ✅ РЕАЛИЗОВАНО: Применяем сыгранную карту
-                if (moveData.cardId && moveData.playerId) {
+                 if (moveData.cardId && moveData.playerId) {
                   console.log(`🃏 [applyRemoteMove] Игрок ${moveData.playerId} играет карту ${moveData.cardId}`);
                   
                   const { players, gameStage } = get();
@@ -3528,12 +3528,12 @@ export const useGameStore = create<GameState>()(
                       get().makeMove(moveData.targetId);
                     }
                   }
-                }
-                break;
-                
-              case 'card_taken':
+                 }
+                 break;
+                 
+               case 'card_taken':
                 // ✅ РЕАЛИЗОВАНО: Игрок взял карту
-                if (moveData.playerId) {
+                 if (moveData.playerId) {
                   console.log(`🃏 [applyRemoteMove] Игрок ${moveData.playerId} берет карту`);
                   
                   const { gameStage } = get();
@@ -3552,8 +3552,8 @@ export const useGameStore = create<GameState>()(
                       get().drawCardFromDeck();
                     }
                   }
-                }
-                break;
+                 }
+                 break;
                  
                case 'one_card_declared':
                  // Игрок объявил "одна карта"
@@ -3562,12 +3562,12 @@ export const useGameStore = create<GameState>()(
                  }
                  break;
                  
-              case 'penalty_card_contributed':
-                // Игрок отдал штрафную карту
+               case 'penalty_card_contributed':
+                 // Игрок отдал штрафную карту
                 if (moveData.contributorId && moveData.cardId && moveData.targetId) {
                   get().contributePenaltyCard(moveData.contributorId, moveData.cardId, moveData.targetId);
-                }
-                break;
+                 }
+                 break;
                  
                default:
                  console.warn(`🌐 [Multiplayer] Неизвестный тип хода:`, moveData.type);
