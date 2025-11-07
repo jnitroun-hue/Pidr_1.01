@@ -1,87 +1,141 @@
-/**
- * 🧹 API: Очистка неактивных комнат
- * 
- * GET /api/rooms/cleanup
- * 
- * Удаляет:
- * - Комнаты в 'waiting' старше 15 минут
- * - Комнаты в 'playing' не обновлявшиеся 15 минут
- * - Комнаты старше 1 дня (любые)
- */
-
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '../../../../lib/supabase';
+import { supabase } from '@/lib/supabase';
 
-export async function GET(req: NextRequest) {
+// 🧹 API: Очистка старых и пустых комнат
+export async function POST(request: NextRequest) {
   try {
-    console.log('🧹 [cleanup] Начинаем очистку неактивных комнат...');
-    
-    const now = new Date();
-    const fifteenMinutesAgo = new Date(now.getTime() - 15 * 60 * 1000);
-    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    
-    // 1. Удаляем комнаты старше 1 дня
-    const { data: veryOld, error: veryOldError } = await supabase
+    console.log('🧹 [CLEANUP] Начинаем очистку комнат...');
+
+    let deletedCount = 0;
+
+    // 1️⃣ УДАЛЯЕМ КОМНАТЫ СТАРШЕ 1 ЧАСА БЕЗ АКТИВНОСТИ
+    const { data: oldRooms, error: oldRoomsError } = await supabase
       .from('_pidr_rooms')
-      .delete()
-      .lt('created_at', oneDayAgo.toISOString())
-      .select('id, name, room_code');
-    
-    console.log(`🗑️ Удалено комнат старше 1 дня: ${veryOld?.length || 0}`);
-    
-    // 2. Удаляем комнаты в waiting старше 15 минут
-    const { data: waitingOld, error: waitingError } = await supabase
-      .from('_pidr_rooms')
-      .delete()
+      .select('id')
       .eq('status', 'waiting')
-      .lt('created_at', fifteenMinutesAgo.toISOString())
-      .select('id, name, room_code');
-    
-    console.log(`⏰ Удалено комнат в waiting старше 15 минут: ${waitingOld?.length || 0}`);
-    
-    // 3. Удаляем комнаты в playing не обновлявшиеся 15 минут
-    const { data: playingInactive, error: playingError } = await supabase
+      .lt('updated_at', new Date(Date.now() - 60 * 60 * 1000).toISOString());
+
+    if (oldRooms && oldRooms.length > 0) {
+      const { error: deleteOldError } = await supabase
+        .from('_pidr_rooms')
+        .delete()
+        .in('id', oldRooms.map(r => r.id));
+
+      if (!deleteOldError) {
+        deletedCount += oldRooms.length;
+        console.log(`✅ [CLEANUP] Удалено ${oldRooms.length} старых комнат`);
+      } else {
+        console.error('❌ [CLEANUP] Ошибка удаления старых комнат:', deleteOldError);
+      }
+    }
+
+    // 2️⃣ УДАЛЯЕМ КОМНАТЫ С ТОЛЬКО БОТАМИ (БЕЗ РЕАЛЬНЫХ ИГРОКОВ)
+    const { data: allRooms, error: allRoomsError } = await supabase
       .from('_pidr_rooms')
-      .delete()
-      .eq('status', 'playing')
-      .lt('updated_at', fifteenMinutesAgo.toISOString())
-      .select('id, name, room_code');
-    
-    console.log(`🎮 Удалено неактивных игровых комнат: ${playingInactive?.length || 0}`);
-    
-    // 4. Получаем оставшиеся комнаты
-    const { data: remaining, error: remainingError } = await supabase
+      .select('id')
+      .eq('status', 'waiting');
+
+    if (allRooms && allRooms.length > 0) {
+      for (const room of allRooms) {
+        const { data: players, error: playersError } = await supabase
+          .from('_pidr_room_players')
+          .select('user_id')
+          .eq('room_id', room.id);
+
+        if (players && players.length > 0) {
+          // Проверяем есть ли хоть один реальный игрок (положительный ID)
+          const hasRealPlayers = players.some(p => {
+            const uid = parseInt(String(p.user_id), 10);
+            return uid > 0;
+          });
+
+          // Если только боты - удаляем комнату
+          if (!hasRealPlayers) {
+            const { error: deleteBotRoomError } = await supabase
+              .from('_pidr_rooms')
+              .delete()
+              .eq('id', room.id);
+
+            if (!deleteBotRoomError) {
+              deletedCount++;
+              console.log(`✅ [CLEANUP] Удалена комната ${room.id} (только боты)`);
+            } else {
+              console.error(`❌ [CLEANUP] Ошибка удаления комнаты ${room.id}:`, deleteBotRoomError);
+            }
+          }
+        }
+      }
+    }
+
+    // 3️⃣ УДАЛЯЕМ ПУСТЫЕ КОМНАТЫ (БЕЗ ИГРОКОВ)
+    const { data: emptyRooms, error: emptyRoomsError } = await supabase
       .from('_pidr_rooms')
-      .select('id, name, room_code, status, created_at, updated_at')
-      .order('created_at', { ascending: false });
-    
-    const totalDeleted = (veryOld?.length || 0) + (waitingOld?.length || 0) + (playingInactive?.length || 0);
-    
+      .select('id')
+      .eq('status', 'waiting');
+
+    if (emptyRooms && emptyRooms.length > 0) {
+      for (const room of emptyRooms) {
+        const { data: players, error: playersError } = await supabase
+          .from('_pidr_room_players')
+          .select('user_id')
+          .eq('room_id', room.id);
+
+        // Если нет игроков - удаляем
+        if (!players || players.length === 0) {
+          const { error: deleteEmptyError } = await supabase
+            .from('_pidr_rooms')
+            .delete()
+            .eq('id', room.id);
+
+          if (!deleteEmptyError) {
+            deletedCount++;
+            console.log(`✅ [CLEANUP] Удалена пустая комната ${room.id}`);
+          } else {
+            console.error(`❌ [CLEANUP] Ошибка удаления пустой комнаты ${room.id}:`, deleteEmptyError);
+          }
+        }
+      }
+    }
+
+    // 4️⃣ УДАЛЯЕМ ЗАВЕРШЁННЫЕ КОМНАТЫ СТАРШЕ 10 МИНУТ
+    const { data: finishedRooms, error: finishedRoomsError } = await supabase
+      .from('_pidr_rooms')
+      .select('id')
+      .eq('status', 'finished')
+      .lt('updated_at', new Date(Date.now() - 10 * 60 * 1000).toISOString());
+
+    if (finishedRooms && finishedRooms.length > 0) {
+      const { error: deleteFinishedError } = await supabase
+        .from('_pidr_rooms')
+        .delete()
+        .in('id', finishedRooms.map(r => r.id));
+
+      if (!deleteFinishedError) {
+        deletedCount += finishedRooms.length;
+        console.log(`✅ [CLEANUP] Удалено ${finishedRooms.length} завершённых комнат`);
+      } else {
+        console.error('❌ [CLEANUP] Ошибка удаления завершённых комнат:', deleteFinishedError);
+      }
+    }
+
+    console.log(`✅ [CLEANUP] Очистка завершена! Удалено комнат: ${deletedCount}`);
+
     return NextResponse.json({
       success: true,
-      deleted: {
-        total: totalDeleted,
-        veryOld: veryOld?.length || 0,
-        waitingOld: waitingOld?.length || 0,
-        playingInactive: playingInactive?.length || 0
-      },
-      remaining: {
-        total: remaining?.length || 0,
-        rooms: remaining || []
-      },
-      deletedRooms: {
-        veryOld: veryOld || [],
-        waitingOld: waitingOld || [],
-        playingInactive: playingInactive || []
-      }
+      message: 'Очистка завершена',
+      deleted_count: deletedCount
     });
-    
+
   } catch (error: any) {
-    console.error('❌ [cleanup] Ошибка очистки комнат:', error);
+    console.error('❌ [CLEANUP] Ошибка очистки:', error);
     return NextResponse.json({
       success: false,
-      error: error.message
+      error: error.message || 'Ошибка очистки комнат'
     }, { status: 500 });
   }
 }
 
+// GET для ручного вызова
+export async function GET(request: NextRequest) {
+  return POST(request);
+}

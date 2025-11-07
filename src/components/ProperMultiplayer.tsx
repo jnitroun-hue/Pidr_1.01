@@ -79,12 +79,36 @@ export const ProperMultiplayer: React.FC = () => {
     fetchUser();
   }, []);
 
-  // Загрузка комнат при открытии лобби (БЕЗ автоматического обновления)
+  // Загрузка комнат при открытии лобби + АВТООЧИСТКА
   useEffect(() => {
     if (view === 'lobby') {
+      cleanupOldRooms(); // ✅ ОЧИСТКА СТАРЫХ КОМНАТ!
       fetchRooms();
     }
   }, [view]);
+
+  // 🧹 АВТОМАТИЧЕСКАЯ ОЧИСТКА СТАРЫХ КОМНАТ
+  const cleanupOldRooms = async () => {
+    try {
+      console.log('🧹 [Multiplayer] Запускаем очистку комнат...');
+      const response = await fetch('/api/rooms/cleanup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-telegram-id': user?.id?.toString() || ''
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log(`✅ [Multiplayer] Очистка завершена! Удалено комнат: ${data.deleted_count}`);
+      } else {
+        console.error('❌ [Multiplayer] Ошибка очистки комнат');
+      }
+    } catch (error) {
+      console.error('❌ [Multiplayer] Ошибка очистки:', error);
+    }
+  };
 
   const fetchUser = async () => {
     try {

@@ -188,7 +188,12 @@ export class RoomManager {
     onPlayerReady?: (userId: string, isReady: boolean) => void;
     onGameStart?: () => void;
     onGameStateUpdate?: (gameState: any) => void;
-    onPlayerMove?: (moveData: any) => void; // ✅ НОВОЕ: Колбэк для ходов
+    onPlayerMove?: (moveData: any) => void;
+    onCardPlayed?: (playerId: string, card: any) => void;
+    onCardsTaken?: (playerId: string, cards: any[]) => void;
+    onOneCardDeclared?: (playerId: string) => void;
+    onGameEnded?: (results: any[]) => void;
+    onGameStateSync?: (gameState: any) => void;
   }): void {
     console.log('📡 [RoomManager] Подписка на комнату:', roomId);
     this.roomId = roomId;
@@ -259,6 +264,36 @@ export class RoomManager {
           callbacks.onPlayerReady(payload.payload.userId, payload.payload.isReady);
         }
       })
+      .on('broadcast', { event: 'card-played' }, (payload: any) => {
+        console.log('🎴 [RoomManager] Карта сыграна:', payload);
+        if (callbacks.onCardPlayed && payload.payload) {
+          callbacks.onCardPlayed(payload.payload.playerId, payload.payload.card);
+        }
+      })
+      .on('broadcast', { event: 'cards-taken' }, (payload: any) => {
+        console.log('⬇️ [RoomManager] Карты взяты:', payload);
+        if (callbacks.onCardsTaken && payload.payload) {
+          callbacks.onCardsTaken(payload.payload.playerId, payload.payload.cards);
+        }
+      })
+      .on('broadcast', { event: 'one-card-declared' }, (payload: any) => {
+        console.log('☝️ [RoomManager] Объявлена одна карта:', payload);
+        if (callbacks.onOneCardDeclared && payload.payload) {
+          callbacks.onOneCardDeclared(payload.payload.playerId);
+        }
+      })
+      .on('broadcast', { event: 'game-ended' }, (payload: any) => {
+        console.log('🏁 [RoomManager] Игра завершена:', payload);
+        if (callbacks.onGameEnded && payload.payload) {
+          callbacks.onGameEnded(payload.payload.results);
+        }
+      })
+      .on('broadcast', { event: 'game-state-sync' }, (payload: any) => {
+        console.log('🔄 [RoomManager] Синхронизация состояния:', payload);
+        if (callbacks.onGameStateSync && payload.payload) {
+          callbacks.onGameStateSync(payload.payload);
+        }
+      })
       .subscribe();
 
     console.log('✅ [RoomManager] Подписка активна');
@@ -298,6 +333,124 @@ export class RoomManager {
         event: 'player-move',
         payload: moveData
       });
+    }
+  }
+
+  /**
+   * ✅ НОВОЕ: Синхронизация полного состояния игры
+   */
+  async syncGameState(roomId: string, gameState: {
+    players: any[];
+    currentPlayerId: string;
+    gameStage: number;
+    deck: any[];
+    tableStack: any[];
+    trumpSuit: string | null;
+    playedCards: any[];
+  }): Promise<void> {
+    if (!this.channel) {
+      console.warn('❌ [RoomManager] Канал не инициализирован');
+      return;
+    }
+
+    console.log('🔄 [RoomManager] Синхронизация состояния игры:', gameState);
+    
+    this.channel.send({
+      type: 'broadcast',
+      event: 'game-state-sync',
+      payload: {
+        ...gameState,
+        timestamp: Date.now()
+      }
+    });
+  }
+
+  /**
+   * ✅ НОВОЕ: Отправить карту на стол
+   */
+  async playCard(roomId: string, playerId: string, card: any): Promise<void> {
+    if (!this.channel) {
+      console.warn('❌ [RoomManager] Канал не инициализирован');
+      return;
+    }
+
+    console.log('🎴 [RoomManager] Игрок играет карту:', { playerId, card });
+    
+    this.channel.send({
+      type: 'broadcast',
+      event: 'card-played',
+      payload: { playerId, card, timestamp: Date.now() }
+    });
+  }
+
+  /**
+   * ✅ НОВОЕ: Взять карты со стола
+   */
+  async takeCards(roomId: string, playerId: string, cards: any[]): Promise<void> {
+    if (!this.channel) {
+      console.warn('❌ [RoomManager] Канал не инициализирован');
+      return;
+    }
+
+    console.log('⬇️ [RoomManager] Игрок берет карты:', { playerId, count: cards.length });
+    
+    this.channel.send({
+      type: 'broadcast',
+      event: 'cards-taken',
+      payload: { playerId, cards, timestamp: Date.now() }
+    });
+  }
+
+  /**
+   * ✅ НОВОЕ: Объявить "Одна карта!"
+   */
+  async declareOneCard(roomId: string, playerId: string): Promise<void> {
+    if (!this.channel) {
+      console.warn('❌ [RoomManager] Канал не инициализирован');
+      return;
+    }
+
+    console.log('☝️ [RoomManager] Игрок объявил "Одна карта!":', playerId);
+    
+    this.channel.send({
+      type: 'broadcast',
+      event: 'one-card-declared',
+      payload: { playerId, timestamp: Date.now() }
+    });
+  }
+
+  /**
+   * ✅ НОВОЕ: Завершение игры
+   */
+  async endGame(roomId: string, results: any[]): Promise<void> {
+    try {
+      // Обновляем статус комнаты
+      const { error } = await supabase
+        .from('_pidr_rooms')
+        .update({ 
+          status: 'finished',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', roomId);
+
+      if (error) {
+        console.error('❌ [RoomManager] Ошибка завершения игры:', error);
+        throw error;
+      }
+
+      // Отправляем результаты всем игрокам
+      if (this.channel) {
+        this.channel.send({
+          type: 'broadcast',
+          event: 'game-ended',
+          payload: { results, timestamp: Date.now() }
+        });
+      }
+
+      console.log('🏁 [RoomManager] Игра завершена:', results);
+    } catch (error) {
+      console.error('❌ [RoomManager] Ошибка завершения игры:', error);
+      throw error;
     }
   }
 
