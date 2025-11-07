@@ -17,13 +17,13 @@
   }
 }
 
-/* Основной игровой стол - АДАПТИВНЫЙ */
+/* Основной игровой стол - АДАПТИВНЫЙ ДЛЯ TELEGRAM */
 .gameTable {
   position: relative;
   width: 90vw;
   max-width: 1200px;
   aspect-ratio: 16 / 10;
-  max-height: 75vh;
+  max-height: min(75vh, 75dvh);
   background: linear-gradient(135deg, #1e7e34 0%, #28a745 50%, #20c997 100%);
   border-radius: 40px;
   box-shadow: 
@@ -36,20 +36,20 @@
   /* Мобильная оптимизация */
   @media (max-width: 768px) {
     width: 95vw;
-    max-height: 65vh;
+    max-height: min(65vh, 65dvh);
     border-radius: 20px;
     border: 2px solid #155724;
   }
   
   @media (max-width: 480px) {
     width: 98vw;
-    max-height: 60vh;
+    max-height: min(60vh, 60dvh);
     border-radius: 15px;
   }
   
   /* Ландшафтная ориентация */
   @media (orientation: landscape) and (max-height: 600px) {
-    max-height: 85vh;
+    max-height: min(85vh, 85dvh);
     aspect-ratio: 18 / 10;
   }
 }

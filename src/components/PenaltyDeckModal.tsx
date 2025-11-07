@@ -47,28 +47,29 @@ export default function PenaltyDeckModal({
             left: 0,
             right: 0,
             bottom: 0,
-            background: 'rgba(0, 0, 0, 0.7)',
-            backdropFilter: 'blur(8px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 10002,
-            padding: '16px'
+            background: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(10px)',
+            zIndex: 99999,
+            pointerEvents: 'auto'
           }}
         >
           <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
+            initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.8, opacity: 0 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            transition={{ duration: 0.25 }}
             onClick={(e) => e.stopPropagation()}
             style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: 'min(380px, 90vw)',
+              maxHeight: 'min(85vh, 85dvh)',
+              overflowY: 'auto',
               background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
               borderRadius: '20px',
-              padding: '24px',
-              maxWidth: '400px',
-              width: '100%',
-              maxHeight: '80vh',
-              overflow: 'auto',
+              padding: '24px 18px',
               boxShadow: '0 20px 50px rgba(0, 0, 0, 0.5)',
               border: '2px solid rgba(239, 68, 68, 0.3)'
             }}

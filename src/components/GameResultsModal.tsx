@@ -47,29 +47,35 @@ export default function GameResultsModal({
 
   return (
     <div 
-      className={`fixed inset-0 z-[10001] flex items-center justify-center transition-all duration-500 ${
-        isVisible ? 'opacity-100' : 'opacity-0'
-      }`}
+      className={`transition-all duration-500 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
       style={{
-        background: 'radial-gradient(circle at center, rgba(15, 23, 42, 0.98) 0%, rgba(0, 0, 0, 0.95) 100%)',
-        backdropFilter: 'blur(20px)'
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(0, 0, 0, 0.75)',
+        backdropFilter: 'blur(10px)',
+        zIndex: 99999,
+        pointerEvents: 'auto'
       }}
     >
       <div 
-        className={`relative transform transition-all duration-700 ${
-          isVisible ? 'scale-100 translate-y-0' : 'scale-75 translate-y-10'
+        className={`transform transition-all duration-700 ${
+          isVisible ? 'scale-100' : 'scale-75'
         }`}
         style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: 'min(380px, 90vw)',
+          maxHeight: 'min(85vh, 85dvh)',
+          overflowY: 'auto',
           background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%)',
           borderRadius: '20px',
           border: '2px solid rgba(99, 102, 241, 0.4)',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 40px rgba(99, 102, 241, 0.3)',
-          width: '50%', // ✅ ПОЛОВИНА ЭКРАНА!
-          maxWidth: '700px',
-          minWidth: '320px',
-          maxHeight: '70vh', // ✅ НЕ ВО ВЕСЬ ЭКРАН!
-          overflow: 'auto',
-          margin: '40px', // ✅ БОЛЬШИЕ ОТСТУПЫ ОТ КРАЁВ!
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 40px rgba(99, 102, 241, 0.3)'
         }}
       >
         {/* Header */}

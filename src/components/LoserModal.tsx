@@ -41,13 +41,10 @@ export default function LoserModal({ playerName, avatar, onClose }: LoserModalPr
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'linear-gradient(135deg, rgba(30, 20, 30, 0.95) 0%, rgba(15, 10, 20, 0.98) 100%)',
+          background: 'rgba(0, 0, 0, 0.75)',
           backdropFilter: 'blur(10px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999,
-          overflow: 'hidden'
+          zIndex: 99999,
+          pointerEvents: 'auto'
         }}
       >
         {/* Падающие черепа */}
@@ -98,24 +95,26 @@ export default function LoserModal({ playerName, avatar, onClose }: LoserModalPr
           }}
         />
 
-        {/* Модальное окно - 60% ЭКРАНА (КАК ИГРОВОЙ СТОЛ!) */}
+        {/* Модальное окно - АБСОЛЮТНОЕ ЦЕНТРИРОВАНИЕ */}
         <motion.div
-          initial={{ scale: 0, rotate: 180 }}
-          animate={{ scale: 1, rotate: 0 }}
-          exit={{ scale: 0, rotate: -180 }}
-          transition={{ type: 'spring', duration: 0.6 }}
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.9, opacity: 0 }}
+          transition={{ duration: 0.25 }}
           style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: 'min(380px, 90vw)',
+            maxHeight: 'min(85vh, 85dvh)',
+            overflowY: 'auto',
             background: 'linear-gradient(135deg, rgba(60, 20, 20, 0.95) 0%, rgba(20, 10, 10, 0.98) 100%)',
             borderRadius: '20px',
-            padding: '30px 24px',
+            padding: '24px 18px',
             boxShadow: '0 20px 60px rgba(139, 0, 0, 0.8), 0 0 80px rgba(255, 0, 0, 0.3), inset 0 0 20px rgba(0, 0, 0, 0.6)',
             border: '2px solid rgba(139, 0, 0, 0.6)',
-            textAlign: 'center',
-            width: 'min(40vw, 500px)', // ✅ 40% ЭКРАНА!
-            maxHeight: '70vh', // ✅ ОГРАНИЧЕНИЕ ПО ВЫСОТЕ
-            overflow: 'auto', // ✅ СКРОЛЛ ЕСЛИ КОНТЕНТ НЕ ВЛЕЗАЕТ
-            minWidth: '300px',
-            position: 'relative'
+            textAlign: 'center'
           }}
         >
           {/* Кровавые блики */}
