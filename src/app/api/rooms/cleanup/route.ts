@@ -7,8 +7,30 @@ export async function POST(request: NextRequest) {
     console.log('🧹 [CLEANUP] Начинаем очистку комнат...');
 
     let deletedCount = 0;
+    let deletedPlayers = 0;
 
-    // 1️⃣ УДАЛЯЕМ КОМНАТЫ СТАРШЕ 1 ЧАСА БЕЗ АКТИВНОСТИ
+    // 1️⃣ УДАЛЯЕМ ОФЛАЙН ИГРОКОВ ИЗ КОМНАТ (НЕ ОНЛАЙН БОЛЬШЕ 5 МИНУТ)
+    const { data: offlineUsers, error: offlineError } = await supabase
+      .from('_pidr_users')
+      .select('telegram_id')
+      .lt('last_seen', new Date(Date.now() - 5 * 60 * 1000).toISOString())
+      .neq('status', 'online');
+
+    if (offlineUsers && offlineUsers.length > 0) {
+      const { error: deletePlayersError } = await supabase
+        .from('_pidr_room_players')
+        .delete()
+        .in('user_id', offlineUsers.map(u => u.telegram_id));
+
+      if (!deletePlayersError) {
+        deletedPlayers = offlineUsers.length;
+        console.log(`✅ [CLEANUP] Удалено ${deletedPlayers} офлайн игроков из комнат`);
+      } else {
+        console.error('❌ [CLEANUP] Ошибка удаления офлайн игроков:', deletePlayersError);
+      }
+    }
+
+    // 2️⃣ УДАЛЯЕМ КОМНАТЫ СТАРШЕ 1 ЧАСА БЕЗ АКТИВНОСТИ
     const { data: oldRooms, error: oldRoomsError } = await supabase
       .from('_pidr_rooms')
       .select('id')
@@ -118,12 +140,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log(`✅ [CLEANUP] Очистка завершена! Удалено комнат: ${deletedCount}`);
+    console.log(`✅ [CLEANUP] Очистка завершена! Удалено комнат: ${deletedCount}, офлайн игроков: ${deletedPlayers}`);
 
     return NextResponse.json({
       success: true,
       message: 'Очистка завершена',
-      deleted_count: deletedCount
+      deleted_rooms: deletedCount,
+      deleted_players: deletedPlayers
     });
 
   } catch (error: any) {
