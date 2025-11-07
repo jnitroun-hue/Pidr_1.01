@@ -53,7 +53,7 @@ export async function validatePlayerInRoom(
     // 3. Проверяем актуальность данных в БД
     const { data: dbPlayer, error: dbError } = await supabase
       .from('_pidr_room_players')
-      .select('position, is_host')
+      .select('position')
       .eq('room_id', expectedRoomId)
       .eq('user_id', userId)
       .single();
@@ -65,11 +65,20 @@ export async function validatePlayerInRoom(
       };
     }
     
+    // ✅ ОПРЕДЕЛЯЕМ ХОСТА ПО host_id В _pidr_rooms
+    const { data: room } = await supabase
+      .from('_pidr_rooms')
+      .select('host_id')
+      .eq('id', expectedRoomId)
+      .single();
+    
+    const isHost = room?.host_id === userId;
+    
     return {
       valid: true,
       userId,
       roomId: expectedRoomId,
-      isHost: dbPlayer.is_host,
+      isHost,
       position: dbPlayer.position,
     };
     

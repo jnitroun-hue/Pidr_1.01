@@ -639,7 +639,6 @@ async function syncPlayerToDatabase(params: {
         user_id: userId,
         username,
         position,
-        is_host: isHost,
         is_ready: isHost, // Хост сразу готов
         joined_at: new Date().toISOString(),
       },

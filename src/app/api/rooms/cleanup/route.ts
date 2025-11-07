@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
       const { error: deleteOldError } = await supabase
         .from('_pidr_rooms')
         .delete()
-        .in('id', oldRooms.map(r => r.id));
+        .in('id', oldRooms.map((r: any) => r.id));
 
       if (!deleteOldError) {
         deletedCount += oldRooms.length;

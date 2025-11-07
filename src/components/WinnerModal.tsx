@@ -144,8 +144,9 @@ export default function WinnerModal({
             top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
-            width: 'min(380px, 90vw)',
-            maxHeight: 'min(85vh, 85dvh)',
+            width: 'min(50vw, 90vw)', // ✅ 50% ЭКРАНА!
+            maxWidth: '500px', // ✅ МАКСИМУМ 500px!
+            maxHeight: 'min(60vh, 60dvh)', // ✅ 60% ВЫСОТЫ!
             overflowY: 'auto',
             background: placeData.gradient,
             borderRadius: '20px',

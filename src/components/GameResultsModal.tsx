@@ -69,8 +69,9 @@ export default function GameResultsModal({
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          width: 'min(380px, 90vw)',
-          maxHeight: 'min(85vh, 85dvh)',
+          width: 'min(50vw, 90vw)', // ✅ 50% ЭКРАНА!
+          maxWidth: '500px', // ✅ МАКСИМУМ 500px!
+          maxHeight: 'min(60vh, 60dvh)', // ✅ 60% ВЫСОТЫ!
           overflowY: 'auto',
           background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%)',
           borderRadius: '20px',
