@@ -1221,18 +1221,49 @@ function GamePageContentComponent({
           <div className={styles.rectangularTable}>
             {/* СТОПКА КАРТ НА СТОЛЕ (2-я стадия) - ЗАМЕНЯЕТ КОЛОДУ */}
             {gameStage >= 2 && tableStack && tableStack.length > 0 && (
-              <div style={{
-                position: 'absolute',
-                left: '50%',
-                top: '50%',
-                transform: 'translate(-50%, -50%)',
-                zIndex: 15,
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                minWidth: '200px',
-                minHeight: '120px'
-              }}>
+              <div 
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = 'move';
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const cardData = e.dataTransfer.getData('card');
+                  if (!cardData) return;
+                  
+                  try {
+                    const card = JSON.parse(cardData);
+                    console.log(`🎯 [DROP] Карта сброшена на стол:`, card);
+                    
+                    // Проверяем что это ход игрока
+                    const myPlayer = players.find(p => !p.isBot);
+                    if (myPlayer?.id !== currentPlayerId) {
+                      showNotification('Сейчас не ваш ход!', 'warning', 2000);
+                      return;
+                    }
+                    
+                    // Играем карту через gameStore
+                    const { selectHandCard, playSelectedCard } = useGameStore.getState();
+                    if (selectHandCard && playSelectedCard) {
+                      selectHandCard(card);
+                      setTimeout(() => playSelectedCard(), 100);
+                    }
+                  } catch (error) {
+                    console.error('❌ [DROP] Ошибка парсинга карты:', error);
+                  }
+                }}
+                style={{
+                  position: 'absolute',
+                  left: '50%',
+                  top: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  zIndex: 15,
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  minWidth: '200px',
+                  minHeight: '120px'
+                }}>
                 {tableStack.map((card, idx) => {
                   // ГОРИЗОНТАЛЬНАЯ СТОПКА: Каждая следующая карта смещается ВПРАВО
                   // Левая карта = нижняя (первая), правая карта = верхняя (последняя)
@@ -1982,9 +2013,9 @@ function GamePageContentComponent({
                     e.dataTransfer.effectAllowed = 'move';
                   }}
                   style={{
-                    marginLeft: index > 0 ? '-24px' : '0', // 40% перекрытие для руки (60px * 0.4 = 24px)
+                    marginLeft: index > 0 ? '-50px' : '0', // ✅ 70% ПЕРЕКРЫТИЕ - компактная рука!
                     zIndex: isSelected ? 100 : index + 1, // Правая карта поверх левой
-                    cursor: isMyTurn && canPlay ? 'grab' : isMyTurn ? 'pointer' : 'not-allowed', // ✅ GRAB курсор!
+                    cursor: isMyTurn && canPlay ? 'grab' : isMyTurn ? 'pointer' : 'not-allowed',
                     position: 'relative',
                   }}
                   onClick={() => {
@@ -2005,8 +2036,8 @@ function GamePageContentComponent({
                   <Image
                     src={`${CARDS_PATH}${cardImage}`}
                     alt={cardImage}
-                    width={70}
-                    height={105}
+                    width={55}
+                    height={82}
                     loading="eager"
                     style={{ 
                       borderRadius: '8px',

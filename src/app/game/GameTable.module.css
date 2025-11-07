@@ -1029,8 +1029,8 @@
     linear-gradient(145deg, #0f172a 0%, #1e293b 100%),
     radial-gradient(circle at top right, rgba(99, 102, 241, 0.1), transparent);
   border: 2px solid rgba(99, 102, 241, 0.3);
-  border-radius: 8px; /* Уменьшен с 12px */
-  padding: 5px 8px; /* Уменьшен с 8px 12px */
+  border-radius: 8px;
+  padding: 5px 8px;
   box-shadow: 
     0 10px 20px rgba(0, 0, 0, 0.5),
     0 0 20px rgba(99, 102, 241, 0.15),
@@ -1038,13 +1038,15 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(15px);
   position: fixed;
-  bottom: 40px; /* ✅ ПОДНЯТО с 10px - не накладывается на системные кнопки */
+  bottom: 40px;
   left: 50%;
-  transform: translateX(-50%); /* Убран scale - уменьшаем сам контейнер */
+  transform: translateX(-50%);
   overflow: visible;
-  min-height: 60px; /* Уменьшен с 90px (90/1.5 = 60) */
-  width: 53%; /* Уменьшен с 80% (80/1.5 ≈ 53) */
-  max-width: 267px; /* Уменьшен с 400px (400/1.5 ≈ 267) */
+  min-height: 50px; /* ✅ ЕЩЁ КОМПАКТНЕЕ! */
+  width: auto; /* ✅ АВТОМАТИЧЕСКАЯ ШИРИНА ПОД КАРТЫ! */
+  max-width: 90vw; /* ✅ НЕ ВЫХОДИТ ЗА ЭКРАН! */
+  padding-left: 12px; /* ✅ ОТСТУП ДЛЯ ПЕРВОЙ КАРТЫ */
+  padding-right: 12px; /* ✅ ОТСТУП ДЛЯ ПОСЛЕДНЕЙ КАРТЫ */
   z-index: 100;
 }
 
@@ -1094,13 +1096,13 @@
 
 .handCard {
   position: relative;
-  width: 70px; /* default, overridden inline for open cards */
-  height: 105px;
-  border-radius: 10px;
+  width: 55px; /* ✅ УМЕНЬШЕНО С 70px! */
+  height: 82px; /* ✅ УМЕНЬШЕНО С 105px! */
+  border-radius: 8px;
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   cursor: pointer;
   transform-style: preserve-3d;
-  margin: 0 3px; /* Положительный margin для лучшей видимости карт */
+  margin: 0; /* ✅ УБРАН MARGIN - используем только marginLeft из inline стилей */
 }
 
 .handCard:hover {
