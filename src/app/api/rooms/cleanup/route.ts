@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
       const { error: deletePlayersError } = await supabase
         .from('_pidr_room_players')
         .delete()
-        .in('user_id', offlineUsers.map(u => u.telegram_id));
+        .in('user_id', offlineUsers.map((u: any) => u.telegram_id));
 
       if (!deletePlayersError) {
         deletedPlayers = offlineUsers.length;
