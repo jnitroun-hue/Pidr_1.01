@@ -5,8 +5,9 @@ import { requireAuth } from '@/lib/auth-utils';
 // 🎮 API: Старт игры в комнате
 export async function POST(
   request: NextRequest,
-  { params }: { params: { roomId: string } }
+  { params }: { params: Promise<{ roomId: string }> }
 ) {
+  const { roomId: roomIdStr } = await params;
   try {
     const auth = await requireAuth(request);
     if (auth.error) {
@@ -14,7 +15,7 @@ export async function POST(
     }
 
     const userId = auth.userId as string;
-    const roomId = parseInt(params.roomId, 10);
+    const roomId = parseInt(roomIdStr, 10);
 
     console.log(`🎮 [START GAME] Комната ${roomId}, хост: ${userId}`);
 
@@ -46,8 +47,8 @@ export async function POST(
       return NextResponse.json({ success: false, error: 'Ошибка получения игроков' }, { status: 500 });
     }
 
-    const realPlayers = players.filter(p => parseInt(String(p.user_id), 10) > 0);
-    const botPlayers = players.filter(p => parseInt(String(p.user_id), 10) < 0);
+    const realPlayers = players.filter((p: any) => parseInt(String(p.user_id), 10) > 0);
+    const botPlayers = players.filter((p: any) => parseInt(String(p.user_id), 10) < 0);
 
     console.log(`👥 [START GAME] Реальных игроков: ${realPlayers.length}, ботов: ${botPlayers.length}`);
 
@@ -80,7 +81,7 @@ export async function POST(
       return NextResponse.json({ success: false, error: 'Ошибка проверки готовности' }, { status: 500 });
     }
 
-    const notReadyRealPlayers = allPlayers.filter(p => {
+    const notReadyRealPlayers = allPlayers.filter((p: any) => {
       const uid = parseInt(String(p.user_id), 10);
       return uid > 0 && !p.is_ready; // Только реальные игроки
     });
