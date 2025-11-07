@@ -86,21 +86,25 @@ export default function WinnerModal({
 
   return (
     <AnimatePresence>
+      {/* ✅ ФИКСИРОВАННЫЙ ФОН */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 flex items-center justify-center overflow-hidden"
         style={{
-          background: 'rgba(0, 0, 0, 0.7)',
-          backdropFilter: 'blur(8px)',
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.75)',
+          backdropFilter: 'blur(10px)',
           zIndex: 99999,
-          pointerEvents: 'auto',
-          padding: '20px'
+          pointerEvents: 'auto'
         }}
       >
-        {/* Анимированный фон с частицами */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* Конфетти */}
+        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
           {confetti.map((particle) => (
             <motion.div
               key={particle.id}
@@ -117,8 +121,8 @@ export default function WinnerModal({
                 delay: particle.delay,
                 ease: 'easeOut'
               }}
-              className="absolute"
               style={{
+                position: 'absolute',
                 width: '12px',
                 height: '12px',
                 background: particle.color,
@@ -129,20 +133,24 @@ export default function WinnerModal({
           ))}
         </div>
 
-        {/* Основная карточка - СТРОГО ПО ЦЕНТРУ */}
+        {/* ✅ МОДАЛКА - АБСОЛЮТНОЕ ЦЕНТРИРОВАНИЕ */}
         <motion.div
-          initial={{ scale: 0.95, opacity: 0 }}
+          initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.95, opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          className="relative"
+          exit={{ scale: 0.9, opacity: 0 }}
+          transition={{ duration: 0.25 }}
           style={{
-            width: '400px',
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '380px',
             maxWidth: '90vw',
+            maxHeight: '85vh',
+            overflowY: 'auto',
             background: placeData.gradient,
             borderRadius: '20px',
-            padding: '24px 20px',
-            margin: 'auto',
+            padding: '24px 18px',
             boxShadow: `0 20px 60px -10px ${placeData.glowColor}, 0 0 0 1px rgba(255, 255, 255, 0.2), inset 0 1px 3px rgba(255, 255, 255, 0.3)`,
             border: '2px solid rgba(255, 255, 255, 0.4)',
             textAlign: 'center'
