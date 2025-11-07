@@ -18,6 +18,7 @@ interface LobbyPlayer {
   username: string;
   position: number;
   is_ready: boolean;
+  is_host?: boolean; // ✅ ДОБАВЛЕНО!
   avatar_url?: string;
 }
 
@@ -31,13 +32,14 @@ interface LobbyState {
 export default function MultiplayerLobby({ 
   roomId, 
   roomCode, 
-  isHost, 
+  isHost: initialIsHost, // ✅ ПЕРЕИМЕНОВАЛИ В initialIsHost
   onGameStart, 
   onLeaveRoom 
 }: MultiplayerLobbyProps) {
   const { user } = useTelegram();
   const roomManagerRef = useRef<RoomManager | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [isHost, setIsHost] = useState(initialIsHost); // ✅ ЛОКАЛЬНЫЙ STATE ДЛЯ isHost
   const [lobbyState, setLobbyState] = useState<LobbyState>({
     players: [],
     maxPlayers: 9,
@@ -131,6 +133,13 @@ export default function MultiplayerLobby({
       if (data.success && data.players) {
         console.log('📋 [MultiplayerLobby] Игроки загружены:', data.players);
         console.log('📋 [MultiplayerLobby] max_players:', data.maxPlayers);
+        
+        // ✅ ОБНОВЛЯЕМ isHost ИЗ БД!
+        const myPlayer = data.players.find((p: LobbyPlayer) => p.user_id === user?.id?.toString());
+        if (myPlayer && myPlayer.is_host !== undefined) {
+          console.log('👑 [MultiplayerLobby] Обновляем isHost:', myPlayer.is_host);
+          setIsHost(myPlayer.is_host);
+        }
         
         setLobbyState(prev => ({
           ...prev,
