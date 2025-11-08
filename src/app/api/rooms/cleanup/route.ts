@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
 
         if (players && players.length > 0) {
           // Проверяем есть ли хоть один реальный игрок (положительный ID)
-          const hasRealPlayers = players.some(p => {
+          const hasRealPlayers = players.some((p: any) => {
             const uid = parseInt(String(p.user_id), 10);
             return uid > 0;
           });
