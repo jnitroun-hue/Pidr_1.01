@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
       const { error: deleteFinishedError } = await supabase
         .from('_pidr_rooms')
         .delete()
-        .in('id', finishedRooms.map(r => r.id));
+        .in('id', finishedRooms.map((r: any) => r.id));
 
       if (!deleteFinishedError) {
         deletedCount += finishedRooms.length;
