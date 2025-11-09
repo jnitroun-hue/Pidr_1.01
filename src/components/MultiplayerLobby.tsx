@@ -394,98 +394,63 @@ export default function MultiplayerLobby({
         </div>
       </div>
 
-      {/* Настройки игры (только для хоста) */}
-      {isHost && (
-        <motion.div 
-          className="game-settings"
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
-          transition={{ duration: 0.3 }}
-        >
-          <div className="settings-header">
-            <Settings className="settings-icon" />
-            <span>Настройки игры</span>
-          </div>
-          
-          <div className="settings-grid">
-            <div className="setting-item">
-              <label>Режим игры:</label>
-              <select 
-                value={gameSettings.gameMode}
-                onChange={(e) => setGameSettings(prev => ({ ...prev, gameMode: e.target.value }))}
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: '8px',
-                  border: '2px solid rgba(255, 255, 255, 0.2)',
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  color: 'white',
-                  fontSize: '14px'
-                }}
-              >
-                <option value="classic">Классический</option>
-                <option value="fast">Быстрый</option>
-                <option value="tournament">Турнир</option>
-              </select>
-            </div>
-            
-            <div className="setting-item">
-              <label>Макс. игроков:</label>
-              <select 
-                value={gameSettings.maxPlayers}
-                onChange={(e) => setGameSettings(prev => ({ ...prev, maxPlayers: parseInt(e.target.value) }))}
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: '8px',
-                  border: '2px solid rgba(255, 255, 255, 0.2)',
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  color: 'white',
-                  fontSize: '14px'
-                }}
-              >
-                <option value={4}>4 игрока</option>
-                <option value={5}>5 игроков</option>
-                <option value={6}>6 игроков</option>
-                <option value={7}>7 игроков</option>
-                <option value={8}>8 игроков</option>
-                <option value={9}>9 игроков</option>
-              </select>
-            </div>
-            
-            <div className="setting-item">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={gameSettings.allowBots}
-                  onChange={(e) => setGameSettings(prev => ({ ...prev, allowBots: e.target.checked }))}
-                />
-                Разрешить ботов
-              </label>
-            </div>
-          </div>
-        </motion.div>
-      )}
+      {/* ✅ УБРАЛИ НАСТРОЙКИ - ОНИ УЖЕ ВЫБРАНЫ ПРИ СОЗДАНИИ КОМНАТЫ! */}
 
-      {/* Кнопки управления */}
-      <div className="lobby-actions">
+      {/* ✅ ПРОФЕССИОНАЛЬНЫЕ КНОПКИ */}
+      <div className="lobby-actions" style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px',
+        padding: '20px',
+        background: 'rgba(0, 0, 0, 0.3)',
+        borderRadius: '16px',
+        border: '1px solid rgba(255, 255, 255, 0.1)'
+      }}>
         {/* Кнопка готовности */}
         <motion.button
-          className={`ready-button ${currentPlayer?.is_ready ? 'ready' : 'not-ready'}`}
           onClick={toggleReady}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
           disabled={!isConnected}
+          whileHover={{ scale: 1.02, y: -2 }}
+          whileTap={{ scale: 0.98 }}
+          style={{
+            padding: '14px 24px',
+            borderRadius: '12px',
+            border: 'none',
+            background: currentPlayer?.is_ready 
+              ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+              : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+            color: 'white',
+            fontSize: '16px',
+            fontWeight: 'bold',
+            cursor: isConnected ? 'pointer' : 'not-allowed',
+            opacity: isConnected ? 1 : 0.5,
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+            transition: 'all 0.2s'
+          }}
         >
-          {currentPlayer?.is_ready ? '❌ Не готов' : '✅ Готов!'}
+          {currentPlayer?.is_ready ? '✅ Готов' : '⏳ Не готов'}
         </motion.button>
 
         {/* Добавить бота (только хост) */}
-        {isHost && gameSettings.allowBots && lobbyState.players.length < lobbyState.maxPlayers && (
+        {isHost && lobbyState.players.length < lobbyState.maxPlayers && (
           <motion.button
-            className="add-bot-button"
             onClick={addBot}
             disabled={isAddingBot}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.02, y: -2 }}
+            whileTap={{ scale: 0.98 }}
+            style={{
+              padding: '14px 24px',
+              borderRadius: '12px',
+              border: 'none',
+              background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+              color: 'white',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              cursor: isAddingBot ? 'not-allowed' : 'pointer',
+              opacity: isAddingBot ? 0.5 : 1,
+              boxShadow: '0 4px 12px rgba(139, 92, 246, 0.4)',
+              transition: 'all 0.2s'
+            }}
           >
             {isAddingBot ? '⏳ Добавление...' : '🤖 Добавить бота'}
           </motion.button>
@@ -494,23 +459,58 @@ export default function MultiplayerLobby({
         {/* Запуск игры (только хост) */}
         {isHost && (
           <motion.button
-            className={`start-game-button ${lobbyState.canStart ? 'can-start' : 'cannot-start'}`}
             onClick={handleStartGame}
             disabled={!lobbyState.canStart || !isConnected}
-            whileHover={lobbyState.canStart ? { scale: 1.05 } : {}}
-            whileTap={lobbyState.canStart ? { scale: 0.95 } : {}}
+            whileHover={lobbyState.canStart ? { scale: 1.02, y: -2 } : {}}
+            whileTap={lobbyState.canStart ? { scale: 0.98 } : {}}
+            style={{
+              padding: '16px 24px',
+              borderRadius: '12px',
+              border: 'none',
+              background: lobbyState.canStart
+                ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
+                : 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)',
+              color: 'white',
+              fontSize: '18px',
+              fontWeight: 'bold',
+              cursor: lobbyState.canStart ? 'pointer' : 'not-allowed',
+              opacity: lobbyState.canStart ? 1 : 0.6,
+              boxShadow: lobbyState.canStart ? '0 6px 16px rgba(245, 158, 11, 0.5)' : '0 4px 12px rgba(0, 0, 0, 0.3)',
+              transition: 'all 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px'
+            }}
           >
-            <Play className="start-icon" />
-            {lobbyState.canStart ? '🚀 Начать игру!' : `⏳ Ждем готовности (${readyPlayersCount}/${lobbyState.players.length})`}
+            {lobbyState.canStart ? (
+              <>
+                <Play size={20} />
+                🚀 Начать игру!
+              </>
+            ) : (
+              `⏳ Ждем готовности (${readyPlayersCount}/${lobbyState.players.length})`
+            )}
           </motion.button>
         )}
 
         {/* Покинуть лобби */}
         <motion.button
-          className="leave-button"
           onClick={handleLeaveRoom}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+          whileHover={{ scale: 1.02, y: -2 }}
+          whileTap={{ scale: 0.98 }}
+          style={{
+            padding: '14px 24px',
+            borderRadius: '12px',
+            border: '2px solid rgba(239, 68, 68, 0.5)',
+            background: 'rgba(239, 68, 68, 0.1)',
+            color: '#ef4444',
+            fontSize: '16px',
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)',
+            transition: 'all 0.2s'
+          }}
         >
           🚪 Покинуть лобби
         </motion.button>

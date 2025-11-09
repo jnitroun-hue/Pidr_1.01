@@ -99,14 +99,30 @@ export async function POST(
       
       console.log(`🤖 [ADD BOT] Боты уже в комнате:`, usedBotIds);
 
-      // ✅ ШАГ 1: ИЩЕМ СВОБОДНОГО БОТА ИЗ БД (НЕ ЗАНЯТОГО В ЭТОЙ КОМНАТЕ)
-      const { data: availableBots, error: botsError } = await supabase
+      // ✅ ШАГ 1: ИЩЕМ СВОБОДНОГО БОТА ИЗ БД (НЕ ЗАНЯТОГО НИ В ОДНОЙ КОМНАТЕ!)
+      // Сначала получаем всех ботов которые УЖЕ В КОМНАТАХ
+      const { data: busyBots } = await supabase
+        .from('_pidr_room_players')
+        .select('user_id')
+        .lt('user_id', 0); // Только боты (отрицательные ID)
+      
+      const busyBotIds = busyBots ? busyBots.map((b: any) => b.user_id) : [];
+      console.log(`🤖 [ADD BOT] Занятые боты:`, busyBotIds);
+      
+      // Теперь ищем свободного бота
+      let query = supabase
         .from('_pidr_users')
-        .select('telegram_id, username, first_name, avatar')
+        .select('telegram_id, username, first_name, avatar_url')
         .eq('is_bot', true)
-        .not('telegram_id', 'in', `(${usedBotIds.length > 0 ? usedBotIds.join(',') : '0'})`)
         .order('telegram_id', { ascending: true })
         .limit(1);
+      
+      // Исключаем занятых ботов
+      if (busyBotIds.length > 0) {
+        query = query.not('telegram_id', 'in', `(${busyBotIds.join(',')})`);
+      }
+      
+      const { data: availableBots, error: botsError } = await query;
 
       if (botsError) {
         console.error('❌ Ошибка получения ботов из БД:', botsError);
@@ -121,7 +137,7 @@ export async function POST(
         const selectedBot = availableBots[0];
         botId = selectedBot.telegram_id;
         botName = selectedBot.username || selectedBot.first_name;
-        botAvatar = selectedBot.avatar;
+        botAvatar = selectedBot.avatar_url || '🤖'; // ✅ ИСПРАВЛЕНО НА avatar_url
         
         console.log(`✅ [ADD BOT] Используем бота из БД: ${botName} (ID: ${botId})`);
       } else {
