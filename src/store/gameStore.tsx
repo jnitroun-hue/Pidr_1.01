@@ -957,6 +957,10 @@ export const useGameStore = create<GameState>()(
               
               console.log(`🔍 [distributePenaltyCards] isActive = ${isActive}`);
               
+              // ✅ КРИТИЧНО: ПРОВЕРЯЕМ СТАТУС "ОДНА КАРТА" ПОСЛЕ РАЗДАЧИ ШТРАФА!
+              console.log(`🔍 [distributePenaltyCards] ПРОВЕРЯЕМ СТАТУС "ОДНА КАРТА" после штрафа...`);
+              get().checkOneCardStatus();
+              
               if (isActive && state.gameStage === 2) {
                 console.log(`🎮 [distributePenaltyCards] Продолжаем ход игрока: ${updatedPlayer.name}`);
                 console.log(`🔍 [distributePenaltyCards] ВЫЗЫВАЕМ processPlayerTurn(${currentPlayerId})`);
@@ -981,9 +985,7 @@ export const useGameStore = create<GameState>()(
         }
         
         // ✅ ВАЖНО: Проверяем статус "одна карта" после раздачи штрафа
-        setTimeout(() => {
-          get().checkOneCardStatus();
-        }, 1500);
+        // ПЕРЕНЕСЕНО ВНУТРЬ setTimeout (после паузы 5 секунд)!
       },
       
       // Управление игроками
