@@ -1999,7 +1999,7 @@ function GamePageContentComponent({
                 <div
                   key={`hand-${index}-${cardImage}`}
                   className={`${styles.handCard} ${isSelected ? styles.selected : ''} ${canPlay ? styles.playable : ''} ${!isMyTurn ? styles.disabled : ''}`}
-                  draggable={isMyTurn && canPlay} // ✅ DRAG только в свой ход и если можно играть!
+                  draggable={isMyTurn && canPlay}
                   onDragStart={(e) => {
                     if (!isMyTurn || !canPlay) {
                       e.preventDefault();
@@ -2012,11 +2012,49 @@ function GamePageContentComponent({
                     e.dataTransfer.setData('card', JSON.stringify(cardObj));
                     e.dataTransfer.effectAllowed = 'move';
                   }}
+                  onTouchStart={(e) => {
+                    if (!isMyTurn || !canPlay) return;
+                    console.log(`📱 [TOUCH START] Начало касания: ${cardImage}`);
+                    const touch = e.touches[0];
+                    const cardObj = typeof card === 'string' 
+                      ? { image: cardImage, open: true, id: `card-${index}` }
+                      : { ...card, id: card.id || `card-${index}` };
+                    // Сохраняем данные карты для touchEnd
+                    (e.currentTarget as any).__draggedCard = cardObj;
+                    (e.currentTarget as any).__touchStartY = touch.clientY;
+                  }}
+                  onTouchMove={(e) => {
+                    if (!isMyTurn || !canPlay) return;
+                    const touch = e.touches[0];
+                    const startY = (e.currentTarget as any).__touchStartY;
+                    if (startY && touch.clientY < startY - 50) {
+                      // Карта перетащена вверх на 50px - визуальная обратная связь
+                      e.currentTarget.style.transform = 'translateY(-20px)';
+                    }
+                  }}
+                  onTouchEnd={(e) => {
+                    if (!isMyTurn || !canPlay) return;
+                    const cardObj = (e.currentTarget as any).__draggedCard;
+                    const startY = (e.currentTarget as any).__touchStartY;
+                    const touch = e.changedTouches[0];
+                    
+                    // Сбрасываем визуальный эффект
+                    e.currentTarget.style.transform = '';
+                    
+                    // Если карта перетащена вверх на 50px - играем её
+                    if (cardObj && startY && touch.clientY < startY - 50) {
+                      console.log(`📱 [TOUCH END] Карта сброшена: ${cardObj.image}`);
+                      selectHandCard(cardObj);
+                      setTimeout(() => playSelectedCard(), 100);
+                    }
+                  }}
                   style={{
-                    marginLeft: index > 0 ? '-50px' : '0', // ✅ 70% ПЕРЕКРЫТИЕ - компактная рука!
-                    zIndex: isSelected ? 100 : index + 1, // Правая карта поверх левой
+                    marginLeft: index > 0 ? '-50px' : '0',
+                    zIndex: isSelected ? 100 : index + 1,
                     cursor: isMyTurn && canPlay ? 'grab' : isMyTurn ? 'pointer' : 'not-allowed',
                     position: 'relative',
+                    transition: 'transform 0.2s ease', // ✅ Плавная анимация для touch
+                    touchAction: 'none', // ✅ Отключаем стандартное поведение браузера
                   }}
                   onClick={() => {
                     if (!isMyTurn) {

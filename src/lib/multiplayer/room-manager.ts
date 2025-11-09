@@ -556,6 +556,16 @@ export class RoomManager {
         }
       }
 
+      // ✅ ОТПРАВЛЯЕМ BROADCAST О ВЫХОДЕ ИГРОКА!
+      if (this.channel) {
+        await this.channel.send({
+          type: 'broadcast',
+          event: 'player-leave',
+          payload: { userId, roomId }
+        });
+        console.log('📡 [RoomManager] Broadcast отправлен: player-leave');
+      }
+
       console.log('✅ [RoomManager] Игрок покинул комнату');
     } catch (error) {
       console.error('❌ [RoomManager] Ошибка leaveRoom:', error);

@@ -1,6 +1,6 @@
-/* Базовые стили игрового контейнера */
+/* ✅ АДАПТАЦИЯ ПОД IPHONE - safe-area + dvh */
 .gameContainer {
-  height: 100vh;
+  height: 100dvh; /* ✅ DVH ДЛЯ IPHONE! */
   width: 100vw;
   overflow: hidden;
   background: 
@@ -15,10 +15,15 @@
   left: 0;
   right: 0;
   bottom: 0;
+  /* ✅ SAFE AREA ДЛЯ IPHONE */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 
 .tableWrapper {
-  height: 100vh;
+  height: 100dvh; /* ✅ DVH ДЛЯ IPHONE! */
   width: 100vw;
   overflow: hidden;
   background: #0a0a0a;
@@ -31,6 +36,11 @@
   left: 0;
   right: 0;
   bottom: 0;
+  /* ✅ SAFE AREA ДЛЯ IPHONE */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 
 /* 🔥 АДАПТИВНЫЙ ВЕРТИКАЛЬНЫЙ СТОЛ - ОПТИМИЗИРОВАН ДЛЯ ВСЕХ ЭКРАНОВ */
@@ -1038,15 +1048,15 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(15px);
   position: fixed;
-  bottom: 40px;
+  bottom: calc(40px + env(safe-area-inset-bottom)); /* ✅ SAFE AREA ДЛЯ IPHONE! */
   left: 50%;
   transform: translateX(-50%);
   overflow: visible;
-  min-height: 50px; /* ✅ ЕЩЁ КОМПАКТНЕЕ! */
-  width: auto; /* ✅ АВТОМАТИЧЕСКАЯ ШИРИНА ПОД КАРТЫ! */
-  max-width: 90vw; /* ✅ НЕ ВЫХОДИТ ЗА ЭКРАН! */
-  padding-left: 12px; /* ✅ ОТСТУП ДЛЯ ПЕРВОЙ КАРТЫ */
-  padding-right: 12px; /* ✅ ОТСТУП ДЛЯ ПОСЛЕДНЕЙ КАРТЫ */
+  min-height: 50px;
+  width: auto;
+  max-width: calc(90vw - env(safe-area-inset-left) - env(safe-area-inset-right)); /* ✅ УЧИТЫВАЕМ SAFE AREA! */
+  padding-left: 12px;
+  padding-right: 12px;
   z-index: 100;
 }
 
