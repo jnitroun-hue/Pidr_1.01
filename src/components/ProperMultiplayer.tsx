@@ -585,7 +585,7 @@ export const ProperMultiplayer: React.FC = () => {
            <div className={styles.field}>
              <label className={styles.label}>Максимум игроков</label>
              <div className={styles.playerCards}>
-               {[4, 5, 6, 7, 8, 9].map((num) => (
+               {[4, 5, 6, 7].map((num) => ( // ✅ МАКСИМУМ 7!
                  <button
                    key={num}
                    type="button"

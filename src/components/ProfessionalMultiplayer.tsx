@@ -66,7 +66,7 @@ const gameModesConfig = {
     color: '#ff0080',
     gradient: 'linear-gradient(135deg, #ff0080, #e91e63)',
     description: 'Молниеносно',
-    maxPlayers: 9,
+    maxPlayers: 9, // ✅ В МУЛЬТИПЛЕЕРЕ ОСТАВЛЯЕМ 9!
     difficulty: 'hard' as const
   }
 };

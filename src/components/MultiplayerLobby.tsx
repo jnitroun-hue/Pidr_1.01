@@ -42,14 +42,14 @@ export default function MultiplayerLobby({
   const [isHost, setIsHost] = useState(initialIsHost); // ✅ ЛОКАЛЬНЫЙ STATE ДЛЯ isHost
   const [lobbyState, setLobbyState] = useState<LobbyState>({
     players: [],
-    maxPlayers: 9,
+    maxPlayers: 9, // ✅ В МУЛЬТИПЛЕЕРЕ ОСТАВЛЯЕМ 9!
     gameInProgress: false,
     canStart: false
   });
   
   const [gameSettings, setGameSettings] = useState({
     gameMode: 'classic',
-    maxPlayers: 9,
+    maxPlayers: 9, // ✅ В МУЛЬТИПЛЕЕРЕ ОСТАВЛЯЕМ 9!
     timeLimit: 0,
     allowBots: true
   });
