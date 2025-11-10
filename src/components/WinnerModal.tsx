@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, Eye, Home, Crown, Star, Sparkles } from 'lucide-react';
 
@@ -7,10 +7,10 @@ interface WinnerModalProps {
   playerName: string;
   place: number;
   avatar?: string;
-  isCurrentUser?: boolean; // ✅ Флаг что это ПОЛЬЗОВАТЕЛЬ победил (не бот)
+  isCurrentUser?: boolean;
   onClose: () => void;
-  onContinueWatching?: () => void; // ✅ Кнопка "Продолжить просмотр"
-  onExitToMenu?: () => void; // ✅ Кнопка "Выйти в главное меню"
+  onContinueWatching?: () => void;
+  onExitToMenu?: () => void;
 }
 
 export default function WinnerModal({ 
@@ -22,18 +22,8 @@ export default function WinnerModal({
   onContinueWatching, 
   onExitToMenu 
 }: WinnerModalProps) {
-  const [confetti, setConfetti] = useState<Array<{ id: number; x: number; delay: number; color: string }>>([]);
 
   useEffect(() => {
-    // Генерируем конфетти
-    const newConfetti = Array.from({ length: 60 }, (_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      delay: Math.random() * 0.8,
-      color: ['#FFD700', '#FFA500', '#FF6B6B', '#4ECDC4', '#95E1D3', '#F38181'][Math.floor(Math.random() * 6)]
-    }));
-    setConfetti(newConfetti);
-
     // ✅ АВТОЗАКРЫТИЕ ТОЛЬКО ДЛЯ БОТОВ (не для пользователя)!
     if (!isCurrentUser) {
       const timer = setTimeout(() => {
@@ -49,35 +39,39 @@ export default function WinnerModal({
     switch (place) {
       case 1:
         return {
-          gradient: 'linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FF8C00 100%)',
-          icon: <Crown size={48} className="text-white" strokeWidth={2.5} />,
-          glowColor: 'rgba(255, 215, 0, 0.6)',
+          gradient: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)',
+          borderColor: '#FFD700',
+          icon: <Crown size={48} strokeWidth={2.5} style={{ color: '#FFD700' }} />,
           title: '🏆 ПОБЕДА!',
-          subtitle: '1-е место'
+          subtitle: '1-е место',
+          iconBg: 'rgba(255, 215, 0, 0.15)'
         };
       case 2:
         return {
-          gradient: 'linear-gradient(135deg, #E8E8E8 0%, #C0C0C0 50%, #A8A8A8 100%)',
-          icon: <Trophy size={44} className="text-white" strokeWidth={2.5} />,
-          glowColor: 'rgba(192, 192, 192, 0.5)',
+          gradient: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)',
+          borderColor: '#C0C0C0',
+          icon: <Trophy size={44} strokeWidth={2.5} style={{ color: '#C0C0C0' }} />,
           title: '🥈 ОТЛИЧНО!',
-          subtitle: '2-е место'
+          subtitle: '2-е место',
+          iconBg: 'rgba(192, 192, 192, 0.15)'
         };
       case 3:
         return {
-          gradient: 'linear-gradient(135deg, #CD7F32 0%, #B8732C 50%, #A0632A 100%)',
-          icon: <Star size={44} className="text-white" strokeWidth={2.5} />,
-          glowColor: 'rgba(205, 127, 50, 0.5)',
+          gradient: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)',
+          borderColor: '#CD7F32',
+          icon: <Star size={44} strokeWidth={2.5} style={{ color: '#CD7F32' }} />,
           title: '🥉 МОЛОДЕЦ!',
-          subtitle: '3-е место'
+          subtitle: '3-е место',
+          iconBg: 'rgba(205, 127, 50, 0.15)'
         };
       default:
         return {
-          gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #5e35b1 100%)',
-          icon: <Sparkles size={40} className="text-white" strokeWidth={2.5} />,
-          glowColor: 'rgba(102, 126, 234, 0.5)',
+          gradient: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)',
+          borderColor: '#8b5cf6',
+          icon: <Sparkles size={40} strokeWidth={2.5} style={{ color: '#8b5cf6' }} />,
           title: '🎉 ФИНИШ!',
-          subtitle: `${place}-е место`
+          subtitle: `${place}-е место`,
+          iconBg: 'rgba(139, 92, 246, 0.15)'
         };
     }
   };
@@ -86,227 +80,144 @@ export default function WinnerModal({
 
   return (
     <AnimatePresence>
-      {/* ✅ ФИКСИРОВАННЫЙ ФОН */}
+      {/* ✅ ФОН */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         style={{
           position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.75)',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.85)',
           backdropFilter: 'blur(10px)',
-          zIndex: 99999,
-          pointerEvents: 'auto'
+          zIndex: 999999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px'
         }}
       >
-        {/* Конфетти */}
-        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
-          {confetti.map((particle) => (
-            <motion.div
-              key={particle.id}
-              initial={{ y: -20, x: `${particle.x}%`, opacity: 1, scale: 0 }}
-              animate={{ 
-                y: '120vh', 
-                x: `${particle.x + (Math.random() - 0.5) * 30}%`,
-                rotate: Math.random() * 720,
-                opacity: [0, 1, 1, 0],
-                scale: [0, 1, 1, 0.5]
-              }}
-              transition={{ 
-                duration: 3 + Math.random() * 2, 
-                delay: particle.delay,
-                ease: 'easeOut'
-              }}
-              style={{
-                position: 'absolute',
-                width: '12px',
-                height: '12px',
-                background: particle.color,
-                borderRadius: '50%',
-                boxShadow: `0 0 10px ${particle.color}`
-              }}
-            />
-          ))}
-        </div>
-
-        {/* ✅ МОДАЛКА - АБСОЛЮТНОЕ ЦЕНТРИРОВАНИЕ */}
+        {/* ✅ МОДАЛКА КАК ПРОФИЛЬ */}
         <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.9, opacity: 0 }}
-          transition={{ duration: 0.25 }}
+          initial={{ scale: 0.8, y: 50 }}
+          animate={{ scale: 1, y: 0 }}
+          exit={{ scale: 0.8, y: 50 }}
+          onClick={(e) => e.stopPropagation()}
           style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: 'min(50vw, 90vw)', // ✅ 50% ЭКРАНА!
-            maxWidth: '500px', // ✅ МАКСИМУМ 500px!
-            maxHeight: 'min(60vh, 60dvh)', // ✅ 60% ВЫСОТЫ!
-            overflowY: 'auto',
             background: placeData.gradient,
-            borderRadius: '20px',
-            padding: '24px 18px',
-            boxShadow: `0 20px 60px -10px ${placeData.glowColor}, 0 0 0 1px rgba(255, 255, 255, 0.2), inset 0 1px 3px rgba(255, 255, 255, 0.3)`,
-            border: '2px solid rgba(255, 255, 255, 0.4)',
+            border: `3px solid ${placeData.borderColor}`,
+            borderRadius: '24px',
+            padding: '30px',
+            maxWidth: '420px',
+            width: '100%',
+            position: 'relative',
+            boxShadow: `0 20px 60px rgba(${placeData.borderColor === '#FFD700' ? '255, 215, 0' : placeData.borderColor === '#C0C0C0' ? '192, 192, 192' : placeData.borderColor === '#CD7F32' ? '205, 127, 50' : '139, 92, 246'}, 0.3)`,
             textAlign: 'center'
           }}
         >
-          {/* Блик */}
-          <motion.div
-            animate={{ 
-              x: ['-100%', '200%'],
-            }}
-            transition={{ 
-              duration: 3, 
-              repeat: Infinity,
-              ease: 'easeInOut',
-              repeatDelay: 1
-            }}
-            className="absolute top-0 left-0 w-1/2 h-full pointer-events-none"
-            style={{
-              background: 'linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%)',
-              filter: 'blur(20px)'
-            }}
-          />
-
           {/* Иконка места */}
-          <motion.div
-            animate={{ 
-              scale: [1, 1.08, 1],
-              rotate: [0, 2, -2, 0]
-            }}
-            transition={{ 
-              duration: 2.5, 
-              repeat: Infinity,
-              ease: 'easeInOut'
-            }}
-            className="flex justify-center mb-3"
-            style={{
-              filter: `drop-shadow(0 8px 24px ${placeData.glowColor})`,
-              transform: 'scale(0.65)' // ✅ ЕЩЁ МЕНЬШЕ ИКОНКИ!
-            }}
-          >
+          <div style={{
+            width: '100px',
+            height: '100px',
+            margin: '0 auto 20px',
+            borderRadius: '50%',
+            background: placeData.iconBg,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            border: `3px solid ${placeData.borderColor}`,
+            boxShadow: `0 10px 30px rgba(${placeData.borderColor === '#FFD700' ? '255, 215, 0' : placeData.borderColor === '#C0C0C0' ? '192, 192, 192' : placeData.borderColor === '#CD7F32' ? '205, 127, 50' : '139, 92, 246'}, 0.4)`
+          }}>
             {placeData.icon}
-          </motion.div>
+          </div>
 
-          {/* Заголовок - СТИЛЬ ПОКЕРА */}
-          <motion.h2
-            initial={{ y: -20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="text-3xl font-black text-white text-center mb-2"
-            style={{
-              textShadow: '0 6px 16px rgba(0, 0, 0, 0.6), 0 2px 4px rgba(0, 0, 0, 0.4), 0 0 20px rgba(255, 255, 255, 0.3)',
-              letterSpacing: '0.05em',
-              fontFamily: 'system-ui, -apple-system, sans-serif',
-              WebkitTextStroke: '1px rgba(0, 0, 0, 0.3)'
-            }}
-          >
+          {/* Заголовок */}
+          <h2 style={{
+            color: '#ffffff',
+            fontSize: '32px',
+            fontWeight: 'black',
+            marginBottom: '8px',
+            textShadow: '0 2px 10px rgba(0,0,0,0.5)'
+          }}>
             {placeData.title}
-          </motion.h2>
+          </h2>
 
-          {/* Место - ОБЪЁМНОЕ */}
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}
-            className="text-lg font-bold text-white/95 text-center mb-5"
-            style={{
-              textShadow: '0 3px 10px rgba(0, 0, 0, 0.5)',
-              background: 'rgba(0, 0, 0, 0.25)',
-              padding: '6px 16px',
-              borderRadius: '12px',
-              display: 'inline-block',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255, 255, 255, 0.2)'
-            }}
-          >
+          {/* Место */}
+          <div style={{
+            color: placeData.borderColor,
+            fontSize: '18px',
+            fontWeight: '700',
+            marginBottom: '25px',
+            textShadow: '0 2px 8px rgba(0,0,0,0.3)'
+          }}>
             {placeData.subtitle}
-          </motion.div>
+          </div>
 
           {/* Аватар и имя */}
-          <motion.div
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            className="flex flex-col items-center gap-3 mb-6"
-          >
+          <div style={{ marginBottom: '25px' }}>
             {avatar && (
-              <motion.div 
-                animate={{ 
-                  scale: [1, 1.05, 1],
-                  rotate: [0, 5, -5, 0]
-                }}
-                transition={{ 
-                  duration: 2, 
-                  repeat: Infinity,
-                  ease: 'easeInOut'
-                }}
-                className="relative"
-                style={{
-                  width: '80px', // ✅ АВАТАР В КРУЖОЧКЕ!
-                  height: '80px',
-                  borderRadius: '50%',
-                  padding: '4px',
-                  background: place === 1 
-                    ? 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)'
-                    : place === 2
-                    ? 'linear-gradient(135deg, #E8E8E8 0%, #C0C0C0 100%)'
-                    : place === 3
-                    ? 'linear-gradient(135deg, #CD7F32 0%, #A0632A 100%)'
-                    : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  boxShadow: `0 8px 30px ${placeData.glowColor}, inset 0 2px 4px rgba(255, 255, 255, 0.6)`,
-                  border: '3px solid rgba(255, 255, 255, 0.8)'
-                }}
-              >
+              <div style={{
+                width: '100px',
+                height: '100px',
+                margin: '0 auto 15px',
+                borderRadius: '50%',
+                background: `linear-gradient(135deg, ${placeData.borderColor}, ${placeData.borderColor}aa)`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: `4px solid rgba(${placeData.borderColor === '#FFD700' ? '255, 215, 0' : placeData.borderColor === '#C0C0C0' ? '192, 192, 192' : placeData.borderColor === '#CD7F32' ? '205, 127, 50' : '139, 92, 246'}, 0.3)`,
+                boxShadow: `0 10px 30px rgba(${placeData.borderColor === '#FFD700' ? '255, 215, 0' : placeData.borderColor === '#C0C0C0' ? '192, 192, 192' : placeData.borderColor === '#CD7F32' ? '205, 127, 50' : '139, 92, 246'}, 0.4)`,
+                overflow: 'hidden'
+              }}>
                 <img 
                   src={avatar} 
                   alt={playerName}
                   style={{
                     width: '100%',
                     height: '100%',
-                    borderRadius: '50%',
                     objectFit: 'cover'
                   }}
                 />
-              </motion.div>
+              </div>
             )}
-            <div className="text-xl font-black text-white text-center px-4 py-2 rounded-xl"
-              style={{
-                background: 'rgba(0, 0, 0, 0.4)',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                textShadow: '0 2px 8px rgba(0, 0, 0, 0.5)'
-              }}
-            >
+            <h3 style={{
+              color: '#ffffff',
+              fontSize: '24px',
+              fontWeight: 'bold',
+              textShadow: '0 2px 8px rgba(0,0,0,0.3)'
+            }}>
               {playerName}
-            </div>
-          </motion.div>
+            </h3>
+          </div>
 
           {/* Кнопки для ПОЛЬЗОВАТЕЛЯ */}
           {isCurrentUser && onContinueWatching && onExitToMenu && (
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.6 }}
-              className="flex flex-col gap-3"
-            >
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px'
+            }}>
               <motion.button
-                whileHover={{ scale: 1.05, y: -2, boxShadow: '0 16px 40px rgba(16, 185, 129, 0.5)' }}
+                whileHover={{ scale: 1.05, y: -2 }}
                 whileTap={{ scale: 0.98, y: 0 }}
                 onClick={onContinueWatching}
-                className="w-full py-3 px-5 rounded-xl font-bold text-base text-white flex items-center justify-center gap-2 transition-all duration-200"
                 style={{
+                  width: '100%',
+                  padding: '14px 20px',
+                  borderRadius: '16px',
+                  fontWeight: 'bold',
+                  fontSize: '16px',
+                  color: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px',
                   background: 'linear-gradient(145deg, #10b981 0%, #059669 100%)',
                   boxShadow: '0 8px 20px rgba(16, 185, 129, 0.35), inset 0 2px 4px rgba(255, 255, 255, 0.4), inset 0 -2px 4px rgba(0, 0, 0, 0.2)',
                   border: '2px solid rgba(255, 255, 255, 0.3)',
                   textShadow: '0 2px 6px rgba(0, 0, 0, 0.4)',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
                 }}
               >
                 <Eye size={20} strokeWidth={2.5} />
@@ -314,22 +225,32 @@ export default function WinnerModal({
               </motion.button>
 
               <motion.button
-                whileHover={{ scale: 1.05, y: -2, boxShadow: '0 16px 40px rgba(99, 102, 241, 0.5)' }}
+                whileHover={{ scale: 1.05, y: -2 }}
                 whileTap={{ scale: 0.98, y: 0 }}
                 onClick={onExitToMenu}
-                className="w-full py-3 px-5 rounded-xl font-bold text-base text-white flex items-center justify-center gap-2 transition-all duration-200"
                 style={{
+                  width: '100%',
+                  padding: '14px 20px',
+                  borderRadius: '16px',
+                  fontWeight: 'bold',
+                  fontSize: '16px',
+                  color: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px',
                   background: 'linear-gradient(145deg, #6366f1 0%, #4f46e5 100%)',
                   boxShadow: '0 8px 20px rgba(99, 102, 241, 0.35), inset 0 2px 4px rgba(255, 255, 255, 0.4), inset 0 -2px 4px rgba(0, 0, 0, 0.2)',
                   border: '2px solid rgba(255, 255, 255, 0.3)',
                   textShadow: '0 2px 6px rgba(0, 0, 0, 0.4)',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
                 }}
               >
                 <Home size={20} strokeWidth={2.5} />
                 Выйти в главное меню
               </motion.button>
-            </motion.div>
+            </div>
           )}
 
           {/* Индикатор автозакрытия для ботов */}
@@ -338,9 +259,14 @@ export default function WinnerModal({
               initial={{ scaleX: 0 }}
               animate={{ scaleX: 1 }}
               transition={{ duration: 3, ease: 'linear' }}
-              className="absolute bottom-0 left-0 right-0 h-1 rounded-b-[28px]"
               style={{
-                background: 'linear-gradient(90deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.4) 100%)',
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: '4px',
+                borderRadius: '0 0 20px 20px',
+                background: `linear-gradient(90deg, ${placeData.borderColor} 0%, ${placeData.borderColor}88 100%)`,
                 transformOrigin: 'left'
               }}
             />
