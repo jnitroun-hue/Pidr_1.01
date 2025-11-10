@@ -23,7 +23,7 @@ export function LoadingFallback() {
         animation: 'spin 1s linear infinite',
         marginBottom: '20px'
       }} />
-      <h2 style={{ marginBottom: '10px', fontSize: '24px' }}>P.I.D.R.</h2>
+      <h2 style={{ marginBottom: '10px', fontSize: '24px' }}>The Must!</h2>
       <p style={{ opacity: 0.7 }}>Загрузка приложения...</p>
       
       <style jsx>{`

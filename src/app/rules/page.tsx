@@ -151,7 +151,7 @@ export default function RulesPage() {
             color: '#94a3b8',
             fontSize: '16px'
           }}>
-            Изучите правила и станьте мастером P.I.D.R.!
+            Изучите правила и станьте мастером The Must!
           </p>
         </motion.div>
 

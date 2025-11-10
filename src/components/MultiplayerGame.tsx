@@ -161,7 +161,7 @@ export default function MultiplayerGame({
     try {
       const result = inviteToGame({ 
         roomCode,
-        roomName: `P.I.D.R. Игра`,
+        roomName: `The Must! Игра`,
         playerCount: onlineUsers.length,
         maxPlayers: 4
       });

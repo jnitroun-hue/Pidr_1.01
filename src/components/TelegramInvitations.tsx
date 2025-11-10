@@ -146,7 +146,7 @@ export default function TelegramInvitations({ onJoinRoom }: TelegramInvitationsP
   const shareInvitation = async (invitation: TelegramInvitation) => {
     try {
       if (webApp && webApp.openTelegramLink) {
-        const shareText = `🎮 Присоединяйся к игре P.I.D.R.!\n\n` +
+        const shareText = `🎮 Присоединяйся к игре The Must!\n\n` +
                          `🎯 Комната: ${invitation.roomCode}\n` +
                          `👤 Создатель: ${invitation.inviterName}\n` +
                          `👥 Игроков: ${invitation.playerCount}\n\n` +

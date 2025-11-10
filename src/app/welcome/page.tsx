@@ -143,7 +143,7 @@ export default function WelcomePage() {
             marginBottom: '10px',
             textShadow: '0 4px 12px rgba(99, 102, 241, 0.3)'
           }}>
-            P.I.D.R.
+            The Must!
           </h1>
           
           <p style={{

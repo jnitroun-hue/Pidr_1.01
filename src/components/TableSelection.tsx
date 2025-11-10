@@ -25,7 +25,7 @@ const tableTypes: TableType[] = [
   {
     id: 'casual',
     name: 'Обычный стол',
-    description: 'Классическая игра P.I.D.R. для новичков',
+    description: 'Классическая игра The Must! для новичков',
     icon: <Users size={32} />,
     gradient: 'from-green-500 to-emerald-600',
     hoverGradient: 'from-green-600 to-emerald-700',

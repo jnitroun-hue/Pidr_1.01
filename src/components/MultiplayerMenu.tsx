@@ -167,7 +167,7 @@ export default function MultiplayerMenu({ onCreateRoom, onJoinRoom, onBack }: Mu
         >
           <Users className="menu-icon" />
           <h1 className="menu-title">Мультиплеер</h1>
-          <p className="menu-subtitle">Играйте с друзьями в P.I.D.R. онлайн</p>
+          <p className="menu-subtitle">Играйте с друзьями в The Must! онлайн</p>
         </motion.div>
 
         {/* Главное меню */}
@@ -251,7 +251,7 @@ export default function MultiplayerMenu({ onCreateRoom, onJoinRoom, onBack }: Mu
                     gameMode: e.target.value 
                   }))}
                 >
-                  <option value="classic">Классический P.I.D.R.</option>
+                  <option value="classic">Классический The Must!</option>
                   <option value="fast">Быстрая игра</option>
                   <option value="tournament">Турнирный режим</option>
                 </select>

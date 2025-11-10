@@ -458,7 +458,7 @@ export const ProperMultiplayer: React.FC = () => {
         >
           ← Назад
         </button>
-        <h1 className={styles.title}>🎮 Мультиплеер P.I.D.R.</h1>
+        <h1 className={styles.title}>🎮 Мультиплеер The Must!</h1>
         <p className={styles.subtitle}>Играйте с друзьями онлайн</p>
       </div>
 

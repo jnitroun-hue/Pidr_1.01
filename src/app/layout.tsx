@@ -7,8 +7,8 @@ import { Providers } from './providers'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'P.D.R.-React Card Game',
-  description: 'Карточная игра P.D.R. - React.Это увлекательная игра для Telegram',
+  title: 'The Must! - Card Game',
+  description: 'Карточная игра The Must! - Увлекательная игра для Telegram',
 }
 
 export const viewport: Viewport = {

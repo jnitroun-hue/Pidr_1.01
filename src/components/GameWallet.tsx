@@ -554,7 +554,7 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
       // Если мы в Telegram WebApp, используем Telegram Share API
       if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
         const tg = window.Telegram.WebApp;
-        const inviteText = `🎮 Присоединяйся к игре P.I.D.R.!\n\n` +
+        const inviteText = `🎮 Присоединяйся к игре The Must!\n\n` +
                           `Получи +500 монет за регистрацию по моей ссылке!\n\n` +
                           `${inviteUrl}`;
         

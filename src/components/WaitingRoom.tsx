@@ -58,8 +58,8 @@ export default function WaitingRoom({
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'P.I.D.R. - Присоединяйся к игре!',
-          text: `Присоединяйся к моей комнате P.I.D.R.! Код: ${roomCode}`,
+          title: 'The Must! - Присоединяйся к игре!',
+          text: `Присоединяйся к моей комнате The Must! Код: ${roomCode}`,
           url: window.location.href
         });
       } catch (err) {

@@ -58,7 +58,7 @@ export default function CardLoadingScreen({
           transition={{ duration: 0.6, delay: 0.2 }}
           className="app-title"
         >
-          P.I.D.R.
+          The Must!
         </motion.h1>
 
         {/* Прогресс бар */}

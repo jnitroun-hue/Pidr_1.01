@@ -86,7 +86,7 @@ export default function LoserModal({ playerName, avatar, onClose }: LoserModalPr
             LOSER
           </h2>
 
-          {/* P.I.D.R. */}
+          {/* The Must! */}
           <h3 style={{
             color: '#8B0000',
             fontSize: '36px',
@@ -95,7 +95,7 @@ export default function LoserModal({ playerName, avatar, onClose }: LoserModalPr
             textShadow: '0 0 15px rgba(139, 0, 0, 0.8), 0 2px 8px rgba(0, 0, 0, 0.9)',
             letterSpacing: '6px'
           }}>
-            P.I.D.R.
+            The Must!
           </h3>
 
           {/* Аватар */}
