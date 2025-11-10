@@ -2460,14 +2460,105 @@ export const useGameStore = create<GameState>()(
               const position = allWinnersSorted.findIndex(w => w.id === winner.id) + 1;
               const isUser = winner.isUser || winner.id === currentUserTelegramId;
               
-              // ✅ КРИТИЧНО: НЕ ОБНОВЛЯЕМ СТАТИСТИКУ ДО КОНЦА ИГРЫ!
-              // Статистика обновится ТОЛЬКО в calculateAndShowGameResults()!
-              // Здесь мы только сохраняем финальную позицию для расчёта!
+              // ✅ ЕСЛИ ЭТО ПОЛЬЗОВАТЕЛЬ - ОБНОВЛЯЕМ СТАТИСТИКУ СРАЗУ!
               if (isUser && currentUserTelegramId) {
-                console.log(`🔍 [checkVictoryCondition] Игрок ${winner.name} финишировал на ${position}-м месте. Статистика обновится в конце игры!`);
+                // ✅ ЗАЩИТА ОТ ДУБЛИРОВАНИЯ: Проверяем что статистика ЕЩЁ НЕ ОБНОВЛЕНА!
+                const { statsUpdatedThisGame } = get();
+                if (statsUpdatedThisGame) {
+                  console.warn(`⚠️ [checkVictoryCondition] Статистика УЖЕ обновлена за эту игру! Пропускаем для ${winner.name}`);
+                  return; // ✅ КРИТИЧНО: Выходим чтобы не дублировать!
+                }
+                
+                // ✅ ДЕТЕРМИНИРОВАННЫЙ РАНДОМ для 4-8 мест (используем ID как seed)
+                const seededRandom = (playerId: string, min: number, max: number): number => {
+                  let hash = 0;
+                  for (let i = 0; i < playerId.length; i++) {
+                    const char = playerId.charCodeAt(i);
+                    hash = ((hash << 5) - hash) + char;
+                    hash = hash & hash;
+                  }
+                  const normalized = Math.abs(hash % (max - min + 1));
+                  return min + normalized;
+                };
+                
+                // Определяем награды
+                const isTopThree = position >= 1 && position <= 3;
+                let coinsEarned = 0;
+                let ratingChange = 0;
+                
+                if (position === 1) {
+                  coinsEarned = 350;
+                  ratingChange = 50; // 🥇 Золото
+                } else if (position === 2) {
+                  coinsEarned = 250;
+                  ratingChange = 25; // 🥈 Серебро
+                } else if (position === 3) {
+                  coinsEarned = 150;
+                  ratingChange = 10; // 🥉 Бронза
+                } else if (position >= 4 && position <= 8) {
+                  coinsEarned = seededRandom(winner.id, 50, 100); // ✅ Рандом 50-100
+                  ratingChange = 0; // Нейтрально
+                }
+                // Для 9-го места (последнего) монеты и рейтинг начисляются в конце игры
+                
+                // ✅ ГЕНЕРИРУЕМ УНИКАЛЬНЫЙ TRACE ID
+                const traceId = `WINNER_${position}_${Date.now()}`;
+                
+                console.log(`🔥🔥🔥 [${traceId}] [checkVictoryCondition] СРАЗУ обновляем статистику для ${winner.name}:`, {
+                  winnerId: winner.id,
+                  winnerName: winner.name,
+                  position,
+                  finishTime: winner.finishTime,
+                  isTopThree,
+                  coinsEarned,
+                  telegramId: currentUserTelegramId
+                });
+                
+                // ✅ УСТАНАВЛИВАЕМ ФЛАГ ЧТО СТАТИСТИКА ОБНОВЛЕНА!
+                set({ statsUpdatedThisGame: true });
+                console.log(`🚩 [${traceId}] ФЛАГ statsUpdatedThisGame УСТАНОВЛЕН В TRUE!`);
+                
+                // ✅ СРАЗУ ОТПРАВЛЯЕМ ЗАПРОС НА ОБНОВЛЕНИЕ!
+                console.log(`📤 [${traceId}] ОТПРАВЛЯЕМ FETCH для победителя места ${position}`);
+                fetch('/api/user/add-coins', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'x-telegram-id': currentUserTelegramId,
+                    'x-username': telegramUser?.username || telegramUser?.first_name || ''
+                  },
+                  body: JSON.stringify({
+                    amount: coinsEarned,
+                    source: `game_finish_place_${position}`,
+                    updateStats: {
+                      gamesPlayed: true,  // ✅ Всегда +1
+                      wins: isTopThree,   // ✅ +1 если ТОП-3
+                      losses: false       // ✅ Не последнее место
+                    },
+                    traceId: traceId,
+                    debug: {
+                      position,
+                      isTopThree,
+                      playerName: winner.name,
+                      finishTime: winner.finishTime
+                    }
+                  })
+                }).then(res => res.json())
+                  .then(data => {
+                    if (data.success) {
+                      console.log(`✅✅✅ [${traceId}] СТАТИСТИКА ОБНОВЛЕНА! Место ${position}, Победа: ${isTopThree}, Монеты: +${coinsEarned}`);
+                      
+                      // ✅ ОБНОВЛЯЕМ РЕЙТИНГ ЕСЛИ ЭТО РЕЙТИНГОВАЯ ИГРА
+                      if (get().isRankedGame && ratingChange !== 0) {
+                        console.log(`🏆 [${traceId}] РЕЙТИНГОВАЯ ИГРА! Обновляем рейтинг: ${ratingChange > 0 ? '+' : ''}${ratingChange}`);
+                        get().updatePlayerRewards(0, 0, ratingChange);
+                      }
+                    } else {
+                      console.error(`❌❌❌ [${traceId}] Ошибка обновления статистики:`, data.error);
+                    }
+                  })
+                  .catch(err => console.error(`❌❌❌ [${traceId}] Ошибка fetch:`, err));
               }
-              
-              // ✅ МЁРТВЫЙ КОД УДАЛЁН! Статистика теперь обновляется только в calculateAndShowGameResults()!
             });
             
             // ✅ УЛУЧШЕННОЕ ОБЪЯВЛЕНИЕ ПОБЕДИТЕЛЕЙ С АНИМАЦИЕЙ (НАЧАЛО НОВОГО БЛОКА)
