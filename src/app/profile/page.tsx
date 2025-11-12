@@ -899,97 +899,186 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="main-menu-container">
-      <div className="main-menu-inner">
-        {/* Header */}
-        <div className="menu-header">
-          <button onClick={() => window.history.back()} className="px-3 py-1 rounded-lg border border-red-400 text-red-200 font-semibold text-base hover:bg-red-400/10 transition-all">
-            <ArrowLeft className="inline w-4 h-4 mr-1" />
-            {t.profile.back}
-          </button>
-          <span className="menu-title">{t.profile.title}</span>
-          <div className="w-6"></div>
-        </div>
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)',
+      padding: '20px',
+      paddingTop: '80px',
+      paddingBottom: '40px'
+    }}>
+      {/* Кнопка назад */}
+      <motion.button
+        initial={{ x: -20, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={() => window.history.back()}
+        style={{
+          position: 'fixed',
+          top: '20px',
+          left: '20px',
+          background: 'rgba(239, 68, 68, 0.2)',
+          border: '2px solid rgba(239, 68, 68, 0.3)',
+          borderRadius: '12px',
+          padding: '12px',
+          color: '#ef4444',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          fontSize: '16px',
+          fontWeight: '600',
+          zIndex: 100,
+          backdropFilter: 'blur(10px)'
+        }}
+      >
+        <ArrowLeft size={20} />
+        {t.profile.back}
+      </motion.button>
 
-        {/* Profile Card */}
+      <div style={{
+        maxWidth: '800px',
+        margin: '0 auto'
+      }}>
+        {/* Заголовок */}
         <motion.div 
-          className="profile-card"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <div className="profile-avatar">
-            {avatarUrl.startsWith('data:') || avatarUrl.startsWith('http') ? (
-              <img src={avatarUrl} alt="Avatar" className="profile-avatar-image" />
-            ) : (
-              <span className="profile-avatar-emoji">{avatarUrl}</span>
-            )}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
-            <h2 className="profile-name" style={{ margin: 0 }}>{user?.username || 'Игрок'}</h2>
-            <button
-              onClick={() => {
-                const newUsername = prompt('Введите новое имя (3-20 символов):', user?.username || '');
-                if (newUsername && newUsername.length >= 3 && newUsername.length <= 20) {
-                  handleUsernameChange(newUsername);
-                } else if (newUsername) {
-                  alert('❌ Имя должно быть от 3 до 20 символов');
-                }
-              }}
-              style={{
-                background: 'rgba(59, 130, 246, 0.2)',
-                border: '1px solid rgba(59, 130, 246, 0.4)',
-                borderRadius: '8px',
-                padding: '6px 8px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'all 0.3s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(59, 130, 246, 0.4)';
-                e.currentTarget.style.transform = 'scale(1.05)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(59, 130, 246, 0.2)';
-                e.currentTarget.style.transform = 'scale(1)';
-              }}
-              title="Редактировать имя"
-            >
-              <span style={{ fontSize: '16px' }}>✏️</span>
-            </button>
-          </div>
-          <p className="profile-status">🟢 {t.profile.online}</p>
-          
-          {/* ИГРОВЫЕ МОНЕТЫ НАД КНОПКОЙ ДРУЗЬЯ */}
-          <div style={{
-            background: 'linear-gradient(135deg, #fbbf24, #f59e0b)',
-            padding: '8px 16px',
-            borderRadius: '12px',
-            margin: '12px 0',
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          style={{
             textAlign: 'center',
-            fontWeight: '600',
-            color: '#1f2937'
+            marginBottom: '30px'
+          }}
+        >
+          <h1 style={{
+            fontSize: '42px',
+            fontWeight: '900',
+            background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #ea580c 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            marginBottom: '10px'
           }}>
-            💰 {(user?.coins || 0).toLocaleString()} {t.profile.coins}
-          </div>
-          
-          {/* Avatar and Friends Buttons */}
-          <div className="profile-buttons">
-            {/* Friends Button */}
-            <motion.button 
-              className="friends-button"
-              onClick={() => window.location.href = '/friends'}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Users className="friends-icon" />
-              <span>ДРУЗЬЯ</span>
-            </motion.button>
+            ПРОФИЛЬ
+          </h1>
+        </motion.div>
 
-            {/* Change Avatar Button */}
-            <motion.div className="avatar-change-container">
+        {/* Компактный блок: Аватар + Друзья слева, Бонусы + Колода справа */}
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.1 }}
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '15px',
+            marginBottom: '20px'
+          }}
+        >
+          {/* ЛЕВАЯ КОЛОНКА: Аватар + Ник + Монеты + Кнопки */}
+          <div style={{
+            background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
+            border: '2px solid rgba(99, 102, 241, 0.3)',
+            borderRadius: '16px',
+            padding: '15px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '10px'
+          }}>
+            {/* Аватар (меньше) */}
+            <div style={{
+              width: '80px',
+              height: '80px',
+              borderRadius: '50%',
+              border: '3px solid rgba(99, 102, 241, 0.5)',
+              overflow: 'hidden',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.2))'
+            }}>
+              {avatarUrl.startsWith('data:') || avatarUrl.startsWith('http') ? (
+                <img src={avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <span style={{ fontSize: '40px' }}>{avatarUrl}</span>
+              )}
+            </div>
+
+            {/* Ник */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <h3 style={{
+                color: '#f1f5f9',
+                fontSize: '16px',
+                fontWeight: '700',
+                margin: 0
+              }}>
+                {user?.username || 'Игрок'}
+              </h3>
+              <button
+                onClick={() => {
+                  const newUsername = prompt('Введите новое имя (3-20 символов):', user?.username || '');
+                  if (newUsername && newUsername.length >= 3 && newUsername.length <= 20) {
+                    handleUsernameChange(newUsername);
+                  } else if (newUsername) {
+                    alert('❌ Имя должно быть от 3 до 20 символов');
+                  }
+                }}
+                style={{
+                  background: 'rgba(59, 130, 246, 0.2)',
+                  border: '1px solid rgba(59, 130, 246, 0.4)',
+                  borderRadius: '6px',
+                  padding: '4px 6px',
+                  cursor: 'pointer',
+                  fontSize: '12px'
+                }}
+              >
+                ✏️
+              </button>
+            </div>
+
+            {/* Монеты */}
+            <div style={{
+              background: 'linear-gradient(135deg, #fbbf24, #f59e0b)',
+              padding: '6px 12px',
+              borderRadius: '8px',
+              fontWeight: '600',
+              color: '#1f2937',
+              fontSize: '14px'
+            }}>
+              💰 {(user?.coins || 0).toLocaleString()}
+            </div>
+
+            {/* Кнопки: Друзья и Аватар */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '8px',
+              width: '100%'
+            }}>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => window.location.href = '/friends'}
+                style={{
+                  background: 'rgba(59, 130, 246, 0.2)',
+                  border: '2px solid rgba(59, 130, 246, 0.3)',
+                  borderRadius: '10px',
+                  padding: '8px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '4px',
+                  color: '#60a5fa',
+                  fontWeight: '600',
+                  fontSize: '11px'
+                }}
+              >
+                <Users size={20} />
+                ДРУЗЬЯ
+              </motion.button>
+
               <input
                 type="file"
                 accept="image/*"
@@ -999,39 +1088,243 @@ export default function ProfilePage() {
               />
               <motion.label
                 htmlFor="avatar-upload"
-                className="avatar-change-button"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
+                style={{
+                  background: 'rgba(34, 197, 94, 0.2)',
+                  border: '2px solid rgba(34, 197, 94, 0.3)',
+                  borderRadius: '10px',
+                  padding: '8px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '4px',
+                  color: '#4ade80',
+                  fontWeight: '600',
+                  fontSize: '11px'
+                }}
               >
-                <Camera className="avatar-change-icon" />
-                <span>{t.profile.avatar}</span>
+                <Camera size={20} />
+                АВАТАР
               </motion.label>
-            </motion.div>
+            </div>
+          </div>
+
+          {/* ПРАВАЯ КОЛОНКА: Бонусы и Моя колода */}
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '15px'
+          }}>
+            {/* Бонусы */}
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setShowModal('bonuses')}
+              style={{
+                flex: 1,
+                background: 'linear-gradient(145deg, rgba(251, 146, 60, 0.8) 0%, rgba(249, 115, 22, 0.6) 100%)',
+                border: '2px solid rgba(251, 146, 60, 0.3)',
+                borderRadius: '16px',
+                padding: '15px',
+                cursor: 'pointer',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+              }}
+            >
+              <Gift size={32} style={{ color: '#fef3c7' }} />
+              <span style={{
+                color: '#fef3c7',
+                fontSize: '16px',
+                fontWeight: '700'
+              }}>
+                🎁 БОНУСЫ
+              </span>
+            </motion.button>
+
+            {/* Моя колода */}
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setShowModal('deck')}
+              style={{
+                flex: 1,
+                background: 'linear-gradient(145deg, rgba(139, 92, 246, 0.8) 0%, rgba(124, 58, 237, 0.6) 100%)',
+                border: '2px solid rgba(139, 92, 246, 0.3)',
+                borderRadius: '16px',
+                padding: '15px',
+                cursor: 'pointer',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+              }}
+            >
+              <Sparkles size={32} style={{ color: '#e9d5ff' }} />
+              <span style={{
+                color: '#e9d5ff',
+                fontSize: '16px',
+                fontWeight: '700'
+              }}>
+                ✨ МОЯ КОЛОДА
+              </span>
+            </motion.button>
           </div>
         </motion.div>
 
-        {/* Customization Buttons */}
-        <motion.div 
-          className="customization-section"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          style={{
-            width: '100%',
-            margin: '20px 0',
-            padding: '0 20px'
-          }}
-        >
-          <h3 style={{
-            color: '#b0b0b0',
-            fontSize: '1.1rem',
-            fontWeight: '700',
-            margin: '0 0 15px 0',
-            letterSpacing: '1px',
-            textAlign: 'center'
-          }}>
-            КАСТОМИЗАЦИЯ
-          </h3>
+        {/* 4 основные кнопки вертикально */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '15px'
+        }}>
+          {/* NFT КОЛЛЕКЦИЯ */}
+          <motion.button
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setShowModal('nft')}
+            style={{
+              width: '100%',
+              background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
+              border: '2px solid rgba(99, 102, 241, 0.3)',
+              borderRadius: '16px',
+              padding: '20px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '15px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+            }}
+          >
+            <div style={{ fontSize: '32px' }}>🎴</div>
+            <h3 style={{
+              color: '#f1f5f9',
+              fontSize: '20px',
+              fontWeight: '700',
+              margin: 0,
+              flex: 1,
+              textAlign: 'left'
+            }}>
+              NFT КОЛЛЕКЦИЯ
+            </h3>
+            <Palette size={32} style={{ color: '#6366f1' }} />
+          </motion.button>
+
+          {/* КОШЕЛЕК */}
+          <motion.button
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setActiveSection('wallet')}
+            style={{
+              width: '100%',
+              background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
+              border: '2px solid rgba(99, 102, 241, 0.3)',
+              borderRadius: '16px',
+              padding: '20px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '15px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+            }}
+          >
+            <div style={{ fontSize: '32px' }}>💳</div>
+            <h3 style={{
+              color: '#f1f5f9',
+              fontSize: '20px',
+              fontWeight: '700',
+              margin: 0,
+              flex: 1,
+              textAlign: 'left'
+            }}>
+              КОШЕЛЕК
+            </h3>
+            <Wallet size={32} style={{ color: '#6366f1' }} />
+          </motion.button>
+
+          {/* СТАТИСТИКА */}
+          <motion.button
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setActiveSection('stats')}
+            style={{
+              width: '100%',
+              background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
+              border: '2px solid rgba(99, 102, 241, 0.3)',
+              borderRadius: '16px',
+              padding: '20px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '15px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+            }}
+          >
+            <div style={{ fontSize: '32px' }}>📊</div>
+            <h3 style={{
+              color: '#f1f5f9',
+              fontSize: '20px',
+              fontWeight: '700',
+              margin: 0,
+              flex: 1,
+              textAlign: 'left'
+            }}>
+              СТАТИСТИКА
+            </h3>
+            <Target size={32} style={{ color: '#6366f1' }} />
+          </motion.button>
+
+          {/* РЕЙТИНГ */}
+          <motion.button
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setActiveSection('rating')}
+            style={{
+              width: '100%',
+              background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
+              border: '2px solid rgba(99, 102, 241, 0.3)',
+              borderRadius: '16px',
+              padding: '20px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '15px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+            }}
+          >
+            <div style={{ fontSize: '32px' }}>🏆</div>
+            <h3 style={{
+              color: '#f1f5f9',
+              fontSize: '20px',
+              fontWeight: '700',
+              margin: 0,
+              flex: 1,
+              textAlign: 'left'
+            }}>
+              РЕЙТИНГ
+            </h3>
+            <Trophy size={32} style={{ color: '#6366f1' }} />
+          </motion.button>
+        </div>
           
           <div style={{
             display: 'grid',
