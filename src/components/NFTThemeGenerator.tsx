@@ -459,6 +459,17 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
                   onGenerateDeck={() => handleGenerateDeck('starwars')}
                   disabled={generating}
                 />
+
+                {/* ЛЕГЕНДАРНАЯ 👑 */}
+                <ThemeCard
+                  theme="legendary"
+                  themeConfig={THEMES.legendary}
+                  generating={generating && selectedTheme === 'legendary'}
+                  onGenerateSingle={() => handleGenerateSingle('legendary')}
+                  onGenerateDeck={() => handleGenerateDeck('legendary')}
+                  disabled={generating}
+                  isLegendary={true}
+                />
               </div>
 
               {/* БАЛАНС */}
@@ -490,68 +501,230 @@ interface ThemeCardProps {
   onGenerateSingle: () => void;
   onGenerateDeck: () => void;
   disabled: boolean;
+  isLegendary?: boolean;
 }
 
-function ThemeCard({ theme, themeConfig, generating, onGenerateSingle, onGenerateDeck, disabled }: ThemeCardProps) {
+function ThemeCard({ theme, themeConfig, generating, onGenerateSingle, onGenerateDeck, disabled, isLegendary }: ThemeCardProps) {
+  const [showCryptoMenu, setShowCryptoMenu] = useState(false);
+
   return (
     <div style={{
+      position: 'relative',
       background: 'rgba(30, 41, 59, 0.6)',
       borderRadius: '16px',
       border: `2px solid ${themeConfig.color}40`,
-      padding: '20px',
+      padding: '16px',
       display: 'flex',
       flexDirection: 'column',
-      gap: '12px'
+      gap: '8px',
+      overflow: 'hidden'
     }}>
+      {/* 🔥 АНИМАЦИЯ ОГНЯ ДЛЯ ЛЕГЕНДАРНОЙ */}
+      {isLegendary && (
+        <>
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '4px',
+            background: 'linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #ff7f00, #ff0000)',
+            backgroundSize: '200% 100%',
+            animation: 'fireMove 2s linear infinite',
+            filter: 'blur(2px)',
+            zIndex: 1
+          }} />
+          <div style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: '4px',
+            background: 'linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #ff7f00, #ff0000)',
+            backgroundSize: '200% 100%',
+            animation: 'fireMove 2s linear infinite',
+            filter: 'blur(2px)',
+            zIndex: 1
+          }} />
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            bottom: 0,
+            width: '4px',
+            background: 'linear-gradient(180deg, #ff0000, #ff7f00, #ffff00, #ff7f00, #ff0000)',
+            backgroundSize: '100% 200%',
+            animation: 'fireMove 2s linear infinite',
+            filter: 'blur(2px)',
+            zIndex: 1
+          }} />
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            bottom: 0,
+            width: '4px',
+            background: 'linear-gradient(180deg, #ff0000, #ff7f00, #ffff00, #ff7f00, #ff0000)',
+            backgroundSize: '100% 200%',
+            animation: 'fireMove 2s linear infinite',
+            filter: 'blur(2px)',
+            zIndex: 1
+          }} />
+          <style>{`
+            @keyframes fireMove {
+              0% { background-position: 0% 0%; }
+              100% { background-position: 200% 0%; }
+            }
+          `}</style>
+        </>
+      )}
+
       {/* ЗАГОЛОВОК ТЕМЫ */}
-      <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-        <div style={{ fontSize: '48px', marginBottom: '8px' }}>{themeConfig.icon}</div>
-        <h3 style={{ fontSize: '20px', fontWeight: 'bold', color: themeConfig.color }}>
+      <div style={{ textAlign: 'center', marginBottom: '4px', position: 'relative', zIndex: 2 }}>
+        <div style={{ fontSize: '36px', marginBottom: '4px' }}>{themeConfig.icon}</div>
+        <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: themeConfig.color }}>
           {themeConfig.name}
         </h3>
       </div>
 
-      {/* КНОПКА: ОДНА КАРТА */}
+      {/* КНОПКА: ОДНА КАРТА - УМЕНЬШЕНА В 2 РАЗА */}
       <motion.button
         whileHover={{ scale: disabled ? 1 : 1.03 }}
         whileTap={{ scale: disabled ? 1 : 0.97 }}
         onClick={onGenerateSingle}
         disabled={disabled}
         style={{
-          padding: '12px',
-          borderRadius: '10px',
+          padding: '6px',
+          borderRadius: '8px',
           border: 'none',
           background: generating ? '#64748b' : themeConfig.gradient,
           color: '#ffffff',
           fontWeight: 'bold',
-          fontSize: '14px',
+          fontSize: '11px',
           cursor: disabled ? 'not-allowed' : 'pointer',
-          opacity: disabled ? 0.6 : 1
+          opacity: disabled ? 0.6 : 1,
+          position: 'relative',
+          zIndex: 2
         }}
       >
-        {generating ? '⏳ Генерация...' : `🎴 Карта (${(themeConfig.singleCost / 1000).toFixed(0)}K)`}
+        {generating ? '⏳' : `🎴 Карта (${(themeConfig.singleCost / 1000).toFixed(0)}K)`}
       </motion.button>
 
-      {/* КНОПКА: КОЛОДА */}
+      {/* КНОПКА: КОЛОДА - УМЕНЬШЕНА В 2 РАЗА */}
       <motion.button
         whileHover={{ scale: disabled ? 1 : 1.03 }}
         whileTap={{ scale: disabled ? 1 : 0.97 }}
         onClick={onGenerateDeck}
         disabled={disabled}
         style={{
-          padding: '12px',
-          borderRadius: '10px',
+          padding: '6px',
+          borderRadius: '8px',
           border: 'none',
           background: generating ? '#64748b' : themeConfig.gradient,
           color: '#ffffff',
           fontWeight: 'bold',
-          fontSize: '14px',
+          fontSize: '11px',
           cursor: disabled ? 'not-allowed' : 'pointer',
-          opacity: disabled ? 0.6 : 1
+          opacity: disabled ? 0.6 : 1,
+          position: 'relative',
+          zIndex: 2
         }}
       >
-        {generating ? '⏳ Генерация...' : `🎴 Колода (${(themeConfig.deckCost / 1000).toFixed(0)}K)`}
+        {generating ? '⏳' : `🎴 Колода (${(themeConfig.deckCost / 1000).toFixed(0)}K)`}
       </motion.button>
+
+      {/* КНОПКА: ЗА КРИПТУ - НОВАЯ! */}
+      <div style={{ position: 'relative', zIndex: 2 }}>
+        <motion.button
+          whileHover={{ scale: disabled ? 1 : 1.03 }}
+          whileTap={{ scale: disabled ? 1 : 0.97 }}
+          onClick={() => setShowCryptoMenu(!showCryptoMenu)}
+          disabled={disabled}
+          style={{
+            width: '100%',
+            padding: '6px',
+            borderRadius: '8px',
+            border: 'none',
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            color: '#ffffff',
+            fontWeight: 'bold',
+            fontSize: '11px',
+            cursor: disabled ? 'not-allowed' : 'pointer',
+            opacity: disabled ? 0.6 : 1
+          }}
+        >
+          💎 ЗА КРИПТУ
+        </motion.button>
+
+        {/* ПОДМЕНЮ КРИПТОВАЛЮТ */}
+        {showCryptoMenu && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            style={{
+              position: 'absolute',
+              top: '100%',
+              left: 0,
+              right: 0,
+              marginTop: '4px',
+              background: 'rgba(15, 23, 42, 0.95)',
+              borderRadius: '8px',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
+              padding: '6px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '4px',
+              zIndex: 10
+            }}
+          >
+            <button
+              style={{
+                padding: '4px',
+                borderRadius: '6px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #0088cc 0%, #005580 100%)',
+                color: '#ffffff',
+                fontSize: '10px',
+                fontWeight: 'bold',
+                cursor: 'pointer'
+              }}
+              onClick={() => alert(`TON: ${themeConfig.cryptoCost?.ton || 0}`)}
+            >
+              💎 TON ({themeConfig.cryptoCost?.ton || 0})
+            </button>
+            <button
+              style={{
+                padding: '4px',
+                borderRadius: '6px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #9945ff 0%, #6a26cd 100%)',
+                color: '#ffffff',
+                fontSize: '10px',
+                fontWeight: 'bold',
+                cursor: 'pointer'
+              }}
+              onClick={() => alert(`SOL: ${themeConfig.cryptoCost?.sol || 0}`)}
+            >
+              ☀️ SOL ({themeConfig.cryptoCost?.sol || 0})
+            </button>
+            <button
+              style={{
+                padding: '4px',
+                borderRadius: '6px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #627eea 0%, #4a5fd8 100%)',
+                color: '#ffffff',
+                fontSize: '10px',
+                fontWeight: 'bold',
+                cursor: 'pointer'
+              }}
+              onClick={() => alert(`ETH: ${themeConfig.cryptoCost?.eth || 0}`)}
+            >
+              💠 ETH ({themeConfig.cryptoCost?.eth || 0})
+            </button>
+          </motion.div>
+        )}
+      </div>
     </div>
   );
 }
