@@ -1670,7 +1670,7 @@
   display: flex;
   align-items: center;
   justify-content: flex-start; /* Выравнивание по левому краю */
-  z-index: 10;
+  z-index: 15; /* ✅ ВЫШЕ АВАТАРОВ (аватары = 5) */
 }
 
 /* Карта игрока - УМЕНЬШЕНО В 3 РАЗА */

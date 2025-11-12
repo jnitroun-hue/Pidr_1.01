@@ -1590,8 +1590,8 @@ function GamePageContentComponent({
                             border: `3px solid ${currentPlayerId === player.id ? '#22c55e' : 'rgba(255, 255, 255, 0.2)'}`,
                             transition: 'all 0.3s ease',
                             objectFit: 'cover',
-                            position: 'relative', // ✅ НА ПЕРЕДНИЙ ПЛАН
-                            zIndex: 10
+                            position: 'relative',
+                            zIndex: 5 // ✅ НИЖЕ КАРТ (карты = 15)
                           }}
                           />
                       {player.isBot && (
