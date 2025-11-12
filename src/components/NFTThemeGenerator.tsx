@@ -10,7 +10,7 @@ interface NFTThemeGeneratorProps {
 }
 
 // Типы тем
-type ThemeType = 'pokemon' | 'halloween' | 'starwars' | 'deck';
+type ThemeType = 'pokemon' | 'halloween' | 'starwars' | 'legendary' | 'deck';
 
 // Конфигурация тем
 const THEMES = {
@@ -21,6 +21,7 @@ const THEMES = {
     gradient: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
     singleCost: 10000,
     deckCost: 400000,
+    cryptoCost: { ton: 0.5, sol: 5, eth: 0.0002 },
     total: 52,
     folder: 'pokemon',
     prefix: '' // Файлы: 1.png, 2.png, ...
@@ -30,22 +31,43 @@ const THEMES = {
     icon: '🎃',
     color: '#f97316',
     gradient: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
-    singleCost: 5000, // ✅ Дешевле т.к. меньше картинок
+    singleCost: 5000,
     deckCost: 200000,
-    total: 10, // ✅ Всего 10 картинок
+    cryptoCost: { ton: 0.3, sol: 3, eth: 0.0001 },
+    total: 10,
     folder: 'halloween',
-    prefix: 'hel_' // ✅ Файлы: hel_1.png, hel_2.png, ...
+    prefix: 'hel_'
   },
   starwars: {
     name: 'Звездные войны',
     icon: '⚔️',
     color: '#3b82f6',
     gradient: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-    singleCost: 5000, // ✅ Дешевле т.к. меньше картинок
+    singleCost: 5000,
     deckCost: 200000,
-    total: 7, // ✅ Всего 7 картинок
+    cryptoCost: { ton: 0.3, sol: 3, eth: 0.0001 },
+    total: 7,
     folder: 'starwars',
-    prefix: 'star_' // ✅ Файлы: star_1.png, star_2.png, ...
+    prefix: 'star_'
+  },
+  legendary: {
+    name: 'Легендарная',
+    icon: '👑',
+    color: '#a855f7',
+    gradient: 'linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)',
+    singleCost: 50000, // ✅ Очень дорого!
+    deckCost: 1000000, // ✅ Миллион!
+    cryptoCost: { ton: 2, sol: 20, eth: 0.001 },
+    total: 5, // ✅ Всего 5 легендарных картинок
+    folder: 'legendary',
+    prefix: 'leg_', // ✅ Файлы: leg_1.png, leg_2.png, ...
+    rarityWeights: { // ✅ Вероятности выпадения
+      leg_1: 10, // 10%
+      leg_2: 15, // 15%
+      leg_3: 25, // 25%
+      leg_4: 30, // 30%
+      leg_5: 20  // 20%
+    }
   }
 };
 
