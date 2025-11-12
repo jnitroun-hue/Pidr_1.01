@@ -300,14 +300,25 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
         const result = await response.json();
         if (result.success && result.transactions) {
           // Преобразуем транзакции в нужный формат
-          const formattedTransactions = result.transactions.map((tx: any) => ({
-            id: tx.id,
-            amount: tx.amount,
-            type: tx.type,
-            description: tx.description,
-            created_at: tx.createdAt,
-            balance_after: tx.amount // Приблизительно
-          }));
+          const formattedTransactions = result.transactions
+            .filter((tx: any) => 
+              // ✅ ТОЛЬКО ПОКУПКИ И ГЕНЕРАЦИИ!
+              tx.type === 'nft_purchase' || 
+              tx.type === 'nft_generation' || 
+              tx.type === 'shop_purchase' ||
+              tx.type === 'item_purchase' ||
+              tx.description?.includes('Покупка') ||
+              tx.description?.includes('Генерация')
+            )
+            .slice(0, 10) // ✅ ТОЛЬКО 10 ПОСЛЕДНИХ!
+            .map((tx: any) => ({
+              id: tx.id,
+              amount: tx.amount,
+              type: tx.type,
+              description: tx.description,
+              created_at: tx.createdAt,
+              balance_after: tx.amount // Приблизительно
+            }));
 
           setTransactions(formattedTransactions);
           console.log('✅ Транзакции загружены из нового API:', formattedTransactions.length);
