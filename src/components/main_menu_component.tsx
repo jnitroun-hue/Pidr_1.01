@@ -129,7 +129,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
       padding: '20px',
       paddingTop: '80px'
     }}>
-      {/* Кнопка назад и язык */}
+      {/* Выбор языка */}
       <motion.div
         initial={{ x: -20, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
@@ -137,33 +137,9 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
           position: 'fixed',
           top: '20px',
           left: '20px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
           zIndex: 100
         }}
       >
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => window.history.back()}
-          style={{
-            background: 'rgba(239, 68, 68, 0.2)',
-            border: '2px solid rgba(239, 68, 68, 0.3)',
-            borderRadius: '12px',
-            padding: '12px',
-            color: '#ef4444',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            fontSize: '16px',
-            fontWeight: '600',
-            backdropFilter: 'blur(10px)'
-          }}
-        >
-          ← {t.common.back}
-        </motion.button>
         <LanguageSwitcher 
           currentLanguage={language}
           onLanguageChange={changeLanguage}
