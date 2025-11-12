@@ -1,571 +1,518 @@
 'use client'
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { ArrowLeft, UserPlus, Search, Check, X, User, Users, Gamepad2, Share, Copy } from 'lucide-react';
-import { useTelegramShare } from '../../hooks/useTelegramShare';
+import { ArrowLeft, UserPlus, Search, User, Users, Share2, Trophy } from 'lucide-react';
 
 interface Friend {
-  id: string;
-  name: string;
-  status: string;
-  avatar: string;
-  lastSeen?: string;
-  isOnline?: boolean;
-  currentRoom?: string;
-}
-
-interface FriendRequest {
-  id: string;
-  userId: string;
-  name: string;
-  message: string;
-  avatar: string;
-  date: string;
-}
-
-interface SuggestedFriend {
-  id: string;
-  name: string;
-  avatar: string;
-  mutualFriends: number;
+  telegram_id: number;
+  username: string;
+  first_name: string;
+  avatar_url?: string;
+  rating: number;
+  games_played: number;
+  wins: number;
+  status: 'online' | 'offline';
+  last_seen?: string;
 }
 
 export default function FriendsPage() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
-  const [onlineFriends, setOnlineFriends] = useState<Friend[]>([]);
-  const [allFriends, setAllFriends] = useState<Friend[]>([]);
-  const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
-  const [suggestedFriends, setSuggestedFriends] = useState<SuggestedFriend[]>([]);
-  const [addingFriend, setAddingFriend] = useState(false);
-  const [newFriendName, setNewFriendName] = useState('');
-  const [userReferralCode, setUserReferralCode] = useState<string>('');
-  
-  const { inviteFriend, shareReferral } = useTelegramShare();
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [searchResults, setSearchResults] = useState<Friend[]>([]);
+  const [searching, setSearching] = useState(false);
 
-  // Загрузка данных друзей
+  // Загрузка друзей из БД
   useEffect(() => {
-    loadFriendsData();
+    loadFriends();
   }, []);
 
-  const loadFriendsData = async () => {
-    setLoading(true);
+  const loadFriends = async () => {
     try {
-      const token = localStorage.getItem('auth_token');
-      if (!token) return;
-
-      // Загружаем онлайн друзей
-      const onlineResponse = await fetch('/api/friends?type=online', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (onlineResponse.ok) {
-        const { friends } = await onlineResponse.json();
-        setOnlineFriends(friends || []);
+      setLoading(true);
+      const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+      
+      if (!telegramUser) {
+        console.error('❌ Telegram user не найден');
+        return;
       }
 
-      // Загружаем всех друзей
-      const allResponse = await fetch('/api/friends?type=all', {
-        headers: { 'Authorization': `Bearer ${token}` }
+      const response = await fetch('/api/friends/list', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-telegram-id': telegramUser.id.toString(),
+          'x-username': telegramUser.username || telegramUser.first_name
+        },
+        credentials: 'include'
       });
-      if (allResponse.ok) {
-        const { friends } = await allResponse.json();
-        setAllFriends(friends || []);
-      }
 
-      // Загружаем запросы в друзья
-      const requestsResponse = await fetch('/api/friends?type=requests', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (requestsResponse.ok) {
-        const { requests } = await requestsResponse.json();
-        setFriendRequests(requests || []);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          setFriends(result.friends || []);
+          console.log('✅ Друзья загружены:', result.friends?.length);
+        }
       }
-
-      // Загружаем предложения
-      const suggestedResponse = await fetch('/api/friends?type=suggested', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (suggestedResponse.ok) {
-        const { suggested } = await suggestedResponse.json();
-        setSuggestedFriends(suggested || []);
-      }
-
-      // Загружаем реферальный код пользователя
-      const referralResponse = await fetch('/api/referral?action=get_code', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (referralResponse.ok) {
-        const { referralCode } = await referralResponse.json();
-        setUserReferralCode(referralCode || '');
-      }
-
     } catch (error) {
-      console.error('Error loading friends:', error);
+      console.error('❌ Ошибка загрузки друзей:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Добавить друга
-  const handleAddFriend = async (username: string) => {
-    try {
-      const token = localStorage.getItem('auth_token');
-      if (!token) return;
+  // Поиск пользователей
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    
+    if (query.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
 
-      const response = await fetch('/api/friends', {
+    try {
+      setSearching(true);
+      const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+      
+      const response = await fetch(`/api/friends/search?query=${encodeURIComponent(query)}`, {
+        headers: {
+          'x-telegram-id': telegramUser?.id?.toString() || '',
+          'x-username': telegramUser?.username || ''
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setSearchResults(result.users || []);
+      }
+    } catch (error) {
+      console.error('❌ Ошибка поиска:', error);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  // Добавить в друзья
+  const handleAddFriend = async (friendId: number) => {
+    try {
+      const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+      
+      const response = await fetch('/api/friends/add', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'x-telegram-id': telegramUser?.id?.toString() || '',
+          'x-username': telegramUser?.username || ''
         },
-        body: JSON.stringify({
-          action: 'add',
-          username: username.trim()
-        })
+        body: JSON.stringify({ friend_id: friendId })
       });
 
-      const result = await response.json();
-      if (result.success) {
-        alert(result.message);
-        setNewFriendName('');
-        setAddingFriend(false);
-      } else {
-        alert(result.message);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          alert('✅ Друг добавлен!');
+          loadFriends();
+        }
       }
     } catch (error) {
-      console.error('Error adding friend:', error);
-      alert('Ошибка при добавлении друга');
+      console.error('❌ Ошибка добавления друга:', error);
     }
   };
 
-  // Принять запрос в друзья
-  const handleAcceptRequest = async (userId: string) => {
-    try {
-      const token = localStorage.getItem('auth_token');
-      if (!token) return;
-
-      const response = await fetch('/api/friends', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          action: 'accept',
-          friendId: userId
-        })
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        // Обновляем списки
-        loadFriendsData();
-      } else {
-        alert(result.message);
-      }
-    } catch (error) {
-      console.error('Error accepting request:', error);
+  // Поделиться приглашением
+  const handleShareInvite = () => {
+    const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+    const inviteLink = `https://t.me/NotPdr_01_bot?start=invite_${telegramUser?.id}`;
+    const shareText = `🎮 Присоединяйся ко мне в The Must! - карточной игре!\n\n${inviteLink}`;
+    
+    if ((window as any).Telegram?.WebApp) {
+      (window as any).Telegram.WebApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(shareText)}`);
     }
   };
 
-  // Отклонить запрос в друзья
-  const handleDeclineRequest = async (userId: string) => {
-    try {
-      const token = localStorage.getItem('auth_token');
-      if (!token) return;
-
-      const response = await fetch('/api/friends', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          action: 'decline',
-          friendId: userId
-        })
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        // Обновляем списки
-        loadFriendsData();
-      } else {
-        alert(result.message);
-      }
-    } catch (error) {
-      console.error('Error declining request:', error);
-    }
-  };
-
-  // Пригласить в игру
-  const handleInviteToGame = (friend: Friend) => {
-    // TODO: Интеграция с системой комнат
-    if (friend.currentRoom) {
-      // Если друг уже в игре, можно присоединиться к его комнате
-      alert(`${friend.name} уже играет! Хотите присоединиться к их игре?`);
-    } else {
-      // Создать новую игру и пригласить друга
-      alert(`Приглашение в игру отправлено ${friend.name}!`);
-    }
-  };
+  const onlineFriends = friends.filter(f => f.status === 'online');
+  const offlineFriends = friends.filter(f => f.status === 'offline');
 
   return (
-    <div className="main-menu-container">
-      <div className="main-menu-inner">
-        {/* Header */}
-        <div className="menu-header">
-          <button onClick={() => window.history.back()} className="px-3 py-1 rounded-lg border border-red-400 text-red-200 font-semibold text-base hover:bg-red-400/10 transition-all">
-            <ArrowLeft className="inline w-4 h-4 mr-1" />
-            Назад
-          </button>
-          <span className="menu-title">ДРУЗЬЯ</span>
-          <div className="flex gap-2">
-            <button 
-              onClick={() => userReferralCode && shareReferral(userReferralCode)}
-              disabled={!userReferralCode}
-              className={`p-2 rounded-lg border transition-all ${
-                userReferralCode 
-                  ? 'border-blue-400 text-blue-200 hover:bg-blue-400/10' 
-                  : 'border-gray-600 text-gray-500 cursor-not-allowed'
-              }`}
-              title="Пригласить друзей через Telegram"
-            >
-              <Share className="w-5 h-5" />
-            </button>
-            <button 
-              onClick={() => setAddingFriend(true)}
-              className="friends-add-btn"
-            >
-              <UserPlus className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)',
+      padding: '20px',
+      paddingTop: '80px',
+      paddingBottom: '40px'
+    }}>
+      {/* Кнопка назад */}
+      <motion.button
+        initial={{ x: -20, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={() => router.back()}
+        style={{
+          position: 'fixed',
+          top: '20px',
+          left: '20px',
+          background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.8) 0%, rgba(220, 38, 38, 0.6) 100%)',
+          border: '2px solid rgba(239, 68, 68, 0.4)',
+          borderRadius: '16px',
+          padding: '12px 20px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          cursor: 'pointer',
+          color: '#ffffff',
+          fontSize: '16px',
+          fontWeight: '700',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
+          zIndex: 1000
+        }}
+      >
+        <ArrowLeft size={20} />
+        НАЗАД
+      </motion.button>
 
-        {/* Add Friend Modal */}
-        {addingFriend && (
-          <motion.div 
-            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <motion.div 
-              className="bg-gray-800 rounded-lg p-6 w-full max-w-md"
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-            >
-              <h3 className="text-xl font-bold text-white mb-4">Добавить друга</h3>
-              <input
-                type="text"
-                placeholder="Введите имя пользователя..."
-                value={newFriendName}
-                onChange={(e) => setNewFriendName(e.target.value)}
-                className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600 focus:border-blue-400 focus:outline-none mb-4"
-                autoFocus
-              />
-              <div className="flex gap-3 justify-end">
-                <button
-                  onClick={() => {
-                    setAddingFriend(false);
-                    setNewFriendName('');
-                  }}
-                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-500 transition-colors"
-                >
-                  Отмена
-                </button>
-                <button
-                  onClick={() => {
-                    if (newFriendName.trim()) {
-                      handleAddFriend(newFriendName);
-                    }
-                  }}
-                  disabled={!newFriendName.trim()}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  Добавить
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
+      {/* Заголовок */}
+      <motion.h1
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        style={{
+          fontSize: '32px',
+          fontWeight: '900',
+          textAlign: 'center',
+          marginBottom: '24px',
+          background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          letterSpacing: '2px'
+        }}
+      >
+        👥 ДРУЗЬЯ
+      </motion.h1>
 
-        {/* Search */}
-        <motion.div 
-          className="friends-search"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+      {/* Поиск */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        style={{
+          position: 'relative',
+          marginBottom: '24px'
+        }}
+      >
+        <Search 
+          size={20} 
+          style={{
+            position: 'absolute',
+            left: '16px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            color: '#64748b',
+            zIndex: 2
+          }}
+        />
+        <input
+          type="text"
+          placeholder="Поиск друзей..."
+          value={searchQuery}
+          onChange={(e) => handleSearch(e.target.value)}
+          style={{
+            width: '100%',
+            padding: '14px 20px 14px 50px',
+            background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.6) 100%)',
+            border: '2px solid rgba(99, 102, 241, 0.3)',
+            borderRadius: '16px',
+            color: '#e2e8f0',
+            fontSize: '16px',
+            outline: 'none',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)'
+          }}
+        />
+      </motion.div>
+
+      {/* Кнопка пригласить */}
+      <motion.button
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        onClick={handleShareInvite}
+        style={{
+          width: '100%',
+          padding: '16px',
+          marginBottom: '24px',
+          background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+          border: '2px solid rgba(16, 185, 129, 0.4)',
+          borderRadius: '16px',
+          color: '#ffffff',
+          fontSize: '16px',
+          fontWeight: '700',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '12px',
+          cursor: 'pointer',
+          boxShadow: '0 4px 20px rgba(16, 185, 129, 0.3)'
+        }}
+      >
+        <Share2 size={20} />
+        ПРИГЛАСИТЬ ДРУЗЕЙ
+      </motion.button>
+
+      {/* Результаты поиска */}
+      {searchQuery.length >= 2 && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          style={{ marginBottom: '24px' }}
         >
-          <div className="search-container">
-            <Search className="search-icon" />
-            <input 
-              type="text" 
-              placeholder="Поиск друзей..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="search-input"
-            />
-          </div>
-        </motion.div>
-
-        {/* Loading */}
-        {loading && (
-          <div className="flex justify-center items-center py-8">
-            <div className="text-white text-lg">Загрузка друзей...</div>
-          </div>
-        )}
-
-        {/* Online Friends */}
-        <motion.div 
-          className="friends-section"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-        >
-          <h3 className="friends-section-title">
-            <span className="online-indicator">🟢</span>
-            ОНЛАЙН ({onlineFriends.length})
-          </h3>
-          <div className="friends-list">
-            {onlineFriends.map((friend, index) => (
-              <motion.div 
-                key={friend.id}
-                className="friend-card online"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.3, delay: index * 0.1 }}
-              >
-                <div className="friend-avatar">
-                  <span className="friend-avatar-emoji">{friend.avatar}</span>
-                </div>
-                <div className="friend-info">
-                  <h4 className="friend-name">{friend.name}</h4>
-                  <p className={`friend-status ${friend.status === 'В игре' ? 'in-game' : 'online'}`}>
-                    {friend.status}
-                  </p>
-                </div>
-                <motion.button 
-                  className="friend-action-btn play"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => handleInviteToGame(friend)}
-                >
-                  <Gamepad2 className="action-icon" />
-                  Играть
-                </motion.button>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* All Friends */}
-        <motion.div 
-          className="friends-section"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-        >
-          <h3 className="friends-section-title">
-            <Users className="section-icon" />
-            ВСЕ ДРУЗЬЯ ({allFriends.length})
-          </h3>
-          <div className="friends-list">
-            {allFriends.map((friend, index) => (
-              <motion.div 
-                key={friend.id}
-                className="friend-card offline"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.3, delay: index * 0.1 }}
-              >
-                <div className="friend-avatar">
-                  <span className="friend-avatar-emoji">{friend.avatar}</span>
-                </div>
-                <div className="friend-info">
-                  <h4 className="friend-name">{friend.name}</h4>
-                  <p className="friend-status offline">{friend.status}</p>
-                </div>
-                <motion.button 
-                  className="friend-action-btn profile"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <User className="action-icon" />
-                  Профиль
-                </motion.button>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* Friend Requests */}
-        <motion.div 
-          className="friends-section"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-        >
-          <h3 className="friends-section-title">
-            <UserPlus className="section-icon" />
-            ЗАПРОСЫ В ДРУЗЬЯ ({friendRequests.length})
-          </h3>
-          <div className="friends-list">
-            {friendRequests.map((request, index) => (
-              <motion.div 
-                key={request.id}
-                className="friend-card request"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.3, delay: index * 0.1 }}
-              >
-                <div className="friend-avatar">
-                  <span className="friend-avatar-emoji">{request.avatar}</span>
-                </div>
-                <div className="friend-info">
-                  <h4 className="friend-name">{request.name}</h4>
-                  <p className="friend-status request">{request.message}</p>
-                </div>
-                <div className="request-actions">
-                  <motion.button 
-                    className="request-btn accept"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => handleAcceptRequest(request.userId)}
-                  >
-                    <Check className="request-icon" />
-                  </motion.button>
-                  <motion.button 
-                    className="request-btn decline"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => handleDeclineRequest(request.userId)}
-                  >
-                    <X className="request-icon" />
-                  </motion.button>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* Invite from Telegram Section */}
-        <motion.div 
-          className="friends-section"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.35 }}
-        >
-          <h3 className="friends-section-title">
-            <Share className="section-icon" />
-            ПРИГЛАСИТЬ ИЗ TELEGRAM
-          </h3>
-          <div className="bg-gradient-to-br from-blue-900/50 to-purple-900/50 rounded-xl border border-blue-400/30 p-4">
-            <h4 className="text-white font-bold text-lg mb-3 text-center">
-              🎁 Приглашай друзей за монеты
-            </h4>
-            
-            <div className="flex gap-3 mb-3">
-              {/* НАСТОЯЩАЯ КНОПКА ПОДЕЛИТЬСЯ */}
-              <motion.button 
-                onClick={() => {
-                  const fallbackCode = userReferralCode || 'DEMO123';
-                  shareReferral(fallbackCode);
-                }}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold py-4 px-4 rounded-lg shadow-xl border-2 border-blue-400 transition-all duration-200 transform hover:scale-105 active:scale-95"
-                whileHover={{ y: -2 }}
-                whileTap={{ y: 0 }}
-                style={{
-                  background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-                  boxShadow: '0 8px 25px rgba(37, 99, 235, 0.4), inset 0 1px 0 rgba(255,255,255,0.2)'
-                }}
-              >
-                <div className="flex items-center justify-center gap-2">
-                  <Share className="w-5 h-5" />
-                  <span>Поделиться</span>
-                </div>
-              </motion.button>
-
-              {/* НАСТОЯЩАЯ КНОПКА КОПИРОВАНИЯ */}
-              <motion.button 
-                onClick={() => {
-                  const fallbackCode = userReferralCode || 'DEMO123';
-                  const referralUrl = `${window.location.origin}?ref=${fallbackCode}`;
-                  navigator.clipboard.writeText(referralUrl).then(() => {
-                    const notification = document.createElement('div');
-                    notification.innerHTML = '✅ Скопировано!';
-                    notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
-                    document.body.appendChild(notification);
-                    setTimeout(() => document.body.removeChild(notification), 2000);
-                  });
-                }}
-                className="bg-gray-600 hover:bg-gray-700 active:bg-gray-800 text-white p-4 rounded-lg shadow-xl border-2 border-gray-400 transition-all duration-200 transform hover:scale-105 active:scale-95"
-                whileHover={{ y: -2 }}
-                whileTap={{ y: 0 }}
-                style={{
-                  background: 'linear-gradient(135deg, #4b5563 0%, #374151 100%)',
-                  boxShadow: '0 8px 25px rgba(75, 85, 99, 0.4), inset 0 1px 0 rgba(255,255,255,0.1)'
-                }}
-                title="Скопировать ссылку"
-              >
-                <Copy className="w-6 h-6" />
-              </motion.button>
+          <h2 style={{
+            color: '#94a3b8',
+            fontSize: '14px',
+            fontWeight: '700',
+            marginBottom: '12px',
+            letterSpacing: '1px'
+          }}>
+            🔍 РЕЗУЛЬТАТЫ ПОИСКА ({searchResults.length})
+          </h2>
+          {searching ? (
+            <div style={{ textAlign: 'center', color: '#64748b', padding: '20px' }}>
+              Поиск...
             </div>
-
-            {/* Только код, без лишнего текста */}
-            {userReferralCode && (
-              <div className="bg-black/40 rounded-lg p-2 text-center">
-                <span className="text-blue-400 font-mono text-sm">
-                  {userReferralCode}
-                </span>
-              </div>
-            )}
-          </div>
+          ) : searchResults.length === 0 ? (
+            <div style={{ textAlign: 'center', color: '#64748b', padding: '20px' }}>
+              Ничего не найдено
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {searchResults.map(user => (
+                <motion.div
+                  key={user.telegram_id}
+                  whileHover={{ scale: 1.02 }}
+                  style={{
+                    padding: '16px',
+                    background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.6) 100%)',
+                    border: '2px solid rgba(99, 102, 241, 0.3)',
+                    borderRadius: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)'
+                  }}
+                >
+                  <div style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '24px'
+                  }}>
+                    {user.avatar_url ? (
+                      <img src={user.avatar_url} alt={user.username} style={{
+                        width: '100%',
+                        height: '100%',
+                        borderRadius: '50%',
+                        objectFit: 'cover'
+                      }} />
+                    ) : (
+                      '👤'
+                    )}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ color: '#e2e8f0', fontWeight: '700', fontSize: '16px' }}>
+                      {user.first_name}
+                    </div>
+                    <div style={{ color: '#64748b', fontSize: '14px' }}>
+                      @{user.username}
+                    </div>
+                  </div>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => handleAddFriend(user.telegram_id)}
+                    style={{
+                      padding: '8px 16px',
+                      background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                      border: 'none',
+                      borderRadius: '12px',
+                      color: '#ffffff',
+                      fontSize: '14px',
+                      fontWeight: '700',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <UserPlus size={16} />
+                  </motion.button>
+                </motion.div>
+              ))}
+            </div>
+          )}
         </motion.div>
+      )}
 
-        {/* Suggested Friends */}
-        <motion.div 
-          className="friends-section suggested"
+      {/* Онлайн друзья */}
+      {onlineFriends.length > 0 && (
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
+          style={{ marginBottom: '24px' }}
         >
-          <h3 className="friends-section-title">
-            <Search className="section-icon" />
-            ВОЗМОЖНЫЕ ДРУЗЬЯ
-          </h3>
-          <div className="suggested-grid">
-            {suggestedFriends.map((suggestion, index) => (
-              <motion.div 
-                key={suggestion.id}
-                className="suggested-card"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.3, delay: index * 0.1 }}
-              >
-                <div className="suggested-avatar">
-                  <span className="suggested-avatar-emoji">{suggestion.avatar}</span>
-                </div>
-                <h4 className="suggested-name">{suggestion.name}</h4>
-                <p className="suggested-mutual">
-                  {suggestion.mutualFriends} общ{suggestion.mutualFriends === 1 ? 'ий друг' : 'их друга'}
-                </p>
-                <motion.button 
-                  className="suggested-add-btn"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => handleAddFriend(suggestion.name)}
-                >
-                  <UserPlus className="add-icon" />
-                  Добавить
-                </motion.button>
-              </motion.div>
+          <h2 style={{
+            color: '#22c55e',
+            fontSize: '14px',
+            fontWeight: '700',
+            marginBottom: '12px',
+            letterSpacing: '1px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <div style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              background: '#22c55e',
+              animation: 'pulse 2s ease-in-out infinite'
+            }}></div>
+            ОНЛАЙН ({onlineFriends.length})
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {onlineFriends.map(friend => (
+              <FriendCard key={friend.telegram_id} friend={friend} />
             ))}
           </div>
         </motion.div>
+      )}
 
-      </div>
+      {/* Все друзья */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <h2 style={{
+          color: '#94a3b8',
+          fontSize: '14px',
+          fontWeight: '700',
+          marginBottom: '12px',
+          letterSpacing: '1px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <Users size={16} />
+          ВСЕ ДРУЗЬЯ ({friends.length})
+        </h2>
+        {loading ? (
+          <div style={{ textAlign: 'center', color: '#64748b', padding: '40px' }}>
+            Загрузка...
+          </div>
+        ) : friends.length === 0 ? (
+          <div style={{ textAlign: 'center', color: '#64748b', padding: '40px' }}>
+            <User size={48} style={{ margin: '0 auto 16px' }} />
+            <div style={{ fontSize: '18px', fontWeight: '700', marginBottom: '8px' }}>
+              У вас пока нет друзей
+            </div>
+            <div style={{ fontSize: '14px' }}>
+              Пригласите друзей через кнопку выше!
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {friends.map(friend => (
+              <FriendCard key={friend.telegram_id} friend={friend} />
+            ))}
+          </div>
+        )}
+      </motion.div>
     </div>
+  );
+}
+
+// Компонент карточки друга
+function FriendCard({ friend }: { friend: Friend }) {
+  return (
+    <motion.div
+      whileHover={{ scale: 1.02, y: -2 }}
+      style={{
+        padding: '16px',
+        background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.6) 100%)',
+        border: `2px solid ${friend.status === 'online' ? 'rgba(34, 197, 94, 0.4)' : 'rgba(100, 116, 139, 0.3)'}`,
+        borderRadius: '16px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
+        transition: 'all 0.3s ease'
+      }}
+    >
+      <div style={{ position: 'relative' }}>
+        <div style={{
+          width: '56px',
+          height: '56px',
+          borderRadius: '50%',
+          background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '28px'
+        }}>
+          {friend.avatar_url ? (
+            <img src={friend.avatar_url} alt={friend.username} style={{
+              width: '100%',
+              height: '100%',
+              borderRadius: '50%',
+              objectFit: 'cover'
+            }} />
+          ) : (
+            '👤'
+          )}
+        </div>
+        {friend.status === 'online' && (
+          <div style={{
+            position: 'absolute',
+            bottom: '2px',
+            right: '2px',
+            width: '14px',
+            height: '14px',
+            borderRadius: '50%',
+            background: '#22c55e',
+            border: '2px solid #0f172a'
+          }}></div>
+        )}
+      </div>
+      <div style={{ flex: 1 }}>
+        <div style={{
+          color: '#e2e8f0',
+          fontWeight: '700',
+          fontSize: '16px',
+          marginBottom: '4px'
+        }}>
+          {friend.first_name}
+        </div>
+        <div style={{
+          color: '#64748b',
+          fontSize: '12px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <Trophy size={12} style={{ color: '#fbbf24' }} />
+          {friend.rating} • {friend.wins}/{friend.games_played}
+        </div>
+      </div>
+      {friend.status === 'online' && (
+        <div style={{
+          padding: '6px 12px',
+          background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+          borderRadius: '12px',
+          color: '#ffffff',
+          fontSize: '12px',
+          fontWeight: '700'
+        }}>
+          В сети
+        </div>
+      )}
+    </motion.div>
   );
 }
