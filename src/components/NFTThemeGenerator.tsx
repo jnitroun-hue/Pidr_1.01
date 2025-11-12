@@ -538,7 +538,7 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
               bottom: 0,
               background: 'rgba(0, 0, 0, 0.85)',
               backdropFilter: 'blur(10px)',
-              zIndex: 99999,
+              zIndex: 999999,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',

@@ -52,24 +52,75 @@ function getSupabaseClientSync() {
       
       console.error(errorMsg);
       
-      // Возвращаем mock клиент
+      // Возвращаем mock клиент с правильным chaining
+      const mockQueryBuilder = {
+        eq: function() { return this; },
+        neq: function() { return this; },
+        gt: function() { return this; },
+        gte: function() { return this; },
+        lt: function() { return this; },
+        lte: function() { return this; },
+        like: function() { return this; },
+        ilike: function() { return this; },
+        is: function() { return this; },
+        in: function() { return this; },
+        contains: function() { return this; },
+        containedBy: function() { return this; },
+        rangeLt: function() { return this; },
+        rangeGt: function() { return this; },
+        rangeGte: function() { return this; },
+        rangeLte: function() { return this; },
+        rangeAdjacent: function() { return this; },
+        overlaps: function() { return this; },
+        textSearch: function() { return this; },
+        match: function() { return this; },
+        not: function() { return this; },
+        or: function() { return this; },
+        filter: function() { return this; },
+        limit: function() { return this; },
+        order: function() { return this; },
+        range: function() { return this; },
+        abortSignal: function() { return this; },
+        single: function() { return Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }); },
+        maybeSingle: function() { return Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }); },
+        csv: function() { return Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }); },
+        then: function(resolve: any) { 
+          return Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }).then(resolve); 
+        },
+        catch: function(reject: any) { 
+          return Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }).catch(reject); 
+        }
+      };
+
       return {
         from: () => ({
-          select: () => ({ data: null, error: { message: 'Supabase not configured' } }),
-          insert: () => ({ data: null, error: { message: 'Supabase not configured' } }),
-          update: () => ({ data: null, error: { message: 'Supabase not configured' } }),
-          delete: () => ({ data: null, error: { message: 'Supabase not configured' } }),
-          upsert: () => ({ data: null, error: { message: 'Supabase not configured' } }),
-          eq: function() { return this; },
-          limit: function() { return this; },
-          single: function() { return this; },
-          or: function() { return this; }
+          select: () => Object.create(mockQueryBuilder),
+          insert: () => Object.create(mockQueryBuilder),
+          update: () => Object.create(mockQueryBuilder),
+          delete: () => Object.create(mockQueryBuilder),
+          upsert: () => Object.create(mockQueryBuilder)
         }),
         channel: () => ({
           on: function() { return this; },
           subscribe: () => {},
-          send: () => {}
-        })
+          send: () => {},
+          unsubscribe: () => {}
+        }),
+        rpc: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }),
+        auth: {
+          getUser: () => Promise.resolve({ data: { user: null }, error: { message: 'Supabase not configured' } }),
+          signInWithPassword: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }),
+          signOut: () => Promise.resolve({ error: { message: 'Supabase not configured' } })
+        },
+        storage: {
+          from: () => ({
+            upload: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }),
+            download: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }),
+            list: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }),
+            remove: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }),
+            getPublicUrl: () => ({ data: { publicUrl: '' } })
+          })
+        }
       };
     }
 

@@ -149,7 +149,7 @@ export default function FriendsPage() {
         animate={{ x: 0, opacity: 1 }}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-        onClick={() => router.push('/profile')}
+        onClick={() => router.back()}
         style={{
           position: 'fixed',
           top: '20px',
