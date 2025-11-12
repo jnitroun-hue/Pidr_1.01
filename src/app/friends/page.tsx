@@ -124,7 +124,7 @@ export default function FriendsPage() {
   // Поделиться приглашением
   const handleShareInvite = () => {
     const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
-    const inviteLink = `https://t.me/NotPdr_01_bot?start=invite_${telegramUser?.id}`;
+    const inviteLink = `https://t.me/NotPidrBot?start=invite_${telegramUser?.id}`;
     const shareText = `🎮 Присоединяйся ко мне в The Must! - карточной игре!\n\n${inviteLink}`;
     
     if ((window as any).Telegram?.WebApp) {
