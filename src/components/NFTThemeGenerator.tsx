@@ -687,66 +687,107 @@ function ThemeCard({ theme, themeConfig, generating, onGenerateSingle, onGenerat
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
+            onClick={(e) => e.stopPropagation()}
             style={{
               position: 'absolute',
               top: '100%',
               left: 0,
               right: 0,
               marginTop: '4px',
-              background: 'rgba(15, 23, 42, 0.95)',
+              background: 'rgba(15, 23, 42, 0.98)',
               borderRadius: '8px',
-              border: '1px solid rgba(16, 185, 129, 0.3)',
-              padding: '6px',
+              border: '2px solid rgba(16, 185, 129, 0.6)',
+              padding: '8px',
               display: 'flex',
               flexDirection: 'column',
-              gap: '4px',
-              zIndex: 10
+              gap: '6px',
+              zIndex: 100,
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)'
             }}
           >
             <button
               style={{
-                padding: '4px',
-                borderRadius: '6px',
-                border: 'none',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: '2px solid rgba(0, 136, 204, 0.4)',
                 background: 'linear-gradient(135deg, #0088cc 0%, #005580 100%)',
                 color: '#ffffff',
-                fontSize: '10px',
+                fontSize: '13px',
                 fontWeight: 'bold',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                boxShadow: '0 2px 8px rgba(0, 136, 204, 0.3)'
               }}
-              onClick={() => alert(`TON: ${themeConfig.cryptoCost?.ton || 0}`)}
+              onClick={(e) => {
+                e.stopPropagation();
+                alert(`💎 TON\n\nСтоимость: ${themeConfig.cryptoCost?.ton || 0} TON\n\n(Скоро будет доступна оплата криптовалютой!)`);
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'scale(1.05)';
+                e.currentTarget.style.borderColor = 'rgba(0, 136, 204, 0.8)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.borderColor = 'rgba(0, 136, 204, 0.4)';
+              }}
             >
-              💎 TON ({themeConfig.cryptoCost?.ton || 0})
+              💎 TON — {themeConfig.cryptoCost?.ton || 0}
             </button>
             <button
               style={{
-                padding: '4px',
-                borderRadius: '6px',
-                border: 'none',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: '2px solid rgba(153, 69, 255, 0.4)',
                 background: 'linear-gradient(135deg, #9945ff 0%, #6a26cd 100%)',
                 color: '#ffffff',
-                fontSize: '10px',
+                fontSize: '13px',
                 fontWeight: 'bold',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                boxShadow: '0 2px 8px rgba(153, 69, 255, 0.3)'
               }}
-              onClick={() => alert(`SOL: ${themeConfig.cryptoCost?.sol || 0}`)}
+              onClick={(e) => {
+                e.stopPropagation();
+                alert(`☀️ SOLANA\n\nСтоимость: ${themeConfig.cryptoCost?.sol || 0} SOL\n\n(Скоро будет доступна оплата криптовалютой!)`);
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'scale(1.05)';
+                e.currentTarget.style.borderColor = 'rgba(153, 69, 255, 0.8)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.borderColor = 'rgba(153, 69, 255, 0.4)';
+              }}
             >
-              ☀️ SOL ({themeConfig.cryptoCost?.sol || 0})
+              ☀️ SOL — {themeConfig.cryptoCost?.sol || 0}
             </button>
             <button
               style={{
-                padding: '4px',
-                borderRadius: '6px',
-                border: 'none',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: '2px solid rgba(98, 126, 234, 0.4)',
                 background: 'linear-gradient(135deg, #627eea 0%, #4a5fd8 100%)',
                 color: '#ffffff',
-                fontSize: '10px',
+                fontSize: '13px',
                 fontWeight: 'bold',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                boxShadow: '0 2px 8px rgba(98, 126, 234, 0.3)'
               }}
-              onClick={() => alert(`ETH: ${themeConfig.cryptoCost?.eth || 0}`)}
+              onClick={(e) => {
+                e.stopPropagation();
+                alert(`💠 ETHEREUM\n\nСтоимость: ${themeConfig.cryptoCost?.eth || 0} ETH\n\n(Скоро будет доступна оплата криптовалютой!)`);
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'scale(1.05)';
+                e.currentTarget.style.borderColor = 'rgba(98, 126, 234, 0.8)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.borderColor = 'rgba(98, 126, 234, 0.4)';
+              }}
             >
-              💠 ETH ({themeConfig.cryptoCost?.eth || 0})
+              💠 ETH — {themeConfig.cryptoCost?.eth || 0}
             </button>
           </motion.div>
         )}
