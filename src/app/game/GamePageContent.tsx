@@ -466,7 +466,7 @@ function GamePageContentComponent({
   }, [multiplayerData]);
 
   // ❌ УДАЛЕНО: Старая логика WinnerScreen - теперь используем WinnerModal из gameStore
-  // Отслеживаем завершение игры для мультиплеера
+    // Отслеживаем завершение игры для мультиплеера
   useEffect(() => {
     if (isMultiplayer && !isGameActive && onGameEnd) {
       console.log('🎮 [GamePageContent] Игра завершена в мультиплеере, вызываем onGameEnd');
@@ -1102,7 +1102,7 @@ function GamePageContentComponent({
             ) : (
               <button
                 onClick={() => togglePenaltyDeckModal(true)}
-                style={{
+                      style={{ 
                   background: 'none',
                   border: 'none',
                   color: 'inherit',
@@ -1129,7 +1129,7 @@ function GamePageContentComponent({
                 🗑️ Бито: {playedCards?.length || 0}
               </button>
             )}
-          </div>
+                </div>
           {/* 💸 СЧЕТЧИК ШТРАФНОЙ СТОПКИ - КНОПКА! */}
           {penaltyDeck.length > 0 && (
             <button
@@ -1253,17 +1253,17 @@ function GamePageContentComponent({
                   }
                 }}
                 style={{
-                  position: 'absolute',
-                  left: '50%',
-                  top: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  zIndex: 15,
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  minWidth: '200px',
-                  minHeight: '120px'
-                }}>
+                position: 'absolute',
+                left: '50%',
+                top: '50%',
+                transform: 'translate(-50%, -50%)',
+                zIndex: 15,
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                minWidth: '200px',
+                minHeight: '120px'
+              }}>
                 {tableStack.map((card, idx) => {
                   // ГОРИЗОНТАЛЬНАЯ СТОПКА: Каждая следующая карта смещается ВПРАВО
                   // Левая карта = нижняя (первая), правая карта = верхняя (последняя)
@@ -1579,9 +1579,9 @@ function GamePageContentComponent({
                       >
                         {/* ✅ ИСПРАВЛЕНО: Используем <img> вместо <Image> для поддержки SVG data URLs */}
                         <img 
-                          src={playerAvatars[player.id] || player.avatar || '/images/default-avatar.png'}
-                          alt={player.name}
-                          className={styles.avatar}
+                        src={playerAvatars[player.id] || player.avatar || '/images/default-avatar.png'}
+                        alt={player.name}
+                            className={styles.avatar}
                           style={{
                             width: '56px',
                             height: '56px',
@@ -1593,11 +1593,11 @@ function GamePageContentComponent({
                             position: 'relative', // ✅ НА ПЕРЕДНИЙ ПЛАН
                             zIndex: 10
                           }}
-                        />
-                        {player.isBot && (
-                          <div className={styles.botBadge}>🤖</div>
+                          />
+                      {player.isBot && (
+                        <div className={styles.botBadge}>🤖</div>
                         )}
-                      </div>
+                          </div>
                     </div>
                     
                   {/* Карты игрока */}
@@ -1768,7 +1768,7 @@ function GamePageContentComponent({
             pointerEvents: 'auto', // ✅ КРИТИЧНО: ВКЛЮЧАЕМ КЛИКИ!
           }}>
             {/* Кнопка "Одна карта!" - ВСЕГДА ВИДНА, ПРОЗРАЧНАЯ */}
-            <button
+              <button
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -1779,7 +1779,7 @@ function GamePageContentComponent({
                   return;
                 }
                 
-                // ИСПРАВЛЕНО: Во 2-й стадии считаем ВСЕ карты, а не только открытые!
+                  // ИСПРАВЛЕНО: Во 2-й стадии считаем ВСЕ карты, а не только открытые!
                 const totalCards = myPlayer.cards.length;
                 console.log(`🔘 [ОДНА КАРТА] Всего карт: ${totalCards}, объявлено: ${oneCardDeclarations[myPlayer.id]}`);
                 
@@ -1790,29 +1790,29 @@ function GamePageContentComponent({
                 } else if (oneCardDeclarations[myPlayer.id]) {
                   console.log('⚠️ [ОДНА КАРТА] Уже объявлено!');
                   showPlayerMessage(myPlayer.id, '✅ Уже объявлено!', 'info', 2000);
-                } else {
+                  } else {
                   console.log(`❌ [ОДНА КАРТА] Недоступно: ${totalCards} карт`);
                   showPlayerMessage(myPlayer.id, `❌ У вас ${totalCards} ${totalCards === 1 ? 'карта' : totalCards < 5 ? 'карты' : 'карт'}!`, 'error', 3000);
-                }
-              }}
-              style={{
-                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                padding: '6px 12px',
-                fontSize: '11px',
-                fontWeight: '700',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
+                  }
+                }}
+                style={{
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '6px 12px',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
                 opacity: myPlayer && myPlayer.cards.length === 1 && !oneCardDeclarations[myPlayer.id] ? 1 : 0.3,
                 transition: 'opacity 0.3s ease',
                 pointerEvents: 'auto',
                 zIndex: 9999,
-              }}
-            >
-              ☝️ Одна карта!
-            </button>
+                }}
+              >
+                ☝️ Одна карта!
+              </button>
             
             {/* Кнопка "Сколько карт?" - ВСЕГДА ВИДНА, ПРОЗРАЧНАЯ */}
             {(() => {
@@ -1882,7 +1882,7 @@ function GamePageContentComponent({
             
             {/* КОМПАКТНАЯ КНОПКА "ШТРАФ" - ВСЕГДА ВИДНА, ПРОЗРАЧНАЯ */}
             {myPlayer && (
-            <button
+              <button
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -1892,23 +1892,23 @@ function GamePageContentComponent({
                 if (!pendingPenalty || !pendingPenalty.contributorsNeeded.includes(myPlayer.id)) {
                   console.log('⚠️ [ШТРАФ] Нет активного штрафа');
                   showPlayerMessage(myPlayer.id, '⏳ Нет активного штрафа', 'warning', 2000);
-                  return;
-                }
-                
+                    return;
+                  }
+                  
                 console.log('✅ [ШТРАФ] Открываем модалку штрафа');
                 useGameStore.setState({
                   showPenaltyCardSelection: true,
                   penaltyCardSelectionPlayerId: myPlayer.id
                 });
-              }}
-              style={{
+                }}
+                style={{
                 background: 'linear-gradient(135deg, #ff1744 0%, #f50057 100%)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                padding: '6px 12px',
-                fontSize: '11px',
-                fontWeight: '700',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '6px 12px',
+                  fontSize: '11px',
+                  fontWeight: '700',
                 cursor: (pendingPenalty && pendingPenalty.contributorsNeeded.includes(myPlayer.id)) ? 'pointer' : 'not-allowed',
                 whiteSpace: 'nowrap',
                 opacity: (pendingPenalty && pendingPenalty.contributorsNeeded.includes(myPlayer.id)) ? 1 : 0.3,
@@ -1917,12 +1917,12 @@ function GamePageContentComponent({
               }}
             >
               💸 Штраф
-            </button>
+              </button>
             )}
             
             {/* КОМПАКТНАЯ КНОПКА "ВЗЯТЬ" - ВСЕГДА ВИДНА, ПРОЗРАЧНАЯ */}
             {myPlayer && (
-            <button
+              <button
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -1947,14 +1947,14 @@ function GamePageContentComponent({
                 console.log('✅ [ВЗЯТЬ] Берем карты со стола!');
                 takeTableCards();
               }}
-              style={{
-                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                padding: '6px 12px',
-                fontSize: '11px',
-                fontWeight: '700',
+                style={{
+                  background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '6px 12px',
+                  fontSize: '11px',
+                  fontWeight: '700',
                 cursor: (gameStage >= 2 && tableStack && tableStack.length > 0 && myPlayer.id === currentPlayerId) ? 'pointer' : 'not-allowed',
                 whiteSpace: 'nowrap',
                 opacity: (gameStage >= 2 && tableStack && tableStack.length > 0 && myPlayer.id === currentPlayerId) ? 1 : 0.3,
@@ -1963,7 +1963,7 @@ function GamePageContentComponent({
               }}
             >
               ⬇️ Взять {tableStack && tableStack.length > 0 ? `(${tableStack.length})` : ''}
-            </button>
+              </button>
             )}
           </div>
           
@@ -2127,9 +2127,9 @@ function GamePageContentComponent({
       {/* Модальное окно профиля игрока */}
       {/* ✅ МОДАЛКА ПРОФИЛЯ ИГРОКА */}
       {selectedPlayerProfile && (
-        <PlayerProfileModal
-          isOpen={isProfileModalOpen}
-          onClose={() => setIsProfileModalOpen(false)}
+      <PlayerProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
           player={selectedPlayerProfile}
         />
       )}
