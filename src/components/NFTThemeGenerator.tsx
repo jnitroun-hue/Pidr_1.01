@@ -78,6 +78,8 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
   const [showModal, setShowModal] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [selectedTheme, setSelectedTheme] = useState<ThemeType | null>(null);
+  const [showCryptoModal, setShowCryptoModal] = useState(false);
+  const [cryptoTheme, setCryptoTheme] = useState<keyof typeof THEMES | null>(null);
 
   // Генерация одной карты
   const handleGenerateSingle = async (theme: keyof typeof THEMES) => {
@@ -463,6 +465,7 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
                   generating={generating && selectedTheme === 'pokemon'}
                   onGenerateSingle={() => handleGenerateSingle('pokemon')}
                   onGenerateDeck={() => handleGenerateDeck('pokemon')}
+                  onCryptoClick={() => { setCryptoTheme('pokemon'); setShowCryptoModal(true); }}
                   disabled={generating}
                 />
 
@@ -473,6 +476,7 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
                   generating={generating && selectedTheme === 'halloween'}
                   onGenerateSingle={() => handleGenerateSingle('halloween')}
                   onGenerateDeck={() => handleGenerateDeck('halloween')}
+                  onCryptoClick={() => { setCryptoTheme('halloween'); setShowCryptoModal(true); }}
                   disabled={generating}
                 />
 
@@ -483,6 +487,7 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
                   generating={generating && selectedTheme === 'starwars'}
                   onGenerateSingle={() => handleGenerateSingle('starwars')}
                   onGenerateDeck={() => handleGenerateDeck('starwars')}
+                  onCryptoClick={() => { setCryptoTheme('starwars'); setShowCryptoModal(true); }}
                   disabled={generating}
                 />
 
@@ -493,6 +498,7 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
                   generating={generating && selectedTheme === 'legendary'}
                   onGenerateSingle={() => handleGenerateSingle('legendary')}
                   onGenerateDeck={() => handleGenerateDeck('legendary')}
+                  onCryptoClick={() => { setCryptoTheme('legendary'); setShowCryptoModal(true); }}
                   disabled={generating}
                   isLegendary={true}
                 />
@@ -515,6 +521,166 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* МОДАЛКА ВЫБОРА КРИПТОВАЛЮТЫ */}
+      <AnimatePresence>
+        {showCryptoModal && cryptoTheme && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowCryptoModal(false)}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0, 0, 0, 0.85)',
+              backdropFilter: 'blur(10px)',
+              zIndex: 99999,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '20px'
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+                borderRadius: '24px',
+                border: '2px solid rgba(16, 185, 129, 0.4)',
+                padding: '32px',
+                maxWidth: '500px',
+                width: '100%',
+                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)'
+              }}
+            >
+              {/* Заголовок */}
+              <div style={{
+                textAlign: 'center',
+                marginBottom: '24px'
+              }}>
+                <h2 style={{
+                  fontSize: '28px',
+                  fontWeight: 'bold',
+                  color: '#fbbf24',
+                  marginBottom: '8px'
+                }}>
+                  💎 Оплата криптовалютой
+                </h2>
+                <p style={{ color: '#94a3b8', fontSize: '16px' }}>
+                  {THEMES[cryptoTheme].name}
+                </p>
+              </div>
+
+              {/* Кнопки криптовалют */}
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px',
+                marginBottom: '24px'
+              }}>
+                {/* TON */}
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => alert(`💎 TON\n\nСтоимость: ${THEMES[cryptoTheme].cryptoCost?.ton || 0} TON\n\n(Скоро будет доступна оплата!)`)}
+                  style={{
+                    padding: '16px 20px',
+                    borderRadius: '16px',
+                    border: '2px solid rgba(0, 136, 204, 0.4)',
+                    background: 'linear-gradient(135deg, #0088cc 0%, #005580 100%)',
+                    color: '#ffffff',
+                    fontSize: '18px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    boxShadow: '0 4px 16px rgba(0, 136, 204, 0.3)'
+                  }}
+                >
+                  <span>💎 TON</span>
+                  <span>{THEMES[cryptoTheme].cryptoCost?.ton || 0}</span>
+                </motion.button>
+
+                {/* SOLANA */}
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => alert(`☀️ SOLANA\n\nСтоимость: ${THEMES[cryptoTheme].cryptoCost?.sol || 0} SOL\n\n(Скоро будет доступна оплата!)`)}
+                  style={{
+                    padding: '16px 20px',
+                    borderRadius: '16px',
+                    border: '2px solid rgba(153, 69, 255, 0.4)',
+                    background: 'linear-gradient(135deg, #9945ff 0%, #6a26cd 100%)',
+                    color: '#ffffff',
+                    fontSize: '18px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    boxShadow: '0 4px 16px rgba(153, 69, 255, 0.3)'
+                  }}
+                >
+                  <span>☀️ SOLANA</span>
+                  <span>{THEMES[cryptoTheme].cryptoCost?.sol || 0}</span>
+                </motion.button>
+
+                {/* ETHEREUM */}
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => alert(`💠 ETHEREUM\n\nСтоимость: ${THEMES[cryptoTheme].cryptoCost?.eth || 0} ETH\n\n(Скоро будет доступна оплата!)`)}
+                  style={{
+                    padding: '16px 20px',
+                    borderRadius: '16px',
+                    border: '2px solid rgba(98, 126, 234, 0.4)',
+                    background: 'linear-gradient(135deg, #627eea 0%, #4a5fd8 100%)',
+                    color: '#ffffff',
+                    fontSize: '18px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    boxShadow: '0 4px 16px rgba(98, 126, 234, 0.3)'
+                  }}
+                >
+                  <span>💠 ETHEREUM</span>
+                  <span>{THEMES[cryptoTheme].cryptoCost?.eth || 0}</span>
+                </motion.button>
+              </div>
+
+              {/* Кнопка закрыть */}
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setShowCryptoModal(false)}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  borderRadius: '12px',
+                  border: '2px solid rgba(239, 68, 68, 0.4)',
+                  background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.2) 100%)',
+                  color: '#ef4444',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer'
+                }}
+              >
+                ← НАЗАД
+              </motion.button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }
@@ -528,10 +694,10 @@ interface ThemeCardProps {
   onGenerateDeck: () => void;
   disabled: boolean;
   isLegendary?: boolean;
+  onCryptoClick: () => void;
 }
 
-function ThemeCard({ theme, themeConfig, generating, onGenerateSingle, onGenerateDeck, disabled, isLegendary }: ThemeCardProps) {
-  const [showCryptoMenu, setShowCryptoMenu] = useState(false);
+function ThemeCard({ theme, themeConfig, generating, onGenerateSingle, onGenerateDeck, disabled, isLegendary, onCryptoClick }: ThemeCardProps) {
 
   return (
     <div style={{
@@ -660,138 +826,28 @@ function ThemeCard({ theme, themeConfig, generating, onGenerateSingle, onGenerat
       </motion.button>
 
       {/* КНОПКА: ЗА КРИПТУ - НОВАЯ! */}
-      <div style={{ position: 'relative', zIndex: 2 }}>
-        <motion.button
-          whileHover={{ scale: disabled ? 1 : 1.03 }}
-          whileTap={{ scale: disabled ? 1 : 0.97 }}
-          onClick={() => setShowCryptoMenu(!showCryptoMenu)}
-          disabled={disabled}
-          style={{
-            width: '100%',
-            padding: '6px',
-            borderRadius: '8px',
-            border: 'none',
-            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-            color: '#ffffff',
-            fontWeight: 'bold',
-            fontSize: '11px',
-            cursor: disabled ? 'not-allowed' : 'pointer',
-            opacity: disabled ? 0.6 : 1
-          }}
-        >
-          💎 ЗА КРИПТУ
-        </motion.button>
-
-        {/* ПОДМЕНЮ КРИПТОВАЛЮТ */}
-        {showCryptoMenu && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              position: 'absolute',
-              top: '100%',
-              left: 0,
-              right: 0,
-              marginTop: '4px',
-              background: 'rgba(15, 23, 42, 0.98)',
-              borderRadius: '8px',
-              border: '2px solid rgba(16, 185, 129, 0.6)',
-              padding: '8px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '6px',
-              zIndex: 100,
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)'
-            }}
-          >
-            <button
-              style={{
-                padding: '8px 12px',
-                borderRadius: '8px',
-                border: '2px solid rgba(0, 136, 204, 0.4)',
-                background: 'linear-gradient(135deg, #0088cc 0%, #005580 100%)',
-                color: '#ffffff',
-                fontSize: '13px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                boxShadow: '0 2px 8px rgba(0, 136, 204, 0.3)'
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
-                alert(`💎 TON\n\nСтоимость: ${themeConfig.cryptoCost?.ton || 0} TON\n\n(Скоро будет доступна оплата криптовалютой!)`);
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'scale(1.05)';
-                e.currentTarget.style.borderColor = 'rgba(0, 136, 204, 0.8)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'scale(1)';
-                e.currentTarget.style.borderColor = 'rgba(0, 136, 204, 0.4)';
-              }}
-            >
-              💎 TON — {themeConfig.cryptoCost?.ton || 0}
-            </button>
-            <button
-              style={{
-                padding: '8px 12px',
-                borderRadius: '8px',
-                border: '2px solid rgba(153, 69, 255, 0.4)',
-                background: 'linear-gradient(135deg, #9945ff 0%, #6a26cd 100%)',
-                color: '#ffffff',
-                fontSize: '13px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                boxShadow: '0 2px 8px rgba(153, 69, 255, 0.3)'
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
-                alert(`☀️ SOLANA\n\nСтоимость: ${themeConfig.cryptoCost?.sol || 0} SOL\n\n(Скоро будет доступна оплата криптовалютой!)`);
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'scale(1.05)';
-                e.currentTarget.style.borderColor = 'rgba(153, 69, 255, 0.8)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'scale(1)';
-                e.currentTarget.style.borderColor = 'rgba(153, 69, 255, 0.4)';
-              }}
-            >
-              ☀️ SOL — {themeConfig.cryptoCost?.sol || 0}
-            </button>
-            <button
-              style={{
-                padding: '8px 12px',
-                borderRadius: '8px',
-                border: '2px solid rgba(98, 126, 234, 0.4)',
-                background: 'linear-gradient(135deg, #627eea 0%, #4a5fd8 100%)',
-                color: '#ffffff',
-                fontSize: '13px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                boxShadow: '0 2px 8px rgba(98, 126, 234, 0.3)'
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
-                alert(`💠 ETHEREUM\n\nСтоимость: ${themeConfig.cryptoCost?.eth || 0} ETH\n\n(Скоро будет доступна оплата криптовалютой!)`);
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'scale(1.05)';
-                e.currentTarget.style.borderColor = 'rgba(98, 126, 234, 0.8)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'scale(1)';
-                e.currentTarget.style.borderColor = 'rgba(98, 126, 234, 0.4)';
-              }}
-            >
-              💠 ETH — {themeConfig.cryptoCost?.eth || 0}
-            </button>
-          </motion.div>
-        )}
-      </div>
+      <motion.button
+        whileHover={{ scale: disabled ? 1 : 1.03 }}
+        whileTap={{ scale: disabled ? 1 : 0.97 }}
+        onClick={onCryptoClick}
+        disabled={disabled}
+        style={{
+          width: '100%',
+          padding: '6px',
+          borderRadius: '8px',
+          border: 'none',
+          background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+          color: '#ffffff',
+          fontWeight: 'bold',
+          fontSize: '11px',
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          opacity: disabled ? 0.6 : 1,
+          position: 'relative',
+          zIndex: 2
+        }}
+      >
+        💎 ЗА КРИПТУ
+      </motion.button>
     </div>
   );
 }
