@@ -1619,6 +1619,97 @@ export default function ProfilePage() {
           </motion.div>
         )}
 
+        {activeSection === 'rating' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            style={{
+              padding: '20px',
+              marginBottom: '100px'
+            }}
+          >
+            <h3 style={{
+              color: '#fbbf24',
+              fontSize: '24px',
+              fontWeight: '700',
+              marginBottom: '20px',
+              textAlign: 'center'
+            }}>
+              🏆 ИСТОРИЯ РЕЙТИНГОВЫХ ИГР
+            </h3>
+            
+            <div style={{
+              background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
+              border: '2px solid rgba(99, 102, 241, 0.3)',
+              borderRadius: '16px',
+              padding: '20px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+            }}>
+              <p style={{
+                color: '#94a3b8',
+                fontSize: '16px',
+                textAlign: 'center',
+                margin: 0
+              }}>
+                Здесь будет отображаться история ваших рейтинговых игр, побед, поражений и заработанных очков.
+              </p>
+              
+              {/* Пример записи */}
+              <div style={{
+                marginTop: '20px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px'
+              }}>
+                <div style={{
+                  background: 'rgba(34, 197, 94, 0.1)',
+                  border: '1px solid rgba(34, 197, 94, 0.3)',
+                  borderRadius: '12px',
+                  padding: '15px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}>
+                  <div>
+                    <div style={{ color: '#4ade80', fontWeight: '700', fontSize: '16px' }}>✅ ПОБЕДА</div>
+                    <div style={{ color: '#94a3b8', fontSize: '14px', marginTop: '4px' }}>12.11.2025, 19:30</div>
+                  </div>
+                  <div style={{
+                    color: '#4ade80',
+                    fontWeight: '700',
+                    fontSize: '20px'
+                  }}>
+                    +50 🏆
+                  </div>
+                </div>
+
+                <div style={{
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  borderRadius: '12px',
+                  padding: '15px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}>
+                  <div>
+                    <div style={{ color: '#f87171', fontWeight: '700', fontSize: '16px' }}>❌ ПОРАЖЕНИЕ</div>
+                    <div style={{ color: '#94a3b8', fontSize: '14px', marginTop: '4px' }}>12.11.2025, 18:15</div>
+                  </div>
+                  <div style={{
+                    color: '#f87171',
+                    fontWeight: '700',
+                    fontSize: '20px'
+                  }}>
+                    -25 🏆
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
       </div>
 
       {/* Модальные окна */}
