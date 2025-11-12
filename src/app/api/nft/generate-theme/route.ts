@@ -18,7 +18,8 @@ import fs from 'fs';
 const THEMES: Record<string, { prefix: string; folder: string; total: number }> = {
   pokemon: { prefix: '', folder: 'pokemon', total: 52 },
   halloween: { prefix: 'hel_', folder: 'halloween', total: 10 },
-  starwars: { prefix: 'star_', folder: 'starwars', total: 7 }
+  starwars: { prefix: 'star_', folder: 'starwars', total: 7 },
+  legendary: { prefix: 'leg_', folder: 'legendary', total: 5 }
 };
 
 export async function POST(request: NextRequest) {

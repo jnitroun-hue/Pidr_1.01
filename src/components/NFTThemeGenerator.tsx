@@ -269,20 +269,54 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
 
       img.onload = () => {
         try {
-          // Белый фон
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(0, 0, 300, 420);
+          // 👑 ЛЕГЕНДАРНАЯ: PNG на ВСЮ КАРТУ!
+          const isLegendary = theme === 'legendary';
 
-          // Черная рамка
-          ctx.strokeStyle = '#000000';
-          ctx.lineWidth = 8;
-          ctx.strokeRect(4, 4, 292, 412);
+          if (isLegendary) {
+            // ✅ РИСУЕМ PNG НА ВСЮ КАРТУ (300x420)
+            ctx.drawImage(img, 0, 0, 300, 420);
+
+            // Черная рамка ПОВЕРХ
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 8;
+            ctx.strokeRect(4, 4, 292, 412);
+          } else {
+            // Обычные темы: белый фон
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, 300, 420);
+
+            // Черная рамка
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 8;
+            ctx.strokeRect(4, 4, 292, 412);
+
+            // Изображение в центре (200x200)
+            const imgWidth = 200;
+            const imgHeight = 200;
+            const imgX = (300 - imgWidth) / 2;
+            const imgY = 110;
+            ctx.drawImage(img, imgX, imgY, imgWidth, imgHeight);
+          }
 
           // Цвет масти
           const suitColor = (suit === 'hearts' || suit === 'diamonds') ? '#ef4444' : '#000000';
           const suitSymbol = { hearts: '♥', diamonds: '♦', clubs: '♣', spades: '♠' }[suit] || suit;
 
-          // Ранг и масть в углах
+          // ✅ РАНГ И МАСТЬ ПОВЕРХ ИЗОБРАЖЕНИЯ!
+          // Добавляем белый контур для лучшей видимости на легендарной
+          if (isLegendary) {
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 3;
+            ctx.font = 'bold 40px Arial';
+            ctx.strokeText(rank.toUpperCase(), 20, 50);
+            ctx.strokeText(rank.toUpperCase(), 260, 400);
+            
+            ctx.font = 'bold 36px Arial';
+            ctx.strokeText(suitSymbol, 20, 90);
+            ctx.strokeText(suitSymbol, 260, 360);
+          }
+
+          // Ранг и масть в углах (основной цвет)
           ctx.fillStyle = suitColor;
           ctx.font = 'bold 40px Arial';
           ctx.fillText(rank.toUpperCase(), 20, 50);
@@ -292,15 +326,7 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
           ctx.fillText(suitSymbol, 20, 90);
           ctx.fillText(suitSymbol, 260, 360);
 
-          // ✅ РИСУЕМ ИЗОБРАЖЕНИЕ В ЦЕНТРЕ!
-          const imgWidth = 200;
-          const imgHeight = 200;
-          const imgX = (300 - imgWidth) / 2;
-          const imgY = 110;
-
-          ctx.drawImage(img, imgX, imgY, imgWidth, imgHeight);
-
-          console.log(`✅ [Client] Изображение нарисовано: ${imagePath}`);
+          console.log(`✅ [Client] Изображение нарисовано: ${imagePath} (legendary: ${isLegendary})`);
           resolve(canvas.toDataURL('image/png'));
         } catch (error) {
           console.error(`❌ [Client] Ошибка рисования:`, error);
