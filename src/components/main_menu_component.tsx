@@ -73,170 +73,322 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
     }
   }
 
+  const menuButtons = [
+    {
+      icon: <Play size={32} />,
+      emoji: '🎮',
+      label: t.mainMenu.play,
+      onClick: () => {
+        hapticFeedback('medium');
+        startGame('single', 7);
+        setTimeout(() => router.push('/game'), 100);
+      }
+    },
+    {
+      icon: <Users size={32} />,
+      emoji: '👥',
+      label: t.mainMenu.online,
+      onClick: () => {
+        hapticFeedback('medium');
+        router.push('/multiplayer');
+      }
+    },
+    {
+      icon: <Store size={32} />,
+      emoji: '🏪',
+      label: t.mainMenu.shop,
+      onClick: () => {
+        hapticFeedback('medium');
+        router.push('/shop');
+      }
+    },
+    {
+      icon: <User size={32} />,
+      emoji: '👤',
+      label: t.mainMenu.profile,
+      onClick: () => {
+        hapticFeedback('medium');
+        router.push('/profile');
+      }
+    },
+    {
+      icon: <Book size={32} />,
+      emoji: '📖',
+      label: t.mainMenu.rules,
+      onClick: () => {
+        hapticFeedback('medium');
+        router.push('/rules');
+      }
+    }
+  ];
+
   return (
-    <div className="main-menu-container">
-      <div className="main-menu-inner">
-        {/* Верхний бар */}
-        <div className="menu-header" style={{ position: 'relative' }}>
-          <button onClick={() => window.history.back()} className="px-3 py-1 rounded-lg border border-red-400 text-red-200 font-semibold text-base hover:bg-red-400/10 transition-all">
-            {t.common.back}
-          </button>
-          <span className="menu-title">{t.mainMenu.title}</span>
-          <LanguageSwitcher 
-            currentLanguage={language}
-            onLanguageChange={changeLanguage}
-            className="ml-2"
-          />
-        </div>
-        
-        {/* Быстрые действия */}
-        <div className="menu-actions-title">
-          {t.mainMenu.quickActions}
-        </div>
-        <div className="menu-actions-grid">
-          <button 
-         onClick={(e) => {
-           e.stopPropagation(); // ✅ КРИТИЧНО: Останавливаем всплытие события!
-           console.log('Кнопка ИГРАТЬ нажата');
-           hapticFeedback('medium');
-           try {
-             // Сначала запускаем игру, потом переходим
-             console.log('🎮 Запускаем игру перед переходом...');
-             startGame('single', 7); // ✅ ИЗМЕНЕНО НА 7!
-                
-                // Небольшая задержка для инициализации
-                setTimeout(() => {
-                  router.push('/game');
-                }, 100);
-              } catch (error) {
-                console.error('Ошибка запуска игры:', error);
-                // Fallback - просто переходим на страницу
-                router.push('/game');
-              }
-            }} 
-            className="menu-action-card"
-            style={{ zIndex: 50 }}
-          >
-            <Play className="menu-action-icon" />
-            <span className="menu-action-label">{t.mainMenu.play.toUpperCase()}</span>
-          </button>
-          
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)',
+      padding: '20px',
+      paddingTop: '80px'
+    }}>
+      {/* Кнопка назад и язык */}
+      <motion.div
+        initial={{ x: -20, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        style={{
+          position: 'fixed',
+          top: '20px',
+          left: '20px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          zIndex: 100
+        }}
+      >
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => window.history.back()}
+          style={{
+            background: 'rgba(239, 68, 68, 0.2)',
+            border: '2px solid rgba(239, 68, 68, 0.3)',
+            borderRadius: '12px',
+            padding: '12px',
+            color: '#ef4444',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: '16px',
+            fontWeight: '600',
+            backdropFilter: 'blur(10px)'
+          }}
+        >
+          ← {t.common.back}
+        </motion.button>
+        <LanguageSwitcher 
+          currentLanguage={language}
+          onLanguageChange={changeLanguage}
+        />
+      </motion.div>
 
-          <button 
-            onClick={(e) => {
-              e.stopPropagation(); // ✅ КРИТИЧНО
-              console.log('Кнопка ОНЛАЙН нажата');
-              hapticFeedback('medium');
-              try {
-                router.push('/multiplayer');
-              } catch (error) {
-                console.error('Ошибка навигации к мультиплееру:', error);
-                window.location.href = '/multiplayer';
-              }
-            }} 
-            className="menu-action-card multiplayer-card"
-            style={{ zIndex: 50 }}
+      <div style={{
+        maxWidth: '800px',
+        margin: '0 auto'
+      }}>
+        {/* Заголовок */}
+        <motion.div 
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          style={{
+            textAlign: 'center',
+            marginBottom: '40px'
+          }}
+        >
+          <motion.div
+            animate={{ 
+              rotate: [0, 10, -10, 0]
+            }}
+            transition={{ 
+              duration: 2, 
+              repeat: Infinity,
+              ease: 'easeInOut'
+            }}
+            style={{
+              fontSize: '64px',
+              marginBottom: '15px'
+            }}
           >
-            <Users className="menu-action-icon" />
-            <span className="menu-action-label">
-              {t.mainMenu.online}
-            </span>
-          </button>
-          <button 
-            onClick={(e) => {
-              e.stopPropagation(); // ✅ КРИТИЧНО
-              console.log('Кнопка МАГАЗИН нажата');
-              hapticFeedback('medium');
-              try {
-                router.push('/shop');
-              } catch (error) {
-                console.error('Ошибка навигации к магазину:', error);
-                window.location.href = '/shop';
-              }
-            }} 
-            className="menu-action-card"
-            style={{ zIndex: 50 }}
-          >
-            <Store className="menu-action-icon" />
-            <span className="menu-action-label">{t.mainMenu.shop}</span>
-          </button>
-          <button 
-            onClick={(e) => {
-              e.stopPropagation(); // ✅ КРИТИЧНО
-              console.log('Кнопка ПРОФИЛЬ нажата');
-              hapticFeedback('medium');
-              try {
-                router.push('/profile');
-              } catch (error) {
-                console.error('Ошибка навигации к профилю:', error);
-                window.location.href = '/profile';
-              }
-            }} 
-            className="menu-action-card"
-            style={{ zIndex: 50 }}
-          >
-            <User className="menu-action-icon" />
-            <span className="menu-action-label">{t.mainMenu.profile}</span>
-          </button>
+            🎴
+          </motion.div>
+          <h1 style={{
+            fontSize: '42px',
+            fontWeight: '900',
+            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            marginBottom: '10px'
+          }}>
+            {t.mainMenu.title}
+          </h1>
+          <p style={{
+            color: '#94a3b8',
+            fontSize: '16px'
+          }}>
+            Выберите действие
+          </p>
+        </motion.div>
+
+        {/* 5 кнопок вертикально */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '15px'
+        }}>
+          {menuButtons.map((button, index) => (
+            <motion.button
+              key={index}
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: index * 0.1 }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={(e) => {
+                e.stopPropagation();
+                button.onClick();
+              }}
+              style={{
+                width: '100%',
+                background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
+                border: '2px solid rgba(99, 102, 241, 0.3)',
+                borderRadius: '16px',
+                padding: '20px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '15px',
+                transition: 'all 0.3s ease',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+              }}
+            >
+              <div style={{
+                fontSize: '32px',
+                filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))'
+              }}>
+                {button.emoji}
+              </div>
+              <h3 style={{
+                color: '#f1f5f9',
+                fontSize: '20px',
+                fontWeight: '700',
+                margin: 0,
+                flex: 1,
+                textAlign: 'left'
+              }}>
+                {button.label}
+              </h3>
+              <div style={{ color: '#6366f1' }}>
+                {button.icon}
+              </div>
+            </motion.button>
+          ))}
         </div>
 
-        {/* Кнопка Правила игры */}
-        <div className="rules-section">
-          <button 
-            onClick={(e) => {
-              e.stopPropagation(); // ✅ КРИТИЧНО
-              console.log('Кнопка ПРАВИЛА нажата');
-              hapticFeedback('medium');
-              try {
-                router.push('/rules');
-              } catch (error) {
-                console.error('Ошибка навигации к правилам:', error);
-                window.location.href = '/rules';
-              }
-            }} 
-            className="rules-button"
-            style={{ zIndex: 50 }}
-          >
-            <Book className="rules-icon" />
-            <span className="rules-label">{t.mainMenu.rules}</span>
-          </button>
-        </div>
-
-        {/* Компактные кошельки под основными кнопками */}
-        <div className="wallet-connect-section-compact">
-          <div className="wallet-connect-title-compact">КОШЕЛЕК</div>
-          <div className="wallet-connect-grid-compact">
-            <button 
-              onClick={() => handleWalletAction('ton')} 
-              className="wallet-connect-btn-compact ton-wallet-compact"
-            >
-              <div className="wallet-connect-icon-compact">💎</div>
-              <div className="wallet-connect-label-compact">
-                {isTonConnected ? '✓' : 'TON'}
-              </div>
-            </button>
-            
-            <button 
-              onClick={() => handleWalletAction('solana')} 
-              className="wallet-connect-btn-compact solana-wallet-compact"
-            >
-              <div className="wallet-connect-icon-compact">⚡</div>
-              <div className="wallet-connect-label-compact">
-                {isSolanaConnected ? '✓' : 'SOL'}
-              </div>
-            </button>
-            
-            <button 
-              onClick={() => handleWalletAction('ethereum')} 
-              className="wallet-connect-btn-compact ethereum-wallet-compact"
-            >
-              <div className="wallet-connect-icon-compact">🦄</div>
-              <div className="wallet-connect-label-compact">
-                {isEthereumConnected ? '✓' : 'ETH'}
-              </div>
-            </button>
+        {/* Компактные кошельки */}
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.6 }}
+          style={{
+            marginTop: '40px',
+            background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
+            border: '2px solid rgba(99, 102, 241, 0.3)',
+            borderRadius: '16px',
+            padding: '20px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+          }}
+        >
+          <div style={{
+            color: '#94a3b8',
+            fontSize: '14px',
+            fontWeight: '600',
+            marginBottom: '15px',
+            textAlign: 'center'
+          }}>
+            КОШЕЛЕК
           </div>
-        </div>
+          <div style={{
+            display: 'flex',
+            gap: '10px',
+            justifyContent: 'center'
+          }}>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => handleWalletAction('ton')}
+              style={{
+                flex: 1,
+                background: isTonConnected 
+                  ? 'linear-gradient(135deg, #0088ff 0%, #0066cc 100%)' 
+                  : 'rgba(0, 136, 255, 0.2)',
+                border: '2px solid rgba(0, 136, 255, 0.3)',
+                borderRadius: '12px',
+                padding: '12px',
+                cursor: 'pointer',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '5px'
+              }}
+            >
+              <div style={{ fontSize: '24px' }}>💎</div>
+              <div style={{ 
+                color: 'white', 
+                fontSize: '12px', 
+                fontWeight: '600' 
+              }}>
+                {isTonConnected ? '✓ TON' : 'TON'}
+              </div>
+            </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => handleWalletAction('solana')}
+              style={{
+                flex: 1,
+                background: isSolanaConnected 
+                  ? 'linear-gradient(135deg, #9945ff 0%, #7733cc 100%)' 
+                  : 'rgba(153, 69, 255, 0.2)',
+                border: '2px solid rgba(153, 69, 255, 0.3)',
+                borderRadius: '12px',
+                padding: '12px',
+                cursor: 'pointer',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '5px'
+              }}
+            >
+              <div style={{ fontSize: '24px' }}>⚡</div>
+              <div style={{ 
+                color: 'white', 
+                fontSize: '12px', 
+                fontWeight: '600' 
+              }}>
+                {isSolanaConnected ? '✓ SOL' : 'SOL'}
+              </div>
+            </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => handleWalletAction('ethereum')}
+              style={{
+                flex: 1,
+                background: isEthereumConnected 
+                  ? 'linear-gradient(135deg, #627eea 0%, #4a5ecc 100%)' 
+                  : 'rgba(98, 126, 234, 0.2)',
+                border: '2px solid rgba(98, 126, 234, 0.3)',
+                borderRadius: '12px',
+                padding: '12px',
+                cursor: 'pointer',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '5px'
+              }}
+            >
+              <div style={{ fontSize: '24px' }}>🦄</div>
+              <div style={{ 
+                color: 'white', 
+                fontSize: '12px', 
+                fontWeight: '600' 
+              }}>
+                {isEthereumConnected ? '✓ ETH' : 'ETH'}
+              </div>
+            </motion.button>
+          </div>
+        </motion.div>
       </div>
     </div>
   )
