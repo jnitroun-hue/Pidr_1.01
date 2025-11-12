@@ -148,7 +148,7 @@ export async function POST(req: NextRequest) {
     const requestBody = await req.json();
     console.log('📥 Получены данные:', requestBody);
     
-    const { telegramId, username, firstName, lastName, photoUrl } = requestBody;
+    const { telegramId, username, firstName, lastName, photoUrl, referrerId } = requestBody;
 
     if (!telegramId || !username) {
       return NextResponse.json({ 
@@ -222,6 +222,44 @@ export async function POST(req: NextRequest) {
 
       user = newUser;
       console.log('✅ Новый пользователь создан:', user.username);
+      
+      // ✅ ОБРАБОТКА РЕФЕРАЛЬНОЙ ССЫЛКИ
+      if (referrerId && referrerId !== String(telegramId)) {
+        console.log('🎁 Обрабатываем реферальную ссылку от:', referrerId);
+        try {
+          // Проверяем, существует ли пригласивший пользователь
+          const { data: referrerUser, error: referrerError } = await supabase
+            .from('_pidr_users')
+            .select('telegram_id')
+            .eq('telegram_id', referrerId)
+            .single();
+          
+          if (referrerUser) {
+            // Создаем связь дружбы (автоматически принятую)
+            const { error: friendshipError } = await supabase
+              .from('_pidr_friendships')
+              .insert([
+                {
+                  user_id: parseInt(telegramId),
+                  friend_id: parseInt(referrerId),
+                  status: 'accepted', // ✅ Сразу принимаем дружбу
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString()
+                }
+              ]);
+            
+            if (!friendshipError) {
+              console.log('✅ Дружба с приглашающим создана!');
+            } else {
+              console.error('❌ Ошибка создания дружбы:', friendshipError);
+            }
+          } else {
+            console.warn('⚠️ Пригласивший пользователь не найден:', referrerId);
+          }
+        } catch (error) {
+          console.error('❌ Ошибка обработки реферальной ссылки:', error);
+        }
+      }
     } else {
       // Обновляем данные существующего пользователя
       console.log('👤 Обновляем данные существующего пользователя...');

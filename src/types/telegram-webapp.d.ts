@@ -16,6 +16,7 @@ export interface TelegramWebAppUser {
 export interface TelegramWebAppInitDataUnsafe {
   user?: TelegramWebAppUser;
   chat?: any;
+  start_param?: string; // ✅ Параметр реферальной ссылки
   // ... другие поля, если нужны
 }
 

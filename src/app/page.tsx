@@ -165,12 +165,23 @@ function HomeWithParams() {
     const createUserThroughDatabase = async (telegramUser: any) => {
       console.log('🌐 Создание/авторизация пользователя в БД...');
       
+      // ✅ ОБРАБОТКА РЕФЕРАЛЬНОЙ ССЫЛКИ
+      const tgWebApp = typeof window !== 'undefined' && (window as any).Telegram?.WebApp;
+      const referralParam = tgWebApp?.initDataUnsafe?.start_param;
+      let referrerId: string | null = null;
+      
+      if (referralParam && referralParam.startsWith('invite_')) {
+        referrerId = referralParam.replace('invite_', '');
+        console.log('🎁 Реферальная ссылка обнаружена! Пригласил:', referrerId);
+      }
+      
       const authData = {
         telegramId: String(telegramUser.id),
         username: telegramUser?.username || `user_${telegramUser.id}`,
         firstName: telegramUser?.first_name || 'Игрок',
         lastName: telegramUser?.last_name || '',
-        photoUrl: telegramUser?.photo_url || null
+        photoUrl: telegramUser?.photo_url || null,
+        referrerId: referrerId // ✅ Передаем ID приглашающего
       };
       
       console.log('📤 Отправляем данные:', authData);
