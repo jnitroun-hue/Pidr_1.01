@@ -1,5 +1,6 @@
 'use client'
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Trophy, Medal, Users, User, Star, Award, Target, Camera, Upload, Wallet, Palette, Sparkles, Gift, Frame } from 'lucide-react';
 import GameWallet from '../../components/GameWallet';
@@ -61,6 +62,7 @@ function BonusCooldownTimer({ bonus, onCooldownEnd }: { bonus: any; onCooldownEn
 }
 
 export default function ProfilePage() {
+  const router = useRouter();
   const { language } = useLanguage();
   const t = useTranslations(language);
   
@@ -1059,7 +1061,7 @@ export default function ProfilePage() {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => window.location.href = '/friends'}
+                onClick={() => router.push('/friends')}
                 style={{
                   background: 'rgba(59, 130, 246, 0.2)',
                   border: '2px solid rgba(59, 130, 246, 0.3)',
