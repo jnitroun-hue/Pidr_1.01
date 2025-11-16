@@ -25,6 +25,8 @@ export async function GET(request: NextRequest) {
 
     const currentUserId = telegramId ? parseInt(telegramId) : null;
 
+    console.log(`🔍 [FRIENDS SEARCH] Поиск по запросу: "${query}", текущий пользователь: ${currentUserId}`);
+
     // Поиск по username или first_name
     const { data: users, error } = await supabase
       .from('_pidr_users')
@@ -41,7 +43,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log(`✅ Найдено пользователей: ${users?.length}`);
+    console.log(`✅ Найдено пользователей: ${users?.length}`, users);
 
     return NextResponse.json({
       success: true,

@@ -76,6 +76,8 @@ export default function FriendsPage() {
       setSearching(true);
       const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
       
+      console.log('🔍 [FRONTEND] Поиск друзей:', query, 'Telegram ID:', telegramUser?.id);
+      
       const response = await fetch(`/api/friends/search?query=${encodeURIComponent(query)}`, {
         headers: {
           'x-telegram-id': telegramUser?.id?.toString() || '',
@@ -85,7 +87,10 @@ export default function FriendsPage() {
 
       if (response.ok) {
         const result = await response.json();
+        console.log('✅ [FRONTEND] Результаты поиска:', result);
         setSearchResults(result.users || []);
+      } else {
+        console.error('❌ [FRONTEND] Ошибка ответа:', response.status, await response.text());
       }
     } catch (error) {
       console.error('❌ Ошибка поиска:', error);

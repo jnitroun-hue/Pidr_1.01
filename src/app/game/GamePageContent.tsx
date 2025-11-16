@@ -192,7 +192,7 @@ interface GamePageContentProps {
 }
 
 function GamePageContentComponent({ 
-  initialPlayerCount = 9, 
+  initialPlayerCount = 7, // ✅ ИЗМЕНЕНО: 9 → 7 ИГРОКОВ!
   isMultiplayer = false, 
   multiplayerData,
   onGameEnd 
@@ -1583,13 +1583,13 @@ function GamePageContentComponent({
                         alt={player.name}
                             className={styles.avatar}
                           style={{
-                            width: '60px',
-                            height: '60px',
+                            width: '30px', // ✅ УМЕНЬШЕНО В 2 РАЗА: 60px → 30px!
+                            height: '30px',
                             borderRadius: '50%',
                             boxShadow: currentPlayerId === player.id 
-                              ? '0 0 30px rgba(251, 191, 36, 1), 0 0 50px rgba(251, 191, 36, 0.8), 0 0 80px rgba(251, 191, 36, 0.6), 0 0 120px rgba(251, 191, 36, 0.4)' // ✅ ЖИРНЫЙ ЗОЛОТОЙ ИМПУЛЬС!
-                              : '0 4px 12px rgba(0, 0, 0, 0.3)',
-                            border: `${currentPlayerId === player.id ? '8px' : '3px'} solid ${currentPlayerId === player.id ? '#fbbf24' : 'rgba(255, 255, 255, 0.2)'}`, // ✅ ЗОЛОТОЙ ОБОД 8px (ЖИРНЕЕ В 5 РАЗ: было 5px → стало 8px)!
+                              ? '0 0 20px rgba(34, 197, 94, 1), 0 0 35px rgba(34, 197, 94, 0.8), 0 0 50px rgba(34, 197, 94, 0.6)' // ✅ ЗЕЛЁНЫЙ ИМПУЛЬС ПРИ ХОДЕ!
+                              : '0 2px 8px rgba(0, 0, 0, 0.3)',
+                            border: `${currentPlayerId === player.id ? '4px' : '2px'} solid ${currentPlayerId === player.id ? '#fbbf24' : 'rgba(255, 255, 255, 0.2)'}`, // ✅ ЖИРНАЯ ЗОЛОТАЯ РАМКА 4px!
                             transition: 'all 0.3s ease',
                             objectFit: 'cover',
                             position: 'relative',
