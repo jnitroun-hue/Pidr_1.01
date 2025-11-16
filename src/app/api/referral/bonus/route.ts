@@ -32,31 +32,47 @@ export async function POST(request: NextRequest) {
     const NEW_USER_BONUS = 200;
 
     // Начисляем бонус пригласившему
-    const { error: referrerError } = await supabase
+    const { data: referrerData } = await supabase
       .from('_pidr_users')
-      .update({
-        coins: supabase.raw(`coins + ${REFERRER_BONUS}`)
-      })
-      .eq('telegram_id', referrer_id);
+      .select('coins')
+      .eq('telegram_id', referrer_id)
+      .single();
 
-    if (referrerError) {
-      console.error('❌ Ошибка начисления бонуса пригласившему:', referrerError);
-    } else {
-      console.log(`✅ Пригласившему ${referrer_id} начислено +${REFERRER_BONUS} монет`);
+    if (referrerData) {
+      const { error: referrerError } = await supabase
+        .from('_pidr_users')
+        .update({
+          coins: (referrerData.coins || 0) + REFERRER_BONUS
+        })
+        .eq('telegram_id', referrer_id);
+
+      if (referrerError) {
+        console.error('❌ Ошибка начисления бонуса пригласившему:', referrerError);
+      } else {
+        console.log(`✅ Пригласившему ${referrer_id} начислено +${REFERRER_BONUS} монет`);
+      }
     }
 
     // Начисляем бонус новому пользователю
-    const { error: newUserError } = await supabase
+    const { data: newUserData } = await supabase
       .from('_pidr_users')
-      .update({
-        coins: supabase.raw(`coins + ${NEW_USER_BONUS}`)
-      })
-      .eq('telegram_id', new_user_id);
+      .select('coins')
+      .eq('telegram_id', new_user_id)
+      .single();
 
-    if (newUserError) {
-      console.error('❌ Ошибка начисления бонуса новому пользователю:', newUserError);
-    } else {
-      console.log(`✅ Новому пользователю ${new_user_id} начислено +${NEW_USER_BONUS} монет`);
+    if (newUserData) {
+      const { error: newUserError } = await supabase
+        .from('_pidr_users')
+        .update({
+          coins: (newUserData.coins || 0) + NEW_USER_BONUS
+        })
+        .eq('telegram_id', new_user_id);
+
+      if (newUserError) {
+        console.error('❌ Ошибка начисления бонуса новому пользователю:', newUserError);
+      } else {
+        console.log(`✅ Новому пользователю ${new_user_id} начислено +${NEW_USER_BONUS} монет`);
+      }
     }
 
     // Создаем запись о реферальном бонусе (для статистики)

@@ -1583,13 +1583,13 @@ function GamePageContentComponent({
                         alt={player.name}
                             className={styles.avatar}
                           style={{
-                            width: '60px', // ✅ УВЕЛИЧЕНО ДЛЯ БОЛЬШЕГО ОБОДА
+                            width: '60px',
                             height: '60px',
                             borderRadius: '50%',
                             boxShadow: currentPlayerId === player.id 
-                              ? '0 0 25px rgba(34, 197, 94, 0.9), 0 0 40px rgba(34, 197, 94, 0.6), 0 0 60px rgba(34, 197, 94, 0.4)' // ✅ ЖИРНЫЙ ИМПУЛЬС!
+                              ? '0 0 30px rgba(251, 191, 36, 1), 0 0 50px rgba(251, 191, 36, 0.8), 0 0 80px rgba(251, 191, 36, 0.6), 0 0 120px rgba(251, 191, 36, 0.4)' // ✅ ЖИРНЫЙ ЗОЛОТОЙ ИМПУЛЬС!
                               : '0 4px 12px rgba(0, 0, 0, 0.3)',
-                            border: `${currentPlayerId === player.id ? '5px' : '3px'} solid ${currentPlayerId === player.id ? '#fbbf24' : 'rgba(255, 255, 255, 0.2)'}`, // ✅ ЗОЛОТОЙ ОБОД 5px!
+                            border: `${currentPlayerId === player.id ? '8px' : '3px'} solid ${currentPlayerId === player.id ? '#fbbf24' : 'rgba(255, 255, 255, 0.2)'}`, // ✅ ЗОЛОТОЙ ОБОД 8px (ЖИРНЕЕ В 5 РАЗ: было 5px → стало 8px)!
                             transition: 'all 0.3s ease',
                             objectFit: 'cover',
                             position: 'relative',
