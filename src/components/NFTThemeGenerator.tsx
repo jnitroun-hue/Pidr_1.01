@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles, Ghost, Swords, Zap } from 'lucide-react';
+import { useTonConnectUI, useTonAddress } from '@tonconnect/ui-react';
+import { toNano } from '@ton/core';
 
 interface NFTThemeGeneratorProps {
   userCoins: number;
@@ -80,6 +82,100 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
   const [selectedTheme, setSelectedTheme] = useState<ThemeType | null>(null);
   const [showCryptoModal, setShowCryptoModal] = useState(false);
   const [cryptoTheme, setCryptoTheme] = useState<keyof typeof THEMES | null>(null);
+  const [tonConnectUI] = useTonConnectUI();
+  const userTonAddress = useTonAddress();
+
+  // ✅ ОПЛАТА ЗА КРИПТУ (TON)
+  const handleCryptoPayment = async (crypto: 'TON' | 'SOL' | 'ETH') => {
+    if (!cryptoTheme) return;
+
+    const themeConfig = THEMES[cryptoTheme];
+    const cost = themeConfig.cryptoCost?.[crypto.toLowerCase() as 'ton' | 'sol' | 'eth'];
+    
+    if (!cost) {
+      alert('❌ Стоимость не указана для этой валюты');
+      return;
+    }
+
+    // ✅ TON ОПЛАТА
+    if (crypto === 'TON') {
+      if (!userTonAddress) {
+        alert('❌ Подключите TON кошелек для оплаты!');
+        return;
+      }
+
+      try {
+        // Получаем адрес получателя
+        const response = await fetch('/api/wallet/ton/payment-info', {
+          method: 'GET',
+          credentials: 'include'
+        });
+
+        if (!response.ok) {
+          throw new Error('Не удалось получить адрес для оплаты');
+        }
+
+        const data = await response.json();
+        if (!data.success) {
+          throw new Error(data.message || 'Ошибка получения адреса');
+        }
+
+        const receiverAddress = data.data.address;
+        const amountNano = toNano(cost.toString());
+
+        // Отправляем транзакцию через TON Connect
+        const transaction = {
+          validUntil: Math.floor(Date.now() / 1000) + 600, // 10 минут
+          messages: [
+            {
+              address: receiverAddress,
+              amount: amountNano.toString(),
+              payload: btoa(`NFT_${cryptoTheme}_${Date.now()}`) // Комментарий к транзакции
+            }
+          ]
+        };
+
+        console.log('💎 Отправка TON транзакции:', transaction);
+        const txResult = await tonConnectUI.sendTransaction(transaction);
+        console.log('✅ Транзакция отправлена:', txResult);
+
+        // Генерируем карту после успешной оплаты
+        const generateResponse = await fetch('/api/nft/generate-crypto', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-telegram-id': typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString() || ''
+          },
+          body: JSON.stringify({
+            theme: cryptoTheme,
+            quantity: 1,
+            crypto: 'TON',
+            transactionHash: txResult.boc,
+            walletAddress: userTonAddress
+          })
+        });
+
+        const generateData = await generateResponse.json();
+        
+        if (generateData.success) {
+          alert(`✅ Карта сгенерирована за ${cost} TON!\n\nТранзакция: ${txResult.boc.slice(0, 20)}...`);
+          setShowCryptoModal(false);
+          setCryptoTheme(null);
+        } else {
+          alert(`❌ Ошибка генерации: ${generateData.error}`);
+        }
+      } catch (error: any) {
+        console.error('❌ Ошибка TON оплаты:', error);
+        if (error.message?.includes('User rejected')) {
+          alert('❌ Оплата отменена');
+        } else {
+          alert(`❌ Ошибка оплаты: ${error.message || 'Неизвестная ошибка'}`);
+        }
+      }
+    } else {
+      alert(`💎 ${crypto} оплата будет доступна в ближайшее время!`);
+    }
+  };
 
   // Генерация одной карты
   const handleGenerateSingle = async (theme: keyof typeof THEMES) => {
@@ -589,16 +685,20 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => alert(`💎 TON\n\nСтоимость: ${THEMES[cryptoTheme].cryptoCost?.ton || 0} TON\n\n(Скоро будет доступна оплата!)`)}
+                  onClick={() => handleCryptoPayment('TON')}
+                  disabled={!userTonAddress}
                   style={{
                     padding: '16px 20px',
                     borderRadius: '16px',
                     border: '2px solid rgba(0, 136, 204, 0.4)',
-                    background: 'linear-gradient(135deg, #0088cc 0%, #005580 100%)',
+                    background: userTonAddress 
+                      ? 'linear-gradient(135deg, #0088cc 0%, #005580 100%)'
+                      : 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)',
                     color: '#ffffff',
                     fontSize: '18px',
                     fontWeight: 'bold',
-                    cursor: 'pointer',
+                    cursor: userTonAddress ? 'pointer' : 'not-allowed',
+                    opacity: userTonAddress ? 1 : 0.6,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
@@ -608,6 +708,11 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
                   <span>💎 TON</span>
                   <span>{THEMES[cryptoTheme].cryptoCost?.ton || 0}</span>
                 </motion.button>
+                {!userTonAddress && (
+                  <div style={{ fontSize: '12px', color: '#94a3b8', textAlign: 'center', marginTop: '-8px' }}>
+                    Подключите TON кошелек
+                  </div>
+                )}
 
                 {/* SOLANA */}
                 <motion.button

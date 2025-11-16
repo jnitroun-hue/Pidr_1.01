@@ -82,7 +82,8 @@ export default function FriendsPage() {
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
     
-    if (query.trim().length < 2) {
+    // ✅ УБРАЛИ ПРОВЕРКУ НА ДЛИНУ - ПОИСК С 1 БУКВЫ
+    if (query.trim().length === 0) {
       setSearchResults([]);
       return;
     }

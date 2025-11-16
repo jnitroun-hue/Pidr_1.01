@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const query = searchParams.get('query');
     const telegramId = request.headers.get('x-telegram-id');
 
-    if (!query || query.length < 2) {
+    if (!query || query.trim().length === 0) {
       return NextResponse.json({
         success: true,
         users: []
@@ -27,13 +27,13 @@ export async function GET(request: NextRequest) {
 
     console.log(`🔍 [FRIENDS SEARCH] Поиск по запросу: "${query}", текущий пользователь: ${currentUserId}`);
 
-    // Поиск по username или first_name
+    // ✅ ПОИСК ПО USERNAME (даже с 1 буквой) - приоритет username
     const { data: users, error } = await supabase
       .from('_pidr_users')
       .select('telegram_id, username, first_name, avatar_url, rating, games_played, wins')
-      .or(`username.ilike.%${query}%,first_name.ilike.%${query}%`)
+      .ilike('username', `%${query}%`) // Поиск по username (даже с 1 буквой)
       .neq('telegram_id', currentUserId || 0) // Исключаем себя
-      .limit(10);
+      .limit(20); // Увеличиваем лимит для лучших результатов
 
     if (error) {
       console.error('❌ Ошибка поиска пользователей:', error);
