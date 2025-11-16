@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
       const { data: anyCard, error: anyError } = await supabase
         .from('_pidr_nft_cards')
         .select('*')
-        .eq('id', nftId)
+        .eq('id', cardId) // ✅ ИСПРАВЛЕНО: cardId вместо nftId
         .single();
       
       if (anyCard) {
@@ -134,8 +134,8 @@ export async function POST(request: NextRequest) {
       const { error: updateError } = await supabase
         .from('_pidr_user_nft_deck')
         .update({
-          nft_card_id: nftId,
-          image_url: imageUrl,
+          nft_card_id: cardId, // ✅ ИСПРАВЛЕНО: cardId вместо nftId
+          image_url: cardImageUrl, // ✅ ИСПРАВЛЕНО: cardImageUrl вместо imageUrl
           updated_at: new Date().toISOString()
         })
         .eq('id', existing.id);
@@ -155,10 +155,10 @@ export async function POST(request: NextRequest) {
         .from('_pidr_user_nft_deck')
         .insert({
           user_id: userId,
-          nft_card_id: nftId,
+          nft_card_id: cardId, // ✅ ИСПРАВЛЕНО: cardId вместо nftId
           suit,
           rank,
-          image_url: imageUrl,
+          image_url: cardImageUrl, // ✅ ИСПРАВЛЕНО: cardImageUrl вместо imageUrl
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         });
