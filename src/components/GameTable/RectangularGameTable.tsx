@@ -45,19 +45,19 @@ const getPlayerPosition = (index: number, totalPlayers: number, isCurrentPlayer:
 
   // ✅ ДЛЯ 5-7 ИГРОКОВ: 2 СВЕРХУ, 2 СЛЕВА, 2 СПРАВА (ВСЕГО 6 + 1 ИГРОК ВНИЗУ = 7)
   if (adjustedIndex < 2) {
-    // 2 игрока сверху
+    // 2 игрока сверху (позиции 0, 1)
     return {
       position: 'top',
       style: {
         top: '20px',
-        left: adjustedIndex === 0 ? '35%' : '65%',
+        left: adjustedIndex === 0 ? '30%' : '70%', // ✅ РАЗНЕСЕНЫ ШИРЕ!
         transform: 'translateX(-50%)',
       }
     };
   } else if (adjustedIndex < 4) {
     // 2 игрока слева (позиции 2, 3)
     const leftIndex = adjustedIndex - 2;
-    const leftPositions = ['35%', '65%']; // ✅ 2 ПОЗИЦИИ!
+    const leftPositions = ['30%', '70%']; // ✅ РАЗНЕСЕНЫ ПО ВЕРТИКАЛИ!
     return {
       position: 'left',
       style: {
@@ -69,7 +69,7 @@ const getPlayerPosition = (index: number, totalPlayers: number, isCurrentPlayer:
   } else {
     // 2 игрока справа (позиции 4, 5)
     const rightIndex = adjustedIndex - 4;
-    const rightPositions = ['35%', '65%']; // ✅ 2 ПОЗИЦИИ!
+    const rightPositions = ['30%', '70%']; // ✅ РАЗНЕСЕНЫ ПО ВЕРТИКАЛИ!
     return {
       position: 'right',
       style: {
