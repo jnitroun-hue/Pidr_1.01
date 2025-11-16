@@ -19,6 +19,7 @@ import { useTelegram } from '../hooks/useTelegram';
 import NeonMainMenu from '../components/main_menu_component';
 import CardLoadingScreen from '../components/CardLoadingScreen';
 import { useLanguage } from '../components/LanguageSwitcher';
+import RoomInviteModal from '../components/RoomInviteModal';
 
 /**
  * P.I.D.R. Game - Автоматическая авторизация через Telegram WebApp
@@ -33,6 +34,10 @@ function HomeWithParams() {
   const { user: telegramUser, isReady } = useTelegram();
   const { language } = useLanguage();
   const router = useRouter();
+  
+  // ✅ СОСТОЯНИЕ ДЛЯ ПРИГЛАШЕНИЯ В КОМНАТУ
+  const [roomInvite, setRoomInvite] = useState<{ roomId: string; roomCode: string } | null>(null);
+  const [showRoomInviteModal, setShowRoomInviteModal] = useState(false);
 
   useEffect(() => {
     // ✅ ЗАЩИТА ОТ ПОВТОРНОГО ЗАПУСКА
@@ -165,7 +170,7 @@ function HomeWithParams() {
     const createUserThroughDatabase = async (telegramUser: any) => {
       console.log('🌐 Создание/авторизация пользователя в БД...');
       
-      // ✅ ОБРАБОТКА РЕФЕРАЛЬНОЙ ССЫЛКИ
+      // ✅ ОБРАБОТКА РЕФЕРАЛЬНОЙ ССЫЛКИ И ПРИГЛАШЕНИЯ В КОМНАТУ
       const tgWebApp = typeof window !== 'undefined' && (window as any).Telegram?.WebApp;
       const referralParam = tgWebApp?.initDataUnsafe?.start_param;
       let referrerId: string | null = null;
@@ -173,6 +178,19 @@ function HomeWithParams() {
       if (referralParam && referralParam.startsWith('invite_')) {
         referrerId = referralParam.replace('invite_', '');
         console.log('🎁 Реферальная ссылка обнаружена! Пригласил:', referrerId);
+      }
+      
+      // ✅ ОБРАБОТКА ПРИГЛАШЕНИЯ В КОМНАТУ (формат: join_${roomId}_${roomCode})
+      let roomInviteData: { roomId: string; roomCode: string } | null = null;
+      if (referralParam && referralParam.startsWith('join_')) {
+        const parts = referralParam.replace('join_', '').split('_');
+        if (parts.length >= 2) {
+          const roomId = parts[0];
+          const roomCode = parts.slice(1).join('_'); // На случай если roomCode содержит подчеркивания
+          console.log('🎮 Приглашение в комнату обнаружено!', { roomId, roomCode });
+          roomInviteData = { roomId, roomCode };
+          setRoomInvite(roomInviteData);
+        }
       }
       
       const authData = {
@@ -221,6 +239,41 @@ function HomeWithParams() {
           setUser(newUser);
           
           initialized.current = true; // ✅ Устанавливаем флаг через useRef
+          
+          // ✅ ПРОВЕРЯЕМ ПРИГЛАШЕНИЕ В КОМНАТУ ПОСЛЕ АВТОРИЗАЦИИ
+          // Используем roomInviteData из замыкания функции createUserThroughDatabase
+          if (roomInviteData) {
+            // Проверяем статус пользователя (онлайн и не в игре)
+            const checkUserStatus = async () => {
+              try {
+                const statusResponse = await fetch('/api/auth', {
+                  method: 'GET',
+                  credentials: 'include'
+                });
+                
+                if (statusResponse.ok) {
+                  const statusData = await statusResponse.json();
+                  if (statusData.success && statusData.user) {
+                    const userStatus = statusData.user.status;
+                    // Показываем модальное окно только если пользователь онлайн и не в игре
+                    if (userStatus === 'online' && userStatus !== 'playing' && userStatus !== 'in_room') {
+                      console.log('✅ Пользователь онлайн, показываем приглашение в комнату');
+                      setTimeout(() => {
+                        setShowRoomInviteModal(true);
+                      }, 500);
+                    } else {
+                      console.log('⚠️ Пользователь не онлайн или уже в игре, пропускаем приглашение. Статус:', userStatus);
+                    }
+                  }
+                }
+              } catch (err) {
+                console.error('❌ Ошибка проверки статуса пользователя:', err);
+              }
+            };
+            
+            checkUserStatus();
+          }
+          
           setTimeout(() => {
             setLoading(false);
             setTimeout(() => setShowMainMenu(true), 100);
@@ -453,6 +506,23 @@ function HomeWithParams() {
           user={user} 
           onLogout={handleLogout}
         />
+        
+        {/* ✅ МОДАЛЬНОЕ ОКНО ПРИГЛАШЕНИЯ В КОМНАТУ */}
+        {roomInvite && (
+          <RoomInviteModal
+            isOpen={showRoomInviteModal}
+            roomId={roomInvite.roomId}
+            roomCode={roomInvite.roomCode}
+            onClose={() => {
+              setShowRoomInviteModal(false);
+              setRoomInvite(null);
+            }}
+            onJoin={() => {
+              setShowRoomInviteModal(false);
+              setRoomInvite(null);
+            }}
+          />
+        )}
       </div>
     );
   }

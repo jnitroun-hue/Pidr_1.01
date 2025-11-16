@@ -79,6 +79,21 @@ export const ProperMultiplayer: React.FC = () => {
     fetchUser();
   }, []);
 
+  // ✅ ОБРАБОТКА ПРИГЛАШЕНИЯ В КОМНАТУ ИЗ URL
+  useEffect(() => {
+    if (typeof window === 'undefined' || !user?.id) return;
+    
+    const params = new URLSearchParams(window.location.search);
+    const roomId = params.get('roomId');
+    const roomCode = params.get('roomCode');
+    
+    if (roomId && roomCode) {
+      console.log('🎮 [ProperMultiplayer] Обнаружено приглашение в комнату из URL:', { roomId, roomCode });
+      // Автоматически присоединяемся к комнате
+      handleJoinRoom(roomCode);
+    }
+  }, [user]);
+
   // Загрузка комнат при открытии лобби + АВТООЧИСТКА
   useEffect(() => {
     if (view === 'lobby') {
