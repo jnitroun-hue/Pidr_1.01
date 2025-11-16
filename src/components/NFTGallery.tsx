@@ -8,6 +8,8 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
+import { TonConnectButton } from '@tonconnect/ui-react';
+import SolanaWalletConnect from './SolanaWalletConnect';
 
 interface NFTCard {
   id: string;
@@ -207,9 +209,21 @@ export default function NFTGallery() {
         }}>
           🎴 МОЯ NFT КОЛЛЕКЦИЯ
         </h3>
-        <p style={{ color: '#94a3b8', fontSize: '1.1rem' }}>
+        <p style={{ color: '#94a3b8', fontSize: '1.1rem', marginBottom: '20px' }}>
           Всего карт: <span style={{ color: '#3b82f6', fontWeight: 'bold', fontSize: '1.3rem' }}>{collection.length}</span>
         </p>
+
+        {/* ✅ ПОДКЛЮЧЕНИЕ КОШЕЛЬКОВ */}
+        <div style={{
+          maxWidth: '400px',
+          margin: '0 auto',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px'
+        }}>
+          <TonConnectButton />
+          <SolanaWalletConnect />
+        </div>
       </div>
 
       {/* СЕТКА КАРТ - КАК В МАГАЗИНЕ */}

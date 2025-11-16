@@ -431,29 +431,53 @@ export default function MultiplayerLobby({
           {currentPlayer?.is_ready ? '✅ Готов' : '⏳ Не готов'}
         </motion.button>
 
-        {/* Добавить бота (только хост) */}
+        {/* Добавить бота и пригласить друзей (только хост) */}
         {isHost && lobbyState.players.length < lobbyState.maxPlayers && (
-          <motion.button
-            onClick={addBot}
-            disabled={isAddingBot}
-            whileHover={{ scale: 1.02, y: -2 }}
-            whileTap={{ scale: 0.98 }}
-            style={{
-              padding: '14px 24px',
-              borderRadius: '12px',
-              border: 'none',
-              background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-              color: 'white',
-              fontSize: '16px',
-              fontWeight: 'bold',
-              cursor: isAddingBot ? 'not-allowed' : 'pointer',
-              opacity: isAddingBot ? 0.5 : 1,
-              boxShadow: '0 4px 12px rgba(139, 92, 246, 0.4)',
-              transition: 'all 0.2s'
-            }}
-          >
-            {isAddingBot ? '⏳ Добавление...' : '🤖 Добавить бота'}
-          </motion.button>
+          <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
+            <motion.button
+              onClick={addBot}
+              disabled={isAddingBot}
+              whileHover={{ scale: 1.02, y: -2 }}
+              whileTap={{ scale: 0.98 }}
+              style={{
+                flex: 1,
+                padding: '14px 24px',
+                borderRadius: '12px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                color: 'white',
+                fontSize: '16px',
+                fontWeight: 'bold',
+                cursor: isAddingBot ? 'not-allowed' : 'pointer',
+                opacity: isAddingBot ? 0.5 : 1,
+                boxShadow: '0 4px 12px rgba(139, 92, 246, 0.4)',
+                transition: 'all 0.2s'
+              }}
+            >
+              {isAddingBot ? '⏳ Добавление...' : '🤖 Добавить бота'}
+            </motion.button>
+
+            <motion.button
+              onClick={() => window.location.href = `/friends?invite_room=${roomId}&room_code=${roomCode}`}
+              whileHover={{ scale: 1.02, y: -2 }}
+              whileTap={{ scale: 0.98 }}
+              style={{
+                flex: 1,
+                padding: '14px 24px',
+                borderRadius: '12px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                color: 'white',
+                fontSize: '16px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)',
+                transition: 'all 0.2s'
+              }}
+            >
+              👥 Пригласить друзей
+            </motion.button>
+          </div>
         )}
 
         {/* Запуск игры (только хост) */}

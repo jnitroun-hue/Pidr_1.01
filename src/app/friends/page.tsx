@@ -23,6 +23,21 @@ export default function FriendsPage() {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [searchResults, setSearchResults] = useState<Friend[]>([]);
   const [searching, setSearching] = useState(false);
+  const [inviteRoomId, setInviteRoomId] = useState<string | null>(null);
+  const [inviteRoomCode, setInviteRoomCode] = useState<string | null>(null);
+
+  // ✅ ПРОВЕРЯЕМ URL НА ПАРАМЕТРЫ ПРИГЛАШЕНИЯ
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const roomId = params.get('invite_room');
+    const roomCode = params.get('room_code');
+    
+    if (roomId && roomCode) {
+      setInviteRoomId(roomId);
+      setInviteRoomCode(roomCode);
+      console.log('🎮 Режим приглашения в комнату:', roomId, roomCode);
+    }
+  }, []);
 
   // Загрузка друзей из БД
   useEffect(() => {
@@ -332,23 +347,50 @@ export default function FriendsPage() {
                       @{user.username}
                     </div>
                   </div>
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => handleAddFriend(user.telegram_id)}
-                    style={{
-                      padding: '8px 16px',
-                      background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-                      border: 'none',
-                      borderRadius: '12px',
-                      color: '#ffffff',
-                      fontSize: '14px',
-                      fontWeight: '700',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <UserPlus size={16} />
-                  </motion.button>
+                  {inviteRoomId && inviteRoomCode ? (
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => {
+                        const inviteLink = `https://t.me/NotPidrBot?start=join_${inviteRoomId}_${inviteRoomCode}`;
+                        const message = `🎮 ${user.username || user.first_name}, присоединяйся к игре The Must!\n\nКод комнаты: ${inviteRoomCode}\n${inviteLink}`;
+                        
+                        if ((window as any).Telegram?.WebApp) {
+                          (window as any).Telegram.WebApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(message)}`);
+                        }
+                      }}
+                      style={{
+                        padding: '8px 16px',
+                        background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                        border: 'none',
+                        borderRadius: '12px',
+                        color: '#ffffff',
+                        fontSize: '14px',
+                        fontWeight: '700',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      🎮 Пригласить
+                    </motion.button>
+                  ) : (
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => handleAddFriend(user.telegram_id)}
+                      style={{
+                        padding: '8px 16px',
+                        background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                        border: 'none',
+                        borderRadius: '12px',
+                        color: '#ffffff',
+                        fontSize: '14px',
+                        fontWeight: '700',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <UserPlus size={16} />
+                    </motion.button>
+                  )}
                 </motion.div>
               ))}
             </div>
