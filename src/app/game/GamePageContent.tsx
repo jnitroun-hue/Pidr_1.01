@@ -91,6 +91,7 @@ const getRectanglePosition = (index: number, totalPlayers: number, gameStage: nu
   left: string; 
   cardDirection: 'horizontal' | 'vertical';
   cardOffset: { x: number; y: number };
+  side: 'top' | 'bottom' | 'left' | 'right'; // ✅ НОВОЕ: сторона для правильного расположения карт
 } => {
   // ПОЗИЦИЯ 0: Главный игрок ВНИЗУ ПО ЦЕНТРУ
   if (index === 0) {
@@ -98,37 +99,61 @@ const getRectanglePosition = (index: number, totalPlayers: number, gameStage: nu
       left: '50%', 
       top: '85%', // ✅ ПОДНЯТО ВЫШЕ - не накладывается на системные кнопки телефона
       cardDirection: 'horizontal',
-      cardOffset: { x: 0, y: -40 }
+      cardOffset: { x: 0, y: -40 },
+      side: 'bottom'
     };
   }
   
-  // НОВАЯ РАССАДКА: 2 СВЕРХУ, ПО 3 ПО БОКАМ
-  // 1-3 → левая сторона (3 игрока)
-  // 4-5 → верхняя сторона (2 игрока) 
-  // 6-8 → правая сторона (3 игрока)
+  // ✅ НОВАЯ РАССАДКА В ЗАВИСИМОСТИ ОТ КОЛИЧЕСТВА ИГРОКОВ
+  const adjustedIndex = index - 1; // Индекс без главного игрока (0-based)
   
-  // ✅ ОРИГИНАЛЬНЫЕ ПОЗИЦИИ ДЛЯ ВСЕХ СТАДИЙ
-  const positions = [
-    { left: '5%', top: '70%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 } }, // 1: слева внизу
-    { left: '5%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 } }, // 2: слева центр
-    { left: '5%', top: '30%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 } }, // 3: слева вверху
-    
-    // ВЕРХНЯЯ СТОРОНА - 2 ИГРОКА
-    { left: '35%', top: '5%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 55 } }, // 4: сверху слева
-    { left: '65%', top: '5%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 55 } }, // 5: сверху справа
-    
-    // ПРАВАЯ СТОРОНА - 3 ИГРОКА
-    { left: '95%', top: '30%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 } }, // 6: справа вверху
-    { left: '95%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 } }, // 7: справа центр
-    { left: '95%', top: '70%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 } }, // 8: справа внизу
-  ];
-  
-  // Возвращаем позицию для индекса
-  if (index >= 1 && index <= 9) {
-    return positions[index - 1];
+  if (totalPlayers === 4) {
+    // 4 игрока: 1 сверху, 1 справа, 1 слева, 1 внизу (главный)
+    const positions = [
+      { left: '50%', top: '5%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 55 }, side: 'top' as const }, // 1: сверху
+      { left: '95%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 }, side: 'right' as const }, // 2: справа
+      { left: '5%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 }, side: 'left' as const }, // 3: слева
+    ];
+    return positions[adjustedIndex] || positions[0];
   }
   
-  // Fallback для дополнительных игроков
+  if (totalPlayers === 5) {
+    // 5 игроков: 2 сверху, 1 справа, 1 слева, 1 внизу (главный)
+    const positions = [
+      { left: '35%', top: '5%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 55 }, side: 'top' as const }, // 1: сверху слева
+      { left: '65%', top: '5%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 55 }, side: 'top' as const }, // 2: сверху справа
+      { left: '95%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 }, side: 'right' as const }, // 3: справа
+      { left: '5%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 }, side: 'left' as const }, // 4: слева
+    ];
+    return positions[adjustedIndex] || positions[0];
+  }
+  
+  if (totalPlayers === 6) {
+    // 6 игроков: 1 сверху, 2 справа, 2 слева, 1 внизу (главный)
+    const positions = [
+      { left: '50%', top: '5%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 55 }, side: 'top' as const }, // 1: сверху
+      { left: '95%', top: '35%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 }, side: 'right' as const }, // 2: справа вверху
+      { left: '95%', top: '65%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 }, side: 'right' as const }, // 3: справа внизу
+      { left: '5%', top: '35%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 }, side: 'left' as const }, // 4: слева вверху
+      { left: '5%', top: '65%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 }, side: 'left' as const }, // 5: слева внизу
+    ];
+    return positions[adjustedIndex] || positions[0];
+  }
+  
+  if (totalPlayers === 7) {
+    // 7 игроков: 2 сверху, 2 слева, 2 справа, 1 внизу (главный)
+    const positions = [
+      { left: '35%', top: '5%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 55 }, side: 'top' as const }, // 1: сверху слева
+      { left: '65%', top: '5%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 55 }, side: 'top' as const }, // 2: сверху справа
+      { left: '5%', top: '35%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 }, side: 'left' as const }, // 3: слева вверху
+      { left: '5%', top: '65%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 }, side: 'left' as const }, // 4: слева внизу
+      { left: '95%', top: '35%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 }, side: 'right' as const }, // 5: справа вверху
+      { left: '95%', top: '65%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 }, side: 'right' as const }, // 6: справа внизу
+    ];
+    return positions[adjustedIndex] || positions[0];
+  }
+  
+  // Fallback для других количеств игроков (старая логика)
   const fallbackAngle = (2 * Math.PI * (index - 1)) / totalPlayers;
   const fallbackX = 50 + 42 * Math.cos(fallbackAngle - Math.PI / 2);
   const fallbackY = 50 + 42 * Math.sin(fallbackAngle - Math.PI / 2);
@@ -137,7 +162,8 @@ const getRectanglePosition = (index: number, totalPlayers: number, gameStage: nu
     left: `${Math.max(5, Math.min(95, fallbackX))}%`,
     top: `${Math.max(5, Math.min(95, fallbackY))}%`,
     cardDirection: 'horizontal' as const,
-    cardOffset: { x: 0, y: -30 }
+    cardOffset: { x: 0, y: -30 },
+    side: 'top'
   };
 };
 
@@ -1051,7 +1077,8 @@ function GamePageContentComponent({
     const rectPos = getRectanglePosition(index, totalPlayers, gameStage);
     return {
       x: parseFloat(rectPos.left),
-      y: parseFloat(rectPos.top)
+      y: parseFloat(rectPos.top),
+      side: rectPos.side // ✅ НОВОЕ: сторона для правильного расположения карт
     };
   };
 
@@ -1501,6 +1528,12 @@ function GamePageContentComponent({
               const isCurrentTurn = player.id === currentPlayerId;
               const playerCards = player.cards || []; // ИСПРАВЛЕНО: используем player.cards из gameStore!
               const isHumanPlayer = player.isUser === true; // ИСПРАВЛЕНО: используем флаг isUser из gameStore!
+              
+              // ✅ НОВОЕ: Определяем расположение карт относительно аватара
+              const cardsOnLeft = position.side === 'right'; // Справа - карты слева от аватара
+              const cardsOnRight = position.side === 'left'; // Слева - карты справа от аватара
+              const cardsOnBottom = position.side === 'top'; // Сверху - карты снизу от аватара
+              const isVerticalLayout = cardsOnBottom; // Вертикальная компоновка для игроков сверху
 
                 return (
                   <div
@@ -1509,10 +1542,11 @@ function GamePageContentComponent({
                     style={{
                     left: `${position.x}%`,
                     top: `${position.y}%`,
+                    flexDirection: isVerticalLayout ? 'column' : (cardsOnLeft ? 'row-reverse' : 'row'), // ✅ Вертикально для сверху, горизонтально для боков
                   }}
                 >
                   {/* Аватар и имя */}
-                    <div className={styles.avatarWrap}>
+                    <div className={styles.avatarWrap} style={{ order: isVerticalLayout ? 1 : (cardsOnLeft ? 2 : 1) }}>
                       {/* Сообщение над игроком (как в чате) */}
                       {playerMessages[player.id] && (
                         <div style={{
@@ -1604,10 +1638,18 @@ function GamePageContentComponent({
                     
                   {/* Карты игрока */}
                   {playerCards.length > 0 && (
-                    <div className={styles.cardsContainer}>
+                    <div className={styles.cardsContainer} style={{ 
+                      order: isVerticalLayout ? 2 : (cardsOnLeft ? 1 : 2),
+                      flexDirection: isVerticalLayout ? 'column' : 'row', // ✅ Вертикально для игроков сверху
+                    }}>
                       {/* УБРАНЫ ДУБЛИРУЮЩИЕСЯ КНОПКИ - оставлены только внизу экрана */}
                       
-                      <div className={styles.activeCardContainer}>
+                      <div className={styles.activeCardContainer} style={{
+                        left: isVerticalLayout ? 'auto' : (cardsOnLeft ? 'auto' : '5px'),
+                        right: isVerticalLayout ? 'auto' : (cardsOnLeft ? '5px' : 'auto'),
+                        top: isVerticalLayout ? '5px' : 'auto',
+                        bottom: isVerticalLayout ? 'auto' : 'auto',
+                      }}>
                         {playerCards.map((card: any, cardIndex: number) => {
                           // Карта может быть строкой "7_of_spades.png(open)" или объектом {rank, suit, image}
                           const cardImage = typeof card === 'string' 

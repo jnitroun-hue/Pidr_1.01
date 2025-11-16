@@ -21,6 +21,7 @@ const getPlayerPosition = (index: number, totalPlayers: number, isCurrentPlayer:
   if (isCurrentPlayer || index === 0) {
     return {
       position: 'bottom-center' as const,
+      side: 'bottom' as const,
       style: {
         bottom: '20px',
         left: '50%',
@@ -30,36 +31,73 @@ const getPlayerPosition = (index: number, totalPlayers: number, isCurrentPlayer:
   }
 
   // Распределяем остальных игроков
-  const remainingPlayers = totalPlayers - 1;
   const adjustedIndex = index - 1;
 
-  if (totalPlayers <= 4) {
-    // Для 2-4 игроков: простое распределение
+  if (totalPlayers === 4) {
+    // 4 игрока: 1 сверху, 1 справа, 1 слева, 1 внизу (главный)
     const positions = [
-      { position: 'top-center', style: { top: '20px', left: '50%', transform: 'translateX(-50%)' } }, // 1
-      { position: 'left-center', style: { top: '50%', left: '20px', transform: 'translateY(-50%)' } }, // 2
-      { position: 'right-center', style: { top: '50%', right: '20px', transform: 'translateY(-50%)' } }, // 3
+      { position: 'top-center' as const, side: 'top' as const, style: { top: '20px', left: '50%', transform: 'translateX(-50%)' } }, // 1: сверху
+      { position: 'right-center' as const, side: 'right' as const, style: { top: '50%', right: '20px', transform: 'translateY(-50%)' } }, // 2: справа
+      { position: 'left-center' as const, side: 'left' as const, style: { top: '50%', left: '20px', transform: 'translateY(-50%)' } }, // 3: слева
     ];
     return positions[adjustedIndex] || positions[0];
   }
 
-  // ✅ ДЛЯ 5-7 ИГРОКОВ: 2 СВЕРХУ, 2 СЛЕВА, 2 СПРАВА (ВСЕГО 6 + 1 ИГРОК ВНИЗУ = 7)
+  if (totalPlayers === 5) {
+    // 5 игроков: 2 сверху, 1 справа, 1 слева, 1 внизу (главный)
+    const positions = [
+      { position: 'top' as const, side: 'top' as const, style: { top: '20px', left: '35%', transform: 'translateX(-50%)' } }, // 1: сверху слева
+      { position: 'top' as const, side: 'top' as const, style: { top: '20px', left: '65%', transform: 'translateX(-50%)' } }, // 2: сверху справа
+      { position: 'right-center' as const, side: 'right' as const, style: { top: '50%', right: '20px', transform: 'translateY(-50%)' } }, // 3: справа
+      { position: 'left-center' as const, side: 'left' as const, style: { top: '50%', left: '20px', transform: 'translateY(-50%)' } }, // 4: слева
+    ];
+    return positions[adjustedIndex] || positions[0];
+  }
+
+  if (totalPlayers === 6) {
+    // 6 игроков: 1 сверху, 2 справа, 2 слева, 1 внизу (главный)
+    const positions = [
+      { position: 'top-center' as const, side: 'top' as const, style: { top: '20px', left: '50%', transform: 'translateX(-50%)' } }, // 1: сверху
+      { position: 'right' as const, side: 'right' as const, style: { top: '35%', right: '20px', transform: 'translateY(-50%)' } }, // 2: справа вверху
+      { position: 'right' as const, side: 'right' as const, style: { top: '65%', right: '20px', transform: 'translateY(-50%)' } }, // 3: справа внизу
+      { position: 'left' as const, side: 'left' as const, style: { top: '35%', left: '20px', transform: 'translateY(-50%)' } }, // 4: слева вверху
+      { position: 'left' as const, side: 'left' as const, style: { top: '65%', left: '20px', transform: 'translateY(-50%)' } }, // 5: слева внизу
+    ];
+    return positions[adjustedIndex] || positions[0];
+  }
+
+  if (totalPlayers === 7) {
+    // 7 игроков: 2 сверху, 2 слева, 2 справа, 1 внизу (главный)
+    const positions = [
+      { position: 'top' as const, side: 'top' as const, style: { top: '20px', left: '35%', transform: 'translateX(-50%)' } }, // 1: сверху слева
+      { position: 'top' as const, side: 'top' as const, style: { top: '20px', left: '65%', transform: 'translateX(-50%)' } }, // 2: сверху справа
+      { position: 'left' as const, side: 'left' as const, style: { top: '35%', left: '20px', transform: 'translateY(-50%)' } }, // 3: слева вверху
+      { position: 'left' as const, side: 'left' as const, style: { top: '65%', left: '20px', transform: 'translateY(-50%)' } }, // 4: слева внизу
+      { position: 'right' as const, side: 'right' as const, style: { top: '35%', right: '20px', transform: 'translateY(-50%)' } }, // 5: справа вверху
+      { position: 'right' as const, side: 'right' as const, style: { top: '65%', right: '20px', transform: 'translateY(-50%)' } }, // 6: справа внизу
+    ];
+    return positions[adjustedIndex] || positions[0];
+  }
+
+  // Fallback для других количеств игроков (старая логика)
   if (adjustedIndex < 2) {
     // 2 игрока сверху (позиции 0, 1)
     return {
       position: 'top',
+      side: 'top' as const,
       style: {
         top: '20px',
-        left: adjustedIndex === 0 ? '30%' : '70%', // ✅ РАЗНЕСЕНЫ ШИРЕ!
+        left: adjustedIndex === 0 ? '30%' : '70%',
         transform: 'translateX(-50%)',
       }
     };
   } else if (adjustedIndex < 4) {
     // 2 игрока слева (позиции 2, 3)
     const leftIndex = adjustedIndex - 2;
-    const leftPositions = ['30%', '70%']; // ✅ РАЗНЕСЕНЫ ПО ВЕРТИКАЛИ!
+    const leftPositions = ['30%', '70%'];
     return {
       position: 'left',
+      side: 'left' as const,
       style: {
         left: '20px',
         top: leftPositions[leftIndex],
@@ -69,9 +107,10 @@ const getPlayerPosition = (index: number, totalPlayers: number, isCurrentPlayer:
   } else {
     // 2 игрока справа (позиции 4, 5)
     const rightIndex = adjustedIndex - 4;
-    const rightPositions = ['30%', '70%']; // ✅ РАЗНЕСЕНЫ ПО ВЕРТИКАЛИ!
+    const rightPositions = ['30%', '70%'];
     return {
       position: 'right',
+      side: 'right' as const,
       style: {
         right: '20px',
         top: rightPositions[rightIndex],
@@ -163,44 +202,28 @@ const RectangularGameTable: React.FC<RectangularGameTableProps> = ({
           const isActivePlayer = player.id === currentPlayerId;
           const position = getPlayerPosition(index, players.length, isCurrentPlayer);
           
+          // ✅ НОВОЕ: Определяем расположение карт относительно аватара
+          const cardsOnLeft = position.side === 'right'; // Справа - карты слева от аватара
+          const cardsOnRight = position.side === 'left'; // Слева - карты справа от аватара
+          const cardsOnBottom = position.side === 'top'; // Сверху - карты снизу от аватара
+          const isVerticalLayout = cardsOnBottom; // Вертикальная компоновка для игроков сверху
+          
           return (
             <motion.div
               key={player.id}
               className={`${styles.playerSeat} ${isCurrentPlayer ? styles.currentPlayer : ''} ${isActivePlayer ? styles.activePlayer : ''}`}
-              style={position.style}
+              style={{
+                ...position.style,
+                flexDirection: isVerticalLayout ? 'column' : (cardsOnLeft ? 'row-reverse' : 'row'), // ✅ Вертикально для сверху, горизонтально для боков
+              }}
               onClick={() => onPlayerClick?.(player.id)}
               initial={{ scale: 0, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: index * 0.1 }}
               whileHover={{ scale: 1.05 }}
             >
-              {/* ✅ КАРТЫ СЛЕВА ОТ АВАТАРА (для игроков справа) */}
-              {!isCurrentPlayer && position.position === 'right' && (
-                <div className={`${styles.playerCards} ${styles.playerCardsRight}`} style={{ order: -1 }}>
-                  {player.cards.slice(0, Math.min(3, player.cards.length)).map((_, cardIndex) => (
-                    <div 
-                      key={cardIndex}
-                      className={styles.playerCard}
-                      style={{
-                        zIndex: cardIndex,
-                        transform: `translateX(${-cardIndex * 3}px) rotate(${(cardIndex - 1) * 5}deg)`
-                      }}
-                    >
-                      <img 
-                        src="/img/cards/back.png" 
-                        alt="Card back"
-                        className={styles.cardBackImage}
-                      />
-                    </div>
-                  ))}
-                  {player.cards.length > 3 && (
-                    <div className={styles.moreCards}>+{player.cards.length - 3}</div>
-                  )}
-                </div>
-              )}
-
               {/* Аватар игрока */}
-              <div className={styles.playerAvatar}>
+              <div className={styles.playerAvatar} style={{ order: isVerticalLayout ? 1 : (cardsOnLeft ? 2 : 1) }}>
                 <img 
                   src={player.avatar || '/avatars/default.png'} 
                   alt={player.name}
@@ -214,23 +237,31 @@ const RectangularGameTable: React.FC<RectangularGameTableProps> = ({
               </div>
 
               {/* Информация об игроке */}
-              <div className={styles.playerInfo}>
+              <div className={styles.playerInfo} style={{ order: isVerticalLayout ? 2 : 1 }}>
                 <div className={styles.playerName}>{player.name}</div>
                 <div className={styles.playerStats}>
                   <span className={styles.cardCount}>{player.cards.length} карт</span>
                 </div>
               </div>
 
-              {/* ✅ КАРТЫ СПРАВА ОТ АВАТАРА (для остальных игроков) */}
-              {!isCurrentPlayer && position.position !== 'right' && (
-                <div className={`${styles.playerCards} ${position.position === 'left' ? styles.playerCardsLeft : ''}`}>
+              {/* ✅ КАРТЫ ОТНОСИТЕЛЬНО АВАТАРА */}
+              {!isCurrentPlayer && (
+                <div 
+                  className={`${styles.playerCards} ${cardsOnLeft ? styles.playerCardsRight : ''} ${cardsOnRight ? styles.playerCardsLeft : ''}`}
+                  style={{ 
+                    order: isVerticalLayout ? 3 : (cardsOnLeft ? 1 : 2),
+                    flexDirection: isVerticalLayout ? 'row' : 'row', // Горизонтально всегда для карт
+                  }}
+                >
                   {player.cards.slice(0, Math.min(3, player.cards.length)).map((_, cardIndex) => (
                     <div 
                       key={cardIndex}
                       className={styles.playerCard}
                       style={{
                         zIndex: cardIndex,
-                        transform: `translateX(${cardIndex * 3}px) rotate(${(cardIndex - 1) * 5}deg)`
+                        transform: cardsOnLeft 
+                          ? `translateX(${-cardIndex * 3}px) rotate(${(cardIndex - 1) * 5}deg)`
+                          : `translateX(${cardIndex * 3}px) rotate(${(cardIndex - 1) * 5}deg)`
                       }}
                     >
                       <img 

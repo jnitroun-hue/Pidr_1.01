@@ -1657,22 +1657,21 @@
 .cardsContainer {
   position: relative;
   display: flex;
-  flex-direction: column;
+  flex-direction: row; /* ✅ По умолчанию горизонтально, но может быть переопределено через inline style */
   align-items: center;
-  margin-top: 0; /* Убираем отступ, теперь аватар сверху */
-  order: 1; /* Карты после аватара */
+  margin-top: 0;
   z-index: 50; /* ✅ КАРТЫ ВЫШЕ АВАТАРОВ! */
+  gap: 4px; /* Отступ между картами и аватаром */
 }
 
 /* Контейнер для активных карт поверх пеньков */
 .activeCardContainer {
-  position: absolute;
-  top: 35px; /* УВЕЛИЧЕНО - отступ от аватара и имени */
-  left: 5px; /* Минимальное смещение для компактности */
+  position: relative; /* ✅ ИЗМЕНЕНО: relative для правильного позиционирования в flex-контейнере */
   display: flex;
   align-items: center;
   justify-content: flex-start; /* Выравнивание по левому краю */
   z-index: 15; /* ✅ ВЫШЕ АВАТАРОВ (аватары = 5) */
+  flex-direction: row; /* ✅ Горизонтальное расположение карт по умолчанию */
 }
 
 /* Карта игрока - УМЕНЬШЕНО В 3 РАЗА */
