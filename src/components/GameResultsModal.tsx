@@ -106,130 +106,183 @@ export default function GameResultsModal({
           )}
         </div>
 
-        {/* Results Table */}
-        <div className="px-8 py-6 space-y-3">
+        {/* Results Table - КОМПАКТНАЯ */}
+        <div className="px-6 py-4 space-y-2">
           {results.map((player, index) => (
             <div
               key={index}
-              className={`relative p-4 rounded-xl transform transition-all duration-300 hover:scale-102 ${
-                player.isUser ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-slate-800' : ''
-              }`}
+              className="relative transform transition-all duration-300"
               style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '12px',
                 background: player.isUser 
                   ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.1) 100%)'
                   : 'linear-gradient(135deg, rgba(51, 65, 85, 0.6) 0%, rgba(30, 41, 59, 0.4) 100%)',
-                border: '1px solid rgba(99, 102, 241, 0.2)',
+                border: player.isUser ? '2px solid rgba(59, 130, 246, 0.5)' : '1px solid rgba(99, 102, 241, 0.2)',
+                borderRadius: '12px',
                 boxShadow: player.isUser 
-                  ? '0 10px 25px rgba(59, 130, 246, 0.3)' 
-                  : '0 4px 12px rgba(0, 0, 0, 0.3)',
+                  ? '0 4px 12px rgba(59, 130, 246, 0.3)' 
+                  : '0 2px 8px rgba(0, 0, 0, 0.3)',
                 animationDelay: `${index * 100}ms`,
                 animation: 'slideInRight 0.5s ease-out forwards',
                 opacity: 0
               }}
             >
-              <div className="flex items-center justify-between">
-                {/* Place & Player Info */}
-                <div className="flex items-center gap-4 flex-1">
-                  {/* Medal/Place */}
-                  <div 
-                    className={`w-14 h-14 rounded-full flex items-center justify-center bg-gradient-to-br ${getPlaceColor(player.place)} shadow-lg`}
-                  >
-                    <span className="text-2xl font-black text-white drop-shadow-lg">
-                      {getMedalText(player.place)}
+              {/* Medal/Place - МАЛЕНЬКИЙ */}
+              <div 
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: player.place === 1 
+                    ? 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)'
+                    : player.place === 2
+                    ? 'linear-gradient(135deg, #d1d5db 0%, #9ca3af 100%)'
+                    : player.place === 3
+                    ? 'linear-gradient(135deg, #fb923c 0%, #f97316 100%)'
+                    : player.place === results.length
+                    ? 'linear-gradient(135deg, #DC143C 0%, #8B0000 100%)'
+                    : 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+                  fontSize: '16px',
+                  fontWeight: '900',
+                  color: '#fff',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
+                }}
+              >
+                {player.place}
+              </div>
+
+              {/* Avatar - МАЛЕНЬКИЙ */}
+              {player.avatar && (
+                <img 
+                  src={player.avatar} 
+                  alt={player.name}
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                    border: '2px solid rgba(255, 255, 255, 0.2)',
+                    filter: player.place === results.length ? 'grayscale(0.5)' : 'none'
+                  }}
+                />
+              )}
+
+              {/* Name */}
+              <div style={{ flex: 1 }}>
+                <div style={{
+                  fontSize: '15px',
+                  fontWeight: '700',
+                  color: '#fff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}>
+                  {player.name}
+                  {player.isUser && (
+                    <span style={{
+                      fontSize: '10px',
+                      padding: '2px 6px',
+                      background: '#3b82f6',
+                      borderRadius: '4px',
+                      fontWeight: '700'
+                    }}>
+                      ВЫ
                     </span>
-                  </div>
-
-                  {/* Avatar & Name */}
-                  <div className="flex items-center gap-3 flex-1">
-                    {player.avatar && (
-                      <img 
-                        src={player.avatar} 
-                        alt={player.name}
-                        className="w-12 h-12 rounded-full border-2 border-slate-600 shadow-md"
-                      />
-                    )}
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-lg text-white">
-                          {player.name}
-                        </span>
-                        {player.isUser && (
-                          <span className="px-2 py-0.5 text-xs font-bold bg-blue-500 text-white rounded-full">
-                            ВЫ
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-sm text-slate-400">
-                        {player.place === results.length ? 'Проигравший' : `${player.place}-е место`}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Stats */}
-                  <div className="flex items-center gap-6">
-                    {/* Coins */}
-                    <div className="flex items-center gap-2">
-                      <Coins className="text-yellow-400" size={20} />
-                      <span className={`font-bold text-lg ${
-                        player.coinsEarned > 0 ? 'text-green-400' : 
-                        player.coinsEarned < 0 ? 'text-red-400' : 
-                        'text-slate-400'
-                      }`}>
-                        {player.coinsEarned > 0 ? '+' : ''}{player.coinsEarned}
-                      </span>
-                    </div>
-
-                    {/* Rating (if ranked) */}
-                    {isRanked && player.ratingChange !== undefined && (
-                      <div className="flex items-center gap-2">
-                        <TrendingUp 
-                          className={player.ratingChange >= 0 ? 'text-green-400' : 'text-red-400'} 
-                          size={18} 
-                        />
-                        <span className={`font-bold ${
-                          player.ratingChange >= 0 ? 'text-green-400' : 'text-red-400'
-                        }`}>
-                          {player.ratingChange > 0 ? '+' : ''}{player.ratingChange}
-                        </span>
-                      </div>
-                    )}
-                  </div>
+                  )}
+                </div>
+                <div style={{
+                  fontSize: '11px',
+                  color: 'rgba(255, 255, 255, 0.5)'
+                }}>
+                  {player.place === results.length ? 'Проигравший' : `${player.place}-е место`}
                 </div>
               </div>
+
+              {/* Coins - КОМПАКТНО */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '14px',
+                fontWeight: '700',
+                color: player.coinsEarned > 0 ? '#22c55e' : player.coinsEarned < 0 ? '#ef4444' : '#94a3b8'
+              }}>
+                💰 {player.coinsEarned > 0 ? '+' : ''}{player.coinsEarned}
+              </div>
+
+              {/* Rating (if ranked) */}
+              {isRanked && player.ratingChange !== undefined && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  color: player.ratingChange >= 0 ? '#22c55e' : '#ef4444'
+                }}>
+                  📈 {player.ratingChange > 0 ? '+' : ''}{player.ratingChange}
+                </div>
+              )}
             </div>
           ))}
         </div>
 
-        {/* Buttons */}
+        {/* Buttons - КАК В ГЛАВНОМ МЕНЮ */}
         <div 
-          className="px-8 py-6 border-t border-slate-700/50 flex gap-4"
+          className="px-6 py-4 border-t border-slate-700/50 flex gap-3"
           style={{
             background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.3) 100%)'
           }}
         >
           <button
             onClick={onPlayAgain}
-            className="flex-1 py-4 px-6 rounded-xl font-bold text-lg text-white transform transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center gap-3 shadow-xl"
+            className="flex-1 transform transition-all duration-200 hover:scale-105 active:scale-95"
             style={{
-              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-              boxShadow: '0 10px 25px rgba(16, 185, 129, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1)',
-              textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
+              padding: '14px 20px',
+              borderRadius: '16px',
+              border: '2px solid rgba(16, 185, 129, 0.3)',
+              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.1) 100%)',
+              color: '#10b981',
+              fontSize: '15px',
+              fontWeight: '700',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)'
             }}
           >
-            <RotateCcw size={24} strokeWidth={2.5} />
+            <RotateCcw size={20} strokeWidth={2.5} />
             ИГРАТЬ СНОВА
           </button>
 
           <button
             onClick={onMainMenu}
-            className="flex-1 py-4 px-6 rounded-xl font-bold text-lg text-white transform transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center gap-3 shadow-xl"
+            className="flex-1 transform transition-all duration-200 hover:scale-105 active:scale-95"
             style={{
-              background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
-              boxShadow: '0 10px 25px rgba(99, 102, 241, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1)',
-              textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
+              padding: '14px 20px',
+              borderRadius: '16px',
+              border: '2px solid rgba(99, 102, 241, 0.3)',
+              background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(79, 70, 229, 0.1) 100%)',
+              color: '#6366f1',
+              fontSize: '15px',
+              fontWeight: '700',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(99, 102, 241, 0.2)'
             }}
           >
-            <Home size={24} strokeWidth={2.5} />
+            <Home size={20} strokeWidth={2.5} />
             В ГЛАВНОЕ МЕНЮ
           </button>
         </div>

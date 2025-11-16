@@ -250,6 +250,27 @@ export async function POST(req: NextRequest) {
             
             if (!friendshipError) {
               console.log('✅ Дружба с приглашающим создана!');
+              
+              // ✅ НАЧИСЛЯЕМ РЕФЕРАЛЬНЫЕ БОНУСЫ!
+              try {
+                const bonusResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/referral/bonus`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    referrer_id: referrerId,
+                    new_user_id: telegramId
+                  })
+                });
+                
+                if (bonusResponse.ok) {
+                  const bonusData = await bonusResponse.json();
+                  console.log('✅ Реферальные бонусы начислены:', bonusData);
+                } else {
+                  console.error('❌ Ошибка начисления бонусов:', await bonusResponse.text());
+                }
+              } catch (bonusError) {
+                console.error('❌ Ошибка вызова API бонусов:', bonusError);
+              }
             } else {
               console.error('❌ Ошибка создания дружбы:', friendshipError);
             }
