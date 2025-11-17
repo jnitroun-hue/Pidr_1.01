@@ -13,6 +13,7 @@ interface PlayerHandProps {
   canPlayCard: (card: Card, index: number) => boolean;
   gameStage: 1 | 2 | 3;
   isPlayerTurn: boolean;
+  nftDeckCards?: Record<string, string>; // ✅ НОВОЕ: NFT карты из колоды
 }
 
 const PlayerHand: React.FC<PlayerHandProps> = ({
@@ -22,7 +23,8 @@ const PlayerHand: React.FC<PlayerHandProps> = ({
   onCardPlay,
   canPlayCard,
   gameStage,
-  isPlayerTurn
+  isPlayerTurn,
+  nftDeckCards = {}
 }) => {
   const maxVisibleCards = 8;
   const shouldScroll = cards.length > maxVisibleCards;
@@ -87,12 +89,28 @@ const PlayerHand: React.FC<PlayerHandProps> = ({
               >
                 {/* Изображение карты */}
                 <div className={styles.cardImageContainer}>
-                  <img
-                    src={`/img/cards/${card.suit}_${card.rank}.png`}
-                    alt={`${card.rank} of ${card.suit}`}
-                    className={styles.cardImage}
-                    draggable={false}
-                  />
+                  {/* ✅ НОВОЕ: Используем NFT карту если она есть в колоде */}
+                  {(() => {
+                    const nftKey = `${card.rank.toLowerCase()}_of_${card.suit.toLowerCase()}`;
+                    const nftImageUrl = nftDeckCards[nftKey];
+                    
+                    return nftImageUrl ? (
+                      <img
+                        src={nftImageUrl}
+                        alt={`${card.rank} of ${card.suit}`}
+                        className={styles.cardImage}
+                        draggable={false}
+                        style={{ objectFit: 'cover' }}
+                      />
+                    ) : (
+                      <img
+                        src={`/img/cards/${card.suit}_${card.rank}.png`}
+                        alt={`${card.rank} of ${card.suit}`}
+                        className={styles.cardImage}
+                        draggable={false}
+                      />
+                    );
+                  })()}
                   
                   {/* Индикатор возможности хода */}
                   {isPlayable && (

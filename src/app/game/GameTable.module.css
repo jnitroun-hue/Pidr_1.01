@@ -1669,11 +1669,12 @@
 .cardsContainer {
   position: relative;
   display: flex;
-  flex-direction: row; /* ✅ По умолчанию горизонтально, но может быть переопределено через inline style */
+  flex-direction: row; /* ✅ Горизонтально для карт (они идут в ряд) */
   align-items: center;
-  margin-top: 0;
+  justify-content: center;
+  margin-top: 8px; /* ✅ ОТСТУП СВЕРХУ ОТ АВАТАРА */
   z-index: 50; /* ✅ КАРТЫ ВЫШЕ АВАТАРОВ! */
-  gap: 4px; /* Отступ между картами и аватаром */
+  gap: 4px; /* Отступ между картами */
 }
 
 /* Контейнер для активных карт поверх пеньков */
