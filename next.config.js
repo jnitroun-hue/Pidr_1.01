@@ -65,6 +65,14 @@ const nextConfig = {
     
     return config;
   },
+  
+  // ✅ ОБРАБОТКА ОШИБОК CHUNK LOADING
+  onDemandEntries: {
+    // Период в мс, в течение которого страницы остаются в памяти
+    maxInactiveAge: 25 * 1000,
+    // Количество страниц, которые должны одновременно оставаться в памяти
+    pagesBufferLength: 2,
+  },
 };
 
 module.exports = nextConfig;

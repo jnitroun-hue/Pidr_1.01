@@ -127,7 +127,8 @@ export default function ProfilePage() {
       if (response.ok) {
         const result = await response.json();
         if (result.success) {
-          console.log('✅ NFT коллекция загружена:', result.nfts);
+          // ✅ ИСПРАВЛЕНО: API возвращает 'collection', а не 'nfts'
+          console.log('✅ NFT коллекция загружена:', result.collection || result.nfts || []);
         }
       }
     } catch (error) {
