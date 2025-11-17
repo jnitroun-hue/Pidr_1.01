@@ -69,34 +69,36 @@ export default function GameResultsModal({
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          width: 'min(50vw, 90vw)', // ✅ 50% ЭКРАНА!
-          maxWidth: '500px', // ✅ МАКСИМУМ 500px!
-          maxHeight: 'min(60vh, 60dvh)', // ✅ 60% ВЫСОТЫ!
+          width: 'min(85vw, 600px)', // ✅ УВЕЛИЧЕНО: 85% ширины, максимум 600px!
+          maxWidth: '600px', // ✅ УВЕЛИЧЕНО: 500px → 600px!
+          maxHeight: 'min(85vh, 85dvh)', // ✅ УВЕЛИЧЕНО: 60% → 85% высоты!
           overflowY: 'auto',
           background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%)',
           borderRadius: '20px',
           border: '2px solid rgba(99, 102, 241, 0.4)',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 40px rgba(99, 102, 241, 0.3)'
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 40px rgba(99, 102, 241, 0.3)',
+          display: 'flex',
+          flexDirection: 'column'
         }}
       >
         {/* Header */}
         <div 
           className="px-8 py-6 border-b border-slate-700/50"
           style={{
-            background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%)'
+            background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%)',
+            flexShrink: 0
           }}
         >
-          <div className="flex items-center justify-center gap-4">
-            <Trophy className="text-yellow-400" size={36} strokeWidth={2.5} />
+          <div className="flex items-center justify-center">
             <h2 
-              className="text-3xl font-black text-white"
+              className="text-2xl font-black text-white"
               style={{
-                textShadow: '0 4px 12px rgba(99, 102, 241, 0.4)'
+                textShadow: '0 4px 12px rgba(99, 102, 241, 0.4)',
+                textAlign: 'center'
               }}
             >
-              РЕЗУЛЬТАТЫ ИГРЫ
+              Результаты игры
             </h2>
-            <Trophy className="text-yellow-400" size={36} strokeWidth={2.5} />
           </div>
           {isRanked && (
             <div className="mt-3 flex items-center justify-center gap-2 text-sm text-amber-400">
@@ -107,7 +109,7 @@ export default function GameResultsModal({
         </div>
 
         {/* Results Table - КОМПАКТНАЯ */}
-        <div className="px-6 py-4 space-y-2">
+        <div className="px-6 py-4 space-y-2" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
           {results.map((player, index) => (
             <div
               key={index}
@@ -237,7 +239,8 @@ export default function GameResultsModal({
         <div 
           className="px-6 py-4 border-t border-slate-700/50 flex gap-3"
           style={{
-            background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.3) 100%)'
+            background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.3) 100%)',
+            flexShrink: 0
           }}
         >
           <button

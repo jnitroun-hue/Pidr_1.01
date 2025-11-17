@@ -1902,33 +1902,59 @@ export const useGameStore = create<GameState>()(
          // Вычисляем игрока который должен завершить круг битья (позиция -1 от инициатора)
          calculateRoundFinisher: (initiatorId: string): string | null => {
            const { players } = get();
+           
+           // ✅ НОВОЕ: Определяем порядок индексов по часовой стрелке (визуальный порядок)
+           const getClockwiseOrder = (totalPlayers: number): number[] => {
+             if (totalPlayers === 4) return [0, 3, 1, 2];
+             if (totalPlayers === 5) return [0, 4, 1, 2, 3];
+             if (totalPlayers === 6) return [0, 5, 4, 1, 2, 3];
+             if (totalPlayers === 7) return [0, 4, 3, 1, 2, 5, 6];
+             return Array.from({ length: totalPlayers }, (_, i) => i);
+           };
+           
+           const clockwiseOrder = getClockwiseOrder(players.length);
+           
+           // Находим позицию инициатора в визуальном порядке
            const initiatorIndex = players.findIndex(p => p.id === initiatorId);
            if (initiatorIndex === -1) return null;
            
-           console.log(`🎯 [calculateRoundFinisher] Инициатор: ${players[initiatorIndex].name} (индекс ${initiatorIndex})`);
+           const initiatorVisualPosition = clockwiseOrder.indexOf(initiatorIndex);
+           if (initiatorVisualPosition === -1) {
+             console.error(`🚨 [calculateRoundFinisher] Инициатор не найден в визуальном порядке!`);
+             return null;
+           }
+           
+           console.log(`🎯 [calculateRoundFinisher] Инициатор: ${players[initiatorIndex].name} (индекс ${initiatorIndex}, визуальная позиция ${initiatorVisualPosition})`);
           
-          // ✅ КРИТИЧНО: Ищем ПЕРВОГО АКТИВНОГО игрока ПЕРЕД инициатором
+          // ✅ КРИТИЧНО: Ищем ПЕРВОГО АКТИВНОГО игрока ПЕРЕД инициатором в ВИЗУАЛЬНОМ порядке
           // Пропускаем игроков которые уже выбыли (isWinner или карт+пеньков=0)
-          let finisherIndex = initiatorIndex;
+          let visualPosition = initiatorVisualPosition;
           let attempts = 0;
           const maxAttempts = players.length; // Защита от бесконечного цикла
           
           do {
-            // Двигаемся против часовой стрелки
-            finisherIndex = finisherIndex === 0 ? players.length - 1 : finisherIndex - 1;
+            // Двигаемся против часовой стрелки в визуальном порядке
+            visualPosition = visualPosition === 0 ? clockwiseOrder.length - 1 : visualPosition - 1;
             attempts++;
             
-            const candidate = players[finisherIndex];
+            const candidateIndex = clockwiseOrder[visualPosition];
+            const candidate = players[candidateIndex];
+            
+            if (!candidate) {
+              console.error(`🚨 [calculateRoundFinisher] Игрок с индексом ${candidateIndex} не найден!`);
+              break;
+            }
+            
             const isActive = !candidate.isWinner && (candidate.cards.length > 0 || candidate.penki.length > 0);
             
             if (isActive) {
-              console.log(`🎯 [calculateRoundFinisher] Должен завершить: ${candidate.name} (индекс ${finisherIndex})`);
+              console.log(`🎯 [calculateRoundFinisher] Должен завершить: ${candidate.name} (индекс ${candidateIndex}, визуальная позиция ${visualPosition})`);
               return candidate.id;
             }
             
             console.log(`⚠️ [calculateRoundFinisher] Пропускаем ${candidate.name} - выбыл из игры`);
             
-          } while (finisherIndex !== initiatorIndex && attempts < maxAttempts);
+          } while (visualPosition !== initiatorVisualPosition && attempts < maxAttempts);
           
           // Если дошли до инициатора - значит больше нет активных игроков
           console.error(`🚨 [calculateRoundFinisher] НЕТ АКТИВНЫХ ИГРОКОВ ДЛЯ ЗАВЕРШЕНИЯ КРУГА!`);

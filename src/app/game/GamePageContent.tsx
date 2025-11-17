@@ -1151,36 +1151,60 @@ function GamePageContentComponent({
             {gameStage === 1 ? (
               <>🎴 Колода: {deck.length}</>
             ) : (
-              <button
-                onClick={() => togglePenaltyDeckModal(true)}
-                      style={{ 
-                  background: 'none',
-                  border: 'none',
-                  color: 'inherit',
-                  fontSize: 'inherit',
-                  fontFamily: 'inherit',
-                  cursor: penaltyDeck.length > 0 ? 'pointer' : 'default',
-                  padding: 0,
-                  margin: 0,
-                  transition: 'all 0.2s',
-                  textDecoration: penaltyDeck.length > 0 ? 'underline' : 'none'
-                }}
-                onMouseEnter={(e) => {
-                  if (penaltyDeck.length > 0) {
-                    e.currentTarget.style.transform = 'scale(1.05)';
-                    e.currentTarget.style.color = '#60a5fa';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'scale(1)';
-                  e.currentTarget.style.color = '';
-                }}
-                disabled={penaltyDeck.length === 0}
-              >
-                🗑️ Бито: {playedCards?.length || 0}
-              </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
+                <button
+                  onClick={() => togglePenaltyDeckModal(true)}
+                        style={{ 
+                    background: 'none',
+                    border: 'none',
+                    color: 'inherit',
+                    fontSize: 'inherit',
+                    fontFamily: 'inherit',
+                    cursor: penaltyDeck.length > 0 ? 'pointer' : 'default',
+                    padding: 0,
+                    margin: 0,
+                    transition: 'all 0.2s',
+                    textDecoration: penaltyDeck.length > 0 ? 'underline' : 'none'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (penaltyDeck.length > 0) {
+                      e.currentTarget.style.transform = 'scale(1.05)';
+                      e.currentTarget.style.color = '#60a5fa';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)';
+                    e.currentTarget.style.color = '';
+                  }}
+                  disabled={penaltyDeck.length === 0}
+                >
+                  🗑️ Бито: {playedCards?.length || 0}
+                </button>
+                {/* ✅ НОВОЕ: Отдельный индикатор козыря во 2-й стадии */}
+                {gameStage >= 2 && trumpSuit && (
+                  <div style={{
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    color: '#fbbf24',
+                    textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    justifyContent: 'center',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    <span>🃏 Козырь:</span>
+                    <span style={{ fontSize: '13px' }}>
+                      {trumpSuit === 'hearts' ? '♥️' : 
+                       trumpSuit === 'diamonds' ? '♦️' : 
+                       trumpSuit === 'clubs' ? '♣️' : 
+                       trumpSuit === 'spades' ? '♠️' : ''}
+                    </span>
+                  </div>
+                )}
+              </div>
             )}
-                </div>
+          </div>
           {/* 💸 СЧЕТЧИК ШТРАФНОЙ СТОПКИ - КНОПКА! */}
           {penaltyDeck.length > 0 && (
             <button
@@ -1567,6 +1591,15 @@ function GamePageContentComponent({
                     left: `${position.x}%`,
                     top: `${position.y}%`,
                     flexDirection: isVerticalLayout ? 'column' : (cardsOnLeft ? 'row-reverse' : 'row'), // ✅ Вертикально для сверху, горизонтально для боков
+                    // ✅ ОБЕСПЕЧИВАЕМ ОДИНАКОВЫЕ СТИЛИ ДЛЯ ВСЕХ ИГРОКОВ (как у игроков сверху)
+                    background: 'linear-gradient(145deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.2) 100%), radial-gradient(circle at center, rgba(255, 215, 0, 0.1) 0%, transparent 70%)',
+                    border: isCurrentTurn ? '3px solid rgba(34, 197, 94, 1)' : '2px solid rgba(255, 215, 0, 0.5)',
+                    borderRadius: '16px',
+                    padding: '10px 8px',
+                    backdropFilter: 'blur(8px)',
+                    boxShadow: isCurrentTurn 
+                      ? '0 8px 30px rgba(0, 0, 0, 0.5), 0 0 30px rgba(34, 197, 94, 0.8), 0 0 50px rgba(34, 197, 94, 0.6), 0 0 70px rgba(34, 197, 94, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
+                      : '0 4px 20px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
                   }}
                 >
                   {/* Аватар и имя */}
@@ -1645,9 +1678,9 @@ function GamePageContentComponent({
                             height: '30px',
                             borderRadius: '50%',
                             boxShadow: currentPlayerId === player.id 
-                              ? '0 0 20px rgba(34, 197, 94, 1), 0 0 35px rgba(34, 197, 94, 0.8), 0 0 50px rgba(34, 197, 94, 0.6)' // ✅ ЗЕЛЁНЫЙ ИМПУЛЬС ПРИ ХОДЕ!
+                              ? '0 0 30px rgba(34, 197, 94, 1), 0 0 50px rgba(34, 197, 94, 0.9), 0 0 70px rgba(34, 197, 94, 0.7), 0 0 90px rgba(34, 197, 94, 0.5)' // ✅ УСИЛЕННОЕ ЗЕЛЁНОЕ СВЕЧЕНИЕ!
                               : '0 2px 8px rgba(0, 0, 0, 0.3)',
-                            border: `${currentPlayerId === player.id ? '4px' : '2px'} solid ${currentPlayerId === player.id ? '#fbbf24' : 'rgba(255, 255, 255, 0.2)'}`, // ✅ ЖИРНАЯ ЗОЛОТАЯ РАМКА 4px!
+                            border: `${currentPlayerId === player.id ? '5px' : '2px'} solid ${currentPlayerId === player.id ? '#22c55e' : 'rgba(255, 255, 255, 0.2)'}`, // ✅ ЕЩЁ БОЛЕЕ ЖИРНАЯ ЗЕЛЁНАЯ РАМКА 5px!
                             transition: 'all 0.3s ease',
                             objectFit: 'cover',
                             position: 'relative',

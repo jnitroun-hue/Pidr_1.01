@@ -103,7 +103,7 @@ export function BuyTab({ listings, onBuy, userCoins, getSuitColor, getSuitSymbol
             borderRadius: '12px',
             overflow: 'hidden',
             marginBottom: '12px',
-            background: '#1e293b'
+            background: '#ffffff' // ✅ ИСПРАВЛЕНО: белый фон для карт в маркетплейсе
           }}>
             {listing.nft_card.image_url ? (
               <Image
@@ -682,7 +682,7 @@ function ListingCard({ listing, onCancel, getSuitColor, getSuitSymbol, getRankDi
           position: 'relative',
           borderRadius: '8px',
           overflow: 'hidden',
-          background: '#1e293b',
+          background: '#ffffff', // ✅ ИСПРАВЛЕНО: белый фон для карт в маркетплейсе
           flexShrink: 0
         }}>
           {listing.nft_card.image_url ? (
@@ -749,7 +749,7 @@ function SoldCard({ listing, getSuitColor, getSuitSymbol, getRankDisplay }: any)
           position: 'relative',
           borderRadius: '8px',
           overflow: 'hidden',
-          background: '#1e293b',
+          background: '#ffffff', // ✅ ИСПРАВЛЕНО: белый фон для карт в маркетплейсе
           flexShrink: 0
         }}>
           {listing.nft_card.image_url ? (

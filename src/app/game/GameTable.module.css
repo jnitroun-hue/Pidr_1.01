@@ -298,24 +298,36 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
-/* Анимация активного игрока */
+/* Анимация активного игрока - УСИЛЕНА ДЛЯ ЛУЧШЕЙ ВИДИМОСТИ */
 .playerSeat.activePlayer {
-  border-color: rgba(0, 255, 136, 0.8);
+  border-color: rgba(34, 197, 94, 1) !important; /* ✅ ЯРКИЙ ЗЕЛЁНЫЙ */
+  border-width: 3px !important; /* ✅ ЖИРНАЯ РАМКА */
   background: 
-    linear-gradient(145deg, rgba(0, 255, 136, 0.1) 0%, rgba(0, 0, 0, 0.2) 100%);
-  animation: activePlayerPulse 2s infinite;
+    linear-gradient(145deg, rgba(34, 197, 94, 0.25) 0%, rgba(0, 0, 0, 0.3) 100%) !important;
+  animation: activePlayerPulse 1.5s infinite;
+  box-shadow: 
+    0 8px 30px rgba(0, 0, 0, 0.5),
+    0 0 30px rgba(34, 197, 94, 0.8),
+    0 0 50px rgba(34, 197, 94, 0.6),
+    0 0 70px rgba(34, 197, 94, 0.4) !important; /* ✅ МНОГОСЛОЙНОЕ СВЕЧЕНИЕ */
 }
 
 @keyframes activePlayerPulse {
   0%, 100% {
     box-shadow: 
-      0 4px 20px rgba(0, 0, 0, 0.3),
-      0 0 15px rgba(0, 255, 136, 0.4);
+      0 8px 30px rgba(0, 0, 0, 0.5),
+      0 0 30px rgba(34, 197, 94, 0.8),
+      0 0 50px rgba(34, 197, 94, 0.6),
+      0 0 70px rgba(34, 197, 94, 0.4);
+    transform: translate(-50%, -50%) scale(1);
   }
   50% {
     box-shadow: 
-      0 6px 25px rgba(0, 0, 0, 0.4),
-      0 0 25px rgba(0, 255, 136, 0.6);
+      0 12px 40px rgba(0, 0, 0, 0.6),
+      0 0 50px rgba(34, 197, 94, 1),
+      0 0 80px rgba(34, 197, 94, 0.8),
+      0 0 100px rgba(34, 197, 94, 0.6);
+    transform: translate(-50%, -50%) scale(1.05); /* ✅ ЛЕГКОЕ УВЕЛИЧЕНИЕ */
   }
 }
 
