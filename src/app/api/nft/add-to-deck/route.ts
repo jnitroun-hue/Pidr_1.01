@@ -116,63 +116,63 @@ export async function POST(request: NextRequest) {
     
     console.log('✅ Карта найдена и принадлежит пользователю');
 
-    // Проверяем существует ли уже запись в _pidr_user_nft_deck
+    // ✅ ПРОВЕРЯЕМ СУЩЕСТВУЕТ ЛИ УЖЕ КАРТА С ТАКИМ SUIT И RANK В КОЛОДЕ
     const { data: existing, error: checkError } = await supabase
       .from('_pidr_user_nft_deck')
-      .select('*')
+      .select('*, nft_card:_pidr_nft_cards(id, image_url, rarity)')
       .eq('user_id', userId)
-      .eq('suit', suit)
-      .eq('rank', rank)
+      .eq('suit', suit.toLowerCase())
+      .eq('rank', rank.toLowerCase())
       .maybeSingle();
 
     if (checkError) {
       console.error('❌ Ошибка проверки существующей карты:', checkError);
     }
 
+    // ✅ ЕСЛИ КАРТА УЖЕ ЕСТЬ - ВОЗВРАЩАЕМ ИНФОРМАЦИЮ ДЛЯ ПОДТВЕРЖДЕНИЯ
     if (existing) {
-      // Обновляем существующую запись
-      const { error: updateError } = await supabase
-        .from('_pidr_user_nft_deck')
-        .update({
-          nft_card_id: cardId, // ✅ ИСПРАВЛЕНО: cardId вместо nftId
-          image_url: cardImageUrl, // ✅ ИСПРАВЛЕНО: cardImageUrl вместо imageUrl
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', existing.id);
-
-      if (updateError) {
-        console.error('❌ Ошибка обновления карты в колоде:', updateError);
-        return NextResponse.json(
-          { success: false, error: 'Ошибка обновления карты' },
-          { status: 500 }
-        );
-      }
-
-      console.log('✅ Карта обновлена в игровой колоде');
-    } else {
-      // Создаем новую запись
-      const { error: insertError } = await supabase
-        .from('_pidr_user_nft_deck')
-        .insert({
-          user_id: userId,
-          nft_card_id: cardId, // ✅ ИСПРАВЛЕНО: cardId вместо nftId
+      const existingCardInfo = existing.nft_card || {};
+      return NextResponse.json({
+        success: false,
+        error: 'DUPLICATE_CARD', // Специальный код для дубликата
+        message: `У вас уже есть карта ${rank}${suit} в колоде`,
+        existingCard: {
+          id: existing.id,
+          nft_card_id: existing.nft_card_id,
+          image_url: existing.image_url || existingCardInfo.image_url,
+          rarity: existingCardInfo.rarity
+        },
+        newCard: {
+          id: cardId,
+          image_url: cardImageUrl,
           suit,
-          rank,
-          image_url: cardImageUrl, // ✅ ИСПРАВЛЕНО: cardImageUrl вместо imageUrl
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
-
-      if (insertError) {
-        console.error('❌ Ошибка добавления карты в колоду:', insertError);
-        return NextResponse.json(
-          { success: false, error: 'Ошибка добавления карты' },
-          { status: 500 }
-        );
-      }
-
-      console.log('✅ Карта добавлена в игровую колоду');
+          rank
+        }
+      });
     }
+
+    // ✅ КАРТЫ НЕТ - ДОБАВЛЯЕМ НОВУЮ
+    const { error: insertError } = await supabase
+      .from('_pidr_user_nft_deck')
+      .insert({
+        user_id: userId,
+        nft_card_id: cardId, // ✅ ИСПРАВЛЕНО: cardId вместо nftId
+        suit: suit.toLowerCase(),
+        rank: rank.toLowerCase(),
+        image_url: cardImageUrl, // ✅ ИСПРАВЛЕНО: cardImageUrl вместо imageUrl
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+
+    if (insertError) {
+      console.error('❌ Ошибка добавления карты в колоду:', insertError);
+      return NextResponse.json(
+        { success: false, error: 'Ошибка добавления карты' },
+        { status: 500 }
+      );
+    }
+
+    console.log('✅ Карта добавлена в игровую колоду');
 
     return NextResponse.json({
       success: true,

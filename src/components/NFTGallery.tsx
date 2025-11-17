@@ -26,6 +26,11 @@ export default function NFTGallery() {
   const [collection, setCollection] = useState<NFTCard[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCard, setSelectedCard] = useState<NFTCard | null>(null);
+  const [showReplaceModal, setShowReplaceModal] = useState(false);
+  const [duplicateInfo, setDuplicateInfo] = useState<{
+    existingCard: any;
+    newCard: NFTCard;
+  } | null>(null);
 
   useEffect(() => {
     loadCollection();
@@ -97,11 +102,50 @@ export default function NFTGallery() {
     return labels[rarity?.toLowerCase()] || rarity;
   };
 
-  const handleAddToDeck = async (card: NFTCard) => {
+  const handleAddToDeck = async (card: NFTCard, forceReplace: boolean = false) => {
     try {
       const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
       const telegramId = telegramUser?.id?.toString() || '';
       const username = telegramUser?.username || telegramUser?.first_name || '';
+
+      // Если это принудительная замена
+      if (forceReplace && duplicateInfo) {
+        const response = await fetch('/api/nft/replace-deck-card', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-telegram-id': telegramId,
+            'x-username': username
+          },
+          body: JSON.stringify({
+            existingCardId: duplicateInfo.existingCard.id,
+            newCardId: card.id,
+            suit: card.suit,
+            rank: card.rank,
+            image_url: card.image_url
+          })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          // ✅ ОБНОВЛЯЕМ КОЛЛЕКЦИЮ ПОСЛЕ ДОБАВЛЕНИЯ
+          loadCollection();
+          setShowReplaceModal(false);
+          setDuplicateInfo(null);
+          setSelectedCard(null);
+          
+          // Показываем уведомление через Telegram WebApp
+          if ((window as any).Telegram?.WebApp?.showAlert) {
+            (window as any).Telegram.WebApp.showAlert('✅ Карта заменена в колоде!');
+          } else {
+            alert('✅ Карта заменена в колоде!');
+          }
+        } else {
+          alert(`❌ ${result.error}`);
+        }
+        return;
+      }
 
       const response = await fetch('/api/nft/add-to-deck', {
         method: 'POST',
@@ -121,10 +165,25 @@ export default function NFTGallery() {
       const result = await response.json();
 
       if (result.success) {
-        alert('✅ Карта добавлена в колоду!');
+        // ✅ ОБНОВЛЯЕМ КОЛЛЕКЦИЮ ПОСЛЕ ДОБАВЛЕНИЯ
+        loadCollection();
         setSelectedCard(null);
+        
+        // Показываем уведомление через Telegram WebApp
+        if ((window as any).Telegram?.WebApp?.showAlert) {
+          (window as any).Telegram.WebApp.showAlert('✅ Карта добавлена в колоду!');
+        } else {
+          alert('✅ Карта добавлена в колоду!');
+        }
+      } else if (result.error === 'DUPLICATE_CARD') {
+        // ✅ ПОКАЗЫВАЕМ МОДАЛЬНОЕ ОКНО С ПОДТВЕРЖДЕНИЕМ ЗАМЕНЫ
+        setDuplicateInfo({
+          existingCard: result.existingCard,
+          newCard: card
+        });
+        setShowReplaceModal(true);
       } else {
-        alert(`❌ ${result.error}`);
+        alert(`❌ ${result.error || result.message}`);
       }
     } catch (error) {
       console.error('❌ Ошибка добавления в колоду:', error);
@@ -546,6 +605,191 @@ export default function NFTGallery() {
             </motion.div>
           </motion.div>
         )}
+
+        {/* ✅ МОДАЛЬНОЕ ОКНО ПОДТВЕРЖДЕНИЯ ЗАМЕНЫ КАРТЫ */}
+        <AnimatePresence>
+          {showReplaceModal && duplicateInfo && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'rgba(0, 0, 0, 0.8)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 999999,
+                padding: '20px'
+              }}
+              onClick={() => {
+                setShowReplaceModal(false);
+                setDuplicateInfo(null);
+              }}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.98) 100%)',
+                  border: '2px solid rgba(139, 92, 246, 0.5)',
+                  borderRadius: '20px',
+                  padding: '30px',
+                  maxWidth: '500px',
+                  width: '100%',
+                  boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)'
+                }}
+              >
+                <h3 style={{
+                  color: '#ffffff',
+                  fontSize: '1.5rem',
+                  fontWeight: 'bold',
+                  marginBottom: '20px',
+                  textAlign: 'center'
+                }}>
+                  ⚠️ Замена карты
+                </h3>
+
+                <p style={{
+                  color: '#94a3b8',
+                  fontSize: '1rem',
+                  marginBottom: '25px',
+                  textAlign: 'center',
+                  lineHeight: '1.6'
+                }}>
+                  У вас уже есть карта <strong style={{ color: '#fbbf24' }}>{duplicateInfo.newCard.rank}{getSuitSymbol(duplicateInfo.newCard.suit)}</strong> в колоде.
+                  <br />
+                  Заменить на новую?
+                </p>
+
+                {/* Сравнение карт */}
+                <div style={{
+                  display: 'flex',
+                  gap: '15px',
+                  marginBottom: '25px',
+                  justifyContent: 'center'
+                }}>
+                  {/* Текущая карта в колоде */}
+                  <div style={{
+                    flex: 1,
+                    textAlign: 'center'
+                  }}>
+                    <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '8px' }}>Текущая</p>
+                    {duplicateInfo.existingCard.image_url && (
+                      <img
+                        src={duplicateInfo.existingCard.image_url}
+                        alt="Current card"
+                        style={{
+                          width: '100%',
+                          maxWidth: '120px',
+                          borderRadius: '12px',
+                          background: '#ffffff',
+                          padding: '8px',
+                          margin: '0 auto'
+                        }}
+                      />
+                    )}
+                  </div>
+
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    fontSize: '2rem',
+                    color: '#fbbf24'
+                  }}>
+                    →
+                  </div>
+
+                  {/* Новая карта */}
+                  <div style={{
+                    flex: 1,
+                    textAlign: 'center'
+                  }}>
+                    <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '8px' }}>Новая</p>
+                    {duplicateInfo.newCard.image_url && (
+                      <img
+                        src={duplicateInfo.newCard.image_url}
+                        alt="New card"
+                        style={{
+                          width: '100%',
+                          maxWidth: '120px',
+                          borderRadius: '12px',
+                          background: '#ffffff',
+                          padding: '8px',
+                          margin: '0 auto'
+                        }}
+                      />
+                    )}
+                  </div>
+                </div>
+
+                {/* Кнопки */}
+                <div style={{
+                  display: 'flex',
+                  gap: '12px'
+                }}>
+                  <button
+                    onClick={() => {
+                      setShowReplaceModal(false);
+                      setDuplicateInfo(null);
+                    }}
+                    style={{
+                      flex: 1,
+                      background: 'rgba(100, 116, 139, 0.3)',
+                      border: '1px solid rgba(100, 116, 139, 0.5)',
+                      borderRadius: '12px',
+                      padding: '14px',
+                      color: '#e2e8f0',
+                      fontSize: '1rem',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(100, 116, 139, 0.5)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'rgba(100, 116, 139, 0.3)';
+                    }}
+                  >
+                    Отмена
+                  </button>
+                  <button
+                    onClick={() => handleAddToDeck(duplicateInfo.newCard, true)}
+                    style={{
+                      flex: 1,
+                      background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                      border: 'none',
+                      borderRadius: '12px',
+                      padding: '14px',
+                      color: '#ffffff',
+                      fontSize: '1rem',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'scale(1.02)';
+                      e.currentTarget.style.boxShadow = '0 4px 20px rgba(59, 130, 246, 0.5)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'scale(1)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
+                  >
+                    ✅ Заменить
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </AnimatePresence>
     </div>
   );

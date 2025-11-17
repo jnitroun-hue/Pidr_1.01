@@ -722,9 +722,18 @@ export default function ProfilePage() {
       const result = await response.json();
 
       if (response.ok && result.success) {
-        alert('✅ Карта удалена из колоды!');
-        // Перезагружаем колоду
+        // ✅ ОБНОВЛЯЕМ КОЛОДУ ПОСЛЕ УДАЛЕНИЯ
         setDeckCards(prev => prev.filter(card => card.id !== deckCardId));
+        
+        // ✅ ПЕРЕЗАГРУЖАЕМ NFT КОЛЛЕКЦИЮ (карта вернется в коллекцию)
+        loadNFTCollection();
+        
+        // Показываем уведомление через Telegram WebApp
+        if ((window as any).Telegram?.WebApp?.showAlert) {
+          (window as any).Telegram.WebApp.showAlert('✅ Карта удалена из колоды!');
+        } else {
+          alert('✅ Карта удалена из колоды!');
+        }
       } else {
         alert(`❌ Ошибка: ${result.error}`);
       }
