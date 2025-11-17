@@ -76,7 +76,8 @@ export async function POST(req: NextRequest) {
       // Отправляем ответ через Telegram Bot API
       const botToken = process.env.TELEGRAM_BOT_TOKEN;
       if (botToken) {
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://your-app-url.vercel.app';
+        // ✅ Поддержка обеих переменных: NEXT_PUBLIC_APP_URL и APP_URL
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || 'https://your-app-url.vercel.app';
         
         // Формируем URL с параметром start_param если есть
         let webAppUrl = appUrl;
@@ -115,7 +116,7 @@ export async function POST(req: NextRequest) {
 
     // Обрабатываем команду /help
     if (text && text.startsWith('/help')) {
-      const helpText = `📖 Помощь по The Must!\n\n`;
+      let helpText = `📖 Помощь по The Must!\n\n`;
       helpText += `🎯 Основные правила:\n`;
       helpText += `• Минимум 4 игрока для начала игры\n`;
       helpText += `• Максимум 7 игроков в комнате\n`;
