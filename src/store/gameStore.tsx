@@ -721,8 +721,36 @@ export const useGameStore = create<GameState>()(
             return;
           }
           
+          // ✅ НОВОЕ: Сортируем активных игроков по визуальному порядку вокруг стола (по часовой стрелке)
+          // Определяем порядок индексов по часовой стрелке (внизу → слева → сверху → справа)
+          const getClockwiseOrder = (totalPlayers: number): number[] => {
+            if (totalPlayers === 4) return [0, 3, 1, 2]; // главный → слева → сверху → справа
+            if (totalPlayers === 5) return [0, 4, 1, 2, 3]; // главный → слева → сверху слева → сверху справа → справа
+            if (totalPlayers === 6) return [0, 5, 4, 1, 2, 3]; // главный → слева внизу → слева вверху → сверху → справа вверху → справа внизу
+            if (totalPlayers === 7) return [0, 4, 3, 1, 2, 5, 6]; // главный → слева внизу → слева вверху → сверху слева → сверху справа → справа вверху → справа внизу
+            return Array.from({ length: totalPlayers }, (_, i) => i);
+          };
+          
+          const clockwiseOrder = getClockwiseOrder(players.length);
+          
+          // Создаем Map для быстрого поиска индекса игрока в исходном массиве
+          const playerIndexMap = new Map<string, number>();
+          players.forEach((p, idx) => playerIndexMap.set(p.id, idx));
+          
+          // Сортируем активных игроков по их позициям в clockwiseOrder
+          const sortedActivePlayers = activePlayers.sort((a, b) => {
+            const indexA = playerIndexMap.get(a.id) ?? Infinity;
+            const indexB = playerIndexMap.get(b.id) ?? Infinity;
+            const orderA = clockwiseOrder.indexOf(indexA);
+            const orderB = clockwiseOrder.indexOf(indexB);
+            // Если игрок не найден в clockwiseOrder (не должен случиться), ставим в конец
+            if (orderA === -1) return 1;
+            if (orderB === -1) return -1;
+            return orderA - orderB;
+          });
+          
           // ✅ ИСПРАВЛЕНО: Если текущий игрок победитель, берем первого активного игрока
-          let currentIndex = activePlayers.findIndex(p => p.id === currentPlayerId);
+          let currentIndex = sortedActivePlayers.findIndex(p => p.id === currentPlayerId);
           
           if (currentIndex === -1) {
             // Текущий игрок стал победителем или вышел из игры - берем первого активного
@@ -730,9 +758,9 @@ export const useGameStore = create<GameState>()(
             currentIndex = 0; // Начинаем с первого активного игрока
           }
           
-          const nextIndex = (currentIndex + 1) % activePlayers.length
-          const nextPlayerId = activePlayers[nextIndex].id
-          const nextPlayer = activePlayers[nextIndex]
+          const nextIndex = (currentIndex + 1) % sortedActivePlayers.length
+          const nextPlayerId = sortedActivePlayers[nextIndex].id
+          const nextPlayer = sortedActivePlayers[nextIndex]
           
           if (!nextPlayer) {
             console.error(`🔄 [nextTurn] ❌ Следующий игрок не найден`);
