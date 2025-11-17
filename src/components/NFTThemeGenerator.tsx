@@ -158,6 +158,9 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
         const generateData = await generateResponse.json();
         
         if (generateData.success) {
+          // ✅ ОБНОВЛЯЕМ КОЛЛЕКЦИЮ NFT ПОСЛЕ ГЕНЕРАЦИИ
+          window.dispatchEvent(new CustomEvent('nft-collection-updated'));
+          
           alert(`✅ Карта сгенерирована за ${cost} TON!\n\nТранзакция: ${txResult.boc.slice(0, 20)}...`);
           setShowCryptoModal(false);
           setCryptoTheme(null);
@@ -229,6 +232,9 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
       const result = await response.json();
 
       if (response.ok && result.success) {
+        // ✅ ОБНОВЛЯЕМ КОЛЛЕКЦИЮ NFT ПОСЛЕ ГЕНЕРАЦИИ
+        window.dispatchEvent(new CustomEvent('nft-collection-updated'));
+        
         alert(`✅ Карта ${themeConfig.name} создана!\n\n${randomRank.toUpperCase()} ${getSuitSymbol(randomSuit)}\n\nСохранено в коллекцию!`);
         
         if (onBalanceUpdate && result.newBalance !== undefined) {
@@ -327,6 +333,9 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
       const deductResult = await deductResponse.json();
 
       if (deductResponse.ok && deductResult.success) {
+        // ✅ ОБНОВЛЯЕМ КОЛЛЕКЦИЮ NFT ПОСЛЕ ГЕНЕРАЦИИ КОЛОДЫ
+        window.dispatchEvent(new CustomEvent('nft-collection-updated'));
+        
         alert(`✅ Колода ${themeConfig.name} создана!\n\n${successCount} уникальных карт\nСохранено в коллекцию!`);
         
         if (onBalanceUpdate && deductResult.newBalance !== undefined) {

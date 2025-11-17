@@ -34,6 +34,18 @@ export default function NFTGallery() {
 
   useEffect(() => {
     loadCollection();
+    
+    // ✅ СЛУШАЕМ СОБЫТИЯ ОБНОВЛЕНИЯ КОЛЛЕКЦИИ
+    const handleCollectionUpdate = () => {
+      console.log('🔄 [NFTGallery] Обновляем коллекцию...');
+      loadCollection();
+    };
+    
+    window.addEventListener('nft-collection-updated', handleCollectionUpdate);
+    
+    return () => {
+      window.removeEventListener('nft-collection-updated', handleCollectionUpdate);
+    };
   }, []);
 
   const loadCollection = async () => {
@@ -49,7 +61,8 @@ export default function NFTGallery() {
         headers: {
           'x-telegram-id': telegramId || '',
           'x-username': username || ''
-        }
+        },
+        cache: 'no-store' // ✅ ОТКЛЮЧАЕМ КЭШИРОВАНИЕ
       });
 
       const result = await response.json();
@@ -129,8 +142,10 @@ export default function NFTGallery() {
         const result = await response.json();
 
         if (result.success) {
-          // ✅ ОБНОВЛЯЕМ КОЛЛЕКЦИЮ ПОСЛЕ ДОБАВЛЕНИЯ
+          // ✅ ОБНОВЛЯЕМ КОЛЛЕКЦИЮ И КОЛОДУ ПОСЛЕ ЗАМЕНЫ
           loadCollection();
+          window.dispatchEvent(new CustomEvent('deck-updated')); // ✅ Обновляем колоду в профиле
+          
           setShowReplaceModal(false);
           setDuplicateInfo(null);
           setSelectedCard(null);
@@ -165,8 +180,10 @@ export default function NFTGallery() {
       const result = await response.json();
 
       if (result.success) {
-        // ✅ ОБНОВЛЯЕМ КОЛЛЕКЦИЮ ПОСЛЕ ДОБАВЛЕНИЯ
+        // ✅ ОБНОВЛЯЕМ КОЛЛЕКЦИЮ И КОЛОДУ ПОСЛЕ ДОБАВЛЕНИЯ
         loadCollection();
+        window.dispatchEvent(new CustomEvent('deck-updated')); // ✅ Обновляем колоду в профиле
+        
         setSelectedCard(null);
         
         // Показываем уведомление через Telegram WebApp

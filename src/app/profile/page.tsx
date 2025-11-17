@@ -121,7 +121,8 @@ export default function ProfilePage() {
       const response = await fetch('/api/nft/collection', {
         method: 'GET',
         headers,
-        credentials: 'include'
+        credentials: 'include',
+        cache: 'no-store' // ✅ ОТКЛЮЧАЕМ КЭШИРОВАНИЕ
       });
       
       if (response.ok) {
@@ -300,7 +301,8 @@ export default function ProfilePage() {
         const response = await fetch('/api/user/deck', {
           method: 'GET',
           headers,
-          credentials: 'include'
+          credentials: 'include',
+          cache: 'no-store' // ✅ ОТКЛЮЧАЕМ КЭШИРОВАНИЕ
         });
         
         if (response.ok) {
@@ -323,6 +325,25 @@ export default function ProfilePage() {
     loadBonuses();
     loadInventory();
     loadDeckCards();
+    
+    // ✅ СЛУШАЕМ СОБЫТИЯ ОБНОВЛЕНИЯ КОЛЛЕКЦИИ И КОЛОДЫ
+    const handleCollectionUpdate = () => {
+      console.log('🔄 Обновляем NFT коллекцию...');
+      loadNFTCollection();
+    };
+    
+    const handleDeckUpdate = () => {
+      console.log('🔄 Обновляем колоду...');
+      loadDeckCards();
+    };
+    
+    window.addEventListener('nft-collection-updated', handleCollectionUpdate);
+    window.addEventListener('deck-updated', handleDeckUpdate);
+    
+    return () => {
+      window.removeEventListener('nft-collection-updated', handleCollectionUpdate);
+      window.removeEventListener('deck-updated', handleDeckUpdate);
+    };
   }, []);
   const [activeSection, setActiveSection] = useState('stats'); // 'stats', 'achievements', 'wallet'
   const [showModal, setShowModal] = useState<'skins' | 'effects' | 'bonuses' | 'frames' | 'nft' | 'deck' | null>(null);
