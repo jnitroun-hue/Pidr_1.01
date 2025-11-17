@@ -453,11 +453,12 @@ export const ProperMultiplayer: React.FC = () => {
 
   // Рендер комнаты ожидания
   if (view === 'waiting' && currentRoom) {
+    // ✅ isHost будет обновляться из БД в MultiplayerLobby через loadRoomPlayers
     return (
       <MultiplayerLobby
         roomId={currentRoom.id.toString()}
         roomCode={currentRoom.code}
-        isHost={currentRoom.hostId === user?.id?.toString()}
+        isHost={currentRoom.hostId === user?.id?.toString()} // Начальное значение, будет обновлено из БД
         onGameStart={handleStartGame}
         onLeaveRoom={handleLeaveRoom}
       />

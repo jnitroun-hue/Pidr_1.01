@@ -27,12 +27,25 @@ export async function GET(
       }, { status: 404 });
     }
 
+    // ✅ ПОЛУЧАЕМ ИНФОРМАЦИЮ О КОМНАТЕ (host_id!)
+    const { data: roomFull, error: roomFullError } = await supabase
+      .from('_pidr_rooms')
+      .select('host_id')
+      .eq('id', roomId)
+      .single();
+
     // Получаем список игроков из БД
     const { data: players, error } = await supabase
       .from('_pidr_room_players')
       .select('*')
       .eq('room_id', roomId)
       .order('position', { ascending: true });
+
+    // ✅ ДОБАВЛЯЕМ is_host К КАЖДОМУ ИГРОКУ
+    const playersWithHost = (players || []).map((player: any) => ({
+      ...player,
+      is_host: roomFull?.host_id === player.user_id // ✅ Сравниваем host_id с user_id
+    }));
 
     if (error) {
       console.error('❌ [GET /api/rooms/players] Ошибка получения игроков:', error);
@@ -46,7 +59,7 @@ export async function GET(
 
     return NextResponse.json({ 
       success: true, 
-      players: players || [],
+      players: playersWithHost || [], // ✅ ИСПОЛЬЗУЕМ playersWithHost
       maxPlayers: room.max_players, // ✅ ДОБАВЛЕНО!
       currentPlayers: players?.length || 0,
       roomStatus: room.status

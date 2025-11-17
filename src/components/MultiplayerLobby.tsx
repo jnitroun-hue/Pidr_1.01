@@ -185,18 +185,39 @@ export default function MultiplayerLobby({
 
   // ✅ ИЗМЕНИТЬ ГОТОВНОСТЬ ЧЕРЕЗ API
   const toggleReady = async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      console.error('❌ [MultiplayerLobby] toggleReady: user.id отсутствует');
+      return;
+    }
     
-    const currentPlayer = lobbyState.players.find(p => p.user_id === user.id.toString());
-    const newReadyState = !currentPlayer?.is_ready;
+    const userIdStr = user.id.toString();
+    const currentPlayer = lobbyState.players.find(p => p.user_id === userIdStr);
     
-    console.log(`🎯 [MultiplayerLobby] Изменение готовности на:`, newReadyState);
+    if (!currentPlayer) {
+      console.error('❌ [MultiplayerLobby] toggleReady: текущий игрок не найден в списке', {
+        userId: userIdStr,
+        players: lobbyState.players.map(p => ({ id: p.user_id, name: p.username }))
+      });
+      return;
+    }
+    
+    const newReadyState = !currentPlayer.is_ready;
+    
+    console.log(`🎯 [MultiplayerLobby] Изменение готовности:`, {
+      userId: userIdStr,
+      currentReady: currentPlayer.is_ready,
+      newReady: newReadyState,
+      roomId
+    });
 
     try {
       const roomManager = roomManagerRef.current;
-      if (!roomManager) return;
+      if (!roomManager) {
+        console.error('❌ [MultiplayerLobby] toggleReady: roomManager не инициализирован');
+        return;
+      }
 
-      await roomManager.setPlayerReady(roomId, user.id.toString(), newReadyState);
+      await roomManager.setPlayerReady(roomId, userIdStr, newReadyState);
       
       // ✅ ПЕРЕЗАГРУЖАЕМ ИЗ БД (ИСТОЧНИК ИСТИНЫ!)
       await loadRoomPlayers();
@@ -204,6 +225,7 @@ export default function MultiplayerLobby({
       console.log('✅ [MultiplayerLobby] Готовность обновлена');
     } catch (error) {
       console.error('❌ [MultiplayerLobby] Ошибка обновления готовности:', error);
+      alert('Ошибка изменения готовности. Попробуйте еще раз.');
     }
   };
 
@@ -458,7 +480,19 @@ export default function MultiplayerLobby({
             </motion.button>
 
             <motion.button
-              onClick={() => window.location.href = `/friends?invite_room=${roomId}&room_code=${roomCode}`}
+              onClick={() => {
+                // ✅ ФОРМИРУЕМ ПРАВИЛЬНУЮ ССЫЛКУ ДЛЯ ВХОДА В ИГРУ
+                const inviteLink = `https://t.me/NotPidrBot?start=join_${roomId}_${roomCode}`;
+                const shareText = `🎮 Присоединяйся к моей игре в The Must!\n\nКод комнаты: ${roomCode}\n\n${inviteLink}`;
+                
+                if ((window as any).Telegram?.WebApp) {
+                  (window as any).Telegram.WebApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(shareText)}`);
+                } else {
+                  // Fallback - копируем ссылку
+                  navigator.clipboard.writeText(inviteLink);
+                  alert('Ссылка скопирована в буфер обмена!');
+                }
+              }}
               whileHover={{ scale: 1.02, y: -2 }}
               whileTap={{ scale: 0.98 }}
               style={{
