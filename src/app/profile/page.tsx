@@ -337,12 +337,20 @@ export default function ProfilePage() {
       loadDeckCards();
     };
     
+    // ✅ СЛУШАЕМ СОБЫТИЯ ОБНОВЛЕНИЯ БАЛАНСА
+    const handleBalanceUpdate = () => {
+      console.log('🔄 Обновляем баланс пользователя...');
+      loadUserData(); // Перезагружаем данные пользователя (включая баланс)
+    };
+    
     window.addEventListener('nft-collection-updated', handleCollectionUpdate);
     window.addEventListener('deck-updated', handleDeckUpdate);
+    window.addEventListener('balance-updated', handleBalanceUpdate);
     
     return () => {
       window.removeEventListener('nft-collection-updated', handleCollectionUpdate);
       window.removeEventListener('deck-updated', handleDeckUpdate);
+      window.removeEventListener('balance-updated', handleBalanceUpdate);
     };
   }, []);
   const [activeSection, setActiveSection] = useState('stats'); // 'stats', 'achievements', 'wallet'

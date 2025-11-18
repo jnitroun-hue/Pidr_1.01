@@ -92,7 +92,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: `Сгенерировано ${quantity} карт за ${crypto}`,
-      cards: generateData.cards
+      cards: generateData.cards || generateData.nft ? [generateData.nft] : [],
+      newBalance: generateData.newBalance // ✅ ПЕРЕДАЕМ newBalance (если есть)
     });
 
   } catch (error: any) {

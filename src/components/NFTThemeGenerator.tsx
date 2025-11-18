@@ -161,6 +161,12 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
           // ✅ ОБНОВЛЯЕМ КОЛЛЕКЦИЮ NFT ПОСЛЕ ГЕНЕРАЦИИ
           window.dispatchEvent(new CustomEvent('nft-collection-updated'));
           
+          // ✅ ОБНОВЛЯЕМ БАЛАНС (если пришел)
+          if (generateData.newBalance !== undefined && onBalanceUpdate) {
+            onBalanceUpdate(generateData.newBalance);
+            window.dispatchEvent(new CustomEvent('balance-updated'));
+          }
+          
           alert(`✅ Карта сгенерирована за ${cost} TON!\n\nТранзакция: ${txResult.boc.slice(0, 20)}...`);
           setShowCryptoModal(false);
           setCryptoTheme(null);
@@ -235,11 +241,43 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
         // ✅ ОБНОВЛЯЕМ КОЛЛЕКЦИЮ NFT ПОСЛЕ ГЕНЕРАЦИИ
         window.dispatchEvent(new CustomEvent('nft-collection-updated'));
         
-        alert(`✅ Карта ${themeConfig.name} создана!\n\n${randomRank.toUpperCase()} ${getSuitSymbol(randomSuit)}\n\nСохранено в коллекцию!`);
-        
-        if (onBalanceUpdate && result.newBalance !== undefined) {
-          onBalanceUpdate(result.newBalance);
+        // ✅ ОБНОВЛЯЕМ БАЛАНС НА КЛИЕНТЕ
+        if (result.newBalance !== undefined) {
+          if (onBalanceUpdate) {
+            onBalanceUpdate(result.newBalance);
+          }
+          // ✅ ОТПРАВЛЯЕМ СОБЫТИЕ ДЛЯ ОБНОВЛЕНИЯ БАЛАНСА В ПРОФИЛЕ
+          window.dispatchEvent(new CustomEvent('balance-updated'));
+        } else {
+          // ✅ ЕСЛИ newBalance НЕ ПРИШЕЛ - ЗАГРУЖАЕМ ИЗ БД
+          console.warn('⚠️ newBalance не получен, загружаем из БД...');
+          const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+          if (telegramUser?.id && onBalanceUpdate) {
+            try {
+              const balanceResponse = await fetch('/api/user/me', {
+                method: 'GET',
+                credentials: 'include',
+                cache: 'no-store', // ✅ ОТКЛЮЧАЕМ КЭШИРОВАНИЕ
+                headers: {
+                  'Content-Type': 'application/json',
+                  'x-telegram-id': telegramUser.id.toString(),
+                  'x-username': telegramUser.username || 'User'
+                }
+              });
+              if (balanceResponse.ok) {
+                const balanceData = await balanceResponse.json();
+                if (balanceData.user?.coins !== undefined) {
+                  onBalanceUpdate(balanceData.user.coins);
+                  window.dispatchEvent(new CustomEvent('balance-updated'));
+                }
+              }
+            } catch (err) {
+              console.error('❌ Ошибка загрузки баланса:', err);
+            }
+          }
         }
+        
+        alert(`✅ Карта ${themeConfig.name} создана!\n\n${randomRank.toUpperCase()} ${getSuitSymbol(randomSuit)}\n\nСохранено в коллекцию!`);
         
         setShowModal(false);
       } else {
@@ -341,6 +379,9 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
         if (onBalanceUpdate && deductResult.newBalance !== undefined) {
           onBalanceUpdate(deductResult.newBalance);
         }
+        
+        // ✅ ОТПРАВЛЯЕМ СОБЫТИЕ ДЛЯ ОБНОВЛЕНИЯ БАЛАНСА В ПРОФИЛЕ
+        window.dispatchEvent(new CustomEvent('balance-updated'));
         
         setShowModal(false);
       } else {

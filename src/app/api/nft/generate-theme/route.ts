@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
 
     console.log(`✅ NFT сохранена в БД: ID=${nftData.id}`);
 
-    // Списываем монеты (если не skipCoinDeduction)
+    // ✅ Списываем монеты (если не skipCoinDeduction)
     let newBalance = undefined;
     
     if (!skipCoinDeduction) {
@@ -131,6 +131,7 @@ export async function POST(request: NextRequest) {
         random_pokemon: 10000,
         random_halloween: 10000,
         random_starwars: 10000,
+        random_legendary: 50000,
         deck_pokemon: 400000,
         deck_halloween: 400000,
         deck_starwars: 400000
@@ -138,17 +139,58 @@ export async function POST(request: NextRequest) {
 
       const cost = costs[action] || 10000;
 
-      const { data: deductData, error: deductError } = await supabase.rpc('deduct_user_coins', {
-        p_user_id: userId,
-        p_amount: cost
-      });
+      // ✅ ПОЛУЧАЕМ ТЕКУЩИЙ БАЛАНС ПОЛЬЗОВАТЕЛЯ
+      const { data: userData, error: userError } = await supabase
+        .from('_pidr_users')
+        .select('coins, id')
+        .eq('telegram_id', userId.toString())
+        .single();
 
-      if (deductError) {
-        console.error('⚠️ Ошибка списания монет:', deductError);
-      } else {
-        newBalance = deductData;
-        console.log(`💰 Списано ${cost} монет, новый баланс: ${newBalance}`);
+      if (userError || !userData) {
+        console.error('❌ Ошибка получения данных пользователя:', userError);
+        return NextResponse.json(
+          { success: false, error: 'Ошибка получения данных пользователя' },
+          { status: 500 }
+        );
       }
+
+      // ✅ ПРОВЕРЯЕМ ДОСТАТОЧНО ЛИ МОНЕТ
+      if (userData.coins < cost) {
+        console.error(`❌ Недостаточно монет: требуется ${cost}, есть ${userData.coins}`);
+        return NextResponse.json(
+          { success: false, error: `Недостаточно монет. Требуется: ${cost}, есть: ${userData.coins}` },
+          { status: 400 }
+        );
+      }
+
+      // ✅ СПИСЫВАЕМ МОНЕТЫ ПРЯМО ЧЕРЕЗ UPDATE
+      newBalance = userData.coins - cost;
+      const { error: updateError } = await supabase
+        .from('_pidr_users')
+        .update({ coins: newBalance })
+        .eq('id', userData.id);
+
+      if (updateError) {
+        console.error('❌ Ошибка списания монет:', updateError);
+        return NextResponse.json(
+          { success: false, error: 'Ошибка списания монет' },
+          { status: 500 }
+        );
+      }
+
+      // ✅ СОЗДАЕМ ТРАНЗАКЦИЮ
+      await supabase
+        .from('_pidr_coin_transactions')
+        .insert({
+          user_id: userData.id,
+          amount: -cost,
+          transaction_type: 'nft_generation',
+          description: `Генерация NFT карты: ${rank} of ${suit} (${theme})`,
+          balance_before: userData.coins,
+          balance_after: newBalance
+        });
+
+      console.log(`✅ Списано ${cost} монет, новый баланс: ${newBalance}`);
     }
 
     return NextResponse.json({
