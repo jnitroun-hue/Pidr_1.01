@@ -67,6 +67,8 @@ interface GameState {
   deck: Card[]
   playedCards: Card[]
   lastPlayedCard: Card | null
+  // ✅ NFT КАРТЫ ИЗ КОЛОДЫ (для замены обычных карт)
+  nftDeckCards: Record<string, string> // { "jack_of_diamonds": "https://..." }
   
   // НОВАЯ МЕХАНИКА: Стопка штрафных карт
   penaltyDeck: PenaltyCard[]
@@ -448,6 +450,7 @@ export const useGameStore = create<GameState>()(
         // ЗАГРУЖАЕМ данные реального игрока из БД
         let userAvatar = '';
         let userName = 'Игрок';
+        let nftDeckCards: Record<string, string> = {}; // ✅ NFT карты из колоды
         
         try {
           const response = await fetch('/api/auth', { credentials: 'include' });
@@ -460,6 +463,42 @@ export const useGameStore = create<GameState>()(
           }
         } catch (error) {
           console.error('❌ Ошибка загрузки игрока:', error);
+        }
+        
+        // ✅ ЗАГРУЖАЕМ NFT КАРТЫ ИЗ КОЛОДЫ
+        try {
+          const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+          const telegramId = telegramUser?.id?.toString() || '';
+          
+          if (telegramId) {
+            const deckResponse = await fetch('/api/user/deck', {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-telegram-id': telegramId
+              },
+              credentials: 'include',
+              cache: 'no-store'
+            });
+            
+            if (deckResponse.ok) {
+              const deckResult = await deckResponse.json();
+              if (deckResult.success && deckResult.deck) {
+                // Формируем мапу: "rank_of_suit" -> image_url
+                deckResult.deck.forEach((deckCard: any) => {
+                  const rank = deckCard.rank?.toLowerCase() || '';
+                  const suit = deckCard.suit?.toLowerCase() || '';
+                  const key = `${rank}_of_${suit}`;
+                  if (deckCard.image_url) {
+                    nftDeckCards[key] = deckCard.image_url;
+                  }
+                });
+                console.log(`✅ [startGame] Загружено ${Object.keys(nftDeckCards).length} NFT карт из колоды`);
+              }
+            }
+          }
+        } catch (error) {
+          console.error('❌ Ошибка загрузки NFT колоды:', error);
         }
         
         const playerInfos = createPlayers(playersCount, 0, userAvatar, userName);
@@ -479,14 +518,19 @@ export const useGameStore = create<GameState>()(
             const cardIndex = i * cardsPerPlayer + j;
             const imageName = shuffledImages[cardIndex];
             
+            // ✅ ПРОВЕРЯЕМ ЕСТЬ ЛИ NFT ВЕРСИЯ ЭТОЙ КАРТЫ (только для игрока!)
+            const nftKey = get().getNFTKey(imageName);
+            const nftImageUrl = !playerInfo.isBot && nftKey && nftDeckCards[nftKey] ? nftDeckCards[nftKey] : null;
+            
             const card: Card = {
               id: `card_${Date.now()}_${i}_${j}_${Math.random().toString(36).substr(2, 9)}`, // ✅ УНИКАЛЬНЫЙ ID
               type: 'normal',
               title: `Карта ${j + 1}`,
               description: '',
-              image: imageName,
+              image: nftImageUrl || imageName, // ✅ ИСПОЛЬЗУЕМ NFT ЕСЛИ ЕСТЬ
               rarity: 'common',
               rank: get().getCardRank(imageName),
+              suit: get().getCardSuit(imageName),
               open: false, // Пока все закрыты
             };
             
@@ -520,16 +564,23 @@ export const useGameStore = create<GameState>()(
         }
         
         // Оставшиеся карты в колоде
-        const remainingCards: Card[] = shuffledImages.slice(playersCount * cardsPerPlayer).map((imageName, index) => ({
-          id: `deck_${Date.now()}_${index}_${Math.random().toString(36).substr(2, 9)}`, // ✅ УНИКАЛЬНЫЙ ID
-          type: 'normal',
-          title: `Карта колоды`,
-          description: '',
-          image: imageName,
-          rarity: 'common',
-          rank: get().getCardRank(imageName),
-          open: false,
-        }));
+        const remainingCards: Card[] = shuffledImages.slice(playersCount * cardsPerPlayer).map((imageName, index) => {
+          // ✅ ПРОВЕРЯЕМ ЕСТЬ ЛИ NFT ВЕРСИЯ ЭТОЙ КАРТЫ
+          const nftKey = get().getNFTKey(imageName);
+          const nftImageUrl = nftKey && nftDeckCards[nftKey] ? nftDeckCards[nftKey] : null;
+          
+          return {
+            id: `deck_${Date.now()}_${index}_${Math.random().toString(36).substr(2, 9)}`, // ✅ УНИКАЛЬНЫЙ ID
+            type: 'normal',
+            title: `Карта колоды`,
+            description: '',
+            image: nftImageUrl || imageName, // ✅ ИСПОЛЬЗУЕМ NFT ЕСЛИ ЕСТЬ
+            rarity: 'common',
+            rank: get().getCardRank(imageName),
+            suit: get().getCardSuit(imageName),
+            open: false,
+          };
+        });
         
         // Определяем первого игрока по старшей открытой карте
         let firstPlayerIndex = 0;
@@ -558,6 +609,7 @@ export const useGameStore = create<GameState>()(
           deck: remainingCards,
           playedCards: [],
           lastPlayedCard: null,
+          nftDeckCards: nftDeckCards, // ✅ СОХРАНЯЕМ NFT КАРТЫ
           gameStage: 1,
           // Сбрасываем данные второй стадии
           lastDrawnCard: null,
@@ -1292,15 +1344,24 @@ export const useGameStore = create<GameState>()(
       
       // Взятие карты из колоды
       drawCardFromDeck: () => {
-        const { deck, players, currentPlayerId, gameStage } = get();
+        const { deck, players, currentPlayerId, gameStage, nftDeckCards } = get();
         if (deck.length === 0 || !currentPlayerId) return false; // Нельзя брать карты из пустой колоды
         
         const currentPlayer = players.find(p => p.id === currentPlayerId);
         if (!currentPlayer) return false;
         
-        const drawnCard = deck[0];
-        // Добавляем ранг к карте
-        drawnCard.rank = get().getCardRank(drawnCard.image || '');
+        const drawnCard = { ...deck[0] }; // ✅ КОПИРУЕМ КАРТУ
+        // ✅ ПРОВЕРЯЕМ ЕСТЬ ЛИ NFT ВЕРСИЯ (только для игрока!)
+        const originalImage = drawnCard.image || '';
+        const nftKey = get().getNFTKey(originalImage);
+        const nftImageUrl = !currentPlayer.isBot && nftKey && nftDeckCards[nftKey] ? nftDeckCards[nftKey] : null;
+        
+        // Добавляем ранг и масть к карте
+        drawnCard.rank = get().getCardRank(originalImage);
+        drawnCard.suit = get().getCardSuit(originalImage);
+        if (nftImageUrl) {
+          drawnCard.image = nftImageUrl; // ✅ ЗАМЕНЯЕМ НА NFT ВЕРСИЮ
+        }
         drawnCard.open = true;
         
         // Карта добавляется ПОВЕРХ открытых карт (в стопку)
