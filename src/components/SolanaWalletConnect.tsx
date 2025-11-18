@@ -3,6 +3,7 @@
 /**
  * 🔗 SOLANA WALLET CONNECT
  * Подключение Solana кошелька (Phantom, Solflare и т.д.)
+ * ✅ Поддержка мобильных устройств через deep linking
  */
 
 import { useState, useEffect } from 'react';
@@ -12,6 +13,12 @@ interface SolanaWalletConnectProps {
   onConnect?: (address: string) => void;
   onDisconnect?: () => void;
 }
+
+// ✅ Определяем, является ли устройство мобильным
+const isMobile = () => {
+  if (typeof window === 'undefined') return false;
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+};
 
 export default function SolanaWalletConnect({ onConnect, onDisconnect }: SolanaWalletConnectProps) {
   const [connected, setConnected] = useState(false);
@@ -41,6 +48,35 @@ export default function SolanaWalletConnect({ onConnect, onDisconnect }: SolanaW
   const connectWallet = async () => {
     try {
       setLoading(true);
+      
+      // ✅ ПРОВЕРЯЕМ МОБИЛЬНОЕ УСТРОЙСТВО
+      if (isMobile()) {
+        console.log('📱 Обнаружено мобильное устройство, используем deep linking для Phantom...');
+        
+        // ✅ ИСПОЛЬЗУЕМ ОФИЦИАЛЬНЫЙ ФОРМАТ DEEP LINK ДЛЯ PHANTOM
+        // Формат: https://phantom.app/ul/v1/connect?app_url=...&redirect_link=...
+        const appUrl = encodeURIComponent(window.location.href);
+        const redirectLink = encodeURIComponent(window.location.href);
+        const deepLink = `https://phantom.app/ul/v1/connect?app_url=${appUrl}&redirect_link=${redirectLink}`;
+        
+        console.log('🔗 Открываем deep link для Phantom:', deepLink);
+        
+        // Пробуем открыть deep link
+        // Если Phantom установлен, он перехватит запрос и откроет приложение
+        window.location.href = deepLink;
+        
+        // Сохраняем состояние ожидания подключения
+        sessionStorage.setItem('solana_connect_pending', 'true');
+        
+        // Показываем сообщение пользователю
+        setTimeout(() => {
+          alert('📱 Откройте Phantom кошелек для подключения');
+        }, 500);
+        
+        return;
+      }
+      
+      // ✅ ДЕСКТОПНАЯ ВЕРСИЯ
       const { solana } = window as any;
 
       if (!solana) {
@@ -59,7 +95,11 @@ export default function SolanaWalletConnect({ onConnect, onDisconnect }: SolanaW
       console.log('✅ Solana кошелек подключен:', publicKey);
     } catch (error: any) {
       console.error('❌ Ошибка подключения Solana:', error);
-      alert('Ошибка подключения кошелька');
+      
+      // На мобильных устройствах ошибка может быть нормальной (deep link открылся)
+      if (!isMobile()) {
+        alert('Ошибка подключения кошелька');
+      }
     } finally {
       setLoading(false);
     }

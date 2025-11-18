@@ -177,10 +177,16 @@ export class UnifiedMasterWallet {
           console.log(`✅ ${network} Master кошелек загружен: ${envAddress || envXpub}`);
         }
       } else {
-        // Показываем предупреждения только для критичных кошельков во время сборки
-        if (!isBuildTime || ['BTC', 'ETH', 'TON', 'SOL'].includes(network)) {
-          console.warn(`⚠️ ${network} Master кошелек не настроен`);
+        // ✅ ИСПРАВЛЕНО: Показываем предупреждения только для критичных кошельков
+        // И только если это действительно критичный кошелек (BTC, ETH, TON, SOL)
+        // USDT_TRC20 и USDT_ERC20 - опциональные, не показываем предупреждения
+        if (['BTC', 'ETH', 'TON', 'SOL'].includes(network)) {
+          // Показываем предупреждение только во время сборки, если это критичный кошелек
+          if (isBuildTime) {
+            console.warn(`⚠️ ${network} Master кошелек не настроен`);
+          }
         }
+        // USDT_TRC20 и USDT_ERC20 - опциональные, не показываем предупреждения
       }
     }
 

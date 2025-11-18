@@ -23,21 +23,32 @@ export class TonPaymentService {
   private apiEndpoint = 'https://toncenter.com/api/v2';
 
   constructor() {
-    this.apiKey = process.env.TONCENTER_API_KEY || '';
-    this.masterAddress = process.env.MASTER_TON_ADDRESS || '';
+    // ✅ ИСПРАВЛЕНО: Проверяем все возможные варианты имен переменных
+    this.apiKey = process.env.TONCENTER_API_KEY || 
+                  process.env.TON_CENTER_API || 
+                  process.env.TONCENTER_API || 
+                  '';
+    this.masterAddress = process.env.MASTER_TON_ADDRESS || 
+                         process.env.TON_MASTER_ADDRESS || 
+                         '';
     
     // Нормализуем адрес (конвертируем UQ в EQ если нужно)
-    if (this.masterAddress.startsWith('UQ')) {
+    if (this.masterAddress && this.masterAddress.startsWith('UQ')) {
       this.masterAddress = 'EQ' + this.masterAddress.substring(2);
       console.log('✅ Конвертирован UQ адрес в EQ:', this.masterAddress);
     }
     
-    if (!this.apiKey) {
-      console.warn('⚠️ TONCENTER_API_KEY не настроен');
-    }
-    
-    if (!this.masterAddress) {
-      console.warn('⚠️ MASTER_TON_ADDRESS не настроен');
+    // ✅ Показываем предупреждения только если переменные действительно отсутствуют
+    // И только во время сборки (build time), не в runtime
+    const isBuildTime = typeof window === 'undefined' && process.env.NODE_ENV === 'production';
+    if (isBuildTime) {
+      if (!this.apiKey) {
+        console.warn('⚠️ TONCENTER_API_KEY не настроен');
+      }
+      
+      if (!this.masterAddress) {
+        console.warn('⚠️ MASTER_TON_ADDRESS не настроен');
+      }
     }
   }
 

@@ -114,6 +114,13 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         isConnecting: false,
       });
     } catch (error: any) {
+      // ✅ Обрабатываем специальный случай для мобильных устройств
+      if (error.message === 'MOBILE_DEEP_LINK') {
+        // На мобильных устройствах deep link уже открыт, просто выходим
+        console.log('📱 Deep link открыт для Phantom на мобильном устройстве');
+        set({ isConnecting: false });
+        return;
+      }
       set({
         error: error.message || 'Failed to connect Solana wallet',
         isConnecting: false,

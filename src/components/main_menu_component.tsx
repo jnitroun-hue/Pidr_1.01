@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Play, User, Book, Store, Users } from 'lucide-react'
+import { Play, User, Book, Store, Users, Image } from 'lucide-react'
 import { useGameStore } from '../store/gameStore'
 import { useTelegram } from '../hooks/useTelegram'
 import { useWalletStore } from '../store/walletStore'
@@ -100,6 +100,15 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
       onClick: () => {
         hapticFeedback('medium');
         router.push('/shop');
+      }
+    },
+    {
+      icon: <Image size={32} />,
+      emoji: '🎴',
+      label: 'NFT Коллекция',
+      onClick: () => {
+        hapticFeedback('medium');
+        router.push('/nft-collection');
       }
     },
     {

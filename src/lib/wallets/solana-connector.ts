@@ -1,5 +1,11 @@
 import { Connection, PublicKey, clusterApiUrl } from '@solana/web3.js';
 
+// ✅ Определяем, является ли устройство мобильным
+const isMobile = () => {
+  if (typeof window === 'undefined') return false;
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+};
+
 export class SolanaWalletConnector {
   private connection: Connection;
   private connectedWallet: any = null;
@@ -14,8 +20,36 @@ export class SolanaWalletConnector {
       throw new Error('Window is undefined');
     }
 
+    // ✅ ПРОВЕРЯЕМ МОБИЛЬНОЕ УСТРОЙСТВО
+    if (isMobile()) {
+      console.log('📱 Обнаружено мобильное устройство, используем deep linking для Phantom...');
+      
+      // Используем официальный deep link формат Phantom для мобильных
+      const appUrl = encodeURIComponent(window.location.href);
+      const redirectLink = encodeURIComponent(window.location.href);
+      
+      // ✅ ОФИЦИАЛЬНЫЙ ФОРМАТ DEEP LINK ДЛЯ PHANTOM
+      // Формат: https://phantom.app/ul/v1/connect?app_url=...&redirect_link=...
+      const deepLink = `https://phantom.app/ul/v1/connect?app_url=${appUrl}&redirect_link=${redirectLink}`;
+      
+      console.log('🔗 Открываем deep link для Phantom:', deepLink);
+      
+      // Пробуем открыть deep link
+      window.location.href = deepLink;
+      
+      // Сохраняем состояние ожидания подключения
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem('solana_connect_pending', 'true');
+      }
+      
+      // На мобильных устройствах мы не можем сразу получить ответ
+      // Пользователь должен будет вернуться в приложение после подключения
+      throw new Error('MOBILE_DEEP_LINK'); // Специальная ошибка для обработки
+    }
+
+    // ✅ ДЕСКТОПНАЯ ВЕРСИЯ
     // Проверяем наличие Phantom
-    const provider = (window as any).phantom?.solana;
+    const provider = (window as any).phantom?.solana || (window as any).solana;
     
     if (!provider?.isPhantom) {
       window.open('https://phantom.app/', '_blank');
