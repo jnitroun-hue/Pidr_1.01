@@ -48,9 +48,20 @@ function getSupabaseClientSync() {
         `На ${isClient ? 'КЛИЕНТЕ' : 'СЕРВЕРЕ'} отсутствуют переменные окружения:\n` +
         `- NEXT_PUBLIC_SUPABASE_URL: ${supabaseUrl ? '✅' : '❌ ОТСУТСТВУЕТ'}\n` +
         `- NEXT_PUBLIC_SUPABASE_ANON_KEY: ${supabaseAnonKey ? '✅' : '❌ ОТСУТСТВУЕТ'}\n\n` +
-        `РЕШЕНИЕ: Проверь что переменные добавлены на Vercel и redeploy!`;
+        `РЕШЕНИЕ:\n` +
+        `1. Добавь переменные в Vercel с префиксом NEXT_PUBLIC_:\n` +
+        `   - NEXT_PUBLIC_SUPABASE_URL\n` +
+        `   - NEXT_PUBLIC_SUPABASE_ANON_KEY\n` +
+        `2. Убедись что они добавлены для всех окружений (Production, Preview, Development)\n` +
+        `3. Сделай redeploy проекта\n\n` +
+        `⚠️ ВАЖНО: На клиенте Next.js может читать ТОЛЬКО переменные с префиксом NEXT_PUBLIC_!`;
       
-      console.error(errorMsg);
+      // ✅ НЕ ПОКАЗЫВАЕМ ОШИБКУ В КОНСОЛИ ЕСЛИ ЭТО ПРОСТО ПРЕДУПРЕЖДЕНИЕ
+      if (isClient) {
+        console.warn(errorMsg);
+      } else {
+        console.error(errorMsg);
+      }
       
       // Возвращаем mock клиент с правильным chaining
       const mockQueryBuilder = {

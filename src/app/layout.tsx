@@ -35,7 +35,14 @@ export default function RootLayout({
         <link
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
           rel="stylesheet"
+          media="print"
+          onLoad="this.media='all'"
         />
+        {/* ✅ ПРЕФЕТЧИНГ ДЛЯ УСКОРЕНИЯ ЗАГРУЗКИ */}
+        <link rel="preconnect" href="https://telegram.org" />
+        <link rel="dns-prefetch" href="https://telegram.org" />
+        <link rel="preconnect" href="https://cdnjs.cloudflare.com" />
+        <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com" />
       </head>
       <body className={inter.className}>
         <ChunkErrorHandler />

@@ -8,8 +8,6 @@ import { useLanguage } from '../../components/LanguageSwitcher';
 import { useTranslations } from '../../lib/i18n/translations';
 import { avatarFrames, getRarityColor, getRarityName } from '../../data/avatar-frames';
 import TonWalletConnect from '../../components/TonWalletConnect';
-import NFTGallery from '../../components/NFTGallery';
-import NFTThemeGenerator from '../../components/NFTThemeGenerator';
 
 // Компонент таймера для бонусов
 function BonusCooldownTimer({ bonus, onCooldownEnd }: { bonus: any; onCooldownEnd: () => void }) {
@@ -100,42 +98,6 @@ export default function ProfilePage() {
   const [user, setUser] = useState<any>(null);
 
   const [avatarUrl, setAvatarUrl] = useState('😎');
-
-  const loadNFTCollection = async () => {
-    try {
-      console.log('🎴 Загружаем NFT коллекцию...');
-      
-      // ✅ Получаем headers из Telegram WebApp
-      const telegramUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json'
-      };
-      
-      if (telegramUser?.id) {
-        headers['x-telegram-id'] = String(telegramUser.id);
-      }
-      if (telegramUser?.username) {
-        headers['x-username'] = telegramUser.username;
-      }
-      
-      const response = await fetch('/api/nft/collection', {
-        method: 'GET',
-        headers,
-        credentials: 'include',
-        cache: 'no-store' // ✅ ОТКЛЮЧАЕМ КЭШИРОВАНИЕ
-      });
-      
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success) {
-          // ✅ ИСПРАВЛЕНО: API возвращает 'collection', а не 'nfts'
-          console.log('✅ NFT коллекция загружена:', result.collection || result.nfts || []);
-        }
-      }
-    } catch (error) {
-      console.warn('⚠️ Не удалось загрузить NFT коллекцию:', error);
-    }
-  };
 
   // ✅ ИСПРАВЛЕНО: Загружаем ВСЕ данные пользователя из Supabase БД
   useEffect(() => {
@@ -327,11 +289,6 @@ export default function ProfilePage() {
     loadDeckCards();
     
     // ✅ СЛУШАЕМ СОБЫТИЯ ОБНОВЛЕНИЯ КОЛЛЕКЦИИ И КОЛОДЫ
-    const handleCollectionUpdate = () => {
-      console.log('🔄 Обновляем NFT коллекцию...');
-      loadNFTCollection();
-    };
-    
     const handleDeckUpdate = () => {
       console.log('🔄 Обновляем колоду...');
       loadDeckCards();
@@ -343,18 +300,16 @@ export default function ProfilePage() {
       loadUserData(); // Перезагружаем данные пользователя (включая баланс)
     };
     
-    window.addEventListener('nft-collection-updated', handleCollectionUpdate);
     window.addEventListener('deck-updated', handleDeckUpdate);
     window.addEventListener('balance-updated', handleBalanceUpdate);
     
     return () => {
-      window.removeEventListener('nft-collection-updated', handleCollectionUpdate);
       window.removeEventListener('deck-updated', handleDeckUpdate);
       window.removeEventListener('balance-updated', handleBalanceUpdate);
     };
   }, []);
   const [activeSection, setActiveSection] = useState('stats'); // 'stats', 'achievements', 'wallet'
-  const [showModal, setShowModal] = useState<'skins' | 'effects' | 'bonuses' | 'frames' | 'nft' | 'deck' | null>(null);
+  const [showModal, setShowModal] = useState<'skins' | 'effects' | 'bonuses' | 'frames' | 'deck' | null>(null);
   const [selectedSkin, setSelectedSkin] = useState('classic');
   const [selectedEffect, setSelectedEffect] = useState('none');
   const [selectedFrame, setSelectedFrame] = useState('default');
@@ -754,9 +709,6 @@ export default function ProfilePage() {
         // ✅ ОБНОВЛЯЕМ КОЛОДУ ПОСЛЕ УДАЛЕНИЯ
         setDeckCards(prev => prev.filter(card => card.id !== deckCardId));
         
-        // ✅ ПЕРЕЗАГРУЖАЕМ NFT КОЛЛЕКЦИЮ (карта вернется в коллекцию)
-        loadNFTCollection();
-        
         // Показываем уведомление через Telegram WebApp
         if ((window as any).Telegram?.WebApp?.showAlert) {
           (window as any).Telegram.WebApp.showAlert('✅ Карта удалена из колоды!');
@@ -851,9 +803,6 @@ export default function ProfilePage() {
       if (user) {
         setUser({ ...user, coins: result.newBalance });
       }
-      
-      // Перезагружаем NFT коллекцию
-      await loadNFTCollection();
       
       alert(`🔥 Поздравляем! Вы получили ${result.nft.rarity} карту:\n${result.nft.rank} ${getSuitEmoji(result.nft.suit)}\n\nОгонь: ${result.nft.burningParams.fireColor}\nИнтенсивность: ${result.nft.burningParams.intensity}\n\n${wallet_address ? `✅ Привязана к кошельку: ${wallet_address.slice(0, 8)}...` : '📦 Сохранена в аккаунте'}`);
       
@@ -1226,41 +1175,6 @@ export default function ProfilePage() {
           flexDirection: 'column',
           gap: '15px'
         }}>
-          {/* NFT КОЛЛЕКЦИЯ */}
-          <motion.button
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setShowModal('nft')}
-            style={{
-              width: '100%',
-              background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
-              border: '2px solid rgba(99, 102, 241, 0.3)',
-              borderRadius: '16px',
-              padding: '20px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '15px',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
-            }}
-          >
-            <div style={{ fontSize: '32px' }}>🎴</div>
-            <h3 style={{
-              color: '#f1f5f9',
-              fontSize: '20px',
-              fontWeight: '700',
-              margin: 0,
-              flex: 1,
-              textAlign: 'left'
-            }}>
-              NFT КОЛЛЕКЦИЯ
-            </h3>
-            <Palette size={32} style={{ color: '#6366f1' }} />
-          </motion.button>
-
           {/* КОШЕЛЕК */}
           <motion.button
             initial={{ y: 20, opacity: 0 }}
@@ -1618,7 +1532,6 @@ export default function ProfilePage() {
               }}>
                 {showModal === 'bonuses' && '🎁 БОНУСЫ'}
                 {showModal === 'frames' && '🖼️ РАМКИ АВАТАРОВ'}
-                {showModal === 'nft' && '🎴 NFT КОЛЛЕКЦИЯ'}
                 {showModal === 'deck' && '🎴 МОЯ КОЛОДА'}
               </h3>
               <button
@@ -2019,104 +1932,6 @@ export default function ProfilePage() {
               </div>
             )}
 
-            {/* NFT КОЛЛЕКЦИЯ МОДАЛЬНОЕ ОКНО */}
-            {showModal === 'nft' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                {/* TON Wallet Connect */}
-                <div style={{
-                  background: 'rgba(30, 41, 59, 0.6)',
-                  border: '2px solid rgba(0, 136, 204, 0.3)',
-                  borderRadius: '16px',
-                  padding: '20px'
-                }}>
-                  <h4 style={{ 
-                    color: '#e2e8f0', 
-                    fontSize: '1.1rem', 
-                    fontWeight: '700', 
-                    margin: '0 0 16px 0',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px'
-                  }}>
-                    <Wallet size={24} /> Подключение TON кошелька
-                  </h4>
-                  <div style={{ 
-                    color: '#94a3b8', 
-                    fontSize: '0.9rem', 
-                    marginBottom: '16px',
-                    lineHeight: '1.6'
-                  }}>
-                    Подключите свой TON кошелек для владения NFT картами. Все NFT будут минтиться напрямую в ваш кошелек.
-                  </div>
-                  <TonWalletConnect 
-                    onConnect={(address) => {
-                      console.log('✅ TON кошелек подключен:', address);
-                      setConnectedWallets(prev => ({ ...prev, ton: address }));
-                      loadNFTCollection();
-                    }}
-                    onDisconnect={() => {
-                      console.log('❌ TON кошелек отключен');
-                      setConnectedWallets(prev => ({ ...prev, ton: undefined }));
-                    }}
-                  />
-                </div>
-
-                {/* NFT Theme Generator - ГЕНЕРАТОР ТЕМАТИЧЕСКИХ КАРТ */}
-                <div style={{
-                  background: 'rgba(30, 41, 59, 0.6)',
-                  border: '2px solid rgba(251, 191, 36, 0.3)',
-                  borderRadius: '16px',
-                  padding: '20px'
-                }}>
-                  <NFTThemeGenerator 
-                    userCoins={user?.coins || 0}
-                    onBalanceUpdate={(newBalance) => {
-                      if (user) {
-                        setUser({...user, coins: newBalance});
-                      }
-                    }}
-                  />
-                </div>
-
-                {/* NFT Gallery - КОМПАКТНАЯ ГАЛЕРЕЯ */}
-                <div style={{
-                  background: 'rgba(30, 41, 59, 0.6)',
-                  border: '2px solid rgba(0, 136, 204, 0.3)',
-                  borderRadius: '16px',
-                  padding: '20px'
-                }}>
-                  <NFTGallery />
-                </div>
-
-                {/* Индикатор подключенного кошелька */}
-                {(connectedWallets.ton || connectedWallets.solana) && (
-                  <div style={{
-                    background: 'rgba(16, 185, 129, 0.2)',
-                    border: '1px solid rgba(16, 185, 129, 0.4)',
-                    borderRadius: '12px',
-                    padding: '12px',
-                    marginBottom: '16px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px'
-                  }}>
-                    <div style={{ fontSize: '24px' }}>✅</div>
-                    <div>
-                      <div style={{ fontSize: '0.9rem', fontWeight: '600', color: '#10b981' }}>
-                        Кошелек подключен
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '4px' }}>
-                        {connectedWallets.ton && `TON: ${connectedWallets.ton.slice(0, 8)}...${connectedWallets.ton.slice(-6)}`}
-                        {connectedWallets.solana && `SOL: ${connectedWallets.solana.slice(0, 8)}...${connectedWallets.solana.slice(-6)}`}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-
-                {/* Информация о NFT */}
-                <div style={{
-                  background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(0, 136, 204, 0.05) 100%)',
                   border: '1px solid rgba(59, 130, 246, 0.2)',
                   borderRadius: '12px',
                   padding: '16px'

@@ -2158,13 +2158,14 @@ export const useGameStore = create<GameState>()(
           // Логи для стадии 2 убраны (слишком много)
            
            // ПРАВИЛА P.I.D.R.: Проверяем можем ли побить верхнюю карту (если есть карты на столе)
-           if (tableStack.length > 0) {
+           // ✅ ИСКЛЮЧЕНИЕ: Для ботов не блокируем, они должны сами выбирать правильные карты
+           if (tableStack.length > 0 && !currentPlayer.isBot) {
              const topCard = tableStack[tableStack.length - 1];
              
              const canBeat = get().canBeatCard(topCard, selectedHandCard, trumpSuit || '');
              if (!canBeat) {
                get().showNotification('Эта карта не может побить верхнюю карту на столе!', 'error', 3000);
-               return; // Блокируем неправильный ход
+               return; // Блокируем неправильный ход (только для игрока, не для ботов)
              }
            }
            

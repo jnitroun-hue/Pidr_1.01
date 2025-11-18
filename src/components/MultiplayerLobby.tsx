@@ -135,7 +135,8 @@ export default function MultiplayerLobby({
         console.log('📋 [MultiplayerLobby] max_players:', data.maxPlayers);
         
         // ✅ ОБНОВЛЯЕМ isHost ИЗ БД!
-        const myPlayer = data.players.find((p: LobbyPlayer) => p.user_id === user?.id?.toString());
+        // ✅ ИСПРАВЛЕНО: Нормализуем сравнение - приводим оба к строке
+        const myPlayer = data.players.find((p: LobbyPlayer) => String(p.user_id) === String(user?.id || ''));
         if (myPlayer && myPlayer.is_host !== undefined) {
           console.log('👑 [MultiplayerLobby] Обновляем isHost:', myPlayer.is_host);
           setIsHost(myPlayer.is_host);
@@ -187,17 +188,78 @@ export default function MultiplayerLobby({
   const toggleReady = async () => {
     if (!user?.id) {
       console.error('❌ [MultiplayerLobby] toggleReady: user.id отсутствует');
+      alert('Ошибка: не удалось определить ваш ID. Перезагрузите страницу.');
       return;
     }
     
-    const userIdStr = user.id.toString();
-    const currentPlayer = lobbyState.players.find(p => p.user_id === userIdStr);
+    // ✅ НОРМАЛИЗУЕМ СРАВНЕНИЕ: приводим оба к строке
+    const userIdStr = String(user.id);
+    console.log('🔍 [MultiplayerLobby] toggleReady: ищем игрока', {
+      userId: userIdStr,
+      userIdType: typeof userIdStr,
+      players: lobbyState.players.map(p => ({
+        user_id: p.user_id,
+        user_idType: typeof p.user_id,
+        user_idStr: String(p.user_id),
+        name: p.username
+      }))
+    });
+    
+    // ✅ ИСПРАВЛЕНО: Нормализуем сравнение - приводим оба к строке
+    const currentPlayer = lobbyState.players.find(p => String(p.user_id) === userIdStr);
     
     if (!currentPlayer) {
       console.error('❌ [MultiplayerLobby] toggleReady: текущий игрок не найден в списке', {
         userId: userIdStr,
-        players: lobbyState.players.map(p => ({ id: p.user_id, name: p.username }))
+        userIdType: typeof userIdStr,
+        players: lobbyState.players.map(p => ({
+          id: p.user_id,
+          idType: typeof p.user_id,
+          idStr: String(p.user_id),
+          name: p.username
+        }))
       });
+      // ✅ ПЕРЕЗАГРУЖАЕМ ИГРОКОВ И ПОВТОРЯЕМ ПОПЫТКУ
+      console.log('🔄 [MultiplayerLobby] Перезагружаем игроков и повторяем попытку...');
+      await loadRoomPlayers();
+      
+      // ✅ ЖДЕМ НЕМНОГО ДЛЯ ОБНОВЛЕНИЯ STATE
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // ✅ ИСПОЛЬЗУЕМ API ДЛЯ ПОЛУЧЕНИЯ АКТУАЛЬНОГО СПИСКА
+      try {
+        const response = await fetch(`/api/rooms/${roomId}/players`, {
+          method: 'GET',
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.players) {
+            const retryPlayer = data.players.find((p: LobbyPlayer) => String(p.user_id) === userIdStr);
+            if (!retryPlayer) {
+              alert('Ошибка: ваш игрок не найден в комнате. Попробуйте перезагрузить страницу.');
+              return;
+            }
+            
+            const newReadyState = !retryPlayer.is_ready;
+            const roomManager = roomManagerRef.current;
+            if (!roomManager) {
+              console.error('❌ [MultiplayerLobby] toggleReady: roomManager не инициализирован');
+              return;
+            }
+
+            await roomManager.setPlayerReady(roomId, userIdStr, newReadyState);
+            await loadRoomPlayers();
+            console.log('✅ [MultiplayerLobby] Готовность обновлена (после перезагрузки)');
+            return;
+          }
+        }
+      } catch (error) {
+        console.error('❌ [MultiplayerLobby] Ошибка при повторной попытке:', error);
+      }
+      
+      alert('Ошибка: не удалось изменить готовность. Попробуйте еще раз или перезагрузите страницу.');
       return;
     }
     
@@ -305,7 +367,8 @@ export default function MultiplayerLobby({
     }
   };
 
-  const currentPlayer = lobbyState.players.find(p => p.user_id === user?.id?.toString());
+  // ✅ ИСПРАВЛЕНО: Нормализуем сравнение - приводим оба к строке
+  const currentPlayer = lobbyState.players.find(p => String(p.user_id) === String(user?.id || ''));
   const readyPlayersCount = lobbyState.players.filter(p => p.is_ready).length;
 
   return (
@@ -355,8 +418,9 @@ export default function MultiplayerLobby({
             {lobbyState.players.map((player, index) => {
               const userIdStr = String(player.user_id || ''); // ✅ КОНВЕРТИРУЕМ В СТРОКУ!
               const isBot = userIdStr.startsWith('-') || parseInt(userIdStr) < 0;
-              const isCurrentUser = userIdStr === user?.id?.toString();
-              const isHostPlayer = index === 0; // Первый игрок = хост
+              // ✅ ИСПРАВЛЕНО: Нормализуем сравнение - приводим оба к строке
+              const isCurrentUser = userIdStr === String(user?.id || '');
+              const isHostPlayer = player.is_host || index === 0; // ✅ ИСПОЛЬЗУЕМ is_host ИЗ БД!
 
               return (
                 <motion.div

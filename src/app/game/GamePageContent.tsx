@@ -261,11 +261,12 @@ function GamePageContentComponent({
     showWinnerModal, winnerModalData, showLoserModal, loserModalData,
     showGameResultsModal, gameResults,
     showPenaltyDeckModal,
+    nftDeckCards: storeNftDeckCards, // ✅ ИСПОЛЬЗУЕМ NFT КАРТЫ ИЗ STORE
     startGame, endGame, resetGame,
     drawCard, makeMove, onDeckClick, placeCardOnSelfByRules,
     selectHandCard, playSelectedCard, takeTableCards, showNotification,
     declareOneCard, askHowManyCards, contributePenaltyCard, cancelPenalty,
-    togglePenaltyDeckModal, nextTurn
+    togglePenaltyDeckModal, nextTurn, getNFTKey
   } = useGameStore();
 
   // ИСПРАВЛЕНО: Получаем данные пользователя из Supabase БД
@@ -280,8 +281,16 @@ function GamePageContentComponent({
   // Текущая открытая карта из колоды (для отображения рядом с колодой)
   const [currentCard, setCurrentCard] = useState<string | null>(null);
 
-  // ✅ NFT КАРТЫ ИЗ КОЛОДЫ (только для игрока)
+  // ✅ NFT КАРТЫ ИЗ КОЛОДЫ (используем из store, но также загружаем локально для синхронизации)
   const [nftDeckCards, setNftDeckCards] = useState<Record<string, string>>({}); // { "ace_of_hearts": "https://..." }
+  
+  // ✅ СИНХРОНИЗИРУЕМ С STORE
+  useEffect(() => {
+    if (storeNftDeckCards && Object.keys(storeNftDeckCards).length > 0) {
+      console.log('🔄 [GamePageContent] Синхронизируем NFT карты из store:', Object.keys(storeNftDeckCards).length);
+      setNftDeckCards(storeNftDeckCards);
+    }
+  }, [storeNftDeckCards]);
 
   // Модальное окно профиля игрока
   const [selectedPlayerProfile, setSelectedPlayerProfile] = useState<any>(null);
@@ -501,7 +510,8 @@ function GamePageContentComponent({
             'Content-Type': 'application/json',
             'x-telegram-id': telegramId
           },
-          credentials: 'include'
+          credentials: 'include',
+          cache: 'no-store' // ✅ ОТКЛЮЧАЕМ КЭШИРОВАНИЕ
         });
 
         if (response.ok) {
@@ -517,8 +527,10 @@ function GamePageContentComponent({
                 nftMap[key] = deckCard.image_url;
               }
             });
-            console.log(`✅ Загружено ${Object.keys(nftMap).length} NFT карт из колоды:`, nftMap);
+            console.log(`✅ [GamePageContent] Загружено ${Object.keys(nftMap).length} NFT карт из колоды:`, nftMap);
             setNftDeckCards(nftMap);
+            // ✅ ТАКЖЕ ОБНОВЛЯЕМ STORE (если есть метод для этого)
+            // Store уже загружает NFT карты в startGame, но для синхронизации обновляем локальный state
           }
         }
       } catch (error) {
@@ -828,12 +840,48 @@ function GamePageContentComponent({
                   selectHandCard(cardInHand);
                   // Играем карту с небольшой задержкой (УСКОРЕНО В 2 РАЗА)
                   setTimeout(() => {
+                    // ✅ ЗАЩИТА: Проверяем что игра все еще активна и ход не изменился
+                    const currentState = useGameStore.getState();
+                    if (!currentState.isGameActive || currentState.currentPlayerId !== currentPlayerId) {
+                      console.warn(`⚠️ [AI] Игра изменилась, отменяем ход бота`);
+                      aiProcessingRef.current = null;
+                      return;
+                    }
                     console.log(`🤖 [${currentTurnPlayer.name}] AI играет карту ${cardInHand.image}`);
-                    playSelectedCard();
+                    try {
+                      playSelectedCard();
+                    } catch (error) {
+                      console.error(`🚨 [AI] Ошибка при игре карты:`, error);
+                      // ✅ ЗАЩИТА: Если ошибка - передаем ход следующему игроку
+                      setTimeout(() => {
+                        const { nextTurn } = useGameStore.getState();
+                        if (nextTurn) nextTurn();
+                      }, 500);
+                    }
                   }, 400);
                 } else {
                   console.error(`🚨 [AI] Карта ${decision.cardToPlay?.image} не найдена в руке ${currentTurnPlayer.name}!`);
                   console.log(`🚨 [AI] Карты в руке:`, currentTurnPlayer.cards.map(c => c.image));
+                  // ✅ ЗАЩИТА: Если карта не найдена - берем первую доступную или передаем ход
+                  if (currentTurnPlayer.cards.length > 0) {
+                    console.log(`🔄 [AI] Пробуем взять первую карту из руки`);
+                    const firstCard = currentTurnPlayer.cards[0];
+                    selectHandCard(firstCard);
+                    setTimeout(() => {
+                      try {
+                        playSelectedCard();
+                      } catch (error) {
+                        console.error(`🚨 [AI] Ошибка при игре первой карты:`, error);
+                        const { nextTurn } = useGameStore.getState();
+                        if (nextTurn) nextTurn();
+                      }
+                    }, 400);
+                  } else {
+                    // Нет карт - передаем ход
+                    console.log(`⚠️ [AI] У ${currentTurnPlayer.name} нет карт, передаем ход`);
+                    const { nextTurn } = useGameStore.getState();
+                    if (nextTurn) nextTurn();
+                  }
                   // Сбрасываем флаг обработки
                   aiProcessingRef.current = null;
                 }
@@ -1780,8 +1828,9 @@ function GamePageContentComponent({
                           }
                           
                           // ✅ НОВОЕ: Проверяем есть ли NFT карта в колоде (только для игрока!)
-                          const nftKey = `${cardRank}_of_${cardSuit}`;
-                          const nftImageUrl = isHumanPlayer && nftDeckCards[nftKey] ? nftDeckCards[nftKey] : null;
+                          // Используем getNFTKey для правильного парсинга ключа
+                          const nftKey = getNFTKey ? getNFTKey(cardImage) : `${cardRank}_of_${cardSuit}`;
+                          const nftImageUrl = isHumanPlayer && (nftDeckCards[nftKey] || storeNftDeckCards?.[nftKey]) ? (nftDeckCards[nftKey] || storeNftDeckCards[nftKey]) : null;
                           
                           // ИСПРАВЛЕНО: В 1-й стадии ТОЛЬКО ВЕРХНЯЯ карта соперника открыта!
                           // Во 2-й стадии ТОЛЬКО СВОИ КАРТЫ открыты!
@@ -2191,8 +2240,9 @@ function GamePageContentComponent({
               }
               
               // ✅ НОВОЕ: Проверяем есть ли NFT карта в колоде
-              const nftKey = `${cardRank}_of_${cardSuit}`;
-              const nftImageUrl = nftDeckCards[nftKey] || null;
+              // ✅ ИСПОЛЬЗУЕМ getNFTKey ДЛЯ ПРАВИЛЬНОГО ПАРСИНГА
+              const nftKey = getNFTKey ? getNFTKey(cardImage) : `${cardRank}_of_${cardSuit}`;
+              const nftImageUrl = (nftDeckCards[nftKey] || storeNftDeckCards?.[nftKey]) || null;
               
               // Проверяем можно ли сыграть эту карту
               const isMyTurn = myPlayer.id === currentPlayerId;

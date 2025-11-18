@@ -73,6 +73,25 @@ const nextConfig = {
     // Количество страниц, которые должны одновременно оставаться в памяти
     pagesBufferLength: 2,
   },
+  
+  // ✅ ОПТИМИЗАЦИЯ ДЛЯ МОБИЛЬНЫХ УСТРОЙСТВ (Telegram WebApp)
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=3600, must-revalidate',
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+        ],
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;
