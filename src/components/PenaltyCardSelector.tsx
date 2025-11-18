@@ -161,7 +161,7 @@ export default function PenaltyCardSelector() {
             {openCards.map((card: any, index: number) => {
               const cardImage = typeof card === 'string' 
                 ? card.replace('(open)', '').replace('(closed)', '')
-                : card.image || `${card.rank}_of_${card.suit}.png`;
+                : card.image || (card.rank && card.suit ? `${card.rank}_of_${card.suit}.png` : 'back.png');
               
               const cardId = card.id || cardImage;
               const isSelected = cardId in selectedAssignments;

@@ -1762,14 +1762,14 @@ function GamePageContentComponent({
                           // Карта может быть строкой "7_of_spades.png(open)" или объектом {rank, suit, image}
                           const cardImage = typeof card === 'string' 
                             ? card.replace('(open)', '').replace('(closed)', '')
-                            : card.image || `${card.rank}_of_${card.suit}.png`;
+                            : card.image || (card.rank && card.suit ? `${card.rank}_of_${card.suit}.png` : 'back.png');
                           
                           // ✅ НОВОЕ: Определяем rank и suit для поиска NFT карты
                           let cardRank = '';
                           let cardSuit = '';
                           if (typeof card === 'object' && card.rank && card.suit) {
-                            cardRank = card.rank.toLowerCase();
-                            cardSuit = card.suit.toLowerCase();
+                            cardRank = String(card.rank).toLowerCase();
+                            cardSuit = String(card.suit).toLowerCase();
                           } else if (typeof card === 'string') {
                             // Парсим из строки "7_of_spades.png"
                             const match = cardImage.match(/(\w+)_of_(\w+)\.png/);
@@ -2173,14 +2173,14 @@ function GamePageContentComponent({
               // Карта может быть строкой "7_of_spades.png(open)" или объектом {rank, suit, image}
               const cardImage = typeof card === 'string' 
                 ? card.replace('(open)', '').replace('(closed)', '')
-                : card.image || `${card.rank}_of_${card.suit}.png`;
+                : card.image || (card.rank && card.suit ? `${card.rank}_of_${card.suit}.png` : 'back.png');
               
               // ✅ НОВОЕ: Определяем rank и suit для поиска NFT карты
               let cardRank = '';
               let cardSuit = '';
               if (typeof card === 'object' && card.rank && card.suit) {
-                cardRank = card.rank.toLowerCase();
-                cardSuit = card.suit.toLowerCase();
+                cardRank = String(card.rank).toLowerCase();
+                cardSuit = String(card.suit).toLowerCase();
               } else if (typeof card === 'string') {
                 // Парсим из строки "7_of_spades.png"
                 const match = cardImage.match(/(\w+)_of_(\w+)\.png/);

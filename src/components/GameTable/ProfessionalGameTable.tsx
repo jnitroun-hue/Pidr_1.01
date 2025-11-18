@@ -78,7 +78,11 @@ const ProfessionalGameTable: React.FC<ProfessionalGameTableProps> = ({
     }
 
     onCardPlay?.(index);
-    addNotification(`Сыграна карта: ${card.rank} ${card.suit}`, 'success');
+    if (card.rank && card.suit) {
+      addNotification(`Сыграна карта: ${card.rank} ${card.suit}`, 'success');
+    } else {
+      addNotification(`Сыграна карта`, 'success');
+    }
   };
 
   const defaultCanPlayCard = (card: Card, index: number) => {

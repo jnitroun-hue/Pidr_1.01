@@ -164,25 +164,32 @@ const RectangularGameTable: React.FC<RectangularGameTableProps> = ({
 
           {/* Область для сыгранных карт */}
           <div className={styles.playedCardsArea}>
-            {playedCards.map((card, index) => (
-              <motion.div
-                key={`${card.suit}-${card.rank}-${index}`}
-                className={styles.playedCard}
-                initial={{ scale: 0, rotate: Math.random() * 20 - 10 }}
-                animate={{ scale: 1, rotate: Math.random() * 10 - 5 }}
-                transition={{ delay: index * 0.1 }}
-                style={{
-                  zIndex: index + 1,
-                  transform: `translate(${Math.random() * 20 - 10}px, ${Math.random() * 20 - 10}px)`
-                }}
-              >
-                <img 
-                  src={`/img/cards/${card.suit}_${card.rank}.png`} 
-                  alt={`${card.rank} of ${card.suit}`}
-                  className={styles.cardImage}
-                />
-              </motion.div>
-            ))}
+            {playedCards.map((card, index) => {
+              // ✅ ПРОВЕРКА НА UNDEFINED
+              if (!card.suit || !card.rank) {
+                return null;
+              }
+              
+              return (
+                <motion.div
+                  key={`${card.suit}-${card.rank}-${index}`}
+                  className={styles.playedCard}
+                  initial={{ scale: 0, rotate: Math.random() * 20 - 10 }}
+                  animate={{ scale: 1, rotate: Math.random() * 10 - 5 }}
+                  transition={{ delay: index * 0.1 }}
+                  style={{
+                    zIndex: index + 1,
+                    transform: `translate(${Math.random() * 20 - 10}px, ${Math.random() * 20 - 10}px)`
+                  }}
+                >
+                  <img 
+                    src={`/img/cards/${card.suit}_${card.rank}.png`} 
+                    alt={`${card.rank} of ${card.suit}`}
+                    className={styles.cardImage}
+                  />
+                </motion.div>
+              );
+            })}
           </div>
 
           {/* Индикатор стадии игры */}

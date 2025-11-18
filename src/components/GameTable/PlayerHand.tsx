@@ -51,7 +51,7 @@ const PlayerHand: React.FC<PlayerHandProps> = ({
             
             return (
               <motion.div
-                key={`${card.suit}-${card.rank}-${index}`}
+                key={`${card.suit || 'unknown'}-${card.rank || 'unknown'}-${index}`}
                 className={`${styles.handCard} ${isSelected ? styles.selected : ''} ${isPlayable ? styles.playable : ''} ${!isPlayerTurn ? styles.disabled : ''}`}
                 initial={{ y: 100, opacity: 0, scale: 0.8 }}
                 animate={{ 
@@ -91,21 +91,36 @@ const PlayerHand: React.FC<PlayerHandProps> = ({
                 <div className={styles.cardImageContainer}>
                   {/* ✅ НОВОЕ: Используем NFT карту если она есть в колоде */}
                   {(() => {
-                    const nftKey = `${card.rank.toLowerCase()}_of_${card.suit.toLowerCase()}`;
+                    // ✅ ПРОВЕРКА НА UNDEFINED
+                    const cardRank = card.rank;
+                    const cardSuit = card.suit;
+                    
+                    if (!cardRank || !cardSuit) {
+                      return (
+                        <img
+                          src={`/img/cards/back.png`}
+                          alt="Card"
+                          className={styles.cardImage}
+                          draggable={false}
+                        />
+                      );
+                    }
+                    
+                    const nftKey = `${String(cardRank).toLowerCase()}_of_${cardSuit.toLowerCase()}`;
                     const nftImageUrl = nftDeckCards[nftKey];
                     
                     return nftImageUrl ? (
                       <img
                         src={nftImageUrl}
-                        alt={`${card.rank} of ${card.suit}`}
+                        alt={`${cardRank} of ${cardSuit}`}
                         className={styles.cardImage}
                         draggable={false}
                         style={{ objectFit: 'cover' }}
                       />
                     ) : (
                       <img
-                        src={`/img/cards/${card.suit}_${card.rank}.png`}
-                        alt={`${card.rank} of ${card.suit}`}
+                        src={`/img/cards/${cardSuit}_${cardRank}.png`}
+                        alt={`${cardRank} of ${cardSuit}`}
                         className={styles.cardImage}
                         draggable={false}
                       />
@@ -121,15 +136,17 @@ const PlayerHand: React.FC<PlayerHandProps> = ({
                 </div>
 
                 {/* Информация о карте */}
-                <div className={styles.cardInfo}>
-                  <div className={styles.cardRank}>{card.rank}</div>
-                  <div className={styles.cardSuit}>
-                    {card.suit === 'hearts' && '♥️'}
-                    {card.suit === 'diamonds' && '♦️'}
-                    {card.suit === 'clubs' && '♣️'}
-                    {card.suit === 'spades' && '♠️'}
+                {card.rank && card.suit && (
+                  <div className={styles.cardInfo}>
+                    <div className={styles.cardRank}>{card.rank}</div>
+                    <div className={styles.cardSuit}>
+                      {card.suit === 'hearts' && '♥️'}
+                      {card.suit === 'diamonds' && '♦️'}
+                      {card.suit === 'clubs' && '♣️'}
+                      {card.suit === 'spades' && '♠️'}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Подсказка для выбранной карты */}
                 {isSelected && (

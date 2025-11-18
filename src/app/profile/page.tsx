@@ -2235,7 +2235,7 @@ export default function ProfilePage() {
                               fontSize: '1.2rem',
                               fontWeight: 'bold'
                             }}>
-                              {nftCard.rank}{suitSymbol}
+                              {nftCard?.rank || '?'}{suitSymbol}
                             </span>
                             <span style={{
                               background: 'rgba(139, 92, 246, 0.2)',
