@@ -36,6 +36,34 @@ export const supabase = new Proxy({} as any, {
   }
 });
 
+// ✅ КЭШИРОВАНИЕ КОНФИГУРАЦИИ С СЕРВЕРА (для клиента)
+let cachedConfig: { url: string; key: string } | null = null;
+let configLoadingPromise: Promise<{ url: string; key: string }> | null = null;
+
+// ✅ ЗАГРУЗКА КОНФИГУРАЦИИ С СЕРВЕРА (fallback для клиента)
+async function loadConfigFromServer(): Promise<{ url: string; key: string }> {
+  if (cachedConfig) return cachedConfig;
+  
+  if (configLoadingPromise) return configLoadingPromise;
+  
+  configLoadingPromise = fetch('/api/config')
+    .then(res => res.json())
+    .then(data => {
+      if (data.supabaseUrl && data.supabaseAnonKey) {
+        cachedConfig = { url: data.supabaseUrl, key: data.supabaseAnonKey };
+        return cachedConfig!;
+      }
+      throw new Error('Config not available from server');
+    })
+    .catch(error => {
+      console.error('❌ [Supabase] Не удалось загрузить конфигурацию с сервера:', error);
+      configLoadingPromise = null;
+      throw error;
+    });
+  
+  return configLoadingPromise;
+}
+
 // ✅ СИНХРОННАЯ ВЕРСИЯ (БЕЗ AWAIT)
 function getSupabaseClientSync() {
   if (!supabaseClient) {
@@ -44,6 +72,25 @@ function getSupabaseClientSync() {
 
     if (!supabaseUrl || !supabaseAnonKey) {
       const isClient = typeof window !== 'undefined';
+      
+      // ✅ НА КЛИЕНТЕ: Пробуем загрузить с сервера асинхронно
+      if (isClient) {
+        // Загружаем конфигурацию с сервера в фоне
+        loadConfigFromServer()
+          .then(config => {
+            console.log('✅ [Supabase] Конфигурация загружена с сервера');
+            // Создаем клиент с загруженной конфигурацией
+            if (!supabaseClient && config.url && config.key) {
+              supabaseClient = createClient(config.url, config.key, {
+                auth: { persistSession: false },
+              });
+            }
+          })
+          .catch(() => {
+            // Игнорируем ошибку, используем mock клиент
+          });
+      }
+      
       const errorMsg = `❌ КРИТИЧНО! Supabase не настроен!\n\n` +
         `На ${isClient ? 'КЛИЕНТЕ' : 'СЕРВЕРЕ'} отсутствуют переменные окружения:\n` +
         `- NEXT_PUBLIC_SUPABASE_URL: ${supabaseUrl ? '✅' : '❌ ОТСУТСТВУЕТ'}\n` +
@@ -54,7 +101,8 @@ function getSupabaseClientSync() {
         `   - NEXT_PUBLIC_SUPABASE_ANON_KEY\n` +
         `2. Убедись что они добавлены для всех окружений (Production, Preview, Development)\n` +
         `3. Сделай redeploy проекта\n\n` +
-        `⚠️ ВАЖНО: На клиенте Next.js может читать ТОЛЬКО переменные с префиксом NEXT_PUBLIC_!`;
+        `⚠️ ВАЖНО: На клиенте Next.js может читать ТОЛЬКО переменные с префиксом NEXT_PUBLIC_!\n` +
+        `${isClient ? '💡 Пробую загрузить конфигурацию с сервера...' : ''}`;
       
       // ✅ НЕ ПОКАЗЫВАЕМ ОШИБКУ В КОНСОЛИ ЕСЛИ ЭТО ПРОСТО ПРЕДУПРЕЖДЕНИЕ
       if (isClient) {

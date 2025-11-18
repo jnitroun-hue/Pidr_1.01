@@ -212,41 +212,67 @@ export const ProperMultiplayer: React.FC = () => {
         const data = await response.json();
         console.log('✅ Комната создана:', data.room);
 
-         const roomData: RoomData = {
-           id: data.room.id.toString(),
-           code: data.room.roomCode,
-           name: data.room.name,
-           host: user?.first_name || user?.username || 'Хост',
-           hostId: user?.id?.toString() || 'host',
-           maxPlayers,
-           gameMode: gameMode === 'casual' ? 'casual' : 'competitive', // Приводим к нужному типу
-           hasPassword,
-           isPrivate,
-           status: 'waiting',
-           players: [
-             {
-               id: user?.id?.toString() || 'host',
-               name: user?.first_name || user?.username || 'Хост',
-               isHost: true,
-               isReady: true,
-               isBot: false,
-               avatar: user?.avatar,
-               joinedAt: new Date()
-             }
-           ],
-           settings: {
-             autoStart: false,
-             allowBots: true,
-             minPlayers: 4 // Изменил на 4 (минимум игроков)
-           }
-         };
+        // ✅ ЗАГРУЖАЕМ ВСЕ ДАННЫЕ ИЗ БД (ИСТОЧНИК ИСТИНЫ!)
+        const roomId = data.room.id.toString();
+        setCurrentRoomId(roomId);
+        setPlayerPosition(data.room.position || 1);
 
-        // Сохраняем ID комнаты и позицию
-        setCurrentRoomId(data.room.id);
-        setPlayerPosition(data.room.position || 1); // Хост всегда позиция 1
+        // Загружаем полные данные комнаты из БД
+        const playersResponse = await fetch(`/api/rooms/${roomId}/players`, {
+          method: 'GET',
+          credentials: 'include'
+        });
 
-        setCurrentRoom(roomData);
-        setView('waiting');
+        if (playersResponse.ok) {
+          const playersData = await playersResponse.json();
+          console.log('✅ Загружены игроки комнаты из БД:', playersData.players);
+          
+          // Загружаем информацию о комнате из БД
+          const roomInfoResponse = await fetch(`/api/rooms/${roomId}`, {
+            method: 'GET',
+            credentials: 'include'
+          });
+
+          let roomInfo: any = null;
+          if (roomInfoResponse.ok) {
+            const roomInfoData = await roomInfoResponse.json();
+            roomInfo = roomInfoData.room;
+          }
+
+          const allPlayers = playersData.players.map((player: any) => ({
+            id: player.user_id.toString(),
+            name: player.username || 'Игрок',
+            isHost: player.is_host || false,
+            isReady: player.is_ready || false,
+            isBot: false,
+            avatar: player.avatar_url,
+            joinedAt: new Date(player.joined_at || Date.now())
+          }));
+
+          const roomData: RoomData = {
+            id: roomId,
+            code: data.room.roomCode,
+            name: roomInfo?.name || data.room.name || 'Новая комната',
+            host: allPlayers.find((p: any) => p.isHost)?.name || user?.first_name || user?.username || 'Хост',
+            hostId: allPlayers.find((p: any) => p.isHost)?.id || user?.id?.toString() || 'host',
+            maxPlayers: roomInfo?.max_players || maxPlayers,
+            gameMode: roomInfo?.settings?.gameMode === 'ranked' ? 'competitive' : 'casual',
+            hasPassword: roomInfo?.password ? true : false,
+            isPrivate: roomInfo?.is_private || false,
+            status: roomInfo?.status || 'waiting',
+            players: allPlayers, // ✅ ВСЕ ИГРОКИ ИЗ БД!
+            settings: {
+              autoStart: roomInfo?.settings?.autoStart || false,
+              allowBots: roomInfo?.settings?.allowBots !== false,
+              minPlayers: 4
+            }
+          };
+
+          setCurrentRoom(roomData);
+          setView('waiting');
+        } else {
+          throw new Error('Не удалось загрузить данные комнаты из БД');
+        }
       } else {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Не удалось создать комнату');
@@ -296,62 +322,64 @@ export const ProperMultiplayer: React.FC = () => {
         const result = await response.json();
         console.log('✅ Присоединились к комнате:', result.room);
         
-        // Сохраняем ID комнаты и позицию
-        setCurrentRoomId(result.room.id);
+        // ✅ ЗАГРУЖАЕМ ВСЕ ДАННЫЕ ИЗ БД (ИСТОЧНИК ИСТИНЫ!)
+        const roomId = result.room.id.toString();
+        setCurrentRoomId(roomId);
         setPlayerPosition(result.room.position);
 
-        // ЗАГРУЖАЕМ ВСЕХ ИГРОКОВ В КОМНАТЕ
-        const playersResponse = await fetch(`/api/rooms/${result.room.id}/players`, {
+        // Загружаем всех игроков из БД
+        const playersResponse = await fetch(`/api/rooms/${roomId}/players`, {
           method: 'GET',
           credentials: 'include'
         });
 
-        let allPlayers = [];
-        if (playersResponse.ok) {
-          const playersData = await playersResponse.json();
-          console.log('✅ Загружены игроки комнаты:', playersData.players);
-          
-          allPlayers = playersData.players.map((player: any) => ({
-            id: player.user_id.toString(),
-            name: player.username || 'Игрок',
-            isHost: player.position === 1, // Хост всегда позиция 1
-            isReady: player.is_ready || player.position === 1, // Хост всегда готов
-            isBot: false,
-            avatar: player.avatar_url,
-            joinedAt: new Date(player.joined_at || Date.now())
-          }));
-        } else {
-          console.error('❌ Не удалось загрузить игроков комнаты');
-          // Fallback - только текущий игрок
-          allPlayers = [{
-            id: user?.id?.toString() || 'player',
-            name: user?.first_name || user?.username || 'Игрок',
-            isHost: result.room.isHost || false,
-            isReady: result.room.isHost || false,
-            isBot: false,
-            avatar: user?.avatar,
-            joinedAt: new Date()
-          }];
+        if (!playersResponse.ok) {
+          throw new Error('Не удалось загрузить игроков комнаты из БД');
         }
 
-         const roomData: RoomData = {
-           id: result.room.id.toString(),
-           code: result.room.roomCode,
-           name: result.room.name,
-           host: allPlayers.find((p: any) => p.isHost)?.name || 'Хост',
-           hostId: allPlayers.find((p: any) => p.isHost)?.id || 'host_id',
-           maxPlayers: 6,
-           gameMode: 'casual',
-           hasPassword: false,
-           isPrivate: false,
-           status: 'waiting',
-           players: allPlayers, // ВСЕ ИГРОКИ ИЗ БД
-           settings: {
-             autoStart: false,
-             allowBots: true,
-             minPlayers: 4
-           }
-         };
+        const playersData = await playersResponse.json();
+        console.log('✅ Загружены игроки комнаты из БД:', playersData.players);
+        
+        // Загружаем информацию о комнате из БД
+        const roomInfoResponse = await fetch(`/api/rooms/${roomId}`, {
+          method: 'GET',
+          credentials: 'include'
+        });
+
+        let roomInfo: any = null;
+        if (roomInfoResponse.ok) {
+          const roomInfoData = await roomInfoResponse.json();
+          roomInfo = roomInfoData.room;
+        }
+
+        const allPlayers = playersData.players.map((player: any) => ({
+          id: player.user_id.toString(),
+          name: player.username || 'Игрок',
+          isHost: player.is_host || false, // ✅ ИСПОЛЬЗУЕМ is_host ИЗ БД!
+          isReady: player.is_ready || false,
+          isBot: false,
+          avatar: player.avatar_url,
+          joinedAt: new Date(player.joined_at || Date.now())
+        }));
+
+        const roomData: RoomData = {
+          id: roomId,
+          code: result.room.roomCode,
+          name: roomInfo?.name || result.room.name || 'Комната',
+          host: allPlayers.find((p: any) => p.isHost)?.name || 'Хост',
+          hostId: allPlayers.find((p: any) => p.isHost)?.id || 'host_id',
+          maxPlayers: roomInfo?.max_players || 6,
+          gameMode: roomInfo?.settings?.gameMode === 'ranked' ? 'competitive' : 'casual',
+          hasPassword: roomInfo?.password ? true : false,
+          isPrivate: roomInfo?.is_private || false,
+          status: roomInfo?.status || 'waiting',
+          players: allPlayers, // ✅ ВСЕ ИГРОКИ ИЗ БД!
+          settings: {
+            autoStart: roomInfo?.settings?.autoStart || false,
+            allowBots: roomInfo?.settings?.allowBots !== false,
+            minPlayers: 4
+          }
+        };
 
         setCurrentRoom(roomData);
         setView('waiting');

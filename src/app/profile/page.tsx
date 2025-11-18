@@ -812,7 +812,7 @@ export default function ProfilePage() {
     }
   };
 
-  function getSuitEmoji(suit: string): string {
+  const getSuitEmoji = (suit: string): string => {
     switch (suit) {
       case 'hearts': return '♥️';
       case 'diamonds': return '♦️';
@@ -820,7 +820,7 @@ export default function ProfilePage() {
       case 'spades': return '♠️';
       default: return suit;
     }
-  }
+  };
 
   const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

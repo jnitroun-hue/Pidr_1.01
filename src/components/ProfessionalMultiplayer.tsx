@@ -107,38 +107,10 @@ export default function ProfessionalMultiplayer({ onBack }: ProfessionalMultipla
           }
         }
       } catch (err) {
-        console.warn('Using fallback data:', err);
-        // Fallback mock data
-        setRooms([
-          {
-            id: '1',
-            code: 'GAME01',
-            name: 'Комната Новичков',
-            host: 'Алекс',
-            players: 3,
-            maxPlayers: 6,
-            gameMode: 'casual',
-            hasPassword: false,
-            isPrivate: false,
-            status: 'waiting',
-            ping: 45,
-            difficulty: 'easy'
-          },
-          {
-            id: '2', 
-            code: 'PRO777',
-            name: 'Турнир Мастеров',
-            host: 'Мария',
-            players: 6,
-            maxPlayers: 8,
-            gameMode: 'pro',
-            hasPassword: true,
-            isPrivate: false,
-            status: 'playing',
-            ping: 23,
-            difficulty: 'hard'
-          }
-        ]);
+        console.error('❌ Ошибка загрузки комнат из БД:', err);
+        // ✅ НЕ ИСПОЛЬЗУЕМ FALLBACK - ТОЛЬКО БД!
+        setRooms([]);
+        setError('Не удалось загрузить комнаты. Попробуйте позже.');
       } finally {
         setLoading(false);
       }

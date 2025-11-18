@@ -2,6 +2,61 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { requireAuth } from '@/lib/auth-utils';
 
+// GET /api/rooms/[roomId] - получить информацию о комнате
+export async function GET(req: NextRequest, context: { params: Promise<{ roomId: string }> }) {
+  try {
+    const params = await context.params;
+    const { roomId } = params;
+    
+    if (!roomId) {
+      return NextResponse.json({ success: false, message: 'Room ID required' }, { status: 400 });
+    }
+
+    console.log(`🔍 [GET /api/rooms/${roomId}] Загружаем информацию о комнате`);
+
+    // Загружаем информацию о комнате из БД
+    const { data: room, error: roomError } = await supabase
+      .from('_pidr_rooms')
+      .select('*')
+      .eq('id', roomId)
+      .single();
+
+    if (roomError || !room) {
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Комната не найдена' 
+      }, { status: 404 });
+    }
+
+    console.log(`✅ [GET /api/rooms/${roomId}] Комната найдена: ${room.name}`);
+
+    return NextResponse.json({
+      success: true,
+      room: {
+        id: room.id,
+        room_code: room.room_code,
+        name: room.name,
+        host_id: room.host_id,
+        max_players: room.max_players,
+        current_players: room.current_players,
+        status: room.status,
+        is_private: room.is_private,
+        password: room.password ? true : false, // Не возвращаем сам пароль
+        settings: room.settings,
+        created_at: room.created_at,
+        updated_at: room.updated_at
+      }
+    });
+
+  } catch (error: any) {
+    console.error('❌ Room GET error:', error);
+    return NextResponse.json({ 
+      success: false, 
+      message: 'Ошибка сервера: ' + (error?.message || 'Неизвестная ошибка')
+    }, { status: 500 });
+  }
+}
+
 // DELETE /api/rooms/[roomId] - удалить конкретную комнату
 export async function DELETE(req: NextRequest, context: { params: Promise<{ roomId: string }> }) {
   try {
