@@ -1932,37 +1932,6 @@ export default function ProfilePage() {
               </div>
             )}
 
-                  border: '1px solid rgba(59, 130, 246, 0.2)',
-                  borderRadius: '12px',
-                  padding: '16px'
-                }}>
-                  <h5 style={{ 
-                    color: '#3b82f6', 
-                    fontSize: '0.9rem', 
-                    fontWeight: '700', 
-                    margin: '0 0 12px 0',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px'
-                  }}>
-                    ℹ️ О NFT картах
-                  </h5>
-                  <ul style={{ 
-                    color: '#94a3b8', 
-                    fontSize: '0.85rem', 
-                    margin: 0, 
-                    paddingLeft: '20px',
-                    lineHeight: '1.8'
-                  }}>
-                    <li>Каждая карта — уникальный NFT в блокчейне TON</li>
-                    <li>Вы полностью владеете своими картами</li>
-                    <li>Можно торговать на маркетплейсах</li>
-                    <li>Рандомный минт: 2-10 = 95%, J-K = 4%, A = 1%</li>
-                    <li>Кастомный минт: выберите масть, ранг и стиль</li>
-                  </ul>
-                </div>
-              </div>
-            )}
-
             {/* 🎴 МОЯ КОЛОДА - МОДАЛКА */}
             {showModal === 'deck' && (
               <div style={{ 
