@@ -190,6 +190,8 @@ interface GameState {
   
   // Методы для P.I.D.R игры
   getCardRank: (imageName: string) => number
+  getCardSuit: (imageName: string) => 'clubs' | 'diamonds' | 'hearts' | 'spades' | 'unknown'
+  getNFTKey: (imageName: string) => string // ✅ Получение ключа для NFT карты (rank_of_suit)
   findAvailableTargets: (currentPlayerId: string) => number[]
   canMakeMove: (currentPlayerId: string) => boolean
   makeMove: (targetPlayerId: string) => void
@@ -198,7 +200,6 @@ interface GameState {
   checkStage1End: () => void
   processPlayerTurn: (playerId: string) => void
   determineTrumpSuit: () => 'clubs' | 'diamonds' | 'hearts' | 'spades' | null
-  getCardSuit: (imageName: string) => 'clubs' | 'diamonds' | 'hearts' | 'spades' | 'unknown'
   
   // Новые методы для алгоритма хода
   revealDeckCard: () => boolean
@@ -314,6 +315,7 @@ export const useGameStore = create<GameState>()(
       deck: [...DEFAULT_CARDS],
       playedCards: [],
       lastPlayedCard: null,
+      nftDeckCards: {}, // ✅ NFT карты из колоды
       
       // НОВАЯ МЕХАНИКА: Стопка штрафных карт
       penaltyDeck: [],
@@ -878,6 +880,7 @@ export const useGameStore = create<GameState>()(
           deck: [...DEFAULT_CARDS],
           playedCards: [],
           lastPlayedCard: null,
+          nftDeckCards: {}, // ✅ Сбрасываем NFT карты
           selectedCard: null,
           penaltyDeck: []
         })
@@ -1167,7 +1170,14 @@ export const useGameStore = create<GameState>()(
       
       // Определение ранга карты по изображению
       getCardRank: (imageName: string) => {
-        const name = imageName.replace('.png', '').replace('/img/cards/', '');
+        // ✅ ОБРАБОТКА NFT URL (могут быть полные URL)
+        let name = imageName;
+        if (imageName.includes('http')) {
+          // Это NFT URL - извлекаем имя файла из URL
+          const urlParts = imageName.split('/');
+          name = urlParts[urlParts.length - 1] || imageName;
+        }
+        name = name.replace('.png', '').replace('/img/cards/', '').split('/').pop() || '';
         let rank = 0;
         if (name.startsWith('ace')) rank = 14;
         else if (name.startsWith('king')) rank = 13;
@@ -1178,6 +1188,36 @@ export const useGameStore = create<GameState>()(
           rank = match ? parseInt(match[1], 10) : 0;
         }
         return rank;
+      },
+      
+      // ✅ НОВОЕ: Получение ключа для NFT карты (rank_of_suit)
+      getNFTKey: (imageName: string) => {
+        // ✅ ОБРАБОТКА NFT URL (могут быть полные URL)
+        let name = imageName;
+        if (imageName.includes('http')) {
+          // Это NFT URL - извлекаем имя файла из URL
+          const urlParts = imageName.split('/');
+          name = urlParts[urlParts.length - 1] || imageName;
+        }
+        name = name.replace('.png', '').replace('/img/cards/', '').split('/').pop() || '';
+        
+        // Парсим rank и suit из имени файла
+        let rank = '';
+        let suit = '';
+        
+        if (name.startsWith('ace')) rank = 'ace';
+        else if (name.startsWith('king')) rank = 'king';
+        else if (name.startsWith('queen')) rank = 'queen';
+        else if (name.startsWith('jack')) rank = 'jack';
+        else {
+          const match = name.match(/(\d+)_of/);
+          rank = match ? match[1] : '';
+        }
+        
+        const suitMatch = name.match(/_of_(\w+)/);
+        suit = suitMatch ? suitMatch[1] : '';
+        
+        return rank && suit ? `${rank}_of_${suit}` : '';
       },
       
       // Поиск доступных целей для текущего хода
@@ -1505,9 +1545,15 @@ export const useGameStore = create<GameState>()(
             console.log('✅ [checkStage1End] Проверка "одна карта" после перехода во 2-ю стадию');
           }, 200);
           
-          // ✅ ИСПРАВЛЕНО: НЕ вызываем processPlayerTurn вручную!
-          // AI useEffect автоматически сработает при изменении gameStage и currentPlayerId
-          console.log(`🎮 [checkStage1End] Стадия 2 инициализирована, AI должен автоматически начать ход`);
+          // ✅ ИСПРАВЛЕНО: ЯВНО вызываем processPlayerTurn для первого игрока!
+          // Это гарантирует, что игра не зависнет
+          setTimeout(() => {
+            const { currentPlayerId } = get();
+            if (currentPlayerId) {
+              console.log(`🎮 [checkStage1End] Запускаем processPlayerTurn для ${currentPlayerId}`);
+              get().processPlayerTurn(currentPlayerId);
+            }
+          }, 500);
         }, 800);
       },
       
@@ -1551,9 +1597,25 @@ export const useGameStore = create<GameState>()(
           
           // ✅ КРИТИЧНО: НЕ сбрасываем stage2TurnPhase если уже выбрана карта!
           // Это предотвращает race condition с AI ботами
+          // НО: Если это новый ход (currentPlayerId !== playerId), сбрасываем фазу
           if (stage2TurnPhase === 'card_selected' && currentPlayerId === playerId) {
             console.log(`⚠️ [processPlayerTurn] Игрок ${currentPlayer.name} уже выбрал карту, не сбрасываем фазу`);
+            // ✅ ЗАЩИТА: Если карта выбрана, но игра не продолжается - проверяем через 2 секунды
+            setTimeout(() => {
+              const { stage2TurnPhase: currentPhase, currentPlayerId: currentId } = get();
+              if (currentPhase === 'card_selected' && currentId === playerId && currentPlayer.isBot) {
+                console.warn(`⚠️ [processPlayerTurn] Игра застряла на card_selected для бота ${currentPlayer.name}, принудительно сбрасываем`);
+                set({ stage2TurnPhase: 'selecting_card' });
+                get().processPlayerTurn(playerId);
+              }
+            }, 2000);
             return;
+          }
+          
+          // ✅ ЗАЩИТА: Если фаза не 'selecting_card' и это новый ход - сбрасываем
+          if (stage2TurnPhase !== 'selecting_card' && currentPlayerId !== playerId) {
+            console.log(`🔄 [processPlayerTurn] Сбрасываем фазу для нового хода игрока ${currentPlayer.name}`);
+            set({ stage2TurnPhase: 'selecting_card' });
           }
           
           console.log(`🔍 [processPlayerTurn] Устанавливаем currentPlayerId: ${currentPlayer.id}, stage2TurnPhase: 'selecting_card'`);
@@ -1768,23 +1830,40 @@ export const useGameStore = create<GameState>()(
       
       // Определение масти карты
       getCardSuit: (imageName: string) => {
-        const name = imageName.replace('.png', '').replace('/img/cards/', '');
+        // ✅ ОБРАБОТКА NFT URL (могут быть полные URL)
+        let name = imageName;
+        if (imageName.includes('http')) {
+          // Это NFT URL - извлекаем имя файла из URL
+          const urlParts = imageName.split('/');
+          name = urlParts[urlParts.length - 1] || imageName;
+        }
+        name = name.replace('.png', '').replace('/img/cards/', '').split('/').pop() || '';
         if (name.includes('clubs')) return 'clubs';
         if (name.includes('diamonds')) return 'diamonds';
         if (name.includes('hearts')) return 'hearts';
-                 if (name.includes('spades')) return 'spades';
-         return 'unknown';
-       },
+        if (name.includes('spades')) return 'spades';
+        return 'unknown';
+      },
        
        // ===== НОВЫЕ МЕТОДЫ ДЛЯ АЛГОРИТМА ХОДА =====
        
        // Показать карту из колоды
        revealDeckCard: () => {
-         const { deck } = get();
+         const { deck, nftDeckCards, players, currentPlayerId } = get();
          if (deck.length === 0) return false;
          
          const topCard = { ...deck[0] };
-         topCard.rank = get().getCardRank(topCard.image || '');
+         // ✅ ПРОВЕРЯЕМ ЕСТЬ ЛИ NFT ВЕРСИЯ (только для игрока!)
+         const currentPlayer = currentPlayerId ? players.find(p => p.id === currentPlayerId) : null;
+         const originalImage = topCard.image || '';
+         const nftKey = get().getNFTKey(originalImage);
+         const nftImageUrl = currentPlayer && !currentPlayer.isBot && nftKey && nftDeckCards[nftKey] ? nftDeckCards[nftKey] : null;
+         
+         topCard.rank = get().getCardRank(originalImage);
+         topCard.suit = get().getCardSuit(originalImage);
+         if (nftImageUrl) {
+           topCard.image = nftImageUrl; // ✅ ЗАМЕНЯЕМ НА NFT ВЕРСИЮ
+         }
          topCard.open = true; // Карта открывается для хода
          
          // ИСПРАВЛЕНИЕ: Добавляем открытую карту в историю для правильного определения козыря
