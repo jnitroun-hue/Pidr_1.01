@@ -35,12 +35,6 @@ export default function RootLayout({
         <link
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
           rel="stylesheet"
-          media="print"
-          onLoad={(e) => {
-            if (e.target instanceof HTMLLinkElement) {
-              e.target.media = 'all';
-            }
-          }}
         />
         {/* ✅ ПРЕФЕТЧИНГ ДЛЯ УСКОРЕНИЯ ЗАГРУЗКИ */}
         <link rel="preconnect" href="https://telegram.org" />
