@@ -9,6 +9,8 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import LanguageSwitcher, { useLanguage } from './LanguageSwitcher'
 import { useTranslations } from '../lib/i18n/translations'
+import OnlineIndicator from './OnlineIndicator'
+import OnlineHeartbeat from './OnlineHeartbeat'
 
 const tokens = [
   { name: 'TON', symbol: 'TON', color: '#0088ff' },
@@ -138,6 +140,9 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
       padding: '20px',
       paddingTop: '80px'
     }}>
+      {/* Автоматическое обновление онлайн статуса */}
+      <OnlineHeartbeat />
+      
       {/* Выбор языка */}
       <motion.div
         initial={{ x: -20, opacity: 0 }}
@@ -153,6 +158,20 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
           currentLanguage={language}
           onLanguageChange={changeLanguage}
         />
+      </motion.div>
+
+      {/* Индикатор онлайн игроков */}
+      <motion.div
+        initial={{ x: 20, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          zIndex: 100
+        }}
+      >
+        <OnlineIndicator />
       </motion.div>
 
       <div style={{

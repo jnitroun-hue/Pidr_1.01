@@ -23,11 +23,11 @@ export async function GET(request: NextRequest) {
     let deletedCount = 0;
     let deletedPlayers = 0;
 
-    // 1️⃣ УДАЛЯЕМ ОФЛАЙН ИГРОКОВ ИЗ КОМНАТ (ОФЛАЙН > 5 МИНУТ)
+    // 1️⃣ УДАЛЯЕМ ОФЛАЙН ИГРОКОВ ИЗ КОМНАТ (ОФЛАЙН > 3 МИНУТЫ)
     const { data: offlineUsers } = await supabase
       .from('_pidr_users')
       .select('telegram_id')
-      .lt('last_seen', new Date(Date.now() - 5 * 60 * 1000).toISOString())
+      .lt('last_seen', new Date(Date.now() - 3 * 60 * 1000).toISOString())
       .neq('status', 'online');
 
     if (offlineUsers && offlineUsers.length > 0) {
@@ -42,12 +42,12 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 2️⃣ УДАЛЯЕМ СТАРЫЕ КОМНАТЫ (> 1 ЧАСА)
+    // 2️⃣ УДАЛЯЕМ СТАРЫЕ КОМНАТЫ В ОЖИДАНИИ (> 15 МИНУТ)
     const { data: oldRooms } = await supabase
       .from('_pidr_rooms')
-      .select('id')
+      .select('id, room_code')
       .eq('status', 'waiting')
-      .lt('updated_at', new Date(Date.now() - 60 * 60 * 1000).toISOString());
+      .lt('updated_at', new Date(Date.now() - 15 * 60 * 1000).toISOString());
 
     if (oldRooms && oldRooms.length > 0) {
       const { error: deleteOldError } = await supabase
@@ -57,7 +57,27 @@ export async function GET(request: NextRequest) {
 
       if (!deleteOldError) {
         deletedCount += oldRooms.length;
-        console.log(`✅ [CRON] Удалено ${oldRooms.length} старых комнат`);
+        console.log(`✅ [CRON] Удалено ${oldRooms.length} старых комнат в ожидании (>15 мин)`);
+        console.log(`   Коды комнат: ${oldRooms.map((r: any) => r.room_code).join(', ')}`);
+      }
+    }
+
+    // 2.5️⃣ УДАЛЯЕМ ПУСТЫЕ КОМНАТЫ (БЕЗ ИГРОКОВ)
+    const { data: allRooms } = await supabase
+      .from('_pidr_rooms')
+      .select('id, room_code, current_players')
+      .eq('status', 'waiting')
+      .eq('current_players', 0);
+
+    if (allRooms && allRooms.length > 0) {
+      const { error: deleteEmptyError } = await supabase
+        .from('_pidr_rooms')
+        .delete()
+        .in('id', allRooms.map((r: any) => r.id));
+
+      if (!deleteEmptyError) {
+        deletedCount += allRooms.length;
+        console.log(`✅ [CRON] Удалено ${allRooms.length} пустых комнат`);
       }
     }
 
