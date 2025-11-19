@@ -24,6 +24,7 @@ import {
   getRoomDetails,
   healthCheck,
 } from '../../../lib/multiplayer/player-state-manager';
+import { lightCleanup, cleanupOfflinePlayers } from '../../../lib/auto-cleanup';
 
 // ============================================================
 // UTILITY FUNCTIONS
@@ -44,6 +45,9 @@ function generateRoomCode(): string {
 
 export async function GET(req: NextRequest) {
   console.log('🔍 GET /api/rooms - загружаем комнаты');
+  
+  // 🧹 АВТОМАТИЧЕСКАЯ ОЧИСТКА (не блокирует запрос)
+  lightCleanup().catch(err => console.error('❌ Ошибка автоочистки:', err));
   
   try {
     // Получаем параметры запроса
@@ -147,6 +151,9 @@ export async function POST(req: NextRequest) {
       const { name, maxPlayers, gameMode, hasPassword, password, isPrivate } = body;
       
       console.log('🆕 Создание новой комнаты...');
+      
+      // 🧹 Легкая очистка перед созданием комнаты
+      lightCleanup().catch(err => console.error('❌ Ошибка автоочистки:', err));
       
       // 1. ПОЛУЧАЕМ ДАННЫЕ ПОЛЬЗОВАТЕЛЯ
       // ✅ userId может быть либо UUID (из JWT), либо telegram_id (из headers)
@@ -303,6 +310,9 @@ export async function POST(req: NextRequest) {
       }
       
       console.log(`🚪 Присоединение к комнате: ${roomCode}`);
+      
+      // 🧹 Удаляем офлайн игроков перед присоединением
+      await cleanupOfflinePlayers();
       
       // 1. НАХОДИМ КОМНАТУ В БД
       const { data: room, error: roomError } = await supabase

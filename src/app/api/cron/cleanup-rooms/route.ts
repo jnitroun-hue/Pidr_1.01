@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
-// ✅ VERCEL CRON JOB - АВТООЧИСТКА КОМНАТ КАЖДЫЕ 5 МИНУТ
-// Добавь в vercel.json:
+// ✅ VERCEL CRON JOB - АВТООЧИСТКА КОМНАТ ЕЖЕДНЕВНО (FREE PLAN)
+// На бесплатном плане Vercel cron работает только раз в день
+// Но реальная очистка происходит при каждом запросе к /api/rooms
+// 
+// В vercel.json:
 // {
 //   "crons": [{
 //     "path": "/api/cron/cleanup-rooms",
-//     "schedule": "*/5 * * * *"
+//     "schedule": "0 0 * * *"  // Каждый день в полночь
 //   }]
 // }
 
