@@ -252,17 +252,47 @@ export async function POST(request: NextRequest) {
     
     // Генерируем payment URL для крипты
     let paymentUrl: string | undefined = undefined;
+    let sellerWalletAddress: string | undefined = undefined;
     
     if (payment_method === 'crypto' && cryptoCurrency) {
+      // ✅ ПОЛУЧАЕМ АДРЕС КОШЕЛЬКА ПРОДАВЦА ИЗ БД
+      const { data: sellerWallet, error: walletError } = await supabase
+        .from('_pidr_hd_wallets')
+        .select('address')
+        .eq('user_id', sellerId.toString())
+        .eq('coin', cryptoCurrency)
+        .eq('is_active', true)
+        .single();
+      
+      if (walletError || !sellerWallet) {
+        console.error('❌ [Marketplace Buy] Кошелек продавца не найден:', walletError);
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: `Продавец не подключил ${cryptoCurrency} кошелек. Оплата невозможна.` 
+          },
+          { status: 400 }
+        );
+      }
+      
+      sellerWalletAddress = sellerWallet.address;
+      console.log(`💰 [Marketplace Buy] Адрес продавца (${cryptoCurrency}): ${sellerWalletAddress}`);
+      
       if (cryptoCurrency === 'TON') {
-        // TON Payment URL (Tonkeeper)
-        const tonReceiverAddress = process.env.TON_RECEIVER_ADDRESS || 'EQBxxxx';
+        // TON Payment URL (Tonkeeper) - ДЕНЬГИ ИДУТ ПРОДАВЦУ!
         const amountNano = Math.floor(price * 1000000000); // TON в нанотоны
-        paymentUrl = `https://app.tonkeeper.com/transfer/${tonReceiverAddress}?amount=${amountNano}&text=NFT_${listing_id}_${buyerId}`;
+        paymentUrl = `https://app.tonkeeper.com/transfer/${sellerWalletAddress}?amount=${amountNano}&text=NFT_${listing_id}_from_${buyerId}`;
+        
+        // TODO: Комиссия платформы 5% - реализовать отдельным платежом или смарт-контрактом
+        const platformFeeNano = Math.floor(price * 0.05 * 1000000000);
+        console.log(`💸 [Marketplace] Комиссия платформы: ${price * 0.05} TON (${platformFeeNano} nano)`);
+        
       } else if (cryptoCurrency === 'SOL') {
-        // Solana Pay URL
-        const solReceiverAddress = process.env.SOLANA_RECEIVER_ADDRESS || '';
-        paymentUrl = `solana:${solReceiverAddress}?amount=${price}&label=NFT_${listing_id}&message=NFT_Purchase`;
+        // Solana Pay URL - ДЕНЬГИ ИДУТ ПРОДАВЦУ!
+        paymentUrl = `solana:${sellerWalletAddress}?amount=${price}&label=NFT_${listing_id}&message=NFT_from_buyer_${buyerId}`;
+        
+        // TODO: Комиссия платформы 5% - реализовать отдельным платежом
+        console.log(`💸 [Marketplace] Комиссия платформы: ${price * 0.05} SOL`);
       }
     }
     
@@ -274,7 +304,9 @@ export async function POST(request: NextRequest) {
       platform_fee: platformFee,
       payment_method,
       crypto_currency: cryptoCurrency,
-      payment_url: paymentUrl
+      payment_url: paymentUrl,
+      seller_wallet: sellerWalletAddress, // Адрес продавца для информации
+      seller_id: sellerId
     });
     
   } catch (error: any) {

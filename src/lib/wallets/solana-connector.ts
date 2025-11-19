@@ -24,18 +24,35 @@ export class SolanaWalletConnector {
     if (isMobile()) {
       console.log('📱 Обнаружено мобильное устройство, используем deep linking для Phantom...');
       
-      // Используем официальный deep link формат Phantom для мобильных
+      // ✅ ИСПРАВЛЕНО: Используем правильный способ открытия для Telegram WebApp
       const appUrl = encodeURIComponent(window.location.href);
       const redirectLink = encodeURIComponent(window.location.href);
       
-      // ✅ ОФИЦИАЛЬНЫЙ ФОРМАТ DEEP LINK ДЛЯ PHANTOM
-      // Формат: https://phantom.app/ul/v1/connect?app_url=...&redirect_link=...
-      const deepLink = `https://phantom.app/ul/v1/connect?app_url=${appUrl}&redirect_link=${redirectLink}`;
+      // ✅ Используем phantom:// URL scheme вместо https://
+      // Это напрямую откроет приложение если оно установлено
+      const deepLink = `phantom://v1/connect?app_url=${appUrl}&redirect_link=${redirectLink}`;
       
       console.log('🔗 Открываем deep link для Phantom:', deepLink);
       
-      // Пробуем открыть deep link
-      window.location.href = deepLink;
+      // ✅ Используем Telegram WebApp API если доступен
+      if ((window as any).Telegram?.WebApp?.openLink) {
+        console.log('📱 Открываем через Telegram WebApp API');
+        (window as any).Telegram.WebApp.openLink(deepLink);
+      } else {
+        // Fallback - пробуем прямой deep link
+        window.location.href = deepLink;
+        
+        // Если Phantom не установлен, через 2 секунды предложим скачать
+        setTimeout(() => {
+          if (confirm('Phantom кошелек не установлен.\n\nСкачать Phantom?')) {
+            if ((window as any).Telegram?.WebApp?.openLink) {
+              (window as any).Telegram.WebApp.openLink('https://phantom.app/download');
+            } else {
+              window.open('https://phantom.app/download', '_blank');
+            }
+          }
+        }, 2000);
+      }
       
       // Сохраняем состояние ожидания подключения
       if (typeof sessionStorage !== 'undefined') {

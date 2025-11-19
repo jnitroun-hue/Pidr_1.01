@@ -9,15 +9,17 @@ echo Adding changed files...
 git add .
 echo.
 echo Committing changes...
-git commit -m "Fix: Next.js 15 build + Auto-cleanup for FREE Vercel"
+git commit -m "Fix: Crypto payments to sellers + Mobile wallets + Online"
 echo.
 echo Details:
-echo - Fixed onLoad handler in layout (Next.js 15 compatibility)
+echo - Crypto payments go to SELLERS (from DB) not platform!
+echo - Fixed TON payment (openLink, seller address from DB)
+echo - Fixed Solana mobile (phantom:// deep link)
+echo - Added wallet check before selling for crypto
 echo - Added online players indicator in main menu
 echo - Auto-cleanup WITHOUT Cron (works on FREE Vercel!)
 echo - Added automatic heartbeat for online status
 echo - Enhanced multiplayer lobby host controls
-echo - Removed vercel-cron.json (not needed)
 echo.
 echo Pushing to remote...
 git push

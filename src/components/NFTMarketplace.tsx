@@ -253,13 +253,26 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
           // ✅ ОТКРЫВАЕМ КОШЕЛЁК С ТОЧНОЙ СУММОЙ!
           console.log(`💎 [Marketplace] Открываем кошелёк ${data.crypto_currency}: ${data.payment_url}`);
           
-          if (typeof window !== 'undefined' && window.Telegram?.WebApp?.openTelegramLink) {
-            window.Telegram.WebApp.openTelegramLink(data.payment_url);
-          } else {
-            window.open(data.payment_url, '_blank');
+          // ✅ ИСПРАВЛЕНО: Telegram WebApp не поддерживает внешние домены в openTelegramLink
+          // Используем window.open для всех крипто-кошельков
+          if (typeof window !== 'undefined') {
+            // Для TON - используем Telegram deep link если в Telegram WebApp
+            if (currency === 'TON' && window.Telegram?.WebApp?.openLink) {
+              // Используем openLink вместо openTelegramLink для внешних URL
+              window.Telegram.WebApp.openLink(data.payment_url);
+            } else {
+              // Для других валют или если не в Telegram - обычный window.open
+              const opened = window.open(data.payment_url, '_blank');
+              if (!opened) {
+                // Если popup заблокирован, копируем ссылку
+                navigator.clipboard.writeText(data.payment_url);
+                alert(`🔗 Скопировано в буфер!\n\nОткройте ${currency === 'TON' ? 'Tonkeeper' : 'Phantom'} и вставьте ссылку для оплаты ${amount} ${currency}\n\n${data.payment_url}`);
+              } else {
+                alert(`🔗 Откройте ${currency === 'TON' ? 'Tonkeeper' : 'Phantom'} для завершения оплаты ${amount} ${currency}`);
+              }
+            }
           }
           
-          alert(`🔗 Откройте ${currency === 'TON' ? 'Tonkeeper' : 'Phantom'} для завершения оплаты ${amount} ${currency}`);
           loadMarketplace(); // ✅ ОБНОВЛЯЕМ МАРКЕТПЛЕЙС
         } else {
           alert(`❌ Ошибка: ${data.error}`);
@@ -281,6 +294,37 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
     if (!price || price <= 0) {
       alert('Укажите корректную цену!');
       return;
+    }
+
+    // ✅ ПРОВЕРКА ПОДКЛЮЧЕНИЯ КОШЕЛЬКА ДЛЯ КРИПТО-ПРОДАЖИ
+    if (sellCurrency === 'TON' || sellCurrency === 'SOL') {
+      // Проверяем наличие кошелька у пользователя
+      try {
+        const checkResponse = await fetch('/api/wallet/hd-addresses', {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            ...getTelegramWebAppHeaders()
+          }
+        });
+        
+        const checkData = await checkResponse.json();
+        const hasWallet = checkData.addresses?.some((addr: any) => addr.coin === sellCurrency);
+        
+        if (!hasWallet) {
+          alert(`❌ Для продажи за ${sellCurrency} подключите ${sellCurrency} кошелек!\n\nПерейдите в раздел "Кошелёк" и подключите ${sellCurrency === 'TON' ? 'TON' : 'Solana'} кошелек.`);
+          return;
+        }
+        
+        // Предупреждаем что оплата пойдет на этот кошелек
+        if (!confirm(`💰 Оплата за NFT придёт на ваш ${sellCurrency} кошелек:\n\n${checkData.addresses.find((a: any) => a.coin === sellCurrency)?.address}\n\nПродолжить?`)) {
+          return;
+        }
+      } catch (error) {
+        console.error('Ошибка проверки кошелька:', error);
+        alert('Ошибка проверки кошелька');
+        return;
+      }
     }
 
     // ✅ НОВАЯ ЛОГИКА: В зависимости от валюты заполняем нужное поле

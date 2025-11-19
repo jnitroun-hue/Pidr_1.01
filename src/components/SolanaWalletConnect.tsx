@@ -53,25 +53,37 @@ export default function SolanaWalletConnect({ onConnect, onDisconnect }: SolanaW
       if (isMobile()) {
         console.log('📱 Обнаружено мобильное устройство, используем deep linking для Phantom...');
         
-        // ✅ ИСПОЛЬЗУЕМ ОФИЦИАЛЬНЫЙ ФОРМАТ DEEP LINK ДЛЯ PHANTOM
-        // Формат: https://phantom.app/ul/v1/connect?app_url=...&redirect_link=...
+        // ✅ ИСПРАВЛЕНО: Используем phantom:// URL scheme
         const appUrl = encodeURIComponent(window.location.href);
         const redirectLink = encodeURIComponent(window.location.href);
-        const deepLink = `https://phantom.app/ul/v1/connect?app_url=${appUrl}&redirect_link=${redirectLink}`;
+        const deepLink = `phantom://v1/connect?app_url=${appUrl}&redirect_link=${redirectLink}`;
         
         console.log('🔗 Открываем deep link для Phantom:', deepLink);
         
-        // Пробуем открыть deep link
-        // Если Phantom установлен, он перехватит запрос и откроет приложение
-        window.location.href = deepLink;
+        // ✅ Используем Telegram WebApp API если доступен
+        const telegramWebApp = (window as any).Telegram?.WebApp;
+        if (telegramWebApp?.openLink) {
+          console.log('📱 Открываем через Telegram WebApp API');
+          telegramWebApp.openLink(deepLink);
+          
+          // Показываем сообщение
+          setTimeout(() => {
+            alert('📱 Откройте Phantom кошелек для подключения.\n\nЕсли Phantom не открылся - установите приложение из App Store или Google Play.');
+          }, 500);
+        } else {
+          // Fallback - пробуем прямой deep link
+          window.location.href = deepLink;
+          
+          // Если Phantom не установлен, через 2 секунды предложим скачать
+          setTimeout(() => {
+            if (confirm('Phantom кошелек не установлен.\n\nСкачать Phantom?')) {
+              window.open('https://phantom.app/download', '_blank');
+            }
+          }, 2000);
+        }
         
         // Сохраняем состояние ожидания подключения
         sessionStorage.setItem('solana_connect_pending', 'true');
-        
-        // Показываем сообщение пользователю
-        setTimeout(() => {
-          alert('📱 Откройте Phantom кошелек для подключения');
-        }, 500);
         
         return;
       }
