@@ -218,33 +218,6 @@ export default function MultiplayerLobby({
       console.error('❌ [MultiplayerLobby] Ошибка toggleReady:', error);
       alert('Не удалось изменить готовность');
     }
-    
-    const newReadyState = !currentPlayer.is_ready;
-    
-    console.log(`🎯 [MultiplayerLobby] Изменение готовности:`, {
-      userId: userIdStr,
-      currentReady: currentPlayer.is_ready,
-      newReady: newReadyState,
-      roomId
-    });
-
-    try {
-      const roomManager = roomManagerRef.current;
-      if (!roomManager) {
-        console.error('❌ [MultiplayerLobby] toggleReady: roomManager не инициализирован');
-        return;
-      }
-
-      await roomManager.setPlayerReady(roomId, userIdStr, newReadyState);
-      
-      // ✅ ПЕРЕЗАГРУЖАЕМ ИЗ БД (ИСТОЧНИК ИСТИНЫ!)
-      await loadRoomPlayers();
-
-      console.log('✅ [MultiplayerLobby] Готовность обновлена');
-    } catch (error) {
-      console.error('❌ [MultiplayerLobby] Ошибка обновления готовности:', error);
-      alert('Ошибка изменения готовности. Попробуйте еще раз.');
-    }
   };
 
   // ✅ ЗАПУСК ИГРЫ ЧЕРЕЗ API
