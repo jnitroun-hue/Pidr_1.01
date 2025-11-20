@@ -64,6 +64,9 @@ function HomeWithParams() {
       }
 
       try {
+        // ✅ Небольшая задержка для инициализации Telegram WebApp
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         // Проверяем активную сессию
         console.log('🔍 Проверяем активную сессию...');
         
@@ -103,60 +106,43 @@ function HomeWithParams() {
         }
 
         // Если нет сессии, авторизуемся через Telegram
-        console.log('🔍 Состояние Telegram:', { 
-          isReady, 
-          hasTelegramUser: !!telegramUser, 
-          telegramUserId: telegramUser?.id 
-        });
-
-        // Если нет сессии, авторизуемся через Telegram
-        if (!isReady) {
-          console.log('⏳ Ожидаем инициализацию Telegram WebApp...');
-          
-          // Ограничиваем количество попыток
-          const attempts = parseInt(sessionStorage.getItem('auth_attempts') || '0');
-          if (attempts < 5) {
-            sessionStorage.setItem('auth_attempts', (attempts + 1).toString());
-            setTimeout(initializePlayer, 1000);
-          } else {
-            console.log('❌ Telegram WebApp не инициализировался');
-            setError('Не удалось подключиться к Telegram. Попробуйте перезапустить бота.');
-            setLoading(false);
-          }
-          return;
-        }
-
-        if (telegramUser && telegramUser.id) {
-          console.log('📱 Telegram WebApp данные получены, создаем пользователя...');
-          console.log('👤 Telegram User:', {
-            id: telegramUser.id,
-            username: telegramUser.username,
-            first_name: telegramUser.first_name
+        // ✅ ИСПРАВЛЕНО: Проверяем window.Telegram.WebApp напрямую
+        let telegramUserData = telegramUser;
+        
+        // Проверяем window.Telegram.WebApp напрямую (не зависим от хука)
+        if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp) {
+          const tgWebApp = (window as any).Telegram.WebApp;
+          console.log('🔍 Проверяем window.Telegram.WebApp:', {
+            hasWebApp: !!tgWebApp,
+            hasInitData: !!tgWebApp.initData,
+            hasInitDataUnsafe: !!tgWebApp.initDataUnsafe,
+            hasUser: !!tgWebApp.initDataUnsafe?.user,
+            user: tgWebApp.initDataUnsafe?.user
           });
           
-          // Сбрасываем счетчик попыток
-          sessionStorage.removeItem('auth_attempts');
-          
-          await createUserThroughDatabase(telegramUser);
-        } else {
-          console.log('❌ Telegram WebApp готов, но данные пользователя недоступны');
-          console.log('📊 telegramUser полный объект:', telegramUser);
-          
-          // Попробуем получить данные из window.Telegram
-          if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp) {
-            const tgWebApp = (window as any).Telegram.WebApp;
-            console.log('🔍 Проверяем window.Telegram.WebApp:', {
-              initDataUnsafe: tgWebApp.initDataUnsafe,
-              user: tgWebApp.initDataUnsafe?.user
-            });
-            
-            if (tgWebApp.initDataUnsafe?.user) {
-              console.log('✅ Найдены данные в window.Telegram.WebApp');
-              await createUserThroughDatabase(tgWebApp.initDataUnsafe.user);
-              return;
-            }
+          if (tgWebApp.initDataUnsafe?.user) {
+            telegramUserData = tgWebApp.initDataUnsafe.user;
+            console.log('✅ Найдены данные в window.Telegram.WebApp:', telegramUserData);
           }
+        }
+
+        if (telegramUserData && telegramUserData.id) {
+          console.log('📱 Telegram WebApp данные получены, создаем пользователя...');
+          console.log('👤 Telegram User:', {
+            id: telegramUserData.id,
+            username: telegramUserData.username,
+            first_name: telegramUserData.first_name
+          });
           
+          await createUserThroughDatabase(telegramUserData);
+        } else {
+          console.log('❌ Telegram WebApp данные недоступны');
+          console.log('📊 Детали:', {
+            telegramUser,
+            hasWindow: typeof window !== 'undefined',
+            hasTelegram: typeof window !== 'undefined' ? !!(window as any).Telegram : false,
+            hasWebApp: typeof window !== 'undefined' ? !!(window as any).Telegram?.WebApp : false
+          });
           setError('Не удалось получить данные пользователя из Telegram. Попробуйте перезапустить бота.');
           setLoading(false);
         }
