@@ -103,19 +103,47 @@ function HomeWithParams() {
         }
 
         // Если нет сессии, авторизуемся через Telegram
-        // ✅ ПРОСТАЯ ЛОГИКА: Берем данные напрямую из window.Telegram.WebApp
+        // ✅ Ждем инициализации Telegram WebApp и получаем данные
         let telegramUserData = null;
+        let attempts = 0;
+        const maxAttempts = 10;
         
-        if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user) {
-          telegramUserData = (window as any).Telegram.WebApp.initDataUnsafe.user;
-          console.log('✅ Данные Telegram пользователя получены:', telegramUserData.id);
+        while (attempts < maxAttempts && !telegramUserData) {
+          // Пробуем получить из хука
+          if (telegramUser && telegramUser.id) {
+            telegramUserData = telegramUser;
+            console.log('✅ Данные из хука useTelegram:', telegramUserData.id);
+            break;
+          }
+          
+          // Пробуем получить напрямую из window.Telegram.WebApp
+          if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user) {
+            telegramUserData = (window as any).Telegram.WebApp.initDataUnsafe.user;
+            console.log('✅ Данные из window.Telegram.WebApp:', telegramUserData.id);
+            break;
+          }
+          
+          // Ждем немного перед следующей попыткой
+          if (attempts < maxAttempts - 1) {
+            await new Promise(resolve => setTimeout(resolve, 200));
+          }
+          attempts++;
         }
 
         if (telegramUserData && telegramUserData.id) {
           console.log('📱 Создаем/авторизуем пользователя через БД...');
           await createUserThroughDatabase(telegramUserData);
         } else {
-          console.error('❌ Telegram WebApp данные недоступны');
+          console.error('❌ Telegram WebApp данные недоступны после', maxAttempts, 'попыток');
+          console.error('📊 Проверка:', {
+            telegramUser,
+            isReady,
+            hasWindow: typeof window !== 'undefined',
+            hasTelegram: typeof window !== 'undefined' ? !!(window as any).Telegram : false,
+            hasWebApp: typeof window !== 'undefined' ? !!(window as any).Telegram?.WebApp : false,
+            hasInitData: typeof window !== 'undefined' ? !!(window as any).Telegram?.WebApp?.initData : false,
+            hasUser: typeof window !== 'undefined' ? !!(window as any).Telegram?.WebApp?.initDataUnsafe?.user : false
+          });
           setError('Не удалось получить данные пользователя из Telegram. Попробуйте перезапустить бота.');
           setLoading(false);
         }

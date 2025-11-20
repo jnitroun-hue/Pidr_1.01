@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '../../../lib/supabase';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
+import { lightCleanup } from '../../../lib/auto-cleanup';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const SESSION_SECRET = process.env.SESSION_SECRET;
@@ -10,6 +11,9 @@ const NEXTAUTH_URL = process.env.NEXTAUTH_URL || process.env.VERCEL_URL;
 // GET /api/auth - Проверка активной сессии
 export async function GET(req: NextRequest) {
   try {
+    // ✅ ОЧИСТКА НЕАКТИВНЫХ ПОЛЬЗОВАТЕЛЕЙ (не блокирует запрос)
+    lightCleanup().catch(err => console.error('❌ Ошибка автоочистки:', err));
+    
     console.log('🔍 Проверка активной сессии пользователя...');
 
     if (!JWT_SECRET) {
@@ -67,7 +71,8 @@ export async function GET(req: NextRequest) {
       }, { status: 404 });
     }
 
-    // Обновляем время последней активности (московское время)
+    // ✅ ИСПРАВЛЕНО: Обновляем только last_seen, НЕ меняем статус на 'online'
+    // Статус должен устанавливаться только через heartbeat или при реальной авторизации
     const moscowTime = new Date().toLocaleString('en-CA', { 
       timeZone: 'Europe/Moscow',
       year: 'numeric',
@@ -82,8 +87,8 @@ export async function GET(req: NextRequest) {
     await supabase
       .from('_pidr_users')
       .update({ 
-        last_seen: moscowTime,
-        status: 'online'
+        last_seen: moscowTime
+        // ✅ УБРАНО: status: 'online' - не меняем статус при проверке сессии!
       })
       .eq('id', userId);
 
