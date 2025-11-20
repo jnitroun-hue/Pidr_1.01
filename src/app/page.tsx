@@ -109,55 +109,91 @@ function HomeWithParams() {
           telegramUserId: telegramUser?.id 
         });
 
-        if (!isReady) {
-          console.log('⏳ Ожидаем инициализацию Telegram WebApp...');
+        // ✅ ИСПРАВЛЕНО: Проверяем window.Telegram.WebApp напрямую, не зависим от isReady
+        let telegramUserData = telegramUser;
+        
+        if (!telegramUserData && typeof window !== 'undefined' && (window as any).Telegram?.WebApp) {
+          const tgWebApp = (window as any).Telegram.WebApp;
+          console.log('🔍 Проверяем window.Telegram.WebApp напрямую:', {
+            hasWebApp: !!tgWebApp,
+            hasInitData: !!tgWebApp.initData,
+            hasInitDataUnsafe: !!tgWebApp.initDataUnsafe,
+            hasUser: !!tgWebApp.initDataUnsafe?.user
+          });
           
-          // Ограничиваем количество попыток
-          const attempts = parseInt(sessionStorage.getItem('auth_attempts') || '0');
-          if (attempts < 5) { // Уменьшаем попытки для быстрого fallback
-            sessionStorage.setItem('auth_attempts', (attempts + 1).toString());
-            setTimeout(initializePlayer, 1000);
-          } else {
-            console.log('❌ Telegram WebApp не инициализировался');
-            setError('Не удалось подключиться к Telegram. Попробуйте перезапустить бота.');
-            setLoading(false);
+          if (tgWebApp.initDataUnsafe?.user) {
+            telegramUserData = tgWebApp.initDataUnsafe.user;
+            console.log('✅ Найдены данные пользователя в window.Telegram.WebApp');
           }
-          return;
         }
 
-        if (telegramUser && telegramUser.id) {
+        // ✅ ИСПРАВЛЕНО: Проверяем initData для авторизации через /api/auth/login
+        const tgWebApp = typeof window !== 'undefined' ? (window as any).Telegram?.WebApp : null;
+        const initData = tgWebApp?.initData;
+        
+        if (initData) {
+          console.log('📱 Найдена initData, авторизуемся через /api/auth/login...');
+          sessionStorage.removeItem('auth_attempts');
+          
+          try {
+            const loginResponse = await fetch('/api/auth/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({
+                method: 'telegram',
+                initData: initData
+              })
+            });
+            
+            if (loginResponse.ok) {
+              const loginData = await loginResponse.json();
+              console.log('✅ Авторизация через initData успешна');
+              
+              // Перезагружаем страницу для применения cookie
+              window.location.reload();
+              return;
+            } else {
+              console.warn('⚠️ Авторизация через initData не удалась, используем fallback');
+            }
+          } catch (error) {
+            console.error('❌ Ошибка авторизации через initData:', error);
+          }
+        }
+        
+        if (telegramUserData && telegramUserData.id) {
           console.log('📱 Telegram WebApp данные получены, создаем пользователя...');
           console.log('👤 Telegram User:', {
-            id: telegramUser.id,
-            username: telegramUser.username,
-            first_name: telegramUser.first_name
+            id: telegramUserData.id,
+            username: telegramUserData.username,
+            first_name: telegramUserData.first_name
           });
           
           // Сбрасываем счетчик попыток
           sessionStorage.removeItem('auth_attempts');
           
-          await createUserThroughDatabase(telegramUser);
+          await createUserThroughDatabase(telegramUserData);
         } else {
-          console.log('❌ Telegram WebApp готов, но данные пользователя недоступны');
-          console.log('📊 telegramUser полный объект:', telegramUser);
+          // ✅ ИСПРАВЛЕНО: Если нет данных после проверки, не зацикливаемся
+          console.log('❌ Telegram WebApp данные недоступны');
+          console.log('📊 Проверка:', {
+            isReady,
+            telegramUser,
+            windowTelegram: typeof window !== 'undefined' ? !!(window as any).Telegram?.WebApp : false
+          });
           
-          // Попробуем получить данные из window.Telegram
-          if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp) {
-            const tgWebApp = (window as any).Telegram.WebApp;
-            console.log('🔍 Проверяем window.Telegram.WebApp:', {
-              initDataUnsafe: tgWebApp.initDataUnsafe,
-              user: tgWebApp.initDataUnsafe?.user
-            });
-            
-            if (tgWebApp.initDataUnsafe?.user) {
-              console.log('✅ Найдены данные в window.Telegram.WebApp');
-              await createUserThroughDatabase(tgWebApp.initDataUnsafe.user);
-              return;
-            }
+          // Ограничиваем количество попыток
+          const attempts = parseInt(sessionStorage.getItem('auth_attempts') || '0');
+          if (attempts < 3) {
+            sessionStorage.setItem('auth_attempts', (attempts + 1).toString());
+            console.log(`⏳ Попытка ${attempts + 1}/3: Ожидаем инициализацию Telegram WebApp...`);
+            setTimeout(initializePlayer, 2000);
+          } else {
+            console.log('❌ Telegram WebApp не инициализировался после 3 попыток');
+            setError('Не удалось подключиться к Telegram. Попробуйте перезапустить бота.');
+            setLoading(false);
+            sessionStorage.removeItem('auth_attempts');
           }
-          
-          setError('Не удалось получить данные пользователя из Telegram. Попробуйте перезапустить бота.');
-          setLoading(false);
         }
 
       } catch (error) {

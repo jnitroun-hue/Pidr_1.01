@@ -11,6 +11,7 @@ import {
   authenticateVK,
   type AuthProvider,
 } from '../../../../lib/auth/universal-auth';
+import jwt from 'jsonwebtoken';
 
 export async function POST(request: NextRequest) {
   try {
@@ -80,6 +81,29 @@ export async function POST(request: NextRequest) {
       maxAge: 30 * 24 * 60 * 60, // 30 дней
       path: '/',
     });
+
+    // ✅ ИСПРАВЛЕНО: Также устанавливаем auth_token (JWT) для совместимости с /api/auth
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (JWT_SECRET && result.userId) {
+      const token = jwt.sign(
+        { 
+          userId: result.userId.toString(),
+          username: 'user' // Будет обновлено при следующем запросе
+        },
+        JWT_SECRET,
+        { expiresIn: '30d' }
+      );
+
+      response.cookies.set('auth_token', token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none' as const, // Для Telegram WebApp нужно 'none'
+        path: '/',
+        maxAge: 30 * 24 * 60 * 60, // 30 дней
+      });
+
+      console.log('✅ [Auth Login] Установлены cookies: pidr_session + auth_token');
+    }
 
     return response;
   } catch (error: any) {
