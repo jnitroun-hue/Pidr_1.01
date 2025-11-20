@@ -103,23 +103,19 @@ function HomeWithParams() {
         }
 
         // Если нет сессии, авторизуемся через Telegram
-        let telegramUserData = telegramUser;
+        // ✅ ПРОСТАЯ ЛОГИКА: Берем данные напрямую из window.Telegram.WebApp
+        let telegramUserData = null;
         
-        // Если нет данных из хука, проверяем window.Telegram.WebApp напрямую
-        if (!telegramUserData && typeof window !== 'undefined' && (window as any).Telegram?.WebApp) {
-          const tgWebApp = (window as any).Telegram.WebApp;
-          if (tgWebApp.initDataUnsafe?.user) {
-            telegramUserData = tgWebApp.initDataUnsafe.user;
-            console.log('✅ Найдены данные Telegram пользователя из window.Telegram.WebApp');
-          }
+        if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user) {
+          telegramUserData = (window as any).Telegram.WebApp.initDataUnsafe.user;
+          console.log('✅ Данные Telegram пользователя получены:', telegramUserData.id);
         }
 
         if (telegramUserData && telegramUserData.id) {
-          console.log('📱 Telegram WebApp данные получены, создаем пользователя через БД...');
+          console.log('📱 Создаем/авторизуем пользователя через БД...');
           await createUserThroughDatabase(telegramUserData);
         } else {
-          console.log('❌ Telegram WebApp данные недоступны');
-          console.log('📊 Проверка:', { telegramUser, isReady, hasWindow: typeof window !== 'undefined' });
+          console.error('❌ Telegram WebApp данные недоступны');
           setError('Не удалось получить данные пользователя из Telegram. Попробуйте перезапустить бота.');
           setLoading(false);
         }
