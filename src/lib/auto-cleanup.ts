@@ -37,7 +37,7 @@ export async function lightCleanup() {
       const { error: deleteError } = await supabase
         .from('_pidr_rooms')
         .delete()
-        .in('id', emptyRooms.map(r => r.id));
+        .in('id', emptyRooms.map((r: { id: number; room_code: string }) => r.id));
       
       if (!deleteError) {
         deletedCount += emptyRooms.length;
@@ -56,7 +56,7 @@ export async function lightCleanup() {
       const { error: deleteError } = await supabase
         .from('_pidr_rooms')
         .delete()
-        .in('id', oldRooms.map(r => r.id));
+        .in('id', oldRooms.map((r: { id: number; room_code: string }) => r.id));
       
       if (!deleteError) {
         deletedCount += oldRooms.length;
@@ -75,7 +75,7 @@ export async function lightCleanup() {
       const { error: deleteError } = await supabase
         .from('_pidr_rooms')
         .delete()
-        .in('id', finishedRooms.map(r => r.id));
+        .in('id', finishedRooms.map((r: { id: number }) => r.id));
       
       if (!deleteError) {
         deletedCount += finishedRooms.length;
