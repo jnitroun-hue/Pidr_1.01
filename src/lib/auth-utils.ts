@@ -17,21 +17,15 @@ const JWT_SECRET = process.env.JWT_SECRET;
  * 3. Query параметры (для тестирования)
  */
 export function getUserIdFromRequest(req: NextRequest): string | null {
-  // ✅ ПРИОРИТЕТ 0: Telegram WebApp headers (для мультиплеера и NFT)
-  const telegramIdHeader = req.headers.get('x-telegram-id');
-  if (telegramIdHeader) {
-    console.log('🎮 Telegram ID найден в x-telegram-id header:', telegramIdHeader);
-    return telegramIdHeader;
-  }
-  
   if (!JWT_SECRET) {
     console.error('❌ JWT_SECRET не настроен');
     return null;
   }
   
   let token: string | null = null;
+  let userIdFromToken: string | null = null;
   
-  // 1. HTTP-only cookies (для безопасности)
+  // 1. HTTP-only cookies (ПРИОРИТЕТ - самый безопасный)
   const cookieToken = req.cookies.get('auth_token')?.value;
   if (cookieToken) {
     token = cookieToken;
@@ -57,27 +51,43 @@ export function getUserIdFromRequest(req: NextRequest): string | null {
     }
   }
   
-  if (!token) {
-    console.log('❌ Токен не найден ни в cookies, ни в headers');
+  // Верифицируем токен
+  if (token) {
+    try {
+      const payload = jwt.verify(token, JWT_SECRET) as any;
+      userIdFromToken = payload.userId || payload.telegramId;
+      
+      if (!userIdFromToken) {
+        console.error('❌ userId отсутствует в токене');
+        return null;
+      }
+      
+      console.log('✅ Пользователь из токена:', userIdFromToken);
+    } catch (error: any) {
+      console.error('❌ Ошибка проверки токена:', error.message);
+      return null;
+    }
+  }
+  
+  // ✅ БЕЗОПАСНАЯ ПРОВЕРКА: x-telegram-id должен совпадать с токеном!
+  const telegramIdHeader = req.headers.get('x-telegram-id');
+  if (telegramIdHeader) {
+    if (userIdFromToken && String(userIdFromToken) !== String(telegramIdHeader)) {
+      console.error('🚨 SECURITY: x-telegram-id не совпадает с токеном!', {
+        fromToken: userIdFromToken,
+        fromHeader: telegramIdHeader
+      });
+      return null; // БЛОКИРУЕМ ДОСТУП!
+    }
+    console.log('✅ x-telegram-id совпадает с токеном');
+  }
+  
+  if (!userIdFromToken) {
+    console.log('❌ Токен не найден');
     return null;
   }
   
-  try {
-    const payload = jwt.verify(token, JWT_SECRET) as any;
-    const userId = payload.userId;
-    
-    if (!userId) {
-      console.error('❌ userId отсутствует в токене');
-      return null;
-    }
-    
-    console.log('✅ Пользователь авторизован:', userId);
-    return userId;
-    
-  } catch (error: any) {
-    console.error('❌ Ошибка проверки токена:', error.message);
-    return null;
-  }
+  return userIdFromToken;
 }
 
 /**

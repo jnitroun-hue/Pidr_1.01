@@ -1851,9 +1851,10 @@ function GamePageContentComponent({
                             isAvailableTarget = deckTargets.includes(index);
                           }
                           
-                          // ✅ НОВОЕ: Определяем URL изображения (NFT или обычная карта)
+                          // ✅ Определяем URL изображения (NFT или обычная карта)
+                          // Для игрока используем NFT если есть, для ботов обычные
                           const cardImageUrl = showOpen 
-                            ? (nftImageUrl || `${CARDS_PATH}${cardImage}`)
+                            ? (isHumanPlayer && nftImageUrl ? nftImageUrl : `${CARDS_PATH}${cardImage}`)
                             : `${CARDS_PATH}${CARD_BACK}`;
                           
                           return (
@@ -1888,11 +1889,17 @@ function GamePageContentComponent({
                                 e.currentTarget.style.transform = 'scale(1)';
                               }}
                             >
-                              {/* ✅ НОВОЕ: Используем обычный <img> для NFT карт (могут быть внешние URL) */}
-                              {nftImageUrl && showOpen ? (
+                              {/* ✅ ПРАВИЛЬНОЕ ОТОБРАЖЕНИЕ: NFT если есть, иначе обычная */}
+                              {isHumanPlayer && nftImageUrl && showOpen ? (
                                 <img
                                   src={nftImageUrl}
-                                  alt={showOpen ? cardImage : 'Card'}
+                                  alt={cardImage}
+                                  onError={(e) => {
+                                    console.log('❌ NFT не загрузилась, показываем стандартную:', cardImage);
+                                    // Заменяем на обычную карту
+                                    const target = e.currentTarget;
+                                    target.src = `${CARDS_PATH}${cardImage}`;
+                                  }}
                                   style={{ 
                                     width: '60px',
                                     height: '90px',
@@ -2346,6 +2353,14 @@ function GamePageContentComponent({
                     <img
                       src={nftImageUrl}
                       alt={cardImage}
+                      onError={(e) => {
+                        console.log('❌ NFT изображение не загрузилось, показываем обычную карту');
+                        e.currentTarget.style.display = 'none';
+                        const fallbackImg = e.currentTarget.nextSibling as HTMLImageElement;
+                        if (fallbackImg) {
+                          fallbackImg.style.display = 'block';
+                        }
+                      }}
                       style={{ 
                         width: '55px',
                         height: '82px',
@@ -2361,27 +2376,26 @@ function GamePageContentComponent({
                         objectFit: 'cover',
                       }}
                     />
-                  ) : (
-                    <Image
-                      src={`${CARDS_PATH}${cardImage}`}
-                      alt={cardImage}
-                      width={55}
-                      height={82}
-                      loading="eager"
-                      style={{ 
-                        borderRadius: '8px',
-                        background: '#ffffff',
-                        opacity: 1,
-                        filter: canPlay ? 'brightness(1.1)' : 'none',
-                        visibility: 'visible',
-                        display: 'block',
-                        transform: isSelected ? 'translateY(-20px) scale(1.1)' : 'none',
-                        transition: 'all 0.3s ease',
-                        boxShadow: canPlay ? '0 0 20px rgba(40, 167, 69, 0.6), 0 0 40px rgba(40, 167, 69, 0.3)' : 'none',
-                      }}
-                      priority
-                    />
-                  )}
+                  ) : null}
+                  <Image
+                    src={`${CARDS_PATH}${cardImage}`}
+                    alt={cardImage}
+                    width={55}
+                    height={82}
+                    loading="eager"
+                    style={{ 
+                      borderRadius: '8px',
+                      background: '#ffffff',
+                      opacity: 1,
+                      filter: canPlay ? 'brightness(1.1)' : 'none',
+                      visibility: 'visible',
+                      display: nftImageUrl ? 'none' : 'block',
+                      transform: isSelected ? 'translateY(-20px) scale(1.1)' : 'none',
+                      transition: 'all 0.3s ease',
+                      boxShadow: canPlay ? '0 0 20px rgba(40, 167, 69, 0.6), 0 0 40px rgba(40, 167, 69, 0.3)' : 'none',
+                    }}
+                    priority
+                  />
                   {canPlay && (
                     <div style={{
                       position: 'absolute',

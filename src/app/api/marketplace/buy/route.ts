@@ -256,11 +256,14 @@ export async function POST(request: NextRequest) {
     
     if (payment_method === 'crypto' && cryptoCurrency) {
       // ✅ ПОЛУЧАЕМ АДРЕС КОШЕЛЬКА ПРОДАВЦА ИЗ БД
+      // ИСПРАВЛЕНО: Используем _pidr_player_wallets, а не _pidr_hd_wallets!
+      const walletType = cryptoCurrency.toLowerCase(); // 'TON' -> 'ton', 'SOL' -> 'sol'
+      
       const { data: sellerWallet, error: walletError } = await supabase
-        .from('_pidr_hd_wallets')
-        .select('address')
+        .from('_pidr_player_wallets')
+        .select('wallet_address')
         .eq('user_id', sellerId.toString())
-        .eq('coin', cryptoCurrency)
+        .eq('wallet_type', walletType)
         .eq('is_active', true)
         .single();
       
@@ -275,7 +278,8 @@ export async function POST(request: NextRequest) {
         );
       }
       
-      sellerWalletAddress = sellerWallet.address;
+      // ИСПРАВЛЕНО: Используем wallet_address вместо address
+      sellerWalletAddress = sellerWallet.wallet_address;
       console.log(`💰 [Marketplace Buy] Адрес продавца (${cryptoCurrency}): ${sellerWalletAddress}`);
       
       if (cryptoCurrency === 'TON') {

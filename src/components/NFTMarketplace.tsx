@@ -298,26 +298,29 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
 
     // ✅ ПРОВЕРКА ПОДКЛЮЧЕНИЯ КОШЕЛЬКА ДЛЯ КРИПТО-ПРОДАЖИ
     if (sellCurrency === 'TON' || sellCurrency === 'SOL') {
-      // Проверяем наличие кошелька у пользователя
+      // ИСПРАВЛЕНО: Проверяем кошелек в _pidr_player_wallets
       try {
-        const checkResponse = await fetch('/api/wallet/hd-addresses', {
-          method: 'GET',
+        const walletType = sellCurrency.toLowerCase(); // 'TON' -> 'ton', 'SOL' -> 'sol'
+        
+        const checkResponse = await fetch('/api/wallet/check', {
+          method: 'POST',
           credentials: 'include',
           headers: {
+            'Content-Type': 'application/json',
             ...getTelegramWebAppHeaders()
-          }
+          },
+          body: JSON.stringify({ wallet_type: walletType })
         });
         
         const checkData = await checkResponse.json();
-        const hasWallet = checkData.addresses?.some((addr: any) => addr.coin === sellCurrency);
         
-        if (!hasWallet) {
+        if (!checkData.success || !checkData.wallet) {
           alert(`❌ Для продажи за ${sellCurrency} подключите ${sellCurrency} кошелек!\n\nПерейдите в раздел "Кошелёк" и подключите ${sellCurrency === 'TON' ? 'TON' : 'Solana'} кошелек.`);
           return;
         }
         
         // Предупреждаем что оплата пойдет на этот кошелек
-        if (!confirm(`💰 Оплата за NFT придёт на ваш ${sellCurrency} кошелек:\n\n${checkData.addresses.find((a: any) => a.coin === sellCurrency)?.address}\n\nПродолжить?`)) {
+        if (!confirm(`💰 Оплата за NFT придёт на ваш ${sellCurrency} кошелек:\n\n${checkData.wallet.wallet_address}\n\nПродолжить?`)) {
           return;
         }
       } catch (error) {

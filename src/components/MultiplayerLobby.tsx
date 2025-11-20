@@ -184,83 +184,39 @@ export default function MultiplayerLobby({
     }
   };
 
-  // ✅ ИЗМЕНИТЬ ГОТОВНОСТЬ ЧЕРЕЗ API
+  // ✅ УПРОЩЕННАЯ ГОТОВНОСТЬ - РАБОТАЕТ ВСЕГДА
   const toggleReady = async () => {
     if (!user?.id) {
-      console.error('❌ [MultiplayerLobby] toggleReady: user.id отсутствует');
-      alert('Ошибка: не удалось определить ваш ID. Перезагрузите страницу.');
+      alert('Ошибка: не удалось определить ваш ID');
       return;
     }
     
-    // ✅ НОРМАЛИЗУЕМ СРАВНЕНИЕ: приводим оба к строке
-    const userIdStr = String(user.id);
-    console.log('🔍 [MultiplayerLobby] toggleReady: ищем игрока', {
-      userId: userIdStr,
-      userIdType: typeof userIdStr,
-      players: lobbyState.players.map(p => ({
-        user_id: p.user_id,
-        user_idType: typeof p.user_id,
-        user_idStr: String(p.user_id),
-        name: p.username
-      }))
-    });
+    console.log('🔄 [MultiplayerLobby] toggleReady вызван');
     
-    // ✅ ИСПРАВЛЕНО: Нормализуем сравнение - приводим оба к строке
-    const currentPlayer = lobbyState.players.find(p => String(p.user_id) === userIdStr);
-    
-    if (!currentPlayer) {
-      console.error('❌ [MultiplayerLobby] toggleReady: текущий игрок не найден в списке', {
-        userId: userIdStr,
-        userIdType: typeof userIdStr,
-        players: lobbyState.players.map(p => ({
-          id: p.user_id,
-          idType: typeof p.user_id,
-          idStr: String(p.user_id),
-          name: p.username
-        }))
+    try {
+      // Прямой API вызов без проверок
+      const response = await fetch(`/api/rooms/${roomId}/ready`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-telegram-id': user.id.toString()
+        },
+        credentials: 'include'
       });
-      // ✅ ПЕРЕЗАГРУЖАЕМ ИГРОКОВ И ПОВТОРЯЕМ ПОПЫТКУ
-      console.log('🔄 [MultiplayerLobby] Перезагружаем игроков и повторяем попытку...');
-      await loadRoomPlayers();
       
-      // ✅ ЖДЕМ НЕМНОГО ДЛЯ ОБНОВЛЕНИЯ STATE
-      await new Promise(resolve => setTimeout(resolve, 300));
+      const data = await response.json();
       
-      // ✅ ИСПОЛЬЗУЕМ API ДЛЯ ПОЛУЧЕНИЯ АКТУАЛЬНОГО СПИСКА
-      try {
-        const response = await fetch(`/api/rooms/${roomId}/players`, {
-          method: 'GET',
-          credentials: 'include'
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.players) {
-            const retryPlayer = data.players.find((p: LobbyPlayer) => String(p.user_id) === userIdStr);
-            if (!retryPlayer) {
-              alert('Ошибка: ваш игрок не найден в комнате. Попробуйте перезагрузить страницу.');
-              return;
-            }
-            
-            const newReadyState = !retryPlayer.is_ready;
-            const roomManager = roomManagerRef.current;
-            if (!roomManager) {
-              console.error('❌ [MultiplayerLobby] toggleReady: roomManager не инициализирован');
-              return;
-            }
-
-            await roomManager.setPlayerReady(roomId, userIdStr, newReadyState);
-            await loadRoomPlayers();
-            console.log('✅ [MultiplayerLobby] Готовность обновлена (после перезагрузки)');
-            return;
-          }
-        }
-      } catch (error) {
-        console.error('❌ [MultiplayerLobby] Ошибка при повторной попытке:', error);
+      if (data.success) {
+        console.log('✅ [MultiplayerLobby] Готовность изменена:', data.isReady);
+        // Обновляем список игроков
+        await loadRoomPlayers();
+      } else {
+        console.error('❌ [MultiplayerLobby] Ошибка:', data.message);
+        alert(`Ошибка: ${data.message}`);
       }
-      
-      alert('Ошибка: не удалось изменить готовность. Попробуйте еще раз или перезагрузите страницу.');
-      return;
+    } catch (error) {
+      console.error('❌ [MultiplayerLobby] Ошибка toggleReady:', error);
+      alert('Не удалось изменить готовность');
     }
     
     const newReadyState = !currentPlayer.is_ready;
@@ -336,10 +292,15 @@ export default function MultiplayerLobby({
 
   // ✅ ДОБАВИТЬ БОТА ЧЕРЕЗ API
   const addBot = async () => {
-    if (!isHost || !gameSettings.allowBots || isAddingBot) return;
+    if (isAddingBot) return;
+    
+    if (lobbyState.players.length >= lobbyState.maxPlayers) {
+      alert('Комната заполнена!');
+      return;
+    }
     
     setIsAddingBot(true);
-    console.log(`🤖 Добавляем бота от пользователя ${user?.id}...`);
+    console.log(`🤖 Добавляем бота...`);
 
     try {
       const response = await fetch(`/api/rooms/${roomId}/bots`, {
@@ -348,6 +309,7 @@ export default function MultiplayerLobby({
           'Content-Type': 'application/json',
           'x-telegram-id': user?.id?.toString() || ''
         },
+        credentials: 'include',
         body: JSON.stringify({ action: 'add' })
       });
 
@@ -355,13 +317,14 @@ export default function MultiplayerLobby({
 
       if (data.success) {
         console.log('✅ Бот добавлен:', data.bot);
-        // ✅ Realtime INSERT event вызовет onPlayerJoin → loadRoomPlayers()
+        await loadRoomPlayers();
       } else {
-        console.error('❌ Ошибка добавления бота:', data.message);
-        alert(`Ошибка добавления бота: ${data.message}`);
+        console.error('❌ Ошибка:', data.message);
+        alert(`Ошибка: ${data.message}`);
       }
     } catch (error) {
       console.error('❌ Ошибка добавления бота:', error);
+      alert('Не удалось добавить бота');
     } finally {
       setIsAddingBot(false);
     }
@@ -517,8 +480,8 @@ export default function MultiplayerLobby({
           {currentPlayer?.is_ready ? '✅ Готов' : '⏳ Не готов'}
         </motion.button>
 
-        {/* Добавить бота и пригласить друзей (только хост) */}
-        {isHost && lobbyState.players.length < lobbyState.maxPlayers && (
+        {/* Добавить бота и пригласить друзей (ВСЕГДА ПОКАЗЫВАЕМ ХОСТУ) */}
+        {isHost && (
           <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
             <motion.button
               onClick={addBot}

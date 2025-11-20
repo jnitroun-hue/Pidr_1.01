@@ -47,7 +47,6 @@ export async function GET(req: NextRequest) {
     const { data: online30min, error: online30Error } = await supabase
       .from('_pidr_users')
       .select('id, username, last_seen')
-      .eq('status', 'online')
       .gte('last_seen', thirtyMinutesAgo);
 
     if (online30Error) {
