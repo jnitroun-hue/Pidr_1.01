@@ -76,6 +76,7 @@ export interface TelegramWebApp {
   showAlert?(message: string, callback?: () => void): void;
   showConfirm?(message: string, callback: (confirmed: boolean) => void): void;
   openTelegramLink?(url: string): void;
+  openLink?(url: string): void; // ✅ Для открытия внешних ссылок
 }
 
 interface Window {
