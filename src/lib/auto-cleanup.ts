@@ -83,6 +83,18 @@ export async function lightCleanup() {
       }
     }
     
+    // 4️⃣ ОБНОВЛЯЕМ СТАТУС НА OFFLINE (неактивны > 3 МИНУТ)
+    const threeMinutesAgo = new Date(Date.now() - 3 * 60 * 1000).toISOString();
+    const { error: statusError } = await supabase
+      .from('_pidr_users')
+      .update({ status: 'offline' })
+      .eq('status', 'online')
+      .lt('last_seen', threeMinutesAgo);
+    
+    if (!statusError) {
+      console.log(`✅ [AUTO-CLEANUP] Обновлен статус неактивных пользователей на offline`);
+    }
+    
     console.log(`✅ [AUTO-CLEANUP] Очистка завершена! Удалено комнат: ${deletedCount}`);
     
     return {

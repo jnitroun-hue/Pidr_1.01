@@ -75,7 +75,9 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    if (listing.seller_user_id === buyerId) {
+    const sellerId = listing.seller_user_id; // Получаем ID продавца из лота
+    
+    if (sellerId === buyerId) {
       return NextResponse.json(
         { success: false, error: 'Нельзя купить собственную карту' },
         { status: 400 }

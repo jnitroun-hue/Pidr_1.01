@@ -29,14 +29,13 @@ export async function GET(req: NextRequest) {
       }, { status: 500 });
     }
 
-    // 2. Реально активные игроки (последние 5 минут) - московское время
+    // 2. Реально активные игроки (последние 3 минуты) - московское время
     const moscowNow = new Date();
-    const fiveMinutesAgo = new Date(moscowNow.getTime() - 5 * 60 * 1000).toISOString();
+    const threeMinutesAgo = new Date(moscowNow.getTime() - 3 * 60 * 1000).toISOString();
     const { data: reallyActive, error: activeError } = await supabase
       .from('_pidr_users')
       .select('id, username, last_seen')
-      .eq('status', 'online')
-      .gte('last_seen', fiveMinutesAgo);
+      .gte('last_seen', threeMinutesAgo);
 
     if (activeError) {
       console.error('❌ Ошибка получения активных игроков:', activeError);
@@ -63,10 +62,21 @@ export async function GET(req: NextRequest) {
       console.error('❌ Ошибка получения игроков в комнатах:', roomsError);
     }
 
+    // ✅ ИСПРАВЛЕНО: Обновляем статус на offline для неактивных
+    const { error: updateStatusError } = await supabase
+      .from('_pidr_users')
+      .update({ status: 'offline' })
+      .eq('status', 'online')
+      .lt('last_seen', threeMinutesAgo);
+    
+    if (updateStatusError) {
+      console.error('❌ Ошибка обновления статусов:', updateStatusError);
+    }
+    
     const stats = {
       total: Object.values(statusStats || {}).reduce((a: any, b: any) => a + b, 0),
       byStatus: statusStats || {},
-      reallyActive: reallyActive?.length || 0, // Последние 5 минут
+      reallyActive: reallyActive?.length || 0, // Последние 3 минуты
       online30min: online30min?.length || 0,   // Последние 30 минут
       inRooms: inRooms?.length || 0,
       moscowTime: new Date().toLocaleString('ru-RU', { 
