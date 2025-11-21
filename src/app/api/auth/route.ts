@@ -106,10 +106,10 @@ export async function GET(req: NextRequest) {
         avatar_url: user.avatar_url,
         coins: user.coins,
         rating: user.rating,
-        gamesPlayed: user.games_played,
-        wins: user.wins,        // ✅ ИСПРАВЛЕНО: wins вместо games_won!
-        losses: user.losses,    // ✅ ДОБАВЛЕНО: losses!
-        status: user.status
+        gamesPlayed: user.total_games_played || user.games_played || 0,
+        wins: user.wins || user.games_won || 0,
+        losses: user.losses || 0,
+        status: user.online_status || user.status || 'offline'
       }
     });
 
@@ -192,20 +192,27 @@ export async function POST(req: NextRequest) {
       // Создаем нового пользователя
       console.log('👤 Создаем нового пользователя...');
       
-      const newUserData = {
+      // ✅ ИСПРАВЛЕНО: Используем правильные названия столбцов из БД
+      const newUserData: any = {
         telegram_id: telegramId,
         username: username,
         first_name: firstName || username,
         last_name: lastName || '',
         avatar_url: photoUrl || null,
-        coins: 1000, // Стартовые монеты
+        coins: 1000,
         rating: 0,
-        games_played: 0,
-        games_won: 0,
-        status: 'online',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
+      
+      // Добавляем поля с правильными названиями (поддержка обоих вариантов)
+      newUserData.total_games_played = 0; // Из скриншота БД
+      newUserData.games_played = 0; // Старое название (на случай если есть)
+      newUserData.wins = 0;
+      newUserData.games_won = 0; // Старое название
+      newUserData.losses = 0;
+      newUserData.online_status = 'online'; // Из скриншота БД
+      newUserData.status = 'online'; // Старое название
       
       console.log('💾 Создаем пользователя с данными:', newUserData);
       
@@ -290,17 +297,23 @@ export async function POST(req: NextRequest) {
       // Обновляем данные существующего пользователя
       console.log('👤 Обновляем данные существующего пользователя...');
       
+      // ✅ ИСПРАВЛЕНО: Обновляем с правильными названиями столбцов
+      const updateData: any = {
+        username: username,
+        first_name: firstName || existingUser.first_name,
+        last_name: lastName || existingUser.last_name,
+        avatar_url: photoUrl || existingUser.avatar_url,
+        last_seen: moscowTime,
+        updated_at: new Date().toISOString()
+      };
+      
+      // Обновляем статус (поддержка обоих вариантов)
+      updateData.online_status = 'online';
+      updateData.status = 'online';
+      
       const { data: updatedUser, error: updateError } = await supabase
         .from('_pidr_users')
-        .update({
-          username: username,
-          first_name: firstName || existingUser.first_name,
-          last_name: lastName || existingUser.last_name,
-          avatar_url: photoUrl || existingUser.avatar_url,
-          last_seen: moscowTime,
-          status: 'online',
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', existingUser.id)
         .select()
         .single();
@@ -340,10 +353,10 @@ export async function POST(req: NextRequest) {
         telegramId: user.telegram_id,
         coins: user.coins,
         rating: user.rating,
-        gamesPlayed: user.games_played,
-        wins: user.wins,        // ✅ ИСПРАВЛЕНО: wins вместо games_won!
-        losses: user.losses,    // ✅ ДОБАВЛЕНО: losses!
-        status: user.status
+        gamesPlayed: (user as any).total_games_played || (user as any).games_played || 0,
+        wins: (user as any).wins || (user as any).games_won || 0,
+        losses: (user as any).losses || 0,
+        status: (user as any).online_status || (user as any).status || 'offline'
       }
     });
 
