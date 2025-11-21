@@ -1,28 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { requireAuth } from '@/lib/auth-utils';
 
 // 🎴 API: Получение игровой колоды пользователя
 
 export async function GET(request: NextRequest) {
   try {
-    // ПРОВЕРЯЕМ АВТОРИЗАЦИЮ
-    const auth = await requireAuth(request);
-    if (auth.error) {
-      return NextResponse.json({ success: false, message: auth.error }, { status: 401 });
+    // ✅ ИСПРАВЛЕНО: Используем headers напрямую, как в /api/nft/collection
+    const telegramIdHeader = request.headers.get('x-telegram-id');
+    const usernameHeader = request.headers.get('x-username');
+    
+    if (!telegramIdHeader) {
+      console.error('❌ [GET DECK] Не найден x-telegram-id header');
+      return NextResponse.json(
+        { success: false, message: 'Требуется авторизация' },
+        { status: 401 }
+      );
     }
 
-    const telegramId = auth.userId as string;
-    const userId = parseInt(telegramId, 10);
+    const userId = parseInt(telegramIdHeader, 10);
+    
+    if (isNaN(userId)) {
+      console.error('❌ [GET DECK] Некорректный telegram_id:', telegramIdHeader);
+      return NextResponse.json(
+        { success: false, message: 'Некорректный ID пользователя' },
+        { status: 400 }
+      );
+    }
 
-    console.log(`🎴 [GET DECK] Получение колоды для пользователя ${userId}`);
+    console.log(`🎴 [GET DECK] Получение колоды для пользователя ${userId} через headers...`);
 
     // ПОЛУЧАЕМ ВСЕ КАРТЫ ИЗ КОЛОДЫ
+    // ✅ ИСПРАВЛЕНО: Используем явное указание foreign key через !nft_card_id
     const { data: deckCards, error } = await supabase
       .from('_pidr_user_nft_deck')
       .select(`
         *,
-        nft_card:_pidr_nft_cards(
+        nft_card:_pidr_nft_cards!nft_card_id(
           id,
           suit,
           rank,
@@ -45,16 +58,22 @@ export async function GET(request: NextRequest) {
     console.log(`✅ [GET DECK] Найдено ${deckCards?.length || 0} карт в колоде`);
 
     // ФОРМИРУЕМ ОТВЕТ
-    const deck = deckCards?.map((card: any) => ({
-      id: card.id,
-      user_id: card.user_id,
-      nft_card_id: card.nft_card_id,
-      suit: card.suit,
-      rank: card.rank,
-      image_url: card.image_url,
-      created_at: card.created_at,
-      nft_card: card.nft_card
-    })) || [];
+    // ✅ ИСПРАВЛЕНО: Используем данные из nft_card если есть, иначе из deck
+    const deck = deckCards?.map((card: any) => {
+      const nftCard = card.nft_card || null;
+      return {
+        id: card.id,
+        user_id: card.user_id,
+        nft_card_id: card.nft_card_id,
+        suit: nftCard?.suit || card.suit,
+        rank: nftCard?.rank || card.rank,
+        rarity: nftCard?.rarity || 'common',
+        image_url: nftCard?.image_url || card.image_url,
+        metadata: nftCard?.metadata || null,
+        created_at: card.created_at,
+        nft_card: nftCard
+      };
+    }) || [];
 
     return NextResponse.json({
       success: true,
@@ -74,13 +93,26 @@ export async function GET(request: NextRequest) {
 // 🗑️ DELETE: Удалить карту из колоды
 export async function DELETE(request: NextRequest) {
   try {
-    const auth = await requireAuth(request);
-    if (auth.error) {
-      return NextResponse.json({ success: false, message: auth.error }, { status: 401 });
+    // ✅ ИСПРАВЛЕНО: Используем headers напрямую
+    const telegramIdHeader = request.headers.get('x-telegram-id');
+    
+    if (!telegramIdHeader) {
+      console.error('❌ [DELETE DECK] Не найден x-telegram-id header');
+      return NextResponse.json(
+        { success: false, message: 'Требуется авторизация' },
+        { status: 401 }
+      );
     }
 
-    const telegramId = auth.userId as string;
-    const userId = parseInt(telegramId, 10);
+    const userId = parseInt(telegramIdHeader, 10);
+    
+    if (isNaN(userId)) {
+      console.error('❌ [DELETE DECK] Некорректный telegram_id:', telegramIdHeader);
+      return NextResponse.json(
+        { success: false, message: 'Некорректный ID пользователя' },
+        { status: 400 }
+      );
+    }
     const body = await request.json();
     const { deckCardId } = body; // ID записи в _pidr_user_nft_deck
 

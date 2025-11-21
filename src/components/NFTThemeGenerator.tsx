@@ -238,8 +238,10 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
       const result = await response.json();
 
       if (response.ok && result.success) {
-        // ✅ ОБНОВЛЯЕМ КОЛЛЕКЦИЮ NFT ПОСЛЕ ГЕНЕРАЦИИ
-        window.dispatchEvent(new CustomEvent('nft-collection-updated'));
+        // ✅ ОБНОВЛЯЕМ КОЛЛЕКЦИЮ NFT ПОСЛЕ ГЕНЕРАЦИИ (с задержкой для обновления БД)
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('nft-collection-updated'));
+        }, 500);
         
         // ✅ ОБНОВЛЯЕМ БАЛАНС НА КЛИЕНТЕ
         if (result.newBalance !== undefined) {
