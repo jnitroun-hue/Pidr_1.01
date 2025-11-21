@@ -1,25 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { requireAuth } from '@/lib/auth-utils';
+import { getUserIdFromRequest } from '@/lib/auth-utils';
 
 // 💓 API: Heartbeat для обновления онлайн статуса
 export async function POST(request: NextRequest) {
   try {
-    const auth = await requireAuth(request);
-    if (auth.error) {
-      return NextResponse.json({ success: false, error: auth.error }, { status: 401 });
+    // ✅ ИСПРАВЛЕНО: Используем x-telegram-id как fallback
+    let userId: string | null = getUserIdFromRequest(request);
+    
+    // Если нет из токена, пробуем из header
+    if (!userId) {
+      const telegramIdHeader = request.headers.get('x-telegram-id');
+      if (telegramIdHeader) {
+        userId = telegramIdHeader;
+      }
+    }
+    
+    if (!userId) {
+      return NextResponse.json({ success: false, error: 'Не авторизован' }, { status: 401 });
     }
 
-    const userId = auth.userId as string;
     const userIdBigInt = parseInt(userId, 10);
 
-    // ✅ ОБНОВЛЯЕМ last_seen (ТРИГГЕР АВТОМАТИЧЕСКИ ОБНОВИТ online_status!)
+    // ✅ ОБНОВЛЯЕМ last_seen и статус (поддержка обоих вариантов столбцов)
+    const updateData: any = {
+      last_seen: new Date().toISOString()
+    };
+    
+    // Обновляем статус (поддержка обоих вариантов)
+    updateData.online_status = 'online';
+    updateData.status = 'online';
+    
     const { error } = await supabase
       .from('_pidr_users')
-      .update({
-        last_seen: new Date().toISOString(),
-        status: 'online'
-      })
+      .update(updateData)
       .eq('telegram_id', userIdBigInt);
 
     if (error) {
