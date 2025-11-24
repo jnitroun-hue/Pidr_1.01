@@ -135,10 +135,28 @@ export default function NFTMintModal({ onClose, onSuccess }: NFTMintModalProps) 
         return;
       }
 
-      // 2. Отправляем транзакцию через TON Connect
+      // 2. ✅ ИСПРАВЛЕНО: Отправляем транзакцию через Telegram Wallet
       const masterWallet = result.master_wallet_address;
       const amount = result.mint_price_ton;
+      const amountNano = Math.floor(amount * 1000000000);
+      const comment = `NFT_MINT_${Date.now()}`;
 
+      // Формируем ton:// URL для Telegram Wallet
+      const tonUrl = `ton://transfer/${masterWallet}?amount=${amountNano}&text=${encodeURIComponent(comment)}`;
+      
+      console.log('💎 Открываем Telegram Wallet для минта:', tonUrl);
+      
+      // Открываем Telegram Wallet
+      if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp) {
+        const tg = (window as any).Telegram.WebApp;
+        tg.openTelegramLink(tonUrl);
+        
+        alert('⏳ Подтвердите оплату в Telegram Wallet\n\nПосле оплаты NFT будет автоматически создана');
+        setIsProcessing(false);
+        return; // Выходим, ждем подтверждения оплаты через webhook
+      }
+
+      // ✅ Fallback: если не в Telegram, используем старый метод (TonConnect)
       const transaction = {
         validUntil: Math.floor(Date.now() / 1000) + 600,
         messages: [

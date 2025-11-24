@@ -99,13 +99,8 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
 
     // ✅ TON ОПЛАТА
     if (crypto === 'TON') {
-      if (!userTonAddress) {
-        alert('❌ Подключите TON кошелек для оплаты!');
-        return;
-      }
-
       try {
-        // Получаем адрес получателя
+        // Получаем адрес получателя из БД (подключенный Telegram Wallet)
         const response = await fetch('/api/wallet/ton/payment-info', {
           method: 'GET',
           credentials: 'include'
@@ -121,58 +116,38 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
         }
 
         const receiverAddress = data.data.address;
-        const amountNano = toNano(cost.toString());
+        const amountNano = Math.floor(cost * 1000000000); // TON в наноTON
+        const comment = `NFT_${cryptoTheme}_${Date.now()}`;
 
-        // Отправляем транзакцию через TON Connect
-        const transaction = {
-          validUntil: Math.floor(Date.now() / 1000) + 600, // 10 минут
-          messages: [
-            {
-              address: receiverAddress,
-              amount: amountNano.toString(),
-              payload: btoa(`NFT_${cryptoTheme}_${Date.now()}`) // Комментарий к транзакции
-            }
-          ]
-        };
-
-        console.log('💎 Отправка TON транзакции:', transaction);
-        const txResult = await tonConnectUI.sendTransaction(transaction);
-        console.log('✅ Транзакция отправлена:', txResult);
-
-        // Генерируем карту после успешной оплаты
-        const generateResponse = await fetch('/api/nft/generate-crypto', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-telegram-id': typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString() || ''
-          },
-          body: JSON.stringify({
-            theme: cryptoTheme,
-            quantity: 1,
-            crypto: 'TON',
-            transactionHash: txResult.boc,
-            walletAddress: userTonAddress
-          })
-        });
-
-        const generateData = await generateResponse.json();
+        // ✅ ИСПРАВЛЕНО: Используем Telegram Wallet вместо TonConnect
+        // Формируем ton:// URL для Telegram Wallet
+        const tonUrl = `ton://transfer/${receiverAddress}?amount=${amountNano}&text=${encodeURIComponent(comment)}`;
         
-        if (generateData.success) {
-          // ✅ ОБНОВЛЯЕМ КОЛЛЕКЦИЮ NFT ПОСЛЕ ГЕНЕРАЦИИ
-          window.dispatchEvent(new CustomEvent('nft-collection-updated'));
+        console.log('💎 Открываем Telegram Wallet:', tonUrl);
+        
+        // Открываем Telegram Wallet через Telegram WebApp API
+        if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp) {
+          const tg = (window as any).Telegram.WebApp;
           
-          // ✅ ОБНОВЛЯЕМ БАЛАНС (если пришел)
-          if (generateData.newBalance !== undefined && onBalanceUpdate) {
-            onBalanceUpdate(generateData.newBalance);
-            window.dispatchEvent(new CustomEvent('balance-updated'));
-          }
+          // Используем openTelegramLink для ton:// протокола
+          tg.openTelegramLink(tonUrl);
           
-          alert(`✅ Карта сгенерирована за ${cost} TON!\n\nТранзакция: ${txResult.boc.slice(0, 20)}...`);
-          setShowCryptoModal(false);
-          setCryptoTheme(null);
+          console.log('✅ Telegram Wallet открыт');
         } else {
-          alert(`❌ Ошибка генерации: ${generateData.error}`);
+          // Fallback для тестирования вне Telegram
+          alert(`💎 Откройте Telegram Wallet для оплаты ${cost} TON\n\nАдрес: ${receiverAddress}\nСумма: ${cost} TON`);
         }
+
+        // ✅ ВАЖНО: Не генерируем карту сразу, ждем подтверждения оплаты
+        alert('⏳ Ожидаем подтверждения оплаты...\n\nПосле успешной оплаты карта будет автоматически сгенерирована (до 5 минут)');
+        
+        // Закрываем модалку
+        setShowCryptoModal(false);
+        setCryptoTheme(null);
+
+        // ✅ TODO: Добавить polling для проверки статуса оплаты
+        // const txResult = await waitForTransaction(receiverAddress, amountNano);
+
       } catch (error: any) {
         console.error('❌ Ошибка TON оплаты:', error);
         if (error.message?.includes('User rejected')) {
@@ -237,10 +212,11 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
 
       const result = await response.json();
 
-      if (response.ok && result.success) {
+        if (response.ok && result.success) {
         // ✅ ОБНОВЛЯЕМ КОЛЛЕКЦИЮ NFT ПОСЛЕ ГЕНЕРАЦИИ (с задержкой для обновления БД)
         setTimeout(() => {
           window.dispatchEvent(new CustomEvent('nft-collection-updated'));
+          window.dispatchEvent(new CustomEvent('transaction-created')); // ✅ Триггерим обновление истории
         }, 500);
         
         // ✅ ОБНОВЛЯЕМ БАЛАНС НА КЛИЕНТЕ
@@ -375,6 +351,7 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
       if (deductResponse.ok && deductResult.success) {
         // ✅ ОБНОВЛЯЕМ КОЛЛЕКЦИЮ NFT ПОСЛЕ ГЕНЕРАЦИИ КОЛОДЫ
         window.dispatchEvent(new CustomEvent('nft-collection-updated'));
+        window.dispatchEvent(new CustomEvent('transaction-created')); // ✅ Триггерим обновление истории
         
         alert(`✅ Колода ${themeConfig.name} создана!\n\n${successCount} уникальных карт\nСохранено в коллекцию!`);
         

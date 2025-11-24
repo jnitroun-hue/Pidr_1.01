@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { supabase } from '../lib/supabase'; // ✅ Добавлен импорт
 
 interface OnlineStats {
   reallyActive: number;
@@ -18,10 +19,31 @@ export default function OnlineIndicator() {
   useEffect(() => {
     loadStats();
     
-    // Обновляем каждые 30 секунд
-    const interval = setInterval(loadStats, 30000);
+    // ✅ УЛУЧШЕНО: Обновляем каждые 5 секунд вместо 30
+    const interval = setInterval(loadStats, 5000);
     
-    return () => clearInterval(interval);
+    // ✅ НОВОЕ: Подписываемся на изменения онлайн статуса через Realtime
+    const channel = supabase
+      .channel('online-status-changes')
+      .on('postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: '_pidr_users',
+          filter: 'status=neq.offline' // Только онлайн пользователи
+        },
+        (payload) => {
+          console.log('🔄 [OnlineIndicator] Изменение статуса пользователя:', payload);
+          // Перезагружаем статистику
+          loadStats();
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      clearInterval(interval);
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const loadStats = async () => {

@@ -155,6 +155,7 @@ export default function NFTImageGenerator({ userCoins, onBalanceUpdate }: NFTIma
       // ✅ ОБНОВЛЯЕМ КОЛЛЕКЦИЮ NFT ПОСЛЕ ГЕНЕРАЦИИ (с задержкой для обновления БД)
       setTimeout(() => {
         window.dispatchEvent(new CustomEvent('nft-collection-updated'));
+        window.dispatchEvent(new CustomEvent('transaction-created')); // ✅ Триггерим обновление истории
       }, 500);
 
       // Перезагружаем список карт

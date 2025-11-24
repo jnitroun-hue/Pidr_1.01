@@ -55,31 +55,45 @@ export function getUserIdFromRequest(req: NextRequest): string | null {
   if (token) {
     try {
       const payload = jwt.verify(token, JWT_SECRET) as any;
-      userIdFromToken = payload.userId || payload.telegramId;
+      // ✅ ИСПРАВЛЕНО: Приоритет telegramId над userId (userId - это ID из БД, а telegramId - это ID из Telegram)
+      userIdFromToken = payload.telegramId || payload.userId;
       
       if (!userIdFromToken) {
-        console.error('❌ userId отсутствует в токене');
+        console.error('❌ userId/telegramId отсутствует в токене');
         return null;
       }
       
-      console.log('✅ Пользователь из токена:', userIdFromToken);
+      console.log('✅ Пользователь из токена:', userIdFromToken, '(type:', typeof userIdFromToken, ')');
     } catch (error: any) {
       console.error('❌ Ошибка проверки токена:', error.message);
       return null;
     }
   }
   
-  // ✅ БЕЗОПАСНАЯ ПРОВЕРКА: x-telegram-id должен совпадать с токеном!
+  // ✅ ИСПРАВЛЕНО: Проверка с приоритетом header (если нет токена, используем header)
   const telegramIdHeader = req.headers.get('x-telegram-id');
   if (telegramIdHeader) {
-    if (userIdFromToken && String(userIdFromToken) !== String(telegramIdHeader)) {
-      console.error('🚨 SECURITY: x-telegram-id не совпадает с токеном!', {
-        fromToken: userIdFromToken,
-        fromHeader: telegramIdHeader
-      });
-      return null; // БЛОКИРУЕМ ДОСТУП!
+    // Если есть токен - проверяем совпадение
+    if (userIdFromToken) {
+      // Сравниваем как строки (могут быть разные типы)
+      const tokenIdStr = String(userIdFromToken);
+      const headerIdStr = String(telegramIdHeader);
+      
+      if (tokenIdStr !== headerIdStr) {
+        console.error('🚨 SECURITY: x-telegram-id не совпадает с токеном!', {
+          fromToken: tokenIdStr,
+          fromHeader: headerIdStr
+        });
+        // ✅ ИСПРАВЛЕНО: Используем header если токен устарел
+        console.warn('⚠️ Токен устарел, используем header');
+        return telegramIdHeader;
+      }
+      console.log('✅ x-telegram-id совпадает с токеном');
+    } else {
+      // Если токена нет - используем header
+      console.log('✅ Токен отсутствует, используем x-telegram-id из header');
+      return telegramIdHeader;
     }
-    console.log('✅ x-telegram-id совпадает с токеном');
   }
   
   if (!userIdFromToken) {

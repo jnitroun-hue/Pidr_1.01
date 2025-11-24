@@ -248,6 +248,7 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
         // ✅ ОБНОВЛЯЕМ КОЛЛЕКЦИЮ NFT ПОСЛЕ ГЕНЕРАЦИИ (с задержкой для обновления БД)
         setTimeout(() => {
           window.dispatchEvent(new CustomEvent('nft-collection-updated'));
+          window.dispatchEvent(new CustomEvent('transaction-created')); // ✅ Триггерим обновление истории
         }, 500);
         
         // Обновляем список карт
@@ -357,6 +358,7 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
       // ✅ ОБНОВЛЯЕМ КОЛЛЕКЦИЮ NFT ПОСЛЕ ГЕНЕРАЦИИ КОЛОДЫ (с задержкой для обновления БД)
       setTimeout(() => {
         window.dispatchEvent(new CustomEvent('nft-collection-updated'));
+        window.dispatchEvent(new CustomEvent('transaction-created')); // ✅ Триггерим обновление истории
       }, 1000);
       
       // Обновляем список карт

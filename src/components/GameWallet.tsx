@@ -82,10 +82,21 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
   const masterWalletService = new MasterWalletService();
 
   // Загружаем данные пользователя и транзакции
+  // ✅ НОВОЕ: Кеш для истории транзакций
+  const lastTransactionsUpdate = React.useRef(0);
+  const transactionsUpdateInterval = 10 * 60 * 1000; // 10 минут
+
   useEffect(() => {
     console.log('🔄 GameWallet: инициализация компонента', { user: !!user, userId: user?.id });
     loadUserData();
-    loadTransactions();
+    
+    // ✅ ИСПРАВЛЕНО: Загружаем транзакции только если прошло 10 минут
+    const now = Date.now();
+    if (now - lastTransactionsUpdate.current > transactionsUpdateInterval) {
+      loadTransactions();
+      lastTransactionsUpdate.current = now;
+    }
+    
     loadMasterAddresses();
     checkBonusStatus(); // Проверяем статус бонуса
     
@@ -111,6 +122,34 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
       });
     }
   }, [user]);
+
+  // ✅ НОВОЕ: Автообновление истории транзакций каждые 10 минут
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const intervalId = setInterval(() => {
+      console.log('⏰ Автообновление истории транзакций (каждые 10 минут)');
+      loadTransactions();
+      lastTransactionsUpdate.current = Date.now();
+    }, transactionsUpdateInterval);
+
+    return () => clearInterval(intervalId);
+  }, [user?.id]);
+
+  // ✅ НОВОЕ: Слушаем события новых транзакций
+  useEffect(() => {
+    const handleNewTransaction = () => {
+      console.log('💸 Новая транзакция - обновляем историю');
+      loadTransactions();
+      lastTransactionsUpdate.current = Date.now();
+    };
+
+    window.addEventListener('transaction-created', handleNewTransaction);
+    
+    return () => {
+      window.removeEventListener('transaction-created', handleNewTransaction);
+    };
+  }, []);
 
   // Автоматический мониторинг платежей каждые 30 секунд
   useEffect(() => {
@@ -280,7 +319,10 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
     if (!user?.id) return;
 
     try {
-      setLoading(true);
+      // ✅ НЕ ПОКАЗЫВАЕМ ЗАГРУЗКУ если есть кешированные данные
+      if (transactions.length === 0) {
+        setLoading(true);
+      }
       
       // Проверяем сессию в БД
       const sessionActive = await checkDatabaseSession();

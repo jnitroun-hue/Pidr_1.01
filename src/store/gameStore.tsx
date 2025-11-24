@@ -3229,22 +3229,31 @@ export const useGameStore = create<GameState>()(
           console.log(`❓ [askHowManyCards] ${asker.name} спрашивает у ${target.name} сколько карт`);
           console.log(`❓ [askHowManyCards] У ${target.name}: всего карт=${targetTotalCards}`);
           
-          // ✅ НОВАЯ ЛОГИКА: Проверяем СРАЗУ при вопросе!
-          if (targetTotalCards === 1) {
-             const hasDeclared = oneCardDeclarations[targetPlayerId];
-             
-            console.log(`🎯 [askHowManyCards] Проверка штрафа: объявил=${hasDeclared}`);
+          // ✅ ИСПРАВЛЕНО: Проверяем ВСЕХ игроков с 1 картой, а не только цель вопроса!
+          // Находим ВСЕХ игроков с 1 картой которые НЕ объявили
+          const forgetfulPlayers = players.filter(p => 
+            p.cards.length === 1 && 
+            !oneCardDeclarations[p.id] &&
+            !p.isWinner
+          );
+          
+          if (forgetfulPlayers.length > 0) {
+            const forgetfulNames = forgetfulPlayers.map(p => p.name).join(', ');
+            console.log(`💸 [askHowManyCards] ⚠️ МНОЖЕСТВЕННЫЙ ШТРАФ! ${forgetfulPlayers.length} игроков НЕ объявили "одна карта!": ${forgetfulNames}`);
             
-            if (!hasDeclared) {
-              // ❌ НЕ ОБЪЯВИЛ ДО ВОПРОСА → ШТРАФ!
-              console.log(`💸 [askHowManyCards] ⚠️ ШТРАФ! ${target.name} НЕ объявил "одна карта!" до вопроса!`);
-              
-              get().showNotification(`💸 ШТРАФ! ${target.name} забыл объявить "одна карта!" → получает штрафные карты!`, 'error', 5000);
-              
-              // ✅ ЗАПУСКАЕМ ПРОЦЕСС ШТРАФА - ИГРА ОСТАНАВЛИВАЕТСЯ!
-               get().startPenaltyProcess(targetPlayerId);
-            } else {
-              // ✅ ОБЪЯВИЛ ДО ВОПРОСА → ШТРАФА НЕТ!
+            // ✅ УВЕДОМЛЕНИЕ ДЛЯ ВСЕХ ШТРАФНИКОВ
+            get().showNotification(
+              `💸 ШТРАФ! ${forgetfulNames} забыли объявить "одна карта!" → штрафуются друг другу!`, 
+              'error', 
+              5000
+            );
+            
+            // ✅ КРИТИЧНО: Передаём МАССИВ всех штрафников!
+            const forgetfulIds = forgetfulPlayers.map(p => p.id);
+            get().startPenaltyProcess(forgetfulIds);
+          } else {
+            // ✅ ВСЕ ОБЪЯВИЛИ ВОВРЕМЯ → ШТРАФА НЕТ!
+            if (targetTotalCards === 1) {
               console.log(`✅ [askHowManyCards] ${target.name} объявил "одна карта" вовремя - штрафа нет!`);
               get().showNotification(`✅ ${target.name} объявил "одна карта" вовремя → штрафа нет!`, 'success', 3000);
             }
@@ -3267,9 +3276,10 @@ export const useGameStore = create<GameState>()(
            const forgetfulPlayers = players.filter(p => targetIds.includes(p.id));
            if (forgetfulPlayers.length === 0) return;
            
-           // Определяем кто должен отдать карты (все кроме штрафуемых)
+           // ✅ ПРАВИЛЬНАЯ ЛОГИКА: Только НЕ-штрафники отдают карты
+           // Штрафники НИКОГДА не скидывают друг другу (даже если их несколько)
            const contributorsNeeded = players
-             .filter(p => !targetIds.includes(p.id) && p.cards.length > 0)
+             .filter(p => !targetIds.includes(p.id) && p.cards.length > 0) // Только не-штрафники с картами
              .map(p => p.id);
            
            if (contributorsNeeded.length === 0) {
@@ -3338,10 +3348,10 @@ export const useGameStore = create<GameState>()(
                    .slice(0, cardsToGive)
                    .map(item => item.card);
                  
-                 // Распределяем карты по штрафникам (по кругу)
+                 // ✅ ПРАВИЛЬНАЯ ЛОГИКА: Распределяем карты по штрафникам (по кругу)
                  sortedWorstCards.forEach((card, cardIndex) => {
                    const targetId = targetIds[cardIndex % targetIds.length];
-                   console.log(`🤖 [startPenaltyProcess] Бот ${player.name} отдает карту ${card.image} игроку ${targetId}`);
+                   console.log(`🤖 [startPenaltyProcess] Бот ${player.name} отдает карту ${card.image} штрафнику ${targetId}`);
                    get().contributePenaltyCard(playerId, card.id, targetId);
                  });
               }, (index + 1) * 1000); // Боты отдают карты с задержкой

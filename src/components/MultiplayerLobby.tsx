@@ -121,8 +121,13 @@ export default function MultiplayerLobby({
         
         // ЕСЛИ 404 - КОМНАТА НЕ НАЙДЕНА, ВЫХОДИМ!
         if (response.status === 404) {
-          console.error('🚪 [MultiplayerLobby] Комната не найдена! Выходим...');
-          onLeaveRoom(); // ⚠️ ВОТ ГДЕ ВЫКИДЫВАЕТ!
+          console.error('🚪 [MultiplayerLobby] Комната не найдена! Выходим без вызова API...');
+          // ✅ ИСПРАВЛЕНО: Не вызываем onLeaveRoom напрямую, а используем handleLeaveRoom
+          // НО БЕЗ API запроса (так как комната уже удалена)
+          if (roomManagerRef.current) {
+            roomManagerRef.current.unsubscribe();
+          }
+          onLeaveRoom();
           return;
         }
         return;
@@ -243,8 +248,14 @@ export default function MultiplayerLobby({
     console.log(`🚪 [MultiplayerLobby] Покидаем лобби`);
 
     try {
-      if (!user?.id) return;
+      if (!user?.id) {
+        console.error('❌ [MultiplayerLobby] Нет user.id');
+        onLeaveRoom();
+        return;
+      }
 
+      console.log(`📤 [MultiplayerLobby] Отправляем запрос на выход из комнаты ${roomId}...`);
+      
       const response = await fetch(`/api/rooms/${roomId}/leave`, {
         method: 'POST',
         headers: {
@@ -254,11 +265,22 @@ export default function MultiplayerLobby({
       });
 
       if (!response.ok) {
-        console.error('❌ [MultiplayerLobby] Ошибка покидания комнаты');
+        console.error('❌ [MultiplayerLobby] API вернул ошибку:', response.status);
+        // Всё равно выходим, даже если API вернул ошибку
+      } else {
+        const result = await response.json();
+        console.log('✅ [MultiplayerLobby] Успешно покинули комнату:', result);
       }
     } catch (error) {
       console.error('❌ [MultiplayerLobby] Ошибка покидания комнаты:', error);
+      // Всё равно выходим, даже если была ошибка
     } finally {
+      // ✅ ВАЖНО: Отписываемся от Realtime ПЕРЕД выходом
+      if (roomManagerRef.current) {
+        roomManagerRef.current.unsubscribe();
+      }
+      
+      // ✅ Вызываем callback родителя
       onLeaveRoom();
     }
   };
