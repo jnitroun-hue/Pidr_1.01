@@ -32,7 +32,7 @@ export default function OnlineIndicator() {
           table: '_pidr_users',
           filter: 'status=neq.offline' // Только онлайн пользователи
         },
-        (payload) => {
+        (payload: any) => {
           console.log('🔄 [OnlineIndicator] Изменение статуса пользователя:', payload);
           // Перезагружаем статистику
           loadStats();
