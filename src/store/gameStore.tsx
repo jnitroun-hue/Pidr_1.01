@@ -3256,12 +3256,12 @@ export const useGameStore = create<GameState>()(
             if (targetTotalCards === 1) {
               console.log(`✅ [askHowManyCards] ${target.name} объявил "одна карта" вовремя - штрафа нет!`);
               get().showNotification(`✅ ${target.name} объявил "одна карта" вовремя → штрафа нет!`, 'success', 3000);
+            } else {
+              // У цели не 1 карта - просто показываем количество
+              console.log(`ℹ️ [askHowManyCards] У ${target.name} ${targetTotalCards} карт - штрафа нет`);
+              get().showNotification(`ℹ️ У ${target.name}: ${targetTotalCards} карт`, 'info', 3000);
             }
-          } else {
-            // У цели не 1 карта - просто показываем количество
-            console.log(`ℹ️ [askHowManyCards] У ${target.name} ${targetTotalCards} карт - штрафа нет`);
-            get().showNotification(`ℹ️ У ${target.name}: ${targetTotalCards} карт`, 'info', 3000);
-           }
+          }
          },
          
          // ✅ НОВАЯ ЛОГИКА: Начать процесс штрафа - ОДНОВРЕМЕННО ДЛЯ ВСЕХ ШТРАФНИКОВ!
