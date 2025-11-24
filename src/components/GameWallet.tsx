@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FaCoins, 
@@ -83,7 +83,7 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
 
   // Загружаем данные пользователя и транзакции
   // ✅ НОВОЕ: Кеш для истории транзакций
-  const lastTransactionsUpdate = React.useRef(0);
+  const lastTransactionsUpdate = useRef(0);
   const transactionsUpdateInterval = 10 * 60 * 1000; // 10 минут
 
   useEffect(() => {
