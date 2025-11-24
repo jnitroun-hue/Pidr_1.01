@@ -6,15 +6,17 @@ export async function GET(req: NextRequest) {
   try {
     console.log('📊 Получение статистики онлайн игроков...');
 
-    // 1. Общая статистика по статусам
+    // 1. Общая статистика по статусам (проверяем ОБА поля!)
     const { data: statusStats, error: statusError } = await supabase
       .from('_pidr_users')
-      .select('status')
+      .select('status, online_status')
       .then(({ data, error }: { data: any; error: any }) => {
         if (error) return { data: null, error };
         
         const stats = data?.reduce((acc: any, user: any) => {
-          acc[user.status] = (acc[user.status] || 0) + 1;
+          // Приоритет online_status над status
+          const status = user.online_status || user.status || 'offline';
+          acc[status] = (acc[status] || 0) + 1;
           return acc;
         }, {}) || {};
         
@@ -52,21 +54,24 @@ export async function GET(req: NextRequest) {
       console.error('❌ Ошибка получения онлайн за 30 мин:', online30Error);
     }
 
-    // 4. Игроки в комнатах
+    // 4. Игроки в комнатах (проверяем ОБА поля!)
     const { data: inRooms, error: roomsError } = await supabase
       .from('_pidr_users')
-      .select('id')
-      .in('status', ['in_room', 'playing']);
+      .select('id, status, online_status')
+      .or('status.in.(in_room,playing),online_status.in.(in_room,playing)');
 
     if (roomsError) {
       console.error('❌ Ошибка получения игроков в комнатах:', roomsError);
     }
 
-    // ✅ ИСПРАВЛЕНО: Обновляем статус на offline для неактивных
+    // ✅ ИСПРАВЛЕНО: Обновляем статус на offline для неактивных (ОБА поля!)
     const { error: updateStatusError } = await supabase
       .from('_pidr_users')
-      .update({ status: 'offline' })
-      .eq('status', 'online')
+      .update({ 
+        status: 'offline',
+        online_status: 'offline'
+      })
+      .or('status.eq.online,online_status.eq.online')
       .lt('last_seen', threeMinutesAgo);
     
     if (updateStatusError) {

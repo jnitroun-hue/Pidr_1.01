@@ -29,8 +29,8 @@ export default function OnlineIndicator() {
         {
           event: '*',
           schema: 'public',
-          table: '_pidr_users',
-          filter: 'status=neq.offline' // Только онлайн пользователи
+          table: '_pidr_users'
+          // ✅ УБРАЛИ ФИЛЬТР - слушаем все изменения
         },
         (payload: any) => {
           console.log('🔄 [OnlineIndicator] Изменение статуса пользователя:', payload);

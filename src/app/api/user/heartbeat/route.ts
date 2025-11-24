@@ -31,10 +31,13 @@ export async function POST(request: NextRequest) {
     updateData.online_status = 'online';
     updateData.status = 'online';
     
-    const { error } = await supabase
+    const { error, data: updatedUser } = await supabase
       .from('_pidr_users')
       .update(updateData)
-      .eq('telegram_id', userIdBigInt);
+      .eq('telegram_id', userIdBigInt)
+      .select();
+    
+    console.log(`💓 [HEARTBEAT] Обновлен статус для ${userId}:`, updatedUser);
 
     if (error) {
       console.error('❌ [HEARTBEAT] Ошибка обновления онлайн статуса:', error);

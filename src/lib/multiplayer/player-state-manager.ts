@@ -630,28 +630,37 @@ async function syncPlayerToDatabase(params: {
 }): Promise<void> {
   const { roomId, userId, username, position, isHost } = params;
   
-  // UPSERT в БД
-  const { error } = await supabase
+  console.log(`📝 [SYNC DB] Синхронизация: roomId=${roomId}, userId=${userId}, isHost=${isHost}, position=${position}`);
+  
+  // ✅ ИСПРАВЛЕНО: Сначала удаляем старую запись, потом вставляем новую
+  // Это гарантирует что is_host будет правильным
+  await supabase
     .from('_pidr_room_players')
-    .upsert(
-      {
-        room_id: roomId,
-        user_id: userId,
-        username,
-        position,
-        is_host: isHost, // ✅ ОПРЕДЕЛЯЕМ ХОСТА!
-        is_ready: isHost, // Хост сразу готов
-        joined_at: new Date().toISOString(),
-      },
-      {
-        onConflict: 'room_id,user_id',
-      }
-    );
+    .delete()
+    .eq('room_id', roomId)
+    .eq('user_id', userId);
+  
+  // Вставляем свежую запись  
+  // ✅ ВАЖНО: room_id это INT4, user_id это INT8 (telegram_id)!
+  const { error, data } = await supabase
+    .from('_pidr_room_players')
+    .insert({
+      room_id: parseInt(roomId), // INT4
+      user_id: parseInt(userId), // INT8 (telegram_id)
+      username,
+      position,
+      is_host: isHost, // ✅ ОПРЕДЕЛЯЕМ ХОСТА!
+      is_ready: isHost, // Хост сразу готов
+      joined_at: new Date().toISOString(),
+    })
+    .select();
   
   if (error) {
     console.error(`❌ [SYNC DB] Ошибка синхронизации с БД:`, error);
     throw error;
   }
+  
+  console.log(`✅ [SYNC DB] Игрок добавлен в БД:`, data);
 }
 
 /**

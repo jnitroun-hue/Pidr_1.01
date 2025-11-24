@@ -5,7 +5,7 @@ import { useTelegram } from '../hooks/useTelegram';
 
 /**
  * Компонент для автоматического обновления онлайн статуса
- * Отправляет heartbeat каждые 30 секунд
+ * Отправляет heartbeat каждые 15 секунд для более точного отслеживания
  */
 export default function OnlineHeartbeat() {
   const { user } = useTelegram();
@@ -17,8 +17,8 @@ export default function OnlineHeartbeat() {
     // Отправляем первый heartbeat сразу
     sendHeartbeat();
 
-    // Затем каждые 30 секунд
-    intervalRef.current = setInterval(sendHeartbeat, 30000);
+    // ✅ УМЕНЬШЕНО: Затем каждые 15 секунд (было 30)
+    intervalRef.current = setInterval(sendHeartbeat, 15000);
 
     // Отправляем heartbeat перед закрытием страницы
     const handleBeforeUnload = () => {

@@ -7,6 +7,7 @@ import { TonConnectProvider } from '../context/TonConnectProvider'
 import type { TelegramWebApp } from '../types/telegram-webapp'
 import { ChakraProvider } from '@chakra-ui/react'
 import { defaultSystem } from '@chakra-ui/react/preset'
+import OnlineHeartbeat from '../components/OnlineHeartbeat'
 
 // Add global augmentation for Window to include Telegram
 declare global {
@@ -62,6 +63,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <TelegramProvider>
         <ThemeProvider>
           <TonConnectProvider>
+            {/* ✅ Автоматическое обновление онлайн статуса на всех страницах */}
+            <OnlineHeartbeat />
             {children}
           </TonConnectProvider>
         </ThemeProvider>
