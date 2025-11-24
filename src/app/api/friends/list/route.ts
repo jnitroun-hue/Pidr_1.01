@@ -21,11 +21,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const userId = parseInt(telegramId);
+    const userId = telegramId; // ✅ Оставляем как строку (VARCHAR в БД)
 
     // Получаем друзей из БД
     const { data: friendships, error } = await supabase
-      .from('_pidr_friendships')
+      .from('_pidr_friends')
       .select(`
         friend_id,
         created_at

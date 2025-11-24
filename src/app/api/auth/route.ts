@@ -247,18 +247,31 @@ export async function POST(req: NextRequest) {
             .single();
           
           if (referrerUser) {
-            // Создаем связь дружбы (автоматически принятую)
-            const { error: friendshipError } = await supabase
-              .from('_pidr_friendships')
+            // Создаем связь дружбы (автоматически принятую) - ДВУХСТОРОННЮЮ!
+            const { error: friendshipError1 } = await supabase
+              .from('_pidr_friends')
               .insert([
                 {
-                  user_id: parseInt(telegramId),
-                  friend_id: parseInt(referrerId),
+                  user_id: String(telegramId),
+                  friend_id: String(referrerId),
                   status: 'accepted', // ✅ Сразу принимаем дружбу
-                  created_at: new Date().toISOString(),
-                  updated_at: new Date().toISOString()
+                  created_at: new Date().toISOString()
                 }
               ]);
+            
+            // ✅ Создаём обратную связь
+            const { error: friendshipError2 } = await supabase
+              .from('_pidr_friends')
+              .insert([
+                {
+                  user_id: String(referrerId),
+                  friend_id: String(telegramId),
+                  status: 'accepted',
+                  created_at: new Date().toISOString()
+                }
+              ]);
+            
+            const friendshipError = friendshipError1 || friendshipError2;
             
             if (!friendshipError) {
               console.log('✅ Дружба с приглашающим создана!');

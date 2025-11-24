@@ -120,6 +120,11 @@ export default function FriendsPage() {
     try {
       const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
       
+      console.log('👥 [FRONTEND] Добавление друга:', {
+        currentUserId: telegramUser?.id,
+        friendId: friendId
+      });
+      
       const response = await fetch('/api/friends/add', {
         method: 'POST',
         headers: {
@@ -130,15 +135,22 @@ export default function FriendsPage() {
         body: JSON.stringify({ friend_id: friendId })
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success) {
-          alert('✅ Друг добавлен!');
-          loadFriends();
-        }
+      const result = await response.json();
+      console.log('📥 [FRONTEND] Ответ сервера:', result);
+
+      if (response.ok && result.success) {
+        alert('✅ Друг добавлен!');
+        await loadFriends(); // Перезагружаем список друзей
+        setSearchQuery(''); // Очищаем поиск
+        setSearchResults([]); // Очищаем результаты
+      } else {
+        const errorMsg = result.error || 'Неизвестная ошибка';
+        console.error('❌ [FRONTEND] Ошибка добавления:', errorMsg);
+        alert(`❌ Ошибка: ${errorMsg}`);
       }
     } catch (error) {
-      console.error('❌ Ошибка добавления друга:', error);
+      console.error('❌ [FRONTEND] Ошибка добавления друга:', error);
+      alert('❌ Произошла ошибка при добавлении друга');
     }
   };
 
@@ -279,7 +291,7 @@ export default function FriendsPage() {
       </motion.button>
 
       {/* Результаты поиска */}
-      {searchQuery.length >= 2 && (
+      {searchQuery.length >= 1 && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
