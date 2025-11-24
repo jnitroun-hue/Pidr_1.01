@@ -322,8 +322,8 @@ export async function POST(request: NextRequest) {
         token_id: `${suit}_${rank}_custom`,
         card_id: `${rank}_of_${suit}`,
         card_name: `${rank.toUpperCase()} of ${suit.toUpperCase()}`,
-        card_rank: rank,
-        card_suit: suit,
+        rank: rank, // ✅ ИСПРАВЛЕНО: rank вместо card_rank
+        suit: suit, // ✅ ИСПРАВЛЕНО: suit вместо card_suit
         rarity: 'custom',
         image_url: publicUrl,
         acquired_via: 'generation',

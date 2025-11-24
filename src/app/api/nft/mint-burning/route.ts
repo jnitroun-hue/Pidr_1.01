@@ -120,8 +120,8 @@ export async function POST(request: NextRequest) {
       .from('_pidr_nft_ownership')
       .insert({
         user_telegram_id: userId,
-        card_rank: randomRank,
-        card_suit: randomSuit,
+        rank: randomRank, // ✅ ИСПРАВЛЕНО: rank вместо card_rank
+        suit: randomSuit, // ✅ ИСПРАВЛЕНО: suit вместо card_suit
         rarity,
         acquired_via: 'burning',
         metadata: burningParams,

@@ -17,14 +17,14 @@ export async function GET(req: NextRequest) {
       .from('_pidr_nft_cards')
       .select('*')
       .order('rarity', { ascending: false })
-      .order('card_rank', { ascending: true });
+      .order('rank', { ascending: true }); // ✅ ИСПРАВЛЕНО: rank вместо card_rank
 
     if (rarity) {
       query = query.eq('rarity', rarity);
     }
 
     if (suit) {
-      query = query.eq('card_suit', suit);
+      query = query.eq('suit', suit); // ✅ ИСПРАВЛЕНО: suit вместо card_suit
     }
 
     const { data: cards, error } = await query;

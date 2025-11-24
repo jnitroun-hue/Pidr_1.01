@@ -194,8 +194,8 @@ export async function POST(req: NextRequest) {
       .from('_pidr_nft_cards')
       .insert([{
         user_id: userIdBigInt,
-        card_suit: suit,
-        card_rank: rank,
+        suit: suit, // ✅ ИСПРАВЛЕНО: suit вместо card_suit
+        rank: rank, // ✅ ИСПРАВЛЕНО: rank вместо card_rank
         image_url: imageUrl,
         storage_path: fileName,
         cost: totalCost,

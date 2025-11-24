@@ -152,6 +152,11 @@ export default function NFTImageGenerator({ userCoins, onBalanceUpdate }: NFTIma
         onBalanceUpdate(result.newBalance);
       }
 
+      // ✅ ОБНОВЛЯЕМ КОЛЛЕКЦИЮ NFT ПОСЛЕ ГЕНЕРАЦИИ (с задержкой для обновления БД)
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('nft-collection-updated'));
+      }, 500);
+
       // Перезагружаем список карт
       await fetchUserCards();
 

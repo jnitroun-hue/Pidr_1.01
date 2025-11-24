@@ -83,8 +83,8 @@ export async function POST(req: NextRequest) {
       card: {
         card_id: card.card_id,
         card_name: card.card_name,
-        card_rank: card.card_rank,
-        card_suit: card.card_suit,
+        rank: card.rank || card.card_rank, // ✅ ПОДДЕРЖКА ОБОИХ ФОРМАТОВ
+        suit: card.suit || card.card_suit, // ✅ ПОДДЕРЖКА ОБОИХ ФОРМАТОВ
         rarity: card.rarity,
         image_url: card.image_url
       },

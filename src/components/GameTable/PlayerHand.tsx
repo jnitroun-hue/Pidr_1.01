@@ -51,7 +51,7 @@ const PlayerHand: React.FC<PlayerHandProps> = ({
             
             return (
               <motion.div
-                key={`${card.suit || 'unknown'}-${card.rank || 'unknown'}-${index}`}
+                key={`hand-${card.id || `${card.suit}-${card.rank}-${index}`}`} // ✅ УНИКАЛЬНЫЙ КЛЮЧ через card.id
                 className={`${styles.handCard} ${isSelected ? styles.selected : ''} ${isPlayable ? styles.playable : ''} ${!isPlayerTurn ? styles.disabled : ''}`}
                 initial={{ y: 100, opacity: 0, scale: 0.8 }}
                 animate={{ 

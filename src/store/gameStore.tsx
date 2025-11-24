@@ -975,7 +975,9 @@ export const useGameStore = create<GameState>()(
           penaltyDeck: [], // ✅ ОЧИЩАЕМ ШТРАФНУЮ СТОПКУ!
           players: newPlayers,
           pendingPenalty: null, // ✅ СБРАСЫВАЕМ ШТРАФ!
-          isGamePaused: false // ✅ ВОЗОБНОВЛЯЕМ ИГРУ!
+          isGamePaused: false, // ✅ ВОЗОБНОВЛЯЕМ ИГРУ!
+          showPenaltyCardSelection: false, // ✅ ЗАКРЫВАЕМ МОДАЛКУ ВЫБОРА КАРТ
+          penaltyCardSelectionPlayerId: null // ✅ СБРАСЫВАЕМ ID ИГРОКА
         });
         
         console.log(`▶️ [distributePenaltyCards] ✅ ИГРА ВОЗОБНОВЛЕНА! (isGamePaused = false)`);
@@ -1015,10 +1017,15 @@ export const useGameStore = create<GameState>()(
           console.log(`⏸️ [distributePenaltyCards] ПАУЗА 5 секунд для сбора штрафных карт...`);
           console.log(`🎮 [distributePenaltyCards] После паузы ход продолжит: ${currentPlayer.name}`);
           
-          // Пауза 5 секунд, затем продолжаем с того же игрока
+          // ✅ ИСПРАВЛЕНО: Пауза 2 секунды вместо 5, и немедленная проверка статуса игры
           setTimeout(() => {
             try {
               const state = get();
+              
+              // ✅ КРИТИЧНО: Сначала проверяем статус "одна карта" для всех игроков
+              console.log(`🔍 [distributePenaltyCards] ПРОВЕРЯЕМ СТАТУС "ОДНА КАРТА" после штрафа...`);
+              get().checkOneCardStatus();
+              
               const updatedPlayer = state.players.find(p => p.id === currentPlayerId);
               
               if (!updatedPlayer) {
@@ -1033,28 +1040,31 @@ export const useGameStore = create<GameState>()(
                 cardsLength: updatedPlayer.cards.length,
                 penkiLength: updatedPlayer.penki.length,
                 gameStage: state.gameStage,
-                currentPlayerId: state.currentPlayerId
+                currentPlayerId: state.currentPlayerId,
+                isGamePaused: state.isGamePaused,
+                stage2TurnPhase: state.stage2TurnPhase
               });
               
               const isActive = !updatedPlayer.isWinner && (updatedPlayer.cards.length > 0 || updatedPlayer.penki.length > 0);
               
               console.log(`🔍 [distributePenaltyCards] isActive = ${isActive}`);
               
-              // ✅ КРИТИЧНО: ПРОВЕРЯЕМ СТАТУС "ОДНА КАРТА" ПОСЛЕ РАЗДАЧИ ШТРАФА!
-              console.log(`🔍 [distributePenaltyCards] ПРОВЕРЯЕМ СТАТУС "ОДНА КАРТА" после штрафа...`);
-              get().checkOneCardStatus();
-              
-              if (isActive && state.gameStage === 2) {
+              if (isActive && (state.gameStage === 2 || state.gameStage === 3)) {
                 console.log(`🎮 [distributePenaltyCards] Продолжаем ход игрока: ${updatedPlayer.name}`);
                 console.log(`🔍 [distributePenaltyCards] ВЫЗЫВАЕМ processPlayerTurn(${currentPlayerId})`);
                 
-                // ✅ КРИТИЧНО: Сбрасываем фазу перед вызовом processPlayerTurn
-                set({ stage2TurnPhase: 'selecting_card' });
+                // ✅ КРИТИЧНО: Полностью сбрасываем состояние хода
+                set({ 
+                  stage2TurnPhase: 'selecting_card',
+                  isGamePaused: false,
+                  currentPlayerId: currentPlayerId
+                });
                 
-            get().processPlayerTurn(currentPlayerId);
+                // ✅ ЗАЩИТА: Немедленно вызываем processPlayerTurn без дополнительной задержки
+                get().processPlayerTurn(currentPlayerId);
                 console.log(`✅ [distributePenaltyCards] processPlayerTurn() ВЫЗВАН!`);
               } else {
-                console.log(`⚠️ [distributePenaltyCards] Игрок ${updatedPlayer.name} больше не активен или игра не в стадии 2, ищем следующего...`);
+                console.log(`⚠️ [distributePenaltyCards] Игрок ${updatedPlayer.name} больше не активен или игра не в стадии 2/3, ищем следующего...`);
                 console.log(`🔍 [distributePenaltyCards] ВЫЗЫВАЕМ nextTurn()`);
                 get().nextTurn();
                 console.log(`✅ [distributePenaltyCards] nextTurn() ВЫЗВАН!`);
@@ -1064,7 +1074,7 @@ export const useGameStore = create<GameState>()(
               // Аварийный nextTurn в случае ошибки
               get().nextTurn();
             }
-          }, 5000); // ✅ ПАУЗА 5 СЕКУНД
+          }, 2000); // ✅ ПАУЗА 2 СЕКУНДЫ (уменьшено с 5)
         }
         
         // ✅ ВАЖНО: Проверяем статус "одна карта" после раздачи штрафа

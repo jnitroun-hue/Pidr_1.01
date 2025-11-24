@@ -1446,7 +1446,7 @@ function GamePageContentComponent({
                   
                   return (
                     <div 
-                      key={`table-${idx}`} 
+                      key={`table-${card.suit}-${card.rank}-${idx}-${card.id || Math.random()}`} // ✅ УНИКАЛЬНЫЙ КЛЮЧ 
                       style={{
                         position: 'absolute',
                         left: `${offset}px`, // СЛЕВА НАПРАВО!

@@ -79,8 +79,8 @@ export async function POST(request: NextRequest) {
           .from('_pidr_nft_cards')
           .upsert({
             card_id: `${card.rank.toLowerCase()}_of_${card.suit}`,
-            card_rank: card.rank,
-            card_suit: card.suit,
+            rank: card.rank, // ✅ ИСПРАВЛЕНО: rank вместо card_rank
+            suit: card.suit, // ✅ ИСПРАВЛЕНО: suit вместо card_suit
             card_name: `${card.rank} of ${card.suit}`,
             rarity: card.rarity,
             image_url: publicUrlData.publicUrl,
