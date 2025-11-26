@@ -23,17 +23,23 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const currentUserId = telegramId ? parseInt(telegramId) : null;
+    const currentUserId = telegramId || null;
 
-    console.log(`🔍 [FRIENDS SEARCH] Поиск по запросу: "${query}", текущий пользователь: ${currentUserId}`);
+    console.log(`🔍 [FRIENDS SEARCH] Поиск по запросу: "${query}", текущий пользователь (telegram_id): ${currentUserId}`);
 
     // ✅ ПОИСК ПО USERNAME (даже с 1 буквой) - приоритет username
-    const { data: users, error } = await supabase
+    let usersQuery = supabase
       .from('_pidr_users')
       .select('telegram_id, username, first_name, avatar_url, rating, games_played, wins')
       .ilike('username', `%${query}%`) // Поиск по username (даже с 1 буквой)
-      .neq('telegram_id', currentUserId || 0) // Исключаем себя
       .limit(20); // Увеличиваем лимит для лучших результатов
+    
+    // ✅ Исключаем себя если есть telegramId
+    if (currentUserId) {
+      usersQuery = usersQuery.neq('telegram_id', currentUserId);
+    }
+    
+    const { data: users, error } = await usersQuery;
 
     if (error) {
       console.error('❌ Ошибка поиска пользователей:', error);

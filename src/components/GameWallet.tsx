@@ -90,12 +90,9 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
     console.log('🔄 GameWallet: инициализация компонента', { user: !!user, userId: user?.id });
     loadUserData();
     
-    // ✅ ИСПРАВЛЕНО: Загружаем транзакции только если прошло 10 минут
-    const now = Date.now();
-    if (now - lastTransactionsUpdate.current > transactionsUpdateInterval) {
-      loadTransactions();
-      lastTransactionsUpdate.current = now;
-    }
+    // ✅ ВСЕГДА загружаем транзакции при первой загрузке
+    loadTransactions();
+    lastTransactionsUpdate.current = Date.now();
     
     loadMasterAddresses();
     checkBonusStatus(); // Проверяем статус бонуса

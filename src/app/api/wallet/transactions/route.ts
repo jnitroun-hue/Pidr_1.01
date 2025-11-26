@@ -28,12 +28,31 @@ export async function GET(req: NextRequest) {
     const offset = Math.max(parseInt(searchParams.get('offset') || '0'), 0);
     const type = searchParams.get('type'); // deposit, withdrawal, purchase, game_win, game_loss
 
-    console.log(`📊 Получаем транзакции для пользователя ${userId}, лимит: ${limit}, смещение: ${offset}`);
+    console.log(`📊 [TRANSACTIONS API] Получаем транзакции для userId=${userId} (type: ${typeof userId}), лимит: ${limit}`);
+
+    // ✅ КРИТИЧНО: userId из requireAuth это telegram_id
+    // Нужно получить user.id (UUID/BIGINT) из таблицы _pidr_users
+    const { data: userData, error: userError } = await supabase
+      .from('_pidr_users')
+      .select('id')
+      .eq('telegram_id', userId)
+      .single();
+    
+    if (userError || !userData) {
+      console.error('❌ [TRANSACTIONS API] Пользователь не найден по telegram_id:', userId, userError);
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Пользователь не найден' 
+      }, { status: 404 });
+    }
+    
+    const userIdBigInt = userData.id; // ✅ Это BIGINT из БД
+    console.log(`✅ [TRANSACTIONS API] Найден user.id=${userIdBigInt} для telegram_id=${userId}`);
 
     let query = supabase
       .from('_pidr_coin_transactions')
       .select('*')
-      .eq('user_id', userId);
+      .eq('user_id', userIdBigInt); // ✅ Используем BIGINT!
 
     // Фильтр по типу транзакции
     if (type) {
