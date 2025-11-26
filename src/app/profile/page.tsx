@@ -245,15 +245,16 @@ export default function ProfilePage() {
       }
     };
 
-    // ✅ ФУНКЦИЯ ЗАГРУЗКИ КОЛОДЫ
-    const loadDeckCards = async () => {
+    // ✅ ФУНКЦИЯ ЗАГРУЗКИ КОЛОДЫ С RETRY МЕХАНИЗМОМ
+    const loadDeckCards = async (retryCount = 0) => {
       try {
         setIsLoadingDeck(true);
         console.log('🎴 Загружаем колоду пользователя...');
         
         const telegramUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
         const headers: HeadersInit = {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache' // ✅ ОТКЛЮЧАЕМ КЭШИРОВАНИЕ
         };
         
         if (telegramUser?.id) {
@@ -272,12 +273,24 @@ export default function ProfilePage() {
           if (result.success && result.deck) {
             console.log(`✅ Колода загружена: ${result.deck.length} карт`);
             setDeckCards(result.deck);
+          } else if (retryCount < 2) {
+            // ✅ RETRY: Повторяем запрос если не получили данные
+            console.log(`🔄 Retry загрузки колоды (попытка ${retryCount + 1})...`);
+            setTimeout(() => loadDeckCards(retryCount + 1), 1000 * (retryCount + 1));
           }
         } else {
           console.error('❌ Ошибка загрузки колоды:', response.status);
+          // ✅ RETRY: Повторяем запрос при ошибке
+          if (retryCount < 2) {
+            setTimeout(() => loadDeckCards(retryCount + 1), 1000 * (retryCount + 1));
+          }
         }
       } catch (error) {
         console.error('❌ Не удалось загрузить колоду:', error);
+        // ✅ RETRY: Повторяем запрос при ошибке
+        if (retryCount < 2) {
+          setTimeout(() => loadDeckCards(retryCount + 1), 1000 * (retryCount + 1));
+        }
       } finally {
         setIsLoadingDeck(false);
       }
@@ -301,6 +314,7 @@ export default function ProfilePage() {
     };
     
     window.addEventListener('deck-updated', handleDeckUpdate);
+    window.addEventListener('nft-deck-updated', handleDeckUpdate); // ✅ Новое событие
     window.addEventListener('balance-updated', handleBalanceUpdate);
     
     return () => {

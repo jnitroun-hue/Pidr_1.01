@@ -73,11 +73,18 @@ export async function GET(req: NextRequest) {
     const collection = data || [];
     console.log(`✅ Найдено ${collection.length} NFT карт для пользователя ${userId} (исключая ${listedCardIds.length} карт на продаже и ${deckCardIds.length} карт в колоде)`);
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       collection,
       total: collection.length
     });
+    
+    // ✅ УСТАНАВЛИВАЕМ ЗАГОЛОВКИ ДЛЯ ОТКЛЮЧЕНИЯ КЭШИРОВАНИЯ
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+    
+    return response;
 
   } catch (error: any) {
     console.error('❌ Ошибка API получения коллекции:', error);

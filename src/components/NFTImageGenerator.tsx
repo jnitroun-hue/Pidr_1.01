@@ -152,11 +152,20 @@ export default function NFTImageGenerator({ userCoins, onBalanceUpdate }: NFTIma
         onBalanceUpdate(result.newBalance);
       }
 
-      // ✅ ОБНОВЛЯЕМ КОЛЛЕКЦИЮ NFT ПОСЛЕ ГЕНЕРАЦИИ (с задержкой для обновления БД)
+      // ✅ ОБНОВЛЯЕМ КОЛЛЕКЦИЮ NFT ПОСЛЕ ГЕНЕРАЦИИ (мгновенно с retry)
+      window.dispatchEvent(new CustomEvent('nft-collection-updated'));
+      window.dispatchEvent(new CustomEvent('nft-deck-updated')); // ✅ Обновляем колоду
+      window.dispatchEvent(new CustomEvent('transaction-created')); // ✅ Триггерим обновление истории
+      
+      // ✅ Retry механизм: повторяем обновление через 1 и 3 секунды для надежности
       setTimeout(() => {
         window.dispatchEvent(new CustomEvent('nft-collection-updated'));
-        window.dispatchEvent(new CustomEvent('transaction-created')); // ✅ Триггерим обновление истории
-      }, 500);
+        window.dispatchEvent(new CustomEvent('nft-deck-updated'));
+      }, 1000);
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('nft-collection-updated'));
+        window.dispatchEvent(new CustomEvent('nft-deck-updated'));
+      }, 3000);
 
       // Перезагружаем список карт
       await fetchUserCards();

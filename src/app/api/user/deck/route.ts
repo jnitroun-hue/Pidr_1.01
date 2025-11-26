@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 // 🎴 API: Получение игровой колоды пользователя
 
 export async function GET(request: NextRequest) {
+  // ✅ ОТКЛЮЧАЕМ КЭШИРОВАНИЕ ДЛЯ РЕАЛЬНОГО ВРЕМЕНИ
   try {
     // ✅ ИСПРАВЛЕНО: Используем headers напрямую, как в /api/nft/collection
     const telegramIdHeader = request.headers.get('x-telegram-id');
@@ -75,11 +76,18 @@ export async function GET(request: NextRequest) {
       };
     }) || [];
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       deck,
       total: deck.length
     });
+    
+    // ✅ УСТАНАВЛИВАЕМ ЗАГОЛОВКИ ДЛЯ ОТКЛЮЧЕНИЯ КЭШИРОВАНИЯ
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+    
+    return response;
 
   } catch (error: any) {
     console.error('❌ [GET DECK] Ошибка:', error);

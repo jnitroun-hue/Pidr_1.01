@@ -213,11 +213,20 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
       const result = await response.json();
 
         if (response.ok && result.success) {
-        // ✅ ОБНОВЛЯЕМ КОЛЛЕКЦИЮ NFT ПОСЛЕ ГЕНЕРАЦИИ (с задержкой для обновления БД)
+        // ✅ ОБНОВЛЯЕМ КОЛЛЕКЦИЮ NFT ПОСЛЕ ГЕНЕРАЦИИ (мгновенно с retry)
+        window.dispatchEvent(new CustomEvent('nft-collection-updated'));
+        window.dispatchEvent(new CustomEvent('nft-deck-updated')); // ✅ Обновляем колоду
+        window.dispatchEvent(new CustomEvent('transaction-created')); // ✅ Триггерим обновление истории
+        
+        // ✅ Retry механизм: повторяем обновление через 1 и 3 секунды для надежности
         setTimeout(() => {
           window.dispatchEvent(new CustomEvent('nft-collection-updated'));
-          window.dispatchEvent(new CustomEvent('transaction-created')); // ✅ Триггерим обновление истории
-        }, 500);
+          window.dispatchEvent(new CustomEvent('nft-deck-updated'));
+        }, 1000);
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('nft-collection-updated'));
+          window.dispatchEvent(new CustomEvent('nft-deck-updated'));
+        }, 3000);
         
         // ✅ ОБНОВЛЯЕМ БАЛАНС НА КЛИЕНТЕ
         if (result.newBalance !== undefined) {
@@ -349,9 +358,20 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
       const deductResult = await deductResponse.json();
 
       if (deductResponse.ok && deductResult.success) {
-        // ✅ ОБНОВЛЯЕМ КОЛЛЕКЦИЮ NFT ПОСЛЕ ГЕНЕРАЦИИ КОЛОДЫ
+        // ✅ ОБНОВЛЯЕМ КОЛЛЕКЦИЮ NFT ПОСЛЕ ГЕНЕРАЦИИ КОЛОДЫ (мгновенно с retry)
         window.dispatchEvent(new CustomEvent('nft-collection-updated'));
+        window.dispatchEvent(new CustomEvent('nft-deck-updated')); // ✅ Обновляем колоду
         window.dispatchEvent(new CustomEvent('transaction-created')); // ✅ Триггерим обновление истории
+        
+        // ✅ Retry механизм: повторяем обновление через 1 и 3 секунды для надежности
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('nft-collection-updated'));
+          window.dispatchEvent(new CustomEvent('nft-deck-updated'));
+        }, 1000);
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('nft-collection-updated'));
+          window.dispatchEvent(new CustomEvent('nft-deck-updated'));
+        }, 3000);
         
         alert(`✅ Колода ${themeConfig.name} создана!\n\n${successCount} уникальных карт\nСохранено в коллекцию!`);
         

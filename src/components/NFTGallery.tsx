@@ -48,7 +48,7 @@ export default function NFTGallery() {
     };
   }, []);
 
-  const loadCollection = async () => {
+  const loadCollection = async (retryCount = 0) => {
     setIsLoading(true);
     try {
       const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
@@ -60,7 +60,8 @@ export default function NFTGallery() {
         credentials: 'include',
         headers: {
           'x-telegram-id': telegramId || '',
-          'x-username': username || ''
+          'x-username': username || '',
+          'Cache-Control': 'no-cache' // ✅ ДОПОЛНИТЕЛЬНО ОТКЛЮЧАЕМ КЭШИРОВАНИЕ
         },
         cache: 'no-store' // ✅ ОТКЛЮЧАЕМ КЭШИРОВАНИЕ
       });
@@ -71,10 +72,20 @@ export default function NFTGallery() {
         setCollection(result.collection || []);
       } else {
         setCollection([]);
+        // ✅ RETRY: Повторяем запрос если не получили данные (максимум 2 попытки)
+        if (retryCount < 2) {
+          console.log(`🔄 [NFTGallery] Retry загрузки коллекции (попытка ${retryCount + 1})...`);
+          setTimeout(() => loadCollection(retryCount + 1), 1000 * (retryCount + 1));
+        }
       }
     } catch (error) {
       console.error('❌ Ошибка загрузки коллекции:', error);
       setCollection([]);
+      // ✅ RETRY: Повторяем запрос при ошибке (максимум 2 попытки)
+      if (retryCount < 2) {
+        console.log(`🔄 [NFTGallery] Retry после ошибки (попытка ${retryCount + 1})...`);
+        setTimeout(() => loadCollection(retryCount + 1), 1000 * (retryCount + 1));
+      }
     } finally {
       setIsLoading(false);
     }
@@ -182,7 +193,8 @@ export default function NFTGallery() {
       if (result.success) {
         // ✅ ОБНОВЛЯЕМ КОЛЛЕКЦИЮ И КОЛОДУ ПОСЛЕ ДОБАВЛЕНИЯ
         loadCollection();
-        window.dispatchEvent(new CustomEvent('deck-updated')); // ✅ Обновляем колоду в профиле
+        window.dispatchEvent(new CustomEvent('nft-deck-updated')); // ✅ Обновляем колоду везде
+        window.dispatchEvent(new CustomEvent('deck-updated')); // ✅ Обновляем колоду в профиле (старое событие для совместимости)
         
         setSelectedCard(null);
         

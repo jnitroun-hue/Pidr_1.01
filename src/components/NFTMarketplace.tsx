@@ -108,49 +108,82 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
     return ranks[rank] || rank;
   };
 
-  // Загрузка данных
-  const loadMarketplace = useCallback(async () => {
+  // Загрузка данных с retry механизмом
+  const loadMarketplace = useCallback(async (retryCount = 0) => {
     setLoading(true);
     try {
       const response = await fetch(`/api/marketplace/list?sort=${sortBy}&filter=all`, {
-        headers: getTelegramWebAppHeaders()
+        headers: {
+          ...getTelegramWebAppHeaders(),
+          'Cache-Control': 'no-cache' // ✅ ОТКЛЮЧАЕМ КЭШИРОВАНИЕ
+        },
+        cache: 'no-store'
       });
       const data = await response.json();
       if (data.success) {
         setListings(data.listings || []);
+      } else if (retryCount < 2) {
+        // ✅ RETRY: Повторяем запрос если не получили данные
+        setTimeout(() => loadMarketplace(retryCount + 1), 1000 * (retryCount + 1));
       }
     } catch (error) {
       console.error('Ошибка загрузки маркетплейса:', error);
+      // ✅ RETRY: Повторяем запрос при ошибке
+      if (retryCount < 2) {
+        setTimeout(() => loadMarketplace(retryCount + 1), 1000 * (retryCount + 1));
+      }
     } finally {
       setLoading(false);
     }
   }, [sortBy]);
 
-  const loadMyNFTs = useCallback(async () => {
+  const loadMyNFTs = useCallback(async (retryCount = 0) => {
     try {
       const response = await fetch('/api/nft/collection', {
-        headers: getTelegramWebAppHeaders()
+        headers: {
+          ...getTelegramWebAppHeaders(),
+          'Cache-Control': 'no-cache' // ✅ ОТКЛЮЧАЕМ КЭШИРОВАНИЕ
+        },
+        cache: 'no-store'
       });
       const data = await response.json();
       if (data.success) {
         setMyNFTs(data.collection || []);
+      } else if (retryCount < 2) {
+        // ✅ RETRY: Повторяем запрос если не получили данные
+        setTimeout(() => loadMyNFTs(retryCount + 1), 1000 * (retryCount + 1));
       }
     } catch (error) {
       console.error('Ошибка загрузки коллекции:', error);
+      // ✅ RETRY: Повторяем запрос при ошибке
+      if (retryCount < 2) {
+        setTimeout(() => loadMyNFTs(retryCount + 1), 1000 * (retryCount + 1));
+      }
     }
   }, []);
 
-  const loadMySales = useCallback(async () => {
+  const loadMySales = useCallback(async (retryCount = 0) => {
     try {
       const response = await fetch('/api/marketplace/my-sales', {
-        headers: getTelegramWebAppHeaders()
+        headers: {
+          ...getTelegramWebAppHeaders(),
+          'Cache-Control': 'no-cache' // ✅ ОТКЛЮЧАЕМ КЭШИРОВАНИЕ
+        },
+        cache: 'no-store'
       });
       const data = await response.json();
       if (data.success) {
         setMySales({ active: data.active || [], sold: data.sold || [] });
+      } else if (retryCount < 2) {
+        // ✅ RETRY: Повторяем запрос если не получили данные
+        setTimeout(() => loadMySales(retryCount + 1), 1000 * (retryCount + 1));
       }
     } catch (error) {
       console.error('Ошибка загрузки продаж:', error);
+      // ✅ RETRY: Повторяем запрос при ошибке
+      if (retryCount < 2) {
+        setTimeout(() => loadMySales(retryCount + 1), 1000 * (retryCount + 1));
+      }
     }
   }, []);
 
@@ -162,6 +195,31 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
     } else if (activeTab === 'my-nfts') {
       loadMyNFTs();
     }
+  }, [activeTab, loadMarketplace, loadMySales, loadMyNFTs]);
+
+  // ✅ СЛУШАЕМ СОБЫТИЯ ОБНОВЛЕНИЯ МАГАЗИНА И КОЛЛЕКЦИИ
+  useEffect(() => {
+    const handleMarketplaceUpdate = () => {
+      console.log('🔄 [NFTMarketplace] Обновляем магазин...');
+      if (activeTab === 'buy') {
+        loadMarketplace();
+      }
+      loadMySales();
+      loadMyNFTs();
+    };
+    
+    const handleCollectionUpdate = () => {
+      console.log('🔄 [NFTMarketplace] Обновляем коллекцию...');
+      loadMyNFTs();
+    };
+    
+    window.addEventListener('marketplace-updated', handleMarketplaceUpdate);
+    window.addEventListener('nft-collection-updated', handleCollectionUpdate);
+    
+    return () => {
+      window.removeEventListener('marketplace-updated', handleMarketplaceUpdate);
+      window.removeEventListener('nft-collection-updated', handleCollectionUpdate);
+    };
   }, [activeTab, loadMarketplace, loadMySales, loadMyNFTs]);
 
   // ✅ АВТОМАТИЧЕСКОЕ ОТКРЫТИЕ МОДАЛКИ ПРОДАЖИ ИЗ КОЛЛЕКЦИИ
@@ -367,8 +425,15 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
         setSelectedNFT(null);
         setSellPrice('');
         setSellCurrency('COINS');
+        
+        // ✅ ОБНОВЛЯЕМ ВСЕ КОМПОНЕНТЫ МАГАЗИНА
+        loadMarketplace(); // ✅ Обновляем список лотов в магазине
         loadMySales();
         loadMyNFTs();
+        
+        // ✅ ОТПРАВЛЯЕМ СОБЫТИЯ ДЛЯ ОБНОВЛЕНИЯ ДРУГИХ КОМПОНЕНТОВ
+        window.dispatchEvent(new CustomEvent('nft-collection-updated'));
+        window.dispatchEvent(new CustomEvent('marketplace-updated'));
       } else {
         alert(`❌ Ошибка: ${data.error}`);
       }
