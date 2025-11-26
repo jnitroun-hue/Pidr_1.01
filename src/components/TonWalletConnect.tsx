@@ -5,6 +5,7 @@ import { useTonConnectUI, useTonAddress } from '@tonconnect/ui-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaWallet, FaCheckCircle, FaTimes, FaExternalLinkAlt } from 'react-icons/fa';
 import styles from './TonWalletConnect.module.css';
+import ManualWalletInput from './ManualWalletInput';
 
 interface TonWalletConnectProps {
   onConnect?: (address: string) => void;
@@ -192,6 +193,13 @@ export default function TonWalletConnect({ onConnect, onDisconnect }: TonWalletC
           ))}
         </div>
       )}
+      
+      {/* ✅ РУЧНОЙ ВВОД КОШЕЛЬКА */}
+      <ManualWalletInput 
+        walletType="ton" 
+        onWalletAdded={loadSavedWallets}
+        savedWallets={savedWallets}
+      />
     </div>
   );
 }

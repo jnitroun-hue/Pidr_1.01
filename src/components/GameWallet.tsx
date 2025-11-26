@@ -21,6 +21,7 @@ import {
 } from 'react-icons/fa';
 import { MasterWalletService } from '@/lib/wallets/master-wallet-service';
 import styles from './GameWallet.module.css';
+import ConnectedWalletsList from './ConnectedWalletsList';
 
 interface User {
   id: string;
@@ -79,6 +80,7 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
     BTC: 0,
     SOL: 0
   });
+  const [selectedWalletForDeposit, setSelectedWalletForDeposit] = useState<any>(null); // ✅ Выбранный кошелек для пополнения
   const masterWalletService = new MasterWalletService();
 
   // Загружаем данные пользователя и транзакции
@@ -1101,9 +1103,48 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
               {activeModal === 'deposit' && (
                 <div className="modal-inner">
                   <div className="modal-header">
-                    <h3>💰 Пополнение через кондиционер</h3>
-                    <button className="close-btn" onClick={() => setActiveModal(null)}>×</button>
+                    <h3>💰 Пополнение баланса</h3>
+                    <button className="close-btn" onClick={() => {
+                      setActiveModal(null);
+                      setSelectedWalletForDeposit(null);
+                    }}>×</button>
                   </div>
+                  
+                  {/* ✅ СПИСОК ПОДКЛЮЧЕННЫХ КОШЕЛЬКОВ ИЗ NFT КОЛЛЕКЦИИ */}
+                  <div style={{ marginBottom: '20px' }}>
+                    <div style={{
+                      fontSize: '14px',
+                      fontWeight: '700',
+                      color: '#ffffff',
+                      marginBottom: '12px',
+                      textAlign: 'center'
+                    }}>
+                      Выберите кошелек для пополнения:
+                    </div>
+                    <ConnectedWalletsList
+                      onWalletSelect={(wallet) => {
+                        setSelectedWalletForDeposit(wallet);
+                        setSelectedCrypto(wallet.wallet_type.toUpperCase());
+                      }}
+                      selectedWalletId={selectedWalletForDeposit?.id || null}
+                      showAddButton={true}
+                    />
+                  </div>
+                  
+                  {selectedWalletForDeposit && (
+                    <div style={{
+                      padding: '12px',
+                      borderRadius: '8px',
+                      background: 'rgba(34, 197, 94, 0.1)',
+                      border: '2px solid rgba(34, 197, 94, 0.3)',
+                      marginBottom: '16px',
+                      fontSize: '12px',
+                      color: '#22c55e',
+                      textAlign: 'center'
+                    }}>
+                      ✅ Выбран: {selectedWalletForDeposit.wallet_type.toUpperCase()} - {selectedWalletForDeposit.wallet_address.slice(0, 6)}...{selectedWalletForDeposit.wallet_address.slice(-4)}
+                    </div>
+                  )}
                   
                   <div className="crypto-select">
                     <label>💰 Выберите криптовалюту для пополнения</label>

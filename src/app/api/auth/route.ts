@@ -226,10 +226,30 @@ export async function POST(req: NextRequest) {
 
       if (createError) {
         console.error('❌ Ошибка создания пользователя:', createError);
-        return NextResponse.json({ 
-          success: false, 
-          message: 'Ошибка создания пользователя' 
-        }, { status: 500 });
+        console.error('❌ Детали ошибки:', {
+          code: createError.code,
+          message: createError.message,
+          details: createError.details,
+          hint: createError.hint
+        });
+        
+        // ✅ ПРОБУЕМ НАЙТИ ПОЛЬЗОВАТЕЛЯ ЕСЛИ ОН УЖЕ СУЩЕСТВУЕТ
+        const { data: existingUserRetry } = await supabase
+          .from('_pidr_users')
+          .select('*')
+          .eq('telegram_id', telegramId)
+          .maybeSingle();
+        
+        if (existingUserRetry) {
+          console.log('✅ Пользователь найден после ошибки создания, используем существующего');
+          user = existingUserRetry;
+        } else {
+          return NextResponse.json({ 
+            success: false, 
+            message: `Ошибка создания пользователя: ${createError.message || 'Неизвестная ошибка'}`,
+            errorDetails: createError
+          }, { status: 500 });
+        }
       }
 
       user = newUser;

@@ -8,6 +8,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import ManualWalletInput from './ManualWalletInput';
 
 interface SolanaWalletConnectProps {
   onConnect?: (address: string) => void;
@@ -24,10 +25,39 @@ export default function SolanaWalletConnect({ onConnect, onDisconnect }: SolanaW
   const [connected, setConnected] = useState(false);
   const [address, setAddress] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [savedWallets, setSavedWallets] = useState<any[]>([]);
 
   useEffect(() => {
     checkConnection();
+    loadSavedWallets();
   }, []);
+
+  const loadSavedWallets = async () => {
+    try {
+      const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+      const telegramId = telegramUser?.id?.toString() || '';
+      const username = telegramUser?.username || telegramUser?.first_name || '';
+
+      const response = await fetch('/api/nft/connect-wallet', {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'x-telegram-id': telegramId || '',
+          'x-username': username || ''
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          const solWallets = (result.wallets || []).filter((w: any) => w.wallet_type === 'sol');
+          setSavedWallets(solWallets);
+        }
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки кошельков:', error);
+    }
+  };
 
   const checkConnection = async () => {
     try {
@@ -213,6 +243,13 @@ export default function SolanaWalletConnect({ onConnect, onDisconnect }: SolanaW
           {loading ? 'Подключение...' : 'Подключить Solana'}
         </button>
       )}
+      
+      {/* ✅ РУЧНОЙ ВВОД КОШЕЛЬКА */}
+      <ManualWalletInput 
+        walletType="sol" 
+        onWalletAdded={loadSavedWallets}
+        savedWallets={savedWallets}
+      />
     </motion.div>
   );
 }

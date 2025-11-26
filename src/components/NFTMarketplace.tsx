@@ -536,6 +536,41 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
         <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: '16px' }}>
           Торговая площадка игровых NFT карт
         </p>
+        
+        {/* ✅ ПРЕДУПРЕЖДЕНИЕ О БЕЗОПАСНОСТИ КОШЕЛЬКОВ */}
+        <div style={{
+          maxWidth: '600px',
+          margin: '20px auto 0',
+          padding: '12px 16px',
+          borderRadius: '8px',
+          background: 'rgba(239, 68, 68, 0.1)',
+          border: '2px solid rgba(239, 68, 68, 0.3)'
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '10px'
+          }}>
+            <span style={{ fontSize: '18px', color: '#ef4444' }}>⚠️</span>
+            <div style={{ flex: 1 }}>
+              <div style={{
+                color: '#ef4444',
+                fontSize: '13px',
+                fontWeight: '700',
+                marginBottom: '4px'
+              }}>
+                ВНИМАНИЕ!
+              </div>
+              <div style={{
+                color: '#fca5a5',
+                fontSize: '12px',
+                lineHeight: '1.5'
+              }}>
+                Убедитесь, что ваши кошельки могут принимать NFT и адреса корректно прописаны! Потерянные средства или NFT мы вернуть не сможем!
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Tabs */}

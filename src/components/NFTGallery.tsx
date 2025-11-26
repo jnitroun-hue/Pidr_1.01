@@ -303,12 +303,46 @@ export default function NFTGallery() {
 
         {/* ✅ ПОДКЛЮЧЕНИЕ КОШЕЛЬКОВ */}
         <div style={{
-          maxWidth: '400px',
+          maxWidth: '500px',
           margin: '0 auto',
           display: 'flex',
           flexDirection: 'column',
           gap: '12px'
         }}>
+          {/* ✅ ПРЕДУПРЕЖДЕНИЕ О БЕЗОПАСНОСТИ */}
+          <div style={{
+            padding: '12px 16px',
+            borderRadius: '8px',
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '2px solid rgba(239, 68, 68, 0.3)',
+            marginBottom: '8px'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '10px'
+            }}>
+              <span style={{ fontSize: '18px', color: '#ef4444' }}>⚠️</span>
+              <div style={{ flex: 1 }}>
+                <div style={{
+                  color: '#ef4444',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  marginBottom: '4px'
+                }}>
+                  ВНИМАНИЕ!
+                </div>
+                <div style={{
+                  color: '#fca5a5',
+                  fontSize: '12px',
+                  lineHeight: '1.5'
+                }}>
+                  Убедитесь, что ваши кошельки могут принимать NFT и адреса корректно прописаны! Потерянные средства или NFT мы вернуть не сможем!
+                </div>
+              </div>
+            </div>
+          </div>
+          
           <TonConnectButton />
           <SolanaWalletConnect />
         </div>
