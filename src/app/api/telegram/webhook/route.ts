@@ -147,7 +147,7 @@ export async function POST(req: NextRequest) {
         
         if (recentGames && recentGames.length > 0) {
           recentWins = `\n🏆 <b>Топ игроков:</b>\n`;
-          recentGames.forEach((user, index) => {
+          recentGames.forEach((user: { username: string | null; wins: number; games_played: number }, index: number) => {
             const winRate = user.games_played > 0 ? Math.round((user.wins / user.games_played) * 100) : 0;
             recentWins += `${index + 1}. ${user.username || 'Игрок'} - ${user.wins} побед (${winRate}%)\n`;
           });
