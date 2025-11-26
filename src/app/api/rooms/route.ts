@@ -54,13 +54,23 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const type = searchParams.get('type') || 'public';
     
+    // ✅ ФИЛЬТРУЕМ ТОЛЬКО АКТИВНЫЕ КОМНАТЫ (последняя активность < 10 минут)
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    
     // Базовый запрос
     let query = supabase
       .from('_pidr_rooms')
       .select('*')
       .in('status', ['waiting', 'playing'])
-      .order('created_at', { ascending: false })
       .limit(50);
+    
+    // ✅ ФИЛЬТРУЕМ ПО АКТИВНОСТИ
+    // Сначала пробуем фильтр по last_activity, если нет - по updated_at
+    query = query.or(`last_activity.gte.${tenMinutesAgo},updated_at.gte.${tenMinutesAgo}`);
+    
+    query = query
+      .order('last_activity', { ascending: false, nullsFirst: false })
+      .order('updated_at', { ascending: false }); // Fallback сортировка
     
     // Фильтр по типу
     if (type === 'public') {
@@ -77,8 +87,19 @@ export async function GET(req: NextRequest) {
       }, { status: 500 });
     }
     
+    // ✅ ФИЛЬТРУЕМ АКТИВНЫЕ КОМНАТЫ НА УРОВНЕ ПРИЛОЖЕНИЯ (надежнее)
+    const activeRooms = (rooms || []).filter((room: any) => {
+      const activityTime = room.last_activity || room.updated_at || room.created_at;
+      if (!activityTime) return false;
+      const activityDate = new Date(activityTime);
+      const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+      return activityDate >= tenMinutesAgo;
+    });
+    
+    console.log(`📊 Загружено комнат: ${rooms?.length || 0}, активных: ${activeRooms.length}`);
+    
     // Обогащаем данные о хостах
-    const roomsWithHosts = await Promise.all((rooms || []).map(async (room: any) => {
+    const roomsWithHosts = await Promise.all(activeRooms.map(async (room: any) => {
       const { data: hostUser } = await supabase
         .from('_pidr_users')
         .select('username, avatar_url')
@@ -234,6 +255,7 @@ export async function POST(req: NextRequest) {
         hasPassword: hasPassword || false
       };
       
+      const now = new Date().toISOString();
       const { data: room, error: roomError } = await supabase
         .from('_pidr_rooms')
         .insert({
@@ -246,7 +268,9 @@ export async function POST(req: NextRequest) {
           is_private: isPrivate || false,
           password: hasPassword ? password : null,
           settings: roomSettings,
-          created_at: new Date().toISOString()
+          created_at: now,
+          updated_at: now, // ✅ ОБНОВЛЯЕМ ВРЕМЯ СОЗДАНИЯ
+          last_activity: now // ✅ УСТАНАВЛИВАЕМ АКТИВНОСТЬ
         })
         .select()
         .single();

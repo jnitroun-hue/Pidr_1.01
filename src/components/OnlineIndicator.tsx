@@ -48,16 +48,26 @@ export default function OnlineIndicator() {
 
   const loadStats = async () => {
     try {
-      const response = await fetch('/api/stats/online');
+      const response = await fetch('/api/stats/online', {
+        cache: 'no-store', // ✅ ОТКЛЮЧАЕМ КЭШИРОВАНИЕ
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      });
       const data = await response.json();
       
       if (data.success && data.stats) {
+        const onlineCount = data.stats.reallyActive || 0;
+        console.log(`🟢 [OnlineIndicator] Онлайн игроков: ${onlineCount}`);
+        
         setStats({
-          reallyActive: data.stats.reallyActive || 0,
+          reallyActive: onlineCount,
           online30min: data.stats.online30min || 0,
           inRooms: data.stats.inRooms || 0,
           total: data.stats.total || 0
         });
+      } else {
+        console.error('❌ [OnlineIndicator] Ошибка получения статистики:', data);
       }
     } catch (error) {
       console.error('❌ Ошибка загрузки онлайн статистики:', error);
@@ -141,7 +151,7 @@ export default function OnlineIndicator() {
           fontWeight: '700',
           textShadow: '0 0 8px rgba(16, 185, 129, 0.5)'
         }}>
-          {stats.reallyActive}
+          {stats?.reallyActive || 0}
         </span>
       </motion.div>
 

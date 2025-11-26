@@ -45,12 +45,13 @@ export async function lightCleanup() {
       }
     }
     
-    // 2️⃣ УДАЛЯЕМ СТАРЫЕ КОМНАТЫ (> 15 МИНУТ)
+    // 2️⃣ УДАЛЯЕМ СТАРЫЕ КОМНАТЫ (> 10 МИНУТ БЕЗ АКТИВНОСТИ)
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
     const { data: oldRooms, error: oldError } = await supabase
       .from('_pidr_rooms')
       .select('id, room_code')
       .eq('status', 'waiting')
-      .lt('updated_at', new Date(Date.now() - 15 * 60 * 1000).toISOString());
+      .or(`last_activity.lt.${tenMinutesAgo},last_activity.is.null`); // ✅ ИСПОЛЬЗУЕМ last_activity
     
     if (oldRooms && oldRooms.length > 0) {
       const { error: deleteError } = await supabase

@@ -31,17 +31,31 @@ export async function GET(req: NextRequest) {
       }, { status: 500 });
     }
 
-    // 2. Реально активные игроки (последние 3 минуты) - московское время
+    // 2. ✅ ИСПРАВЛЕНО: Реально активные игроки - считаем ВСЕХ онлайн правильно
     const moscowNow = new Date();
+    const fiveMinutesAgo = new Date(moscowNow.getTime() - 5 * 60 * 1000).toISOString();
     const threeMinutesAgo = new Date(moscowNow.getTime() - 3 * 60 * 1000).toISOString();
-    const { data: reallyActive, error: activeError } = await supabase
+    
+    // ✅ ПОЛУЧАЕМ ВСЕХ ПОЛЬЗОВАТЕЛЕЙ С ПОЛЯМИ ДЛЯ ПОДСЧЕТА ОНЛАЙН
+    const { data: allUsers, error: activeError } = await supabase
       .from('_pidr_users')
-      .select('id, username, last_seen')
-      .gte('last_seen', threeMinutesAgo);
+      .select('id, username, last_seen, status, online_status');
 
     if (activeError) {
-      console.error('❌ Ошибка получения активных игроков:', activeError);
+      console.error('❌ Ошибка получения пользователей:', activeError);
     }
+
+    // ✅ ФИЛЬТРУЕМ: Считаем всех онлайн игроков (статус 'online' ИЛИ активность < 5 минут)
+    const onlinePlayers = (allUsers || []).filter((user: any) => {
+      const status = user.online_status || user.status || 'offline';
+      const lastSeen = user.last_seen ? new Date(user.last_seen) : null;
+      const isRecentlyActive = lastSeen && lastSeen >= new Date(fiveMinutesAgo);
+      
+      // ✅ ИГРОК ОНЛАЙН ЕСЛИ: статус = 'online' ИЛИ был активен за последние 5 минут
+      return status === 'online' || isRecentlyActive;
+    });
+    
+    console.log(`📊 [ONLINE STATS] Всего пользователей: ${allUsers?.length || 0}, онлайн: ${onlinePlayers.length}`);
 
     // 3. Игроки онлайн за последние 30 минут - московское время
     const thirtyMinutesAgo = new Date(moscowNow.getTime() - 30 * 60 * 1000).toISOString();
@@ -65,6 +79,7 @@ export async function GET(req: NextRequest) {
     }
 
     // ✅ ИСПРАВЛЕНО: Обновляем статус на offline для неактивных (ОБА поля!)
+    // Обновляем только тех, кто был онлайн, но неактивен более 5 минут
     const { error: updateStatusError } = await supabase
       .from('_pidr_users')
       .update({ 
@@ -72,16 +87,23 @@ export async function GET(req: NextRequest) {
         online_status: 'offline'
       })
       .or('status.eq.online,online_status.eq.online')
-      .lt('last_seen', threeMinutesAgo);
+      .lt('last_seen', fiveMinutesAgo); // ✅ УВЕЛИЧИЛИ ДО 5 МИНУТ
     
     if (updateStatusError) {
       console.error('❌ Ошибка обновления статусов:', updateStatusError);
+    } else {
+      console.log(`✅ [ONLINE STATS] Обновлен статус неактивных игроков на offline`);
     }
     
+    // ✅ ИСПРАВЛЕНО: Считаем онлайн игроков правильно
+    const onlineCount = onlinePlayers.length; // Реальное количество онлайн
+    const offlineCount = (statusStats?.offline || 0);
+    const totalUsers = onlineCount + offlineCount + (statusStats?.in_room || 0) + (statusStats?.playing || 0);
+    
     const stats = {
-      total: Object.values(statusStats || {}).reduce((a: any, b: any) => a + b, 0),
+      total: totalUsers || Object.values(statusStats || {}).reduce((a: any, b: any) => a + b, 0),
       byStatus: statusStats || {},
-      reallyActive: reallyActive?.length || 0, // Последние 3 минуты
+      reallyActive: onlineCount, // ✅ ИСПРАВЛЕНО: Реальное количество онлайн игроков
       online30min: online30min?.length || 0,   // Последние 30 минут
       inRooms: inRooms?.length || 0,
       moscowTime: new Date().toLocaleString('ru-RU', { 
@@ -93,27 +115,48 @@ export async function GET(req: NextRequest) {
         minute: '2-digit',
         second: '2-digit'
       }),
-      activeUsers: reallyActive?.map((user: any) => ({
+      activeUsers: onlinePlayers.map((user: any) => ({
         id: user.id,
         username: user.username,
-        lastSeenMoscow: new Date(user.last_seen).toLocaleString('ru-RU', { 
+        lastSeenMoscow: user.last_seen ? new Date(user.last_seen).toLocaleString('ru-RU', { 
           timeZone: 'Europe/Moscow',
           year: 'numeric',
           month: '2-digit', 
           day: '2-digit',
           hour: '2-digit',
           minute: '2-digit'
-        }),
-        minutesAgo: Math.round((moscowNow.getTime() - new Date(user.last_seen).getTime()) / 60000)
-      })) || []
+        }) : 'Недавно',
+        minutesAgo: user.last_seen ? Math.round((moscowNow.getTime() - new Date(user.last_seen).getTime()) / 60000) : 0
+      }))
     };
 
-    console.log('✅ Статистика онлайна:', stats);
+    console.log('✅ Статистика онлайна:', {
+      ...stats,
+      debug: {
+        onlinePlayersCount: onlinePlayers.length,
+        allUsersCount: allUsers?.length || 0,
+        statusBreakdown: {
+          online: onlinePlayers.filter((u: any) => (u.online_status || u.status) === 'online').length,
+          recentlyActive: onlinePlayers.filter((u: any) => {
+            const status = u.online_status || u.status || 'offline';
+            const lastSeen = u.last_seen ? new Date(u.last_seen) : null;
+            return status !== 'online' && lastSeen && lastSeen >= new Date(fiveMinutesAgo);
+          }).length
+        }
+      }
+    });
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       stats
     });
+    
+    // ✅ УСТАНАВЛИВАЕМ ЗАГОЛОВКИ ДЛЯ ОТКЛЮЧЕНИЯ КЭШИРОВАНИЯ
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+    
+    return response;
 
   } catch (error: any) {
     console.error('❌ Ошибка API статистики:', error);

@@ -44,6 +44,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
 
+    // ✅ ОБНОВЛЯЕМ last_activity КОМНАТЫ, ЕСЛИ ПОЛЬЗОВАТЕЛЬ В КОМНАТЕ
+    try {
+      const { data: playerRoom } = await supabase
+        .from('_pidr_room_players')
+        .select('room_id')
+        .eq('user_id', userIdBigInt)
+        .maybeSingle();
+      
+      if (playerRoom?.room_id) {
+        const now = new Date().toISOString();
+        await supabase
+          .from('_pidr_rooms')
+          .update({ 
+            last_activity: now,
+            updated_at: now
+          })
+          .eq('id', playerRoom.room_id);
+        console.log(`✅ [HEARTBEAT] Обновлена активность комнаты ${playerRoom.room_id}`);
+      }
+    } catch (roomError) {
+      console.error('⚠️ [HEARTBEAT] Ошибка обновления активности комнаты:', roomError);
+      // Не критично, продолжаем
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Онлайн статус обновлён',

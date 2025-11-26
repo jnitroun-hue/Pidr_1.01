@@ -661,6 +661,15 @@ async function syncPlayerToDatabase(params: {
   }
   
   console.log(`✅ [SYNC DB] Игрок добавлен в БД:`, data);
+  
+  // ✅ ОБНОВЛЯЕМ last_activity КОМНАТЫ
+  await supabase
+    .from('_pidr_rooms')
+    .update({ 
+      last_activity: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', parseInt(roomId));
 }
 
 /**
