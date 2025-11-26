@@ -15,19 +15,23 @@ export async function POST(
       return NextResponse.json({ success: false, message: auth.error }, { status: 401 });
     }
 
-    const userId = auth.userId as string;
+    const userId = auth.userId as string; // ✅ Это telegram_id
     const roomId = params.roomId;
     const body = await request.json();
     const { isReady } = body;
 
-    console.log(`🔴 Обновляем готовность: userId=${userId}, roomId=${roomId}, isReady=${isReady}`);
+    console.log(`🔴 [READY API] Обновляем готовность: userId=${userId}, roomId=${roomId}, isReady=${isReady}`);
+    console.log(`🔍 [READY API] userId type:`, typeof userId, 'roomId type:', typeof roomId);
 
-    // ОБНОВЛЯЕМ ГОТОВНОСТЬ ИГРОКА
-    const { error } = await supabase
+    // ✅ ОБНОВЛЯЕМ ГОТОВНОСТЬ ИГРОКА (user_id это INT8, room_id это INT4)
+    const { error, data } = await supabase
       .from('_pidr_room_players')
       .update({ is_ready: isReady })
-      .eq('room_id', roomId)
-      .eq('user_id', userId);
+      .eq('room_id', parseInt(roomId))
+      .eq('user_id', parseInt(userId))
+      .select();
+    
+    console.log(`📊 [READY API] Результат обновления:`, data, error);
 
     if (error) {
       console.error('❌ Ошибка обновления готовности:', error);

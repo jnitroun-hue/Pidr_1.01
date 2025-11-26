@@ -138,13 +138,26 @@ export default function MultiplayerLobby({
       if (data.success && data.players) {
         console.log('📋 [MultiplayerLobby] Игроки загружены:', data.players);
         console.log('📋 [MultiplayerLobby] max_players:', data.maxPlayers);
+        console.log('👤 [MultiplayerLobby] user?.id из Telegram:', user?.id, typeof user?.id);
         
         // ✅ ОБНОВЛЯЕМ isHost ИЗ БД!
-        // ✅ ИСПРАВЛЕНО: Нормализуем сравнение - приводим оба к строке
-        const myPlayer = data.players.find((p: LobbyPlayer) => String(p.user_id) === String(user?.id || ''));
+        // ✅ КРИТИЧНО: Сравниваем telegram_id с telegram_id!
+        const currentUserId = String(user?.id || '');
+        console.log('🔍 [MultiplayerLobby] Ищем игрока с ID:', currentUserId);
+        
+        const myPlayer = data.players.find((p: LobbyPlayer) => {
+          const playerId = String(p.user_id);
+          console.log(`   Сравниваем: "${playerId}" === "${currentUserId}": ${playerId === currentUserId}, is_host:`, p.is_host);
+          return playerId === currentUserId;
+        });
+        
+        console.log('👤 [MultiplayerLobby] Найден мой игрок:', myPlayer);
+        
         if (myPlayer && myPlayer.is_host !== undefined) {
           console.log('👑 [MultiplayerLobby] Обновляем isHost:', myPlayer.is_host);
           setIsHost(myPlayer.is_host);
+        } else {
+          console.warn('⚠️ [MultiplayerLobby] НЕ НАШЛИ СЕБЯ В СПИСКЕ ИГРОКОВ! user_id:', currentUserId);
         }
         
         setLobbyState(prev => ({

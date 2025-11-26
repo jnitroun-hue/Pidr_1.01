@@ -161,10 +161,11 @@ function getSupabaseClientSync() {
         }),
         channel: () => ({
           on: function() { return this; },
-          subscribe: () => {},
+          subscribe: () => ({ unsubscribe: () => {} }), // ✅ Возвращаем объект с unsubscribe!
           send: () => {},
           unsubscribe: () => {}
         }),
+        removeChannel: () => Promise.resolve({ status: 'ok' }), // ✅ Добавлен removeChannel!
         rpc: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }),
         auth: {
           getUser: () => Promise.resolve({ data: { user: null }, error: { message: 'Supabase not configured' } }),
