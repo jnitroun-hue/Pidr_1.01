@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { supabase } from '@/lib/supabase';
 
 /**
  * 🎮 Telegram Bot Webhook Handler
@@ -134,29 +135,74 @@ export async function POST(req: NextRequest) {
     if (text && text.startsWith('/start')) {
       const startParam = text.split(' ')[1]; // Параметр после /start
       
-      let responseText = `🎮 <b>Добро пожаловать в P.I.D.R.!</b>\n\n`;
-      responseText += `Это увлекательная карточная игра для Telegram WebApp.\n\n`;
-      responseText += `🎯 <b>Что вас ждет:</b>\n`;
-      responseText += `• Динамичная карточная игра с ботами и друзьями\n`;
-      responseText += `• Система рейтинга и достижений\n`;
-      responseText += `• Уникальные NFT карты для коллекции\n`;
-      responseText += `• Мультиплеер на 4-7 игроков\n\n`;
-      responseText += `🚀 <b>Начните играть прямо сейчас!</b>\n`;
-      responseText += `Нажмите кнопку "🎮 Играть" чтобы открыть игру.`;
-
+      // ✅ ПОЛУЧАЕМ СТАТИСТИКУ ДЛЯ ПРОМО-СООБЩЕНИЯ
+      let recentWins = '';
+      try {
+        const { data: recentGames } = await supabase
+          .from('_pidr_users')
+          .select('username, wins, games_played')
+          .gt('wins', 0)
+          .order('wins', { ascending: false })
+          .limit(3);
+        
+        if (recentGames && recentGames.length > 0) {
+          recentWins = `\n🏆 <b>Топ игроков:</b>\n`;
+          recentGames.forEach((user, index) => {
+            const winRate = user.games_played > 0 ? Math.round((user.wins / user.games_played) * 100) : 0;
+            recentWins += `${index + 1}. ${user.username || 'Игрок'} - ${user.wins} побед (${winRate}%)\n`;
+          });
+        }
+      } catch (error) {
+        console.error('❌ Ошибка получения статистики:', error);
+      }
+      
+      // ✅ КРАСИВОЕ ПРОМО-СООБЩЕНИЕ КАК В PRAGMATIC PLAY
+      let promoText = `🎴 <b>Играй в P.I.D.R. прямо в Telegram!</b>\n\n`;
+      promoText += `От создателей увлекательной карточной игры – официальное мини-приложение!\n\n`;
+      
+      // ✅ ОСНОВНОЕ СООБЩЕНИЕ С ПРОМО-ИНФОРМАЦИЕЙ
+      let mainMessage = `<b>🎯 Что может этот бот?</b>\n\n`;
+      mainMessage += `🎮 <b>Динамичная карточная игра</b>\n`;
+      mainMessage += `• Играй с ботами или друзьями\n`;
+      mainMessage += `• Мультиплеер на 4-7 игроков\n`;
+      mainMessage += `• Реалистичная механика игры\n\n`;
+      
+      mainMessage += `🏆 <b>Система достижений</b>\n`;
+      mainMessage += `• Рейтинг и ранги\n`;
+      mainMessage += `• Статистика побед\n`;
+      mainMessage += `• Уникальные награды\n\n`;
+      
+      mainMessage += `🎴 <b>NFT коллекция</b>\n`;
+      mainMessage += `• Создавай уникальные карты\n`;
+      mainMessage += `• Торгуй на маркетплейсе\n`;
+      mainMessage += `• Собирай редкие NFT\n\n`;
+      
+      mainMessage += `💰 <b>Игровая валюта</b>\n`;
+      mainMessage += `• Зарабатывай монеты\n`;
+      mainMessage += `• Пополняй баланс\n`;
+      mainMessage += `• Используй в игре\n\n`;
+      
+      // ✅ ДОБАВЛЯЕМ СТАТИСТИКУ ПОБЕД
+      if (recentWins) {
+        mainMessage += recentWins + '\n';
+      }
+      
       // Если есть параметр (invite_ или join_), добавляем информацию
       if (startParam) {
         if (startParam.startsWith('invite_')) {
           const referrerId = startParam.replace('invite_', '');
-          responseText += `\n\n🎁 <b>Вы были приглашены другом!</b>\nВы получите бонус при регистрации.`;
+          mainMessage += `🎁 <b>Вы были приглашены другом!</b>\nВы получите бонус при регистрации.\n\n`;
         } else if (startParam.startsWith('join_')) {
           const parts = startParam.replace('join_', '').split('_');
           if (parts.length >= 2) {
             const roomCode = parts.slice(1).join('_');
-            responseText += `\n\n🎮 <b>Приглашение в игру!</b>\nКод комнаты: <code>${roomCode}</code>\n\nНажмите кнопку "🎮 Играть" чтобы присоединиться!`;
+            mainMessage += `🎮 <b>Приглашение в игру!</b>\nКод комнаты: <code>${roomCode}</code>\n\n`;
           }
         }
       }
+      
+      mainMessage += `🚀 <b>Испытай удачу в P.I.D.R.!</b>\n`;
+      mainMessage += `Играй и выигрывай в лучшей карточной игре Telegram!`;
 
       // Отправляем ответ через Telegram Bot API
       const botToken = process.env.TELEGRAM_BOT_TOKEN;
@@ -170,12 +216,29 @@ export async function POST(req: NextRequest) {
           webAppUrl += `?start_param=${encodeURIComponent(startParam)}`;
         }
         
+        // ✅ ОТПРАВЛЯЕМ ПЕРВОЕ ПРОМО-СООБЩЕНИЕ
+        const promoResponse = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text: promoText,
+            parse_mode: 'HTML'
+          })
+        });
+        
+        const promoData = await promoResponse.json();
+        if (!promoData.ok) {
+          console.error('❌ [Telegram Webhook] Ошибка отправки промо:', promoData);
+        }
+        
+        // ✅ ОТПРАВЛЯЕМ ОСНОВНОЕ СООБЩЕНИЕ С КНОПКАМИ
         const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             chat_id: chatId,
-            text: responseText,
+            text: mainMessage,
             parse_mode: 'HTML',
             reply_markup: {
               inline_keyboard: [
@@ -189,6 +252,16 @@ export async function POST(req: NextRequest) {
                   {
                     text: '📖 Изучить правила',
                     callback_data: 'show_rules'
+                  },
+                  {
+                    text: '💬 Поддержка',
+                    url: 'https://t.me/your_support_bot' // ✅ ЗАМЕНИТЕ НА ВАШ БОТ ПОДДЕРЖКИ
+                  }
+                ],
+                [
+                  {
+                    text: '📢 Новости',
+                    url: 'https://t.me/your_news_channel' // ✅ ЗАМЕНИТЕ НА ВАШ КАНАЛ С НОВОСТЯМИ
                   }
                 ]
               ]
@@ -200,7 +273,7 @@ export async function POST(req: NextRequest) {
         if (!responseData.ok) {
           console.error('❌ [Telegram Webhook] Ошибка отправки сообщения:', responseData);
         } else {
-          console.log('✅ [Telegram Webhook] Сообщение отправлено успешно');
+          console.log('✅ [Telegram Webhook] Промо-сообщения отправлены успешно');
         }
       } else {
         console.warn('⚠️ [Telegram Webhook] TELEGRAM_BOT_TOKEN не установлен');
