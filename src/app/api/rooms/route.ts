@@ -90,25 +90,115 @@ export async function GET(req: NextRequest) {
     // ✅ ФИЛЬТРУЕМ АКТИВНЫЕ КОМНАТЫ НА УРОВНЕ ПРИЛОЖЕНИЯ (надежнее)
     const activeRooms = (rooms || []).filter((room: any) => {
       const activityTime = room.last_activity || room.updated_at || room.created_at;
-      if (!activityTime) return false;
+      if (!activityTime) {
+        console.log(`⚠️ [GET ROOMS] Комната ${room.id} без времени активности, пропускаем`);
+        return false;
+      }
       const activityDate = new Date(activityTime);
       const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-      return activityDate >= tenMinutesAgo;
+      const isActive = activityDate >= tenMinutesAgo;
+      
+      if (!isActive) {
+        console.log(`⏰ [GET ROOMS] Комната ${room.id} неактивна (последняя активность: ${activityTime})`);
+      }
+      
+      return isActive;
     });
     
-    console.log(`📊 Загружено комнат: ${rooms?.length || 0}, активных: ${activeRooms.length}`);
+    console.log(`📊 [GET ROOMS] Загружено комнат из БД: ${rooms?.length || 0}, активных: ${activeRooms.length}`);
+    
+    // ✅ ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА: Убеждаемся что комната не пустая
+    const roomsWithPlayers = activeRooms.filter((room: any) => {
+      // Комната считается активной если есть хотя бы один игрок или она только что создана
+      const hasPlayers = room.current_players > 0;
+      const isRecentlyCreated = room.created_at && new Date(room.created_at) >= new Date(Date.now() - 2 * 60 * 1000); // Создана менее 2 минут назад
+      
+      if (!hasPlayers && !isRecentlyCreated) {
+        console.log(`👻 [GET ROOMS] Комната ${room.id} пустая и старая, пропускаем`);
+        return false;
+      }
+      
+      return true;
+    });
+    
+    console.log(`👥 [GET ROOMS] Комнат с игроками: ${roomsWithPlayers.length}`);
     
     // Обогащаем данные о хостах
-    const roomsWithHosts = await Promise.all(activeRooms.map(async (room: any) => {
-      const { data: hostUser } = await supabase
-        .from('_pidr_users')
-        .select('username, avatar_url')
-        .eq('id', room.host_id)
-        .single();
+    const roomsWithHosts = await Promise.all(roomsWithPlayers.map(async (room: any) => {
+      // ✅ СПОСОБ 1: Получаем хоста через host_id (UUID)
+      let hostUser: any = null;
+      
+      if (room.host_id) {
+        const { data: hostFromId } = await supabase
+          .from('_pidr_users')
+          .select('username, avatar_url')
+          .eq('id', room.host_id)
+          .maybeSingle();
+        
+        if (hostFromId) {
+          hostUser = hostFromId;
+        }
+      }
+      
+      // ✅ СПОСОБ 2: Fallback - получаем хоста через _pidr_room_players (is_host = true)
+      if (!hostUser) {
+        console.log(`⚠️ [GET ROOMS] Хост не найден через host_id для комнаты ${room.id}, пробуем через _pidr_room_players`);
+        const { data: hostPlayer } = await supabase
+          .from('_pidr_room_players')
+          .select('user_id, username')
+          .eq('room_id', room.id)
+          .eq('is_host', true)
+          .maybeSingle();
+        
+        if (hostPlayer) {
+          // Получаем данные пользователя по user_id (telegram_id)
+          const { data: userData } = await supabase
+            .from('_pidr_users')
+            .select('username, avatar_url')
+            .eq('telegram_id', hostPlayer.user_id)
+            .maybeSingle();
+          
+          if (userData) {
+            hostUser = userData;
+            // ✅ ОБНОВЛЯЕМ host_id в комнате для будущих запросов
+            await supabase
+              .from('_pidr_rooms')
+              .update({ host_id: userData.id })
+              .eq('id', room.id);
+            console.log(`✅ [GET ROOMS] Хост найден и обновлен для комнаты ${room.id}`);
+          }
+        }
+      }
+      
+      // ✅ СПОСОБ 3: Последний fallback - первый игрок в комнате
+      if (!hostUser) {
+        console.log(`⚠️ [GET ROOMS] Хост не найден, используем первого игрока для комнаты ${room.id}`);
+        const { data: firstPlayer } = await supabase
+          .from('_pidr_room_players')
+          .select('user_id, username')
+          .eq('room_id', room.id)
+          .order('joined_at', { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        
+        if (firstPlayer) {
+          const { data: userData } = await supabase
+            .from('_pidr_users')
+            .select('username, avatar_url')
+            .eq('telegram_id', firstPlayer.user_id)
+            .maybeSingle();
+          
+          if (userData) {
+            hostUser = userData;
+          }
+        }
+      }
       
       // Получаем реальное количество игроков из Redis
       const roomDetails = await getRoomDetails(room.id);
       const actualPlayerCount = roomDetails?.playerCount || room.current_players;
+      
+      console.log(`📋 [GET ROOMS] Комната ${room.id}: хост=${hostUser?.username || 'Неизвестно'}, игроков=${actualPlayerCount}`);
       
       return {
         id: room.id,

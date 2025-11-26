@@ -359,13 +359,15 @@ export async function POST(req: NextRequest) {
 // GET для проверки webhook
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const action = searchParams.get('action');
+    // ✅ ИСПОЛЬЗУЕМ req.nextUrl вместо new URL для правильного парсинга
+    const action = req.nextUrl.searchParams.get('action');
+    const url = req.nextUrl.toString();
     
     console.log('🔍 [Telegram Webhook GET] Получен запрос:', {
-      url: req.url,
+      url,
       action,
-      allParams: Object.fromEntries(searchParams.entries())
+      searchParams: req.nextUrl.searchParams.toString(),
+      allParams: Object.fromEntries(req.nextUrl.searchParams.entries())
     });
     
     // ✅ ПРОВЕРКА СТАТУСА WEBHOOK
@@ -463,10 +465,28 @@ export async function GET(req: NextRequest) {
     
     // ✅ ДЕФОЛТНЫЙ ОТВЕТ
     console.log('ℹ️ [Telegram Webhook GET] Дефолтный ответ (action не указан или неизвестен)');
+    console.log('🔍 [Telegram Webhook GET] Отладочная информация:', {
+      action,
+      actionType: typeof action,
+      actionIsNull: action === null,
+      actionIsUndefined: action === undefined,
+      actionIsEmpty: action === '',
+      url: req.url,
+      nextUrl: req.nextUrl.toString(),
+      searchParams: req.nextUrl.searchParams.toString()
+    });
+    
     return NextResponse.json({ 
       message: 'Telegram Bot Webhook is active',
       timestamp: new Date().toISOString(),
       action: action || 'none',
+      debug: {
+        action,
+        actionType: typeof action,
+        url: req.url,
+        nextUrl: req.nextUrl.toString(),
+        searchParams: req.nextUrl.searchParams.toString()
+      },
       endpoints: {
         check: '/api/telegram/webhook?action=check',
         setup: '/api/telegram/webhook?action=setup'
