@@ -16,6 +16,14 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     
+    // ✅ ЛОГИРОВАНИЕ ВСЕХ ВХОДЯЩИХ ЗАПРОСОВ
+    console.log('📥 [Telegram Webhook] Получен запрос:', {
+      hasMessage: !!body.message,
+      hasCallbackQuery: !!body.callback_query,
+      updateId: body.update_id,
+      keys: Object.keys(body)
+    });
+    
     // ✅ ОПЦИОНАЛЬНАЯ ПРОВЕРКА SECRET TOKEN (для безопасности)
     const secretToken = req.headers.get('x-telegram-bot-api-secret-token');
     if (process.env.WEBHOOK_SECRET_TOKEN && secretToken !== process.env.WEBHOOK_SECRET_TOKEN) {
@@ -116,6 +124,7 @@ export async function POST(req: NextRequest) {
     
     // Проверяем, что это сообщение от Telegram
     if (!body.message) {
+      console.log('📨 [Telegram Webhook] Обновление без сообщения, игнорируем:', Object.keys(body));
       return NextResponse.json({ ok: true }); // Игнорируем обновления без сообщений
     }
 
@@ -133,17 +142,26 @@ export async function POST(req: NextRequest) {
 
     // Обрабатываем команду /start
     if (text && text.startsWith('/start')) {
+      console.log('✅ [Telegram Webhook] Обрабатываем команду /start');
       const startParam = text.split(' ')[1]; // Параметр после /start
+      console.log('📋 [Telegram Webhook] Параметр start:', startParam);
       
       // ✅ ПОЛУЧАЕМ СТАТИСТИКУ ДЛЯ ПРОМО-СООБЩЕНИЯ
       let recentWins = '';
       try {
-        const { data: recentGames } = await supabase
+        console.log('📊 [Telegram Webhook] Загружаем статистику игроков...');
+        const { data: recentGames, error: statsError } = await supabase
           .from('_pidr_users')
           .select('username, wins, games_played')
           .gt('wins', 0)
           .order('wins', { ascending: false })
           .limit(3);
+        
+        if (statsError) {
+          console.error('❌ [Telegram Webhook] Ошибка загрузки статистики:', statsError);
+        } else {
+          console.log('✅ [Telegram Webhook] Статистика загружена:', recentGames?.length || 0, 'игроков');
+        }
         
         if (recentGames && recentGames.length > 0) {
           recentWins = `\n🏆 <b>Топ игроков:</b>\n`;
@@ -153,7 +171,7 @@ export async function POST(req: NextRequest) {
           });
         }
       } catch (error) {
-        console.error('❌ Ошибка получения статистики:', error);
+        console.error('❌ [Telegram Webhook] Ошибка получения статистики:', error);
       }
       
       // ✅ КРАСИВОЕ ПРОМО-СООБЩЕНИЕ КАК В PRAGMATIC PLAY
@@ -206,17 +224,22 @@ export async function POST(req: NextRequest) {
 
       // Отправляем ответ через Telegram Bot API
       const botToken = process.env.TELEGRAM_BOT_TOKEN;
+      console.log('🔑 [Telegram Webhook] Bot token:', botToken ? `${botToken.substring(0, 10)}...` : 'НЕ УСТАНОВЛЕН');
+      
       if (botToken) {
         // ✅ Поддержка обеих переменных: NEXT_PUBLIC_APP_URL и APP_URL
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || 'https://your-app-url.vercel.app';
+        console.log('🌐 [Telegram Webhook] App URL:', appUrl);
         
         // Формируем URL с параметром start_param если есть
         let webAppUrl = appUrl;
         if (startParam) {
           webAppUrl += `?start_param=${encodeURIComponent(startParam)}`;
         }
+        console.log('🔗 [Telegram Webhook] Web App URL:', webAppUrl);
         
         // ✅ ОТПРАВЛЯЕМ ПЕРВОЕ ПРОМО-СООБЩЕНИЕ
+        console.log('📤 [Telegram Webhook] Отправляем первое промо-сообщение...');
         const promoResponse = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -228,11 +251,15 @@ export async function POST(req: NextRequest) {
         });
         
         const promoData = await promoResponse.json();
+        console.log('📥 [Telegram Webhook] Ответ на промо-сообщение:', promoData);
         if (!promoData.ok) {
           console.error('❌ [Telegram Webhook] Ошибка отправки промо:', promoData);
+        } else {
+          console.log('✅ [Telegram Webhook] Первое промо-сообщение отправлено успешно');
         }
         
         // ✅ ОТПРАВЛЯЕМ ОСНОВНОЕ СООБЩЕНИЕ С КНОПКАМИ
+        console.log('📤 [Telegram Webhook] Отправляем основное сообщение с кнопками...');
         const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -270,6 +297,7 @@ export async function POST(req: NextRequest) {
         });
         
         const responseData = await response.json();
+        console.log('📥 [Telegram Webhook] Ответ на основное сообщение:', responseData);
         if (!responseData.ok) {
           console.error('❌ [Telegram Webhook] Ошибка отправки сообщения:', responseData);
         } else {
@@ -277,6 +305,7 @@ export async function POST(req: NextRequest) {
         }
       } else {
         console.warn('⚠️ [Telegram Webhook] TELEGRAM_BOT_TOKEN не установлен');
+        console.warn('💡 Установите переменную окружения TELEGRAM_BOT_TOKEN в Vercel');
       }
     }
 
