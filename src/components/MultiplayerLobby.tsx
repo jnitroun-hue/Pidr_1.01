@@ -344,44 +344,85 @@ export default function MultiplayerLobby({
 
   return (
     <div className="multiplayer-lobby">
-      {/* Заголовок */}
-      <div className="lobby-header">
-        <div className="lobby-title">
-          <Users className="lobby-icon" />
-          <span>Мультиплеер Лобби</span>
-          {isConnected ? (
-            <Wifi className="connection-icon connected" />
-          ) : (
-            <WifiOff className="connection-icon disconnected" />
-          )}
+      {/* ✅ ПРОФЕССИОНАЛЬНЫЙ ЗАГОЛОВОК С ОПИСАНИЕМ */}
+      <motion.div 
+        className="lobby-header"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="lobby-title-section">
+          <div className="lobby-title">
+            <div className="title-icon-wrapper">
+              <Users className="lobby-icon" />
+            </div>
+            <div className="title-text">
+              <h1>Мультиплеер Лобби</h1>
+              <p className="lobby-description">
+                Соберите команду и начните эпическую карточную битву!
+              </p>
+            </div>
+            <div className="connection-status-badge">
+              {isConnected ? (
+                <Wifi className="connection-icon connected" />
+              ) : (
+                <WifiOff className="connection-icon disconnected" />
+              )}
+              <span className="connection-text">
+                {isConnected ? 'Подключено' : 'Отключено'}
+              </span>
+            </div>
+          </div>
         </div>
         
-        {/* Код комнаты */}
+        {/* ✅ КРАСИВАЯ КАРТОЧКА С КОДОМ КОМНАТЫ */}
         <motion.div 
-          className="room-code-container"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+          className="room-code-card"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+          whileHover={{ scale: 1.02, y: -2 }}
+          whileTap={{ scale: 0.98 }}
           onClick={copyRoomCode}
         >
-          <div className="room-code-label">Код комнаты:</div>
-          <div className="room-code">
-            {roomCode}
+          <div className="room-code-header">
+            <span className="room-code-label">🎮 Код комнаты</span>
             {codeCopied ? (
               <Check className="copy-icon success" />
             ) : (
               <Copy className="copy-icon" />
             )}
           </div>
+          <div className="room-code-value">
+            {roomCode}
+          </div>
+          <div className="room-code-hint">
+            {codeCopied ? '✅ Скопировано!' : 'Нажмите чтобы скопировать'}
+          </div>
         </motion.div>
-      </div>
+      </motion.div>
 
-      {/* Список игроков */}
-      <div className="players-section">
+      {/* ✅ ПРОФЕССИОНАЛЬНАЯ СЕКЦИЯ ИГРОКОВ */}
+      <motion.div 
+        className="players-section"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+      >
         <div className="players-header">
-          <span>Игроки ({lobbyState.players.length}/{lobbyState.maxPlayers})</span>
-          <span className="ready-count">
-            Готовы: {readyPlayersCount}/{lobbyState.players.length}
-          </span>
+          <div className="players-header-left">
+            <Users className="players-header-icon" />
+            <div>
+              <h2 className="players-title">Игроки</h2>
+              <p className="players-subtitle">
+                {lobbyState.players.length} из {lobbyState.maxPlayers} игроков
+              </p>
+            </div>
+          </div>
+          <div className="ready-count-badge">
+            <Check className="ready-icon" />
+            <span>Готовы: {readyPlayersCount}/{lobbyState.players.length}</span>
+          </div>
         </div>
         
         <div className="players-list">
@@ -449,7 +490,7 @@ export default function MultiplayerLobby({
             </div>
           ))}
         </div>
-      </div>
+      </motion.div>
 
       {/* ✅ УБРАЛИ НАСТРОЙКИ - ОНИ УЖЕ ВЫБРАНЫ ПРИ СОЗДАНИИ КОМНАТЫ! */}
 
@@ -634,66 +675,248 @@ export default function MultiplayerLobby({
 
       <style jsx>{`
         .multiplayer-lobby {
-          padding: 20px;
-          max-width: 800px;
+          min-height: 100vh;
+          background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+          padding: 24px;
+          max-width: 900px;
           margin: 0 auto;
+          position: relative;
+          overflow-x: hidden;
+        }
+
+        .multiplayer-lobby::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: 
+            radial-gradient(circle at 20% 50%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 80% 50%, rgba(16, 185, 129, 0.1) 0%, transparent 50%);
+          pointer-events: none;
+          z-index: 0;
+        }
+
+        .multiplayer-lobby > * {
+          position: relative;
+          z-index: 1;
         }
 
         .lobby-header {
-          margin-bottom: 30px;
+          margin-bottom: 32px;
+        }
+
+        .lobby-title-section {
+          margin-bottom: 24px;
         }
 
         .lobby-title {
           display: flex;
+          align-items: flex-start;
+          gap: 16px;
+          padding: 24px;
+          background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(16, 185, 129, 0.15) 100%);
+          backdrop-filter: blur(10px);
+          border-radius: 20px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .title-icon-wrapper {
+          width: 56px;
+          height: 56px;
+          background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+          border-radius: 16px;
+          display: flex;
           align-items: center;
-          gap: 10px;
-          font-size: 24px;
-          font-weight: bold;
-          margin-bottom: 15px;
+          justify-content: center;
+          box-shadow: 0 4px 16px rgba(139, 92, 246, 0.4);
+        }
+
+        .lobby-icon {
+          width: 28px;
+          height: 28px;
+          color: white;
+        }
+
+        .title-text {
+          flex: 1;
+        }
+
+        .title-text h1 {
+          font-size: 28px;
+          font-weight: 800;
+          background: linear-gradient(135deg, #ffffff 0%, #e0e7ff 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          margin: 0 0 8px 0;
+          text-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+        }
+
+        .lobby-description {
+          font-size: 14px;
+          color: rgba(255, 255, 255, 0.7);
+          margin: 0;
+          line-height: 1.5;
+        }
+
+        .connection-status-badge {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 6px;
+          padding: 12px;
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 12px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .connection-icon {
-          width: 20px;
-          height: 20px;
+          width: 24px;
+          height: 24px;
         }
 
         .connection-icon.connected {
           color: #10b981;
+          filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.5));
         }
 
         .connection-icon.disconnected {
           color: #ef4444;
+          filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.5));
         }
 
-        .room-code-container {
+        .connection-text {
+          font-size: 11px;
+          color: rgba(255, 255, 255, 0.6);
+          font-weight: 600;
+        }
+
+        .room-code-card {
           cursor: pointer;
-          padding: 15px;
-          background: rgba(255, 255, 255, 0.1);
-          border-radius: 12px;
+          padding: 24px;
+          background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.2) 100%);
+          backdrop-filter: blur(10px);
+          border-radius: 20px;
+          border: 2px solid rgba(16, 185, 129, 0.3);
+          box-shadow: 
+            0 8px 32px rgba(16, 185, 129, 0.2),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1);
+          transition: all 0.3s ease;
+        }
+
+        .room-code-card:hover {
+          border-color: rgba(16, 185, 129, 0.5);
+          box-shadow: 
+            0 12px 40px rgba(16, 185, 129, 0.3),
+            inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .room-code-header {
           display: flex;
           align-items: center;
           justify-content: space-between;
+          margin-bottom: 12px;
         }
 
-        .room-code {
-          font-size: 24px;
-          font-weight: bold;
+        .room-code-label {
+          font-size: 14px;
+          font-weight: 600;
+          color: rgba(255, 255, 255, 0.8);
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .copy-icon {
+          width: 20px;
+          height: 20px;
+          color: rgba(255, 255, 255, 0.6);
+          transition: all 0.2s;
+        }
+
+        .copy-icon.success {
           color: #10b981;
-          display: flex;
-          align-items: center;
-          gap: 10px;
+        }
+
+        .room-code-value {
+          font-size: 36px;
+          font-weight: 900;
+          font-family: 'Courier New', monospace;
+          letter-spacing: 4px;
+          background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          text-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+          margin: 8px 0;
+        }
+
+        .room-code-hint {
+          font-size: 12px;
+          color: rgba(255, 255, 255, 0.5);
+          margin-top: 8px;
         }
 
         .players-section {
-          margin-bottom: 30px;
+          margin-bottom: 32px;
         }
 
         .players-header {
           display: flex;
           justify-content: space-between;
-          margin-bottom: 15px;
-          font-size: 18px;
-          font-weight: bold;
+          align-items: center;
+          margin-bottom: 20px;
+          padding: 20px;
+          background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%);
+          backdrop-filter: blur(10px);
+          border-radius: 16px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .players-header-left {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+        }
+
+        .players-header-icon {
+          width: 32px;
+          height: 32px;
+          color: #8b5cf6;
+        }
+
+        .players-title {
+          font-size: 20px;
+          font-weight: 700;
+          color: white;
+          margin: 0 0 4px 0;
+        }
+
+        .players-subtitle {
+          font-size: 13px;
+          color: rgba(255, 255, 255, 0.6);
+          margin: 0;
+        }
+
+        .ready-count-badge {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px 16px;
+          background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.2) 100%);
+          border-radius: 12px;
+          border: 1px solid rgba(16, 185, 129, 0.3);
+          color: #10b981;
+          font-weight: 600;
+          font-size: 14px;
+        }
+
+        .ready-icon {
+          width: 18px;
+          height: 18px;
+          color: #10b981;
         }
 
         .players-list {
@@ -703,25 +926,39 @@ export default function MultiplayerLobby({
         }
 
         .player-item {
-          padding: 15px;
-          background: rgba(255, 255, 255, 0.05);
-          border-radius: 12px;
+          padding: 18px 20px;
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%);
+          backdrop-filter: blur(10px);
+          border-radius: 16px;
           display: flex;
           justify-content: space-between;
           align-items: center;
           border: 2px solid transparent;
+          transition: all 0.3s ease;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .player-item:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
         }
 
         .player-item.ready {
-          border-color: #10b981;
+          border-color: rgba(16, 185, 129, 0.4);
+          background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.1) 100%);
+          box-shadow: 0 4px 16px rgba(16, 185, 129, 0.2);
         }
 
         .player-item.not-ready {
-          border-color: #ef4444;
+          border-color: rgba(239, 68, 68, 0.4);
+          background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.1) 100%);
+          box-shadow: 0 4px 16px rgba(239, 68, 68, 0.2);
         }
 
         .player-item.host {
-          background: rgba(251, 191, 36, 0.1);
+          background: linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.15) 100%);
+          border-color: rgba(251, 191, 36, 0.5);
+          box-shadow: 0 4px 16px rgba(251, 191, 36, 0.3);
         }
 
         .player-info {
@@ -731,17 +968,21 @@ export default function MultiplayerLobby({
         }
 
         .player-avatar {
-          width: 48px;
-          height: 48px;
+          width: 52px;
+          height: 52px;
           border-radius: 50%;
           object-fit: cover;
+          border: 2px solid rgba(255, 255, 255, 0.2);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
 
         .player-name {
           display: flex;
           align-items: center;
           gap: 8px;
-          font-weight: bold;
+          font-weight: 700;
+          font-size: 16px;
+          color: white;
         }
 
         .host-crown {
@@ -757,10 +998,15 @@ export default function MultiplayerLobby({
         }
 
         .you-badge {
-          background: #3b82f6;
-          padding: 2px 8px;
-          border-radius: 6px;
-          font-size: 10px;
+          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+          padding: 4px 10px;
+          border-radius: 8px;
+          font-size: 11px;
+          font-weight: 700;
+          color: white;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
         }
 
         .ready-indicator, .waiting-indicator {
@@ -788,7 +1034,13 @@ export default function MultiplayerLobby({
         .lobby-actions {
           display: flex;
           flex-direction: column;
-          gap: 15px;
+          gap: 16px;
+          padding: 24px;
+          background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%);
+          backdrop-filter: blur(10px);
+          border-radius: 20px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         }
 
         .ready-button, .add-bot-button, .start-game-button, .leave-button {
