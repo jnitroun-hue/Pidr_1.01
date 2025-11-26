@@ -95,6 +95,11 @@ export default function TonWalletConnect({ onConnect, onDisconnect }: TonWalletC
         setShowSuccess(true);
         setTimeout(() => setShowSuccess(false), 3000);
         onConnect?.(address);
+        
+        // ✅ ОТПРАВЛЯЕМ СОБЫТИЕ ОБНОВЛЕНИЯ КОШЕЛЬКОВ ДЛЯ СИНХРОНИЗАЦИИ
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('wallet-updated'));
+        }
       } else {
         console.error('Ошибка сохранения кошелька:', result.message);
       }

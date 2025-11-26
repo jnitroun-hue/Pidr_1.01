@@ -81,6 +81,11 @@ export default function ManualWalletInput({ walletType, onWalletAdded, savedWall
         setWalletAddress('');
         setShowInput(false);
         onWalletAdded?.(address, walletType);
+        
+        // ✅ ОТПРАВЛЯЕМ СОБЫТИЕ ОБНОВЛЕНИЯ КОШЕЛЬКОВ ДЛЯ СИНХРОНИЗАЦИИ
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('wallet-updated'));
+        }
       } else {
         setError(result.message || 'Ошибка сохранения кошелька');
       }

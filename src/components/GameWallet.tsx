@@ -1187,16 +1187,65 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
                   </div>
 
                   <div className="address-section">
-                    <label>🔐 Ваш персональный HD адрес для пополнения</label>
-                    <HDAddressDisplay 
-                      crypto={selectedCrypto} 
-                      userId={user?.id || ''} 
-                      generateAddress={generateDepositAddress}
-                      isGenerating={isGeneratingAddress}
-                    />
+                    <label>
+                      {selectedWalletForDeposit 
+                        ? `🔐 Адрес вашего ${selectedWalletForDeposit.wallet_type.toUpperCase()} кошелька для пополнения`
+                        : '🔐 Ваш персональный HD адрес для пополнения'
+                      }
+                    </label>
+                    {selectedWalletForDeposit ? (
+                      <div style={{
+                        padding: '16px',
+                        borderRadius: '8px',
+                        background: 'rgba(30, 41, 59, 0.8)',
+                        border: '2px solid rgba(59, 130, 246, 0.3)',
+                        marginBottom: '12px'
+                      }}>
+                        <div style={{
+                          fontFamily: 'monospace',
+                          fontSize: '13px',
+                          color: '#ffffff',
+                          wordBreak: 'break-all',
+                          marginBottom: '12px'
+                        }}>
+                          {selectedWalletForDeposit.wallet_address}
+                        </div>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(selectedWalletForDeposit.wallet_address);
+                            alert('Адрес скопирован!');
+                          }}
+                          style={{
+                            width: '100%',
+                            padding: '10px',
+                            borderRadius: '6px',
+                            border: 'none',
+                            background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                            color: '#ffffff',
+                            fontSize: '13px',
+                            fontWeight: '700',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          📋 Скопировать адрес
+                        </button>
+                      </div>
+                    ) : (
+                      <HDAddressDisplay 
+                        crypto={selectedCrypto} 
+                        userId={user?.id || ''} 
+                        generateAddress={generateDepositAddress}
+                        isGenerating={isGeneratingAddress}
+                      />
+                    )}
                     <div className="hd-info">
                       <FaKey className="hd-icon" />
-                      <span>Уникальный адрес для {selectedCrypto} - скопируйте и отправьте средства точно в указанной сети!</span>
+                      <span>
+                        {selectedWalletForDeposit 
+                          ? `Отправьте ${selectedCrypto} на адрес вашего подключенного кошелька. После подтверждения транзакции баланс будет пополнен автоматически.`
+                          : `Уникальный адрес для ${selectedCrypto} - скопируйте и отправьте средства точно в указанной сети!`
+                        }
+                      </span>
                     </div>
                     <div className="warning-critical">
                       <strong>⛔ НЕ отправляйте токены из другой сети!</strong><br/>
