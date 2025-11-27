@@ -19,6 +19,21 @@ export async function POST(
 
     console.log(`🎮 [START GAME] Комната ${roomId}, хост: ${userId}`);
 
+    // ✅ ПОЛУЧАЕМ UUID ПОЛЬЗОВАТЕЛЯ ПО TELEGRAM_ID
+    const { data: userData, error: userError } = await supabase
+      .from('_pidr_users')
+      .select('id')
+      .eq('telegram_id', userId)
+      .single();
+    
+    if (userError || !userData) {
+      console.error(`❌ [START GAME] Пользователь не найден:`, userError);
+      return NextResponse.json({ success: false, error: 'Пользователь не найден' }, { status: 404 });
+    }
+    
+    const userUUID = userData.id;
+    console.log(`👤 [START GAME] Пользователь найден: UUID=${userUUID}, telegram_id=${userId}`);
+
     // 1️⃣ ПРОВЕРЯЕМ ЧТО ПОЛЬЗОВАТЕЛЬ - ХОСТ
     const { data: room, error: roomError } = await supabase
       .from('_pidr_rooms')
@@ -31,8 +46,9 @@ export async function POST(
       return NextResponse.json({ success: false, error: 'Комната не найдена' }, { status: 404 });
     }
 
-    if (room.host_id !== userId) {
-      console.error('❌ [START GAME] Не хост:', userId, 'vs', room.host_id);
+    // ✅ ИСПРАВЛЕНО: Сравниваем UUID с UUID
+    if (room.host_id !== userUUID) {
+      console.error('❌ [START GAME] Не хост:', { userUUID, hostId: room.host_id, telegramId: userId });
       return NextResponse.json({ success: false, error: 'Только хост может начать игру' }, { status: 403 });
     }
 
@@ -95,11 +111,13 @@ export async function POST(
     }
 
     // 4️⃣ МЕНЯЕМ СТАТУС КОМНАТЫ НА "PLAYING"
+    const now = new Date().toISOString();
     const { error: updateError } = await supabase
       .from('_pidr_rooms')
       .update({
         status: 'playing',
-        updated_at: new Date().toISOString()
+        last_activity: now, // ✅ ОБНОВЛЯЕМ АКТИВНОСТЬ
+        updated_at: now
       })
       .eq('id', roomId);
 

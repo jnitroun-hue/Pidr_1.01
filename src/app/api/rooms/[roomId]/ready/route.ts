@@ -17,7 +17,28 @@ export async function POST(
 
     const userId = auth.userId as string; // ✅ Это telegram_id
     const roomId = params.roomId;
-    const body = await request.json();
+    
+    // ✅ ИСПРАВЛЕНО: Безопасный парсинг body с обработкой ошибок
+    let body: any = {};
+    try {
+      const bodyText = await request.text();
+      if (bodyText) {
+        body = JSON.parse(bodyText);
+      }
+    } catch (error) {
+      console.error('❌ [READY API] Ошибка парсинга body:', error);
+      // Если body пустой, определяем isReady из текущего состояния
+      const { data: currentPlayer } = await supabase
+        .from('_pidr_room_players')
+        .select('is_ready')
+        .eq('room_id', parseInt(roomId))
+        .eq('user_id', parseInt(userId))
+        .maybeSingle();
+      
+      body.isReady = !currentPlayer?.is_ready; // Переключаем состояние
+      console.log('⚠️ [READY API] Body пустой, переключаем готовность:', body.isReady);
+    }
+    
     const { isReady } = body;
 
     console.log(`🔴 [READY API] Обновляем готовность: userId=${userId}, roomId=${roomId}, isReady=${isReady}`);
@@ -57,10 +78,20 @@ export async function POST(
     }
 
     console.log(`✅ Готовность обновлена. Игроков: ${players?.length || 0}`);
+    
+    // ✅ ОБНОВЛЯЕМ last_activity КОМНАТЫ
+    await supabase
+      .from('_pidr_rooms')
+      .update({ 
+        last_activity: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', parseInt(roomId));
 
     return NextResponse.json({ 
       success: true, 
-      players: players || []
+      players: players || [],
+      isReady // ✅ ВОЗВРАЩАЕМ НОВОЕ СОСТОЯНИЕ
     });
 
   } catch (error) {

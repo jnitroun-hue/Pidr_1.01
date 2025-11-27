@@ -101,11 +101,20 @@ export default function MultiplayerLobby({
       console.log('🔄 [MultiplayerLobby] Автообновление из БД...');
       loadRoomPlayers();
     }, 2000);
+    
+    // ✅ ДОПОЛНИТЕЛЬНОЕ ОБНОВЛЕНИЕ ДЛЯ ХОСТА (каждую секунду)
+    const hostInterval = isHost ? setInterval(() => {
+      console.log('🔄 [MultiplayerLobby] Автообновление для хоста...');
+      loadRoomPlayers();
+    }, 1000) : null;
 
     // Очистка при размонтировании
     return () => {
       console.log('🔌 [MultiplayerLobby] Отключаемся от комнаты');
       clearInterval(interval);
+      if (hostInterval) {
+        clearInterval(hostInterval);
+      }
       roomManager.unsubscribe();
     };
   }, [roomId]);
@@ -209,32 +218,54 @@ export default function MultiplayerLobby({
       return;
     }
     
-    console.log('🔄 [MultiplayerLobby] toggleReady вызван');
+    // ✅ ОПРЕДЕЛЯЕМ ТЕКУЩЕЕ СОСТОЯНИЕ И ПЕРЕКЛЮЧАЕМ
+    const currentReadyState = currentPlayer?.is_ready || false;
+    const newReadyState = !currentReadyState;
+    
+    console.log('🔄 [MultiplayerLobby] toggleReady вызван, текущее состояние:', currentReadyState, 'новое:', newReadyState);
     
     try {
-      // Прямой API вызов без проверок
+      // ✅ ИСПРАВЛЕНО: Отправляем body с isReady!
       const response = await fetch(`/api/rooms/${roomId}/ready`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-telegram-id': user.id.toString()
         },
-        credentials: 'include'
+        credentials: 'include',
+        body: JSON.stringify({
+          isReady: newReadyState
+        })
       });
+      
+      // ✅ ПРОВЕРЯЕМ ОТВЕТ ПЕРЕД ПАРСИНГОМ JSON
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ [MultiplayerLobby] API вернул ошибку:', response.status, errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText || 'Unknown error'}`);
+      }
       
       const data = await response.json();
       
       if (data.success) {
-        console.log('✅ [MultiplayerLobby] Готовность изменена:', data.isReady);
+        console.log('✅ [MultiplayerLobby] Готовность изменена:', newReadyState);
         // Обновляем список игроков
         await loadRoomPlayers();
+        // ✅ ОБНОВЛЯЕМ last_activity КОМНАТЫ
+        await fetch(`/api/user/heartbeat`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-telegram-id': user.id.toString()
+          }
+        }).catch(() => {}); // Игнорируем ошибки heartbeat
       } else {
         console.error('❌ [MultiplayerLobby] Ошибка:', data.message);
-        alert(`Ошибка: ${data.message}`);
+        alert(`Ошибка: ${data.message || 'Не удалось изменить готовность'}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ [MultiplayerLobby] Ошибка toggleReady:', error);
-      alert('Не удалось изменить готовность');
+      alert(`Ошибка: ${error.message || 'Не удалось изменить готовность'}`);
     }
   };
 
@@ -308,7 +339,7 @@ export default function MultiplayerLobby({
     }
     
     setIsAddingBot(true);
-    console.log(`🤖 Добавляем бота...`);
+    console.log(`🤖 [MultiplayerLobby] Добавляем бота...`);
 
     try {
       const response = await fetch(`/api/rooms/${roomId}/bots`, {
@@ -321,11 +352,25 @@ export default function MultiplayerLobby({
         body: JSON.stringify({ action: 'add' })
       });
 
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || `HTTP ${response.status}`);
+      }
+
       const data = await response.json();
 
       if (data.success) {
-        console.log('✅ Бот добавлен:', data.bot);
+        console.log('✅ [MultiplayerLobby] Бот добавлен:', data.bot);
+        // ✅ ОБНОВЛЯЕМ СПИСОК ИГРОКОВ
         await loadRoomPlayers();
+        // ✅ ОБНОВЛЯЕМ last_activity КОМНАТЫ
+        await fetch(`/api/user/heartbeat`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-telegram-id': user?.id?.toString() || ''
+          }
+        }).catch(() => {}); // Игнорируем ошибки heartbeat
       } else {
         console.error('❌ Ошибка:', data.message);
         alert(`Ошибка: ${data.message}`);

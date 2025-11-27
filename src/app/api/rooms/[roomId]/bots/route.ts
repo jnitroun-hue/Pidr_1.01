@@ -205,10 +205,15 @@ export async function POST(
         }, { status: 500 });
       }
 
-      // ОБНОВЛЯЕМ СЧЕТЧИК ИГРОКОВ
+      // ✅ ОБНОВЛЯЕМ СЧЕТЧИК ИГРОКОВ И last_activity
+      const now = new Date().toISOString();
       const { error: updateError } = await supabase
         .from('_pidr_rooms')
-        .update({ current_players: room.current_players + 1 })
+        .update({ 
+          current_players: room.current_players + 1,
+          last_activity: now,
+          updated_at: now
+        })
         .eq('id', roomId);
 
       if (updateError) {
@@ -262,10 +267,15 @@ export async function POST(
         }, { status: 500 });
       }
 
-      // ОБНОВЛЯЕМ СЧЕТЧИК ИГРОКОВ
+      // ✅ ОБНОВЛЯЕМ СЧЕТЧИК ИГРОКОВ И last_activity
+      const now = new Date().toISOString();
       const { error: updateError } = await supabase
         .from('_pidr_rooms')
-        .update({ current_players: room.current_players - 1 })
+        .update({ 
+          current_players: room.current_players - 1,
+          last_activity: now,
+          updated_at: now
+        })
         .eq('id', roomId);
 
       if (updateError) {

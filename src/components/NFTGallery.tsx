@@ -374,7 +374,7 @@ export default function NFTGallery() {
                 cursor: 'pointer'
               }}
             >
-              {/* ИЗОБРАЖЕНИЕ КАРТЫ */}
+              {/* ИЗОБРАЖЕНИЕ КАРТЫ - ОПТИМИЗИРОВАНО ДЛЯ МОБИЛЬНЫХ */}
               <div style={{
                 width: '100%',
                 aspectRatio: '0.7',
@@ -387,39 +387,64 @@ export default function NFTGallery() {
                 pointerEvents: 'none'
               }}>
                 {card.image_url ? (
-                  <img
-                    src={card.image_url}
-                    alt={`${card.rank} of ${card.suit}`}
-                    loading="lazy"
-                    style={{ 
-                      width: '100%', 
-                      height: '100%', 
-                      objectFit: 'contain',
-                      display: 'block'
-                    }}
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                      const parent = e.currentTarget.parentElement;
-                      if (parent) {
-                        parent.innerHTML = `
-                          <div style="
-                            width: 100%;
-                            height: 100%;
-                            display: flex;
-                            flex-direction: column;
-                            align-items: center;
-                            justify-content: center;
-                            color: ${suitColor};
-                            font-size: 32px;
-                            font-weight: bold;
-                          ">
-                            <div>${getSuitSymbol(card.suit)}</div>
-                            <div style="font-size: 20px;">${card.rank?.toUpperCase()}</div>
-                          </div>
-                        `;
-                      }
-                    }}
-                  />
+                  <>
+                    {/* ✅ PLACEHOLDER ПРИ ЗАГРУЗКЕ */}
+                    <div 
+                      className="card-placeholder"
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: suitColor,
+                        fontSize: '24px',
+                        fontWeight: 'bold',
+                        background: '#f8f9fa',
+                        zIndex: 1
+                      }}
+                    >
+                      <div>{getSuitSymbol(card.suit)}</div>
+                      <div style={{ fontSize: '16px', marginTop: '4px' }}>{card.rank?.toUpperCase()}</div>
+                    </div>
+                    
+                    {/* ✅ ОПТИМИЗИРОВАННОЕ ИЗОБРАЖЕНИЕ */}
+                    <img
+                      src={card.image_url}
+                      alt={`${card.rank} of ${card.suit}`}
+                      loading="lazy"
+                      decoding="async"
+                      style={{ 
+                        width: '100%', 
+                        height: '100%', 
+                        objectFit: 'contain',
+                        display: 'block',
+                        position: 'relative',
+                        zIndex: 2,
+                        opacity: 0,
+                        transition: 'opacity 0.3s ease-in-out'
+                      }}
+                      onLoad={(e) => {
+                        // ✅ Скрываем placeholder когда изображение загрузилось
+                        const img = e.currentTarget;
+                        img.style.opacity = '1';
+                        const placeholder = img.parentElement?.querySelector('.card-placeholder') as HTMLElement;
+                        if (placeholder) {
+                          placeholder.style.display = 'none';
+                        }
+                      }}
+                      onError={(e) => {
+                        // ✅ При ошибке показываем placeholder
+                        const img = e.currentTarget;
+                        img.style.display = 'none';
+                        const placeholder = img.parentElement?.querySelector('.card-placeholder') as HTMLElement;
+                        if (placeholder) {
+                          placeholder.style.display = 'flex';
+                        }
+                      }}
+                    />
+                  </>
                 ) : (
                   <div style={{
                     width: '100%',
@@ -429,11 +454,11 @@ export default function NFTGallery() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     color: suitColor,
-                    fontSize: '32px',
+                    fontSize: '24px',
                     fontWeight: 'bold'
                   }}>
                     <div>{getSuitSymbol(card.suit)}</div>
-                    <div style={{ fontSize: '20px' }}>{card.rank?.toUpperCase()}</div>
+                    <div style={{ fontSize: '16px', marginTop: '4px' }}>{card.rank?.toUpperCase()}</div>
                   </div>
                 )}
               </div>
