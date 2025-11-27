@@ -375,14 +375,21 @@ export async function POST(req: NextRequest) {
       
       // 4. АТОМАРНО ДОБАВЛЯЕМ ХОСТА В КОМНАТУ
       // ✅ Используем telegram_id для Redis
+      console.log(`👑 [CREATE ROOM] Создаем комнату ${room.id}, добавляем хоста ${userTelegramId} с isHost=true`);
       const joinResult = await atomicJoinRoom({
         userId: userTelegramId.toString(),
         username: userData.username,
         roomId: room.id,
         roomCode,
         maxPlayers: maxPlayers || 6,
-        isHost: true, // Создатель = хост
+        isHost: true, // ✅ Создатель = хост
       });
+      
+      if (joinResult.success) {
+        console.log(`✅ [CREATE ROOM] Хост успешно добавлен в комнату ${room.id}`);
+      } else {
+        console.error(`❌ [CREATE ROOM] Ошибка добавления хоста:`, joinResult.error);
+      }
       
       if (!joinResult.success) {
         // Откатываем создание комнаты

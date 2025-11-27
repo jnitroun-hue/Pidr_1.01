@@ -417,6 +417,8 @@ export async function atomicJoinRoom(params: {
   const { userId, username, roomId, roomCode, maxPlayers, isHost } = params;
   
   console.log(`🔒 [ATOMIC JOIN] Начало операции для пользователя ${userId}`);
+  console.log(`👑 [ATOMIC JOIN] isHost=${isHost} (type: ${typeof isHost}), username=${username}, roomId=${roomId}`);
+  console.log(`👑 [ATOMIC JOIN] isHost=${isHost} (type: ${typeof isHost}), username=${username}, roomId=${roomId}`);
   
   // 1. ПОЛУЧАЕМ БЛОКИРОВКУ ИГРОКА
   const playerLock = await acquirePlayerLock(userId, 10000); // 10 секунд
@@ -505,12 +507,13 @@ export async function atomicJoinRoom(params: {
       await setPlayerState(userId, playerState);
       
       // 9. СИНХРОНИЗИРУЕМ С POSTGRESQL
+      console.log(`💾 [ATOMIC JOIN] Вызываем syncPlayerToDatabase с isHost=${isHost} (type: ${typeof isHost})`);
       await syncPlayerToDatabase({
         roomId,
         userId,
         username,
         position,
-        isHost,
+        isHost: Boolean(isHost), // ✅ ПРИВОДИМ К BOOLEAN
       });
       
       // 10. ОБНОВЛЯЕМ СЧЕТЧИК В БД
@@ -630,37 +633,116 @@ async function syncPlayerToDatabase(params: {
 }): Promise<void> {
   const { roomId, userId, username, position, isHost } = params;
   
-  console.log(`📝 [SYNC DB] Синхронизация: roomId=${roomId}, userId=${userId}, isHost=${isHost}, position=${position}`);
+  console.log(`📝 [SYNC DB] Синхронизация: roomId=${roomId}, userId=${userId}, isHost=${isHost} (type: ${typeof isHost}), position=${position}`);
   
   // ✅ ИСПРАВЛЕНО: Сначала удаляем старую запись, потом вставляем новую
   // Это гарантирует что is_host будет правильным
-  await supabase
+  const deleteResult = await supabase
     .from('_pidr_room_players')
     .delete()
-    .eq('room_id', roomId)
-    .eq('user_id', userId);
+    .eq('room_id', parseInt(roomId))
+    .eq('user_id', parseInt(userId));
+  
+  if (deleteResult.error) {
+    console.warn(`⚠️ [SYNC DB] Ошибка удаления старой записи (может не существовать):`, deleteResult.error);
+  } else {
+    console.log(`🗑️ [SYNC DB] Удалена старая запись для userId=${userId}, roomId=${roomId}`);
+  }
   
   // Вставляем свежую запись  
   // ✅ ВАЖНО: room_id это INT4, user_id это INT8 (telegram_id)!
+  const insertData = {
+    room_id: parseInt(roomId), // INT4
+    user_id: parseInt(userId), // INT8 (telegram_id)
+    username,
+    position,
+    is_host: Boolean(isHost), // ✅ ПРИВОДИМ К BOOLEAN И ОПРЕДЕЛЯЕМ ХОСТА!
+    is_ready: Boolean(isHost), // Хост сразу готов
+    joined_at: new Date().toISOString(),
+  };
+  
+  console.log(`💾 [SYNC DB] Вставляем данные:`, JSON.stringify(insertData, null, 2));
+  
   const { error, data } = await supabase
     .from('_pidr_room_players')
-    .insert({
-      room_id: parseInt(roomId), // INT4
-      user_id: parseInt(userId), // INT8 (telegram_id)
-      username,
-      position,
-      is_host: isHost, // ✅ ОПРЕДЕЛЯЕМ ХОСТА!
-      is_ready: isHost, // Хост сразу готов
-      joined_at: new Date().toISOString(),
-    })
+    .insert(insertData)
     .select();
   
   if (error) {
     console.error(`❌ [SYNC DB] Ошибка синхронизации с БД:`, error);
+    console.error(`❌ [SYNC DB] Данные которые пытались вставить:`, insertData);
     throw error;
   }
   
   console.log(`✅ [SYNC DB] Игрок добавлен в БД:`, data);
+  
+  // ✅ ПРОВЕРЯЕМ ЧТО is_host УСТАНОВЛЕН ПРАВИЛЬНО И ПРИНУДИТЕЛЬНО ИСПРАВЛЯЕМ ЕСЛИ НУЖНО
+  if (data && data.length > 0) {
+    const insertedRecord = data[0];
+    if (insertedRecord.is_host !== isHost) {
+      console.error(`🚨 [SYNC DB] КРИТИЧЕСКАЯ ОШИБКА: is_host не совпадает! Ожидали: ${isHost}, получили: ${insertedRecord.is_host}`);
+      console.log(`🔧 [SYNC DB] ПРИНУДИТЕЛЬНО ИСПРАВЛЯЕМ is_host на ${isHost}`);
+      
+      // ✅ ПРИНУДИТЕЛЬНО ОБНОВЛЯЕМ is_host
+      const { error: updateError, data: updatedData } = await supabase
+        .from('_pidr_room_players')
+        .update({ 
+          is_host: Boolean(isHost),
+          is_ready: Boolean(isHost) // Хост сразу готов
+        })
+        .eq('id', insertedRecord.id)
+        .select();
+      
+      if (updateError) {
+        console.error(`❌ [SYNC DB] Ошибка принудительного обновления is_host:`, updateError);
+      } else {
+        console.log(`✅ [SYNC DB] is_host принудительно обновлен:`, updatedData);
+      }
+    } else {
+      console.log(`✅ [SYNC DB] is_host установлен правильно: ${insertedRecord.is_host}`);
+    }
+  }
+  
+  // ✅ ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА: ЕСЛИ ИГРОК - ХОСТ ПО host_id, ПРИНУДИТЕЛЬНО УСТАНАВЛИВАЕМ is_host
+  try {
+    const { data: roomData } = await supabase
+      .from('_pidr_rooms')
+      .select('host_id')
+      .eq('id', parseInt(roomId))
+      .single();
+    
+    if (roomData?.host_id) {
+      // Получаем UUID пользователя по telegram_id
+      const { data: userData } = await supabase
+        .from('_pidr_users')
+        .select('id')
+        .eq('telegram_id', parseInt(userId))
+        .single();
+      
+      if (userData?.id && roomData.host_id === userData.id) {
+        // Игрок является хостом по host_id, но is_host может быть FALSE - исправляем!
+        if (!isHost) {
+          console.warn(`⚠️ [SYNC DB] Игрок ${userId} является хостом по host_id, но isHost=${isHost}. Принудительно исправляем!`);
+          const { error: fixError } = await supabase
+            .from('_pidr_room_players')
+            .update({ 
+              is_host: true,
+              is_ready: true
+            })
+            .eq('room_id', parseInt(roomId))
+            .eq('user_id', parseInt(userId));
+          
+          if (fixError) {
+            console.error(`❌ [SYNC DB] Ошибка исправления is_host для хоста:`, fixError);
+          } else {
+            console.log(`✅ [SYNC DB] is_host исправлен для хоста ${userId}`);
+          }
+        }
+      }
+    }
+  } catch (checkError) {
+    console.warn(`⚠️ [SYNC DB] Ошибка проверки host_id (не критично):`, checkError);
+  }
   
   // ✅ ОБНОВЛЯЕМ last_activity КОМНАТЫ
   await supabase
