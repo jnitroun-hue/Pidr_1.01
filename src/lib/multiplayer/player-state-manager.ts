@@ -679,16 +679,21 @@ async function updateRoomPlayerCount(roomId: string): Promise<void> {
   // Считаем реальное количество игроков в Redis
   const count = await getRoomPlayerCount(roomId);
   
-  // Обновляем в БД
+  // ✅ ИСПРАВЛЕНО: Обновляем current_players И last_activity
+  const now = new Date().toISOString();
   const { error } = await supabase
     .from('_pidr_rooms')
-    .update({ current_players: count })
+    .update({ 
+      current_players: count,
+      last_activity: now, // ✅ ОБНОВЛЯЕМ АКТИВНОСТЬ!
+      updated_at: now
+    })
     .eq('id', roomId);
   
   if (error) {
     console.error(`❌ [SYNC DB] Ошибка обновления счетчика:`, error);
   } else {
-    console.log(`📊 [SYNC DB] Счетчик комнаты ${roomId} обновлен: ${count}`);
+    console.log(`📊 [SYNC DB] Счетчик комнаты ${roomId} обновлен: ${count}, last_activity обновлен`);
   }
 }
 

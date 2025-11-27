@@ -99,6 +99,14 @@ export const ProperMultiplayer: React.FC = () => {
     if (view === 'lobby') {
       cleanupOldRooms(); // ✅ ОЧИСТКА СТАРЫХ КОМНАТ!
       fetchRooms();
+      
+      // ✅ АВТООБНОВЛЕНИЕ КОМНАТ КАЖДЫЕ 3 СЕКУНДЫ
+      const interval = setInterval(() => {
+        console.log('🔄 [ProperMultiplayer] Автообновление комнат...');
+        fetchRooms();
+      }, 3000);
+      
+      return () => clearInterval(interval);
     }
   }, [view]);
 
@@ -153,7 +161,8 @@ export const ProperMultiplayer: React.FC = () => {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json'
-        }
+        },
+        cache: 'no-store' // ✅ ОТКЛЮЧАЕМ КЭШИРОВАНИЕ
       });
 
       if (response.ok) {

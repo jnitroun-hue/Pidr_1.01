@@ -32,9 +32,11 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    console.log(`🔗 Пользователь ${userId} (BIGINT: ${userIdBigInt}) подключает TON кошелек через headers...`);
-
     const { wallet_address, wallet_type = 'ton', proof } = await req.json();
+    
+    // ✅ ИСПРАВЛЕНО: Показываем правильный тип кошелька в логах
+    const walletTypeUpper = (wallet_type || 'ton').toUpperCase();
+    console.log(`🔗 Пользователь ${userId} (BIGINT: ${userIdBigInt}) подключает ${walletTypeUpper} кошелек через headers...`);
 
     if (!wallet_address) {
       return NextResponse.json(
@@ -68,7 +70,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.log(`✅ Кошелек ${wallet_address} успешно подключен для пользователя ${userId}`);
+    console.log(`✅ ${walletTypeUpper} кошелек ${wallet_address} успешно подключен для пользователя ${userId}`);
     return NextResponse.json({
       success: true,
       message: 'Кошелек успешно подключен',

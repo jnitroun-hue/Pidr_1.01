@@ -101,36 +101,9 @@ export default function NFTCollectionPage() {
         maxWidth: '1200px',
         margin: '0 auto'
       }}>
-        {/* Заголовок */}
+        {/* ✅ NFT Генератор - ПЕРЕМЕЩЕН ВВЕРХ (вместо заголовка) */}
         <div style={{
-          textAlign: 'center',
-          marginBottom: '30px'
-        }}>
-          <h1 style={{
-            fontSize: '42px',
-            fontWeight: '900',
-            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-            marginBottom: '10px'
-          }}>
-            🎴 NFT Коллекция
-          </h1>
-          <p style={{
-            color: '#94a3b8',
-            fontSize: '16px'
-          }}>
-            Ваши уникальные карты
-          </p>
-        </div>
-
-        {/* NFT Галерея */}
-        <NFTGallery />
-
-        {/* NFT Генератор */}
-        <div style={{
-          marginTop: '40px',
+          marginBottom: '30px',
           background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
           border: '2px solid rgba(99, 102, 241, 0.3)',
           borderRadius: '16px',
@@ -151,6 +124,9 @@ export default function NFTCollectionPage() {
             onBalanceUpdate={handleBalanceUpdate}
           />
         </div>
+
+        {/* NFT Галерея */}
+        <NFTGallery />
       </div>
     </div>
   )

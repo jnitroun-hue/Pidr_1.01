@@ -99,11 +99,14 @@ export default function ProfessionalMultiplayer({ onBack }: ProfessionalMultipla
     const loadRooms = async () => {
       setLoading(true);
       try {
-        const response = await fetch('/api/rooms?type=public');
+        const response = await fetch('/api/rooms?type=public', {
+          cache: 'no-store' // ✅ ОТКЛЮЧАЕМ КЭШИРОВАНИЕ
+        });
         if (response.ok) {
           const data = await response.json();
           if (data.success) {
             setRooms(data.rooms || []);
+            setError(null);
           }
         }
       } catch (err) {
@@ -117,6 +120,14 @@ export default function ProfessionalMultiplayer({ onBack }: ProfessionalMultipla
     };
 
     loadRooms();
+    
+    // ✅ АВТООБНОВЛЕНИЕ КОМНАТ КАЖДЫЕ 3 СЕКУНДЫ
+    const interval = setInterval(() => {
+      console.log('🔄 [ProfessionalMultiplayer] Автообновление комнат...');
+      loadRooms();
+    }, 3000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const handleCreateRoom = async () => {

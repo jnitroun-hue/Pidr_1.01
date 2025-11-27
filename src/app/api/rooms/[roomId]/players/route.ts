@@ -42,9 +42,23 @@ export async function GET(
       .order('position', { ascending: true });
 
     // ✅ ДОБАВЛЯЕМ is_host К КАЖДОМУ ИГРОКУ
-    const playersWithHost = (players || []).map((player: any) => ({
+    // ⚠️ ВАЖНО: host_id это UUID, user_id это telegram_id (INT8)
+    // Нужно получить UUID пользователя из _pidr_users для сравнения
+    const playersWithHost = await Promise.all((players || []).map(async (player: any) => {
+      // Получаем UUID пользователя по telegram_id
+      const { data: userData } = await supabase
+        .from('_pidr_users')
+        .select('id')
+        .eq('telegram_id', player.user_id)
+        .maybeSingle();
+      
+      // Сравниваем UUID с UUID
+      const isHost = roomFull?.host_id && userData?.id && roomFull.host_id === userData.id;
+      
+      return {
       ...player,
-      is_host: roomFull?.host_id === player.user_id // ✅ Сравниваем host_id с user_id
+        is_host: isHost || player.is_host // Используем is_host из БД как fallback
+      };
     }));
 
     if (error) {
