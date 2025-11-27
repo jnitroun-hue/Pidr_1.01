@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Получаем данные друзей
-    const friendIds = friendships?.map(f => f.friend_id) || [];
+    const friendIds = friendships?.map((f: any) => f.friend_id) || [];
     
     console.log(`🔍 [FRIENDS LIST] Получаем данные для friend_ids:`, friendIds);
     
