@@ -15,7 +15,12 @@ export async function GET(req: NextRequest) {
     // ✅ ОЧИСТКА НЕАКТИВНЫХ ПОЛЬЗОВАТЕЛЕЙ (не блокирует запрос)
     lightCleanup().catch(err => console.error('❌ Ошибка автоочистки:', err));
     
-    console.log('🔍 Проверка активной сессии пользователя...');
+    console.log('🔍 [GET /api/auth] Проверка активной сессии пользователя...');
+    console.log('📋 [GET /api/auth] Headers:', {
+      'x-telegram-id': req.headers.get('x-telegram-id'),
+      'x-username': req.headers.get('x-username'),
+      'user-agent': req.headers.get('user-agent')?.substring(0, 50)
+    });
 
     if (!JWT_SECRET) {
       console.error('❌ JWT_SECRET не настроен');
@@ -61,47 +66,67 @@ export async function GET(req: NextRequest) {
       }, { status: 401 });
     }
 
-    // ✅ КРИТИЧЕСКАЯ ПРОВЕРКА БЕЗОПАСНОСТИ: Проверяем соответствие x-telegram-id header
+    // ✅ КРИТИЧЕСКАЯ ПРОВЕРКА БЕЗОПАСНОСТИ: x-telegram-id header ОБЯЗАТЕЛЕН!
     const telegramIdHeader = req.headers.get('x-telegram-id');
-    if (telegramIdHeader) {
-      // Получаем данные пользователя из БД для проверки telegram_id
-      const { data: userForCheck, error: userCheckError } = await supabase
-        .from('_pidr_users')
-        .select('telegram_id')
-        .eq('id', userId)
-        .single();
-
-      if (userCheckError || !userForCheck) {
-        console.error('❌ Пользователь не найден в БД для проверки:', userCheckError);
-        return NextResponse.json({ 
-          success: false, 
-          message: 'Пользователь не найден' 
-        }, { status: 404 });
-      }
-
-      // ✅ КРИТИЧНО: Проверяем что telegram_id из БД совпадает с header
-      const dbTelegramId = String(userForCheck.telegram_id || '');
-      const headerTelegramId = String(telegramIdHeader);
-      
-      if (dbTelegramId !== headerTelegramId) {
-        console.error('🚨 КРИТИЧЕСКАЯ ОШИБКА БЕЗОПАСНОСТИ: x-telegram-id не совпадает с токеном!', {
-          userId,
-          dbTelegramId,
-          headerTelegramId,
-          tokenTelegramId: telegramIdFromToken
-        });
-        return NextResponse.json({ 
-          success: false, 
-          message: 'Несоответствие токена и Telegram ID. Доступ запрещен.' 
-        }, { status: 403 });
-      }
-      
-      console.log('✅ Безопасность: x-telegram-id совпадает с токеном');
-    } else {
-      console.warn('⚠️ x-telegram-id header отсутствует - используем только токен (менее безопасно)');
-      // ✅ НЕ БЛОКИРУЕМ: Если header отсутствует, но токен валиден - разрешаем доступ
-      // Но это менее безопасно, поэтому логируем предупреждение
+    
+    if (!telegramIdHeader) {
+      console.error('🚨 КРИТИЧЕСКАЯ ОШИБКА БЕЗОПАСНОСТИ: x-telegram-id header отсутствует!');
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Требуется x-telegram-id header для безопасности. Доступ запрещен.' 
+      }, { status: 403 });
     }
+
+    // Получаем данные пользователя из БД для проверки telegram_id
+    const { data: userForCheck, error: userCheckError } = await supabase
+      .from('_pidr_users')
+      .select('telegram_id')
+      .eq('id', userId)
+      .single();
+
+    if (userCheckError || !userForCheck) {
+      console.error('❌ Пользователь не найден в БД для проверки:', userCheckError);
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Пользователь не найден' 
+      }, { status: 404 });
+    }
+
+    // ✅ КРИТИЧНО: Проверяем что telegram_id из БД совпадает с header
+    const dbTelegramId = String(userForCheck.telegram_id || '');
+    const headerTelegramId = String(telegramIdHeader);
+    
+    if (dbTelegramId !== headerTelegramId) {
+      console.error('🚨 КРИТИЧЕСКАЯ ОШИБКА БЕЗОПАСНОСТИ: x-telegram-id не совпадает с токеном!', {
+        userId,
+        dbTelegramId,
+        headerTelegramId,
+        tokenTelegramId: telegramIdFromToken,
+        action: 'БЛОКИРУЕМ ДОСТУП И УДАЛЯЕМ НЕВЕРНЫЙ ТОКЕН'
+      });
+      
+      // ✅ УДАЛЯЕМ НЕВЕРНЫЙ ТОКЕН ИЗ COOKIE
+      const errorResponse = NextResponse.json({ 
+        success: false, 
+        message: 'Несоответствие токена и Telegram ID. Доступ запрещен. Пожалуйста, перезайдите.' 
+      }, { status: 403 });
+      
+      // Удаляем неверный токен
+      errorResponse.cookies.set('auth_token', '', {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none',
+        path: '/',
+        maxAge: 0
+      });
+      
+      return errorResponse;
+    }
+    
+    console.log('✅ Безопасность: x-telegram-id совпадает с токеном', {
+      userId,
+      telegramId: dbTelegramId
+    });
 
     // ✅ ПРОВЕРКА УСТРОЙСТВА: Проверяем device fingerprint (мягкая проверка)
     // ⚠️ ВАЖНО: Не блокируем если fingerprint отсутствует - это нормально для разных браузеров
@@ -141,27 +166,46 @@ export async function GET(req: NextRequest) {
       }, { status: 404 });
     }
 
-    // ✅ КРИТИЧНО: Проверяем что возвращаем данные правильного пользователя
-    console.log('👤 [GET /api/auth] Найден пользователь:', {
-      id: user.id,
+    // ✅ КРИТИЧНО: Финальная проверка - убеждаемся что возвращаем правильного пользователя
+    const finalTelegramId = String(user.telegram_id || '');
+    const finalHeaderTelegramId = String(telegramIdHeader || '');
+    
+    console.log('👤 [GET /api/auth] Финальная проверка пользователя:', {
+      userId: user.id,
       username: user.username,
-      telegram_id: user.telegram_id,
-      telegramIdFromToken,
-      telegramIdHeader
+      dbTelegramId: finalTelegramId,
+      headerTelegramId: finalHeaderTelegramId,
+      tokenTelegramId: telegramIdFromToken,
+      match: finalTelegramId === finalHeaderTelegramId
     });
 
-    // ✅ ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА: Если header присутствует, убеждаемся что telegram_id совпадает
-    if (telegramIdHeader && String(user.telegram_id) !== String(telegramIdHeader)) {
+    // ✅ КРИТИЧНО: Если telegram_id не совпадает - БЛОКИРУЕМ
+    if (finalTelegramId !== finalHeaderTelegramId) {
       console.error('🚨 КРИТИЧЕСКАЯ ОШИБКА: telegram_id пользователя не совпадает с header!', {
         userId: user.id,
-        userTelegramId: user.telegram_id,
-        headerTelegramId: telegramIdHeader
+        userTelegramId: finalTelegramId,
+        headerTelegramId: finalHeaderTelegramId,
+        action: 'БЛОКИРУЕМ ДОСТУП'
       });
-      return NextResponse.json({ 
+      
+      const errorResponse = NextResponse.json({ 
         success: false, 
-        message: 'Несоответствие данных пользователя. Доступ запрещен.' 
+        message: 'Несоответствие данных пользователя. Доступ запрещен. Пожалуйста, перезайдите.' 
       }, { status: 403 });
+      
+      // Удаляем неверный токен
+      errorResponse.cookies.set('auth_token', '', {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none',
+        path: '/',
+        maxAge: 0
+      });
+      
+      return errorResponse;
     }
+    
+    console.log('✅ [GET /api/auth] Все проверки пройдены, возвращаем данные пользователя:', user.username);
 
     // ✅ ИСПРАВЛЕНО: Обновляем только last_seen, НЕ меняем статус на 'online'
     // Статус должен устанавливаться только через heartbeat или при реальной авторизации

@@ -64,26 +64,66 @@ function HomeWithParams() {
       }
 
       try {
-        // Проверяем активную сессию
-        console.log('🔍 Проверяем активную сессию...');
+        // ✅ КРИТИЧНО: Получаем telegram_id из Telegram WebApp для проверки
+        const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+        const telegramId = telegramUser?.id?.toString() || '';
+        
+        if (!telegramId) {
+          console.warn('⚠️ Telegram ID не найден, пропускаем проверку сессии');
+        } else {
+          console.log('🔍 Проверяем активную сессию для telegram_id:', telegramId);
+        }
+        
+        // ✅ КРИТИЧНО: Отправляем x-telegram-id header для проверки безопасности
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json'
+        };
+        
+        if (telegramId) {
+          headers['x-telegram-id'] = telegramId;
+          headers['x-username'] = telegramUser?.username || telegramUser?.first_name || '';
+        }
         
         const sessionResponse = await fetch('/api/auth', {
           method: 'GET',
-          credentials: 'include'
+          credentials: 'include',
+          headers // ✅ ДОБАВЛЯЕМ headers с x-telegram-id!
         });
 
         if (sessionResponse.ok) {
           const sessionData = await sessionResponse.json();
           
           if (sessionData.success && sessionData.user) {
-            console.log('✅ Активная сессия найдена:', sessionData.user.username);
+            // ✅ КРИТИЧНО: Проверяем что пользователь из сессии совпадает с Telegram ID
+            const sessionTelegramId = String(sessionData.user.telegramId || '');
+            const currentTelegramId = String(telegramId || '');
+            
+            if (telegramId && sessionTelegramId !== currentTelegramId) {
+              console.error('🚨 КРИТИЧЕСКАЯ ОШИБКА: Пользователь из сессии не совпадает с Telegram ID!', {
+                sessionUser: sessionData.user.username,
+                sessionTelegramId,
+                currentTelegramId,
+                action: 'ОТКЛОНЯЕМ СЕССИЮ И ПЕРЕАВТОРИЗУЕМСЯ'
+              });
+              
+              // Удаляем неверную сессию и переавторизуемся
+              await fetch('/api/auth', {
+                method: 'DELETE',
+                credentials: 'include'
+              });
+              
+              // Продолжаем с новой авторизацией
+              throw new Error('Сессия не соответствует текущему пользователю');
+            }
+            
+            console.log('✅ Активная сессия найдена и проверена:', sessionData.user.username);
             
             const existingUser: User = {
               id: sessionData.user.id,
               username: sessionData.user.username,
               firstName: sessionData.user.firstName || sessionData.user.username,
               lastName: sessionData.user.lastName || '',
-              telegramId: sessionData.user.telegramId || '',
+              telegramId: sessionData.user.telegramId || telegramId,
               coins: sessionData.user.coins || 1000,
               rating: sessionData.user.rating || 0,
               gamesPlayed: sessionData.user.gamesPlayed || 0,
@@ -100,6 +140,13 @@ function HomeWithParams() {
             console.log('🚀 ДОБРО ПОЖАЛОВАТЬ ОБРАТНО В P.I.D.R.!');
             return;
           }
+        } else if (sessionResponse.status === 403) {
+          // Сессия не соответствует - удаляем и переавторизуемся
+          console.warn('⚠️ Сессия отклонена, переавторизуемся...');
+          await fetch('/api/auth', {
+            method: 'DELETE',
+            credentials: 'include'
+          });
         }
 
         // Если нет сессии, авторизуемся через Telegram
