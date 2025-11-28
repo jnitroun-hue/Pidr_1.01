@@ -3,6 +3,7 @@ import { supabase } from '../../../lib/supabase';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
 import { lightCleanup } from '../../../lib/auto-cleanup';
+import crypto from 'crypto';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const SESSION_SECRET = process.env.SESSION_SECRET;
@@ -45,11 +46,13 @@ export async function GET(req: NextRequest) {
     // Верифицируем JWT токен
     let userId: string;
     let telegramIdFromToken: string | null = null;
+    let deviceFingerprintFromToken: string | null = null;
     try {
       const payload = jwt.verify(token, JWT_SECRET) as any;
       userId = payload.userId;
       telegramIdFromToken = payload.telegramId || null;
-      console.log('✅ JWT токен валиден, userId:', userId, 'telegramId:', telegramIdFromToken);
+      deviceFingerprintFromToken = payload.deviceFingerprint || null;
+      console.log('✅ JWT токен валиден, userId:', userId, 'telegramId:', telegramIdFromToken, 'device:', deviceFingerprintFromToken);
     } catch (jwtError) {
       console.error('❌ Невалидный JWT токен:', jwtError);
       return NextResponse.json({ 
@@ -95,10 +98,35 @@ export async function GET(req: NextRequest) {
       
       console.log('✅ Безопасность: x-telegram-id совпадает с токеном');
     } else {
-      console.warn('⚠️ x-telegram-id header отсутствует - возможна проблема безопасности');
+      console.warn('⚠️ x-telegram-id header отсутствует - используем только токен (менее безопасно)');
+      // ✅ НЕ БЛОКИРУЕМ: Если header отсутствует, но токен валиден - разрешаем доступ
+      // Но это менее безопасно, поэтому логируем предупреждение
+    }
+
+    // ✅ ПРОВЕРКА УСТРОЙСТВА: Проверяем device fingerprint (мягкая проверка)
+    // ⚠️ ВАЖНО: Не блокируем если fingerprint отсутствует - это нормально для разных браузеров
+    const userAgent = req.headers.get('user-agent') || '';
+    const headerDeviceFingerprint = req.headers.get('x-device-fingerprint');
+    
+    if (deviceFingerprintFromToken && headerDeviceFingerprint) {
+      // Только если оба fingerprint присутствуют - проверяем совпадение
+      if (deviceFingerprintFromToken !== headerDeviceFingerprint) {
+        console.warn('⚠️ Device fingerprint не совпадает, но разрешаем доступ (разные браузеры нормальны)', {
+          userId,
+          tokenDevice: deviceFingerprintFromToken.substring(0, 8),
+          headerDevice: headerDeviceFingerprint.substring(0, 8),
+          userAgent: userAgent.substring(0, 50)
+        });
+        // ✅ НЕ БЛОКИРУЕМ: Разные браузеры/устройства - это нормально
+      } else {
+        console.log('✅ Device fingerprint совпадает');
+      }
+    } else {
+      console.log('ℹ️ Device fingerprint не проверяется (отсутствует в токене или header)');
     }
 
     // Получаем данные пользователя из БД
+    console.log('🔍 [GET /api/auth] Запрашиваем пользователя с userId:', userId, 'telegramId из токена:', telegramIdFromToken);
     const { data: user, error } = await supabase
       .from('_pidr_users')
       .select('*')
@@ -111,6 +139,28 @@ export async function GET(req: NextRequest) {
         success: false, 
         message: 'Пользователь не найден' 
       }, { status: 404 });
+    }
+
+    // ✅ КРИТИЧНО: Проверяем что возвращаем данные правильного пользователя
+    console.log('👤 [GET /api/auth] Найден пользователь:', {
+      id: user.id,
+      username: user.username,
+      telegram_id: user.telegram_id,
+      telegramIdFromToken,
+      telegramIdHeader
+    });
+
+    // ✅ ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА: Если header присутствует, убеждаемся что telegram_id совпадает
+    if (telegramIdHeader && String(user.telegram_id) !== String(telegramIdHeader)) {
+      console.error('🚨 КРИТИЧЕСКАЯ ОШИБКА: telegram_id пользователя не совпадает с header!', {
+        userId: user.id,
+        userTelegramId: user.telegram_id,
+        headerTelegramId: telegramIdHeader
+      });
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Несоответствие данных пользователя. Доступ запрещен.' 
+      }, { status: 403 });
     }
 
     // ✅ ИСПРАВЛЕНО: Обновляем только last_seen, НЕ меняем статус на 'online'
@@ -404,12 +454,25 @@ export async function POST(req: NextRequest) {
       console.log('✅ Пользователь обновлен:', user.username);
     }
 
-    // Создаем JWT токен
+    // ✅ КРИТИЧНО: Создаем device fingerprint для привязки токена к устройству
+    const userAgent = req.headers.get('user-agent') || '';
+    const acceptLanguage = req.headers.get('accept-language') || '';
+    const platform = req.headers.get('sec-ch-ua-platform') || '';
+    const deviceFingerprint = crypto
+      .createHash('sha256')
+      .update(`${userAgent}${acceptLanguage}${platform}${user.telegram_id}`)
+      .digest('hex')
+      .substring(0, 32);
+    
+    console.log('🔐 Создаем токен с device fingerprint:', deviceFingerprint.substring(0, 8) + '...');
+
+    // Создаем JWT токен с device fingerprint
     const token = jwt.sign(
       { 
         userId: user.id,
         telegramId: user.telegram_id,
-        username: user.username
+        username: user.username,
+        deviceFingerprint // ✅ ПРИВЯЗКА К УСТРОЙСТВУ
       },
       JWT_SECRET,
       { expiresIn: '30d' } // Токен действует 30 дней

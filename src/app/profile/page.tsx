@@ -105,12 +105,17 @@ export default function ProfilePage() {
       try {
         console.log('👤 Загружаем данные пользователя из Supabase БД...');
         
+        // ✅ КРИТИЧНО: Добавляем x-telegram-id header для правильной идентификации
+        const telegramHeaders = getTelegramWebAppHeaders();
+        console.log('🔐 [Profile] Отправляем запрос с headers:', telegramHeaders);
+        
         // Получаем данные пользователя из API (Supabase)
         const response = await fetch('/api/auth', {
           method: 'GET',
           credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
+            ...telegramHeaders // ✅ ДОБАВЛЯЕМ x-telegram-id header!
           }
         });
         
@@ -162,7 +167,11 @@ export default function ProfilePage() {
         // Загружаем актуальный баланс
         const balanceResponse = await fetch('/api/user/balance', {
           method: 'GET',
-          credentials: 'include'
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            ...telegramHeaders // ✅ ДОБАВЛЯЕМ x-telegram-id header!
+          }
         });
         
         if (balanceResponse.ok) {
@@ -183,9 +192,14 @@ export default function ProfilePage() {
     const loadBonuses = async () => {
       try {
         console.log('🎁 Загружаем доступные бонусы...');
+        const telegramHeaders = getTelegramWebAppHeaders();
         const response = await fetch('/api/bonus', {
           method: 'GET',
-          credentials: 'include'
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            ...telegramHeaders // ✅ ДОБАВЛЯЕМ x-telegram-id header!
+          }
         });
         
         if (response.ok) {
