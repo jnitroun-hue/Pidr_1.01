@@ -80,60 +80,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Добавляем в друзья (двухсторонняя связь)
-    console.log('💾 [FRIENDS ADD] Создаём первую связь: user_id =', userId, ', friend_id =', friend_id);
+    // ✅ ИСПРАВЛЕНО: Создаем запрос в друзья (pending), а не сразу accepted
+    console.log('💾 [FRIENDS ADD] Создаём запрос в друзья: user_id =', userId, ', friend_id =', friend_id);
     const { data: friendship1, error: error1 } = await supabase
       .from('_pidr_friends')
       .insert({
         user_id: String(userId),
         friend_id: String(friend_id),
-        status: 'accepted',
+        status: 'pending', // ✅ ИСПРАВЛЕНО: pending вместо accepted
         created_at: new Date().toISOString()
       })
       .select();
 
     if (error1) {
-      console.error('❌ [FRIENDS ADD] Ошибка создания первой связи:', error1);
+      console.error('❌ [FRIENDS ADD] Ошибка создания запроса:', error1);
       return NextResponse.json(
-        { success: false, error: `Ошибка создания дружбы: ${error1.message}` },
+        { success: false, error: `Ошибка создания запроса: ${error1.message}` },
         { status: 500 }
       );
     }
 
-    console.log('✅ [FRIENDS ADD] Первая связь создана:', friendship1);
+    console.log('✅ [FRIENDS ADD] Запрос в друзья создан:', friendship1);
 
-    console.log('💾 [FRIENDS ADD] Создаём вторую связь: user_id =', friend_id, ', friend_id =', userId);
-    const { data: friendship2, error: error2 } = await supabase
-      .from('_pidr_friends')
-      .insert({
-        user_id: String(friend_id),
-        friend_id: String(userId),
-        status: 'accepted',
-        created_at: new Date().toISOString()
-      })
-      .select();
-
-    if (error2) {
-      console.error('❌ [FRIENDS ADD] Ошибка создания второй связи:', error2);
-      // Откатываем первую связь
-      await supabase
-        .from('_pidr_friends')
-        .delete()
-        .eq('user_id', userId)
-        .eq('friend_id', friend_id);
-      
-      return NextResponse.json(
-        { success: false, error: `Ошибка создания обратной связи: ${error2.message}` },
-        { status: 500 }
-      );
-    }
-
-    console.log('✅ [FRIENDS ADD] Вторая связь создана:', friendship2);
-    console.log(`✅ [FRIENDS ADD] Пользователи ${userId} и ${friend_id} теперь друзья!`);
+    // ✅ НЕ создаем обратную связь сразу - друг должен принять запрос
+    // Когда друг примет запрос, статус изменится на 'accepted' и создастся обратная связь
 
     return NextResponse.json({
       success: true,
-      message: 'Друг добавлен!'
+      message: 'Запрос в друзья отправлен!'
     });
 
   } catch (error: any) {

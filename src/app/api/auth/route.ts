@@ -44,16 +44,58 @@ export async function GET(req: NextRequest) {
 
     // Верифицируем JWT токен
     let userId: string;
+    let telegramIdFromToken: string | null = null;
     try {
       const payload = jwt.verify(token, JWT_SECRET) as any;
       userId = payload.userId;
-      console.log('✅ JWT токен валиден, userId:', userId);
+      telegramIdFromToken = payload.telegramId || null;
+      console.log('✅ JWT токен валиден, userId:', userId, 'telegramId:', telegramIdFromToken);
     } catch (jwtError) {
       console.error('❌ Невалидный JWT токен:', jwtError);
       return NextResponse.json({ 
         success: false, 
         message: 'Невалидный токен' 
       }, { status: 401 });
+    }
+
+    // ✅ КРИТИЧЕСКАЯ ПРОВЕРКА БЕЗОПАСНОСТИ: Проверяем соответствие x-telegram-id header
+    const telegramIdHeader = req.headers.get('x-telegram-id');
+    if (telegramIdHeader) {
+      // Получаем данные пользователя из БД для проверки telegram_id
+      const { data: userForCheck, error: userCheckError } = await supabase
+        .from('_pidr_users')
+        .select('telegram_id')
+        .eq('id', userId)
+        .single();
+
+      if (userCheckError || !userForCheck) {
+        console.error('❌ Пользователь не найден в БД для проверки:', userCheckError);
+        return NextResponse.json({ 
+          success: false, 
+          message: 'Пользователь не найден' 
+        }, { status: 404 });
+      }
+
+      // ✅ КРИТИЧНО: Проверяем что telegram_id из БД совпадает с header
+      const dbTelegramId = String(userForCheck.telegram_id || '');
+      const headerTelegramId = String(telegramIdHeader);
+      
+      if (dbTelegramId !== headerTelegramId) {
+        console.error('🚨 КРИТИЧЕСКАЯ ОШИБКА БЕЗОПАСНОСТИ: x-telegram-id не совпадает с токеном!', {
+          userId,
+          dbTelegramId,
+          headerTelegramId,
+          tokenTelegramId: telegramIdFromToken
+        });
+        return NextResponse.json({ 
+          success: false, 
+          message: 'Несоответствие токена и Telegram ID. Доступ запрещен.' 
+        }, { status: 403 });
+      }
+      
+      console.log('✅ Безопасность: x-telegram-id совпадает с токеном');
+    } else {
+      console.warn('⚠️ x-telegram-id header отсутствует - возможна проблема безопасности');
     }
 
     // Получаем данные пользователя из БД

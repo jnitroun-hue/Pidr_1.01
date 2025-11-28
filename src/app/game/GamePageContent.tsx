@@ -520,11 +520,26 @@ function GamePageContentComponent({
             // Формируем мапу: "rank_of_suit" -> image_url
             const nftMap: Record<string, string> = {};
             result.deck.forEach((deckCard: any) => {
-              const rank = deckCard.rank?.toLowerCase() || '';
-              const suit = deckCard.suit?.toLowerCase() || '';
+              // ✅ ИСПРАВЛЕНО: Нормализуем rank и suit для правильного ключа
+              let rank = String(deckCard.rank || '').toLowerCase().trim();
+              let suit = String(deckCard.suit || '').toLowerCase().trim();
+              
+              // ✅ Нормализация рангов (A -> ace, K -> king, Q -> queen, J -> jack, числа остаются)
+              if (rank === 'a' || rank === 'ace') rank = 'ace';
+              else if (rank === 'k' || rank === 'king') rank = 'king';
+              else if (rank === 'q' || rank === 'queen') rank = 'queen';
+              else if (rank === 'j' || rank === 'jack') rank = 'jack';
+              
+              // ✅ Нормализация мастей (H -> hearts, D -> diamonds, C -> clubs, S -> spades)
+              if (suit === 'h' || suit === 'heart') suit = 'hearts';
+              else if (suit === 'd' || suit === 'diamond') suit = 'diamonds';
+              else if (suit === 'c' || suit === 'club') suit = 'clubs';
+              else if (suit === 's' || suit === 'spade') suit = 'spades';
+              
               const key = `${rank}_of_${suit}`;
-              if (deckCard.image_url) {
+              if (deckCard.image_url && rank && suit) {
                 nftMap[key] = deckCard.image_url;
+                console.log(`🎴 [GamePageContent] Добавлена NFT карта: ${key} -> ${deckCard.image_url}`);
               }
             });
             console.log(`✅ [GamePageContent] Загружено ${Object.keys(nftMap).length} NFT карт из колоды:`, nftMap);
