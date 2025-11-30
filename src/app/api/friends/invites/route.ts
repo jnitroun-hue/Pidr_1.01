@@ -51,7 +51,15 @@ export async function GET(request: NextRequest) {
 
     // Обогащаем данными о комнатах и отправителях
     const detailed = await Promise.all(
-      (invites || []).map(async (invite) => {
+      (invites || []).map(async (invite: {
+        id: number;
+        room_id: number;
+        room_code: string;
+        from_user_id: number;
+        created_at: string;
+        expires_at: string;
+        status: string;
+      }) => {
         const [roomRes, userRes] = await Promise.all([
           supabase
             .from('_pidr_rooms')
