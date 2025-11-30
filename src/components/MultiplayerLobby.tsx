@@ -659,19 +659,7 @@ export default function MultiplayerLobby({
             </motion.button>
 
             <motion.button
-              onClick={() => {
-                // ✅ ФОРМИРУЕМ ПРАВИЛЬНУЮ ССЫЛКУ ДЛЯ ВХОДА В ИГРУ
-                const inviteLink = `https://t.me/NotPidrBot?start=join_${roomId}_${roomCode}`;
-                const shareText = `🎮 Присоединяйся к моей игре в The Must!\n\nКод комнаты: ${roomCode}\n\n${inviteLink}`;
-                
-                if ((window as any).Telegram?.WebApp) {
-                  (window as any).Telegram.WebApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(shareText)}`);
-                } else {
-                  // Fallback - копируем ссылку
-                  navigator.clipboard.writeText(inviteLink);
-                  alert('Ссылка скопирована в буфер обмена!');
-                }
-              }}
+              onClick={() => setShowInviteModal(true)}
               whileHover={{ scale: 1.02, y: -2 }}
               whileTap={{ scale: 0.98 }}
               style={{

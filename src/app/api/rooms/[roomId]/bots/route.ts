@@ -109,11 +109,11 @@ export async function POST(
       const busyBotIds = busyBots ? busyBots.map((b: any) => b.user_id) : [];
       console.log(`🤖 [ADD BOT] Занятые боты:`, busyBotIds);
       
-      // Теперь ищем свободного бота
+      // ✅ Ищем свободного бота по отрицательному telegram_id (боты имеют ID < 0)
       let query = supabase
         .from('_pidr_users')
         .select('telegram_id, username, first_name, avatar_url')
-        .eq('is_bot', true)
+        .lt('telegram_id', 0) // ✅ Боты имеют отрицательные telegram_id
         .order('telegram_id', { ascending: true })
         .limit(1);
       
@@ -157,7 +157,7 @@ export async function POST(
         botName = `${randomName}_БОТ`;
         botAvatar = '🤖';
         
-        // Создаем бота в _pidr_users
+        // Создаем бота в _pidr_users (без поля is_bot, так как боты определяются по telegram_id < 0)
         const { error: createBotError } = await supabase
           .from('_pidr_users')
           .insert({
@@ -167,11 +167,10 @@ export async function POST(
             last_name: 'БОТ',
             coins: 5000,
             rating: 1000 + Math.floor(Math.random() * 500),
-            wins: Math.floor(Math.random() * 50),
-            losses: Math.floor(Math.random() * 50),
-            is_bot: true,
+            games_played: Math.floor(Math.random() * 100),
+            games_won: Math.floor(Math.random() * 50),
             status: 'offline',
-            avatar: botAvatar
+            avatar_url: botAvatar
           });
 
         if (createBotError) {

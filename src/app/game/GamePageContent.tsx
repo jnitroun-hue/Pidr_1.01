@@ -1868,8 +1868,12 @@ function GamePageContentComponent({
                           
                           // ✅ Определяем URL изображения (NFT или обычная карта)
                           // Для игрока используем NFT если есть, для ботов обычные
+                          // ИСПРАВЛЕНО: Проверяем является ли cardImage уже URL
+                          const isCardImageUrl = cardImage.startsWith('http://') || cardImage.startsWith('https://');
                           const cardImageUrl = showOpen 
-                            ? (isHumanPlayer && nftImageUrl ? nftImageUrl : `${CARDS_PATH}${cardImage}`)
+                            ? (isHumanPlayer && nftImageUrl 
+                                ? nftImageUrl 
+                                : (isCardImageUrl ? cardImage : `${CARDS_PATH}${cardImage}`))
                             : `${CARDS_PATH}${CARD_BACK}`;
                           
                           return (
@@ -1906,33 +1910,54 @@ function GamePageContentComponent({
                             >
                               {/* ✅ ПРАВИЛЬНОЕ ОТОБРАЖЕНИЕ: NFT если есть, иначе обычная */}
                               {isHumanPlayer && nftImageUrl && showOpen ? (
-                                <img
-                                  src={nftImageUrl}
-                                  alt={cardImage}
-                                  onError={(e) => {
-                                    console.log('❌ NFT не загрузилась, показываем стандартную:', cardImage);
-                                    // Заменяем на обычную карту
-                                    const target = e.currentTarget;
-                                    target.src = `${CARDS_PATH}${cardImage}`;
-                                  }}
-                                  style={{ 
-                                    width: '60px',
-                                    height: '90px',
-                                    borderRadius: '8px',
-                                    background: '#ffffff',
-                                    opacity: 1,
-                                    filter: shouldHighlight || isAvailableTarget ? 'brightness(1.2)' : 'none',
-                                    visibility: 'visible',
-                                    display: 'block',
-                                    boxShadow: shouldHighlight 
-                                      ? '0 0 20px rgba(40, 167, 69, 0.8), 0 0 30px rgba(40, 167, 69, 0.5)' 
-                                      : isAvailableTarget 
-                                      ? '0 0 20px rgba(59, 130, 246, 0.8), 0 0 30px rgba(59, 130, 246, 0.5)'
-                                      : 'none',
-                                    transition: 'all 0.3s ease',
-                                    objectFit: 'cover',
-                                  }}
-                                />
+                                <div style={{ position: 'relative', width: '60px', height: '90px' }}>
+                                  <img
+                                    src={nftImageUrl}
+                                    alt={cardImage}
+                                    onError={(e) => {
+                                      console.log('❌ NFT не загрузилась, показываем стандартную:', cardImage);
+                                      // Заменяем на обычную карту (если cardImage не URL)
+                                      const target = e.currentTarget;
+                                      if (!cardImage.startsWith('http')) {
+                                        target.src = `${CARDS_PATH}${cardImage}`;
+                                      } else {
+                                        target.src = `${CARDS_PATH}${cardRank}_of_${cardSuit}.png`;
+                                      }
+                                    }}
+                                    style={{ 
+                                      width: '60px',
+                                      height: '90px',
+                                      borderRadius: '8px',
+                                      background: '#ffffff',
+                                      opacity: 1,
+                                      filter: shouldHighlight || isAvailableTarget ? 'brightness(1.2)' : 'none',
+                                      visibility: 'visible',
+                                      display: 'block',
+                                      boxShadow: shouldHighlight 
+                                        ? '0 0 20px rgba(40, 167, 69, 0.8), 0 0 30px rgba(40, 167, 69, 0.5)' 
+                                        : isAvailableTarget 
+                                        ? '0 0 20px rgba(59, 130, 246, 0.8), 0 0 30px rgba(59, 130, 246, 0.5)'
+                                        : 'none',
+                                      transition: 'all 0.3s ease',
+                                      objectFit: 'cover',
+                                    }}
+                                  />
+                                  {/* ✅ ОВЕРЛЕЙ РАНГА И МАСТИ НА NFT КАРТЕ */}
+                                  <div style={{
+                                    position: 'absolute',
+                                    top: '3px',
+                                    left: '4px',
+                                    fontSize: '11px',
+                                    fontWeight: 'bold',
+                                    color: cardSuit === 'hearts' || cardSuit === 'diamonds' ? '#dc2626' : '#1f2937',
+                                    textShadow: '0 0 2px white, 0 0 2px white',
+                                    lineHeight: '1',
+                                    pointerEvents: 'none'
+                                  }}>
+                                    <div>{cardRank?.toUpperCase() === 'JACK' ? 'J' : cardRank?.toUpperCase() === 'QUEEN' ? 'Q' : cardRank?.toUpperCase() === 'KING' ? 'K' : cardRank?.toUpperCase() === 'ACE' ? 'A' : cardRank}</div>
+                                    <div>{cardSuit === 'hearts' ? '♥' : cardSuit === 'diamonds' ? '♦' : cardSuit === 'clubs' ? '♣' : cardSuit === 'spades' ? '♠' : ''}</div>
+                                  </div>
+                                </div>
                               ) : (
                                 <Image
                                   src={cardImageUrl}
@@ -2365,35 +2390,54 @@ function GamePageContentComponent({
                 >
                   {/* ✅ НОВОЕ: Используем NFT карту если она есть в колоде */}
                   {nftImageUrl ? (
-                    <img
-                      src={nftImageUrl}
-                      alt={cardImage}
-                      onError={(e) => {
-                        console.log('❌ NFT изображение не загрузилось, показываем обычную карту');
-                        e.currentTarget.style.display = 'none';
-                        const fallbackImg = e.currentTarget.nextSibling as HTMLImageElement;
-                        if (fallbackImg) {
-                          fallbackImg.style.display = 'block';
-                        }
-                      }}
-                      style={{ 
-                        width: '55px',
-                        height: '82px',
-                        borderRadius: '8px',
-                        background: '#ffffff',
-                        opacity: 1,
-                        filter: canPlay ? 'brightness(1.1)' : 'none',
-                        visibility: 'visible',
-                        display: 'block',
-                        transform: isSelected ? 'translateY(-20px) scale(1.1)' : 'none',
-                        transition: 'all 0.3s ease',
-                        boxShadow: canPlay ? '0 0 20px rgba(40, 167, 69, 0.6), 0 0 40px rgba(40, 167, 69, 0.3)' : 'none',
-                        objectFit: 'cover',
-                      }}
-                    />
+                    <div style={{ position: 'relative', width: '55px', height: '82px' }}>
+                      <img
+                        src={nftImageUrl}
+                        alt={cardImage}
+                        onError={(e) => {
+                          console.log('❌ NFT изображение не загрузилось, показываем обычную карту');
+                          e.currentTarget.style.display = 'none';
+                          const fallbackImg = e.currentTarget.nextSibling as HTMLImageElement;
+                          if (fallbackImg) {
+                            fallbackImg.style.display = 'block';
+                          }
+                        }}
+                        style={{ 
+                          width: '55px',
+                          height: '82px',
+                          borderRadius: '8px',
+                          background: '#ffffff',
+                          opacity: 1,
+                          filter: canPlay ? 'brightness(1.1)' : 'none',
+                          visibility: 'visible',
+                          display: 'block',
+                          transform: isSelected ? 'translateY(-20px) scale(1.1)' : 'none',
+                          transition: 'all 0.3s ease',
+                          boxShadow: canPlay ? '0 0 20px rgba(40, 167, 69, 0.6), 0 0 40px rgba(40, 167, 69, 0.3)' : 'none',
+                          objectFit: 'cover',
+                        }}
+                      />
+                      {/* ✅ ОВЕРЛЕЙ РАНГА И МАСТИ НА NFT КАРТЕ */}
+                      <div style={{
+                        position: 'absolute',
+                        top: '2px',
+                        left: '3px',
+                        fontSize: '10px',
+                        fontWeight: 'bold',
+                        color: cardSuit === 'hearts' || cardSuit === 'diamonds' ? '#dc2626' : '#1f2937',
+                        textShadow: '0 0 2px white, 0 0 2px white',
+                        lineHeight: '1',
+                        pointerEvents: 'none',
+                        transform: isSelected ? 'translateY(-20px)' : 'none',
+                        transition: 'transform 0.3s ease'
+                      }}>
+                        <div>{cardRank?.toUpperCase() === 'JACK' ? 'J' : cardRank?.toUpperCase() === 'QUEEN' ? 'Q' : cardRank?.toUpperCase() === 'KING' ? 'K' : cardRank?.toUpperCase() === 'ACE' ? 'A' : cardRank}</div>
+                        <div>{cardSuit === 'hearts' ? '♥' : cardSuit === 'diamonds' ? '♦' : cardSuit === 'clubs' ? '♣' : cardSuit === 'spades' ? '♠' : ''}</div>
+                      </div>
+                    </div>
                   ) : null}
                   <Image
-                    src={`${CARDS_PATH}${cardImage}`}
+                    src={cardImage.startsWith('http') ? `${CARDS_PATH}${cardRank}_of_${cardSuit}.png` : `${CARDS_PATH}${cardImage}`}
                     alt={cardImage}
                     width={55}
                     height={82}
