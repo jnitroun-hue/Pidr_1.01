@@ -44,7 +44,7 @@ function generateRoomCode(): string {
 // ============================================================
 
 export async function GET(req: NextRequest) {
-  console.log('🔍 GET /api/rooms - загружаем комнаты');
+  console.log('🔍 GET /api/rooms - загружаем комнаты (УПРОЩЁННЫЙ ФИЛЬТР ДЛЯ ОТЛАДКИ!)');
   
   // 🧹 АВТОМАТИЧЕСКАЯ ОЧИСТКА (не блокирует запрос)
   lightCleanup().catch(err => console.error('❌ Ошибка автоочистки:', err));
@@ -54,25 +54,15 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const type = searchParams.get('type') || 'public';
     
-    // ✅ ФИЛЬТРУЕМ ТОЛЬКО АКТИВНЫЕ КОМНАТЫ (последняя активность < 10 минут)
-    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-    
-    // Базовый запрос
+    // ⚠️ ВАЖНО: максимально упрощаем фильтр, чтобы КАЖДАЯ созданная комната была видна всем игрокам
+    // Оставляем только фильтр по статусу и приватности
     let query = supabase
       .from('_pidr_rooms')
       .select('*')
       .in('status', ['waiting', 'playing'])
+      .order('created_at', { ascending: false })
       .limit(50);
     
-    // ✅ ФИЛЬТРУЕМ ПО АКТИВНОСТИ
-    // Сначала пробуем фильтр по last_activity, если нет - по updated_at
-    query = query.or(`last_activity.gte.${tenMinutesAgo},updated_at.gte.${tenMinutesAgo}`);
-    
-    query = query
-      .order('last_activity', { ascending: false, nullsFirst: false })
-      .order('updated_at', { ascending: false }); // Fallback сортировка
-    
-    // Фильтр по типу
     if (type === 'public') {
       query = query.eq('is_private', false);
     }
@@ -87,44 +77,12 @@ export async function GET(req: NextRequest) {
       }, { status: 500 });
     }
     
-    // ✅ ФИЛЬТРУЕМ АКТИВНЫЕ КОМНАТЫ НА УРОВНЕ ПРИЛОЖЕНИЯ (надежнее)
-    const activeRooms = (rooms || []).filter((room: any) => {
-      const activityTime = room.last_activity || room.updated_at || room.created_at;
-      if (!activityTime) {
-        console.log(`⚠️ [GET ROOMS] Комната ${room.id} без времени активности, пропускаем`);
-        return false;
-      }
-      const activityDate = new Date(activityTime);
-      const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-      const isActive = activityDate >= tenMinutesAgo;
-      
-      if (!isActive) {
-        console.log(`⏰ [GET ROOMS] Комната ${room.id} неактивна (последняя активность: ${activityTime})`);
-      }
-      
-      return isActive;
-    });
+    console.log(`📊 [GET ROOMS] Загружено комнат из БД (БЕЗ ЖЁСТКИХ ФИЛЬТРОВ): ${rooms?.length || 0}`);
     
-    console.log(`📊 [GET ROOMS] Загружено комнат из БД: ${rooms?.length || 0}, активных: ${activeRooms.length}`);
-    
-    // ✅ ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА: Убеждаемся что комната не пустая
-    const roomsWithPlayers = activeRooms.filter((room: any) => {
-      // Комната считается активной если есть хотя бы один игрок или она только что создана
-      const hasPlayers = room.current_players > 0;
-      const isRecentlyCreated = room.created_at && new Date(room.created_at) >= new Date(Date.now() - 2 * 60 * 1000); // Создана менее 2 минут назад
-      
-      if (!hasPlayers && !isRecentlyCreated) {
-        console.log(`👻 [GET ROOMS] Комната ${room.id} пустая и старая, пропускаем`);
-        return false;
-      }
-      
-      return true;
-    });
-    
-    console.log(`👥 [GET ROOMS] Комнат с игроками: ${roomsWithPlayers.length}`);
+    const roomsForListing = rooms || [];
     
     // Обогащаем данные о хостах
-    const roomsWithHosts = await Promise.all(roomsWithPlayers.map(async (room: any) => {
+    const roomsWithHosts = await Promise.all(roomsForListing.map(async (room: any) => {
       // ✅ СПОСОБ 1: Получаем хоста через host_id (UUID)
       let hostUser: any = null;
       

@@ -269,6 +269,62 @@ export default function MultiplayerLobby({
     }
   };
 
+  // ✅ ДОБАВЛЕНИЕ БОТА (ТОЛЬКО ХОСТОМ)
+  const handleAddBot = async () => {
+    if (!isHost) {
+      alert('Добавлять ботов может только хост комнаты');
+      return;
+    }
+    if (!user?.id) {
+      alert('Ошибка: не удалось определить ваш ID');
+      return;
+    }
+
+    try {
+      setIsAddingBot(true);
+      console.log('🤖 [MultiplayerLobby] Добавляем бота в комнату', roomId);
+
+      const response = await fetch(`/api/rooms/${roomId}/bots`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-telegram-id': user.id.toString()
+        },
+        credentials: 'include',
+        body: JSON.stringify({ action: 'add' })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ [MultiplayerLobby] Ошибка добавления бота:', response.status, errorText);
+        alert(errorText || 'Не удалось добавить бота');
+        return;
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        console.log('✅ [MultiplayerLobby] Бот добавлен:', data.bot);
+        await loadRoomPlayers();
+        // Обновим активность комнаты
+        await fetch('/api/user/heartbeat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-telegram-id': user.id.toString()
+          }
+        });
+      } else {
+        console.error('❌ [MultiplayerLobby] API вернул ошибку при добавлении бота:', data.message);
+        alert(data.message || 'Не удалось добавить бота');
+      }
+    } catch (error) {
+      console.error('❌ [MultiplayerLobby] Ошибка добавления бота:', error);
+      alert('Ошибка добавления бота');
+    } finally {
+      setIsAddingBot(false);
+    }
+  };
+
   // ✅ ЗАПУСК ИГРЫ ЧЕРЕЗ API
   const handleStartGame = async () => {
     if (!isHost || !lobbyState.canStart) return;
@@ -577,8 +633,8 @@ export default function MultiplayerLobby({
         {/* Добавить бота и пригласить друзей (ВСЕГДА ПОКАЗЫВАЕМ ХОСТУ) */}
         {isHost && (
           <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
-            <motion.button
-              onClick={addBot}
+                      <motion.button
+                        onClick={handleAddBot}
               disabled={isAddingBot}
               whileHover={{ scale: 1.02, y: -2 }}
               whileTap={{ scale: 0.98 }}

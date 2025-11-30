@@ -380,11 +380,11 @@ export async function POST(req: NextRequest) {
           console.log('✅ Пользователь найден после ошибки создания, используем существующего');
           user = existingUserRetry;
         } else {
-          return NextResponse.json({ 
-            success: false, 
+        return NextResponse.json({ 
+          success: false, 
             message: `Ошибка создания пользователя: ${createError.message || 'Неизвестная ошибка'}`,
             errorDetails: createError
-          }, { status: 500 });
+        }, { status: 500 });
         }
       }
 

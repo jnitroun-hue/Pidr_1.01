@@ -4,6 +4,7 @@ import Script from 'next/script'
 import './globals.css'
 import { Providers } from './providers'
 import ChunkErrorHandler from '../components/ChunkErrorHandler'
+import GlobalRoomInviteListener from '../components/GlobalRoomInviteListener'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -48,6 +49,8 @@ export default function RootLayout({
           <div style={{ minHeight: '100vh' }}>
             {children}
           </div>
+          {/* Глобальный слушатель приглашений в комнаты (отображается поверх ЛЮБОЙ страницы) */}
+          <GlobalRoomInviteListener />
         </Providers>
       </body>
     </html>

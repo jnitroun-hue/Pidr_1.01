@@ -112,6 +112,18 @@ CREATE TABLE IF NOT EXISTS _pidr_friends (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Приглашения в комнаты
+CREATE TABLE IF NOT EXISTS _pidr_room_invites (
+    id BIGSERIAL PRIMARY KEY,
+    room_id BIGINT REFERENCES _pidr_rooms(id) ON DELETE CASCADE,
+    room_code VARCHAR(10) NOT NULL,
+    from_user_id BIGINT NOT NULL, -- telegram_id отправителя
+    to_user_id BIGINT NOT NULL,   -- telegram_id получателя
+    status VARCHAR(20) DEFAULT 'pending', -- pending / accepted / declined / expired
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP WITH TIME ZONE
+);
+
 -- Достижения
 CREATE TABLE IF NOT EXISTS _pidr_achievements (
     id BIGSERIAL PRIMARY KEY,
@@ -160,6 +172,8 @@ CREATE INDEX IF NOT EXISTS idx_pidr_room_players_room_id ON _pidr_room_players (
 CREATE INDEX IF NOT EXISTS idx_pidr_room_players_user_id ON _pidr_room_players (user_id);
 CREATE INDEX IF NOT EXISTS idx_pidr_hd_wallets_user_id ON _pidr_hd_wallets (user_id);
 CREATE INDEX IF NOT EXISTS idx_pidr_coin_transactions_user_id ON _pidr_coin_transactions (user_id);
+CREATE INDEX IF NOT EXISTS idx_pidr_room_invites_to_user ON _pidr_room_invites (to_user_id, status);
+CREATE INDEX IF NOT EXISTS idx_pidr_room_invites_room ON _pidr_room_invites (room_id);
 `;
 
 const RLS_POLICIES_SQL = `
@@ -176,6 +190,7 @@ ALTER TABLE _pidr_friends ENABLE ROW LEVEL SECURITY;
 ALTER TABLE _pidr_achievements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE _pidr_user_achievements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE _pidr_user_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE _pidr_room_invites ENABLE ROW LEVEL SECURITY;
 
 -- Политики доступа (открытые для разработки)
 DO $$

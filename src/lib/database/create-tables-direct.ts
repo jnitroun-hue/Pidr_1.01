@@ -106,6 +106,21 @@ export async function createTablesDirectly(): Promise<{ success: boolean; messag
           updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
       `
+    },
+    {
+      name: '_pidr_room_invites',
+      sql: `
+        CREATE TABLE IF NOT EXISTS _pidr_room_invites (
+          id BIGSERIAL PRIMARY KEY,
+          room_id BIGINT NOT NULL,
+          room_code VARCHAR(10) NOT NULL,
+          from_user_id BIGINT NOT NULL,
+          to_user_id BIGINT NOT NULL,
+          status VARCHAR(20) DEFAULT 'pending',
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          expires_at TIMESTAMP WITH TIME ZONE
+        );
+      `
     }
   ];
 
@@ -243,6 +258,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_pidr_hd_address ON _pidr_hd_wallets (coin,
 CREATE INDEX IF NOT EXISTS idx_pidr_users_telegram_id ON _pidr_users (telegram_id);
 CREATE INDEX IF NOT EXISTS idx_pidr_rooms_code ON _pidr_rooms (room_code);
 CREATE INDEX IF NOT EXISTS idx_pidr_rooms_status ON _pidr_rooms (status);
+CREATE INDEX IF NOT EXISTS idx_pidr_room_invites_to_user ON _pidr_room_invites (to_user_id, status);
+CREATE INDEX IF NOT EXISTS idx_pidr_room_invites_room ON _pidr_room_invites (room_id);
 
 -- RLS ПОЛИТИКИ (открытые для разработки)
 ALTER TABLE _pidr_users ENABLE ROW LEVEL SECURITY;
@@ -251,6 +268,7 @@ ALTER TABLE _pidr_room_players ENABLE ROW LEVEL SECURITY;
 ALTER TABLE _pidr_coin_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE _pidr_hd_wallets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE _pidr_user_status ENABLE ROW LEVEL SECURITY;
+ALTER TABLE _pidr_room_invites ENABLE ROW LEVEL SECURITY;
 
 -- Политики доступа (открытые для разработки)
 -- Удаляем существующие политики если есть, затем создаем новые
