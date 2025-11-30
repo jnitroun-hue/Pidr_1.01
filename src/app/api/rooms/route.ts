@@ -551,6 +551,9 @@ export async function POST(req: NextRequest) {
       
       console.log(`✅ Игрок ${userTelegramId3} вышел из комнаты ${roomId}`);
       
+      // ✅ ДОПОЛНИТЕЛЬНАЯ ОЧИСТКА REDIS - убеждаемся что игрок удален из всех комнат
+      await removePlayerFromAllRooms(userTelegramId3);
+      
       // Проверяем нужно ли удалить комнату (если хост вышел и комната пустая)
       const { data: room } = await supabase
         .from('_pidr_rooms')

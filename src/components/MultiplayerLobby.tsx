@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Users, Copy, Check, Crown, Play, Clock, Wifi, WifiOff, UserPlus, Settings, Bot } from 'lucide-react';
 import { RoomManager } from '../lib/multiplayer/room-manager';
 import { useTelegram } from '../hooks/useTelegram';
+import InviteFriendsModal from './InviteFriendsModal';
 
 interface MultiplayerLobbyProps {
   roomId: string;
@@ -57,6 +58,7 @@ export default function MultiplayerLobby({
   const [codeCopied, setCodeCopied] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [isAddingBot, setIsAddingBot] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
 
   // ✅ ИНИЦИАЛИЗАЦИЯ RoomManager при монтировании
   useEffect(() => {
@@ -1219,6 +1221,14 @@ export default function MultiplayerLobby({
           color: #ef4444;
         }
       `}</style>
+      
+      {/* Модальное окно приглашения друзей */}
+      <InviteFriendsModal
+        isOpen={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+        roomId={roomId}
+        roomCode={roomCode}
+      />
     </div>
   );
 }
