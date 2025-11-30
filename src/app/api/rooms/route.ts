@@ -217,7 +217,7 @@ export async function POST(req: NextRequest) {
     // ============================================================
     
     if (action === 'create') {
-      const { name, maxPlayers, gameMode, hasPassword, password, isPrivate } = body;
+      const { name, maxPlayers, gameMode, hasPassword, password, isPrivate, forceReplace } = body;
       
       console.log('🆕 Создание новой комнаты...');
       
@@ -282,11 +282,33 @@ export async function POST(req: NextRequest) {
           .single();
         
         if (existingRoom) {
-          return NextResponse.json({ 
-            success: false, 
-            message: `У вас уже есть активная комната "${existingRoom.name}" (${existingRoom.room_code}). Закройте её сначала.`,
-            currentRoom: existingRoom
-          }, { status: 400 });
+          // ✅ ЕСЛИ forceReplace = true, закрываем старую комнату
+          if (forceReplace) {
+            console.log(`🔄 [CREATE ROOM] Принудительная замена комнаты ${existingRoom.id}`);
+            // Закрываем старую комнату
+            await supabase
+              .from('_pidr_rooms')
+              .update({ status: 'finished' })
+              .eq('id', existingRoom.id);
+            
+            // Удаляем игроков из старой комнаты
+            await supabase
+              .from('_pidr_room_players')
+              .delete()
+              .eq('room_id', existingRoom.id);
+            
+            // Очищаем Redis
+            await removePlayerFromAllRooms(userTelegramId.toString());
+            
+            console.log(`✅ [CREATE ROOM] Старая комната закрыта, создаем новую`);
+          } else {
+            // Если не forceReplace, возвращаем ошибку с информацией о текущей комнате
+            return NextResponse.json({ 
+              success: false, 
+              message: `У вас уже есть активная комната "${existingRoom.name}" (${existingRoom.room_code}). Закройте её сначала.`,
+              currentRoom: existingRoom
+            }, { status: 400 });
+          }
         } else {
           // Комната есть в Redis но не в БД - очищаем Redis
           await removePlayerFromAllRooms(userTelegramId.toString());

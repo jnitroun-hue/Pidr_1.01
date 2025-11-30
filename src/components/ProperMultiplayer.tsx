@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import MultiplayerLobby from './MultiplayerLobby'; // ✅ ИСПОЛЬЗУЕМ НОВЫЙ КОМПОНЕНТ!
+import ReplaceRoomModal from './ReplaceRoomModal';
 import styles from './ProperMultiplayer.module.css';
 
 interface Room {
@@ -73,6 +74,11 @@ export const ProperMultiplayer: React.FC = () => {
 
   // Форма присоединения
   const [joinCode, setJoinCode] = useState('');
+  
+  // Модалка замены комнаты
+  const [showReplaceModal, setShowReplaceModal] = useState(false);
+  const [pendingRoomData, setPendingRoomData] = useState<any>(null);
+  const [existingRoom, setExistingRoom] = useState<{ name: string; code: string } | null>(null);
 
   // Загрузка пользователя при монтировании
   useEffect(() => {
@@ -94,19 +100,12 @@ export const ProperMultiplayer: React.FC = () => {
     }
   }, [user]);
 
-  // Загрузка комнат при открытии лобби + АВТООЧИСТКА
+  // Загрузка комнат при открытии лобби + ОЧИСТКА
   useEffect(() => {
     if (view === 'lobby') {
       cleanupOldRooms(); // ✅ ОЧИСТКА СТАРЫХ КОМНАТ!
       fetchRooms();
-      
-      // ✅ АВТООБНОВЛЕНИЕ КОМНАТ КАЖДЫЕ 3 СЕКУНДЫ
-      const interval = setInterval(() => {
-        console.log('🔄 [ProperMultiplayer] Автообновление комнат...');
-        fetchRooms();
-      }, 3000);
-      
-      return () => clearInterval(interval);
+      // ✅ УБРАНО АВТООБНОВЛЕНИЕ - загрузка только при открытии страницы
     }
   }, [view]);
 
@@ -181,7 +180,7 @@ export const ProperMultiplayer: React.FC = () => {
     }
   };
 
-  const handleCreateRoom = async () => {
+  const handleCreateRoom = async (forceReplace: boolean = false) => {
     if (!roomName.trim()) {
       setError('Введите название комнаты');
       return;
@@ -195,7 +194,8 @@ export const ProperMultiplayer: React.FC = () => {
       name: roomName,
       maxPlayers,
       gameMode,
-      type_maxPlayers: typeof maxPlayers
+      type_maxPlayers: typeof maxPlayers,
+      forceReplace
     });
 
     try {
@@ -213,7 +213,8 @@ export const ProperMultiplayer: React.FC = () => {
           gameMode,
           hasPassword,
           password: hasPassword ? password : null,
-          isPrivate
+          isPrivate,
+          forceReplace // ✅ ДОБАВЛЕНО для принудительной замены
         })
       });
 
@@ -279,11 +280,35 @@ export const ProperMultiplayer: React.FC = () => {
 
           setCurrentRoom(roomData);
           setView('waiting');
+          // ✅ ОБНОВЛЯЕМ СПИСОК КОМНАТ ПОСЛЕ СОЗДАНИЯ
+          fetchRooms();
         } else {
           throw new Error('Не удалось загрузить данные комнаты из БД');
         }
       } else {
         const errorData = await response.json();
+        
+        // ✅ ПРОВЕРЯЕМ ЕСТЬ ЛИ АКТИВНАЯ КОМНАТА
+        if (errorData.message && errorData.message.includes('уже есть активная комната') && errorData.currentRoom) {
+          // Сохраняем данные для создания новой комнаты
+          setPendingRoomData({
+            name: roomName,
+            maxPlayers,
+            gameMode,
+            hasPassword,
+            password: hasPassword ? password : null,
+            isPrivate
+          });
+          // Показываем модалку подтверждения
+          setExistingRoom({
+            name: errorData.currentRoom.name,
+            code: errorData.currentRoom.room_code
+          });
+          setShowReplaceModal(true);
+          setLoading(false);
+          return;
+        }
+        
         throw new Error(errorData.message || 'Не удалось создать комнату');
       }
     } catch (error: any) {
@@ -291,14 +316,41 @@ export const ProperMultiplayer: React.FC = () => {
       
       // Специальная обработка ошибки "уже в комнате"
       if (error.message && error.message.includes('уже есть активная комната')) {
-        setError(error.message + ' Хотите выйти из неё?');
-        // Можно добавить кнопку для выхода
+        // Если это не из response.json, значит ошибка сети - показываем общую ошибку
+        setError(error.message || 'Не удалось создать комнату');
       } else {
         setError(error.message || 'Не удалось создать комнату');
       }
     } finally {
       setLoading(false);
     }
+  };
+  
+  // ✅ ОБРАБОТЧИК ПОДТВЕРЖДЕНИЯ ЗАМЕНЫ КОМНАТЫ
+  const handleConfirmReplace = async () => {
+    setShowReplaceModal(false);
+    if (pendingRoomData) {
+      // Сначала выходим из текущей комнаты
+      if (currentRoomId) {
+        try {
+          await fetch('/api/rooms', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              action: 'leave',
+              roomId: currentRoomId
+            })
+          });
+        } catch (err) {
+          console.error('❌ Ошибка выхода из комнаты:', err);
+        }
+      }
+      // Затем создаем новую комнату
+      await handleCreateRoom(true);
+    }
+    setPendingRoomData(null);
+    setExistingRoom(null);
   };
 
   const handleJoinRoom = async (roomCode?: string) => {
@@ -707,7 +759,7 @@ export const ProperMultiplayer: React.FC = () => {
             
             <button 
               className={`${styles.button} ${styles.primary}`}
-              onClick={handleCreateRoom}
+              onClick={() => handleCreateRoom(false)}
               disabled={loading || !roomName.trim()}
             >
               {loading ? '⏳ Создание...' : '🏠 Создать'}
@@ -765,6 +817,21 @@ export const ProperMultiplayer: React.FC = () => {
             </button>
           </div>
         </div>
+      )}
+      
+      {/* Модалка замены комнаты */}
+      {showReplaceModal && existingRoom && (
+        <ReplaceRoomModal
+          isOpen={showReplaceModal}
+          onClose={() => {
+            setShowReplaceModal(false);
+            setPendingRoomData(null);
+            setExistingRoom(null);
+          }}
+          onConfirm={handleConfirmReplace}
+          currentRoomName={existingRoom.name}
+          currentRoomCode={existingRoom.code}
+        />
       )}
     </div>
   );
