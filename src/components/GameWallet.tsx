@@ -239,10 +239,21 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
 
   const loadUserData = async () => {
     try {
+      // ✅ Получаем telegram данные для header
+      const tg = (window as any).Telegram?.WebApp;
+      const telegramUser = tg?.initDataUnsafe?.user;
+      
+      const headers: Record<string, string> = {};
+      if (telegramUser?.id) {
+        headers['x-telegram-id'] = String(telegramUser.id);
+        headers['x-username'] = telegramUser.username || telegramUser.first_name || 'User';
+      }
+      
       // Получаем данные пользователя из API (не из localStorage!)
       const authResponse = await fetch('/api/auth', {
         method: 'GET',
-        credentials: 'include'
+        credentials: 'include',
+        headers
       });
       
       if (!authResponse.ok) {
@@ -293,9 +304,20 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
   // Проверяем активность сессии в БД
   const checkDatabaseSession = async () => {
     try {
+      // ✅ Получаем telegram данные для header
+      const tg = (window as any).Telegram?.WebApp;
+      const telegramUser = tg?.initDataUnsafe?.user;
+      
+      const headers: Record<string, string> = {};
+      if (telegramUser?.id) {
+        headers['x-telegram-id'] = String(telegramUser.id);
+        headers['x-username'] = telegramUser.username || telegramUser.first_name || 'User';
+      }
+      
       const response = await fetch('/api/auth', {
         method: 'GET',
-        credentials: 'include' // Важно для отправки cookies
+        credentials: 'include', // Важно для отправки cookies
+        headers
       });
 
       if (response.ok) {

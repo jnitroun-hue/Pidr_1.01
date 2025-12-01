@@ -1001,8 +1001,19 @@ function GamePageContentComponent({
     let actualAvatar = userData?.avatar;
     
     try {
+      // ✅ Получаем telegram данные для header
+      const tg = (window as any).Telegram?.WebApp;
+      const telegramUser = tg?.initDataUnsafe?.user;
+      
+      const authHeaders: Record<string, string> = {};
+      if (telegramUser?.id) {
+        authHeaders['x-telegram-id'] = String(telegramUser.id);
+        authHeaders['x-username'] = telegramUser.username || telegramUser.first_name || 'User';
+      }
+      
       const response = await fetch('/api/auth', {
         credentials: 'include',
+        headers: authHeaders
       });
       
       if (response.ok) {

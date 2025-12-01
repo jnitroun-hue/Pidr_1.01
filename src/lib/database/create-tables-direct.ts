@@ -290,6 +290,9 @@ CREATE POLICY "Enable all for all users" ON _pidr_hd_wallets FOR ALL USING (true
 DROP POLICY IF EXISTS "Enable all for all users" ON _pidr_user_status;
 CREATE POLICY "Enable all for all users" ON _pidr_user_status FOR ALL USING (true);
 
+DROP POLICY IF EXISTS "Enable all for all users" ON _pidr_room_invites;
+CREATE POLICY "Enable all for all users" ON _pidr_room_invites FOR ALL USING (true);
+
 -- ГОТОВО! Все таблицы P.I.D.R. созданы!
   `;
 }

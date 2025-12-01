@@ -242,6 +242,10 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = '_pidr_user_settings' AND policyname = 'Enable all for all users') THEN
         CREATE POLICY "Enable all for all users" ON _pidr_user_settings FOR ALL USING (true);
     END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = '_pidr_room_invites' AND policyname = 'Enable all for all users') THEN
+        CREATE POLICY "Enable all for all users" ON _pidr_room_invites FOR ALL USING (true);
+    END IF;
 END
 $$;
 `;

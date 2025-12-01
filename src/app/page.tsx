@@ -259,7 +259,11 @@ function HomeWithParams() {
               try {
                 const statusResponse = await fetch('/api/auth', {
                   method: 'GET',
-                  credentials: 'include'
+                  credentials: 'include',
+                  headers: {
+                    'x-telegram-id': String(telegramUser.id),
+                    'x-username': telegramUser.username || telegramUser.first_name || 'User'
+                  }
                 });
                 
                 if (statusResponse.ok) {
@@ -298,7 +302,11 @@ function HomeWithParams() {
             try {
               const checkResponse = await fetch('/api/auth', {
                 method: 'GET',
-                credentials: 'include'
+                credentials: 'include',
+                headers: {
+                  'x-telegram-id': String(telegramUser.id),
+                  'x-username': telegramUser.username || telegramUser.first_name || 'User'
+                }
               });
               console.log('🍪 Проверка cookie после авторизации:', checkResponse.status);
               if (!checkResponse.ok) {

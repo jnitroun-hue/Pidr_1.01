@@ -134,9 +134,20 @@ export const ProperMultiplayer: React.FC = () => {
 
   const fetchUser = async () => {
     try {
+      // ✅ Получаем telegram данные для header
+      const tg = (window as any).Telegram?.WebApp;
+      const telegramUser = tg?.initDataUnsafe?.user;
+      
+      const headers: Record<string, string> = {};
+      if (telegramUser?.id) {
+        headers['x-telegram-id'] = String(telegramUser.id);
+        headers['x-username'] = telegramUser.username || telegramUser.first_name || 'User';
+      }
+      
       const response = await fetch('/api/auth', {
         method: 'GET',
-        credentials: 'include'
+        credentials: 'include',
+        headers
       });
 
       if (response.ok) {
