@@ -1525,7 +1525,26 @@ function GamePageContentComponent({
                 alignItems: 'center'
               }}>
                 {/* Открытая карта из колоды (слева) - КЛИКАБЕЛЬНАЯ! */}
-                {currentCard && revealedDeckCard && (
+                {currentCard && revealedDeckCard && (() => {
+                  // ✅ ИСПРАВЛЕНО: Проверяем является ли карта NFT URL
+                  const isNftUrl = currentCard.startsWith('http://') || currentCard.startsWith('https://');
+                  const cardSrc = isNftUrl ? currentCard : `${CARDS_PATH}${currentCard}`;
+                  
+                  // Парсим ранг и масть для оверлея
+                  let deckCardRank = '';
+                  let deckCardSuit = '';
+                  if (!isNftUrl) {
+                    const match = currentCard.match(/(\w+)_of_(\w+)\.png/);
+                    if (match) {
+                      deckCardRank = match[1].toLowerCase();
+                      deckCardSuit = match[2].toLowerCase();
+                    }
+                  } else if (revealedDeckCard) {
+                    deckCardRank = String(revealedDeckCard.rank || '').toLowerCase();
+                    deckCardSuit = String(revealedDeckCard.suit || '').toLowerCase();
+                  }
+                  
+                  return (
                   <div 
                     style={{ 
                       position: 'relative',
@@ -1559,20 +1578,55 @@ function GamePageContentComponent({
                       e.currentTarget.style.transform = 'scale(1)';
                     }}
                   >
-                    <Image
-                      src={`${CARDS_PATH}${currentCard}`}
-                      alt="Current Card"
-                      width={36}
-                      height={54}
-                      style={{ 
-                        borderRadius: '6px',
-                        opacity: 1,
-                        filter: 'none',
-                        visibility: 'visible',
-                        display: 'block'
-                      }}
-                      priority
-                    />
+                    {/* ✅ ИСПРАВЛЕНО: Для NFT используем img, для обычных - Image */}
+                    {isNftUrl ? (
+                      <img
+                        src={cardSrc}
+                        alt="Current Card"
+                        style={{ 
+                          width: '36px',
+                          height: '54px',
+                          borderRadius: '6px',
+                          opacity: 1,
+                          filter: 'none',
+                          visibility: 'visible',
+                          display: 'block',
+                          objectFit: 'cover'
+                        }}
+                      />
+                    ) : (
+                      <Image
+                        src={cardSrc}
+                        alt="Current Card"
+                        width={36}
+                        height={54}
+                        style={{ 
+                          borderRadius: '6px',
+                          opacity: 1,
+                          filter: 'none',
+                          visibility: 'visible',
+                          display: 'block'
+                        }}
+                        priority
+                      />
+                    )}
+                    {/* ✅ ОВЕРЛЕЙ РАНГА И МАСТИ ДЛЯ NFT КАРТЫ ИЗ КОЛОДЫ */}
+                    {isNftUrl && deckCardRank && deckCardSuit && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '2px',
+                        left: '3px',
+                        fontSize: '8px',
+                        fontWeight: 'bold',
+                        color: deckCardSuit === 'hearts' || deckCardSuit === 'diamonds' ? '#dc2626' : '#1f2937',
+                        textShadow: '0 0 2px white, 0 0 2px white',
+                        lineHeight: '1',
+                        pointerEvents: 'none'
+                      }}>
+                        <div>{deckCardRank === 'jack' ? 'J' : deckCardRank === 'queen' ? 'Q' : deckCardRank === 'king' ? 'K' : deckCardRank === 'ace' ? 'A' : deckCardRank}</div>
+                        <div>{deckCardSuit === 'hearts' ? '♥' : deckCardSuit === 'diamonds' ? '♦' : deckCardSuit === 'clubs' ? '♣' : deckCardSuit === 'spades' ? '♠' : ''}</div>
+                      </div>
+                    )}
                     {turnPhase === 'waiting_deck_action' && availableTargets.length > 0 && (
                       <div style={{
                         position: 'absolute',
@@ -1595,7 +1649,8 @@ function GamePageContentComponent({
                       </div>
                     )}
                   </div>
-                )}
+                  );
+                })()}
                 
                 {/* Колода (справа, уменьшена на 60%) */}
                 <div 
