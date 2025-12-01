@@ -639,6 +639,7 @@ function GamePageContentComponent({
   
   // Защита от повторных вызовов AI (race condition protection)
   const aiProcessingRef = useRef<string | null>(null);
+  const aiLastProcessingTimeRef = useRef<number | null>(null);
   
   // Детектируем размер экрана и ориентацию для адаптивности
   const [screenInfo, setScreenInfo] = useState({
@@ -748,9 +749,23 @@ function GamePageContentComponent({
   
   // Обработка ходов ИИ
   useEffect(() => {
-    const { isGameActive, currentPlayerId, players, gameStage, stage2TurnPhase, deck, availableTargets, revealedDeckCard, trumpSuit, tableStack } = useGameStore.getState();
+    const { isGameActive, currentPlayerId, players, gameStage, stage2TurnPhase, deck, availableTargets, revealedDeckCard, trumpSuit, tableStack, isGamePaused, pendingPenalty } = useGameStore.getState();
     
     if (!isGameActive || !currentPlayerId) {
+      return;
+    }
+    
+    // ✅ КРИТИЧНО: НЕ ДАЕМ AI ХОДИТЬ ЕСЛИ ИГРА НА ПАУЗЕ (сбор штрафа)
+    if (isGamePaused) {
+      console.log(`⏸️ [AI] Игра на паузе (сбор штрафа), AI ${currentPlayerId} ждёт...`);
+      return;
+    }
+    
+    // ✅ КРИТИЧНО: НЕ ДАЕМ AI ХОДИТЬ ЕСЛИ ЕСТЬ ОЖИДАЮЩИЙ ШТРАФ
+    if (pendingPenalty) {
+      console.log(`⏸️ [AI] Ожидающий штраф, AI ${currentPlayerId} ждёт...`);
+      // ✅ СБРОС REF: Когда появляется штраф - сбрасываем ref чтобы AI мог продолжить после
+      aiProcessingRef.current = null;
       return;
     }
     
@@ -764,8 +779,17 @@ function GamePageContentComponent({
     }
     
     // Защита от повторных вызовов AI (race condition protection)
+    // ✅ ИСПРАВЛЕНО: Добавлена проверка на время (защита от застревания)
     if (aiProcessingRef.current === currentPlayerId) {
-      return;
+      // Проверяем не застрял ли AI (более 5 секунд)
+      const now = Date.now();
+      if (aiLastProcessingTimeRef.current && now - aiLastProcessingTimeRef.current > 5000) {
+        console.log(`⚠️ [AI] AI застрял на ${currentPlayerId}, принудительно сбрасываем`);
+        aiProcessingRef.current = null;
+        aiLastProcessingTimeRef.current = null;
+      } else {
+        return;
+      }
     }
     
     // СТРОГИЕ ПРОВЕРКИ: ИИ может ходить только в свой ход!
@@ -794,8 +818,9 @@ function GamePageContentComponent({
       return;
     }
     
-    // Устанавливаем флаг обработки
+    // Устанавливаем флаг обработки и время начала
     aiProcessingRef.current = currentPlayerId;
+    aiLastProcessingTimeRef.current = Date.now();
     
     // Задержка перед ходом ИИ для реалистичности
     const makeAIMove = async () => {
@@ -938,7 +963,7 @@ function GamePageContentComponent({
       // Сбрасываем флаг при очистке useEffect
       aiProcessingRef.current = null;
     };
-  }, [isGameActive, currentPlayerId, gameStage, stage2TurnPhase, turnPhase]);
+  }, [isGameActive, currentPlayerId, gameStage, stage2TurnPhase, turnPhase, pendingPenalty]);
   
   // ✅ УБРАН ЕБАНЫЙ БАГ: Больше НЕ СБРАСЫВАЕМ игру для single player!
   // Этот useEffect УБИВАЛ только что созданную игру!
@@ -1459,6 +1484,15 @@ function GamePageContentComponent({
                   const offset = idx * 25; // 25px смещение вправо (примерно 30% от ширины карты 74px)
                   const isTopCard = idx === tableStack.length - 1;
                   
+                  // ✅ ИСПРАВЛЕНО: Проверяем является ли card.image NFT URL
+                  const cardImg = card.image || 'card_back.png';
+                  const isNftUrl = cardImg.startsWith('http://') || cardImg.startsWith('https://');
+                  const tableCardSrc = isNftUrl ? cardImg : `${CARDS_PATH}${cardImg}`;
+                  
+                  // Парсим ранг и масть для оверлея NFT
+                  const tableCardRank = String(card.rank || '').toLowerCase();
+                  const tableCardSuit = String(card.suit || '').toLowerCase();
+                  
                   return (
                     <div 
                       key={`table-${card.suit}-${card.rank}-${idx}-${card.id || Math.random()}`} // ✅ УНИКАЛЬНЫЙ КЛЮЧ 
@@ -1478,17 +1512,51 @@ function GamePageContentComponent({
                         // УБРАНА АНИМАЦИЯ pulse - не мерцает больше
                       }}
                     >
-                      <Image
-                        src={`${CARDS_PATH}${card.image || 'card_back.png'}`}
-                        alt={`Card ${idx + 1}`}
-                        width={74}
-                        height={111}
-                        style={{ 
-                          borderRadius: '6px',
-                          display: 'block'
-                        }}
-                        priority
-                      />
+                      {/* ✅ ИСПРАВЛЕНО: Для NFT используем img, для обычных - Image */}
+                      {isNftUrl ? (
+                        <div style={{ position: 'relative', width: '74px', height: '111px' }}>
+                          <img
+                            src={tableCardSrc}
+                            alt={`Card ${idx + 1}`}
+                            style={{ 
+                              width: '74px',
+                              height: '111px',
+                              borderRadius: '6px',
+                              display: 'block',
+                              objectFit: 'cover'
+                            }}
+                          />
+                          {/* ✅ ОВЕРЛЕЙ РАНГА И МАСТИ ДЛЯ NFT НА СТОЛЕ */}
+                          {tableCardRank && tableCardSuit && (
+                            <div style={{
+                              position: 'absolute',
+                              top: '4px',
+                              left: '6px',
+                              fontSize: '14px',
+                              fontWeight: 'bold',
+                              color: tableCardSuit === 'hearts' || tableCardSuit === 'diamonds' ? '#dc2626' : '#1f2937',
+                              textShadow: '0 0 3px white, 0 0 3px white, 0 0 3px white',
+                              lineHeight: '1',
+                              pointerEvents: 'none'
+                            }}>
+                              <div>{tableCardRank === 'jack' ? 'J' : tableCardRank === 'queen' ? 'Q' : tableCardRank === 'king' ? 'K' : tableCardRank === 'ace' ? 'A' : tableCardRank}</div>
+                              <div>{tableCardSuit === 'hearts' ? '♥' : tableCardSuit === 'diamonds' ? '♦' : tableCardSuit === 'clubs' ? '♣' : tableCardSuit === 'spades' ? '♠' : ''}</div>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <Image
+                          src={tableCardSrc}
+                          alt={`Card ${idx + 1}`}
+                          width={74}
+                          height={111}
+                          style={{ 
+                            borderRadius: '6px',
+                            display: 'block'
+                          }}
+                          priority
+                        />
+                      )}
                     </div>
                   );
                 })}
