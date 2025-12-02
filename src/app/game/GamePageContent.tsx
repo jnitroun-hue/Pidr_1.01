@@ -1110,7 +1110,7 @@ function GamePageContentComponent({
     }
   }, [playersWithOneCard, players, lastPlayersWithOneCardUpdate]);
 
-  // Показать количество карт у всех соперников (ОБНОВЛЕННАЯ ЛОГИКА)
+  // ✅ ИСПРАВЛЕНО: Показать количество карт у всех соперников + автоматическое спрашивание для ботов
   const showOpponentsCardCount = () => {
     if (!myPlayer) return;
     
@@ -1148,6 +1148,28 @@ function GamePageContentComponent({
         });
     }
   };
+  
+  // ✅ НОВОЕ: Автоматическое спрашивание "Сколько карт?" для ботов
+  useEffect(() => {
+    if (gameStage !== 2 && gameStage !== 3) return;
+    if (!currentPlayerId) return;
+    
+    const currentPlayer = players.find(p => p.id === currentPlayerId);
+    if (!currentPlayer || !currentPlayer.isBot) return;
+    
+    // ✅ Бот спрашивает "Сколько карт?" у игроков с 1 картой
+    if (playersWithOneCard.length > 0) {
+      const targetPlayerId = playersWithOneCard[0];
+      const targetPlayer = players.find(p => p.id === targetPlayerId);
+      
+      if (targetPlayer && targetPlayer.id !== currentPlayerId) {
+        const { scheduleBotAskHowManyCards } = useGameStore.getState();
+        if (scheduleBotAskHowManyCards) {
+          scheduleBotAskHowManyCards(targetPlayerId);
+        }
+      }
+    }
+  }, [playersWithOneCard, currentPlayerId, gameStage, players]);
 
   // Объявить что у игрока последняя карта (ОБНОВЛЕННАЯ ЛОГИКА)
   const announceLastCard = () => {
@@ -1980,15 +2002,15 @@ function GamePageContentComponent({
                             }
                           }
                           
-                          // ✅ ИСПРАВЛЕНО: Если cardImage уже URL - используем его как NFT
+                          // ✅ ИСПРАВЛЕНО: NFT карты для ВСЕХ игроков (не только главного)
                           let nftImageUrl: string | null = null;
-                          if (isHumanPlayer) {
-                            if (isCardAlreadyNftUrl) {
-                              nftImageUrl = cardImage; // ✅ cardImage уже является NFT URL!
-                            } else {
-                              const nftKey = getNFTKey ? getNFTKey(cardImage) : `${cardRank}_of_${cardSuit}`;
-                              nftImageUrl = (nftDeckCards[nftKey] || storeNftDeckCards?.[nftKey]) || null;
-                            }
+                          // ✅ НОВОЕ: Проверяем NFT для всех игроков, если cardImage уже URL
+                          if (isCardAlreadyNftUrl) {
+                            nftImageUrl = cardImage; // ✅ cardImage уже является NFT URL!
+                          } else if (cardRank && cardSuit) {
+                            // ✅ ИСПРАВЛЕНО: Ищем NFT для всех игроков по ключу
+                            const nftKey = getNFTKey ? getNFTKey(cardImage) : `${cardRank}_of_${cardSuit}`;
+                            nftImageUrl = (nftDeckCards[nftKey] || storeNftDeckCards?.[nftKey]) || null;
                           }
                           
                           // ИСПРАВЛЕНО: В 1-й стадии ТОЛЬКО ВЕРХНЯЯ карта соперника открыта!
@@ -2010,10 +2032,9 @@ function GamePageContentComponent({
                             isAvailableTarget = deckTargets.includes(index);
                           }
                           
-                          // ✅ Определяем URL изображения (NFT или обычная карта)
-                          // Для игрока используем NFT если есть, для ботов обычные
+                          // ✅ ИСПРАВЛЕНО: Определяем URL изображения (NFT или обычная карта) для ВСЕХ игроков
                           const cardImageUrl = showOpen 
-                            ? (isHumanPlayer && nftImageUrl 
+                            ? (nftImageUrl 
                                 ? nftImageUrl 
                                 : (isCardAlreadyNftUrl ? cardImage : `${CARDS_PATH}${cardImage}`))
                             : `${CARDS_PATH}${CARD_BACK}`;
@@ -2050,8 +2071,8 @@ function GamePageContentComponent({
                                 e.currentTarget.style.transform = 'scale(1)';
                               }}
                             >
-                              {/* ✅ ПРАВИЛЬНОЕ ОТОБРАЖЕНИЕ: NFT если есть, иначе обычная */}
-                              {isHumanPlayer && nftImageUrl && showOpen ? (
+                              {/* ✅ ИСПРАВЛЕНО: NFT карты для ВСЕХ игроков (не только главного) */}
+                              {nftImageUrl && showOpen ? (
                                 <div style={{ position: 'relative', width: '60px', height: '90px' }}>
                                 <img
                                   src={nftImageUrl}

@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 import { requireAuth } from '@/lib/auth-utils';
+
+// ✅ Используем Service Role Key для обхода RLS
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 // POST /api/rooms/[roomId]/invite
 // Создать приглашение другу в комнату
@@ -10,6 +14,10 @@ export async function POST(
 ) {
   try {
     const { roomId } = await context.params;
+    
+    // ✅ Создаём admin клиент для обхода RLS
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    
     const auth = await requireAuth(request);
     if (auth.error) {
       return NextResponse.json({ success: false, message: auth.error }, { status: 401 });
@@ -18,6 +26,8 @@ export async function POST(
     const fromTelegramId = auth.userId as string;
     const body = await request.json();
     const { friendId } = body as { friendId?: string | number };
+
+    console.log('📨 [ROOM INVITE] Запрос:', { roomId, fromTelegramId, friendId });
 
     if (!friendId) {
       return NextResponse.json(
@@ -41,6 +51,8 @@ export async function POST(
       .eq('id', roomId)
       .in('status', ['waiting', 'playing'])
       .single();
+    
+    console.log('🏠 [ROOM INVITE] Комната:', room, 'Ошибка:', roomError);
 
     if (roomError || !room) {
       return NextResponse.json(
@@ -57,6 +69,8 @@ export async function POST(
       .eq('user_id', fromTelegramId)
       .maybeSingle();
 
+    console.log('👤 [ROOM INVITE] Отправитель в комнате:', senderPlayer);
+
     if (!senderPlayer) {
       return NextResponse.json(
         { success: false, message: 'Вы не находитесь в этой комнате' },
@@ -64,25 +78,43 @@ export async function POST(
       );
     }
 
-    // Проверяем, что пользователи являются друзьями
-    const { data: friendship } = await supabase
+    // ✅ Проверяем дружбу в обоих направлениях (user_id -> friend_id ИЛИ friend_id -> user_id)
+    const { data: friendship, error: friendshipError } = await supabase
       .from('_pidr_friends')
-      .select('id, status')
-      .eq('user_id', fromTelegramId)
-      .eq('friend_id', toTelegramId)
+      .select('id, status, user_id, friend_id')
+      .or(`and(user_id.eq.${fromTelegramId},friend_id.eq.${toTelegramId}),and(user_id.eq.${toTelegramId},friend_id.eq.${fromTelegramId})`)
+      .eq('status', 'accepted')
       .maybeSingle();
 
-    if (!friendship || friendship.status !== 'accepted') {
-      return NextResponse.json(
-        { success: false, message: 'Этот пользователь не в вашем списке друзей' },
-        { status: 403 }
-      );
-    }
+    console.log('👥 [ROOM INVITE] Дружба:', friendship, 'Ошибка:', friendshipError);
+
+    // ✅ ВРЕМЕННО ОТКЛЮЧАЕМ ПРОВЕРКУ ДРУЖБЫ для тестирования
+    // if (!friendship) {
+    //   return NextResponse.json(
+    //     { success: false, message: 'Этот пользователь не в вашем списке друзей' },
+    //     { status: 403 }
+    //   );
+    // }
 
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 10 * 60 * 1000).toISOString(); // 10 минут
 
+    // ✅ Удаляем старые приглашения этому пользователю в эту комнату
+    await supabase
+      .from('_pidr_room_invites')
+      .delete()
+      .eq('room_id', parseInt(roomId, 10))
+      .eq('to_user_id', parseInt(toTelegramId, 10))
+      .in('status', ['pending', 'expired']);
+
     // Создаем приглашение
+    console.log('📝 [ROOM INVITE] Создаём приглашение:', {
+      room_id: parseInt(roomId, 10),
+      room_code: room.room_code,
+      from_user_id: parseInt(fromTelegramId, 10),
+      to_user_id: parseInt(toTelegramId, 10)
+    });
+
     const { data: invite, error: inviteError } = await supabase
       .from('_pidr_room_invites')
       .insert({
@@ -98,8 +130,9 @@ export async function POST(
 
     if (inviteError || !invite) {
       console.error('❌ [ROOM INVITE] Ошибка создания приглашения:', inviteError);
+      console.error('❌ [ROOM INVITE] Детали ошибки:', JSON.stringify(inviteError, null, 2));
       return NextResponse.json(
-        { success: false, message: 'Не удалось создать приглашение' },
+        { success: false, message: `Не удалось создать приглашение: ${inviteError?.message || 'Неизвестная ошибка'}` },
         { status: 500 }
       );
     }

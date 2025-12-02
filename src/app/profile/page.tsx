@@ -81,6 +81,17 @@ export default function ProfilePage() {
     };
   };
   
+  // ✅ НОВОЕ: Получение данных пользователя из Telegram WebApp
+  const getTelegramUser = () => {
+    if (typeof window === 'undefined') return null;
+    const telegramUser = (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+    return {
+      id: telegramUser?.id?.toString() || user?.telegramId || user?.id || '',
+      username: telegramUser?.username || user?.username || '',
+      firstName: telegramUser?.first_name || user?.firstName || ''
+    };
+  };
+  
   const [stats, setStats] = useState({
     rating: 0,
     gamesPlayed: 0,
@@ -497,6 +508,40 @@ export default function ProfilePage() {
   // ✅ ИСПРАВЛЕНО: Обработка получения бонусов через Supabase API
   const handleBonusClick = async (bonusId: string) => {
     console.log('🎁 Получение бонуса через API:', bonusId);
+    
+    // ✅ НОВОЕ: Для реферального бонуса показываем ссылку для приглашения
+    if (bonusId === 'referral') {
+      try {
+        const currentUser = getTelegramUser();
+        const referralCode = currentUser?.id || user?.telegramId || user?.id || 'player_' + Date.now();
+        const gameUrl = typeof window !== 'undefined' ? window.location.origin : '';
+        const inviteUrl = `${gameUrl}?ref=${referralCode}`;
+        
+        // Если мы в Telegram WebApp, используем Telegram Share API
+        if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
+          const tg = window.Telegram.WebApp;
+          const inviteText = `🎮 Присоединяйся к игре P.I.D.R.!\n\nПолучи +500 монет за регистрацию по моей ссылке!\n\n${inviteUrl}`;
+          
+          if (typeof tg.openTelegramLink === 'function') {
+            tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(inviteUrl)}&text=${encodeURIComponent(inviteText)}`);
+          } else {
+            window.open(`https://t.me/share/url?url=${encodeURIComponent(inviteUrl)}&text=${encodeURIComponent(inviteText)}`, '_blank');
+          }
+        } else {
+          // Fallback - копируем в буфер обмена
+          if (navigator.clipboard) {
+            await navigator.clipboard.writeText(inviteUrl);
+            alert(`✅ Реферальная ссылка скопирована!\n\n${inviteUrl}\n\nПоделитесь ей с друзьями и получите +500 монет за каждого активного друга!`);
+          } else {
+            prompt('Скопируйте эту ссылку и поделитесь с друзьями:', inviteUrl);
+          }
+        }
+      } catch (error: any) {
+        console.error('❌ Ошибка создания реферальной ссылки:', error);
+        alert(`❌ Ошибка: ${error.message || 'Не удалось создать реферальную ссылку'}`);
+      }
+      return; // Выходим, не обрабатываем как обычный бонус
+    }
     
     try {
       console.log('🔑 Отправляем запрос на получение бонуса...');

@@ -41,23 +41,31 @@ export async function GET(
       .eq('room_id', roomId)
       .order('position', { ascending: true });
 
-    // ✅ ДОБАВЛЯЕМ is_host К КАЖДОМУ ИГРОКУ
+    // ✅ ИСПРАВЛЕНО: ДОБАВЛЯЕМ is_host И is_bot К КАЖДОМУ ИГРОКУ
     // ⚠️ ВАЖНО: host_id это UUID, user_id это telegram_id (INT8)
-    // Нужно получить UUID пользователя из _pidr_users для сравнения
+    // Боты определяются по telegram_id < 0
     const playersWithHost = await Promise.all((players || []).map(async (player: any) => {
-      // Получаем UUID пользователя по telegram_id
-      const { data: userData } = await supabase
-        .from('_pidr_users')
-        .select('id')
-        .eq('telegram_id', player.user_id)
-        .maybeSingle();
+      // ✅ НОВОЕ: Определяем является ли игрок ботом (telegram_id < 0)
+      const isBot = typeof player.user_id === 'number' && player.user_id < 0;
       
-      // Сравниваем UUID с UUID
-      const isHost = roomFull?.host_id && userData?.id && roomFull.host_id === userData.id;
+      // Получаем UUID пользователя по telegram_id (только для не-ботов)
+      let userData = null;
+      if (!isBot) {
+        const { data } = await supabase
+          .from('_pidr_users')
+          .select('id')
+          .eq('telegram_id', player.user_id)
+          .maybeSingle();
+        userData = data;
+      }
+      
+      // Сравниваем UUID с UUID (только для не-ботов)
+      const isHost = !isBot && roomFull?.host_id && userData?.id && roomFull.host_id === userData.id;
       
       return {
-      ...player,
-        is_host: isHost || player.is_host // Используем is_host из БД как fallback
+        ...player,
+        is_host: isHost || player.is_host, // Используем is_host из БД как fallback
+        is_bot: isBot // ✅ ДОБАВЛЕНО: Флаг бота
       };
     }));
 

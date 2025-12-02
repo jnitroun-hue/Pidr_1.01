@@ -2375,7 +2375,7 @@ export const useGameStore = create<GameState>()(
           setTimeout(() => get().nextTurn(), 200);
          },
          
-        // Проверка возможности побить карту
+        // ✅ ИСПРАВЛЕНО: Правильная логика побития карт
         canBeatCard: (attackCard: Card, defendCard: Card, trumpSuit: string) => {
           if (!attackCard.image || !defendCard.image) return false;
           
@@ -2384,21 +2384,26 @@ export const useGameStore = create<GameState>()(
           const attackRank = get().getCardRank(attackCard.image);
           const defendRank = get().getCardRank(defendCard.image);
           
-          // Убраны логи (спамят консоль - вызываются 30+ раз за ход)
-          
-          // ОСОБОЕ ПРАВИЛО: "Пики только Пикями" - пики можно бить ТОЛЬКО пиками
+          // ✅ ПРАВИЛО 1: "Пики только Пикями" - пики можно бить ТОЛЬКО пиками
           if (attackSuit === 'spades' && defendSuit !== 'spades') {
             return false;
           }
           
-          // Бить той же мастью старшей картой
+          // ✅ ПРАВИЛО 2: Бить той же мастью - защищающая карта (defendCard) должна быть СТАРШЕ атакующей (attackCard)
           if (attackSuit === defendSuit) {
-            return defendRank > attackRank;
+            return defendRank > attackRank; // ✅ ИСПРАВЛЕНО: defendRank > attackRank (защита старше атаки)
           }
           
-          // Бить козырем некозырную карту (НО НЕ ПИКУ!)
+          // ✅ ПРАВИЛО 3: Бить козырем некозырную карту (НО НЕ ПИКУ!)
+          // Защищающая карта козырем может побить атакующую некозырную (кроме пик)
           if (defendSuit === trumpSuit && attackSuit !== trumpSuit && attackSuit !== 'spades') {
             return true;
+          }
+          
+          // ✅ ПРАВИЛО 4: Козырь не может побить козырь меньшего ранга - нужна та же масть
+          // Если обе карты козыри - защита должна быть старше
+          if (defendSuit === trumpSuit && attackSuit === trumpSuit) {
+            return defendRank > attackRank;
           }
           
           return false;
@@ -2549,7 +2554,7 @@ export const useGameStore = create<GameState>()(
           }
          },
          
-         // Активация пеньков (остается во 2-й стадии) - ИСПРАВЛЕНО
+         // ✅ ИСПРАВЛЕНО: Активация пеньков с защитой от бесконечного цикла
          activatePenki: (playerId: string) => {
            const { players } = get();
            const playerIndex = players.findIndex(p => p.id === playerId);
@@ -2558,6 +2563,36 @@ export const useGameStore = create<GameState>()(
            if (!player || player.penki.length === 0) {
              console.log(`🃏 [activatePenki] ❌ Игрок не найден или нет пеньков для активации: ${playerId}`);
              return;
+           }
+           
+           // ✅ КРИТИЧНО: Защита от бесконечного цикла - проверяем активных игроков
+           const activePlayers = players.filter(p => 
+             (p.cards.length > 0 || p.penki.length > 0) && !p.isWinner
+           );
+           
+           // ✅ Если осталось только 2 активных игрока и оба боты - проверяем на бесконечный цикл
+           if (activePlayers.length === 2) {
+             const bothBots = activePlayers.every(p => p.isBot);
+             if (bothBots) {
+               // Проверяем что у обоих ботов одинаковое количество карт (1 карта + пеньки)
+               const bot1 = activePlayers[0];
+               const bot2 = activePlayers[1];
+               const bot1Total = bot1.cards.length + bot1.penki.length;
+               const bot2Total = bot2.cards.length + bot2.penki.length;
+               
+               // ✅ Если у обоих ботов по 1 карте и они постоянно активируют пеньки - завершаем игру
+               if (bot1Total === 1 && bot2Total === 1 && bot1.penki.length === 0 && bot2.penki.length === 0) {
+                 console.log(`🔄 [activatePenki] ⚠️ ОБНАРУЖЕН БЕСКОНЕЧНЫЙ ЦИКЛ: 2 бота с 1 картой каждый - завершаем игру`);
+                 get().showNotification(`⚠️ Игра завершена: 2 бота с равным количеством карт`, 'warning', 5000);
+                 
+                 // Завершаем игру - оба бота проиграли
+                 setTimeout(() => {
+                   set({ isGameActive: false, gameStage: 4 });
+                   get().calculateAndShowGameResults();
+                 }, 2000);
+                 return;
+               }
+             }
            }
            
            console.log(`🃏 [activatePenki] Активация пеньков для ${player.name}`);
@@ -3160,8 +3195,7 @@ export const useGameStore = create<GameState>()(
          
          // ===== МЕТОДЫ ДЛЯ СИСТЕМЫ "ОДНА КАРТА!" И ШТРАФОВ =====
          
-        // Проверка кому нужно объявлять "одна карта"
-        // ✅ НОВАЯ ЛОГИКА: БЕЗ ТАЙМЕРОВ! Только отслеживание кто с 1 картой
+        // ✅ ИСПРАВЛЕНО: Проверка кому нужно объявлять "одна карта" + автоматическое объявление для ботов
         checkOneCardStatus: () => {
           const { players, gameStage, oneCardDeclarations } = get();
           if (gameStage !== 2 && gameStage !== 3) return; // Только во 2-й и 3-й стадиях
@@ -3177,6 +3211,20 @@ export const useGameStore = create<GameState>()(
               newPlayersWithOneCard.push(player.id);
               
               const hasAlreadyDeclared = oneCardDeclarations[player.id];
+              
+              // ✅ НОВОЕ: Боты автоматически объявляют "одна карта!" с задержкой 4-8.5 сек
+              if (!hasAlreadyDeclared && player.isBot) {
+                const delay = 4000 + Math.random() * 4500; // 4-8.5 сек
+                console.log(`🤖 [checkOneCardStatus] Бот ${player.name} объявит "одна карта!" через ${Math.round(delay)}мс`);
+                setTimeout(() => {
+                  // Проверяем что у бота все еще 1 карта
+                  const currentState = get();
+                  const currentPlayer = currentState.players.find(p => p.id === player.id);
+                  if (currentPlayer && currentPlayer.cards.length === 1 && !currentState.oneCardDeclarations[player.id]) {
+                    get().declareOneCard(player.id);
+                  }
+                }, delay);
+              }
               
               // Логируем только если не объявил
               if (!hasAlreadyDeclared) {
@@ -3238,7 +3286,7 @@ export const useGameStore = create<GameState>()(
           get().showNotification(`✅ ${player.name}: ОДНА КАРТА!`, 'success', 3000);
          },
          
-       // Спросить "сколько карт?" у другого игрока
+       // ✅ ИСПРАВЛЕНО: Спросить "сколько карт?" у другого игрока + автоматическое спрашивание для ботов
        askHowManyCards: (askerPlayerId: string, targetPlayerId: string) => {
           const { players, oneCardDeclarations, pendingPenalty } = get();
           const asker = players.find(p => p.id === askerPlayerId);

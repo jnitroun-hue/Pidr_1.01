@@ -424,15 +424,19 @@ export const ProperMultiplayer: React.FC = () => {
           roomInfo = roomInfoData.room;
         }
 
-        const allPlayers = playersData.players.map((player: any) => ({
-          id: player.user_id.toString(),
-          name: player.username || 'Игрок',
-          isHost: player.is_host || false, // ✅ ИСПОЛЬЗУЕМ is_host ИЗ БД!
-          isReady: player.is_ready || false,
-          isBot: false,
-          avatar: player.avatar_url,
-          joinedAt: new Date(player.joined_at || Date.now())
-        }));
+        // ✅ ИСПРАВЛЕНО: Определяем ботов по user_id < 0 или is_bot из БД
+        const allPlayers = playersData.players.map((player: any) => {
+          const isBot = player.is_bot || (typeof player.user_id === 'number' && player.user_id < 0);
+          return {
+            id: player.user_id.toString(),
+            name: player.username || 'Игрок',
+            isHost: player.is_host || false, // ✅ ИСПОЛЬЗУЕМ is_host ИЗ БД!
+            isReady: player.is_ready || false,
+            isBot: isBot, // ✅ ИСПРАВЛЕНО: Определяем бота правильно
+            avatar: player.avatar_url,
+            joinedAt: new Date(player.joined_at || Date.now())
+          };
+        });
 
         const roomData: RoomData = {
           id: roomId,
