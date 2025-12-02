@@ -21,7 +21,7 @@ export interface DatabaseUser {
 }
 
 export class DatabaseAuth {
-  private sessionManager = new SessionManager();
+  // ✅ УПРОЩЕНО: SessionManager теперь только статический, экземпляр не нужен
 
   /**
    * Авторизация через Telegram

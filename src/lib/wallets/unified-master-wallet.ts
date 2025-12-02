@@ -401,7 +401,7 @@ export class UnifiedMasterWallet {
       network: network,
       address: masterWallet.address,
       derivationIndex: 0,
-      masterWalletId: masterWallet.id,
+      masterWalletId: network, // ✅ ИСПРАВЛЕНО: используем network как идентификатор
       isActive: true,
       createdAt: new Date(),
       balance: '0',
