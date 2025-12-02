@@ -42,9 +42,9 @@ export async function POST(request: NextRequest) {
       walletAddress
     });
 
-    // ✅ ПОЛУЧАЕМ ИНФОРМАЦИЮ О ЛОТЕ
+    // ✅ ПОЛУЧАЕМ ИНФОРМАЦИЮ О ЛОТЕ (используем _pidr_nft_marketplace)
     const { data: listing, error: listingError } = await supabase
-      .from('_pidr_marketplace_listings')
+      .from('_pidr_nft_marketplace')
       .select('*, nft_card:_pidr_nft_cards(*)')
       .eq('id', listingId)
       .eq('status', 'active')
@@ -80,9 +80,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ✅ ОБНОВЛЯЕМ СТАТУС ЛОТА
+    // ✅ ОБНОВЛЯЕМ СТАТУС ЛОТА (используем _pidr_nft_marketplace)
     const { error: updateError } = await supabase
-      .from('_pidr_marketplace_listings')
+      .from('_pidr_nft_marketplace')
       .update({
         status: 'sold',
         buyer_id: buyerId,
@@ -114,50 +114,38 @@ export async function POST(request: NextRequest) {
 
     // ✅ НАЧИСЛЯЕМ ПРОДАВЦУ В РЕАЛЬНЫЙ БАЛАНС КОШЕЛЬКА
     try {
-      // Получаем адрес кошелька продавца из таблицы подключенных кошельков
+      // Получаем адрес кошелька продавца из таблицы _pidr_player_wallets
       const { data: sellerWallet, error: walletError } = await supabase
-        .from('_pidr_user_wallets')
-        .select('wallet_address, wallet_type')
+        .from('_pidr_player_wallets')
+        .select('wallet_address, coin_type, balance')
         .eq('user_id', sellerId)
-        .eq('wallet_type', crypto.toLowerCase())
-        .eq('is_active', true)
+        .eq('coin_type', crypto.toLowerCase())
         .single();
 
       if (sellerWallet && !walletError) {
-        // Обновляем баланс в таблице кошельков (если есть поле balance)
-        // Или создаем/обновляем запись в таблице балансов
-        const { data: currentBalance, error: balanceError } = await supabase
-          .from('_pidr_user_wallets')
-          .select('balance')
-          .eq('user_id', sellerId)
-          .eq('wallet_type', crypto.toLowerCase())
-          .single();
-
-        const currentBalanceValue = parseFloat(currentBalance?.balance || '0');
+        // Обновляем баланс в таблице кошельков
+        const currentBalanceValue = parseFloat(sellerWallet.balance || '0');
         const newBalance = currentBalanceValue + price;
 
         const { error: updateBalanceError } = await supabase
-          .from('_pidr_user_wallets')
+          .from('_pidr_player_wallets')
           .update({
             balance: newBalance.toString(),
             updated_at: new Date().toISOString()
           })
           .eq('user_id', sellerId)
-          .eq('wallet_type', crypto.toLowerCase())
-          .eq('is_active', true);
+          .eq('coin_type', crypto.toLowerCase());
 
         if (updateBalanceError) {
           console.error('❌ Ошибка обновления баланса кошелька:', updateBalanceError);
           // Пытаемся создать запись если не существует
           await supabase
-            .from('_pidr_user_wallets')
+            .from('_pidr_player_wallets')
             .insert({
               user_id: sellerId,
-              wallet_address: sellerWallet.wallet_address,
-              wallet_type: crypto.toLowerCase(),
+              wallet_address: sellerWallet.wallet_address || '',
+              coin_type: crypto.toLowerCase(),
               balance: price.toString(),
-              is_active: true,
-              is_primary: false,
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString()
             });

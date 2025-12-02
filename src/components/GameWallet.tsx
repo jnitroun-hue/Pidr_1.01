@@ -477,6 +477,126 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
     }
   };
 
+  // ✅ НОВОЕ: Пополнение через подключенный кошелёк (TonConnect/Phantom/MetaMask)
+  const handleDepositViaWallet = async () => {
+    if (!selectedWalletForDeposit) {
+      alert('Выберите кошелёк для пополнения');
+      return;
+    }
+
+    const amount = parseFloat(depositAmount);
+    if (!amount || amount <= 0) {
+      alert('Введите корректную сумму для пополнения');
+      return;
+    }
+
+    const walletType = selectedWalletForDeposit.wallet_type?.toLowerCase() || selectedCrypto.toLowerCase();
+    
+    try {
+      setLoading(true);
+      console.log(`💳 Пополнение через ${walletType}:`, { amount, crypto: selectedCrypto });
+
+      // ✅ Получаем MASTER_WALLET адрес для выбранной криптовалюты
+      const masterAddressResponse = await fetch(`/api/wallet/unified?action=get_master_address&crypto=${selectedCrypto}`);
+      const masterAddressData = await masterAddressResponse.json();
+      
+      if (!masterAddressData.success || !masterAddressData.address) {
+        throw new Error('Не удалось получить адрес для пополнения');
+      }
+
+      const masterAddress = masterAddressData.address;
+      console.log(`📬 MASTER_WALLET адрес для ${selectedCrypto}:`, masterAddress);
+
+      // ✅ Открываем кошелёк с готовой транзакцией
+      if (walletType === 'ton') {
+        // TonConnect - открываем через tonkeeper/tonhub
+        const tonAmountNano = Math.floor(amount * 1e9); // TON в nanoTON
+        const tonLink = `ton://transfer/${masterAddress}?amount=${tonAmountNano}&text=deposit_${getTelegramUser()?.id}`;
+        
+        // Пробуем открыть через Telegram WebApp
+        if ((window as any).Telegram?.WebApp?.openLink) {
+          (window as any).Telegram.WebApp.openLink(tonLink);
+        } else {
+          window.open(tonLink, '_blank');
+        }
+        
+        alert(`✅ Откройте кошелёк и подтвердите транзакцию на ${amount} TON.\n\nПосле подтверждения баланс обновится автоматически.`);
+        
+      } else if (walletType === 'sol' || walletType === 'solana') {
+        // Solana - открываем через Phantom
+        const solLink = `https://phantom.app/ul/v1/signAndSendTransaction?network=mainnet-beta`;
+        
+        // Попытка через Phantom deeplink
+        const phantomLink = `phantom://send?recipient=${masterAddress}&amount=${amount}`;
+        
+        if ((window as any).solana?.isPhantom) {
+          // Если Phantom установлен как расширение
+          try {
+            const provider = (window as any).solana;
+            if (!provider.isConnected) {
+              await provider.connect();
+            }
+            // Создаём транзакцию
+            alert(`✅ Подготовка транзакции Solana...\n\nОтправьте ${amount} SOL на адрес:\n${masterAddress}`);
+          } catch (err) {
+            console.error('Phantom error:', err);
+            window.open(phantomLink, '_blank');
+          }
+        } else {
+          // Открываем через deeplink
+          if ((window as any).Telegram?.WebApp?.openLink) {
+            (window as any).Telegram.WebApp.openLink(phantomLink);
+          } else {
+            window.open(phantomLink, '_blank');
+          }
+        }
+        
+        alert(`✅ Откройте Phantom и подтвердите транзакцию на ${amount} SOL.\n\nПосле подтверждения баланс обновится автоматически.`);
+        
+      } else if (walletType === 'eth' || walletType === 'ethereum') {
+        // Ethereum - открываем через MetaMask
+        const ethAmountWei = BigInt(Math.floor(amount * 1e18)).toString(16);
+        
+        if ((window as any).ethereum) {
+          try {
+            await (window as any).ethereum.request({
+              method: 'eth_sendTransaction',
+              params: [{
+                to: masterAddress,
+                value: '0x' + ethAmountWei,
+                from: selectedWalletForDeposit.wallet_address
+              }]
+            });
+            alert(`✅ Транзакция отправлена!\n\nПосле подтверждения баланс обновится автоматически.`);
+          } catch (err: any) {
+            if (err.code === 4001) {
+              alert('❌ Транзакция отклонена пользователем');
+            } else {
+              throw err;
+            }
+          }
+        } else {
+          // Открываем MetaMask deeplink
+          const mmLink = `https://metamask.app.link/send/${masterAddress}@1?value=${ethAmountWei}`;
+          window.open(mmLink, '_blank');
+          alert(`✅ Откройте MetaMask и подтвердите транзакцию на ${amount} ETH.`);
+        }
+      } else {
+        alert(`⚠️ Пополнение через ${walletType} пока не поддерживается.\n\nСкопируйте адрес выше и отправьте вручную.`);
+      }
+
+      // Закрываем модалку
+      setActiveModal(null);
+      setDepositAmount('');
+      
+    } catch (error: any) {
+      console.error('❌ Ошибка пополнения через кошелёк:', error);
+      alert('Ошибка: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleWithdraw = async () => {
     const amount = parseInt(withdrawAmount);
     if (!amount || amount <= 0) {
@@ -1248,16 +1368,141 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
                       generateAddress={generateDepositAddress}
                       isGenerating={isGeneratingAddress}
                     />
-                    <div className="hd-info">
-                      <FaKey className="hd-icon" />
-                      <span>
-                        ⚠️ ВАЖНО: Отправляйте {selectedCrypto} на адрес MASTER_WALLET игры (указан выше). После подтверждения транзакции баланс будет пополнен автоматически.
+                  </div>
+                  
+                  {/* ✅ НОВОЕ: Ввод суммы и кнопка пополнения через кошелёк */}
+                  <div style={{
+                    marginTop: '16px',
+                    padding: '16px',
+                    background: 'rgba(59, 130, 246, 0.1)',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(59, 130, 246, 0.3)'
+                  }}>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: '#ffffff',
+                      marginBottom: '12px'
+                    }}>
+                      💰 Сумма для пополнения ({selectedCrypto})
+                    </label>
+                    <div style={{
+                      display: 'flex',
+                      gap: '8px',
+                      marginBottom: '12px'
+                    }}>
+                      <input
+                        type="number"
+                        value={depositAmount}
+                        onChange={(e) => setDepositAmount(e.target.value)}
+                        placeholder={selectedCrypto === 'TON' ? '1.0' : selectedCrypto === 'SOL' ? '0.1' : '0.01'}
+                        step="0.01"
+                        min="0"
+                        style={{
+                          flex: 1,
+                          padding: '14px',
+                          borderRadius: '10px',
+                          border: '2px solid rgba(59, 130, 246, 0.3)',
+                          background: 'rgba(0, 0, 0, 0.3)',
+                          color: '#ffffff',
+                          fontSize: '18px',
+                          fontWeight: '600'
+                        }}
+                      />
+                      <span style={{
+                        padding: '14px 16px',
+                        background: 'rgba(59, 130, 246, 0.2)',
+                        borderRadius: '10px',
+                        color: '#60a5fa',
+                        fontWeight: '700',
+                        fontSize: '16px'
+                      }}>
+                        {selectedCrypto}
                       </span>
                     </div>
-                    <div className="warning-critical">
-                      <strong>⛔ НЕ отправляйте токены из другой сети!</strong><br/>
-                      Например, не отправляйте USDT (TRC-20) на ETH адрес - средства будут потеряны!
+                    
+                    {/* Быстрые кнопки суммы */}
+                    <div style={{
+                      display: 'flex',
+                      gap: '8px',
+                      marginBottom: '16px'
+                    }}>
+                      {(selectedCrypto === 'TON' ? ['1', '5', '10', '25'] : 
+                        selectedCrypto === 'SOL' ? ['0.1', '0.5', '1', '5'] :
+                        ['0.01', '0.05', '0.1', '0.5']).map((amount) => (
+                        <button
+                          key={amount}
+                          onClick={() => setDepositAmount(amount)}
+                          style={{
+                            flex: 1,
+                            padding: '10px',
+                            borderRadius: '8px',
+                            border: depositAmount === amount ? '2px solid #3b82f6' : '1px solid rgba(255,255,255,0.2)',
+                            background: depositAmount === amount ? 'rgba(59, 130, 246, 0.3)' : 'rgba(255,255,255,0.05)',
+                            color: '#ffffff',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          {amount}
+                        </button>
+                      ))}
                     </div>
+                    
+                    {/* ✅ Кнопка пополнения через подключенный кошелёк */}
+                    {selectedWalletForDeposit ? (
+                      <button
+                        onClick={() => handleDepositViaWallet()}
+                        disabled={loading || !depositAmount || parseFloat(depositAmount) <= 0}
+                        style={{
+                          width: '100%',
+                          padding: '16px',
+                          borderRadius: '12px',
+                          border: 'none',
+                          background: loading ? 'rgba(100,100,100,0.5)' : 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                          color: '#ffffff',
+                          fontSize: '16px',
+                          fontWeight: '700',
+                          cursor: loading ? 'not-allowed' : 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          boxShadow: '0 4px 15px rgba(34, 197, 94, 0.4)'
+                        }}
+                      >
+                        {loading ? (
+                          <>⏳ Обработка...</>
+                        ) : (
+                          <>
+                            💳 Пополнить через {selectedWalletForDeposit.wallet_type === 'ton' ? 'TonConnect' : 
+                              selectedWalletForDeposit.wallet_type === 'sol' ? 'Phantom' : 'MetaMask'}
+                          </>
+                        )}
+                      </button>
+                    ) : (
+                      <div style={{
+                        padding: '14px',
+                        borderRadius: '10px',
+                        background: 'rgba(251, 191, 36, 0.1)',
+                        border: '1px solid rgba(251, 191, 36, 0.3)',
+                        color: '#fbbf24',
+                        fontSize: '14px',
+                        textAlign: 'center'
+                      }}>
+                        ⚠️ Выберите кошелёк выше для пополнения через приложение
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="hd-info" style={{ marginTop: '16px' }}>
+                    <FaKey className="hd-icon" />
+                    <span>
+                      💡 Или скопируйте адрес выше и отправьте {selectedCrypto} вручную. Баланс обновится автоматически.
+                    </span>
                   </div>
                 </div>
               )}

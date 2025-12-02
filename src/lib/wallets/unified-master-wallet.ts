@@ -387,30 +387,25 @@ export class UnifiedMasterWallet {
       return this.addressCache.get(cacheKey)!;
     }
 
-    // Ищем в БД
-    const { data, error } = await supabase
-      .from('_pidr_user_wallet_addresses')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('network', network)
-      .eq('is_active', true)
-      .single();
-
-    if (error || !data) {
+    // ✅ УПРОЩЕНО: Используем только MASTER_WALLET адреса из переменных окружения
+    // Таблица _pidr_user_wallet_addresses удалена - больше не генерируем индивидуальные адреса
+    const masterWallet = this.masterWallets.get(network);
+    if (!masterWallet) {
       return null;
     }
 
+    // Возвращаем MASTER_WALLET адрес для всех пользователей
     const address: UserWalletAddress = {
-      id: data.id,
-      userId: data.user_id,
-      network: data.network,
-      address: data.address,
-      derivationIndex: data.derivation_index,
-      masterWalletId: data.master_wallet_id,
-      isActive: data.is_active,
-      createdAt: new Date(data.created_at),
-      balance: data.balance,
-      lastChecked: data.last_checked ? new Date(data.last_checked) : undefined
+      id: `master_${network}_${userId}`,
+      userId: userId,
+      network: network,
+      address: masterWallet.address,
+      derivationIndex: 0,
+      masterWalletId: masterWallet.id,
+      isActive: true,
+      createdAt: new Date(),
+      balance: '0',
+      lastChecked: new Date()
     };
 
     this.addressCache.set(cacheKey, address);
@@ -418,26 +413,12 @@ export class UnifiedMasterWallet {
   }
 
   /**
-   * 💾 Сохранение адреса пользователя в БД
+   * 💾 Сохранение адреса пользователя - ОТКЛЮЧЕНО (используем только MASTER_WALLET)
    */
   private async saveUserAddress(address: UserWalletAddress): Promise<void> {
-    const { error } = await supabase
-      .from('_pidr_user_wallet_addresses')
-      .insert({
-        id: address.id,
-        user_id: address.userId,
-        network: address.network,
-        address: address.address,
-        derivation_index: address.derivationIndex,
-        master_wallet_id: address.masterWalletId,
-        is_active: address.isActive,
-        created_at: address.createdAt.toISOString()
-      });
-
-    if (error) {
-      console.error('❌ Ошибка сохранения адреса:', error);
-      throw new Error(`Не удалось сохранить адрес: ${error.message}`);
-    }
+    // ✅ УПРОЩЕНО: Больше не сохраняем индивидуальные адреса
+    // Все пользователи отправляют на MASTER_WALLET адрес
+    console.log(`✅ [saveUserAddress] Используем MASTER_WALLET для ${address.network}`);
   }
 
   /**
@@ -491,23 +472,12 @@ export class UnifiedMasterWallet {
     totalAddresses: number;
     lastActivity: Date | null;
   }> {
-    const { data: addressCount } = await supabase
-      .from('_pidr_user_wallet_addresses')
-      .select('id', { count: 'exact' })
-      .eq('is_active', true);
-
-    const { data: lastAddress } = await supabase
-      .from('_pidr_user_wallet_addresses')
-      .select('created_at')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
-
+    // ✅ УПРОЩЕНО: Статистика на основе MASTER_WALLET конфигурации
     return {
       totalNetworks: Object.keys(SUPPORTED_NETWORKS).length,
       activeWallets: this.masterWallets.size,
-      totalAddresses: addressCount?.length || 0,
-      lastActivity: lastAddress ? new Date(lastAddress.created_at) : null
+      totalAddresses: this.masterWallets.size, // Используем только MASTER_WALLET адреса
+      lastActivity: new Date()
     };
   }
 

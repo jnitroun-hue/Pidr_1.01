@@ -79,22 +79,6 @@ export async function createTablesDirectly(): Promise<{ success: boolean; messag
       `
     },
     {
-      name: '_pidr_hd_wallets',
-      sql: `
-        CREATE TABLE IF NOT EXISTS _pidr_hd_wallets (
-          id BIGSERIAL PRIMARY KEY,
-          user_id VARCHAR(255) NOT NULL,
-          coin VARCHAR(10) NOT NULL,
-          address VARCHAR(255) NOT NULL,
-          derivation_path VARCHAR(100) NOT NULL,
-          address_index INTEGER NOT NULL,
-          is_active BOOLEAN DEFAULT true,
-          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-        );
-      `
-    },
-    {
       name: '_pidr_user_status',
       sql: `
         CREATE TABLE IF NOT EXISTS _pidr_user_status (
@@ -229,20 +213,7 @@ CREATE TABLE IF NOT EXISTS _pidr_coin_transactions (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 5. HD Кошельки (ГЛАВНАЯ ТАБЛИЦА!)
-CREATE TABLE IF NOT EXISTS _pidr_hd_wallets (
-    id BIGSERIAL PRIMARY KEY,
-    user_id VARCHAR(255) NOT NULL,
-    coin VARCHAR(10) NOT NULL,
-    address VARCHAR(255) NOT NULL,
-    derivation_path VARCHAR(100) NOT NULL,
-    address_index INTEGER NOT NULL,
-    is_active BOOLEAN DEFAULT true,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- 6. Статус пользователей
+-- 5. Статус пользователей
 CREATE TABLE IF NOT EXISTS _pidr_user_status (
     id BIGSERIAL PRIMARY KEY,
     user_id VARCHAR(255) UNIQUE NOT NULL,
@@ -253,8 +224,6 @@ CREATE TABLE IF NOT EXISTS _pidr_user_status (
 );
 
 -- ИНДЕКСЫ
-CREATE UNIQUE INDEX IF NOT EXISTS idx_pidr_hd_user_coin ON _pidr_hd_wallets (user_id, coin);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_pidr_hd_address ON _pidr_hd_wallets (coin, address);
 CREATE INDEX IF NOT EXISTS idx_pidr_users_telegram_id ON _pidr_users (telegram_id);
 CREATE INDEX IF NOT EXISTS idx_pidr_rooms_code ON _pidr_rooms (room_code);
 CREATE INDEX IF NOT EXISTS idx_pidr_rooms_status ON _pidr_rooms (status);
@@ -266,7 +235,6 @@ ALTER TABLE _pidr_users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE _pidr_rooms ENABLE ROW LEVEL SECURITY;
 ALTER TABLE _pidr_room_players ENABLE ROW LEVEL SECURITY;
 ALTER TABLE _pidr_coin_transactions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE _pidr_hd_wallets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE _pidr_user_status ENABLE ROW LEVEL SECURITY;
 ALTER TABLE _pidr_room_invites ENABLE ROW LEVEL SECURITY;
 
@@ -283,9 +251,6 @@ CREATE POLICY "Enable all for all users" ON _pidr_room_players FOR ALL USING (tr
 
 DROP POLICY IF EXISTS "Enable all for all users" ON _pidr_coin_transactions;
 CREATE POLICY "Enable all for all users" ON _pidr_coin_transactions FOR ALL USING (true);
-
-DROP POLICY IF EXISTS "Enable all for all users" ON _pidr_hd_wallets;
-CREATE POLICY "Enable all for all users" ON _pidr_hd_wallets FOR ALL USING (true);
 
 DROP POLICY IF EXISTS "Enable all for all users" ON _pidr_user_status;
 CREATE POLICY "Enable all for all users" ON _pidr_user_status FOR ALL USING (true);

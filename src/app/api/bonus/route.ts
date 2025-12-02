@@ -59,12 +59,12 @@ export async function POST(req: NextRequest) {
         // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Используем уникальную комбинацию user_id + date для проверки
         const todayKey = `${userId}_${todayStart.getTime()}`; // Уникальный ключ на день
         
+        // ✅ ИСПРАВЛЕНО: Используем _pidr_coin_transactions вместо удалённой _pidr_transactions
         const { data: dailyBonusToday, error: dailyError } = await supabase
-          .from('_pidr_transactions')
+          .from('_pidr_coin_transactions')
           .select('id, created_at, amount')
           .eq('user_id', userId)
-          .eq('type', 'bonus')
-          .eq('bonus_type', 'daily')
+          .eq('transaction_type', 'bonus')
           .gte('created_at', todayStart.toISOString())
           .lt('created_at', todayEnd.toISOString())
           .order('created_at', { ascending: false })
@@ -76,10 +76,10 @@ export async function POST(req: NextRequest) {
         
         // ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА: Ищем транзакции по описанию с сегодняшней датой
         const { data: bonusByDescription } = await supabase
-          .from('_pidr_transactions')
+          .from('_pidr_coin_transactions')
           .select('id, created_at, amount, description')
           .eq('user_id', userId)
-          .eq('type', 'bonus')
+          .eq('transaction_type', 'bonus')
           .like('description', `%${todayStart.toDateString()}%`)
           .limit(1);
         
@@ -152,14 +152,16 @@ export async function POST(req: NextRequest) {
     }
     
     // 2. Записываем транзакцию для истории
+    // ✅ ИСПРАВЛЕНО: Используем _pidr_coin_transactions
     const { error: transactionError } = await supabase
-      .from('_pidr_transactions')
+      .from('_pidr_coin_transactions')
       .insert({
         user_id: userId,
-        type: 'bonus',
+        transaction_type: 'bonus',
         amount: bonusAmount,
         description: bonusDescription,
-        bonus_type: bonusType,
+        balance_before: user.coins,
+        balance_after: newBalance,
         created_at: new Date().toISOString()
       });
       
@@ -205,18 +207,20 @@ export async function GET(req: NextRequest) {
   
   try {
     // Получаем информацию о последних бонусах пользователя
+    // ✅ ИСПРАВЛЕНО: Используем _pidr_coin_transactions
     const { data: recentBonuses } = await supabase
-      .from('_pidr_transactions')
-      .select('bonus_type, created_at')
+      .from('_pidr_coin_transactions')
+      .select('transaction_type, created_at, description')
       .eq('user_id', userId)
-      .eq('type', 'bonus')
+      .eq('transaction_type', 'bonus')
       .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // За последние 24 часа
       .order('created_at', { ascending: false });
     
     // Проверяем доступность бонусов
     const today = new Date().toDateString();
+    // ✅ ИСПРАВЛЕНО: Проверяем по description вместо bonus_type
     const dailyBonusToday = recentBonuses?.find((b: any) => 
-      b.bonus_type === 'daily' && 
+      b.description?.includes('Ежедневный бонус') && 
       new Date(b.created_at).toDateString() === today
     );
     

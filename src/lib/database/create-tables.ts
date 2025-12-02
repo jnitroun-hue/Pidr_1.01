@@ -59,19 +59,6 @@ CREATE TABLE IF NOT EXISTS _pidr_coin_transactions (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- HD Кошельки (ГЛАВНАЯ ТАБЛИЦА!)
-CREATE TABLE IF NOT EXISTS _pidr_hd_wallets (
-    id BIGSERIAL PRIMARY KEY,
-    user_id VARCHAR(255) NOT NULL,
-    coin VARCHAR(10) NOT NULL,
-    address VARCHAR(255) NOT NULL,
-    derivation_path VARCHAR(100) NOT NULL,
-    address_index INTEGER NOT NULL,
-    is_active BOOLEAN DEFAULT true,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
 -- Статус пользователей
 CREATE TABLE IF NOT EXISTS _pidr_user_status (
     id BIGSERIAL PRIMARY KEY,
@@ -159,18 +146,11 @@ CREATE TABLE IF NOT EXISTS _pidr_user_settings (
 
 const INDEXES_SQL = `
 -- ИНДЕКСЫ
-CREATE UNIQUE INDEX IF NOT EXISTS idx_pidr_hd_user_coin 
-ON _pidr_hd_wallets (user_id, coin);
-
-CREATE UNIQUE INDEX IF NOT EXISTS idx_pidr_hd_address 
-ON _pidr_hd_wallets (coin, address);
-
 CREATE INDEX IF NOT EXISTS idx_pidr_users_telegram_id ON _pidr_users (telegram_id);
 CREATE INDEX IF NOT EXISTS idx_pidr_rooms_code ON _pidr_rooms (room_code);
 CREATE INDEX IF NOT EXISTS idx_pidr_rooms_status ON _pidr_rooms (status);
 CREATE INDEX IF NOT EXISTS idx_pidr_room_players_room_id ON _pidr_room_players (room_id);
 CREATE INDEX IF NOT EXISTS idx_pidr_room_players_user_id ON _pidr_room_players (user_id);
-CREATE INDEX IF NOT EXISTS idx_pidr_hd_wallets_user_id ON _pidr_hd_wallets (user_id);
 CREATE INDEX IF NOT EXISTS idx_pidr_coin_transactions_user_id ON _pidr_coin_transactions (user_id);
 CREATE INDEX IF NOT EXISTS idx_pidr_room_invites_to_user ON _pidr_room_invites (to_user_id, status);
 CREATE INDEX IF NOT EXISTS idx_pidr_room_invites_room ON _pidr_room_invites (room_id);
@@ -182,7 +162,6 @@ ALTER TABLE _pidr_users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE _pidr_rooms ENABLE ROW LEVEL SECURITY;
 ALTER TABLE _pidr_room_players ENABLE ROW LEVEL SECURITY;
 ALTER TABLE _pidr_coin_transactions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE _pidr_hd_wallets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE _pidr_user_status ENABLE ROW LEVEL SECURITY;
 ALTER TABLE _pidr_games ENABLE ROW LEVEL SECURITY;
 ALTER TABLE _pidr_game_results ENABLE ROW LEVEL SECURITY;
@@ -209,10 +188,6 @@ BEGIN
     
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = '_pidr_coin_transactions' AND policyname = 'Enable all for all users') THEN
         CREATE POLICY "Enable all for all users" ON _pidr_coin_transactions FOR ALL USING (true);
-    END IF;
-    
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = '_pidr_hd_wallets' AND policyname = 'Enable all for all users') THEN
-        CREATE POLICY "Enable all for all users" ON _pidr_hd_wallets FOR ALL USING (true);
     END IF;
     
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = '_pidr_user_status' AND policyname = 'Enable all for all users') THEN
@@ -278,7 +253,7 @@ export async function createPidrTables(): Promise<{ success: boolean; message: s
         // Альтернативный способ - проверяем каждую таблицу отдельно
         const tables = [
           '_pidr_users', '_pidr_rooms', '_pidr_room_players', 
-          '_pidr_coin_transactions', '_pidr_hd_wallets', '_pidr_user_status',
+          '_pidr_coin_transactions', '_pidr_user_status',
           '_pidr_games', '_pidr_game_results', '_pidr_friends',
           '_pidr_achievements', '_pidr_user_achievements', '_pidr_user_settings'
         ];
@@ -372,7 +347,7 @@ export async function createPidrTables(): Promise<{ success: boolean; message: s
 export async function checkDatabaseStatus() {
   const tables = [
     '_pidr_users', '_pidr_rooms', '_pidr_room_players', 
-    '_pidr_coin_transactions', '_pidr_hd_wallets', '_pidr_user_status'
+    '_pidr_coin_transactions', '_pidr_user_status'
   ];
 
   const status: Record<string, boolean> = {};

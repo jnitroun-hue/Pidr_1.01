@@ -32,8 +32,7 @@ export async function GET(req: NextRequest) {
       '_pidr_friends',
       '_pidr_achievements',
       '_pidr_user_achievements',
-      '_pidr_user_settings',
-      '_pidr_hd_wallets'
+      '_pidr_user_settings'
     ];
 
     const tableStatus: Record<string, any> = {};
@@ -124,17 +123,12 @@ export async function POST(req: NextRequest) {
       return await updateUserBalance(userId, amount);
     }
 
-    // HD Wallet actions
-    if (action === 'save_hd_address') {
-      return await saveHDAddress(body);
-    }
-
-    if (action === 'get_user_hd_address') {
-      return await getUserHDAddress(userId, body.coin);
-    }
-
-    if (action === 'get_all_user_hd_addresses') {
-      return await getAllUserHDAddresses(userId);
+    // ✅ HD Wallet actions - УДАЛЕНЫ (используем MASTER_WALLET из переменных окружения)
+    if (action === 'save_hd_address' || action === 'get_user_hd_address' || action === 'get_all_user_hd_addresses') {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'HD Wallet функции удалены. Используйте MASTER_WALLET адреса из переменных окружения.' 
+      }, { status: 410 }); // 410 Gone
     }
 
     // Автоматическое создание таблиц
@@ -466,122 +460,8 @@ async function updateUserBalance(userId: string, newBalance: number) {
   }
 }
 
-// HD Wallet functions
-async function saveHDAddress(addressData: any) {
-  try {
-    console.log('💾 Сохранение HD адреса:', addressData);
-
-    const { data, error } = await supabase
-      .from('_pidr_hd_wallets')
-      .insert([
-        {
-          user_id: addressData.userId,
-          coin: addressData.coin,
-          address: addressData.address,
-          derivation_path: addressData.derivationPath,
-          address_index: addressData.index,
-          created_at: new Date().toISOString()
-        }
-      ]);
-
-    if (error) {
-      console.error('❌ Ошибка сохранения HD адреса:', error);
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ 
-      success: true, 
-      message: 'HD адрес сохранен',
-      data 
-    });
-
-  } catch (error: any) {
-    console.error('❌ Ошибка saveHDAddress:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
-  }
-}
-
-async function getUserHDAddress(userId: string, coin: string) {
-  try {
-    console.log(`🔍 Поиск HD адреса для пользователя ${userId}, монета ${coin}`);
-
-    const { data, error } = await supabase
-      .from('_pidr_hd_wallets')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('coin', coin.toUpperCase())
-      .single();
-
-    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
-      console.error('❌ Ошибка получения HD адреса:', error);
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
-    }
-
-    if (!data) {
-      return NextResponse.json({ 
-        success: true, 
-        address: null,
-        message: 'Адрес не найден' 
-      });
-    }
-
-    const address = {
-      userId: data.user_id,
-      coin: data.coin,
-      address: data.address,
-      derivationPath: data.derivation_path,
-      index: data.address_index,
-      created_at: new Date(data.created_at)
-    };
-
-    return NextResponse.json({ 
-      success: true, 
-      address,
-      message: 'HD адрес найден' 
-    });
-
-  } catch (error: any) {
-    console.error('❌ Ошибка getUserHDAddress:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
-  }
-}
-
-async function getAllUserHDAddresses(userId: string) {
-  try {
-    console.log(`🔍 Получение всех HD адресов для пользователя ${userId}`);
-
-    const { data, error } = await supabase
-      .from('_pidr_hd_wallets')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('❌ Ошибка получения всех HD адресов:', error);
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
-    }
-
-    const addresses = data.map((row: any) => ({
-      userId: row.user_id,
-      coin: row.coin,
-      address: row.address,
-      derivationPath: row.derivation_path,
-      index: row.address_index,
-      created_at: new Date(row.created_at)
-    }));
-
-    return NextResponse.json({ 
-      success: true, 
-      addresses,
-      count: addresses.length,
-      message: `Найдено ${addresses.length} HD адресов` 
-    });
-
-  } catch (error: any) {
-    console.error('❌ Ошибка getAllUserHDAddresses:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
-  }
-}
+// ✅ HD Wallet functions - УДАЛЕНЫ (таблица _pidr_hd_wallets удалена)
+// Используем только MASTER_WALLET адреса из переменных окружения
 
 // Обработчик автоматического создания таблиц
 async function handleCreateTables() {

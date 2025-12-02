@@ -1,5 +1,0 @@
-[33m0f83f3c[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m REVERT: Restore immediate stats update on player finish
-[33me7b583a[m FIX: Redesign winner/loser modals + fix premature stats update
-[33md719649[m FIX ONE CARD CHECK AFTER PENALTY DISTRIBUTION
-[33m3997d86[m ADD TOUCH DRAG DROP + IPHONE SAFE AREA + FAST LEAVE UPDATE + AUTO CLEANUP CRON + FIX RLS
-[33m174819b[m FIX SINGLE PLAYER 7 BOTS + 2-2-2-1 LAYOUT + KEEP MULTIPLAYER 4-9

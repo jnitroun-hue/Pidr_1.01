@@ -37,29 +37,33 @@ export async function POST(req: NextRequest) {
   try {
     console.log(`💳 Проверяем платежи для пользователя ${userId}`);
 
-    // 1. Получаем все HD адреса пользователя
-    const { data: hdAddresses, error: addressError } = await supabase
-      .from('_pidr_hd_wallets')
-      .select('*')
-      .eq('user_id', userId);
-
-    if (addressError) {
-      console.error('❌ Ошибка получения HD адресов:', addressError);
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Ошибка получения адресов' 
-      }, { status: 500 });
-    }
-
-    if (!hdAddresses || hdAddresses.length === 0) {
+    // ✅ УПРОЩЕНО: HD адреса больше не используются
+    // Все платежи идут на MASTER_WALLET адреса из переменных окружения
+    // Пользователи идентифицируются по memo/comment в транзакции
+    
+    console.log(`📍 [check-payments] Проверяем входящие платежи на MASTER_WALLET для ${userId}`);
+    
+    // Получаем MASTER_WALLET адреса из переменных окружения
+    const masterAddresses = [
+      { coin: 'TON', address: process.env.MASTER_WALLET_TON },
+      { coin: 'SOL', address: process.env.MASTER_WALLET_SOL },
+      { coin: 'ETH', address: process.env.MASTER_WALLET_ETH }
+    ].filter(a => a.address);
+    
+    if (masterAddresses.length === 0) {
       return NextResponse.json({
         success: true,
-        message: 'У пользователя нет HD адресов',
+        message: 'MASTER_WALLET адреса не настроены',
         newPayments: []
       });
     }
-
-    console.log(`📍 Найдено ${hdAddresses.length} HD адресов для проверки`);
+    
+    // Используем MASTER_WALLET как источник для проверки платежей
+    const hdAddresses = masterAddresses.map(a => ({
+      user_id: userId,
+      coin: a.coin,
+      address: a.address
+    }));
 
     // 2. Проверяем платежи по каждому адресу
     const newPayments = [];

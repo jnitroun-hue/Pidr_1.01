@@ -33,9 +33,10 @@ export async function GET(req: NextRequest) {
     console.log(`💰 Баланс пользователя ${user.username}: ${user.coins} монет`);
     
     // Получаем последние транзакции для истории
+    // ✅ ИСПРАВЛЕНО: Используем _pidr_coin_transactions
     const { data: recentTransactions } = await supabase
-      .from('_pidr_transactions')
-      .select('id, type, amount, description, created_at')
+      .from('_pidr_coin_transactions')
+      .select('id, transaction_type, amount, description, created_at')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(10);
@@ -142,13 +143,16 @@ export async function POST(req: NextRequest) {
     }
     
     // Записываем транзакцию
+    // ✅ ИСПРАВЛЕНО: Используем _pidr_coin_transactions
     const { error: transactionError } = await supabase
-      .from('_pidr_transactions')
+      .from('_pidr_coin_transactions')
       .insert({
         user_id: userId,
-        type: type,
+        transaction_type: type,
         amount: amount,
         description: description,
+        balance_before: oldBalance,
+        balance_after: newBalance,
         created_at: new Date().toISOString()
       });
       

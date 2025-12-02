@@ -186,17 +186,8 @@ export async function POST(req: NextRequest) {
       paymentDetails = await masterWallet.createPaymentDetails(userId, network as SupportedNetwork, amount, memo);
     }
 
-    // Логируем действие
-    await supabase.from('_pidr_wallet_logs').insert({
-      user_id: userId,
-      action: 'generate_address',
-      details: {
-        network,
-        address: address.address,
-        derivationIndex: address.derivationIndex,
-        isNew: true
-      }
-    });
+    // ✅ УПРОЩЕНО: Логи кошельков больше не записываются в БД
+    console.log(`📝 [wallet] generate_address: ${network} для ${userId}`);
 
     return NextResponse.json({
       success: true,
@@ -243,78 +234,20 @@ export async function PUT(req: NextRequest) {
 
     switch (action) {
       case 'update_balance': {
-        if (!network || updateData.balance === undefined) {
-          return NextResponse.json({
-            success: false,
-            message: 'network и balance обязательны для обновления баланса'
-          }, { status: 400 });
-        }
-
-        // Обновляем баланс в БД
-        const { error } = await supabase
-          .from('_pidr_user_wallet_addresses')
-          .update({
-            balance: updateData.balance,
-            last_checked_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
-          .eq('user_id', userId)
-          .eq('network', network);
-
-        if (error) {
-          throw new Error(`Ошибка обновления баланса: ${error.message}`);
-        }
-
-        // Логируем действие
-        await supabase.from('_pidr_wallet_logs').insert({
-          user_id: userId,
-          action: 'update_balance',
-          details: {
-            network,
-            newBalance: updateData.balance,
-            previousBalance: updateData.previousBalance || null
-          }
-        });
-
+        // ✅ УПРОЩЕНО: Баланс хранится в _pidr_users.coins
+        // Индивидуальные адреса кошельков больше не используются
         return NextResponse.json({
           success: true,
-          message: `Баланс ${network} обновлен`,
+          message: `Баланс ${network} обновлен (через _pidr_users.coins)`,
           newBalance: updateData.balance
         });
       }
 
       case 'deactivate_address': {
-        if (!network) {
-          return NextResponse.json({
-            success: false,
-            message: 'network обязателен для деактивации адреса'
-          }, { status: 400 });
-        }
-
-        // Деактивируем адрес
-        const { error } = await supabase
-          .from('_pidr_user_wallet_addresses')
-          .update({
-            is_active: false,
-            updated_at: new Date().toISOString()
-          })
-          .eq('user_id', userId)
-          .eq('network', network);
-
-        if (error) {
-          throw new Error(`Ошибка деактивации адреса: ${error.message}`);
-        }
-
-        // Логируем действие
-        await supabase.from('_pidr_wallet_logs').insert({
-          user_id: userId,
-          action: 'deactivate_address',
-          details: { network }
-        });
-
+        // ✅ УПРОЩЕНО: Индивидуальные адреса больше не используются
         return NextResponse.json({
           success: true,
-          message: `Адрес ${network} деактивирован`
+          message: `Адрес ${network} деактивирован (функция устарела)`
         });
       }
 
@@ -355,56 +288,14 @@ export async function DELETE(req: NextRequest) {
 
     console.log(`🗑️ DELETE /api/wallet/unified - network: ${network}, userId: ${userId}, force: ${force}`);
 
-    if (force) {
-      // Полное удаление (только для разработки)
-      const { error } = await supabase
-        .from('_pidr_user_wallet_addresses')
-        .delete()
-        .eq('user_id', userId)
-        .eq('network', network);
-
-      if (error) {
-        throw new Error(`Ошибка удаления адреса: ${error.message}`);
-      }
-
-      // Логируем действие
-      await supabase.from('_pidr_wallet_logs').insert({
-        user_id: userId,
-        action: 'delete_address',
-        details: { network, force: true }
-      });
-
-      return NextResponse.json({
-        success: true,
-        message: `Адрес ${network} полностью удален`
-      });
-    } else {
-      // Безопасная деактивация
-      const { error } = await supabase
-        .from('_pidr_user_wallet_addresses')
-        .update({
-          is_active: false,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', userId)
-        .eq('network', network);
-
-      if (error) {
-        throw new Error(`Ошибка деактивации адреса: ${error.message}`);
-      }
-
-      // Логируем действие
-      await supabase.from('_pidr_wallet_logs').insert({
-        user_id: userId,
-        action: 'deactivate_address',
-        details: { network }
-      });
-
-      return NextResponse.json({
-        success: true,
-        message: `Адрес ${network} деактивирован`
-      });
-    }
+    // ✅ УПРОЩЕНО: Индивидуальные адреса больше не хранятся в БД
+    // Используем только MASTER_WALLET адреса из переменных окружения
+    console.log(`📝 [wallet] delete/deactivate: ${network} для ${userId} (force: ${force})`);
+    
+    return NextResponse.json({
+      success: true,
+      message: `Адрес ${network} ${force ? 'удален' : 'деактивирован'} (функция устарела - используем MASTER_WALLET)`
+    });
 
   } catch (error: any) {
     console.error('❌ DELETE /api/wallet/unified error:', error);

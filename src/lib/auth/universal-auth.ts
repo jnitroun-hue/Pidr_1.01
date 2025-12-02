@@ -259,25 +259,12 @@ function hashToken(token: string): string {
 
 /**
  * Инвалидация сессии (logout)
+ * ✅ УПРОЩЕНО: Сессии хранятся только в JWT, БД не используется
  */
 export async function invalidateSession(sessionToken: string): Promise<boolean> {
-  if (!supabase) {
-    return false;
-  }
-
-  const sessionTokenHash = hashToken(sessionToken);
-
-  const { error } = await supabase
-    .from('_pidr_user_sessions')
-    .update({ is_active: false, updated_at: new Date().toISOString() })
-    .eq('session_token_hash', sessionTokenHash);
-
-  if (error) {
-    console.error('❌ Ошибка инвалидации сессии:', error);
-    return false;
-  }
-
-  console.log('✅ Сессия инвалидирована');
+  // ✅ УПРОЩЕНО: Сессии больше не хранятся в БД (таблица _pidr_user_sessions удалена)
+  // Logout происходит на клиенте путём удаления токена из localStorage/cookies
+  console.log('✅ Сессия инвалидирована (клиентская сторона)');
   return true;
 }
 

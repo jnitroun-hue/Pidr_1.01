@@ -114,44 +114,38 @@ export class TonPaymentService {
 
   /**
    * Найти пользователя по MEMO
+   * ✅ УПРОЩЕНО: Memo больше не используется - транзакции идут через TonConnect
    */
   private async findUserByMemo(memo: string): Promise<string | null> {
     try {
-      const supabase = getSupabaseAdmin();
-      
-      // Ищем в таблице payment_addresses где хранятся memo пользователей
-      const { data, error } = await supabase
-        .from('_pidr_payment_addresses')
-        .select('user_id')
-        .eq('memo', memo)
-        .eq('coin', 'TON')
-        .single();
-
-      if (error || !data) {
-        console.log(`⚠️ Пользователь с memo ${memo} не найден`);
-        return null;
+      // ✅ УПРОЩЕНО: Парсим telegram_id из memo формата "deposit_TELEGRAM_ID"
+      if (memo && memo.startsWith('deposit_')) {
+        const userId = memo.replace('deposit_', '');
+        console.log(`✅ Извлечён userId из memo: ${userId}`);
+        return userId;
       }
-
-      console.log(`✅ Найден пользователь для memo ${memo}: ${data.user_id}`);
-      return data.user_id;
+      
+      console.log(`⚠️ Memo не распознан: ${memo}`);
+      return null;
       
     } catch (error) {
-      console.error('❌ Ошибка поиска пользователя по memo:', error);
+      console.error('❌ Ошибка парсинга memo:', error);
       return null;
     }
   }
 
   /**
    * Проверить была ли транзакция уже обработана
+   * ✅ ИСПРАВЛЕНО: Используем _pidr_crypto_transactions
    */
   private async isTransactionProcessed(txHash: string): Promise<boolean> {
     try {
       const supabase = getSupabaseAdmin();
       
       const { data, error } = await supabase
-        .from('_pidr_transactions')
+        .from('_pidr_crypto_transactions')
         .select('id')
-        .eq('tx_hash', txHash)
+        .eq('transaction_hash', txHash)
         .single();
 
       return !!data && !error;
@@ -163,24 +157,22 @@ export class TonPaymentService {
 
   /**
    * Сохранить транзакцию в БД и зачислить монеты
+   * ✅ ИСПРАВЛЕНО: Используем _pidr_crypto_transactions
    */
   private async processPayment(tx: TonTransaction, userId: string, tonAmount: number, coinsAmount: number): Promise<boolean> {
     try {
       const supabase = getSupabaseAdmin();
 
-      // 1. Сохраняем транзакцию
+      // 1. Сохраняем транзакцию в _pidr_crypto_transactions
       const { error: txError } = await supabase
-        .from('_pidr_transactions')
+        .from('_pidr_crypto_transactions')
         .insert({
-          user_id: userId,
-          type: 'deposit',
-          amount: coinsAmount,
-          coin: 'TON',
-          coin_amount: tonAmount,
-          tx_hash: tx.hash,
-          from_address: tx.from,
-          to_address: tx.to,
-          memo: tx.comment || '',
+          user_id: parseInt(userId) || 0,
+          crypto_type: 'TON',
+          transaction_hash: tx.hash,
+          wallet_address: tx.from,
+          amount: tonAmount,
+          purpose: `Deposit: ${coinsAmount} coins`,
           status: 'completed',
           created_at: new Date(tx.timestamp).toISOString()
         });
@@ -310,6 +302,7 @@ export class TonPaymentService {
 
   /**
    * Получить информацию для платежа (адрес + memo пользователя)
+   * ✅ УПРОЩЕНО: Memo генерируется на лету, не сохраняем в БД
    */
   async getPaymentInfo(userId: string): Promise<{
     address: string;
@@ -319,39 +312,8 @@ export class TonPaymentService {
     qr_url?: string;
   }> {
     try {
-      const supabase = getSupabaseAdmin();
-      
-      // Проверяем есть ли уже memo для этого пользователя
-      let { data: existingAddress } = await supabase
-        .from('_pidr_payment_addresses')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('coin', 'TON')
-        .single();
-
-      let memo: string;
-
-      if (existingAddress) {
-        memo = existingAddress.memo;
-      } else {
-        // Генерируем новый memo
-        memo = this.generateUserMemo(userId);
-        
-        // Сохраняем в БД
-        const { error } = await supabase
-          .from('_pidr_payment_addresses')
-          .insert({
-            user_id: userId,
-            coin: 'TON',
-            address: this.masterAddress,
-            memo: memo,
-            is_active: true
-          });
-
-        if (error) {
-          console.error('❌ Ошибка сохранения memo:', error);
-        }
-      }
+      // ✅ УПРОЩЕНО: Memo = "deposit_TELEGRAM_ID" - парсится при получении транзакции
+      const memo = `deposit_${userId}`;
 
       return {
         address: this.masterAddress,
