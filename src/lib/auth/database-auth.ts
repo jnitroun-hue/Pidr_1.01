@@ -253,23 +253,27 @@ export class DatabaseAuth {
 
   /**
    * Проверка активной сессии
+   * ✅ ИСПРАВЛЕНО: Используем validateToken вместо validateSession
    */
   async validateSession(sessionId: string): Promise<DatabaseUser | null> {
     console.log('🔍 Проверка сессии:', sessionId);
 
     try {
-      const validation = await SessionManager.validateSession(sessionId);
+      // ✅ ИСПРАВЛЕНО: sessionId здесь - это JWT токен
+      const validation = await SessionManager.validateToken(sessionId);
       
-      if (!validation.valid) {
+      if (!validation.valid || !validation.userId) {
         console.log('❌ Сессия недействительна');
         return null;
       }
 
       // Получаем данные пользователя из БД
+      // ✅ ИСПРАВЛЕНО: userId из JWT может быть строкой или числом, приводим к строке
+      const userIdStr = String(validation.userId);
       const { data: user, error } = await supabase
         .from('_pidr_users')
         .select('*')
-        .eq('id', validation.userId)
+        .eq('telegram_id', userIdStr)
         .single();
 
       if (error || !user) {
