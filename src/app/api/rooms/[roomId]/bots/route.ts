@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { requireAuth } from '@/lib/auth-utils';
+import { atomicJoinRoom } from '@/lib/multiplayer/player-state-manager';
 
 // 🤖 API ДЛЯ УПРАВЛЕНИЯ БОТАМИ В КОМНАТЕ
 export async function POST(
@@ -184,42 +185,38 @@ export async function POST(
         console.log(`✅ [ADD BOT] Создан новый бот: ${botName} (ID: ${botId})`);
       }
 
-      // ✅ ДОБАВЛЯЕМ БОТА В КОМНАТУ
-      const { error: botError } = await supabase
-        .from('_pidr_room_players')
-        .insert({
-          room_id: roomId,
-          user_id: botId,
-          username: botName,
-          position: nextPosition,
-          is_ready: true,
-          avatar_url: botAvatar
-        });
+      // ✅ ИСПРАВЛЕНО: ДОБАВЛЯЕМ БОТА ЧЕРЕЗ atomicJoinRoom для синхронизации с Redis
+      console.log(`🤖 [ADD BOT] Добавляем бота ${botName} (ID: ${botId}) в комнату ${roomId}`);
+      
+      const joinResult = await atomicJoinRoom({
+        userId: String(botId), // ✅ telegram_id бота (отрицательное число)
+        username: botName,
+        roomId: String(roomId),
+        roomCode: room.room_code,
+        maxPlayers: room.max_players,
+        isHost: false, // Боты не могут быть хостами
+      });
 
-      if (botError) {
-        console.error('❌ Ошибка добавления бота в комнату:', botError);
+      if (!joinResult.success) {
+        console.error('❌ [ADD BOT] Ошибка добавления бота через atomicJoinRoom:', joinResult.error);
         return NextResponse.json({ 
           success: false, 
-          message: 'Ошибка добавления бота: ' + botError.message 
+          message: 'Ошибка добавления бота: ' + (joinResult.error || 'Неизвестная ошибка')
         }, { status: 500 });
       }
 
-      // ✅ ОБНОВЛЯЕМ СЧЕТЧИК ИГРОКОВ И last_activity
-      const now = new Date().toISOString();
-      const { error: updateError } = await supabase
-        .from('_pidr_rooms')
-        .update({ 
-          current_players: room.current_players + 1,
-          last_activity: now,
-          updated_at: now
-        })
-        .eq('id', roomId);
+      // ✅ ОБНОВЛЯЕМ avatar_url для бота (atomicJoinRoom не устанавливает его)
+      const { error: avatarError } = await supabase
+        .from('_pidr_room_players')
+        .update({ avatar_url: botAvatar })
+        .eq('room_id', roomId)
+        .eq('user_id', botId);
 
-      if (updateError) {
-        console.error('❌ Ошибка обновления счетчика:', updateError);
+      if (avatarError) {
+        console.warn('⚠️ [ADD BOT] Ошибка обновления avatar_url (не критично):', avatarError);
       }
 
-      console.log(`✅ Бот ${botName} добавлен в комнату ${roomId}`);
+      console.log(`✅ [ADD BOT] Бот ${botName} успешно добавлен в комнату ${roomId} на позицию ${joinResult.position}`);
 
       return NextResponse.json({ 
         success: true, 

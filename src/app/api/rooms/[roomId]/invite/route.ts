@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireAuth } from '@/lib/auth-utils';
-
-// ✅ Используем Service Role Key для обхода RLS
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+import { supabase } from '@/lib/supabase';
 
 // POST /api/rooms/[roomId]/invite
 // Создать приглашение другу в комнату
@@ -15,8 +12,21 @@ export async function POST(
   try {
     const { roomId } = await context.params;
     
+    // ✅ ИСПРАВЛЕНО: Используем готовый клиент из lib/supabase
+    // Если нужен admin доступ, создаём отдельный клиент
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('❌ [ROOM INVITE] Отсутствуют переменные окружения Supabase');
+      return NextResponse.json(
+        { success: false, message: 'Ошибка конфигурации сервера' },
+        { status: 500 }
+      );
+    }
+    
     // ✅ Создаём admin клиент для обхода RLS
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const adminSupabase = createClient(supabaseUrl, supabaseServiceKey);
     
     const auth = await requireAuth(request);
     if (auth.error) {
@@ -45,7 +55,7 @@ export async function POST(
     }
 
     // Проверяем существование комнаты
-    const { data: room, error: roomError } = await supabase
+    const { data: room, error: roomError } = await adminSupabase
       .from('_pidr_rooms')
       .select('*')
       .eq('id', roomId)
@@ -62,7 +72,7 @@ export async function POST(
     }
 
     // Проверяем, что отправитель действительно в этой комнате
-    const { data: senderPlayer } = await supabase
+    const { data: senderPlayer } = await adminSupabase
       .from('_pidr_room_players')
       .select('id')
       .eq('room_id', roomId)
@@ -79,7 +89,7 @@ export async function POST(
     }
 
     // ✅ Проверяем дружбу в обоих направлениях (user_id -> friend_id ИЛИ friend_id -> user_id)
-    const { data: friendship, error: friendshipError } = await supabase
+    const { data: friendship, error: friendshipError } = await adminSupabase
       .from('_pidr_friends')
       .select('id, status, user_id, friend_id')
       .or(`and(user_id.eq.${fromTelegramId},friend_id.eq.${toTelegramId}),and(user_id.eq.${toTelegramId},friend_id.eq.${fromTelegramId})`)
@@ -100,7 +110,7 @@ export async function POST(
     const expiresAt = new Date(now.getTime() + 10 * 60 * 1000).toISOString(); // 10 минут
 
     // ✅ Удаляем старые приглашения этому пользователю в эту комнату
-    await supabase
+    await adminSupabase
       .from('_pidr_room_invites')
       .delete()
       .eq('room_id', parseInt(roomId, 10))
@@ -115,7 +125,7 @@ export async function POST(
       to_user_id: parseInt(toTelegramId, 10)
     });
 
-    const { data: invite, error: inviteError } = await supabase
+    const { data: invite, error: inviteError } = await adminSupabase
       .from('_pidr_room_invites')
       .insert({
         room_id: parseInt(roomId, 10),

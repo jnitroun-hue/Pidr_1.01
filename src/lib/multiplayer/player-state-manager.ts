@@ -712,31 +712,40 @@ async function syncPlayerToDatabase(params: {
       .single();
     
     if (roomData?.host_id) {
-      // Получаем UUID пользователя по telegram_id
+      // ✅ ИСПРАВЛЕНО: userId это telegram_id (строка), получаем UUID пользователя
       const { data: userData } = await supabase
         .from('_pidr_users')
         .select('id')
-        .eq('telegram_id', parseInt(userId))
+        .eq('telegram_id', String(userId)) // ✅ userId это telegram_id (строка или число)
         .single();
       
       if (userData?.id && roomData.host_id === userData.id) {
-        // Игрок является хостом по host_id, но is_host может быть FALSE - исправляем!
-        if (!isHost) {
-          console.warn(`⚠️ [SYNC DB] Игрок ${userId} является хостом по host_id, но isHost=${isHost}. Принудительно исправляем!`);
-          const { error: fixError } = await supabase
+        // ✅ Игрок является хостом по host_id - ПРИНУДИТЕЛЬНО устанавливаем is_host=true
+        console.log(`👑 [SYNC DB] Игрок ${userId} является хостом по host_id (UUID: ${userData.id}), принудительно устанавливаем is_host=true`);
+        const { error: fixError, data: fixedData } = await supabase
+          .from('_pidr_room_players')
+          .update({ 
+            is_host: true,
+            is_ready: true
+          })
+          .eq('room_id', parseInt(roomId))
+          .eq('user_id', parseInt(String(userId))) // ✅ user_id в БД это telegram_id (INT8)
+          .select();
+        
+        if (fixError) {
+          console.error(`❌ [SYNC DB] Ошибка исправления is_host для хоста:`, fixError);
+        } else {
+          console.log(`✅ [SYNC DB] is_host принудительно установлен для хоста ${userId}:`, fixedData);
+        }
+      } else {
+        // ✅ Если НЕ хост по host_id, но isHost=true - это ошибка, исправляем на false
+        if (isHost && userData?.id && roomData.host_id !== userData.id) {
+          console.warn(`⚠️ [SYNC DB] Игрок ${userId} НЕ является хостом по host_id, но isHost=true. Исправляем на false.`);
+          await supabase
             .from('_pidr_room_players')
-            .update({ 
-              is_host: true,
-              is_ready: true
-            })
+            .update({ is_host: false })
             .eq('room_id', parseInt(roomId))
-            .eq('user_id', parseInt(userId));
-          
-          if (fixError) {
-            console.error(`❌ [SYNC DB] Ошибка исправления is_host для хоста:`, fixError);
-          } else {
-            console.log(`✅ [SYNC DB] is_host исправлен для хоста ${userId}`);
-          }
+            .eq('user_id', parseInt(String(userId)));
         }
       }
     }

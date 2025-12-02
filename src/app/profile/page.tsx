@@ -514,8 +514,9 @@ export default function ProfilePage() {
       try {
         const currentUser = getTelegramUser();
         const referralCode = currentUser?.id || user?.telegramId || user?.id || 'player_' + Date.now();
-        const gameUrl = typeof window !== 'undefined' ? window.location.origin : '';
-        const inviteUrl = `${gameUrl}?ref=${referralCode}`;
+        // ✅ ИСПРАВЛЕНО: Реферальная ссылка на Telegram бота
+        const botUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || 'your_bot_username';
+        const inviteUrl = `https://t.me/${botUsername}?start=ref_${referralCode}`;
         
         // Если мы в Telegram WebApp, используем Telegram Share API
         if (typeof window !== 'undefined' && window.Telegram?.WebApp) {

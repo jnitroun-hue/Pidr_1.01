@@ -740,10 +740,10 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
         return;
       }
       
-      // Генерируем реферальную ссылку
+      // ✅ ИСПРАВЛЕНО: Генерируем реферальную ссылку на Telegram бота
       const referralCode = currentUser.id || 'player_' + Date.now();
-      const gameUrl = window.location.origin;
-      const inviteUrl = `${gameUrl}?ref=${referralCode}`;
+      const botUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || 'your_bot_username';
+      const inviteUrl = `https://t.me/${botUsername}?start=ref_${referralCode}`;
       
       // Если мы в Telegram WebApp, используем Telegram Share API
       if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
@@ -1140,8 +1140,9 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
                     {(() => {
                       const currentUser = getTelegramUser();
                       const referralCode = currentUser?.id || user?.id || 'player_' + Date.now();
-                      const gameUrl = typeof window !== 'undefined' ? window.location.origin : '';
-                      return `${gameUrl}?ref=${referralCode}`;
+                      // ✅ ИСПРАВЛЕНО: Реферальная ссылка на Telegram бота, а не на Vercel
+                      const botUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || 'your_bot_username';
+                      return `https://t.me/${botUsername}?start=ref_${referralCode}`;
                     })()}
                   </div>
                 </div>
@@ -1150,8 +1151,9 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
                   onClick={async () => {
                     const currentUser = getTelegramUser();
                     const referralCode = currentUser?.id || user?.id || 'player_' + Date.now();
-                    const gameUrl = typeof window !== 'undefined' ? window.location.origin : '';
-                    const inviteUrl = `${gameUrl}?ref=${referralCode}`;
+                    // ✅ ИСПРАВЛЕНО: Реферальная ссылка на Telegram бота
+                    const botUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || 'your_bot_username';
+                    const inviteUrl = `https://t.me/${botUsername}?start=ref_${referralCode}`;
                     try {
                       await navigator.clipboard.writeText(inviteUrl);
                       alert('✅ Реферальная ссылка скопирована!\n\nПоделитесь ей с друзьями и получите +500 монет за каждого активного друга!');

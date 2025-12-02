@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
 
-    // ✅ ОБНОВЛЯЕМ last_activity КОМНАТЫ, ЕСЛИ ПОЛЬЗОВАТЕЛЬ В КОМНАТЕ
+    // ✅ ОБНОВЛЯЕМ is_online В _pidr_room_players И last_activity КОМНАТЫ
     try {
       const { data: playerRoom } = await supabase
         .from('_pidr_room_players')
@@ -54,6 +54,18 @@ export async function POST(request: NextRequest) {
       
       if (playerRoom?.room_id) {
         const now = new Date().toISOString();
+        
+        // ✅ ИСПРАВЛЕНО: Обновляем is_online в _pidr_room_players
+        await supabase
+          .from('_pidr_room_players')
+          .update({ 
+            is_online: true,
+            last_activity: now
+          })
+          .eq('user_id', userIdBigInt)
+          .eq('room_id', playerRoom.room_id);
+        
+        // Обновляем last_activity комнаты
         await supabase
           .from('_pidr_rooms')
           .update({ 
@@ -61,7 +73,7 @@ export async function POST(request: NextRequest) {
             updated_at: now
           })
           .eq('id', playerRoom.room_id);
-        console.log(`✅ [HEARTBEAT] Обновлена активность комнаты ${playerRoom.room_id}`);
+        console.log(`✅ [HEARTBEAT] Обновлена активность комнаты ${playerRoom.room_id} и is_online для игрока`);
       }
     } catch (roomError) {
       console.error('⚠️ [HEARTBEAT] Ошибка обновления активности комнаты:', roomError);
