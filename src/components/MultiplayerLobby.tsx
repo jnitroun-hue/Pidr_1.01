@@ -74,18 +74,22 @@ export default function MultiplayerLobby({
     roomManager.subscribeToRoom(roomId, {
       onPlayerJoin: (player) => {
         console.log('👥 [MultiplayerLobby] Игрок присоединился:', player);
-        // ✅ ЗАГРУЖАЕМ ИЗ БД (ИСТОЧНИК ИСТИНЫ!)
-        loadRoomPlayers();
+        // ✅ ЗАГРУЖАЕМ ИЗ БД (ИСТОЧНИК ИСТИНЫ!) - с задержкой для надежности
+        setTimeout(() => loadRoomPlayers(), 100);
+        setTimeout(() => loadRoomPlayers(), 500);
+        setTimeout(() => loadRoomPlayers(), 1000);
       },
       onPlayerLeave: (userId) => {
         console.log('👋 [MultiplayerLobby] Игрок покинул:', userId);
-        // ✅ ЗАГРУЖАЕМ ИЗ БД (ИСТОЧНИК ИСТИНЫ!)
-        loadRoomPlayers();
+        // ✅ ЗАГРУЖАЕМ ИЗ БД (ИСТОЧНИК ИСТИНЫ!) - с задержкой для надежности
+        setTimeout(() => loadRoomPlayers(), 100);
+        setTimeout(() => loadRoomPlayers(), 500);
       },
       onPlayerReady: (userId, isReady) => {
         console.log('✅ [MultiplayerLobby] Готовность обновлена:', userId, isReady);
-        // ✅ ЗАГРУЖАЕМ ИЗ БД (ИСТОЧНИК ИСТИНЫ!)
-        loadRoomPlayers();
+        // ✅ ЗАГРУЖАЕМ ИЗ БД (ИСТОЧНИК ИСТИНЫ!) - с задержкой для надежности
+        setTimeout(() => loadRoomPlayers(), 100);
+        setTimeout(() => loadRoomPlayers(), 500);
       },
       onGameStart: () => {
         console.log('🚀 [MultiplayerLobby] Игра началась!');
@@ -98,17 +102,17 @@ export default function MultiplayerLobby({
     // ✅ ЗАГРУЖАЕМ ИЗ БД ПРИ МОНТИРОВАНИИ
     loadRoomPlayers();
 
-    // ✅ АВТООБНОВЛЕНИЕ КАЖДЫЕ 2 СЕКУНДЫ (НА СЛУЧАЙ ЕСЛИ REALTIME НЕ СРАБОТАЛ)
+    // ✅ АВТООБНОВЛЕНИЕ КАЖДЫЕ 1.5 СЕКУНДЫ (НА СЛУЧАЙ ЕСЛИ REALTIME НЕ СРАБОТАЛ)
     const interval = setInterval(() => {
       console.log('🔄 [MultiplayerLobby] Автообновление из БД...');
       loadRoomPlayers();
-    }, 2000);
+    }, 1500);
     
-    // ✅ ДОПОЛНИТЕЛЬНОЕ ОБНОВЛЕНИЕ ДЛЯ ХОСТА (каждую секунду)
+    // ✅ ДОПОЛНИТЕЛЬНОЕ ОБНОВЛЕНИЕ ДЛЯ ХОСТА (каждые 0.8 секунды для лучшей синхронизации)
     const hostInterval = isHost ? setInterval(() => {
       console.log('🔄 [MultiplayerLobby] Автообновление для хоста...');
       loadRoomPlayers();
-    }, 1000) : null;
+    }, 800) : null;
 
     // Очистка при размонтировании
     return () => {
@@ -535,11 +539,11 @@ export default function MultiplayerLobby({
         <div style={{
           position: 'relative',
           width: '100%',
-          minHeight: '400px',
+          minHeight: '300px',
           background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%)',
           borderRadius: '20px',
           border: '3px solid rgba(34, 197, 94, 0.3)',
-          padding: '40px',
+          padding: '20px',
           marginBottom: '20px'
         }}>
           {/* Стол в центре */}
@@ -548,18 +552,18 @@ export default function MultiplayerLobby({
             top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
-            width: '200px',
-            height: '200px',
+            width: '120px',
+            height: '120px',
             background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.3) 0%, rgba(16, 185, 129, 0.3) 100%)',
             borderRadius: '50%',
-            border: '4px solid rgba(34, 197, 94, 0.5)',
+            border: '3px solid rgba(34, 197, 94, 0.5)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '24px',
+            fontSize: '16px',
             fontWeight: 'bold',
             color: 'rgba(34, 197, 94, 0.8)',
-            boxShadow: '0 0 30px rgba(34, 197, 94, 0.3)'
+            boxShadow: '0 0 20px rgba(34, 197, 94, 0.3)'
           }}>
             🎮 СТОЛ
           </div>
@@ -572,7 +576,7 @@ export default function MultiplayerLobby({
             
             // Вычисляем позицию вокруг стола (круг)
             const angle = (360 / lobbyState.maxPlayers) * (position - 1) - 90; // Начинаем сверху
-            const radius = 180;
+            const radius = 140;
             const x = Math.cos((angle * Math.PI) / 180) * radius;
             const y = Math.sin((angle * Math.PI) / 180) * radius;
             
@@ -592,7 +596,7 @@ export default function MultiplayerLobby({
                   top: `calc(50% + ${y}px)`,
                   left: `calc(50% + ${x}px)`,
                   transform: 'translate(-50%, -50%)',
-                  width: '120px',
+                  width: '90px',
                   zIndex: isEmpty ? 1 : 2
                 }}
               >
@@ -600,83 +604,83 @@ export default function MultiplayerLobby({
                   <div style={{
                     background: 'rgba(100, 116, 139, 0.2)',
                     border: '2px dashed rgba(100, 116, 139, 0.5)',
-                    borderRadius: '12px',
-                    padding: '12px',
+                    borderRadius: '10px',
+                    padding: '8px',
                     textAlign: 'center',
                     color: 'rgba(148, 163, 184, 0.8)',
-                    fontSize: '12px'
+                    fontSize: '10px'
                   }}>
-                    <UserPlus size={24} style={{ marginBottom: '4px', opacity: 0.5 }} />
-                    <div>Позиция {position}</div>
-                    <div style={{ fontSize: '10px', marginTop: '4px' }}>Свободно</div>
+                    <UserPlus size={18} style={{ marginBottom: '2px', opacity: 0.5 }} />
+                    <div>Поз. {position}</div>
+                    <div style={{ fontSize: '9px', marginTop: '2px' }}>Свободно</div>
                   </div>
                 ) : (
                   <motion.div
-                    whileHover={{ scale: 1.1, y: -5 }}
+                    whileHover={{ scale: 1.05, y: -3 }}
                     style={{
                       background: player.is_ready 
                         ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.3) 0%, rgba(5, 150, 105, 0.3) 100%)'
                         : 'linear-gradient(135deg, rgba(239, 68, 68, 0.3) 0%, rgba(220, 38, 38, 0.3) 100%)',
-                      border: `3px solid ${player.is_ready ? 'rgba(16, 185, 129, 0.6)' : 'rgba(239, 68, 68, 0.6)'}`,
-                      borderRadius: '16px',
-                      padding: '12px',
+                      border: `2px solid ${player.is_ready ? 'rgba(16, 185, 129, 0.6)' : 'rgba(239, 68, 68, 0.6)'}`,
+                      borderRadius: '12px',
+                      padding: '8px',
                       textAlign: 'center',
                       boxShadow: isCurrentUser 
-                        ? '0 0 20px rgba(59, 130, 246, 0.6)' 
-                        : '0 4px 12px rgba(0, 0, 0, 0.3)',
+                        ? '0 0 15px rgba(59, 130, 246, 0.6)' 
+                        : '0 3px 8px rgba(0, 0, 0, 0.3)',
                       position: 'relative'
                     }}
                   >
                     {isHostPlayer && (
                       <div style={{
                         position: 'absolute',
-                        top: '-8px',
-                        right: '-8px',
+                        top: '-6px',
+                        right: '-6px',
                         background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
                         borderRadius: '50%',
-                        width: '32px',
-                        height: '32px',
+                        width: '24px',
+                        height: '24px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        boxShadow: '0 4px 12px rgba(251, 191, 36, 0.5)',
+                        boxShadow: '0 3px 8px rgba(251, 191, 36, 0.5)',
                         zIndex: 10
                       }}>
-                        <Crown size={18} style={{ color: 'white' }} />
+                        <Crown size={14} style={{ color: 'white' }} />
                       </div>
                     )}
                     {isBot && (
                       <div style={{
                         position: 'absolute',
-                        top: '-8px',
-                        left: '-8px',
+                        top: '-6px',
+                        left: '-6px',
                         background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
                         borderRadius: '50%',
-                        width: '28px',
-                        height: '28px',
+                        width: '22px',
+                        height: '22px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        boxShadow: '0 4px 12px rgba(139, 92, 246, 0.5)',
+                        boxShadow: '0 3px 8px rgba(139, 92, 246, 0.5)',
                         zIndex: 10
                       }}>
-                        <Bot size={16} style={{ color: 'white' }} />
+                        <Bot size={12} style={{ color: 'white' }} />
                       </div>
                     )}
                     {isCurrentUser && (
                       <div style={{
                         position: 'absolute',
-                        bottom: '-8px',
+                        bottom: '-6px',
                         left: '50%',
                         transform: 'translateX(-50%)',
                         background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                        borderRadius: '12px',
-                        padding: '2px 8px',
-                        fontSize: '10px',
+                        borderRadius: '8px',
+                        padding: '2px 6px',
+                        fontSize: '8px',
                         fontWeight: 'bold',
                         color: 'white',
                         whiteSpace: 'nowrap',
-                        boxShadow: '0 2px 8px rgba(59, 130, 246, 0.5)'
+                        boxShadow: '0 2px 6px rgba(59, 130, 246, 0.5)'
                       }}>
                         ВЫ
                       </div>
@@ -686,35 +690,35 @@ export default function MultiplayerLobby({
                         src={player.avatar_url} 
                         alt={player.username}
                         style={{
-                          width: '48px',
-                          height: '48px',
+                          width: '36px',
+                          height: '36px',
                           borderRadius: '50%',
-                          marginBottom: '6px',
+                          marginBottom: '4px',
                           border: `2px solid ${player.is_ready ? '#10b981' : '#ef4444'}`,
                           objectFit: 'cover'
                         }}
                       />
                     ) : (
                       <div style={{
-                        width: '48px',
-                        height: '48px',
+                        width: '36px',
+                        height: '36px',
                         borderRadius: '50%',
                         background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                        margin: '0 auto 6px',
+                        margin: '0 auto 4px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: '20px',
+                        fontSize: '16px',
                         color: 'white'
                       }}>
                         {player.username?.[0]?.toUpperCase() || '?'}
                       </div>
                     )}
                     <div style={{
-                      fontSize: '12px',
+                      fontSize: '10px',
                       fontWeight: 'bold',
                       color: 'white',
-                      marginBottom: '4px',
+                      marginBottom: '2px',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap'
@@ -722,16 +726,16 @@ export default function MultiplayerLobby({
                       {player.username || `Игрок ${position}`}
                     </div>
                     <div style={{
-                      fontSize: '10px',
+                      fontSize: '8px',
                       color: player.is_ready ? '#10b981' : '#ef4444',
                       fontWeight: '600'
                     }}>
                       {player.is_ready ? '✅ Готов' : '⏳ Не готов'}
                     </div>
                     <div style={{
-                      fontSize: '9px',
+                      fontSize: '7px',
                       color: 'rgba(255, 255, 255, 0.7)',
-                      marginTop: '2px'
+                      marginTop: '1px'
                     }}>
                       Поз. {position}
                     </div>
@@ -823,12 +827,29 @@ export default function MultiplayerLobby({
       }}>
         {/* Кнопка готовности */}
         <motion.button
-          onClick={toggleReady}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (isConnected) {
+              toggleReady();
+            }
+          }}
+          onTouchStart={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onTouchEnd={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (isConnected) {
+              toggleReady();
+            }
+          }}
           disabled={!isConnected}
           whileHover={{ scale: 1.02, y: -2 }}
-          whileTap={{ scale: 0.98 }}
+          whileTap={{ scale: 0.95 }}
           style={{
-            padding: '14px 24px',
+            padding: '16px 24px',
             borderRadius: '12px',
             border: 'none',
             background: currentPlayer?.is_ready 
@@ -840,7 +861,14 @@ export default function MultiplayerLobby({
             cursor: isConnected ? 'pointer' : 'not-allowed',
             opacity: isConnected ? 1 : 0.5,
             boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
-            transition: 'all 0.2s'
+            transition: 'all 0.2s',
+            WebkitTapHighlightColor: 'transparent',
+            touchAction: 'manipulation',
+            userSelect: 'none',
+            minHeight: '48px',
+            width: '100%',
+            position: 'relative',
+            zIndex: 10
           }}
         >
           {currentPlayer?.is_ready ? '✅ Готов' : '⏳ Не готов'}
@@ -982,11 +1010,17 @@ export default function MultiplayerLobby({
         .multiplayer-lobby {
           min-height: 100vh;
           background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
-          padding: 24px;
+          padding: 16px;
           max-width: 900px;
           margin: 0 auto;
           position: relative;
           overflow-x: hidden;
+        }
+
+        @media (max-width: 768px) {
+          .multiplayer-lobby {
+            padding: 12px;
+          }
         }
 
         .multiplayer-lobby::before {
@@ -1339,13 +1373,20 @@ export default function MultiplayerLobby({
         .lobby-actions {
           display: flex;
           flex-direction: column;
-          gap: 16px;
-          padding: 24px;
+          gap: 12px;
+          padding: 16px;
           background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%);
           backdrop-filter: blur(10px);
-          border-radius: 20px;
+          border-radius: 16px;
           border: 1px solid rgba(255, 255, 255, 0.1);
           box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        @media (max-width: 768px) {
+          .lobby-actions {
+            padding: 12px;
+            gap: 10px;
+          }
         }
 
         .ready-button, .add-bot-button, .start-game-button, .leave-button {
