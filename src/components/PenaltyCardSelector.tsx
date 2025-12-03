@@ -163,6 +163,10 @@ export default function PenaltyCardSelector() {
                 ? card.replace('(open)', '').replace('(closed)', '')
                 : card.image || (card.rank && card.suit ? `${card.rank}_of_${card.suit}.png` : 'back.png');
               
+              // ✅ ИСПРАВЛЕНО: Проверяем является ли cardImage полным URL (NFT карта)
+              const isNFTUrl = cardImage && (cardImage.startsWith('http://') || cardImage.startsWith('https://'));
+              const imageSrc = isNFTUrl ? cardImage : `${CARDS_PATH}${cardImage}`;
+              
               const cardId = card.id || cardImage;
               const isSelected = cardId in selectedAssignments;
               
@@ -192,7 +196,7 @@ export default function PenaltyCardSelector() {
                   }}
                 >
                   <Image
-                    src={`${CARDS_PATH}${cardImage}`}
+                    src={imageSrc}
                     alt={cardImage}
                     width={60}
                     height={90}
@@ -246,6 +250,10 @@ export default function PenaltyCardSelector() {
                   ? card.replace('(open)', '').replace('(closed)', '')
                   : (card?.image as string) || cardId;
                 
+                // ✅ ИСПРАВЛЕНО: Проверяем является ли cardImage полным URL (NFT карта)
+                const isNFTUrl = cardImage && (cardImage.startsWith('http://') || cardImage.startsWith('https://'));
+                const imageSrc = isNFTUrl ? cardImage : `${CARDS_PATH}${cardImage}`;
+                
                 const assignedTarget = selectedAssignments[cardId];
 
             return (
@@ -268,7 +276,7 @@ export default function PenaltyCardSelector() {
                     flexShrink: 0
                   }}>
                     <Image
-                      src={`${CARDS_PATH}${cardImage}`}
+                      src={imageSrc}
                       alt={cardImage}
                       width={60}
                       height={90}

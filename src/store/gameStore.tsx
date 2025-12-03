@@ -1217,13 +1217,35 @@ export const useGameStore = create<GameState>()(
         }
         name = name.replace('.png', '').replace('/img/cards/', '').split('/').pop() || '';
         let rank = 0;
+        
+        // ✅ ИСПРАВЛЕНО: Сначала проверяем стандартные ранги
         if (name.startsWith('ace')) rank = 14;
         else if (name.startsWith('king')) rank = 13;
         else if (name.startsWith('queen')) rank = 12;
         else if (name.startsWith('jack')) rank = 11;
         else {
-          const match = name.match(/(\d+)_of/);
-          rank = match ? parseInt(match[1], 10) : 0;
+          // ✅ ИСПРАВЛЕНО: Парсим число из начала имени файла (поддерживает NFT карты с числами)
+          // Формат может быть: "92_of_diamonds" или "7_of_spades"
+          const match = name.match(/^(\d+)_of/);
+          if (match) {
+            const parsedRank = parseInt(match[1], 10);
+            // ✅ КРИТИЧНО: Для NFT карт с числами > 14, используем их как есть
+            // Но для стандартных карт (2-10) используем их числовое значение
+            if (parsedRank >= 2 && parsedRank <= 10) {
+              rank = parsedRank;
+            } else if (parsedRank > 14) {
+              // ✅ NFT карта с нестандартным рангом - используем как есть
+              rank = parsedRank;
+            } else {
+              rank = parsedRank;
+            }
+          } else {
+            // ✅ Попытка найти число в любом месте имени (для совместимости)
+            const numberMatch = name.match(/(\d+)/);
+            if (numberMatch) {
+              rank = parseInt(numberMatch[1], 10);
+            }
+          }
         }
         return rank;
       },
@@ -3288,11 +3310,18 @@ export const useGameStore = create<GameState>()(
          
        // ✅ ИСПРАВЛЕНО: Спросить "сколько карт?" у другого игрока + автоматическое спрашивание для ботов
        askHowManyCards: (askerPlayerId: string, targetPlayerId: string) => {
-          const { players, oneCardDeclarations, pendingPenalty } = get();
+          const { players, oneCardDeclarations, pendingPenalty, gameStage } = get();
           const asker = players.find(p => p.id === askerPlayerId);
           const target = players.find(p => p.id === targetPlayerId);
           
           if (!asker || !target) return;
+          
+          // ✅ КРИТИЧНО: Штрафы работают ТОЛЬКО со 2-й стадии!
+          if (gameStage === 1) {
+            console.log(`⚠️ [askHowManyCards] Стадия 1 - штрафы не работают!`);
+            get().showNotification(`ℹ️ У ${target.name}: ${target.cards.length} карт`, 'info', 3000);
+            return;
+          }
           
           // ✅ ЗАЩИТА: Если уже идет штраф, не проверяем снова!
           if (pendingPenalty) {
@@ -3342,7 +3371,13 @@ export const useGameStore = create<GameState>()(
          
          // ✅ НОВАЯ ЛОГИКА: Начать процесс штрафа - ОДНОВРЕМЕННО ДЛЯ ВСЕХ ШТРАФНИКОВ!
          startPenaltyProcess: (forgetfulPlayerIds: string | string[]) => {
-           const { players } = get();
+           const { players, gameStage } = get();
+           
+           // ✅ КРИТИЧНО: Штрафы работают ТОЛЬКО со 2-й стадии!
+           if (gameStage === 1) {
+             console.log(`⚠️ [startPenaltyProcess] Стадия 1 - штрафы не работают!`);
+             return;
+           }
            
            // ✅ КРИТИЧНО: Поддерживаем как одного штрафника, так и массив!
            const targetIds = Array.isArray(forgetfulPlayerIds) ? forgetfulPlayerIds : [forgetfulPlayerIds];
