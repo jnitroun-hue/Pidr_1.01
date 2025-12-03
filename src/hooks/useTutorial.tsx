@@ -4,18 +4,31 @@ import { TutorialStep } from '@/components/TutorialModal';
 
 export interface TutorialConfig {
   enabled: boolean; // Включены ли подсказки
-  currentStepIndex: number; // Текущий шаг
+  shownSteps: Set<string>; // Какие шаги уже показаны
   steps: TutorialStep[]; // Все шаги
 }
 
-export function useTutorial(gameStage: number, isFirstGame: boolean, isUserTurn: boolean) {
+export function useTutorial(
+  gameStage: number, 
+  isFirstGame: boolean, 
+  isUserTurn: boolean,
+  currentPlayerId: string | null,
+  userPlayerId: string | null,
+  players: any[]
+) {
   const [tutorialConfig, setTutorialConfig] = useState<TutorialConfig>({
     enabled: false,
-    currentStepIndex: 0,
+    shownSteps: new Set(),
     steps: []
   });
   const [currentStep, setCurrentStep] = useState<TutorialStep | null>(null);
   const [isTutorialPaused, setIsTutorialPaused] = useState(false);
+
+  // Refs для отслеживания состояний
+  const lastGameStageRef = useRef<number>(1);
+  const lastUserTurnRef = useRef<boolean>(false);
+  const lastCurrentPlayerRef = useRef<string | null>(null);
+  const penkiOpenedRef = useRef<boolean>(false);
 
   // Генерируем шаги для первой игры
   const generateFirstGameSteps = useCallback((): TutorialStep[] => {
@@ -27,52 +40,46 @@ export function useTutorial(gameStage: number, isFirstGame: boolean, isUserTurn:
         content: 'Это ваша первая игра с ботами. Мы покажем вам все основные правила и механики игры. Нажимайте "Понятно" чтобы продолжить.'
       },
       {
-        id: 'first_turn',
-        title: 'Кто ходит первым?',
+        id: 'penki_explanation',
+        title: 'Что такое пеньки?',
         icon: '🎯',
-        content: 'Первым ходит игрок с самой младшей картой. Это вы! Вы можете положить свою карту на соперника с картой младше вашей.'
+        content: 'В начале игры каждому игроку раздается по 2 закрытые карты - это "пеньки". Они лежат закрытыми до тех пор, пока у вас не закончатся карты в руке. Тогда пеньки открываются, и вы продолжаете играть с ними.'
       },
       {
-        id: 'stage1_rules',
-        title: 'Правила первой стадии',
+        id: 'first_turn_start',
+        title: 'Начало игры - кто ходит первым?',
+        icon: '🎯',
+        content: 'Первым ходит игрок с самой младшей открытой картой. Цель первой стадии: положить свою карту на соперника, у которого карта младше вашей. Старшая карта бьет младшую (Туз → Король → Дама → Валет → 10 → ... → 2). Двойка бьет только Туз. Масти не важны!'
+      },
+      {
+        id: 'your_turn_stage1',
+        title: 'Ваш ход - что делать?',
         icon: '🎴',
-        content: 'В первой стадии у каждого игрока одна открытая карта. Старшая карта бьет младшую (Туз → Король → Дама → Валет → 10 → ... → 2). Двойка бьет только Туз. Масти не важны!'
-      },
-      {
-        id: 'deck_usage',
-        title: 'Использование колоды',
-        icon: '🃏',
-        content: 'Если не можете сходить на соперника, вы можете взять карту из колоды. Если эта карта старше вашей открытой карты, вы можете положить её на себя.'
+        content: 'Сейчас ваш ход! Посмотрите на открытые карты соперников. Если у кого-то карта младше вашей - нажмите на этого игрока, чтобы положить на него свою карту. Если не можете сходить на соперника, нажмите на колоду, чтобы взять новую карту.'
       },
       {
         id: 'stage2_transition',
         title: 'Переход во вторую стадию',
         icon: '🔄',
-        content: 'Когда колода заканчивается, начинается вторая стадия. Козырь определяется последней взятой картой (кроме пик). Пики НЕ могут быть козырем!'
+        content: 'Колода закончилась! Начинается вторая стадия. Козырь определяется последней взятой картой (кроме пик). ⚠️ Пики НЕ могут быть козырем!'
       },
       {
         id: 'stage2_rules',
         title: 'Правила второй стадии',
         icon: '🃏',
-        content: 'Во второй стадии вы можете ходить любой картой с руки. Козырь бьет любую некозырную карту. ⚠️ ВАЖНО: Пики можно бить ТОЛЬКО пиками! Пики не могут быть козырем.\n\n💡 ВАЖНОЕ ПРАВИЛО: Когда у вас остается одна карта, вы ОБЯЗАНЫ объявить "Одна карта!". Если забудете и вас спросят "Сколько карт?" - получите штрафные карты от всех игроков!'
+        content: 'Во второй стадии вы можете ходить любой картой с руки. Козырь бьет любую некозырную карту.\n\n⚠️ ВАЖНО: Пики можно бить ТОЛЬКО пиками! Пики не могут быть козырем.\n\n💡 Когда у вас остается одна карта, вы ОБЯЗАНЫ объявить "Одна карта!". Если забудете и вас спросят "Сколько карт?" - получите штрафные карты от всех игроков!'
       },
       {
-        id: 'penki_intro',
-        title: 'Что такое пеньки?',
+        id: 'your_turn_stage2',
+        title: 'Ваш ход во второй стадии',
+        icon: '🎴',
+        content: 'Сейчас ваш ход! Выберите карту из руки и положите её на соперника. Помните: козырь бьет любую некозырную карту, а пики можно бить только пиками!'
+      },
+      {
+        id: 'penki_opened',
+        title: 'Пеньки открыты!',
         icon: '🎯',
-        content: 'Пеньки - это 2 закрытые карты, которые вы получили в начале игры. Они используются в третьей стадии, когда у вас заканчиваются карты в руке.'
-      },
-      {
-        id: 'stage3_transition',
-        title: 'Третья стадия - пеньки',
-        icon: '🎯',
-        content: 'Когда у игрока заканчиваются карты в руке, открываются его пеньки. Игрок продолжает играть с пеньками до их окончания.'
-      },
-      {
-        id: 'one_card_rule',
-        title: 'Правило "Одна карта!" и "Сколько карт?"',
-        icon: '⚠️',
-        content: 'Когда у вас остается одна карта, вы ОБЯЗАНЫ объявить "Одна карта!".\n\nЛюбой игрок может спросить другого "Сколько карт?" в любой момент.\n\nЕсли у вас одна карта и вы НЕ объявили "Одна карта!", а вас спросили "Сколько карт?" - вы получаете штраф: все игроки сдают вам по одной карте!\n\nИгра останавливается, пока все игроки не сдадут штрафные карты.'
+        content: 'У вас закончились карты в руке, поэтому открылись ваши пеньки (2 закрытые карты, которые вы получили в начале игры). Теперь вы играете с этими картами до их окончания. Это третья стадия игры.'
       }
     ];
   }, []);
@@ -83,9 +90,10 @@ export function useTutorial(gameStage: number, isFirstGame: boolean, isUserTurn:
       const steps = generateFirstGameSteps();
       setTutorialConfig({
         enabled: true,
-        currentStepIndex: 0,
+        shownSteps: new Set(),
         steps
       });
+      // Показываем приветствие
       setCurrentStep(steps[0]);
       setIsTutorialPaused(true);
     }
@@ -93,57 +101,143 @@ export function useTutorial(gameStage: number, isFirstGame: boolean, isUserTurn:
 
   // Переход к следующему шагу
   const nextStep = useCallback(() => {
-    if (tutorialConfig.enabled && tutorialConfig.currentStepIndex < tutorialConfig.steps.length - 1) {
-      const nextIndex = tutorialConfig.currentStepIndex + 1;
-      setTutorialConfig(prev => ({ ...prev, currentStepIndex: nextIndex }));
-      setCurrentStep(tutorialConfig.steps[nextIndex]);
-    } else {
-      // Завершение туториала
-      setTutorialConfig(prev => ({ ...prev, enabled: false }));
+    if (tutorialConfig.enabled && currentStep) {
+      // Помечаем текущий шаг как показанный
+      const newShownSteps = new Set(tutorialConfig.shownSteps);
+      newShownSteps.add(currentStep.id);
+      
+      setTutorialConfig(prev => ({ 
+        ...prev, 
+        shownSteps: newShownSteps 
+      }));
+      
       setCurrentStep(null);
       setIsTutorialPaused(false);
     }
-  }, [tutorialConfig]);
+  }, [tutorialConfig, currentStep]);
 
   // Закрытие туториала
   const closeTutorial = useCallback(() => {
-    setTutorialConfig(prev => ({ ...prev, enabled: false }));
+    if (currentStep) {
+      const newShownSteps = new Set(tutorialConfig.shownSteps);
+      newShownSteps.add(currentStep.id);
+      
+      setTutorialConfig(prev => ({ 
+        ...prev, 
+        shownSteps: newShownSteps 
+      }));
+    }
     setCurrentStep(null);
     setIsTutorialPaused(false);
-  }, []);
+  }, [tutorialConfig, currentStep]);
 
-  // Показываем подсказки в нужные моменты
-  const stageTransitionRef = useRef<number>(1);
-  
+  // ✅ 1. Модалка при начале хода - кто ходит и цель 1-й стадии
   useEffect(() => {
     if (!tutorialConfig.enabled || isTutorialPaused) return;
+    
+    // Проверяем, изменился ли текущий игрок (начался новый ход)
+    const isNewTurn = currentPlayerId !== lastCurrentPlayerRef.current && currentPlayerId !== null;
+    const isFirstTurn = !lastCurrentPlayerRef.current && currentPlayerId !== null;
+    
+    if ((isNewTurn || isFirstTurn) && gameStage === 1 && !tutorialConfig.shownSteps.has('first_turn_start')) {
+      lastCurrentPlayerRef.current = currentPlayerId;
+      
+      const step = tutorialConfig.steps.find(s => s.id === 'first_turn_start');
+      if (step) {
+        setCurrentStep(step);
+        setIsTutorialPaused(true);
+      }
+    }
+  }, [currentPlayerId, gameStage, tutorialConfig, isTutorialPaused]);
 
-    const steps = tutorialConfig.steps;
-    const currentIndex = tutorialConfig.currentStepIndex;
-
-    // Подсказка при переходе во вторую стадию
-    if (gameStage === 2 && stageTransitionRef.current === 1) {
-      stageTransitionRef.current = 2;
-      // Пропускаем к шагу про вторую стадию
-      const stage2Index = steps.findIndex(s => s.id === 'stage2_transition');
-      if (stage2Index !== -1) {
-        setTutorialConfig(prev => ({ ...prev, currentStepIndex: stage2Index }));
-        setCurrentStep(steps[stage2Index]);
+  // ✅ 2. Модалка когда до игрока дошел ход (если он не ходил первым)
+  useEffect(() => {
+    if (!tutorialConfig.enabled || isTutorialPaused) return;
+    
+    // Проверяем, стал ли ход пользователя (и он не первый)
+    const becameUserTurn = isUserTurn && !lastUserTurnRef.current;
+    const alreadyShownFirstTurn = tutorialConfig.shownSteps.has('first_turn_start');
+    
+    if (becameUserTurn && gameStage === 1 && alreadyShownFirstTurn && !tutorialConfig.shownSteps.has('your_turn_stage1')) {
+      lastUserTurnRef.current = true;
+      
+      const step = tutorialConfig.steps.find(s => s.id === 'your_turn_stage1');
+      if (step) {
+        setCurrentStep(step);
         setIsTutorialPaused(true);
       }
     }
     
-    // Подсказка при переходе в третью стадию
-    if (gameStage === 3 && stageTransitionRef.current === 2) {
-      stageTransitionRef.current = 3;
-      const stage3Index = steps.findIndex(s => s.id === 'stage3_transition');
-      if (stage3Index !== -1) {
-        setTutorialConfig(prev => ({ ...prev, currentStepIndex: stage3Index }));
-        setCurrentStep(steps[stage3Index]);
+    if (!isUserTurn) {
+      lastUserTurnRef.current = false;
+    }
+  }, [isUserTurn, gameStage, tutorialConfig, isTutorialPaused]);
+
+  // ✅ 3. Модалка при переходе во 2-ю стадию
+  useEffect(() => {
+    if (!tutorialConfig.enabled || isTutorialPaused) return;
+    
+    const stageChanged = gameStage === 2 && lastGameStageRef.current === 1;
+    
+    if (stageChanged && !tutorialConfig.shownSteps.has('stage2_transition')) {
+      lastGameStageRef.current = 2;
+      
+      const step = tutorialConfig.steps.find(s => s.id === 'stage2_transition');
+      if (step) {
+        setCurrentStep(step);
+        setIsTutorialPaused(true);
+        return;
+      }
+    }
+    
+    // После перехода показываем правила 2-й стадии (только если нет текущей модалки)
+    if (gameStage === 2 && tutorialConfig.shownSteps.has('stage2_transition') && !tutorialConfig.shownSteps.has('stage2_rules')) {
+      const step = tutorialConfig.steps.find(s => s.id === 'stage2_rules');
+      if (step) {
+        setCurrentStep(step);
+        setIsTutorialPaused(true);
+        return;
+      }
+    }
+    
+    // Показываем подсказку для хода пользователя во 2-й стадии
+    if (gameStage === 2 && isUserTurn && !lastUserTurnRef.current && tutorialConfig.shownSteps.has('stage2_rules') && !tutorialConfig.shownSteps.has('your_turn_stage2')) {
+      lastUserTurnRef.current = true;
+      
+      const step = tutorialConfig.steps.find(s => s.id === 'your_turn_stage2');
+      if (step) {
+        setCurrentStep(step);
         setIsTutorialPaused(true);
       }
     }
-  }, [gameStage, tutorialConfig, isTutorialPaused]);
+  }, [gameStage, isUserTurn, tutorialConfig, isTutorialPaused]);
+
+  // ✅ 4. Модалка при открытии пеньков
+  useEffect(() => {
+    if (!tutorialConfig.enabled || isTutorialPaused || !userPlayerId) return;
+    
+    const userPlayer = players.find(p => p.id === userPlayerId);
+    if (!userPlayer) return;
+    
+    // Проверяем, открылись ли пеньки (у игрока закончились карты в руке, но есть пеньки)
+    // Пеньки открываются когда cards.length === 0 и penki.length > 0
+    const penkiOpened = userPlayer.cards.length === 0 && userPlayer.penki.length > 0;
+    
+    if (penkiOpened && !penkiOpenedRef.current && !tutorialConfig.shownSteps.has('penki_opened')) {
+      penkiOpenedRef.current = true;
+      
+      const step = tutorialConfig.steps.find(s => s.id === 'penki_opened');
+      if (step) {
+        setCurrentStep(step);
+        setIsTutorialPaused(true);
+      }
+    }
+  }, [players, userPlayerId, tutorialConfig, isTutorialPaused]);
+
+  // Обновляем refs
+  useEffect(() => {
+    lastGameStageRef.current = gameStage;
+  }, [gameStage]);
 
   return {
     currentStep,
@@ -153,4 +247,3 @@ export function useTutorial(gameStage: number, isFirstGame: boolean, isUserTurn:
     isTutorialActive: tutorialConfig.enabled
   };
 }
-

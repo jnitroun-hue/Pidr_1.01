@@ -45,8 +45,10 @@ export default function TutorialModal({
               right: 0,
               bottom: 0,
               background: 'rgba(0, 0, 0, 0.85)',
-              zIndex: 9998,
-              backdropFilter: 'blur(4px)'
+              zIndex: 9999, // ✅ Высокий z-index для Telegram Web App
+              backdropFilter: 'blur(4px)',
+              // ✅ Для Telegram Web App
+              WebkitBackdropFilter: 'blur(4px)'
             }}
           />
           
@@ -67,10 +69,13 @@ export default function TutorialModal({
               borderRadius: '20px',
               border: '3px solid rgba(99, 102, 241, 0.5)',
               boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(99, 102, 241, 0.3)',
-              zIndex: 9999,
+              zIndex: 10000, // ✅ Высокий z-index для Telegram Web App
               padding: '30px',
-              maxHeight: '80vh',
-              overflowY: 'auto'
+              maxHeight: '85vh',
+              overflowY: 'auto',
+              // ✅ Для Telegram Web App - убеждаемся что модалка поверх всего
+              WebkitTransform: 'translate(-50%, -50%)',
+              msTransform: 'translate(-50%, -50%)'
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -176,7 +181,10 @@ export default function TutorialModal({
                 fontWeight: '700',
                 cursor: 'pointer',
                 boxShadow: '0 8px 24px rgba(99, 102, 241, 0.4)',
-                transition: 'all 0.3s'
+                transition: 'all 0.3s',
+                // ✅ Для Telegram Web App - убеждаемся что кнопка кликабельна
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'transparent'
               }}
             >
               {showNext ? 'Далее →' : 'Понятно ✓'}

@@ -302,6 +302,8 @@ function GamePageContentComponent({
   const [gamesPlayed, setGamesPlayed] = useState<number | null>(null);
   const [isFirstGame, setIsFirstGame] = useState(false);
   const isUserTurn = currentPlayerId && players.find(p => p.id === currentPlayerId)?.isUser || false;
+  const userPlayer = players.find(p => p.isUser);
+  const userPlayerId = userPlayer?.id || null;
   
   const { 
     currentStep, 
@@ -309,7 +311,7 @@ function GamePageContentComponent({
     nextStep, 
     closeTutorial, 
     isTutorialActive 
-  } = useTutorial(gameStage, isFirstGame, isUserTurn);
+  } = useTutorial(gameStage, isFirstGame, isUserTurn, currentPlayerId, userPlayerId, players);
 
   // ✅ Загружаем количество игр
   useEffect(() => {
@@ -2901,7 +2903,7 @@ function GamePageContentComponent({
           step={currentStep}
           onClose={closeTutorial}
           onNext={nextStep}
-          showNext={true}
+          showNext={false}
         />
       )}
     </div>
