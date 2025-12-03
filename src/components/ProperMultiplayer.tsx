@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import MultiplayerLobby from './MultiplayerLobby'; // ✅ ИСПОЛЬЗУЕМ НОВЫЙ КОМПОНЕНТ!
 import ReplaceRoomModal from './ReplaceRoomModal';
+import MultiplayerAccessModal from './MultiplayerAccessModal';
 import styles from './ProperMultiplayer.module.css';
 
 interface Room {
@@ -191,9 +192,57 @@ export const ProperMultiplayer: React.FC = () => {
     }
   };
 
+  // ✅ ПРОВЕРКА ДОСТУПА К МУЛЬТИПЛЕЕРУ
+  const [botGamesPlayed, setBotGamesPlayed] = useState<number | null>(null);
+  const [showAccessModal, setShowAccessModal] = useState(false);
+
+  // ✅ Загружаем количество игр с ботами
+  useEffect(() => {
+    if (!user?.id) return;
+    const userId = user.id;
+
+    const loadBotGamesCount = async () => {
+      try {
+        const response = await fetch('/api/user/bot-games', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-telegram-id': userId.toString()
+          },
+          credentials: 'include'
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setBotGamesPlayed(data.botGamesPlayed || 0);
+            if (!data.canPlayMultiplayer && view === 'lobby') {
+              setShowAccessModal(true);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('❌ [ProperMultiplayer] Ошибка загрузки игр с ботами:', error);
+      }
+    };
+
+    loadBotGamesCount();
+  }, [user?.id, view]);
+
   const handleCreateRoom = async (forceReplace: boolean = false) => {
     if (!roomName.trim()) {
       setError('Введите название комнаты');
+      return;
+    }
+
+    if (!user?.id) {
+      setError('Пользователь не авторизован');
+      return;
+    }
+
+    // ✅ ПРОВЕРКА ДОСТУПА
+    if (botGamesPlayed !== null && botGamesPlayed < 3) {
+      setShowAccessModal(true);
       return;
     }
 
@@ -848,6 +897,21 @@ export const ProperMultiplayer: React.FC = () => {
           currentRoomCode={existingRoom.code}
         />
       )}
+
+      {/* ✅ МОДАЛКА БЛОКИРОВКИ ДОСТУПА К МУЛЬТИПЛЕЕРУ */}
+      <MultiplayerAccessModal
+        isOpen={showAccessModal}
+        botGamesPlayed={botGamesPlayed || 0}
+        requiredGames={3}
+        onClose={() => setShowAccessModal(false)}
+        onPlayBots={() => {
+          setShowAccessModal(false);
+          // Возвращаемся в главное меню для игры с ботами
+          if (typeof window !== 'undefined') {
+            window.location.href = '/';
+          }
+        }}
+      />
     </div>
   );
 };

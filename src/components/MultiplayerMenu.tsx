@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Hash, Users, Crown, Play, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import { useTelegram } from '../hooks/useTelegram';
+import MultiplayerAccessModal from './MultiplayerAccessModal';
 
 interface MultiplayerMenuProps {
   onCreateRoom: (roomData: any) => void;
@@ -25,6 +26,45 @@ export default function MultiplayerMenu({ onCreateRoom, onJoinRoom, onBack }: Mu
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  
+  // ✅ ПРОВЕРКА ДОСТУПА К МУЛЬТИПЛЕЕРУ
+  const [botGamesPlayed, setBotGamesPlayed] = useState<number | null>(null);
+  const [showAccessModal, setShowAccessModal] = useState(false);
+  const [checkingAccess, setCheckingAccess] = useState(true);
+
+  // ✅ Загружаем количество игр с ботами
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const loadBotGamesCount = async () => {
+      try {
+        const response = await fetch('/api/user/bot-games', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-telegram-id': user.id.toString()
+          },
+          credentials: 'include'
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setBotGamesPlayed(data.botGamesPlayed || 0);
+            if (!data.canPlayMultiplayer) {
+              setShowAccessModal(true);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('❌ [MultiplayerMenu] Ошибка загрузки игр с ботами:', error);
+      } finally {
+        setCheckingAccess(false);
+      }
+    };
+
+    loadBotGamesCount();
+  }, [user?.id]);
 
   // Состояние для создания комнаты
   const [createRoomData, setCreateRoomData] = useState({
@@ -52,6 +92,12 @@ export default function MultiplayerMenu({ onCreateRoom, onJoinRoom, onBack }: Mu
   const handleCreateRoom = async () => {
     if (!user?.id) {
       setError('Не удалось получить информацию о пользователе');
+      return;
+    }
+
+    // ✅ ПРОВЕРКА ДОСТУПА
+    if (botGamesPlayed !== null && botGamesPlayed < 3) {
+      setShowAccessModal(true);
       return;
     }
 
@@ -101,6 +147,12 @@ export default function MultiplayerMenu({ onCreateRoom, onJoinRoom, onBack }: Mu
   const handleJoinRoom = async () => {
     if (!user?.id || !joinRoomCode.trim()) {
       setError('Введите код комнаты');
+      return;
+    }
+
+    // ✅ ПРОВЕРКА ДОСТУПА
+    if (botGamesPlayed !== null && botGamesPlayed < 3) {
+      setShowAccessModal(true);
       return;
     }
 
@@ -427,6 +479,18 @@ export default function MultiplayerMenu({ onCreateRoom, onJoinRoom, onBack }: Mu
           </motion.button>
         )}
       </div>
+
+      {/* ✅ МОДАЛКА БЛОКИРОВКИ ДОСТУПА К МУЛЬТИПЛЕЕРУ */}
+      <MultiplayerAccessModal
+        isOpen={showAccessModal}
+        botGamesPlayed={botGamesPlayed || 0}
+        requiredGames={3}
+        onClose={() => setShowAccessModal(false)}
+        onPlayBots={() => {
+          setShowAccessModal(false);
+          onBack(); // Возвращаемся в главное меню для игры с ботами
+        }}
+      />
     </div>
   );
 }

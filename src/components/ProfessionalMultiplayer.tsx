@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useTelegram } from '../hooks/useTelegram';
 import { useWebSocket } from '../hooks/useWebSocket';
+import MultiplayerAccessModal from './MultiplayerAccessModal';
 import styles from './NeonMainMenu.module.css';
 
 interface ProfessionalMultiplayerProps {
@@ -80,6 +81,42 @@ export default function ProfessionalMultiplayer({ onBack }: ProfessionalMultipla
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
+  // ✅ ПРОВЕРКА ДОСТУПА К МУЛЬТИПЛЕЕРУ
+  const [botGamesPlayed, setBotGamesPlayed] = useState<number | null>(null);
+  const [showAccessModal, setShowAccessModal] = useState(false);
+
+  // ✅ Загружаем количество игр с ботами
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const loadBotGamesCount = async () => {
+      try {
+        const response = await fetch('/api/user/bot-games', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-telegram-id': user.id.toString()
+          },
+          credentials: 'include'
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setBotGamesPlayed(data.botGamesPlayed || 0);
+            if (!data.canPlayMultiplayer) {
+              setShowAccessModal(true);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('❌ [ProfessionalMultiplayer] Ошибка загрузки игр с ботами:', error);
+      }
+    };
+
+    loadBotGamesCount();
+  }, [user?.id]);
+  
   // Create room state
   const [createData, setCreateData] = useState({
     name: '',
@@ -131,6 +168,11 @@ export default function ProfessionalMultiplayer({ onBack }: ProfessionalMultipla
   }, []);
 
   const handleCreateRoom = async () => {
+    // ✅ ПРОВЕРКА ДОСТУПА
+    if (botGamesPlayed !== null && botGamesPlayed < 3) {
+      setShowAccessModal(true);
+      return;
+    }
     setLoading(true);
     setError(null);
     
@@ -577,6 +619,18 @@ export default function ProfessionalMultiplayer({ onBack }: ProfessionalMultipla
           </motion.div>
         )}
       </div>
+
+      {/* ✅ МОДАЛКА БЛОКИРОВКИ ДОСТУПА К МУЛЬТИПЛЕЕРУ */}
+      <MultiplayerAccessModal
+        isOpen={showAccessModal}
+        botGamesPlayed={botGamesPlayed || 0}
+        requiredGames={3}
+        onClose={() => setShowAccessModal(false)}
+        onPlayBots={() => {
+          setShowAccessModal(false);
+          onBack(); // Возвращаемся в главное меню для игры с ботами
+        }}
+      />
     </div>
   );
 }

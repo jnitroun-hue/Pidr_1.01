@@ -7,6 +7,8 @@ import WinnerModal from '../../components/WinnerModal';
 import LoserModal from '../../components/LoserModal';
 import GameResultsModal from '../../components/GameResultsModal';
 import PenaltyDeckModal from '../../components/PenaltyDeckModal';
+import TutorialModal from '../../components/TutorialModal';
+import { useTutorial } from '../../hooks/useTutorial';
 import styles from './GameTable.module.css';
 // Генераторы перенесены в отдельный проект pidr_generators
 import { getPremiumTable } from '@/utils/generatePremiumTable';
@@ -295,6 +297,88 @@ function GamePageContentComponent({
   // Модальное окно профиля игрока
   const [selectedPlayerProfile, setSelectedPlayerProfile] = useState<any>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+
+  // ✅ СИСТЕМА ОБУЧЕНИЯ: Проверяем первую игру с ботами
+  const [botGamesPlayed, setBotGamesPlayed] = useState<number | null>(null);
+  const [isFirstGame, setIsFirstGame] = useState(false);
+  const isUserTurn = currentPlayerId && players.find(p => p.id === currentPlayerId)?.isUser || false;
+  
+  const { 
+    currentStep, 
+    isTutorialPaused, 
+    nextStep, 
+    closeTutorial, 
+    isTutorialActive 
+  } = useTutorial(gameStage, isFirstGame, isUserTurn);
+
+  // ✅ Загружаем количество игр с ботами
+  useEffect(() => {
+    if (!user?.id || isMultiplayer) return;
+
+    const loadBotGamesCount = async () => {
+      try {
+        const response = await fetch('/api/user/bot-games', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-telegram-id': user.id.toString()
+          },
+          credentials: 'include'
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setBotGamesPlayed(data.botGamesPlayed || 0);
+            setIsFirstGame(data.botGamesPlayed === 0);
+            console.log(`📊 [GamePageContent] Игр с ботами: ${data.botGamesPlayed}, первая игра: ${data.botGamesPlayed === 0}`);
+          }
+        }
+      } catch (error) {
+        console.error('❌ [GamePageContent] Ошибка загрузки игр с ботами:', error);
+      }
+    };
+
+    loadBotGamesCount();
+  }, [user?.id, isMultiplayer]);
+
+  // ✅ Обновляем счетчик игр с ботами при завершении игры (только один раз)
+  const gameEndedRef = useRef(false);
+  useEffect(() => {
+    if (!isGameActive && gameMode === 'single' && !isMultiplayer && user?.id && botGamesPlayed !== null && !gameEndedRef.current) {
+      gameEndedRef.current = true;
+      
+      const updateBotGamesCount = async () => {
+        try {
+          const response = await fetch('/api/user/bot-games', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-telegram-id': user.id.toString()
+            },
+            credentials: 'include'
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+              console.log(`✅ [GamePageContent] Счетчик игр с ботами обновлен: ${data.botGamesPlayed}`);
+              setBotGamesPlayed(data.botGamesPlayed);
+            }
+          }
+        } catch (error) {
+          console.error('❌ [GamePageContent] Ошибка обновления счетчика:', error);
+        }
+      };
+
+      updateBotGamesCount();
+    }
+    
+    // Сбрасываем флаг когда игра начинается
+    if (isGameActive) {
+      gameEndedRef.current = false;
+    }
+  }, [isGameActive, gameMode, isMultiplayer, user?.id, botGamesPlayed]);
 
   // Модальное окно сдачи штрафных карт (УДАЛЕНО - теперь используется showPenaltyCardSelection из store)
   // const [showPenaltyModal, setShowPenaltyModal] = useState(false);
@@ -2847,6 +2931,17 @@ function GamePageContentComponent({
             : undefined
         }
       />
+
+      {/* ✅ МОДАЛКА ОБУЧЕНИЯ (ТУТОРИАЛ) */}
+      {isTutorialActive && currentStep && (
+        <TutorialModal
+          isOpen={isTutorialPaused}
+          step={currentStep}
+          onClose={closeTutorial}
+          onNext={nextStep}
+          showNext={true}
+        />
+      )}
     </div>
   );
 }
