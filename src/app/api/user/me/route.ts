@@ -70,7 +70,8 @@ export async function GET(req: NextRequest) {
         coins: user.coins,
         rating: user.rating,
         experience: user.experience || 0,
-        games_played: user.games_played || 0,
+        games_played: user.total_games || user.games_played || 0, // ✅ Используем total_games
+        gamesPlayed: user.total_games || user.games_played || 0, // ✅ Дублируем для совместимости
         wins: user.wins || 0,
         losses: user.losses || 0,
         best_win_streak: user.best_win_streak || 0,

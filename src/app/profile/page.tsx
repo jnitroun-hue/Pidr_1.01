@@ -148,9 +148,9 @@ export default function ProfilePage() {
             telegramId: result.user.telegramId,
             coins: result.user.coins,
             rating: result.user.rating,
-            gamesPlayed: result.user.gamesPlayed,
-            wins: result.user.wins,        // ✅ ИСПРАВЛЕНО: wins вместо gamesWon!
-            losses: result.user.losses,    // ✅ ДОБАВЛЕНО: losses из API
+            gamesPlayed: result.user.gamesPlayed || result.user.games_played || 0, // ✅ Используем gamesPlayed или games_played
+            wins: result.user.wins || 0,        // ✅ ИСПРАВЛЕНО: wins вместо gamesWon!
+            losses: result.user.losses || 0,    // ✅ ДОБАВЛЕНО: losses из API
             status: result.user.status,
             avatar_url: result.user.avatar_url
           };

@@ -63,19 +63,21 @@ export default function TutorialModal({
               top: '50%',
               left: '50%',
               transform: 'translate(-50%, -50%)',
-              width: '90%',
-              maxWidth: '500px',
+              width: 'min(90vw, 800px)', // ✅ Увеличена ширина
+              maxWidth: '800px',
               background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%)',
-              borderRadius: '20px',
-              border: '3px solid rgba(99, 102, 241, 0.5)',
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(99, 102, 241, 0.3)',
+              borderRadius: '24px',
+              border: '4px solid rgba(99, 102, 241, 0.6)',
+              boxShadow: '0 25px 80px rgba(0, 0, 0, 0.6), 0 0 50px rgba(99, 102, 241, 0.4)',
               zIndex: 10000, // ✅ Высокий z-index для Telegram Web App
-              padding: '30px',
-              maxHeight: '85vh',
+              padding: '40px',
+              maxHeight: '90vh',
               overflowY: 'auto',
               // ✅ Для Telegram Web App - убеждаемся что модалка поверх всего
               WebkitTransform: 'translate(-50%, -50%)',
-              msTransform: 'translate(-50%, -50%)'
+              msTransform: 'translate(-50%, -50%)',
+              // ✅ Центрирование для всех случаев
+              margin: '0 auto'
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -95,7 +97,7 @@ export default function TutorialModal({
               }}>
                 {step.icon && (
                   <div style={{
-                    fontSize: '32px',
+                    fontSize: '48px', // ✅ Увеличен размер иконки
                     filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))'
                   }}>
                     {step.icon}
@@ -111,7 +113,7 @@ export default function TutorialModal({
                   />
                 )}
                 <h2 style={{
-                  fontSize: '24px',
+                  fontSize: '28px', // ✅ Увеличен размер
                   fontWeight: '800',
                   background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
                   WebkitBackgroundClip: 'text',
@@ -152,9 +154,9 @@ export default function TutorialModal({
             {/* Контент */}
             <div style={{
               color: '#e2e8f0',
-              fontSize: '16px',
-              lineHeight: '1.7',
-              marginBottom: '25px'
+              fontSize: '18px', // ✅ Увеличен размер текста
+              lineHeight: '1.8',
+              marginBottom: '30px'
             }}>
               {typeof step.content === 'string' ? (
                 <p style={{ margin: 0, whiteSpace: 'pre-line' }}>
@@ -172,15 +174,15 @@ export default function TutorialModal({
               whileTap={{ scale: 0.98 }}
               style={{
                 width: '100%',
-                padding: '16px 24px',
+                padding: '20px 32px', // ✅ Увеличен padding
                 background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
                 color: 'white',
                 border: 'none',
-                borderRadius: '12px',
-                fontSize: '18px',
+                borderRadius: '16px',
+                fontSize: '20px', // ✅ Увеличен размер текста
                 fontWeight: '700',
                 cursor: 'pointer',
-                boxShadow: '0 8px 24px rgba(99, 102, 241, 0.4)',
+                boxShadow: '0 10px 30px rgba(99, 102, 241, 0.5)',
                 transition: 'all 0.3s',
                 // ✅ Для Telegram Web App - убеждаемся что кнопка кликабельна
                 touchAction: 'manipulation',
