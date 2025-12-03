@@ -5,7 +5,7 @@ import { Lock, Gamepad2, Trophy } from 'lucide-react';
 
 interface MultiplayerAccessModalProps {
   isOpen: boolean;
-  botGamesPlayed: number;
+  gamesPlayed: number;
   requiredGames: number;
   onClose: () => void;
   onPlayBots: () => void;
@@ -13,14 +13,14 @@ interface MultiplayerAccessModalProps {
 
 export default function MultiplayerAccessModal({
   isOpen,
-  botGamesPlayed,
+  gamesPlayed,
   requiredGames,
   onClose,
   onPlayBots
 }: MultiplayerAccessModalProps) {
   if (!isOpen) return null;
 
-  const remaining = requiredGames - botGamesPlayed;
+  const remaining = requiredGames - gamesPlayed;
 
   return (
     <>
@@ -124,7 +124,7 @@ export default function MultiplayerAccessModal({
             }}>
               <Gamepad2 size={24} style={{ color: '#fbbf24' }} />
               <span style={{ fontSize: '18px', fontWeight: '700', color: '#fbbf24' }}>
-                Сыграно: {botGamesPlayed} / {requiredGames}
+                Сыграно: {gamesPlayed} / {requiredGames}
               </span>
             </div>
             <div style={{

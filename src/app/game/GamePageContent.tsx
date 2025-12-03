@@ -298,8 +298,8 @@ function GamePageContentComponent({
   const [selectedPlayerProfile, setSelectedPlayerProfile] = useState<any>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
-  // ✅ СИСТЕМА ОБУЧЕНИЯ: Проверяем первую игру с ботами
-  const [botGamesPlayed, setBotGamesPlayed] = useState<number | null>(null);
+  // ✅ СИСТЕМА ОБУЧЕНИЯ: Проверяем первую игру
+  const [gamesPlayed, setGamesPlayed] = useState<number | null>(null);
   const [isFirstGame, setIsFirstGame] = useState(false);
   const isUserTurn = currentPlayerId && players.find(p => p.id === currentPlayerId)?.isUser || false;
   
@@ -311,11 +311,11 @@ function GamePageContentComponent({
     isTutorialActive 
   } = useTutorial(gameStage, isFirstGame, isUserTurn);
 
-  // ✅ Загружаем количество игр с ботами
+  // ✅ Загружаем количество игр
   useEffect(() => {
     if (!user?.id || isMultiplayer) return;
 
-    const loadBotGamesCount = async () => {
+    const loadGamesCount = async () => {
       try {
         const response = await fetch('/api/user/bot-games', {
           method: 'GET',
@@ -329,56 +329,18 @@ function GamePageContentComponent({
         if (response.ok) {
           const data = await response.json();
           if (data.success) {
-            setBotGamesPlayed(data.botGamesPlayed || 0);
-            setIsFirstGame(data.botGamesPlayed === 0);
-            console.log(`📊 [GamePageContent] Игр с ботами: ${data.botGamesPlayed}, первая игра: ${data.botGamesPlayed === 0}`);
+            setGamesPlayed(data.gamesPlayed || 0);
+            setIsFirstGame(data.gamesPlayed === 0);
+            console.log(`📊 [GamePageContent] Игр сыграно: ${data.gamesPlayed}, первая игра: ${data.gamesPlayed === 0}`);
           }
         }
       } catch (error) {
-        console.error('❌ [GamePageContent] Ошибка загрузки игр с ботами:', error);
+        console.error('❌ [GamePageContent] Ошибка загрузки игр:', error);
       }
     };
 
-    loadBotGamesCount();
+    loadGamesCount();
   }, [user?.id, isMultiplayer]);
-
-  // ✅ Обновляем счетчик игр с ботами при завершении игры (только один раз)
-  const gameEndedRef = useRef(false);
-  useEffect(() => {
-    if (!isGameActive && gameMode === 'single' && !isMultiplayer && user?.id && botGamesPlayed !== null && !gameEndedRef.current) {
-      gameEndedRef.current = true;
-      
-      const updateBotGamesCount = async () => {
-        try {
-          const response = await fetch('/api/user/bot-games', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-telegram-id': user.id.toString()
-            },
-            credentials: 'include'
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            if (data.success) {
-              console.log(`✅ [GamePageContent] Счетчик игр с ботами обновлен: ${data.botGamesPlayed}`);
-              setBotGamesPlayed(data.botGamesPlayed);
-            }
-          }
-        } catch (error) {
-          console.error('❌ [GamePageContent] Ошибка обновления счетчика:', error);
-        }
-      };
-
-      updateBotGamesCount();
-    }
-    
-    // Сбрасываем флаг когда игра начинается
-    if (isGameActive) {
-      gameEndedRef.current = false;
-    }
-  }, [isGameActive, gameMode, isMultiplayer, user?.id, botGamesPlayed]);
 
   // Модальное окно сдачи штрафных карт (УДАЛЕНО - теперь используется showPenaltyCardSelection из store)
   // const [showPenaltyModal, setShowPenaltyModal] = useState(false);

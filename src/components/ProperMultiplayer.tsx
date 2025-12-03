@@ -193,15 +193,15 @@ export const ProperMultiplayer: React.FC = () => {
   };
 
   // ✅ ПРОВЕРКА ДОСТУПА К МУЛЬТИПЛЕЕРУ
-  const [botGamesPlayed, setBotGamesPlayed] = useState<number | null>(null);
+  const [gamesPlayed, setGamesPlayed] = useState<number | null>(null);
   const [showAccessModal, setShowAccessModal] = useState(false);
 
-  // ✅ Загружаем количество игр с ботами
+  // ✅ Загружаем количество игр
   useEffect(() => {
     if (!user?.id) return;
     const userId = user.id;
 
-    const loadBotGamesCount = async () => {
+    const loadGamesCount = async () => {
       try {
         const response = await fetch('/api/user/bot-games', {
           method: 'GET',
@@ -215,18 +215,18 @@ export const ProperMultiplayer: React.FC = () => {
         if (response.ok) {
           const data = await response.json();
           if (data.success) {
-            setBotGamesPlayed(data.botGamesPlayed || 0);
+            setGamesPlayed(data.gamesPlayed || 0);
             if (!data.canPlayMultiplayer && view === 'lobby') {
               setShowAccessModal(true);
             }
           }
         }
       } catch (error) {
-        console.error('❌ [ProperMultiplayer] Ошибка загрузки игр с ботами:', error);
+        console.error('❌ [ProperMultiplayer] Ошибка загрузки игр:', error);
       }
     };
 
-    loadBotGamesCount();
+    loadGamesCount();
   }, [user?.id, view]);
 
   const handleCreateRoom = async (forceReplace: boolean = false) => {
@@ -241,7 +241,7 @@ export const ProperMultiplayer: React.FC = () => {
     }
 
     // ✅ ПРОВЕРКА ДОСТУПА
-    if (botGamesPlayed !== null && botGamesPlayed < 3) {
+    if (gamesPlayed !== null && gamesPlayed < 3) {
       setShowAccessModal(true);
       return;
     }
@@ -901,7 +901,7 @@ export const ProperMultiplayer: React.FC = () => {
       {/* ✅ МОДАЛКА БЛОКИРОВКИ ДОСТУПА К МУЛЬТИПЛЕЕРУ */}
       <MultiplayerAccessModal
         isOpen={showAccessModal}
-        botGamesPlayed={botGamesPlayed || 0}
+        gamesPlayed={gamesPlayed || 0}
         requiredGames={3}
         onClose={() => setShowAccessModal(false)}
         onPlayBots={() => {
