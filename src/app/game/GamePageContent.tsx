@@ -311,7 +311,7 @@ function GamePageContentComponent({
     nextStep, 
     closeTutorial, 
     isTutorialActive 
-  } = useTutorial(gameStage, isFirstGame, isUserTurn, currentPlayerId, userPlayerId, players);
+  } = useTutorial(gameStage, isFirstGame, isUserTurn, currentPlayerId, userPlayerId, players, deck.length);
 
   // ✅ Загружаем количество игр
   useEffect(() => {

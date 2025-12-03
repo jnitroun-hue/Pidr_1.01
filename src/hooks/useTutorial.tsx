@@ -14,7 +14,8 @@ export function useTutorial(
   isUserTurn: boolean,
   currentPlayerId: string | null,
   userPlayerId: string | null,
-  players: any[]
+  players: any[],
+  deckLength: number = 0
 ) {
   const [tutorialConfig, setTutorialConfig] = useState<TutorialConfig>({
     enabled: false,
@@ -58,6 +59,12 @@ export function useTutorial(
         content: 'Сейчас ваш ход! Посмотрите на открытые карты соперников. Если у кого-то карта младше вашей - нажмите на этого игрока, чтобы положить на него свою карту. Если не можете сходить на соперника, нажмите на колоду, чтобы взять новую карту.'
       },
       {
+        id: 'no_cards_stage1',
+        title: 'У вас не осталось карт!',
+        icon: '🃏',
+        content: 'У вас закончились карты в руке! В первой стадии вы должны взять карту из колоды. Нажмите на колоду, чтобы взять новую карту. Если эта карта старше вашей открытой карты, вы можете положить её на себя. Если не можете сходить - передайте ход следующему игроку.'
+      },
+      {
         id: 'stage2_transition',
         title: 'Переход во вторую стадию',
         icon: '🔄',
@@ -79,7 +86,7 @@ export function useTutorial(
         id: 'penki_opened',
         title: 'Пеньки открыты!',
         icon: '🎯',
-        content: 'У вас закончились карты в руке, поэтому открылись ваши пеньки (2 закрытые карты, которые вы получили в начале игры). Теперь вы играете с этими картами до их окончания. Это третья стадия игры.'
+        content: 'У вас закончились карты в руке во второй стадии, поэтому открылись ваши пеньки (2 закрытые карты, которые вы получили в начале игры). Теперь вы играете с этими картами до их окончания. Это третья стадия игры.'
       }
     ];
   }, []);
@@ -212,16 +219,45 @@ export function useTutorial(
     }
   }, [gameStage, isUserTurn, tutorialConfig, isTutorialPaused]);
 
-  // ✅ 4. Модалка при открытии пеньков
+  // ✅ 4. Модалка когда в 1-й стадии закончились карты (только если колода еще есть!)
+  const noCardsStage1Ref = useRef<boolean>(false);
   useEffect(() => {
     if (!tutorialConfig.enabled || isTutorialPaused || !userPlayerId) return;
     
     const userPlayer = players.find(p => p.id === userPlayerId);
     if (!userPlayer) return;
     
+    // В первой стадии: если закончились карты, но есть колода - нужно брать из колоды
+    // ✅ КРИТИЧНО: Показываем только если колода еще есть (deckLength > 0)!
+    const noCardsInStage1 = gameStage === 1 && userPlayer.cards.length === 0 && userPlayer.penki.length > 0 && deckLength > 0;
+    
+    if (noCardsInStage1 && !noCardsStage1Ref.current && !tutorialConfig.shownSteps.has('no_cards_stage1')) {
+      noCardsStage1Ref.current = true;
+      
+      const step = tutorialConfig.steps.find(s => s.id === 'no_cards_stage1');
+      if (step) {
+        setCurrentStep(step);
+        setIsTutorialPaused(true);
+      }
+    }
+    
+    // Сбрасываем флаг если карты появились или колода закончилась
+    if (userPlayer.cards.length > 0 || deckLength === 0) {
+      noCardsStage1Ref.current = false;
+    }
+  }, [players, userPlayerId, gameStage, deckLength, tutorialConfig, isTutorialPaused]);
+
+  // ✅ 5. Модалка при открытии пеньков (ТОЛЬКО во 2-й стадии и позже!)
+  useEffect(() => {
+    if (!tutorialConfig.enabled || isTutorialPaused || !userPlayerId) return;
+    
+    const userPlayer = players.find(p => p.id === userPlayerId);
+    if (!userPlayer) return;
+    
+    // ✅ КРИТИЧНО: Пеньки открываются ТОЛЬКО во 2-й стадии и позже!
     // Проверяем, открылись ли пеньки (у игрока закончились карты в руке, но есть пеньки)
-    // Пеньки открываются когда cards.length === 0 и penki.length > 0
-    const penkiOpened = userPlayer.cards.length === 0 && userPlayer.penki.length > 0;
+    // И это должно быть во 2-й стадии или позже
+    const penkiOpened = gameStage >= 2 && userPlayer.cards.length === 0 && userPlayer.penki.length > 0;
     
     if (penkiOpened && !penkiOpenedRef.current && !tutorialConfig.shownSteps.has('penki_opened')) {
       penkiOpenedRef.current = true;
@@ -232,7 +268,7 @@ export function useTutorial(
         setIsTutorialPaused(true);
       }
     }
-  }, [players, userPlayerId, tutorialConfig, isTutorialPaused]);
+  }, [players, userPlayerId, gameStage, tutorialConfig, isTutorialPaused]);
 
   // Обновляем refs
   useEffect(() => {
