@@ -12,10 +12,10 @@ export async function GET(
 
     console.log(`📋 [GET /api/rooms/${roomId}/players] Получение списка игроков`);
 
-    // ✅ СНАЧАЛА ПОЛУЧАЕМ ИНФОРМАЦИЮ О КОМНАТЕ (max_players!)
+    // ✅ ИСПРАВЛЕНО: Один запрос для получения всей информации о комнате
     const { data: room, error: roomError } = await supabase
       .from('_pidr_rooms')
-      .select('max_players, current_players, status')
+      .select('max_players, current_players, status, host_id')
       .eq('id', roomId)
       .single();
 
@@ -26,13 +26,6 @@ export async function GET(
         message: 'Комната не найдена: ' + (roomError?.message || 'Unknown error')
       }, { status: 404 });
     }
-
-    // ✅ ПОЛУЧАЕМ ИНФОРМАЦИЮ О КОМНАТЕ (host_id!)
-    const { data: roomFull, error: roomFullError } = await supabase
-      .from('_pidr_rooms')
-      .select('host_id')
-      .eq('id', roomId)
-      .single();
 
     // Получаем список игроков из БД
     const { data: players, error } = await supabase
@@ -50,6 +43,8 @@ export async function GET(
       
       // Получаем UUID пользователя по telegram_id (только для не-ботов)
       let userData = null;
+      let isHost = false;
+      
       if (!isBot) {
         const { data } = await supabase
           .from('_pidr_users')
@@ -57,14 +52,30 @@ export async function GET(
           .eq('telegram_id', player.user_id)
           .maybeSingle();
         userData = data;
+        
+        // ✅ КРИТИЧНО: Сравниваем UUID с UUID (только для не-ботов)
+        // room.host_id это UUID, userData.id это UUID
+        if (room?.host_id && userData?.id) {
+          // ✅ ИСПРАВЛЕНО: Приводим оба к строке для корректного сравнения
+          const hostIdStr = String(room.host_id);
+          const userIdStr = String(userData.id);
+          isHost = hostIdStr === userIdStr;
+          
+          console.log(`🔍 [GET /api/rooms/players] Проверка хоста для игрока ${player.user_id}:`, {
+            hostId: hostIdStr,
+            userId: userIdStr,
+            isHost,
+            playerIsHost: player.is_host
+          });
+        }
       }
       
-      // Сравниваем UUID с UUID (только для не-ботов)
-      const isHost = !isBot && roomFull?.host_id && userData?.id && roomFull.host_id === userData.id;
+      // ✅ КРИТИЧНО: Используем вычисленный isHost, но если в БД уже есть is_host=true, тоже учитываем
+      const finalIsHost = isHost || (player.is_host === true);
       
       return {
         ...player,
-        is_host: isHost || player.is_host, // Используем is_host из БД как fallback
+        is_host: finalIsHost, // ✅ ИСПРАВЛЕНО: Используем вычисленный isHost
         is_bot: isBot // ✅ ДОБАВЛЕНО: Флаг бота
       };
     }));

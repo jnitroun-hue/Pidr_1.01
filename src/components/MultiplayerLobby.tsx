@@ -306,7 +306,10 @@ export default function MultiplayerLobby({
       const data = await response.json();
       if (data.success) {
         console.log('✅ [MultiplayerLobby] Бот добавлен:', data.bot);
+        // ✅ ИСПРАВЛЕНО: Ждём немного и обновляем список несколько раз
         await loadRoomPlayers();
+        setTimeout(() => loadRoomPlayers(), 500);
+        setTimeout(() => loadRoomPlayers(), 1500);
         // Обновим активность комнаты
         await fetch('/api/user/heartbeat', {
           method: 'POST',
@@ -528,14 +531,225 @@ export default function MultiplayerLobby({
           </div>
         </div>
         
-        <div className="players-list">
+        {/* ✅ НОВОЕ: ВИЗУАЛИЗАЦИЯ СТОЛА С ПОЗИЦИЯМИ ИГРОКОВ */}
+        <div style={{
+          position: 'relative',
+          width: '100%',
+          minHeight: '400px',
+          background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%)',
+          borderRadius: '20px',
+          border: '3px solid rgba(34, 197, 94, 0.3)',
+          padding: '40px',
+          marginBottom: '20px'
+        }}>
+          {/* Стол в центре */}
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '200px',
+            height: '200px',
+            background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.3) 0%, rgba(16, 185, 129, 0.3) 100%)',
+            borderRadius: '50%',
+            border: '4px solid rgba(34, 197, 94, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '24px',
+            fontWeight: 'bold',
+            color: 'rgba(34, 197, 94, 0.8)',
+            boxShadow: '0 0 30px rgba(34, 197, 94, 0.3)'
+          }}>
+            🎮 СТОЛ
+          </div>
+
+          {/* Игроки вокруг стола по позициям */}
+          {Array.from({ length: lobbyState.maxPlayers }, (_, index) => {
+            const position = index + 1;
+            const player = lobbyState.players.find(p => p.position === position);
+            const isEmpty = !player;
+            
+            // Вычисляем позицию вокруг стола (круг)
+            const angle = (360 / lobbyState.maxPlayers) * (position - 1) - 90; // Начинаем сверху
+            const radius = 180;
+            const x = Math.cos((angle * Math.PI) / 180) * radius;
+            const y = Math.sin((angle * Math.PI) / 180) * radius;
+            
+            const userIdStr = player ? String(player.user_id || '') : '';
+            const isBot = player && (userIdStr.startsWith('-') || parseInt(userIdStr) < 0);
+            const isCurrentUser = player && userIdStr === String(user?.id || '');
+            const isHostPlayer = player && player.is_host === true;
+            
+            return (
+              <motion.div
+                key={`position-${position}`}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.3, delay: index * 0.1 }}
+                style={{
+                  position: 'absolute',
+                  top: `calc(50% + ${y}px)`,
+                  left: `calc(50% + ${x}px)`,
+                  transform: 'translate(-50%, -50%)',
+                  width: '120px',
+                  zIndex: isEmpty ? 1 : 2
+                }}
+              >
+                {isEmpty ? (
+                  <div style={{
+                    background: 'rgba(100, 116, 139, 0.2)',
+                    border: '2px dashed rgba(100, 116, 139, 0.5)',
+                    borderRadius: '12px',
+                    padding: '12px',
+                    textAlign: 'center',
+                    color: 'rgba(148, 163, 184, 0.8)',
+                    fontSize: '12px'
+                  }}>
+                    <UserPlus size={24} style={{ marginBottom: '4px', opacity: 0.5 }} />
+                    <div>Позиция {position}</div>
+                    <div style={{ fontSize: '10px', marginTop: '4px' }}>Свободно</div>
+                  </div>
+                ) : (
+                  <motion.div
+                    whileHover={{ scale: 1.1, y: -5 }}
+                    style={{
+                      background: player.is_ready 
+                        ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.3) 0%, rgba(5, 150, 105, 0.3) 100%)'
+                        : 'linear-gradient(135deg, rgba(239, 68, 68, 0.3) 0%, rgba(220, 38, 38, 0.3) 100%)',
+                      border: `3px solid ${player.is_ready ? 'rgba(16, 185, 129, 0.6)' : 'rgba(239, 68, 68, 0.6)'}`,
+                      borderRadius: '16px',
+                      padding: '12px',
+                      textAlign: 'center',
+                      boxShadow: isCurrentUser 
+                        ? '0 0 20px rgba(59, 130, 246, 0.6)' 
+                        : '0 4px 12px rgba(0, 0, 0, 0.3)',
+                      position: 'relative'
+                    }}
+                  >
+                    {isHostPlayer && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '-8px',
+                        right: '-8px',
+                        background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
+                        borderRadius: '50%',
+                        width: '32px',
+                        height: '32px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 4px 12px rgba(251, 191, 36, 0.5)',
+                        zIndex: 10
+                      }}>
+                        <Crown size={18} style={{ color: 'white' }} />
+                      </div>
+                    )}
+                    {isBot && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '-8px',
+                        left: '-8px',
+                        background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                        borderRadius: '50%',
+                        width: '28px',
+                        height: '28px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 4px 12px rgba(139, 92, 246, 0.5)',
+                        zIndex: 10
+                      }}>
+                        <Bot size={16} style={{ color: 'white' }} />
+                      </div>
+                    )}
+                    {isCurrentUser && (
+                      <div style={{
+                        position: 'absolute',
+                        bottom: '-8px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                        borderRadius: '12px',
+                        padding: '2px 8px',
+                        fontSize: '10px',
+                        fontWeight: 'bold',
+                        color: 'white',
+                        whiteSpace: 'nowrap',
+                        boxShadow: '0 2px 8px rgba(59, 130, 246, 0.5)'
+                      }}>
+                        ВЫ
+                      </div>
+                    )}
+                    {player.avatar_url ? (
+                      <img 
+                        src={player.avatar_url} 
+                        alt={player.username}
+                        style={{
+                          width: '48px',
+                          height: '48px',
+                          borderRadius: '50%',
+                          marginBottom: '6px',
+                          border: `2px solid ${player.is_ready ? '#10b981' : '#ef4444'}`,
+                          objectFit: 'cover'
+                        }}
+                      />
+                    ) : (
+                      <div style={{
+                        width: '48px',
+                        height: '48px',
+                        borderRadius: '50%',
+                        background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                        margin: '0 auto 6px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '20px',
+                        color: 'white'
+                      }}>
+                        {player.username?.[0]?.toUpperCase() || '?'}
+                      </div>
+                    )}
+                    <div style={{
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      color: 'white',
+                      marginBottom: '4px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {player.username || `Игрок ${position}`}
+                    </div>
+                    <div style={{
+                      fontSize: '10px',
+                      color: player.is_ready ? '#10b981' : '#ef4444',
+                      fontWeight: '600'
+                    }}>
+                      {player.is_ready ? '✅ Готов' : '⏳ Не готов'}
+                    </div>
+                    <div style={{
+                      fontSize: '9px',
+                      color: 'rgba(255, 255, 255, 0.7)',
+                      marginTop: '2px'
+                    }}>
+                      Поз. {position}
+                    </div>
+                  </motion.div>
+                )}
+              </motion.div>
+            );
+          })}
+        </div>
+        
+        {/* ✅ ДОПОЛНИТЕЛЬНЫЙ СПИСОК ИГРОКОВ (для мобильных) */}
+        <div className="players-list" style={{ display: 'none' }}>
           <AnimatePresence>
             {lobbyState.players.map((player, index) => {
-              const userIdStr = String(player.user_id || ''); // ✅ КОНВЕРТИРУЕМ В СТРОКУ!
+              const userIdStr = String(player.user_id || '');
               const isBot = userIdStr.startsWith('-') || parseInt(userIdStr) < 0;
-              // ✅ ИСПРАВЛЕНО: Нормализуем сравнение - приводим оба к строке
               const isCurrentUser = userIdStr === String(user?.id || '');
-              const isHostPlayer = player.is_host || index === 0; // ✅ ИСПОЛЬЗУЕМ is_host ИЗ БД!
+              const isHostPlayer = player.is_host === true;
 
               return (
                 <motion.div
