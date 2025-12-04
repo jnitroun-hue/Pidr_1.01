@@ -77,12 +77,32 @@ export async function GET(req: NextRequest) {
       }, { status: 403 });
     }
 
-    // Получаем данные пользователя из БД для проверки telegram_id
-    const { data: userForCheck, error: userCheckError } = await supabase
-      .from('_pidr_users')
-      .select('telegram_id')
-      .eq('id', userId)
-      .single();
+    // ✅ ИСПРАВЛЕНО: userId из токена может быть как id из БД, так и telegram_id
+    // Сначала пробуем найти по id, если не найдено - ищем по telegram_id
+    let userForCheck: any = null;
+    let userCheckError: any = null;
+    
+    // Пробуем найти по id (если userId - это числовой id из БД)
+    if (!isNaN(Number(userId))) {
+      const { data, error } = await supabase
+        .from('_pidr_users')
+        .select('id, telegram_id')
+        .eq('id', parseInt(userId))
+        .single();
+      userForCheck = data;
+      userCheckError = error;
+    }
+    
+    // Если не найдено по id, ищем по telegram_id
+    if (!userForCheck) {
+      const { data, error } = await supabase
+        .from('_pidr_users')
+        .select('id, telegram_id')
+        .eq('telegram_id', userId)
+        .single();
+      userForCheck = data;
+      userCheckError = error;
+    }
 
     if (userCheckError || !userForCheck) {
       console.error('❌ Пользователь не найден в БД для проверки:', userCheckError);
@@ -150,13 +170,35 @@ export async function GET(req: NextRequest) {
       console.log('ℹ️ Device fingerprint не проверяется (отсутствует в токене или header)');
     }
 
-    // Получаем данные пользователя из БД
+    // ✅ ИСПРАВЛЕНО: userId из токена может быть как id из БД, так и telegram_id
+    // Сначала пробуем найти по id, если не найдено - ищем по telegram_id
     console.log('🔍 [GET /api/auth] Запрашиваем пользователя с userId:', userId, 'telegramId из токена:', telegramIdFromToken);
-    const { data: user, error } = await supabase
-      .from('_pidr_users')
-      .select('*')
-      .eq('id', userId)
-      .single();
+    
+    let user: any = null;
+    let error: any = null;
+    
+    // Пробуем найти по id (если userId - это числовой id из БД)
+    if (!isNaN(Number(userId))) {
+      const { data, error: err } = await supabase
+        .from('_pidr_users')
+        .select('*')
+        .eq('id', parseInt(userId))
+        .single();
+      user = data;
+      error = err;
+    }
+    
+    // Если не найдено по id, ищем по telegram_id
+    if (!user && (!error || error.code === 'PGRST116')) {
+      console.log('🔍 Пользователь не найден по id, ищем по telegram_id:', userId);
+      const { data, error: err } = await supabase
+        .from('_pidr_users')
+        .select('*')
+        .eq('telegram_id', userId)
+        .single();
+      user = data;
+      error = err;
+    }
 
     if (error || !user) {
       console.error('❌ Пользователь не найден в БД:', error);

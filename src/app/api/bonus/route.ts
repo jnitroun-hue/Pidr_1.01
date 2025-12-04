@@ -26,20 +26,24 @@ export async function POST(req: NextRequest) {
     
     console.log(`🎁 Обработка бонуса "${bonusType}" для пользователя:`, userId);
     
-    // Получаем текущего пользователя
+    // ✅ ИСПРАВЛЕНО: userId из requireAuth это telegram_id (строка), а не id из БД
+    // Сначала ищем пользователя по telegram_id
     const { data: user, error: userError } = await supabase
       .from('_pidr_users')
       .select('id, username, coins, telegram_id')
-      .eq('id', userId)
+      .eq('telegram_id', userId)
       .single();
       
     if (userError || !user) {
-      console.error('❌ Пользователь не найден:', userError);
+      console.error('❌ Пользователь не найден по telegram_id:', userId, userError);
       return NextResponse.json({ 
         success: false, 
         message: 'Пользователь не найден' 
       }, { status: 404 });
     }
+    
+    // ✅ Используем id из БД для транзакций
+    const dbUserId = user.id;
     
     console.log('👤 Текущий пользователь:', user.username, 'Баланс:', user.coins);
     
@@ -59,11 +63,11 @@ export async function POST(req: NextRequest) {
         // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Используем уникальную комбинацию user_id + date для проверки
         const todayKey = `${userId}_${todayStart.getTime()}`; // Уникальный ключ на день
         
-        // ✅ ИСПРАВЛЕНО: Используем _pidr_coin_transactions вместо удалённой _pidr_transactions
+        // ✅ ИСПРАВЛЕНО: Используем dbUserId (id из БД) вместо telegram_id
         const { data: dailyBonusToday, error: dailyError } = await supabase
           .from('_pidr_coin_transactions')
           .select('id, created_at, amount')
-          .eq('user_id', userId)
+          .eq('user_id', dbUserId)
           .eq('transaction_type', 'bonus')
           .gte('created_at', todayStart.toISOString())
           .lt('created_at', todayEnd.toISOString())
@@ -78,7 +82,7 @@ export async function POST(req: NextRequest) {
         const { data: bonusByDescription } = await supabase
           .from('_pidr_coin_transactions')
           .select('id, created_at, amount, description')
-          .eq('user_id', userId)
+          .eq('user_id', dbUserId)
           .eq('transaction_type', 'bonus')
           .like('description', `%${todayStart.toDateString()}%`)
           .limit(1);
@@ -128,7 +132,7 @@ export async function POST(req: NextRequest) {
         const { data: telegramBonusCheck } = await supabase
           .from('_pidr_coin_transactions')
           .select('id')
-          .eq('user_id', userId)
+          .eq('user_id', dbUserId)
           .eq('transaction_type', 'bonus')
           .eq('description', 'Бонус за подписку в Telegram')
           .limit(1);
@@ -151,7 +155,7 @@ export async function POST(req: NextRequest) {
         const { data: vkBonusCheck } = await supabase
           .from('_pidr_coin_transactions')
           .select('id')
-          .eq('user_id', userId)
+          .eq('user_id', dbUserId)
           .eq('transaction_type', 'bonus')
           .eq('description', 'Бонус за подписку в ВК')
           .limit(1);
@@ -187,7 +191,7 @@ export async function POST(req: NextRequest) {
         coins: newBalance,
         updated_at: new Date().toISOString()
       })
-      .eq('id', userId);
+      .eq('id', dbUserId);
       
     if (updateError) {
       console.error('❌ Ошибка обновления баланса:', updateError);
@@ -198,11 +202,11 @@ export async function POST(req: NextRequest) {
     }
     
     // 2. Записываем транзакцию для истории
-    // ✅ ИСПРАВЛЕНО: Используем _pidr_coin_transactions
+    // ✅ ИСПРАВЛЕНО: Используем _pidr_coin_transactions и dbUserId (id из БД)
     const { error: transactionError } = await supabase
       .from('_pidr_coin_transactions')
       .insert({
-        user_id: userId,
+        user_id: dbUserId,
         transaction_type: 'bonus',
         amount: bonusAmount,
         description: bonusDescription,
@@ -252,12 +256,28 @@ export async function GET(req: NextRequest) {
   const userId = auth.userId;
   
   try {
+    // ✅ ИСПРАВЛЕНО: userId из requireAuth это telegram_id, нужно найти пользователя в БД
+    const { data: userData } = await supabase
+      .from('_pidr_users')
+      .select('id')
+      .eq('telegram_id', userId)
+      .single();
+    
+    if (!userData) {
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Пользователь не найден' 
+      }, { status: 404 });
+    }
+    
+    const dbUserId = userData.id;
+    
     // Получаем информацию о последних бонусах пользователя
-    // ✅ ИСПРАВЛЕНО: Используем _pidr_coin_transactions
+    // ✅ ИСПРАВЛЕНО: Используем _pidr_coin_transactions и dbUserId
     const { data: recentBonuses } = await supabase
       .from('_pidr_coin_transactions')
       .select('transaction_type, created_at, description')
-      .eq('user_id', userId)
+      .eq('user_id', dbUserId)
       .eq('transaction_type', 'bonus')
       .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // За последние 24 часа
       .order('created_at', { ascending: false });
@@ -274,7 +294,7 @@ export async function GET(req: NextRequest) {
     const { data: telegramSubscribeCheck } = await supabase
       .from('_pidr_coin_transactions')
       .select('id')
-      .eq('user_id', userId)
+      .eq('user_id', dbUserId)
       .eq('transaction_type', 'bonus')
       .eq('description', 'Бонус за подписку в Telegram')
       .limit(1);
@@ -282,7 +302,7 @@ export async function GET(req: NextRequest) {
     const { data: vkSubscribeCheck } = await supabase
       .from('_pidr_coin_transactions')
       .select('id')
-      .eq('user_id', userId)
+      .eq('user_id', dbUserId)
       .eq('transaction_type', 'bonus')
       .eq('description', 'Бонус за подписку в ВК')
       .limit(1);
