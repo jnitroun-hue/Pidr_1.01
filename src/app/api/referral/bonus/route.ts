@@ -34,15 +34,18 @@ export async function POST(request: NextRequest) {
     // Начисляем бонус пригласившему
     const { data: referrerData } = await supabase
       .from('_pidr_users')
-      .select('coins')
+      .select('id, coins')
       .eq('telegram_id', referrer_id)
       .single();
 
     if (referrerData) {
+      const oldBalance = referrerData.coins || 0;
+      const newBalance = oldBalance + REFERRER_BONUS;
+      
       const { error: referrerError } = await supabase
         .from('_pidr_users')
         .update({
-          coins: (referrerData.coins || 0) + REFERRER_BONUS
+          coins: newBalance
         })
         .eq('telegram_id', referrer_id);
 
@@ -50,21 +53,37 @@ export async function POST(request: NextRequest) {
         console.error('❌ Ошибка начисления бонуса пригласившему:', referrerError);
       } else {
         console.log(`✅ Пригласившему ${referrer_id} начислено +${REFERRER_BONUS} монет`);
+        
+        // ✅ ИСПРАВЛЕНО: Записываем транзакцию в _pidr_coin_transactions
+        await supabase
+          .from('_pidr_coin_transactions')
+          .insert({
+            user_id: referrerData.id,
+            transaction_type: 'bonus',
+            amount: REFERRER_BONUS,
+            description: `Реферальный бонус за приглашение друга`,
+            balance_before: oldBalance,
+            balance_after: newBalance,
+            created_at: new Date().toISOString()
+          });
       }
     }
 
     // Начисляем бонус новому пользователю
     const { data: newUserData } = await supabase
       .from('_pidr_users')
-      .select('coins')
+      .select('id, coins')
       .eq('telegram_id', new_user_id)
       .single();
 
     if (newUserData) {
+      const oldBalance = newUserData.coins || 0;
+      const newBalance = oldBalance + NEW_USER_BONUS;
+      
       const { error: newUserError } = await supabase
         .from('_pidr_users')
         .update({
-          coins: (newUserData.coins || 0) + NEW_USER_BONUS
+          coins: newBalance
         })
         .eq('telegram_id', new_user_id);
 
@@ -72,6 +91,19 @@ export async function POST(request: NextRequest) {
         console.error('❌ Ошибка начисления бонуса новому пользователю:', newUserError);
       } else {
         console.log(`✅ Новому пользователю ${new_user_id} начислено +${NEW_USER_BONUS} монет`);
+        
+        // ✅ ИСПРАВЛЕНО: Записываем транзакцию в _pidr_coin_transactions
+        await supabase
+          .from('_pidr_coin_transactions')
+          .insert({
+            user_id: newUserData.id,
+            transaction_type: 'bonus',
+            amount: NEW_USER_BONUS,
+            description: `Бонус за регистрацию по реферальной ссылке`,
+            balance_before: oldBalance,
+            balance_after: newBalance,
+            created_at: new Date().toISOString()
+          });
       }
     }
 

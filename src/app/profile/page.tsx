@@ -445,6 +445,8 @@ export default function ProfilePage() {
     cooldownUntil?: Date | null;
     referrals?: number;
     nextRank?: string;
+    link?: string;
+    note?: string;
   }>>([
     {
       id: 'daily',
@@ -460,10 +462,30 @@ export default function ProfilePage() {
       id: 'referral',
       name: 'Реферальная система',
       description: 'Приглашайте друзей и получайте бонусы',
-      reward: '100 монет за друга',
+      reward: '500 монет за активного друга',
       icon: '👥',
       available: true,
       referrals: 0
+    },
+    {
+      id: 'telegram_subscribe',
+      name: 'Подписка в Telegram',
+      description: 'Подпишитесь на наш Telegram канал',
+      reward: '300 монет',
+      icon: '📢',
+      available: true,
+      link: process.env.NEXT_PUBLIC_TELEGRAM_CHANNEL_LINK || 'https://t.me/your_channel',
+      note: 'Подпишитесь на канал и получите бонус!'
+    },
+    {
+      id: 'vk_subscribe',
+      name: 'Подписка в ВК',
+      description: 'Подпишитесь на наше сообщество ВКонтакте',
+      reward: '300 монет',
+      icon: '👥',
+      available: true,
+      link: process.env.NEXT_PUBLIC_VK_GROUP_LINK || 'https://vk.com/your_group',
+      note: 'Подпишитесь на сообщество и получите бонус!'
     },
     {
       id: 'rank_up',
@@ -544,6 +566,21 @@ export default function ProfilePage() {
       return; // Выходим, не обрабатываем как обычный бонус
     }
     
+    // ✅ НОВОЕ: Для бонусов за подписки открываем ссылку
+    const bonus = bonuses.find(b => b.id === bonusId);
+    if ((bonusId === 'telegram_subscribe' || bonusId === 'vk_subscribe') && bonus?.link) {
+      // Открываем ссылку на подписку
+      if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.openLink) {
+        (window as any).Telegram.WebApp.openLink(bonus.link);
+      } else {
+        window.open(bonus.link, '_blank');
+      }
+      
+      // Показываем сообщение с инструкцией
+      alert(`📢 Подпишитесь на ${bonusId === 'telegram_subscribe' ? 'Telegram канал' : 'сообщество ВК'} и вернитесь сюда, чтобы получить бонус!\n\nПосле подписки нажмите кнопку "Получить бонус" еще раз.`);
+      return; // Выходим, пользователь должен подписаться
+    }
+    
     try {
       console.log('🔑 Отправляем запрос на получение бонуса...');
       
@@ -587,6 +624,13 @@ export default function ProfilePage() {
           setBonuses(prev => prev.map(bonus => 
             bonus.id === bonusId 
               ? { ...bonus, available: false, cooldownUntil: nextBonusTime }
+              : bonus
+          ));
+        } else if (bonusId === 'telegram_subscribe' || bonusId === 'vk_subscribe') {
+          // Обновляем статус бонуса за подписку
+          setBonuses(prev => prev.map(bonus => 
+            bonus.id === bonusId 
+              ? { ...bonus, available: false }
               : bonus
           ));
         }
@@ -1961,6 +2005,12 @@ export default function ProfilePage() {
                           🎯 Следующий ранг: {bonus.nextRank}
                         </div>
                       )}
+                      
+                      {(bonus.id === 'telegram_subscribe' || bonus.id === 'vk_subscribe') && bonus.note && (
+                        <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginTop: '8px' }}>
+                          {bonus.note}
+                        </div>
+                      )}
                     </div>
                     <div>
                       {bonus.available ? (
@@ -1987,7 +2037,8 @@ export default function ProfilePage() {
                           }}
                         >
                           {bonus.id === 'daily' ? '🎁 ПОЛУЧИТЬ' : 
-                           bonus.id === 'referral' ? '👥 ПРИГЛАСИТЬ' : 
+                           bonus.id === 'referral' ? '👥 ПРИГЛАСИТЬ' :
+                           (bonus.id === 'telegram_subscribe' || bonus.id === 'vk_subscribe') ? '📢 ПОДПИСАТЬСЯ' :
                            '🏆 ПОЛУЧИТЬ'}
                         </button>
                       ) : (

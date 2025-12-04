@@ -122,6 +122,52 @@ export async function POST(req: NextRequest) {
         bonusDescription = 'Бонус за повышение ранга';
         break;
         
+      case 'telegram_subscribe':
+        // ✅ БОНУС ЗА ПОДПИСКУ В TELEGRAM
+        // Проверяем, получал ли пользователь уже этот бонус
+        const { data: telegramBonusCheck } = await supabase
+          .from('_pidr_coin_transactions')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('transaction_type', 'bonus')
+          .eq('description', 'Бонус за подписку в Telegram')
+          .limit(1);
+        
+        if (telegramBonusCheck && telegramBonusCheck.length > 0) {
+          return NextResponse.json({ 
+            success: false, 
+            message: 'Бонус за подписку в Telegram уже получен!' 
+          }, { status: 400 });
+        }
+        
+        bonusAmount = 300; // 300 монет за подписку
+        bonusDescription = 'Бонус за подписку в Telegram';
+        console.log(`✅ Бонус за подписку в Telegram доступен: ${bonusAmount} монет`);
+        break;
+        
+      case 'vk_subscribe':
+        // ✅ БОНУС ЗА ПОДПИСКУ В ВК
+        // Проверяем, получал ли пользователь уже этот бонус
+        const { data: vkBonusCheck } = await supabase
+          .from('_pidr_coin_transactions')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('transaction_type', 'bonus')
+          .eq('description', 'Бонус за подписку в ВК')
+          .limit(1);
+        
+        if (vkBonusCheck && vkBonusCheck.length > 0) {
+          return NextResponse.json({ 
+            success: false, 
+            message: 'Бонус за подписку в ВК уже получен!' 
+          }, { status: 400 });
+        }
+        
+        bonusAmount = 300; // 300 монет за подписку
+        bonusDescription = 'Бонус за подписку в ВК';
+        console.log(`✅ Бонус за подписку в ВК доступен: ${bonusAmount} монет`);
+        break;
+        
       default:
         return NextResponse.json({ 
           success: false, 
@@ -224,6 +270,23 @@ export async function GET(req: NextRequest) {
       new Date(b.created_at).toDateString() === today
     );
     
+    // Проверяем бонусы за подписки
+    const { data: telegramSubscribeCheck } = await supabase
+      .from('_pidr_coin_transactions')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('transaction_type', 'bonus')
+      .eq('description', 'Бонус за подписку в Telegram')
+      .limit(1);
+    
+    const { data: vkSubscribeCheck } = await supabase
+      .from('_pidr_coin_transactions')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('transaction_type', 'bonus')
+      .eq('description', 'Бонус за подписку в ВК')
+      .limit(1);
+    
     const availableBonuses = [
       {
         id: 'daily',
@@ -244,6 +307,26 @@ export async function GET(req: NextRequest) {
         available: false, // Не доступен для ручного получения
         referrals: 0, // TODO: подсчитать из базы
         note: 'Бонус начисляется автоматически когда приглашенный друг получает первый ежедневный бонус'
+      },
+      {
+        id: 'telegram_subscribe',
+        name: 'Подписка в Telegram',
+        description: 'Подпишитесь на наш Telegram канал',
+        reward: '300 монет',
+        icon: '📢',
+        available: !telegramSubscribeCheck || telegramSubscribeCheck.length === 0,
+        link: process.env.NEXT_PUBLIC_TELEGRAM_CHANNEL_LINK || 'https://t.me/your_channel', // TODO: Заменить на реальную ссылку
+        note: 'Подпишитесь на канал и получите бонус!'
+      },
+      {
+        id: 'vk_subscribe',
+        name: 'Подписка в ВК',
+        description: 'Подпишитесь на наше сообщество ВКонтакте',
+        reward: '300 монет',
+        icon: '👥',
+        available: !vkSubscribeCheck || vkSubscribeCheck.length === 0,
+        link: process.env.NEXT_PUBLIC_VK_GROUP_LINK || 'https://vk.com/your_group', // TODO: Заменить на реальную ссылку
+        note: 'Подпишитесь на сообщество и получите бонус!'
       },
       {
         id: 'rank_up',
