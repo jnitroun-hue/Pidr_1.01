@@ -191,7 +191,7 @@ function HomeWithParams() {
       if (referralParam && referralParam.startsWith('join_')) {
         const parts = referralParam.replace('join_', '').split('_');
         // Ищем ref_ в параметрах
-        const refIndex = parts.findIndex(p => p === 'ref');
+        const refIndex = parts.findIndex((p: string) => p === 'ref');
         if (refIndex !== -1 && parts[refIndex + 1]) {
           // Есть ref параметр
           referrerId = parts[refIndex + 1];
@@ -209,7 +209,7 @@ function HomeWithParams() {
       } else if (referralParam && referralParam.startsWith('invite_')) {
         // ✅ ОБРАБОТКА ПРИГЛАШЕНИЯ С REF (формат: invite_${id}_ref_${referralCode} или invite_${id})
         const parts = referralParam.replace('invite_', '').split('_');
-        const refIndex = parts.findIndex(p => p === 'ref');
+        const refIndex = parts.findIndex((p: string) => p === 'ref');
         if (refIndex !== -1 && parts[refIndex + 1]) {
           // Есть ref параметр
           referrerId = parts[refIndex + 1];
