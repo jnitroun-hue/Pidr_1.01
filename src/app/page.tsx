@@ -186,15 +186,19 @@ function HomeWithParams() {
       const referralParam = tgWebApp?.initDataUnsafe?.start_param;
       let referrerId: string | null = null;
       
-      if (referralParam && referralParam.startsWith('invite_')) {
-        referrerId = referralParam.replace('invite_', '');
-        console.log('🎁 Реферальная ссылка обнаружена! Пригласил:', referrerId);
-      }
-      
-      // ✅ ОБРАБОТКА ПРИГЛАШЕНИЯ В КОМНАТУ (формат: join_${roomId}_${roomCode})
+      // ✅ ОБРАБОТКА ПРИГЛАШЕНИЯ В КОМНАТУ (формат: join_${roomId}_${roomCode} или join_${roomId}_${roomCode}_ref_${referralCode})
       let roomInviteData: { roomId: string; roomCode: string } | null = null;
       if (referralParam && referralParam.startsWith('join_')) {
         const parts = referralParam.replace('join_', '').split('_');
+        // Ищем ref_ в параметрах
+        const refIndex = parts.findIndex(p => p === 'ref');
+        if (refIndex !== -1 && parts[refIndex + 1]) {
+          // Есть ref параметр
+          referrerId = parts[refIndex + 1];
+          console.log('🎁 Реферальная ссылка обнаружена в приглашении в комнату! Пригласил:', referrerId);
+          // Убираем ref часть из parts
+          parts.splice(refIndex, 2);
+        }
         if (parts.length >= 2) {
           const roomId = parts[0];
           const roomCode = parts.slice(1).join('_'); // На случай если roomCode содержит подчеркивания
@@ -202,6 +206,23 @@ function HomeWithParams() {
           roomInviteData = { roomId, roomCode };
           setRoomInvite(roomInviteData);
         }
+      } else if (referralParam && referralParam.startsWith('invite_')) {
+        // ✅ ОБРАБОТКА ПРИГЛАШЕНИЯ С REF (формат: invite_${id}_ref_${referralCode} или invite_${id})
+        const parts = referralParam.replace('invite_', '').split('_');
+        const refIndex = parts.findIndex(p => p === 'ref');
+        if (refIndex !== -1 && parts[refIndex + 1]) {
+          // Есть ref параметр
+          referrerId = parts[refIndex + 1];
+          console.log('🎁 Реферальная ссылка обнаружена в приглашении! Пригласил:', referrerId);
+        } else {
+          // Нет ref, используем invite ID как referrerId
+          referrerId = parts[0];
+          console.log('🎁 Реферальная ссылка обнаружена! Пригласил:', referrerId);
+        }
+      } else if (referralParam && referralParam.startsWith('ref_')) {
+        // ✅ ОБРАБОТКА ПРОСТОЙ РЕФЕРАЛЬНОЙ ССЫЛКИ
+        referrerId = referralParam.replace('ref_', '');
+        console.log('🎁 Реферальная ссылка обнаружена! Пригласил:', referrerId);
       }
       
       const authData = {

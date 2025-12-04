@@ -742,7 +742,7 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
       
       // ✅ ИСПРАВЛЕНО: Генерируем реферальную ссылку на Telegram бота
       const referralCode = currentUser.id || 'player_' + Date.now();
-      const botUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || 'your_bot_username';
+      const botUsername = 'NotPidrBot';
       const inviteUrl = `https://t.me/${botUsername}?start=ref_${referralCode}`;
       
       // Если мы в Telegram WebApp, используем Telegram Share API
@@ -1121,50 +1121,95 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
             <div className="quick-actions">
               <h3 className="section-title">Быстрые действия</h3>
               
-              <div className="quick-action-item">
-                <FaTrophy className="quick-icon" />
-                <div className="quick-text" style={{ flex: 1 }}>
-                  <span className="quick-title">Реферальная ссылка</span>
-                  <span className="quick-desc">+500 монет за активного друга</span>
-                  {/* ✅ ИСПРАВЛЕНО: Показываем реферальную ссылку */}
-                  <div style={{ 
-                    marginTop: '8px', 
-                    padding: '8px', 
-                    background: 'rgba(30, 41, 59, 0.6)', 
-                    borderRadius: '6px',
-                    fontFamily: 'monospace',
-                    fontSize: '12px',
-                    color: '#94a3b8',
-                    wordBreak: 'break-all'
+              <div className="quick-action-item" style={{
+                flexDirection: 'column',
+                alignItems: 'stretch',
+                gap: '12px',
+                padding: '20px',
+                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(16, 185, 129, 0.15) 100%)',
+                border: '2px solid rgba(59, 130, 246, 0.4)',
+                borderRadius: '16px',
+                backdropFilter: 'blur(10px)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                  <FaTrophy className="quick-icon" style={{ fontSize: '24px', color: '#ffd700' }} />
+                  <div style={{ flex: 1 }}>
+                    <span className="quick-title" style={{ fontSize: '18px', fontWeight: '700', color: '#3b82f6' }}>
+                      Реферальная ссылка
+                    </span>
+                    <div className="quick-desc" style={{ fontSize: '14px', color: '#94a3b8', marginTop: '4px' }}>
+                      +500 монет за активного друга
+                    </div>
+                  </div>
+                </div>
+                {/* ✅ УЛУЧШЕННЫЙ контейнер с реферальной ссылкой */}
+                <div style={{ 
+                  marginTop: '8px', 
+                  padding: '14px 16px', 
+                  background: 'rgba(15, 23, 42, 0.8)', 
+                  borderRadius: '12px',
+                  border: '1px solid rgba(59, 130, 246, 0.3)',
+                  fontFamily: 'monospace',
+                  fontSize: '13px',
+                  color: '#3b82f6',
+                  wordBreak: 'break-all',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  position: 'relative'
+                }}>
+                  <span style={{ 
+                    flex: 1,
+                    lineHeight: '1.5',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
                   }}>
                     {(() => {
                       const currentUser = getTelegramUser();
                       const referralCode = currentUser?.id || user?.id || 'player_' + Date.now();
-                      // ✅ ИСПРАВЛЕНО: Реферальная ссылка на Telegram бота, а не на Vercel
-                      const botUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || 'your_bot_username';
+                      const botUsername = 'NotPidrBot';
                       return `https://t.me/${botUsername}?start=ref_${referralCode}`;
                     })()}
-                  </div>
+                  </span>
+                  <button
+                    onClick={async () => {
+                      const currentUser = getTelegramUser();
+                      const referralCode = currentUser?.id || user?.id || 'player_' + Date.now();
+                      const botUsername = 'NotPidrBot';
+                      const inviteUrl = `https://t.me/${botUsername}?start=ref_${referralCode}`;
+                      try {
+                        await navigator.clipboard.writeText(inviteUrl);
+                        alert('✅ Реферальная ссылка скопирована!\n\nПоделитесь ей с друзьями и получите +500 монет за каждого активного друга!');
+                      } catch (error) {
+                        alert(`Реферальная ссылка:\n\n${inviteUrl}\n\nСкопируйте её вручную`);
+                      }
+                    }}
+                    disabled={loading}
+                    style={{
+                      padding: '8px 12px',
+                      background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                      border: '1px solid #ffd700',
+                      borderRadius: '8px',
+                      color: 'white',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s',
+                      flexShrink: 0,
+                      whiteSpace: 'nowrap'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'scale(1.05)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.4)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'scale(1)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
+                  >
+                    📋 Копировать
+                  </button>
                 </div>
-                <button 
-                  className="quick-button"
-                  onClick={async () => {
-                    const currentUser = getTelegramUser();
-                    const referralCode = currentUser?.id || user?.id || 'player_' + Date.now();
-                    // ✅ ИСПРАВЛЕНО: Реферальная ссылка на Telegram бота
-                    const botUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || 'your_bot_username';
-                    const inviteUrl = `https://t.me/${botUsername}?start=ref_${referralCode}`;
-                    try {
-                      await navigator.clipboard.writeText(inviteUrl);
-                      alert('✅ Реферальная ссылка скопирована!\n\nПоделитесь ей с друзьями и получите +500 монет за каждого активного друга!');
-                    } catch (error) {
-                      alert(`Реферальная ссылка:\n\n${inviteUrl}\n\nСкопируйте её вручную`);
-                    }
-                  }}
-                  disabled={loading}
-                >
-                  📋 Копировать
-                </button>
               </div>
             </div>
           </motion.div>

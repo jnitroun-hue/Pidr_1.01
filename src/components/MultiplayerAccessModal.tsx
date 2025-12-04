@@ -1,7 +1,7 @@
 'use client'
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Lock, Gamepad2, Trophy } from 'lucide-react';
+import { Lock, Gamepad2, Trophy, X } from 'lucide-react';
 
 interface MultiplayerAccessModalProps {
   isOpen: boolean;
@@ -37,32 +37,40 @@ export default function MultiplayerAccessModal({
           right: 0,
           bottom: 0,
           background: 'rgba(0, 0, 0, 0.85)',
-          zIndex: 9998,
+          zIndex: 9999,
           backdropFilter: 'blur(4px)'
         }}
       />
       
-      {/* Модалка */}
+      {/* Модалка - позиционирование как TutorialModal */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
         style={{
           position: 'fixed',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: '90%',
-          maxWidth: '500px',
-          background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%)',
-          borderRadius: '20px',
-          border: '3px solid rgba(239, 68, 68, 0.5)',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(239, 68, 68, 0.3)',
-          zIndex: 9999,
-          padding: '30px',
+          top: '10%',
+          left: '10%',
+          right: '10%',
+          bottom: '10%',
+          width: '80%',
+          maxWidth: 'none',
+          height: 'auto',
           maxHeight: '80vh',
-          overflowY: 'auto'
+          margin: '0',
+          background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%)',
+          borderRadius: '24px',
+          border: '4px solid rgba(239, 68, 68, 0.6)',
+          boxShadow: '0 25px 80px rgba(0, 0, 0, 0.6), 0 0 50px rgba(239, 68, 68, 0.4)',
+          zIndex: 10000,
+          padding: '40px',
+          overflowY: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          boxSizing: 'border-box',
+          WebkitOverflowScrolling: 'touch',
+          overscrollBehavior: 'contain'
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -70,11 +78,12 @@ export default function MultiplayerAccessModal({
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
+          justifyContent: 'space-between',
           gap: '12px',
-          marginBottom: '20px',
-          paddingBottom: '15px',
-          borderBottom: '2px solid rgba(239, 68, 68, 0.3)'
+          marginBottom: '24px',
+          paddingBottom: '16px',
+          borderBottom: '2px solid rgba(239, 68, 68, 0.3)',
+          flexShrink: 0
         }}>
           <Lock 
             size={32} 
@@ -84,25 +93,57 @@ export default function MultiplayerAccessModal({
             }} 
           />
           <h2 style={{
-            fontSize: '24px',
+            fontSize: 'clamp(24px, 4vw, 32px)',
             fontWeight: '800',
             background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
-            margin: 0
+            margin: 0,
+            wordBreak: 'break-word',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            flex: 1
           }}>
             Доступ к мультиплееру закрыт
           </h2>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'rgba(239, 68, 68, 0.2)',
+              border: '2px solid rgba(239, 68, 68, 0.3)',
+              borderRadius: '8px',
+              padding: '8px',
+              cursor: 'pointer',
+              color: '#ef4444',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s',
+              flexShrink: 0,
+              marginLeft: '12px'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.3)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
+            }}
+          >
+            <X size={20} />
+          </button>
         </div>
 
         {/* Контент */}
         <div style={{
           color: '#e2e8f0',
-          fontSize: '16px',
-          lineHeight: '1.7',
-          marginBottom: '25px',
-          textAlign: 'center'
+          fontSize: 'clamp(16px, 2.5vw, 20px)',
+          lineHeight: '1.8',
+          marginBottom: '32px',
+          textAlign: 'center',
+          flex: 1,
+          overflowY: 'auto',
+          wordBreak: 'break-word'
         }}>
           <p style={{ marginBottom: '20px' }}>
             Чтобы играть онлайн с реальными игроками, вам нужно сначала сыграть <strong>{requiredGames} игры с ботами</strong>.
@@ -144,7 +185,8 @@ export default function MultiplayerAccessModal({
         <div style={{
           display: 'flex',
           flexDirection: 'column',
-          gap: '12px'
+          gap: '12px',
+          flexShrink: 0
         }}>
           <motion.button
             onClick={onPlayBots}
@@ -152,19 +194,22 @@ export default function MultiplayerAccessModal({
             whileTap={{ scale: 0.98 }}
             style={{
               width: '100%',
-              padding: '16px 24px',
+              padding: '20px 32px',
               background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
               color: 'white',
               border: 'none',
-              borderRadius: '12px',
-              fontSize: '18px',
+              borderRadius: '16px',
+              fontSize: 'clamp(18px, 3vw, 22px)',
               fontWeight: '700',
               cursor: 'pointer',
-              boxShadow: '0 8px 24px rgba(99, 102, 241, 0.4)',
+              boxShadow: '0 10px 30px rgba(99, 102, 241, 0.5)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '8px'
+              gap: '8px',
+              transition: 'all 0.3s',
+              touchAction: 'manipulation',
+              WebkitTapHighlightColor: 'transparent'
             }}
           >
             <Gamepad2 size={20} />

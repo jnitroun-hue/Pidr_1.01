@@ -157,7 +157,11 @@ export default function FriendsPage() {
   // Поделиться приглашением
   const handleShareInvite = () => {
     const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
-    const inviteLink = `https://t.me/NotPidrBot?start=invite_${telegramUser?.id}`;
+    // ✅ ИСПРАВЛЕНО: Добавляем ref параметр в дополнение к invite
+    const referralCode = telegramUser?.id || '';
+    const inviteLink = referralCode 
+      ? `https://t.me/NotPidrBot?start=invite_${referralCode}_ref_${referralCode}`
+      : `https://t.me/NotPidrBot?start=invite_${telegramUser?.id}`;
     const shareText = `🎮 Присоединяйся ко мне в The Must! - карточной игре!\n\n${inviteLink}`;
     
     if ((window as any).Telegram?.WebApp) {
@@ -365,7 +369,13 @@ export default function FriendsPage() {
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       onClick={() => {
-                        const inviteLink = `https://t.me/NotPidrBot?start=join_${inviteRoomId}_${inviteRoomCode}`;
+                        // ✅ ИСПРАВЛЕНО: Добавляем ref параметр в дополнение к invite
+                        const telegramUser = (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+                        const referralCode = telegramUser?.id || '';
+                        // Формат: join_roomId_roomCode_ref_referralCode
+                        const inviteLink = referralCode 
+                          ? `https://t.me/NotPidrBot?start=join_${inviteRoomId}_${inviteRoomCode}_ref_${referralCode}`
+                          : `https://t.me/NotPidrBot?start=join_${inviteRoomId}_${inviteRoomCode}`;
                         const message = `🎮 ${user.username || user.first_name}, присоединяйся к игре The Must!\n\nКод комнаты: ${inviteRoomCode}\n${inviteLink}`;
                         
                         if ((window as any).Telegram?.WebApp) {
