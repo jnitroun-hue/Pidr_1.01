@@ -309,7 +309,18 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => handleWalletAction('ton')}
+              onClick={() => {
+                hapticFeedback('medium');
+                // Открываем Telegram Wallet через deep link
+                const tgWebApp = typeof window !== 'undefined' && (window as any).Telegram?.WebApp;
+                if (tgWebApp) {
+                  // Используем Telegram WebApp API для открытия кошелька
+                  tgWebApp.openTelegramLink('https://t.me/wallet');
+                } else {
+                  // Fallback для браузера
+                  window.open('https://t.me/wallet', '_blank');
+                }
+              }}
               style={{
                 flex: 1,
                 minWidth: '80px',
@@ -396,45 +407,6 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
               </div>
             </motion.button>
 
-            {/* ✅ НОВОЕ: Кнопка Telegram Wallet */}
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => {
-                hapticFeedback('medium');
-                // Открываем Telegram Wallet через deep link
-                const tgWebApp = typeof window !== 'undefined' && (window as any).Telegram?.WebApp;
-                if (tgWebApp) {
-                  // Используем Telegram WebApp API для открытия кошелька
-                  tgWebApp.openTelegramLink('https://t.me/wallet');
-                } else {
-                  // Fallback для браузера
-                  window.open('https://t.me/wallet', '_blank');
-                }
-              }}
-              style={{
-                flex: 1,
-                minWidth: '80px',
-                background: 'linear-gradient(135deg, #3390ec 0%, #2481cc 100%)',
-                border: '2px solid rgba(51, 144, 236, 0.3)',
-                borderRadius: '12px',
-                padding: '12px',
-                cursor: 'pointer',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '5px'
-              }}
-            >
-              <div style={{ fontSize: '24px' }}>💳</div>
-              <div style={{ 
-                color: 'white', 
-                fontSize: '12px', 
-                fontWeight: '600' 
-              }}>
-                Wallet
-              </div>
-            </motion.button>
           </div>
         </motion.div>
       </div>
