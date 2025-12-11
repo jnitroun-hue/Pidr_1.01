@@ -30,6 +30,8 @@ function HomeWithParams() {
   const [loading, setLoading] = useState(true);
   const [showMainMenu, setShowMainMenu] = useState(false);
   const [error, setError] = useState<string>('');
+  const [isBrowser, setIsBrowser] = useState(false); // ✅ НОВОЕ: Определяем браузер vs mini app
+  const [retryCount, setRetryCount] = useState(0); // ✅ НОВОЕ: Счетчик попыток
   const initialized = useRef(false); // ✅ useRef - НЕ СБРАСЫВАЕТСЯ при рендере
   const { user: telegramUser, isReady } = useTelegram();
   const { language } = useLanguage();
@@ -39,6 +41,14 @@ function HomeWithParams() {
   const [roomInvite, setRoomInvite] = useState<{ roomId: string; roomCode: string } | null>(null);
   const [showRoomInviteModal, setShowRoomInviteModal] = useState(false);
 
+  // ✅ ОПРЕДЕЛЯЕМ: БРАУЗЕР ИЛИ MINI APP
+  const isTelegramMiniApp = (): boolean => {
+    if (typeof window === 'undefined') return false;
+    const tg = (window as any).Telegram?.WebApp;
+    // Проверяем что это реальный Telegram Mini App (не mock)
+    return !!(tg && tg.initData && tg.initData.length > 0);
+  };
+
   useEffect(() => {
     // ✅ ЗАЩИТА ОТ ПОВТОРНОГО ЗАПУСКА
     if (initialized.current) {
@@ -47,6 +57,18 @@ function HomeWithParams() {
     }
     
     console.log('🎮 P.I.D.R. GAME - АВТОМАТИЧЕСКАЯ АВТОРИЗАЦИЯ');
+    
+    // ✅ ПРОВЕРЯЕМ: БРАУЗЕР ИЛИ MINI APP
+    const isMiniApp = isTelegramMiniApp();
+    console.log('📱 Telegram Mini App:', isMiniApp);
+    
+    if (!isMiniApp) {
+      console.log('🌐 Обнаружен браузер - показываем регистрацию');
+      setIsBrowser(true);
+      setLoading(false);
+      initialized.current = true;
+      return;
+    }
     
     // ✅ ПРОВЕРКА ПЕРВОГО ВХОДА - ПЕРЕНАПРАВЛЕНИЕ НА WELCOME
     const isFirstVisit = typeof window !== 'undefined' && !localStorage.getItem('pidr_visited');
@@ -69,7 +91,21 @@ function HomeWithParams() {
         const telegramId = telegramUser?.id?.toString() || '';
         
         if (!telegramId) {
-          console.warn('⚠️ Telegram ID не найден, пропускаем проверку сессии');
+          console.warn('⚠️ Telegram ID не найден');
+          // ✅ ЖДЕМ ИНИЦИАЛИЗАЦИИ TELEGRAM WEBAPP (до 3 секунд)
+          if (retryCount < 3) {
+            console.log(`🔄 Попытка ${retryCount + 1}/3 - ждем инициализации Telegram...`);
+            setTimeout(() => {
+              setRetryCount(prev => prev + 1);
+            }, 1000);
+            return;
+          }
+          // После 3 попыток показываем браузерную версию
+          console.warn('⚠️ Telegram не инициализировался, показываем браузерную версию');
+          setIsBrowser(true);
+          setLoading(false);
+          initialized.current = true;
+          return;
         } else {
           console.log('🔍 Проверяем активную сессию для telegram_id:', telegramId);
         }
@@ -112,41 +148,37 @@ function HomeWithParams() {
                 credentials: 'include'
               });
               
-              // Продолжаем с новой авторизацией
-              throw new Error('Сессия не соответствует текущему пользователю');
+              // Продолжаем с новой авторизацией - не throw, просто продолжаем
+              console.log('🔄 Продолжаем с новой авторизацией...');
+            } else {
+              console.log('✅ Активная сессия найдена и проверена:', sessionData.user.username);
+              
+              const existingUser: User = {
+                id: sessionData.user.id,
+                username: sessionData.user.username,
+                firstName: sessionData.user.firstName || sessionData.user.username,
+                lastName: sessionData.user.lastName || '',
+                telegramId: sessionData.user.telegramId || telegramId,
+                coins: sessionData.user.coins || 1000,
+                rating: sessionData.user.rating || 0,
+                gamesPlayed: sessionData.user.gamesPlayed || 0,
+                gamesWon: sessionData.user.gamesWon || 0,
+                photoUrl: sessionData.user.photoUrl || ''
+              };
+              
+              setUser(existingUser);
+              initialized.current = true;
+              setTimeout(() => {
+                setLoading(false);
+                setTimeout(() => setShowMainMenu(true), 100);
+              }, 1500);
+              console.log('🚀 ДОБРО ПОЖАЛОВАТЬ ОБРАТНО В P.I.D.R.!');
+              return;
             }
-            
-            console.log('✅ Активная сессия найдена и проверена:', sessionData.user.username);
-            
-            const existingUser: User = {
-              id: sessionData.user.id,
-              username: sessionData.user.username,
-              firstName: sessionData.user.firstName || sessionData.user.username,
-              lastName: sessionData.user.lastName || '',
-              telegramId: sessionData.user.telegramId || telegramId,
-              coins: sessionData.user.coins || 1000,
-              rating: sessionData.user.rating || 0,
-              gamesPlayed: sessionData.user.gamesPlayed || 0,
-              gamesWon: sessionData.user.gamesWon || 0,
-              photoUrl: sessionData.user.photoUrl || ''
-            };
-            
-            setUser(existingUser);
-            initialized.current = true;
-            setTimeout(() => {
-              setLoading(false);
-              setTimeout(() => setShowMainMenu(true), 100);
-            }, 1500);
-            console.log('🚀 ДОБРО ПОЖАЛОВАТЬ ОБРАТНО В P.I.D.R.!');
-            return;
           }
-        } else if (sessionResponse.status === 403) {
-          // Сессия не соответствует - удаляем и переавторизуемся
-          console.warn('⚠️ Сессия отклонена, переавторизуемся...');
-          await fetch('/api/auth', {
-            method: 'DELETE',
-            credentials: 'include'
-          });
+        } else if (sessionResponse.status === 401 || sessionResponse.status === 403) {
+          // ✅ 401 = не авторизован (нормально), 403 = запрещено
+          console.log('📝 Сессия не найдена или истекла, авторизуемся заново...');
         }
 
         // Если нет сессии, авторизуемся через Telegram
@@ -167,13 +199,21 @@ function HomeWithParams() {
           await createUserThroughDatabase(telegramUserData);
         } else {
           console.error('❌ Telegram WebApp данные недоступны');
-          setError('Не удалось получить данные пользователя из Telegram. Попробуйте перезапустить бота.');
+          // ✅ Показываем браузерную версию вместо ошибки
+          setIsBrowser(true);
           setLoading(false);
+          initialized.current = true;
         }
 
-      } catch (error) {
+      } catch (error: any) {
         console.error('❌ Ошибка инициализации:', error);
-        setError('Ошибка подключения к серверу');
+        // ✅ Более информативная ошибка
+        const errorMessage = error?.message || 'Неизвестная ошибка';
+        if (errorMessage.includes('fetch') || errorMessage.includes('network')) {
+          setError('Ошибка подключения к серверу. Проверьте интернет-соединение.');
+        } else {
+          setError(`Ошибка: ${errorMessage}`);
+        }
         setLoading(false);
       }
     };
@@ -350,7 +390,7 @@ function HomeWithParams() {
     };
 
     initializePlayer();
-  }, []); // ✅ ПУСТОЙ МАССИВ - запускается ТОЛЬКО ОДИН РАЗ!
+  }, [retryCount]); // ✅ Перезапускается при изменении retryCount для retry логики
 
   const handleLogout = async () => {
     try {
@@ -522,17 +562,38 @@ function HomeWithParams() {
   // Показываем ошибку
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-red-900 via-purple-900 to-indigo-900 flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto p-6">
+      <div className="min-h-screen bg-gradient-to-br from-red-900 via-purple-900 to-indigo-900 flex items-center justify-center p-4">
+        <div className="text-center max-w-md mx-auto">
           <div className="text-6xl mb-4">❌</div>
           <h2 className="text-2xl font-bold text-white mb-4">Ошибка</h2>
           <p className="text-red-200 mb-6">{error}</p>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold"
-          >
-            Попробовать снова
-          </button>
+          
+          <div className="space-y-3">
+            <button 
+              onClick={() => {
+                setError('');
+                setLoading(true);
+                setRetryCount(0);
+                initialized.current = false;
+              }} 
+              className="w-full bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+            >
+              Попробовать снова
+            </button>
+            
+            <a 
+              href="https://t.me/NotPidrBot"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors text-center"
+            >
+              Открыть в Telegram
+            </a>
+          </div>
+          
+          <p className="text-gray-400 text-sm mt-4">
+            Если проблема повторяется, перезапустите бота в Telegram
+          </p>
         </div>
       </div>
     );
@@ -567,12 +628,61 @@ function HomeWithParams() {
     );
   }
 
+  // ✅ БРАУЗЕРНАЯ ВЕРСИЯ - ПОКАЗЫВАЕМ РЕГИСТРАЦИЮ
+  if (isBrowser) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900 flex items-center justify-center p-4">
+        <div className="text-center max-w-md mx-auto">
+          {/* Логотип */}
+          <div className="mb-8">
+            <div className="w-24 h-24 mx-auto bg-gradient-to-br from-purple-500 via-pink-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-2xl border border-white/20 mb-4">
+              <div className="text-4xl font-black text-white">P</div>
+            </div>
+            <h1 className="text-4xl font-black bg-gradient-to-r from-purple-400 via-pink-400 to-indigo-400 bg-clip-text text-transparent">
+              P.I.D.R.
+            </h1>
+            <p className="text-xl text-gray-300 mt-2">Game</p>
+          </div>
+
+          {/* Информация */}
+          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 mb-6">
+            <h2 className="text-xl font-bold text-white mb-4">🎮 Играй в Telegram!</h2>
+            <p className="text-gray-300 mb-4">
+              P.I.D.R. - это карточная игра, доступная как Telegram Mini App.
+            </p>
+            <p className="text-gray-400 text-sm mb-6">
+              Для игры откройте бота в Telegram и нажмите кнопку "Играть".
+            </p>
+            
+            {/* Кнопка открыть в Telegram */}
+            <a 
+              href="https://t.me/NotPidrBot"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-blue-500/50 w-full"
+            >
+              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.161c-.18 1.897-.962 6.502-1.359 8.627-.168.9-.5 1.201-.82 1.23-.697.064-1.226-.461-1.901-.903-1.056-.692-1.653-1.123-2.678-1.799-1.185-.781-.417-1.21.258-1.911.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.139-5.062 3.345-.479.329-.913.489-1.302.481-.428-.009-1.252-.242-1.865-.442-.752-.244-1.349-.374-1.297-.789.027-.216.324-.437.893-.663 3.498-1.524 5.831-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635.099-.002.321.023.465.141.121.099.154.232.17.325.015.093.034.305.019.471z"/>
+              </svg>
+              Открыть в Telegram
+            </a>
+          </div>
+
+          {/* QR код или инструкции */}
+          <div className="text-gray-400 text-sm">
+            <p>Или найдите бота: <span className="text-purple-400 font-mono">@NotPidrBot</span></p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Fallback - не должно появляться
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900 flex items-center justify-center">
       <div className="text-center">
         <h2 className="text-2xl font-bold text-white mb-4">P.I.D.R. Game</h2>
-        <p className="text-gray-300">Запустите бота через Telegram</p>
+        <p className="text-gray-300">Загрузка...</p>
       </div>
     </div>
   );
