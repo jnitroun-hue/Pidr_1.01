@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
       message: 'Генерация начата'
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ Ошибка запуска генерации:', error);
     return NextResponse.json(
       { error: 'Ошибка запуска генерации' },
@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
       job
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ Ошибка получения статуса:', error);
     return NextResponse.json(
       { error: 'Ошибка получения статуса' },

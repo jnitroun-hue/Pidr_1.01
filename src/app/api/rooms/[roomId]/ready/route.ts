@@ -25,7 +25,7 @@ export async function POST(
       if (bodyText) {
         body = JSON.parse(bodyText);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ [READY API] Ошибка парсинга body:', error);
       // Если body пустой, определяем isReady из текущего состояния
       const { data: currentPlayer } = await supabase
@@ -94,7 +94,7 @@ export async function POST(
       isReady // ✅ ВОЗВРАЩАЕМ НОВОЕ СОСТОЯНИЕ
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ Ошибка API готовности:', error);
     return NextResponse.json({ 
       success: false, 
@@ -141,7 +141,7 @@ export async function GET(
       allReady
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ Ошибка API готовности:', error);
     return NextResponse.json({ 
       success: false, 

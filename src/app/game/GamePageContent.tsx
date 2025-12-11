@@ -336,7 +336,7 @@ function GamePageContentComponent({
             console.log(`📊 [GamePageContent] Игр сыграно: ${data.gamesPlayed}, первая игра: ${data.gamesPlayed === 0}`);
           }
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('❌ [GamePageContent] Ошибка загрузки игр:', error);
       }
     };
@@ -396,7 +396,7 @@ function GamePageContentComponent({
             };
           }
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('❌ [generatePlayerProfile] Ошибка загрузки профиля:', error);
       }
       
@@ -523,7 +523,7 @@ function GamePageContentComponent({
           console.warn('⚠️ Пользователь не найден в БД, используем дефолтные данные');
           setUserData({ coins: 0, username: username || 'Игрок', telegramId });
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('❌ Ошибка загрузки данных пользователя:', error);
         // ✅ Даже при ошибке устанавливаем дефолтные данные
         const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
@@ -596,7 +596,7 @@ function GamePageContentComponent({
             // Store уже загружает NFT карты в startGame, но для синхронизации обновляем локальный state
           }
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('❌ Ошибка загрузки NFT колоды:', error);
       }
     };
@@ -938,7 +938,7 @@ function GamePageContentComponent({
                     console.log(`🤖 [${currentTurnPlayer.name}] AI играет карту ${cardInHand.image}`);
                     try {
                       playSelectedCard();
-                    } catch (error) {
+                    } catch (error: unknown) {
                       console.error(`🚨 [AI] Ошибка при игре карты:`, error);
                       // ✅ ЗАЩИТА: Если ошибка - передаем ход следующему игроку
                       setTimeout(() => {
@@ -958,7 +958,7 @@ function GamePageContentComponent({
                     setTimeout(() => {
                       try {
                         playSelectedCard();
-                      } catch (error) {
+                      } catch (error: unknown) {
                         console.error(`🚨 [AI] Ошибка при игре первой карты:`, error);
                         const { nextTurn } = useGameStore.getState();
                         if (nextTurn) nextTurn();
@@ -995,7 +995,7 @@ function GamePageContentComponent({
       // Сбрасываем флаг после завершения хода
       aiProcessingRef.current = null;
         
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(`🚨 [makeAIMove] КРИТИЧЕСКАЯ ОШИБКА при ходе ИИ:`, error);
       // Сбрасываем флаг обработки в случае ошибки
       aiProcessingRef.current = null;
@@ -1075,7 +1075,7 @@ function GamePageContentComponent({
           });
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ [handleStartGame] Ошибка загрузки данных:', error);
     }
     
@@ -1255,7 +1255,7 @@ function GamePageContentComponent({
       setGeneratedTableImage(tableImage);
       console.log('✅ Статичный стол загружен!');
       
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ Ошибка генерации стола:', error);
     } finally {
       setIsGeneratingTable(false);
@@ -1283,7 +1283,7 @@ function GamePageContentComponent({
       setPlayerAvatars(avatars);
       console.log('✅ Стандартные аватары загружены!');
       
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ Ошибка генерации аватаров:', error);
     } finally {
       setIsGeneratingAvatars(false);
@@ -1543,7 +1543,7 @@ function GamePageContentComponent({
                       selectHandCard(card);
                       setTimeout(() => playSelectedCard(), 100);
                     }
-                  } catch (error) {
+                  } catch (error: unknown) {
                     console.error('❌ [DROP] Ошибка парсинга карты:', error);
                   }
                 }}

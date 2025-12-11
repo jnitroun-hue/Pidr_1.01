@@ -13,7 +13,7 @@ const NEXTAUTH_URL = process.env.NEXTAUTH_URL || process.env.VERCEL_URL;
 export async function GET(req: NextRequest) {
   try {
     // ✅ ОЧИСТКА НЕАКТИВНЫХ ПОЛЬЗОВАТЕЛЕЙ (не блокирует запрос)
-    lightCleanup().catch(err => console.error('❌ Ошибка автоочистки:', err));
+    lightCleanup().catch((err: unknown) => console.error('❌ Ошибка автоочистки:', err));
     
     console.log('🔍 [GET /api/auth] Проверка активной сессии пользователя...');
     console.log('📋 [GET /api/auth] Headers:', {
@@ -502,7 +502,7 @@ export async function POST(req: NextRequest) {
           } else {
             console.warn('⚠️ Пригласивший пользователь не найден:', referrerId);
           }
-        } catch (error) {
+        } catch (error: unknown) {
           console.error('❌ Ошибка обработки реферальной ссылки:', error);
         }
       }

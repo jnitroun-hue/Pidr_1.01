@@ -476,7 +476,7 @@ export const useGameStore = create<GameState>()(
               userName = result.user.username || 'Игрок';
             }
           }
-        } catch (error) {
+        } catch (error: unknown) {
           console.error('❌ Ошибка загрузки игрока:', error);
         }
         
@@ -527,7 +527,7 @@ export const useGameStore = create<GameState>()(
               }
             }
           }
-        } catch (error) {
+        } catch (error: unknown) {
           console.error('❌ Ошибка загрузки NFT колоды:', error);
         }
         
@@ -676,7 +676,7 @@ export const useGameStore = create<GameState>()(
           get().processPlayerTurn(players[firstPlayerIndex].id);
         }, 500);
         
-        } catch (error) {
+        } catch (error: unknown) {
           console.error('❌ Ошибка старта игры:', error);
           console.error('Stack trace:', (error as Error).stack);
           
@@ -894,7 +894,7 @@ export const useGameStore = create<GameState>()(
         
         // УДАЛЕНО: Неправильная логика завершения игры по maxRounds
         // Игра завершается только когда игроки остаются без карт (checkVictoryCondition)
-        } catch (error) {
+        } catch (error: unknown) {
           console.error(`🔄 [nextTurn] ❌ Критическая ошибка при передаче хода:`, error);
           get().showNotification('Ошибка при передаче хода', 'error', 3000);
         }
@@ -934,7 +934,7 @@ export const useGameStore = create<GameState>()(
             const result = await response.json();
             console.log('✅ Награды обновлены:', result.rewards);
           }
-        } catch (error) {
+        } catch (error: unknown) {
           console.error('❌ Ошибка API наград:', error);
         }
       },
@@ -1097,7 +1097,7 @@ export const useGameStore = create<GameState>()(
                 get().nextTurn();
                 console.log(`✅ [distributePenaltyCards] nextTurn() ВЫЗВАН!`);
               }
-            } catch (error) {
+            } catch (error: unknown) {
               console.error(`❌ [distributePenaltyCards] Ошибка при продолжении игры после штрафа:`, error);
               // Аварийный nextTurn в случае ошибки
               get().nextTurn();
@@ -1718,7 +1718,7 @@ export const useGameStore = create<GameState>()(
                 setTimeout(() => {
                   try {
                     get().makeMove(targetPlayer?.id || '');
-                  } catch (error) {
+                  } catch (error: unknown) {
                     console.error(`🚨 Ошибка хода бота:`, error);
                   }
                 }, 800);
@@ -2847,7 +2847,7 @@ export const useGameStore = create<GameState>()(
                       console.error(`❌❌❌ [${traceId}] Ошибка обновления статистики:`, data.error);
                     }
                   })
-                  .catch(err => console.error(`❌❌❌ [${traceId}] Ошибка fetch:`, err));
+                  .catch((err: unknown) => console.error(`❌❌❌ [${traceId}] Ошибка fetch:`, err));
               }
             });
             
@@ -3186,7 +3186,7 @@ export const useGameStore = create<GameState>()(
                     console.error(`❌❌❌ [${traceId}] API вернул ошибку:`, data.error);
                   }
                 })
-                .catch(err => {
+                .catch((err: unknown) => {
                   console.error(`❌❌❌ [${traceId}] КРИТИЧЕСКАЯ ОШИБКА ОБНОВЛЕНИЯ:`, err);
                   console.error('Полная ошибка:', {
                     message: err.message,
@@ -3799,7 +3799,7 @@ export const useGameStore = create<GameState>()(
             });
             
             console.log(`✅ [sendPlayerMove] Ход отправлен успешно:`, moveData.type);
-          } catch (error) {
+          } catch (error: unknown) {
             console.error(`❌ [sendPlayerMove] Ошибка отправки хода:`, error);
           }
          },
@@ -3886,7 +3886,7 @@ export const useGameStore = create<GameState>()(
                default:
                  console.warn(`🌐 [Multiplayer] Неизвестный тип хода:`, moveData.type);
              }
-           } catch (error) {
+           } catch (error: unknown) {
              console.error(`🌐 [Multiplayer] Ошибка применения удаленного хода:`, error);
            }
          },

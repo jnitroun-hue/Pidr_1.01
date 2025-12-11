@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
           }
         }
 
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('❌ Ошибка синхронизации NFT:', error);
       }
     }
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
       synced: nfts.length
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ Ошибка синхронизации NFT:', error);
     return NextResponse.json(
       { error: 'Ошибка синхронизации' },

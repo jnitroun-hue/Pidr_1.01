@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
         processed++;
         console.log(`✅ Задача ${job.id} завершена успешно`);
 
-      } catch (error) {
+      } catch (error: unknown) {
         console.error(`❌ Ошибка обработки задачи ${job.id}:`, error);
         await cardQueue.failJob(job.id, error instanceof Error ? error.message : 'Unknown error');
       }
@@ -129,7 +129,7 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString()
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ Ошибка cron job:', error);
     return NextResponse.json(
       { error: 'Ошибка обработки очереди' },

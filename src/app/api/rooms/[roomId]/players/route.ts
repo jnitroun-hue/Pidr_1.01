@@ -112,7 +112,7 @@ export async function GET(
       roomStatus: room.status
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ [GET /api/rooms/players] Ошибка:', error);
     return NextResponse.json({ 
       success: false, 

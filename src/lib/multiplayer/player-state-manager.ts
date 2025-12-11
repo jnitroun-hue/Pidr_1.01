@@ -830,7 +830,7 @@ export async function getRoomDetails(roomId: string): Promise<{
       playerCount,
       slots: slots as Record<string, string>,
     };
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(`❌ Ошибка получения информации о комнате ${roomId}:`, error);
     return null;
   }

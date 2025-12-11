@@ -60,7 +60,7 @@ export async function POST(
       message: 'Вы покинули комнату' 
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ [leave] Ошибка:', error);
     return NextResponse.json({ 
       success: false, 

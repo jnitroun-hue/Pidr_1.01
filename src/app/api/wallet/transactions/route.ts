@@ -98,7 +98,7 @@ export async function GET(req: NextRequest) {
       }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ Transactions GET error:', error);
     return NextResponse.json({ 
       success: false, 
@@ -222,7 +222,7 @@ export async function POST(req: NextRequest) {
       }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ Transactions POST error:', error);
     return NextResponse.json({ 
       success: false, 

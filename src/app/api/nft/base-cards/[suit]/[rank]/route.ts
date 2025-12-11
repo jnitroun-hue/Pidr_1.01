@@ -52,7 +52,7 @@ export async function GET(
     // Редирект на Supabase Storage CDN
     return NextResponse.redirect(data.publicUrl);
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ Ошибка получения базовой карты:', error);
     return NextResponse.json(
       { error: 'Ошибка загрузки карты' },

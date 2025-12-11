@@ -28,7 +28,7 @@ if (isRedisConfigured) {
       limiter: Ratelimit.slidingWindow(10, "10 s"), // 10 запросов в 10 секунд
       analytics: true,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.warn('Redis not available, rate limiting disabled:', error);
   }
 }

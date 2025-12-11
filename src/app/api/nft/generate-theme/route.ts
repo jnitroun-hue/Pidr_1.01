@@ -301,7 +301,7 @@ async function generateThemeCardImage(
     console.log(`✅ Изображение карты создано!`);
     return finalImage;
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(`❌ Ошибка генерации изображения:`, error);
     throw new Error(`Failed to generate card image: ${error}`);
   }

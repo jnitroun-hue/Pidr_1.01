@@ -87,7 +87,7 @@ export class RoomManager {
         roomId: room.id,
         roomCode: room.code
       };
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ [RoomManager] Ошибка создания комнаты:', error);
       throw error;
     }
@@ -173,7 +173,7 @@ export class RoomManager {
         roomId: room.id,
         isHost: room.host_id === userId
       };
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ [RoomManager] Ошибка присоединения к комнате:', error);
       throw error;
     }
@@ -460,7 +460,7 @@ export class RoomManager {
       }
 
       console.log('🏁 [RoomManager] Игра завершена:', results);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ [RoomManager] Ошибка завершения игры:', error);
       throw error;
     }
@@ -493,7 +493,7 @@ export class RoomManager {
           payload: { userId, isReady }
         });
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ [RoomManager] Ошибка setPlayerReady:', error);
       throw error;
     }
@@ -522,7 +522,7 @@ export class RoomManager {
 
       const data = await response.json();
       console.log('✅ [RoomManager] Игра началась через API:', data);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ [RoomManager] Ошибка startGame:', error);
       throw error;
     }
@@ -579,7 +579,7 @@ export class RoomManager {
       }
 
       console.log('✅ [RoomManager] Игрок покинул комнату');
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ [RoomManager] Ошибка leaveRoom:', error);
       throw error;
     }
@@ -625,7 +625,7 @@ export class RoomManager {
       }
 
       return players || [];
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ [RoomManager] Ошибка getRoomPlayers:', error);
       throw error;
     }
@@ -648,7 +648,7 @@ export class RoomManager {
       }
 
       return room;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ [RoomManager] Ошибка getRoomInfo:', error);
       return null;
     }

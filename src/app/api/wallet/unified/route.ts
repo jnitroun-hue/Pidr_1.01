@@ -68,7 +68,7 @@ export async function GET(req: NextRequest) {
                 createdAt: address.createdAt
               });
             }
-          } catch (error) {
+          } catch (error: unknown) {
             console.error(`❌ Ошибка получения ${network} адреса:`, error);
           }
         }

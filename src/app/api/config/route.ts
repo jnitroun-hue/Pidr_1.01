@@ -27,7 +27,7 @@ export async function GET() {
       supabaseUrl,
       supabaseAnonKey
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ [/api/config] Ошибка:', error);
     return NextResponse.json(
       { error: 'Failed to load config' },

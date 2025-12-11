@@ -133,7 +133,7 @@ export async function GET(request: NextRequest) {
           message: 'Invalid action'
         }, { status: 400 });
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Tables API error:', error);
     return NextResponse.json({
       success: false,
@@ -383,7 +383,7 @@ export async function POST(request: NextRequest) {
           message: 'Invalid action'
         }, { status: 400 });
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Tables POST API error:', error);
     return NextResponse.json({
       success: false,

@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
         // В реальном проекте здесь будут API вызовы к блокчейн сетям
         const payments = await checkAddressPayments(hdAddress);
         newPayments.push(...payments);
-      } catch (error) {
+      } catch (error: unknown) {
         console.warn(`⚠️ Ошибка проверки адреса ${hdAddress.address}:`, error);
       }
     }
@@ -153,7 +153,7 @@ export async function POST(req: NextRequest) {
       newBalance: newPayments.length > 0 ? newBalance : null
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ Check payments error:', error);
     return NextResponse.json({ 
       success: false, 
@@ -200,7 +200,7 @@ async function checkAddressPayments(hdAddress: any): Promise<any[]> {
       default:
         return [];
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(`❌ Ошибка проверки ${coin} адреса ${address}:`, error);
     return [];
   }

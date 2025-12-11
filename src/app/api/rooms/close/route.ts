@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
       message: `Комната "${room.name}" успешно закрыта`
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Room close error:', error);
     return NextResponse.json({ 
       success: false, 

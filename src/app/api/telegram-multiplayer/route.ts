@@ -139,7 +139,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: false, message: 'Unknown action' }, { status: 400 });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Telegram multiplayer API error:', error);
     return NextResponse.json({ success: false, message: 'Internal server error' }, { status: 500 });
   }
@@ -225,7 +225,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ success: false, message: 'Invalid type' }, { status: 400 });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Telegram multiplayer GET error:', error);
     return NextResponse.json({ success: false, message: 'Internal server error' }, { status: 500 });
   }

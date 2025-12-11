@@ -342,7 +342,7 @@ function HomeWithParams() {
                     }
                   }
                 }
-              } catch (err) {
+              } catch (err: unknown) {
                 console.error('❌ Ошибка проверки статуса пользователя:', err);
               }
             };
@@ -373,7 +373,7 @@ function HomeWithParams() {
               if (!checkResponse.ok) {
                 console.warn('⚠️ Cookie не установлен корректно, но пользователь создан');
               }
-            } catch (error) {
+            } catch (error: unknown) {
               console.warn('⚠️ Не удалось проверить cookie:', error);
             }
           }, 1000);
@@ -400,7 +400,7 @@ function HomeWithParams() {
       });
       setUser(null);
       console.log('👋 Выход выполнен');
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ Ошибка выхода:', error);
     }
   };

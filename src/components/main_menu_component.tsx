@@ -70,7 +70,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
           }
           break
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Wallet connection error:', error)
     }
   }

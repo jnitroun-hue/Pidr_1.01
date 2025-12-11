@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
       message: userId ? 'Пользователь авторизован' : 'Пользователь не авторизован'
     });
     
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ [DEBUG] Ошибка проверки авторизации:', error);
     return NextResponse.json({
       success: false,

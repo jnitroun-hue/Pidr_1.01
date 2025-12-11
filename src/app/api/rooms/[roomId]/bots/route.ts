@@ -328,7 +328,7 @@ export async function POST(
       }, { status: 400 });
     }
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ Ошибка API ботов:', error);
     return NextResponse.json({ 
       success: false, 

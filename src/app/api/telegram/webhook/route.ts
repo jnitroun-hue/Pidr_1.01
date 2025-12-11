@@ -174,7 +174,7 @@ export async function POST(req: NextRequest) {
             recentWins += `${index + 1}. ${user.username || 'Игрок'} - ${user.wins} побед (${winRate}%)\n`;
           });
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('❌ [Telegram Webhook] Ошибка получения статистики:', error);
       }
       
