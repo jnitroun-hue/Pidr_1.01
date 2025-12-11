@@ -84,7 +84,7 @@ export async function GET(
           .eq('room_id', roomId)
           .eq('user_id', player.user_id)
           .then(() => console.log(`✅ [GET /api/rooms/players] is_host исправлен для ${player.user_id}`))
-          .catch(err => console.error(`❌ [GET /api/rooms/players] Ошибка исправления is_host:`, err));
+          .catch((err: unknown) => console.error(`❌ [GET /api/rooms/players] Ошибка исправления is_host:`, err));
       }
       
       return {
