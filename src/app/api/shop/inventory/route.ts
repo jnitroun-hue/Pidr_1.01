@@ -1,0 +1,49 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { supabase } from '../../../../lib/supabase';
+import { getSessionFromRequest } from '@/lib/auth/session-utils';
+
+// GET /api/shop/inventory - Получить инвентарь пользователя
+export async function GET(req: NextRequest) {
+  console.log('📦 GET /api/shop/inventory - Получение инвентаря...');
+  
+  try {
+    // Проверяем аутентификацию - БЕЗ cookies, только из localStorage через headers
+    const telegramIdHeader = req.headers.get('x-telegram-id');
+    const usernameHeader = req.headers.get('x-username');
+    
+    if (!telegramIdHeader) {
+      console.error('❌ [Shop Inventory] Не найден x-telegram-id header');
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Требуется авторизация' 
+      }, { status: 401 });
+    }
+    
+    const userId = telegramIdHeader;
+    const userIdBigInt = parseInt(userId, 10); // ✅ Конвертируем в BIGINT!
+    
+    console.log(`✅ [Shop Inventory] Авторизован пользователь через headers: ${userId} (${userIdBigInt})`);
+    
+    // ✅ ВРЕМЕННОЕ РЕШЕНИЕ: Возвращаем пустой инвентарь (пока нет таблицы инвентаря)
+    console.log(`✅ Инвентарь загружен для пользователя ${userId}`);
+    
+    return NextResponse.json({ 
+      success: true,
+      data: {
+        skins: [],
+        effects: [],
+        frames: [],
+        boosters: [],
+        active_settings: null
+      }
+    });
+    
+  } catch (error: any) {
+    console.error('❌ Ошибка получения инвентаря:', error);
+    return NextResponse.json({ 
+      success: false, 
+      message: `Ошибка: ${error?.message || 'Неизвестная ошибка'}` 
+    }, { status: 500 });
+  }
+}
+

@@ -1,0 +1,221 @@
+/* Game Wallet Styles */
+.game-wallet-container {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: inherit;
+}
+
+.balance-card {
+  background: linear-gradient(135deg, #1e3a8a 0%, #1e293b 50%, #0f172a 100%);
+  border: 2px solid #ffd700;
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 16px rgba(255, 215, 0, 0.2), 0 0 20px rgba(30, 58, 138, 0.3);
+  position: relative;
+  overflow: hidden;
+  max-width: 280px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.balance-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, transparent 30%, rgba(255, 215, 0, 0.1) 50%, transparent 70%);
+  pointer-events: none;
+}
+
+.balance-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.balance-icon {
+  font-size: 16px;
+  color: #3b82f6;
+}
+
+.balance-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.balance-amount {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.coin-icon {
+  font-size: 18px;
+  color: #3b82f6;
+  filter: drop-shadow(0 0 5px rgba(59, 130, 246, 0.5));
+}
+
+.amount-text {
+  font-size: 20px;
+  font-weight: 700;
+  color: #3b82f6;
+  text-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+}
+
+.currency {
+  font-size: 14px;
+  color: #94a3b8;
+  margin-left: auto;
+}
+
+.wallet-id {
+  font-size: 12px;
+  color: #64748b;
+  text-align: center;
+}
+
+.wallet-tabs {
+  display: flex;
+  background: linear-gradient(135deg, rgba(30, 58, 138, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%);
+  border: 1px solid rgba(255, 215, 0, 0.2);
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 16px;
+  backdrop-filter: blur(10px);
+  max-width: 320px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.tab-button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  border-radius: 12px;
+  color: #94a3b8;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.tab-button.active {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
+  border: 1px solid #ffd700;
+}
+
+.tab-button:hover:not(.active) {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 32px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.action-button {
+  flex: 1;
+  min-width: 140px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 16px;
+  border-radius: 16px;
+  border: 3px solid #ffd700;
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #0f4c75 0%, #1e3a8a 30%, #065f46 70%, #064e3b 100%);
+  color: white;
+  box-shadow: 
+    0 8px 25px rgba(255, 215, 0, 0.3),
+    0 15px 35px rgba(30, 58, 138, 0.4),
+    inset 0 2px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.3);
+}
+
+.action-button:hover {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 
+    0 12px 35px rgba(255, 215, 0, 0.5),
+    0 20px 60px rgba(30, 58, 138, 0.6),
+    inset 0 3px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.4);
+}
+
+.action-icon {
+  font-size: 24px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+  z-index: 2;
+  position: relative;
+}
+
+.hd-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 8px;
+  font-size: 12px;
+  color: #3b82f6;
+}
+
+.hd-icon {
+  font-size: 14px;
+  color: #ffd700;
+}
+
+.hd-address-container {
+  position: relative;
+}
+
+.hd-generating {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.hd-spinner {
+  position: absolute;
+  right: 50px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(59, 130, 246, 0.3);
+  border-top: 2px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: translateY(-50%) rotate(0deg); }
+  100% { transform: translateY(-50%) rotate(360deg); }
+}

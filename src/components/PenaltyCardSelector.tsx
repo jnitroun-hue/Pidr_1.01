@@ -1,0 +1,406 @@
+'use client'
+
+import React, { useState } from 'react';
+import Image from 'next/image';
+import { useGameStore } from '../store/gameStore';
+
+const CARDS_PATH = '/img/cards/';
+
+export default function PenaltyCardSelector() {
+  const { 
+    players,
+    pendingPenalty,
+    showPenaltyCardSelection,
+    penaltyCardSelectionPlayerId,
+    contributePenaltyCard
+  } = useGameStore();
+
+  // ✅ НОВАЯ ЛОГИКА: Выбор карты + цели для каждой карты
+  const [selectedAssignments, setSelectedAssignments] = useState<{[cardId: string]: string}>({}); // cardId -> targetPlayerId
+
+  if (!showPenaltyCardSelection || !penaltyCardSelectionPlayerId || !pendingPenalty) {
+    return null;
+  }
+
+  const contributorPlayer = players.find(p => p.id === penaltyCardSelectionPlayerId);
+  
+  // ✅ КРИТИЧНО: Получаем ВСЕХ штрафников (может быть несколько!)
+  const targetPlayerIds = Array.isArray(pendingPenalty.targetPlayerId) 
+    ? pendingPenalty.targetPlayerId 
+    : [pendingPenalty.targetPlayerId];
+  
+  const targetPlayers = players.filter(p => targetPlayerIds.includes(p.id));
+  const openCards = contributorPlayer?.cards.filter(c => c.open) || [];
+
+  // ✅ НОВАЯ ЛОГИКА: Отдаем карты ВСЕМ выбранным целям
+  const handleSubmit = () => {
+    Object.entries(selectedAssignments).forEach(([cardId, targetId]) => {
+      contributePenaltyCard(penaltyCardSelectionPlayerId, cardId, targetId);
+    });
+    setSelectedAssignments({});
+  };
+  
+  // Проверяем сколько карт нужно отдать
+  const cardsToGive = Math.min(openCards.length, targetPlayers.length);
+  const selectedCount = Object.keys(selectedAssignments).length;
+  
+  // ✅ НОВОЕ: Функция для выбора/отмены выбора карты
+  const toggleCardSelection = (cardId: string) => {
+    setSelectedAssignments(prev => {
+      const newAssignments = { ...prev };
+      if (newAssignments[cardId]) {
+        // Отменяем выбор
+        delete newAssignments[cardId];
+      } else {
+        // Выбираем карту (пока без цели)
+        if (Object.keys(newAssignments).length < cardsToGive) {
+          newAssignments[cardId] = ''; // Пустая строка = цель не выбрана
+        }
+      }
+      return newAssignments;
+    });
+  };
+  
+  // ✅ НОВОЕ: Функция для выбора цели для карты
+  const assignTarget = (cardId: string, targetId: string) => {
+    setSelectedAssignments(prev => ({
+      ...prev,
+      [cardId]: targetId
+    }));
+  };
+
+  return (
+    <div 
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(0, 0, 0, 0.85)',
+        backdropFilter: 'blur(12px)',
+        zIndex: 999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '20px'
+      }}
+    >
+      <div 
+        style={{
+          background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%)',
+          borderRadius: '20px',
+          padding: '24px',
+          maxWidth: '700px',
+          width: '100%',
+          maxHeight: '85vh',
+          overflowY: 'auto',
+          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.6)',
+          border: '2px solid rgba(239, 68, 68, 0.5)'
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 style={{ 
+          color: '#ef4444', 
+          marginBottom: '8px', 
+          fontSize: '22px', 
+          fontWeight: 'bold',
+          textAlign: 'center'
+        }}>
+          💸 Штраф для {targetPlayers.length} игроков
+        </h2>
+        <p style={{ 
+          color: '#94a3b8', 
+          marginBottom: '16px', 
+          fontSize: '14px',
+          textAlign: 'center'
+        }}>
+          Выберите {cardsToGive} {cardsToGive === 1 ? 'карту' : cardsToGive < 5 ? 'карты' : 'карт'} и распределите их между штрафниками
+        </p>
+
+        {/* ✅ СПИСОК ШТРАФНИКОВ */}
+        <div style={{
+          background: 'rgba(239, 68, 68, 0.1)',
+          borderRadius: '12px',
+          padding: '12px',
+          marginBottom: '20px',
+          border: '1px solid rgba(239, 68, 68, 0.3)'
+        }}>
+          <div style={{ color: '#ef4444', fontSize: '13px', fontWeight: '600', marginBottom: '8px' }}>
+            Штрафники ({targetPlayers.length}):
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+            {targetPlayers.map(tp => (
+              <div key={tp.id} style={{
+                background: 'rgba(239, 68, 68, 0.2)',
+                padding: '6px 12px',
+                borderRadius: '8px',
+                color: '#fca5a5',
+                fontSize: '12px',
+                fontWeight: '600'
+              }}>
+                {tp.name}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ✅ ВСЕ ДОСТУПНЫЕ КАРТЫ С ВЫБОРОМ */}
+        <div style={{
+          marginBottom: '16px'
+        }}>
+          <div style={{ color: '#cbd5e1', fontSize: '14px', marginBottom: '12px', fontWeight: '600' }}>
+            1. Выберите {cardsToGive} {cardsToGive === 1 ? 'карту' : cardsToGive < 5 ? 'карты' : 'карт'} из {openCards.length} доступных:
+          </div>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(70px, 1fr))',
+            gap: '8px',
+            marginBottom: '20px'
+          }}>
+            {openCards.map((card: any, index: number) => {
+              const cardImage = typeof card === 'string' 
+                ? card.replace('(open)', '').replace('(closed)', '')
+                : card.image || (card.rank && card.suit ? `${card.rank}_of_${card.suit}.png` : 'back.png');
+              
+              // ✅ ИСПРАВЛЕНО: Проверяем является ли cardImage полным URL (NFT карта)
+              const isNFTUrl = cardImage && (cardImage.startsWith('http://') || cardImage.startsWith('https://'));
+              const imageSrc = isNFTUrl ? cardImage : `${CARDS_PATH}${cardImage}`;
+              
+              const cardId = card.id || cardImage;
+              const isSelected = cardId in selectedAssignments;
+              
+              return (
+                <div
+                  key={`card-select-${index}`}
+                  onClick={() => toggleCardSelection(cardId)}
+                  style={{
+                    position: 'relative',
+                    background: '#ffffff', /* ✅ БЕЛЫЙ ФОН КАК У ВЫБРАННОЙ КАРТЫ! */
+                    borderRadius: '8px',
+                    padding: '4px',
+                    border: isSelected ? '3px solid #10b981' : '2px solid rgba(100, 116, 139, 0.3)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    boxShadow: isSelected ? '0 0 15px rgba(16, 185, 129, 0.5)' : '0 2px 8px rgba(0, 0, 0, 0.3)'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isSelected) {
+                      e.currentTarget.style.border = '2px solid rgba(100, 116, 139, 0.6)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isSelected) {
+                      e.currentTarget.style.border = '2px solid rgba(100, 116, 139, 0.3)';
+                    }
+                  }}
+                >
+                  <Image
+                    src={imageSrc}
+                    alt={cardImage}
+                    width={60}
+                    height={90}
+                    style={{ 
+                      borderRadius: '6px',
+                      display: 'block',
+                      width: '100%',
+                      height: 'auto'
+                    }}
+                  />
+                  {isSelected && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '2px',
+                      right: '2px',
+                      background: '#10b981',
+                      borderRadius: '50%',
+                      width: '24px',
+                      height: '24px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '14px',
+                      color: 'white',
+                      fontWeight: 'bold'
+                    }}>
+                      ✓
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        
+        {/* ✅ НАЗНАЧЕНИЕ ЦЕЛЕЙ ДЛЯ ВЫБРАННЫХ КАРТ */}
+        {selectedCount > 0 && (
+          <div style={{
+            marginBottom: '20px'
+          }}>
+            <div style={{ color: '#cbd5e1', fontSize: '14px', marginBottom: '12px', fontWeight: '600' }}>
+              2. Назначьте кому отдать каждую карту:
+            </div>
+            <div style={{
+              display: 'grid',
+              gap: '12px'
+            }}>
+              {Object.keys(selectedAssignments).map((cardId, index) => {
+                const card: any = openCards.find((c: any) => (c.id || c.image) === cardId);
+                const cardImage: string = typeof card === 'string' 
+                  ? card.replace('(open)', '').replace('(closed)', '')
+                  : (card?.image as string) || cardId;
+                
+                // ✅ ИСПРАВЛЕНО: Проверяем является ли cardImage полным URL (NFT карта)
+                const isNFTUrl = cardImage && (cardImage.startsWith('http://') || cardImage.startsWith('https://'));
+                const imageSrc = isNFTUrl ? cardImage : `${CARDS_PATH}${cardImage}`;
+                
+                const assignedTarget = selectedAssignments[cardId];
+
+            return (
+              <div 
+                key={`penalty-card-${index}`}
+                style={{
+                  background: 'rgba(30, 41, 59, 0.5)',
+                  borderRadius: '12px',
+                  padding: '12px',
+                  border: assignedTarget ? '2px solid #10b981' : '2px solid rgba(100, 116, 139, 0.3)'
+                }}
+              >
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                  {/* КАРТА */}
+                  <div style={{
+                    position: 'relative',
+                    background: '#ffffff',
+                    borderRadius: '8px',
+                    padding: '3px',
+                    flexShrink: 0
+                  }}>
+                    <Image
+                      src={imageSrc}
+                      alt={cardImage}
+                      width={60}
+                      height={90}
+                      style={{ 
+                        borderRadius: '6px',
+                        display: 'block'
+                      }}
+                    />
+                  </div>
+
+                  {/* СТРЕЛКА */}
+                  <div style={{ color: '#94a3b8', fontSize: '24px', flexShrink: 0 }}>
+                    →
+                  </div>
+
+                  {/* ВЫБОР ЦЕЛИ */}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ color: '#cbd5e1', fontSize: '12px', marginBottom: '6px', fontWeight: '600' }}>
+                      Кому отдать:
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '6px' }}>
+                      {targetPlayers.map(tp => {
+                        const isSelected = assignedTarget === tp.id;
+                        return (
+                          <button
+                            key={tp.id}
+                            onClick={() => {
+                              setSelectedAssignments(prev => ({
+                                ...prev,
+                                [cardId]: tp.id
+                              }));
+                            }}
+                            style={{
+                              background: isSelected 
+                                ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                                : 'rgba(100, 116, 139, 0.3)',
+                              color: 'white',
+                              border: isSelected ? '2px solid #10b981' : '2px solid rgba(100, 116, 139, 0.5)',
+                              borderRadius: '8px',
+                              padding: '8px',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease'
+                            }}
+                            onMouseEnter={(e) => {
+                              if (!isSelected) {
+                                e.currentTarget.style.background = 'rgba(100, 116, 139, 0.5)';
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!isSelected) {
+                                e.currentTarget.style.background = 'rgba(100, 116, 139, 0.3)';
+                              }
+                            }}
+                          >
+                            {isSelected && '✓ '}{tp.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+            </div>
+          </div>
+        )}
+
+        {/* ПРОГРЕСС */}
+        <div style={{
+          background: 'rgba(100, 116, 139, 0.2)',
+          borderRadius: '8px',
+          padding: '10px',
+          marginBottom: '16px',
+          textAlign: 'center',
+          color: selectedCount === cardsToGive && Object.values(selectedAssignments).every(t => t !== '') ? '#10b981' : '#94a3b8',
+          fontSize: '13px',
+          fontWeight: '600'
+        }}>
+          {selectedCount === 0 
+            ? `Выберите ${cardsToGive} ${cardsToGive === 1 ? 'карту' : cardsToGive < 5 ? 'карты' : 'карт'}`
+            : selectedCount < cardsToGive 
+              ? `Выбрано карт: ${selectedCount}/${cardsToGive}`
+              : Object.values(selectedAssignments).some(t => t === '')
+                ? `⚠️ Назначьте цель для всех карт`
+                : `✓ Все карты распределены (${selectedCount}/${cardsToGive})`}
+        </div>
+
+        {/* КНОПКА ОТДАТЬ */}
+        <button
+          disabled={selectedCount !== cardsToGive || Object.values(selectedAssignments).some(t => t === '')}
+          onClick={handleSubmit}
+          style={{
+            width: '100%',
+            background: selectedCount === cardsToGive
+              ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+              : 'rgba(100, 116, 139, 0.3)',
+            color: 'white',
+            border: '2px solid rgba(16, 185, 129, 0.5)',
+            borderRadius: '12px',
+            padding: '14px 24px',
+            fontSize: '16px',
+            fontWeight: '700',
+            cursor: selectedCount === cardsToGive ? 'pointer' : 'not-allowed',
+            transition: 'all 0.3s ease',
+            opacity: selectedCount === cardsToGive ? 1 : 0.5
+          }}
+          onMouseEnter={(e) => {
+            if (selectedCount === cardsToGive) {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 6px 20px rgba(16, 185, 129, 0.5)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = 'none';
+          }}
+        >
+          ✓ Отдать {cardsToGive} {cardsToGive === 1 ? 'карту' : cardsToGive < 5 ? 'карты' : 'карт'}
+        </button>
+      </div>
+    </div>
+  );
+}
+

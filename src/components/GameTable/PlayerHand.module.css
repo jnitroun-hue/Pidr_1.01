@@ -1,0 +1,427 @@
+/* Контейнер руки игрока */
+.handContainer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(180deg, transparent 0%, rgba(15, 23, 42, 0.95) 20%, rgba(15, 23, 42, 0.98) 100%);
+  backdrop-filter: blur(10px);
+  border-top: 2px solid rgba(255, 255, 255, 0.1);
+  padding: 20px;
+  z-index: 100;
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.3);
+}
+
+/* Заголовок руки */
+.handHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  color: white;
+}
+
+.handTitle {
+  font-size: 16px;
+  font-weight: bold;
+  color: #ffd700;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.gameStageInfo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.waitingIndicator {
+  background: rgba(255, 193, 7, 0.2);
+  color: #ffc107;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  animation: waitingPulse 2s ease-in-out infinite;
+}
+
+@keyframes waitingPulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+/* Карты в руке */
+.handCards {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 0 20px;
+  min-height: 120px;
+  position: relative;
+}
+
+.handCards.scrollable {
+  justify-content: flex-start;
+  overflow-x: auto;
+  overflow-y: visible;
+  padding: 0 20px 10px 20px;
+  scroll-behavior: smooth;
+}
+
+.handCards.scrollable::-webkit-scrollbar {
+  height: 6px;
+}
+
+.handCards.scrollable::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.handCards.scrollable::-webkit-scrollbar-thumb {
+  background: rgba(255, 215, 0, 0.5);
+  border-radius: 3px;
+}
+
+.handCards.scrollable::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 215, 0, 0.7);
+}
+
+/* Карта в руке */
+.handCard {
+  position: relative;
+  width: 80px;
+  height: 112px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+}
+
+.handCard.selected {
+  z-index: 10;
+}
+
+.handCard.playable {
+  cursor: pointer;
+}
+
+.handCard.playable .cardImageContainer::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border: 2px solid #28a745;
+  border-radius: 10px;
+  box-shadow: 0 0 15px rgba(40, 167, 69, 0.5);
+  animation: playableGlow 2s ease-in-out infinite;
+}
+
+@keyframes playableGlow {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(40, 167, 69, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(40, 167, 69, 0.8);
+  }
+}
+
+.handCard.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.handCard.disabled:hover {
+  transform: none !important;
+}
+
+/* Контейнер изображения карты */
+.cardImageContainer {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 
+    0 4px 15px rgba(0, 0, 0, 0.3),
+    0 2px 5px rgba(0, 0, 0, 0.2);
+  background: white;
+  transition: all 0.3s ease;
+}
+
+.handCard:hover .cardImageContainer {
+  box-shadow: 
+    0 8px 25px rgba(0, 0, 0, 0.4),
+    0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.handCard.selected .cardImageContainer {
+  box-shadow: 
+    0 12px 30px rgba(255, 215, 0, 0.4),
+    0 6px 15px rgba(0, 0, 0, 0.3),
+    0 0 0 3px #ffd700;
+}
+
+.cardImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: all 0.3s ease;
+}
+
+/* Индикатор возможности хода */
+.playableIndicator {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 12px;
+  height: 12px;
+  background: #28a745;
+  border-radius: 50%;
+  border: 2px solid white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+}
+
+.playablePulse {
+  width: 6px;
+  height: 6px;
+  background: white;
+  border-radius: 50%;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Информация о карте */
+.cardInfo {
+  position: absolute;
+  bottom: 4px;
+  left: 4px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.handCard:hover .cardInfo,
+.handCard.selected .cardInfo {
+  opacity: 1;
+}
+
+.cardRank {
+  font-size: 11px;
+}
+
+.cardSuit {
+  font-size: 12px;
+}
+
+/* Подсказка для карты */
+.cardTooltip {
+  position: absolute;
+  bottom: -35px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 20;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.cardTooltip::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 4px solid rgba(0, 0, 0, 0.9);
+}
+
+/* Действия с картами */
+.handActions {
+  margin-top: 15px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.actionButtons {
+  display: flex;
+  gap: 12px;
+}
+
+.actionButton {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.playButton {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+}
+
+.playButton:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+}
+
+.playButton:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.cancelButton {
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+}
+
+.cancelButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
+}
+
+/* Подсказки по игре */
+.gameHints {
+  text-align: center;
+}
+
+.hint {
+  background: rgba(23, 162, 184, 0.2);
+  color: #17a2b8;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  border: 1px solid rgba(23, 162, 184, 0.3);
+  max-width: 400px;
+}
+
+/* Подсказка прокрутки */
+.scrollHint {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 11px;
+  margin-top: 8px;
+  animation: fadeInOut 3s ease-in-out infinite;
+}
+
+@keyframes fadeInOut {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .handContainer {
+    padding: 15px 10px;
+  }
+
+  .handCard {
+    width: 60px;
+    height: 84px;
+  }
+
+  .handCards {
+    gap: 6px;
+    padding: 0 10px;
+    min-height: 100px;
+  }
+
+  .handTitle {
+    font-size: 14px;
+  }
+
+  .gameStageInfo {
+    font-size: 12px;
+  }
+
+  .actionButton {
+    padding: 8px 16px;
+    font-size: 12px;
+  }
+
+  .hint {
+    font-size: 11px;
+    padding: 6px 12px;
+    max-width: 300px;
+  }
+}
+
+@media (max-width: 480px) {
+  .handContainer {
+    padding: 10px 5px;
+  }
+
+  .handCard {
+    width: 50px;
+    height: 70px;
+  }
+
+  .handCards {
+    gap: 4px;
+    padding: 0 5px;
+    min-height: 85px;
+  }
+
+  .handHeader {
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .actionButtons {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .actionButton {
+    padding: 6px 12px;
+    font-size: 11px;
+  }
+}
+
+/* Анимации появления */
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.handContainer {
+  animation: slideUp 0.5s ease-out;
+}
