@@ -1756,7 +1756,7 @@ function GamePageContentComponent({
                           filter: 'none',
                           visibility: 'visible',
                           display: 'block',
-                          objectFit: 'cover'
+                          objectFit: 'contain' // ✅ ИСПРАВЛЕНО: contain вместо cover - карта не обрезается
                         }}
                       />
                     ) : (
@@ -2183,7 +2183,7 @@ function GamePageContentComponent({
                                       ? '0 0 20px rgba(59, 130, 246, 0.8), 0 0 30px rgba(59, 130, 246, 0.5)'
                                       : 'none',
                                     transition: 'all 0.3s ease',
-                                    objectFit: 'cover',
+                                    objectFit: 'contain', // ✅ ИСПРАВЛЕНО: contain вместо cover - карта не обрезается
                                   }}
                                 />
                                   {/* ✅ ОВЕРЛЕЙ РАНГА И МАСТИ НА NFT КАРТЕ */}
@@ -2686,7 +2686,7 @@ function GamePageContentComponent({
                         transform: isSelected ? 'translateY(-20px) scale(1.1)' : 'none',
                         transition: 'all 0.3s ease',
                         boxShadow: canPlay ? '0 0 20px rgba(40, 167, 69, 0.6), 0 0 40px rgba(40, 167, 69, 0.3)' : 'none',
-                        objectFit: 'cover',
+                        objectFit: 'contain', // ✅ ИСПРАВЛЕНО: contain вместо cover - карта не обрезается
                       }}
                     />
                       {/* ✅ ОВЕРЛЕЙ РАНГА И МАСТИ НА NFT КАРТЕ */}
