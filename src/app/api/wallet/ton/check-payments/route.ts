@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     console.error('❌ Ошибка проверки TON платежей:', error);
     return NextResponse.json({
       success: false,
-      message: 'Ошибка проверки платежей: ' + error.message
+      message: 'Ошибка проверки платежей: ' + (error instanceof Error ? error.message : String(error))
     }, { status: 500 });
   }
 }
@@ -75,7 +75,7 @@ export async function GET(req: NextRequest) {
     console.error('❌ [CRON] Ошибка проверки TON платежей:', error);
     return NextResponse.json({
       success: false,
-      message: 'Ошибка: ' + error.message
+      message: 'Ошибка: ' + (error instanceof Error ? error.message : String(error))
     }, { status: 500 });
   }
 }

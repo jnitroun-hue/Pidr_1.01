@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
     console.error('❌ Ошибка получения TON payment info:', error);
     return NextResponse.json({
       success: false,
-      message: 'Ошибка получения информации для платежа: ' + error.message
+      message: 'Ошибка получения информации для платежа: ' + (error instanceof Error ? error.message : String(error))
     }, { status: 500 });
   }
 }

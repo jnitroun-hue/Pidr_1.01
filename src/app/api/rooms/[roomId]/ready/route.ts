@@ -58,7 +58,7 @@ export async function POST(
       console.error('❌ Ошибка обновления готовности:', error);
       return NextResponse.json({ 
         success: false, 
-        message: 'Ошибка обновления готовности: ' + error.message 
+        message: 'Ошибка обновления готовности: ' + (error instanceof Error ? error.message : String(error)) 
       }, { status: 500 });
     }
 
@@ -123,7 +123,7 @@ export async function GET(
       console.error('❌ Ошибка получения готовности:', error);
       return NextResponse.json({ 
         success: false, 
-        message: 'Ошибка получения готовности: ' + error.message 
+        message: 'Ошибка получения готовности: ' + (error instanceof Error ? error.message : String(error)) 
       }, { status: 500 });
     }
 

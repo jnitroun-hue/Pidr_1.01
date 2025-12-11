@@ -144,7 +144,7 @@ export async function POST(
     console.error('❌ [START GAME] Ошибка:', error);
     return NextResponse.json({ 
       success: false, 
-      error: error.message || 'Ошибка старта игры' 
+      error: (error instanceof Error ? error.message : String(error)) || 'Ошибка старта игры' 
     }, { status: 500 });
   }
 }

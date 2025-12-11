@@ -76,7 +76,7 @@ export async function GET(req: NextRequest) {
       console.error('❌ Ошибка загрузки комнат:', error);
       return NextResponse.json({ 
         success: false, 
-        message: 'Ошибка загрузки комнат: ' + error.message 
+        message: 'Ошибка загрузки комнат: ' + (error instanceof Error ? error.message : String(error)) 
       }, { status: 500 });
     }
     

@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error('❌ [Add Coins] Критическая ошибка:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Internal server error' },
+      { success: false, error: (error instanceof Error ? error.message : String(error)) || 'Internal server error' },
       { status: 500 }
     );
   }

@@ -98,7 +98,7 @@ export async function GET(
       console.error('❌ [GET /api/rooms/players] Ошибка получения игроков:', error);
       return NextResponse.json({ 
         success: false, 
-        message: 'Ошибка получения игроков: ' + error.message 
+        message: 'Ошибка получения игроков: ' + (error instanceof Error ? error.message : String(error)) 
       }, { status: 500 });
     }
 

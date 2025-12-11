@@ -352,7 +352,7 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error('❌ [Telegram Webhook] Ошибка:', error);
     // ✅ ВАЖНО: Даже при ошибке возвращаем ok: true, иначе Telegram будет повторять запросы
-    return NextResponse.json({ ok: true, error: error.message });
+    return NextResponse.json({ ok: true, error: error instanceof Error ? error.message : String(error) });
   }
 }
 
@@ -398,7 +398,7 @@ export async function GET(req: NextRequest) {
       });
     } catch (error: any) {
       return NextResponse.json({ 
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         webhookConfigured: false
       }, { status: 500 });
     }
@@ -458,7 +458,7 @@ export async function GET(req: NextRequest) {
       } catch (error: any) {
         console.error('❌ [Telegram Webhook GET] Ошибка установки webhook:', error);
         return NextResponse.json({ 
-          error: error.message
+          error: error instanceof Error ? error.message : String(error)
         }, { status: 500 });
       }
     }
@@ -495,7 +495,7 @@ export async function GET(req: NextRequest) {
   } catch (error: any) {
     console.error('❌ [Telegram Webhook GET] Ошибка:', error);
     return NextResponse.json({ 
-      error: error.message
+      error: error instanceof Error ? error.message : String(error)
     }, { status: 500 });
   }
 }

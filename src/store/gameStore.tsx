@@ -3189,9 +3189,9 @@ export const useGameStore = create<GameState>()(
                 .catch((err: unknown) => {
                   console.error(`❌❌❌ [${traceId}] КРИТИЧЕСКАЯ ОШИБКА ОБНОВЛЕНИЯ:`, err);
                   console.error('Полная ошибка:', {
-                    message: err.message,
-                    stack: err.stack,
-                    name: err.name
+                    message: err instanceof Error ? err.message : String(err),
+                    stack: err instanceof Error ? err.stack : undefined,
+                    name: err instanceof Error ? err.name : 'Unknown'
                     });
                   });
               } // ✅ Закрываем else блок для statsUpdatedThisGame

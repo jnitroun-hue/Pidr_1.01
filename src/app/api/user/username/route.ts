@@ -48,10 +48,10 @@ export async function PATCH(req: NextRequest) {
     try {
       decoded = verify(token, JWT_SECRET);
     } catch (error: any) {
-      console.error('❌ Ошибка проверки токена:', error.message);
+      console.error('❌ Ошибка проверки токена:', error instanceof Error ? error.message : String(error));
       return NextResponse.json({ 
         success: false, 
-        message: 'Невалидный токен - ' + error.message 
+        message: 'Невалидный токен - ' + (error instanceof Error ? error.message : String(error)) 
       }, { status: 401 });
     }
 
@@ -105,7 +105,7 @@ export async function PATCH(req: NextRequest) {
       console.error('❌ Ошибка обновления имени:', error);
       return NextResponse.json({ 
         success: false, 
-        message: 'Ошибка обновления имени: ' + error.message 
+        message: 'Ошибка обновления имени: ' + (error instanceof Error ? error.message : String(error)) 
       }, { status: 500 });
     }
 

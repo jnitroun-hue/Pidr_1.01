@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('❌ [HEARTBEAT] Ошибка обновления онлайн статуса:', error);
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      return NextResponse.json({ success: false, error: error instanceof Error ? error.message : String(error) }, { status: 500 });
     }
 
     // ✅ ОБНОВЛЯЕМ is_online В _pidr_room_players И last_activity КОМНАТЫ
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
     console.error('❌ [HEARTBEAT] Ошибка:', error);
     return NextResponse.json({
       success: false,
-      error: error.message || 'Ошибка heartbeat'
+      error: (error instanceof Error ? error.message : String(error)) || 'Ошибка heartbeat'
     }, { status: 500 });
   }
 }

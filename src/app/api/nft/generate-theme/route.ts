@@ -211,7 +211,7 @@ export async function POST(request: NextRequest) {
     console.error('❌ [generate-theme] Ошибка:', error);
     return NextResponse.json({
       success: false,
-      error: error.message || 'Внутренняя ошибка сервера'
+      error: (error instanceof Error ? error.message : String(error)) || 'Внутренняя ошибка сервера'
     }, { status: 500 });
   }
 }

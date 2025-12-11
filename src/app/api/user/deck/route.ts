@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
       console.error('❌ [GET DECK] Ошибка получения колоды:', error);
       return NextResponse.json({ 
         success: false, 
-        error: error.message 
+        error: error instanceof Error ? error.message : String(error) 
       }, { status: 500 });
     }
 
@@ -144,7 +144,7 @@ export async function DELETE(request: NextRequest) {
       console.error('❌ [DELETE FROM DECK] Ошибка:', error);
       return NextResponse.json({ 
         success: false, 
-        error: error.message 
+        error: error instanceof Error ? error.message : String(error) 
       }, { status: 500 });
     }
 
@@ -155,11 +155,11 @@ export async function DELETE(request: NextRequest) {
       message: 'Карта удалена из колоды'
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ [DELETE FROM DECK] Ошибка:', error);
     return NextResponse.json({ 
       success: false, 
-      error: error.message 
+      error: error instanceof Error ? error.message : String(error)
     }, { status: 500 });
   }
 }

@@ -125,7 +125,7 @@ export async function GET(req: NextRequest) {
         } catch (error: any) {
           return NextResponse.json({
             success: false,
-            message: error.message
+            message: error instanceof Error ? error.message : String(error)
           }, { status: 404 });
         }
       }
@@ -142,7 +142,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: false,
       message: 'Внутренняя ошибка сервера',
-      error: error.message
+      error: error instanceof Error ? error.message : String(error)
     }, { status: 500 });
   }
 }
@@ -207,7 +207,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: false,
       message: 'Ошибка создания адреса',
-      error: error.message
+      error: error instanceof Error ? error.message : String(error)
     }, { status: 500 });
   }
 }
@@ -263,7 +263,7 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({
       success: false,
       message: 'Ошибка обновления',
-      error: error.message
+      error: error instanceof Error ? error.message : String(error)
     }, { status: 500 });
   }
 }
@@ -302,7 +302,7 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({
       success: false,
       message: 'Ошибка удаления адреса',
-      error: error.message
+      error: error instanceof Error ? error.message : String(error)
     }, { status: 500 });
   }
 }

@@ -853,7 +853,7 @@ export async function healthCheck(): Promise<{
     await redis.ping();
     redisOk = true;
   } catch (error: any) {
-    errors.push(`Redis: ${error.message}`);
+    errors.push(`Redis: ${error instanceof Error ? error.message : String(error)}`);
   }
   
   // Проверка БД
@@ -862,7 +862,7 @@ export async function healthCheck(): Promise<{
     if (!error) {
       dbOk = true;
     } else {
-      errors.push(`Database: ${error.message}`);
+      errors.push(`Database: ${error instanceof Error ? error.message : String(error)}`);
     }
   } catch (error: any) {
     errors.push(`Database: ${error.message}`);
