@@ -216,7 +216,43 @@ export async function POST(
         console.warn('⚠️ [ADD BOT] Ошибка обновления avatar_url (не критично):', avatarError);
       }
 
+      // ✅ ОБНОВЛЯЕМ СЧЕТЧИК ИГРОКОВ В КОМНАТЕ (atomicJoinRoom уже обновляет, но на всякий случай)
+      const { error: countError } = await supabase
+        .from('_pidr_rooms')
+        .update({ 
+          current_players: room.current_players + 1,
+          last_activity: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', roomId);
+
+      if (countError) {
+        console.warn('⚠️ [ADD BOT] Ошибка обновления счетчика (не критично, atomicJoinRoom уже обновил):', countError);
+      } else {
+        console.log(`✅ [ADD BOT] Счетчик игроков обновлен: ${room.current_players + 1}`);
+      }
+
       console.log(`✅ [ADD BOT] Бот ${botName} успешно добавлен в комнату ${roomId} на позицию ${joinResult.position}`);
+
+      // ✅ ОТПРАВЛЯЕМ BROADCAST ДЛЯ СИНХРОНИЗАЦИИ ВСЕХ КЛИЕНТОВ
+      try {
+        const channel = supabase.channel(`room:${roomId}`);
+        await channel.send({
+          type: 'broadcast',
+          event: 'player-joined',
+          payload: {
+            userId: String(botId),
+            username: botName,
+            position: joinResult.position,
+            isHost: false,
+            isBot: true,
+            timestamp: Date.now()
+          }
+        });
+        console.log(`📡 [ADD BOT] Broadcast отправлен для синхронизации клиентов`);
+      } catch (broadcastError) {
+        console.warn(`⚠️ [ADD BOT] Ошибка отправки broadcast (не критично):`, broadcastError);
+      }
 
       return NextResponse.json({ 
         success: true, 
@@ -224,7 +260,7 @@ export async function POST(
         bot: {
           id: botId,
           name: botName,
-          position: nextPosition
+          position: joinResult.position || nextPosition
         }
       });
 

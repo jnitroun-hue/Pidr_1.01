@@ -75,9 +75,11 @@ export default function MultiplayerLobby({
       onPlayerJoin: (player) => {
         console.log('👥 [MultiplayerLobby] Игрок присоединился:', player);
         // ✅ ЗАГРУЖАЕМ ИЗ БД (ИСТОЧНИК ИСТИНЫ!) - с задержкой для надежности
-        setTimeout(() => loadRoomPlayers(), 100);
-        setTimeout(() => loadRoomPlayers(), 500);
-        setTimeout(() => loadRoomPlayers(), 1000);
+        // ✅ УЛУЧШЕНО: Более агрессивное обновление для хоста
+        const delays = isHost ? [50, 200, 500, 1000] : [100, 500, 1000];
+        delays.forEach(delay => {
+          setTimeout(() => loadRoomPlayers(), delay);
+        });
       },
       onPlayerLeave: (userId) => {
         console.log('👋 [MultiplayerLobby] Игрок покинул:', userId);
@@ -108,11 +110,11 @@ export default function MultiplayerLobby({
       loadRoomPlayers();
     }, 1500);
     
-    // ✅ ДОПОЛНИТЕЛЬНОЕ ОБНОВЛЕНИЕ ДЛЯ ХОСТА (каждые 0.8 секунды для лучшей синхронизации)
+    // ✅ УЛУЧШЕНО: Более частое обновление для хоста (каждые 0.5 секунды)
     const hostInterval = isHost ? setInterval(() => {
       console.log('🔄 [MultiplayerLobby] Автообновление для хоста...');
       loadRoomPlayers();
-    }, 800) : null;
+    }, 500) : null;
 
     // Очистка при размонтировании
     return () => {

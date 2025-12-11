@@ -519,6 +519,25 @@ export async function atomicJoinRoom(params: {
       // 10. ОБНОВЛЯЕМ СЧЕТЧИК В БД
       await updateRoomPlayerCount(roomId);
       
+      // 11. ✅ ОТПРАВЛЯЕМ BROADCAST ДЛЯ СИНХРОНИЗАЦИИ ВСЕХ КЛИЕНТОВ
+      try {
+        const channel = supabase.channel(`room:${roomId}`);
+        await channel.send({
+          type: 'broadcast',
+          event: 'player-joined',
+          payload: {
+            userId,
+            username,
+            position,
+            isHost,
+            timestamp: Date.now()
+          }
+        });
+        console.log(`📡 [ATOMIC JOIN] Broadcast отправлен для синхронизации клиентов`);
+      } catch (broadcastError) {
+        console.warn(`⚠️ [ATOMIC JOIN] Ошибка отправки broadcast (не критично):`, broadcastError);
+      }
+      
       console.log(`✅ [ATOMIC JOIN] Игрок ${userId} успешно присоединился к комнате ${roomId} на позиции ${position}`);
       
       return {

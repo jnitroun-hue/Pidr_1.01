@@ -71,7 +71,21 @@ export async function GET(
       }
       
       // ✅ КРИТИЧНО: Используем вычисленный isHost, но если в БД уже есть is_host=true, тоже учитываем
+      // ✅ УЛУЧШЕНО: Приоритет у вычисленного isHost (сравнение с host_id)
       const finalIsHost = isHost || (player.is_host === true);
+      
+      // ✅ ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА: Если игрок является хостом по host_id, но is_host=false в БД - исправляем
+      if (isHost && !player.is_host) {
+        console.log(`🔧 [GET /api/rooms/players] Исправляем is_host для хоста ${player.user_id}`);
+        // Обновляем в БД (не блокируем ответ)
+        supabase
+          .from('_pidr_room_players')
+          .update({ is_host: true })
+          .eq('room_id', roomId)
+          .eq('user_id', player.user_id)
+          .then(() => console.log(`✅ [GET /api/rooms/players] is_host исправлен для ${player.user_id}`))
+          .catch(err => console.error(`❌ [GET /api/rooms/players] Ошибка исправления is_host:`, err));
+      }
       
       return {
         ...player,

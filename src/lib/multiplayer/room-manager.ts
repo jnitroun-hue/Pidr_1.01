@@ -211,6 +211,18 @@ export class RoomManager {
           callbacks.onPlayerJoin(payload.new as RoomPlayer);
         }
       })
+      .on('broadcast', { event: 'player-joined' }, (payload: any) => {
+        console.log('📡 [RoomManager] Получен broadcast о присоединении игрока:', payload);
+        // ✅ ПРИНУДИТЕЛЬНО ОБНОВЛЯЕМ СПИСОК ИГРОКОВ
+        if (callbacks.onPlayerJoin && payload.payload) {
+          // Загружаем полные данные игрока из БД
+          setTimeout(() => {
+            if (callbacks.onPlayerJoin) {
+              callbacks.onPlayerJoin(payload.payload as any);
+            }
+          }, 100);
+        }
+      })
       .on('postgres_changes', {
         event: 'DELETE',
         schema: 'public',
