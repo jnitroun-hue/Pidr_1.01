@@ -284,7 +284,7 @@ export default function RegisterPage() {
       <Box 
         minH="100vh" 
         minW="100vw"
-      bg="#0f172a"
+        bg="#0f172a"
       bgGradient="linear(135deg, #0f172a 0%, #1e293b 30%, #0f172a 60%, #064e3b 100%)"
       display="flex" 
       alignItems="center" 
