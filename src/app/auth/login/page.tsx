@@ -19,7 +19,6 @@ export default function LoginPage() {
     identifier: '', // username, email или phone
     password: '' 
   });
-  const [credentials, setCredentials] = useState({ username: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
