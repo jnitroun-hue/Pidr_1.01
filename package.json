@@ -60,10 +60,7 @@
     "zustand": "^5.0.5"
   },
   "devDependencies": {
-<<<<<<< HEAD
     "@types/bcryptjs": "^2.4.6",
-=======
->>>>>>> 23a978722cf8d61908043d26b8e399bb35c8fe1d
     "@types/jsdom": "^21.1.7",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20.19.1",
