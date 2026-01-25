@@ -53,6 +53,7 @@ export interface SessionData {
   vkId?: string;
   googleId?: string;
   email?: string;
+  phone?: string;
   createdAt: number;
   lastActivity: number;
   deviceInfo?: {
@@ -93,6 +94,7 @@ export async function createSession(data: {
   vkId?: string;
   googleId?: string;
   email?: string;
+  phone?: string;
   userAgent?: string;
   ip?: string;
 }): Promise<{ sessionId: string; token: string }> {
@@ -107,6 +109,7 @@ export async function createSession(data: {
     vkId: data.vkId,
     googleId: data.googleId,
     email: data.email,
+    phone: data.phone,
     createdAt: Date.now(),
     lastActivity: Date.now(),
     deviceInfo: {

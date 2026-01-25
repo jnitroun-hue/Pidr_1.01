@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import * as bcrypt from 'bcryptjs';
@@ -5,10 +6,27 @@ import { createSession } from '@/lib/auth/redis-session-manager';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+=======
+/**
+ * POST /api/auth/login
+ * Универсальный endpoint для входа через любой метод
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import {
+  authenticateUser,
+  authenticateTelegramWebApp,
+  authenticateGoogle,
+  authenticateVK,
+  type AuthProvider,
+} from '../../../../lib/auth/universal-auth';
+import jwt from 'jsonwebtoken';
+>>>>>>> 23a978722cf8d61908043d26b8e399bb35c8fe1d
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+<<<<<<< HEAD
     const { username, email, phone, password, type = 'local' } = body;
 
     // Валидация
@@ -49,10 +67,60 @@ export async function POST(request: NextRequest) {
       console.log('❌ Пользователь не найден');
       return NextResponse.json(
         { success: false, message: 'Неверный логин или пароль' },
+=======
+    const { method, ...authData } = body;
+
+    let result;
+
+    switch (method as AuthProvider) {
+      case 'telegram':
+        // Telegram Web App
+        if (authData.initData) {
+          result = await authenticateTelegramWebApp(authData.initData);
+        } else {
+          result = await authenticateUser({
+            authProvider: 'telegram',
+            providerUserId: authData.telegramId,
+            username: authData.username,
+            avatarUrl: authData.avatarUrl,
+            providerData: authData.providerData,
+          });
+        }
+        break;
+
+      case 'google':
+        // Google OAuth
+        result = await authenticateGoogle(authData.googleToken);
+        break;
+
+      case 'vk':
+        // VK OAuth
+        result = await authenticateVK(authData.vkAccessToken);
+        break;
+
+      case 'email':
+        // Email/Password (TODO: реализовать)
+        return NextResponse.json(
+          { error: 'Email авторизация пока не реализована' },
+          { status: 501 }
+        );
+
+      default:
+        return NextResponse.json(
+          { error: 'Неизвестный метод авторизации' },
+          { status: 400 }
+        );
+    }
+
+    if (!result.success) {
+      return NextResponse.json(
+        { error: result.error || 'Ошибка авторизации' },
+>>>>>>> 23a978722cf8d61908043d26b8e399bb35c8fe1d
         { status: 401 }
       );
     }
 
+<<<<<<< HEAD
     // Проверяем пароль
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
 
@@ -116,10 +184,21 @@ export async function POST(request: NextRequest) {
 
     // Устанавливаем cookie с токеном
     response.cookies.set('auth_token', token, {
+=======
+    // Устанавливаем cookie с сессией
+    const response = NextResponse.json({
+      success: true,
+      userId: result.userId,
+      isNewUser: result.isNewUser,
+    });
+
+    response.cookies.set('pidr_session', result.sessionToken!, {
+>>>>>>> 23a978722cf8d61908043d26b8e399bb35c8fe1d
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 30 * 24 * 60 * 60, // 30 дней
+<<<<<<< HEAD
       path: '/'
     });
 
@@ -129,7 +208,44 @@ export async function POST(request: NextRequest) {
     console.error('❌ Ошибка входа:', error);
     return NextResponse.json(
       { success: false, message: 'Внутренняя ошибка сервера' },
+=======
+      path: '/',
+    });
+
+    // ✅ ИСПРАВЛЕНО: Также устанавливаем auth_token (JWT) для совместимости с /api/auth
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (JWT_SECRET && result.userId) {
+      const token = jwt.sign(
+        { 
+          userId: result.userId.toString(),
+          username: 'user' // Будет обновлено при следующем запросе
+        },
+        JWT_SECRET,
+        { expiresIn: '30d' }
+      );
+
+      response.cookies.set('auth_token', token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none' as const, // Для Telegram WebApp нужно 'none'
+        path: '/',
+        maxAge: 30 * 24 * 60 * 60, // 30 дней
+      });
+
+      console.log('✅ [Auth Login] Установлены cookies: pidr_session + auth_token');
+    }
+
+    return response;
+  } catch (error: any) {
+    console.error('❌ Ошибка /api/auth/login:', error);
+    return NextResponse.json(
+      { error: 'Внутренняя ошибка сервера' },
+>>>>>>> 23a978722cf8d61908043d26b8e399bb35c8fe1d
       { status: 500 }
     );
   }
 }
+<<<<<<< HEAD
+=======
+
+>>>>>>> 23a978722cf8d61908043d26b8e399bb35c8fe1d
