@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import * as bcrypt from 'bcryptjs';
@@ -6,7 +5,6 @@ import { createSession } from '@/lib/auth/redis-session-manager';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-=======
 /**
  * POST /api/auth/login
  * Универсальный endpoint для входа через любой метод
@@ -21,12 +19,10 @@ import {
   type AuthProvider,
 } from '../../../../lib/auth/universal-auth';
 import jwt from 'jsonwebtoken';
->>>>>>> 23a978722cf8d61908043d26b8e399bb35c8fe1d
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-<<<<<<< HEAD
     const { username, email, phone, password, type = 'local' } = body;
 
     // Валидация
@@ -67,7 +63,6 @@ export async function POST(request: NextRequest) {
       console.log('❌ Пользователь не найден');
       return NextResponse.json(
         { success: false, message: 'Неверный логин или пароль' },
-=======
     const { method, ...authData } = body;
 
     let result;
@@ -115,12 +110,10 @@ export async function POST(request: NextRequest) {
     if (!result.success) {
       return NextResponse.json(
         { error: result.error || 'Ошибка авторизации' },
->>>>>>> 23a978722cf8d61908043d26b8e399bb35c8fe1d
         { status: 401 }
       );
     }
 
-<<<<<<< HEAD
     // Проверяем пароль
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
 
@@ -184,7 +177,6 @@ export async function POST(request: NextRequest) {
 
     // Устанавливаем cookie с токеном
     response.cookies.set('auth_token', token, {
-=======
     // Устанавливаем cookie с сессией
     const response = NextResponse.json({
       success: true,
@@ -193,12 +185,10 @@ export async function POST(request: NextRequest) {
     });
 
     response.cookies.set('pidr_session', result.sessionToken!, {
->>>>>>> 23a978722cf8d61908043d26b8e399bb35c8fe1d
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 30 * 24 * 60 * 60, // 30 дней
-<<<<<<< HEAD
       path: '/'
     });
 
@@ -208,7 +198,6 @@ export async function POST(request: NextRequest) {
     console.error('❌ Ошибка входа:', error);
     return NextResponse.json(
       { success: false, message: 'Внутренняя ошибка сервера' },
-=======
       path: '/',
     });
 
@@ -240,12 +229,8 @@ export async function POST(request: NextRequest) {
     console.error('❌ Ошибка /api/auth/login:', error);
     return NextResponse.json(
       { error: 'Внутренняя ошибка сервера' },
->>>>>>> 23a978722cf8d61908043d26b8e399bb35c8fe1d
       { status: 500 }
     );
   }
 }
-<<<<<<< HEAD
-=======
 
->>>>>>> 23a978722cf8d61908043d26b8e399bb35c8fe1d

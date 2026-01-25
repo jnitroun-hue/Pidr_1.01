@@ -5,10 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Box, Button, Input, VStack, HStack, Text, Alert, Flex } from '@chakra-ui/react';
 import { FaEye, FaEyeSlash, FaTelegram, FaGoogle } from 'react-icons/fa';
 import Link from 'next/link';
-<<<<<<< HEAD
 import VKAutoAuth from '@/components/VKAutoAuth';
-=======
->>>>>>> 23a978722cf8d61908043d26b8e399bb35c8fe1d
 
 // VK icon component
 const VKIcon = () => (
@@ -18,14 +15,11 @@ const VKIcon = () => (
 );
 
 export default function LoginPage() {
-<<<<<<< HEAD
   const [credentials, setCredentials] = useState({ 
     identifier: '', // username, email или phone
     password: '' 
   });
-=======
   const [credentials, setCredentials] = useState({ username: '', password: '' });
->>>>>>> 23a978722cf8d61908043d26b8e399bb35c8fe1d
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -46,11 +40,8 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-<<<<<<< HEAD
     if (!credentials.identifier || !credentials.password) {
-=======
     if (!credentials.username || !credentials.password) {
->>>>>>> 23a978722cf8d61908043d26b8e399bb35c8fe1d
       setError('Пожалуйста, заполните все поля');
       return;
     }
@@ -59,7 +50,6 @@ export default function LoginPage() {
     setError('');
 
     try {
-<<<<<<< HEAD
       // Определяем тип идентификатора (username, email или phone)
       const identifier = credentials.identifier;
       let loginData: any = { password: credentials.password };
@@ -76,7 +66,6 @@ export default function LoginPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(loginData)
-=======
       const response = await fetch('/api/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -85,7 +74,6 @@ export default function LoginPage() {
           username: credentials.username,
           password: credentials.password
         })
->>>>>>> 23a978722cf8d61908043d26b8e399bb35c8fe1d
       });
 
       const data = await response.json();
@@ -290,17 +278,14 @@ export default function LoginPage() {
   };
 
   return (
-<<<<<<< HEAD
     <>
       <VKAutoAuth />
       <Box 
         minH="100vh" 
         minW="100vw"
-=======
     <Box 
       minH="100vh" 
       minW="100vw"
->>>>>>> 23a978722cf8d61908043d26b8e399bb35c8fe1d
       bg="#0f172a"
       bgGradient="linear(135deg, #0f172a 0%, #1e293b 30%, #0f172a 60%, #064e3b 100%)"
       display="flex" 
@@ -381,7 +366,6 @@ export default function LoginPage() {
               <VStack gap={4}>
                 <Box>
                   <Text mb={3} fontWeight="600" color="#e2e8f0">
-<<<<<<< HEAD
                     Логин, Email или Телефон
                   </Text>
                   <Input
@@ -389,7 +373,6 @@ export default function LoginPage() {
                     value={credentials.identifier}
                     onChange={(e) => setCredentials({ ...credentials, identifier: e.target.value })}
                     placeholder="username, email@example.com или +1234567890"
-=======
                     Логин
                   </Text>
                   <Input
@@ -397,7 +380,6 @@ export default function LoginPage() {
                     value={credentials.username}
                     onChange={(e) => setCredentials({ ...credentials, username: e.target.value })}
                     placeholder="Введите ваш логин"
->>>>>>> 23a978722cf8d61908043d26b8e399bb35c8fe1d
                     bg="linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.6) 100%)"
                     backdropFilter="blur(10px)"
                     border="1px solid"
@@ -639,9 +621,6 @@ export default function LoginPage() {
         </VStack>
       </Box>
     </Box>
-<<<<<<< HEAD
     </>
-=======
->>>>>>> 23a978722cf8d61908043d26b8e399bb35c8fe1d
   );
 }

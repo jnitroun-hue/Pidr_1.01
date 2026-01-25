@@ -5,10 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Box, Button, Input, VStack, HStack, Text, Alert, Flex } from '@chakra-ui/react';
 import { FaEye, FaEyeSlash, FaTelegram, FaGoogle, FaCheckCircle } from 'react-icons/fa';
 import Link from 'next/link';
-<<<<<<< HEAD
 import VKAutoAuth from '@/components/VKAutoAuth';
-=======
->>>>>>> 23a978722cf8d61908043d26b8e399bb35c8fe1d
 
 // VK icon component
 const VKIcon = () => (
@@ -20,10 +17,7 @@ const VKIcon = () => (
 interface FormData {
   username: string;
   email: string;
-<<<<<<< HEAD
   phone: string;
-=======
->>>>>>> 23a978722cf8d61908043d26b8e399bb35c8fe1d
   password: string;
   confirmPassword: string;
 }
@@ -31,10 +25,7 @@ interface FormData {
 interface FormValidation {
   username: boolean;
   email: boolean;
-<<<<<<< HEAD
   phone: boolean;
-=======
->>>>>>> 23a978722cf8d61908043d26b8e399bb35c8fe1d
   password: boolean;
   confirmPassword: boolean;
 }
@@ -43,10 +34,7 @@ export default function RegisterPage() {
   const [formData, setFormData] = useState<FormData>({
     username: '',
     email: '',
-<<<<<<< HEAD
     phone: '',
-=======
->>>>>>> 23a978722cf8d61908043d26b8e399bb35c8fe1d
     password: '',
     confirmPassword: ''
   });
@@ -58,10 +46,7 @@ export default function RegisterPage() {
   const [validation, setValidation] = useState<FormValidation>({
     username: false,
     email: false,
-<<<<<<< HEAD
     phone: false,
-=======
->>>>>>> 23a978722cf8d61908043d26b8e399bb35c8fe1d
     password: false,
     confirmPassword: false
   });
@@ -83,12 +68,9 @@ export default function RegisterPage() {
   useEffect(() => {
     setValidation({
       username: formData.username.length >= 3 && formData.username.length <= 32 && /^[a-zA-Z0-9_]+$/.test(formData.username),
-<<<<<<< HEAD
       email: !formData.email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email), // опционально
       phone: !formData.phone || /^\+?[1-9]\d{1,14}$/.test(formData.phone), // опционально
-=======
       email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email),
->>>>>>> 23a978722cf8d61908043d26b8e399bb35c8fe1d
       password: formData.password.length >= 6 && /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password),
       confirmPassword: formData.password === formData.confirmPassword && formData.confirmPassword.length > 0
     });
@@ -98,11 +80,8 @@ export default function RegisterPage() {
     e.preventDefault();
 
     // Проверка валидации
-<<<<<<< HEAD
     if (!validation.username || !validation.email || !validation.phone || !validation.password || !validation.confirmPassword) {
-=======
     if (!validation.username || !validation.email || !validation.password || !validation.confirmPassword) {
->>>>>>> 23a978722cf8d61908043d26b8e399bb35c8fe1d
       setError('Пожалуйста, исправьте ошибки в форме');
       return;
     }
@@ -112,7 +91,6 @@ export default function RegisterPage() {
 
     try {
       // Сначала регистрируем пользователя
-<<<<<<< HEAD
       const registerData: any = {
         username: formData.username,
         password: formData.password
@@ -126,7 +104,6 @@ export default function RegisterPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(registerData)
-=======
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -135,7 +112,6 @@ export default function RegisterPage() {
           email: formData.email,
           password: formData.password
         })
->>>>>>> 23a978722cf8d61908043d26b8e399bb35c8fe1d
       });
 
       const data = await response.json();
@@ -311,17 +287,14 @@ export default function RegisterPage() {
   });
 
   return (
-<<<<<<< HEAD
     <>
       <VKAutoAuth />
       <Box 
         minH="100vh" 
         minW="100vw"
-=======
     <Box 
       minH="100vh" 
       minW="100vw"
->>>>>>> 23a978722cf8d61908043d26b8e399bb35c8fe1d
       bg="#0f172a"
       bgGradient="linear(135deg, #0f172a 0%, #1e293b 30%, #0f172a 60%, #064e3b 100%)"
       display="flex" 
@@ -426,11 +399,8 @@ export default function RegisterPage() {
 
                 <Box>
                   <Text mb={2} fontWeight="600" color="#e2e8f0">
-<<<<<<< HEAD
                     Email <Text as="span" color="#94a3b8" fontSize="sm">(опционально)</Text>
-=======
                     Email
->>>>>>> 23a978722cf8d61908043d26b8e399bb35c8fe1d
                     {formData.email && (
                       validation.email ? 
                         <FaCheckCircle style={{ display: 'inline', marginLeft: '8px', color: '#22c55e' }} /> : 
@@ -454,7 +424,6 @@ export default function RegisterPage() {
 
                 <Box>
                   <Text mb={2} fontWeight="600" color="#e2e8f0">
-<<<<<<< HEAD
                     Телефон <Text as="span" color="#94a3b8" fontSize="sm">(опционально)</Text>
                     {formData.phone && (
                       validation.phone ? 
@@ -479,8 +448,6 @@ export default function RegisterPage() {
 
                 <Box>
                   <Text mb={2} fontWeight="600" color="#e2e8f0">
-=======
->>>>>>> 23a978722cf8d61908043d26b8e399bb35c8fe1d
                     Пароль
                     {formData.password && (
                       validation.password ? 
@@ -725,9 +692,6 @@ export default function RegisterPage() {
         </VStack>
       </Box>
     </Box>
-<<<<<<< HEAD
     </>
-=======
->>>>>>> 23a978722cf8d61908043d26b8e399bb35c8fe1d
   );
 }
