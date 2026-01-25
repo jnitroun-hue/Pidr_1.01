@@ -3,16 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Box, Button, Input, VStack, HStack, Text, Alert, Flex } from '@chakra-ui/react';
-import { FaEye, FaEyeSlash, FaTelegram, FaGoogle } from 'react-icons/fa';
+import { FaEye, FaEyeSlash, FaTelegram } from 'react-icons/fa';
 import Link from 'next/link';
-import VKAutoAuth from '@/components/VKAutoAuth';
-
-// VK icon component
-const VKIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M15.684 0H8.316C1.592 0 0 1.592 0 8.316v7.368C0 22.408 1.592 24 8.316 24h7.368C22.408 24 24 22.408 24 15.684V8.316C24 1.592 22.408 0 15.684 0zm3.692 17.123h-1.744c-.66 0-.864-.525-2.05-1.727-1.033-1.033-.148-1.49-.148-1.49.15-.108.3-.27.3-.511 0-.213-.064-.511-.945-.511-.75 0-.976.336-1.394.336-.475 0-.671-.3-.671-.671 0-.398.418-.671 1.008-.671.814 0 1.245.273 2.229.273.814 0 1.245-.336 1.245-.868 0-.418-.254-.786-.683-1.033l1.394-1.394c.088-.088.212-.148.348-.148.273 0 .498.225.498.498 0 .136-.06.26-.148.348l-1.394 1.394c.247.16.407.254.686.516.418.418.814.996.814 1.677 0 1.245-.976 2.229-2.229 2.229-.418 0-.796-.15-1.095-.387-.3.236-.677.387-1.095.387-.475 0-.9-.15-1.245-.398v.398c0 .273-.225.498-.498.498s-.498-.225-.498-.498V9.563c0-.814.66-1.474 1.474-1.474h3.444c.814 0 1.474.66 1.474 1.474v6.796c0 .273-.225.498-.498.498z"/>
-  </svg>
-);
 
 export default function LoginPage() {
   const [credentials, setCredentials] = useState({ 
@@ -240,33 +232,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleGoogleLogin = () => {
-    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-    if (!clientId) {
-      showToast('Ошибка конфигурации', 'Google OAuth не настроен', 'error');
-      return;
-    }
-
-    const redirectUri = `${window.location.origin}/auth/google/callback`;
-    const scope = 'openid profile email';
-    const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}`;
-    
-    window.location.href = googleAuthUrl;
-  };
-
-  const handleVKLogin = () => {
-    const clientId = process.env.NEXT_PUBLIC_VK_CLIENT_ID;
-    if (!clientId) {
-      showToast('Ошибка конфигурации', 'VK OAuth не настроен', 'error');
-      return;
-    }
-
-    const redirectUri = `${window.location.origin}/auth/vk/callback`;
-    const scope = 'email';
-    const vkAuthUrl = `https://oauth.vk.com/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&v=5.131`;
-    
-    window.location.href = vkAuthUrl;
-  };
 
   return (
     <Box 
@@ -501,67 +466,6 @@ export default function LoginPage() {
               {loading ? 'ВХОД...' : 'ВОЙТИ ЧЕРЕЗ TELEGRAM'}
             </Button>
 
-            <HStack gap={3} w="full">
-              <Button
-                onClick={handleGoogleLogin}
-                size="md"
-                flex={1}
-                disabled={loading}
-                bg="linear-gradient(135deg, rgba(239, 68, 68, 0.8) 0%, rgba(220, 38, 38, 0.6) 100%)"
-                border="1px solid"
-                borderColor="rgba(239, 68, 68, 0.4)"
-                borderRadius="12px"
-                boxShadow="0 4px 20px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1)"
-                backdropFilter="blur(10px)"
-                color="#e2e8f0"
-                fontWeight="600"
-                transition="all 0.3s ease"
-                _hover={{
-                  borderColor: 'rgba(255, 215, 0, 0.6)',
-                  bg: 'linear-gradient(135deg, rgba(220, 38, 38, 0.9) 0%, rgba(185, 28, 28, 0.8) 100%)',
-                  color: '#ffd700',
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3), 0 0 20px rgba(255, 215, 0, 0.1)'
-                }}
-                _disabled={{
-                  opacity: 0.6,
-                  cursor: 'not-allowed',
-                  _hover: {}
-                }}
-              >
-                <FaGoogle style={{ marginRight: 8 }} /> Google
-              </Button>
-              <Button
-                onClick={handleVKLogin}
-                size="md"
-                flex={1}
-                disabled={loading}
-                bg="linear-gradient(135deg, rgba(79, 172, 254, 0.8) 0%, rgba(37, 99, 235, 0.6) 100%)"
-                border="1px solid"
-                borderColor="rgba(79, 172, 254, 0.4)"
-                borderRadius="12px"
-                boxShadow="0 4px 20px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1)"
-                backdropFilter="blur(10px)"
-                color="#e2e8f0"
-                fontWeight="600"
-                transition="all 0.3s ease"
-                _hover={{
-                  borderColor: 'rgba(255, 215, 0, 0.6)',
-                  bg: 'linear-gradient(135deg, rgba(37, 99, 235, 0.9) 0%, rgba(30, 64, 175, 0.8) 100%)',
-                  color: '#ffd700',
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3), 0 0 20px rgba(255, 215, 0, 0.1)'
-                }}
-                _disabled={{
-                  opacity: 0.6,
-                  cursor: 'not-allowed',
-                  _hover: {}
-                }}
-              >
-                <VKIcon />
-                <span style={{ marginLeft: 8 }}>VK</span>
-              </Button>
-            </HStack>
           </VStack>
 
           {/* Register Link */}
