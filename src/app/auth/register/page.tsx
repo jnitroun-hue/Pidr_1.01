@@ -279,9 +279,7 @@ export default function RegisterPage() {
   });
 
   return (
-    <>
-      <VKAutoAuth />
-      <Box 
+    <Box 
         minH="100vh" 
         minW="100vw"
         bg="#0f172a"
@@ -681,6 +679,5 @@ export default function RegisterPage() {
         </VStack>
       </Box>
     </Box>
-    </>
   );
 }

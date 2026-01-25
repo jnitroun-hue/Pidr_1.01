@@ -269,9 +269,7 @@ export default function LoginPage() {
   };
 
   return (
-    <>
-      <VKAutoAuth />
-      <Box 
+    <Box 
         minH="100vh" 
         minW="100vw"
         bg="#0f172a"
@@ -609,6 +607,5 @@ export default function LoginPage() {
         </VStack>
       </Box>
     </Box>
-    </>
   );
 }
