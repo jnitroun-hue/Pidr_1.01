@@ -1,0 +1,13 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/cleanup-rooms",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/process-card-queue",
+      "schedule": "* * * * *"
+    }
+  ]
+}
+
