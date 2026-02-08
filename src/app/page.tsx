@@ -654,6 +654,22 @@ function HomeWithParams() {
               Для игры откройте бота в Telegram и нажмите кнопку "Играть".
             </p>
             
+            {/* Кнопки авторизации */}
+            <div className="flex flex-col gap-3 mb-4">
+              <a 
+                href="/auth/login"
+                className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-green-500/50 w-full"
+              >
+                🔐 Войти
+              </a>
+              <a 
+                href="/auth/register"
+                className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-purple-500/50 w-full"
+              >
+                ✨ Зарегистрироваться
+              </a>
+            </div>
+
             {/* Кнопка открыть в Telegram */}
             <a 
               href="https://t.me/NotPidrBot"
