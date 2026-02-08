@@ -338,7 +338,7 @@ export default function RegisterPage() {
                   <VStack gap={5}>
                     {/* Username */}
                     <Box w="full">
-                      <HStack mb={3} spacing={2}>
+                      <HStack mb={3} gap={2}>
                         <Box
                           p={2}
                           borderRadius="10px"
@@ -347,7 +347,7 @@ export default function RegisterPage() {
                         >
                           <FaUser color="#ffd700" size={14} />
                         </Box>
-                        <HStack spacing={2}>
+                        <HStack gap={2}>
                           <Text fontWeight="600" color="#e2e8f0" fontSize="sm" letterSpacing="0.5px">
                             Логин
                           </Text>
@@ -387,7 +387,7 @@ export default function RegisterPage() {
 
                     {/* Email */}
                     <Box w="full">
-                      <HStack mb={3} spacing={2}>
+                      <HStack mb={3} gap={2}>
                         <Box
                           p={2}
                           borderRadius="10px"
@@ -396,7 +396,7 @@ export default function RegisterPage() {
                         >
                           <FaEnvelope color="#ffd700" size={14} />
                         </Box>
-                        <HStack spacing={2}>
+                        <HStack gap={2}>
                           <Text fontWeight="600" color="#e2e8f0" fontSize="sm" letterSpacing="0.5px">
                             Email
                           </Text>
@@ -436,7 +436,7 @@ export default function RegisterPage() {
 
                     {/* Phone */}
                     <Box w="full">
-                      <HStack mb={3} spacing={2}>
+                      <HStack mb={3} gap={2}>
                         <Box
                           p={2}
                           borderRadius="10px"
@@ -445,7 +445,7 @@ export default function RegisterPage() {
                         >
                           <FaPhone color="#ffd700" size={14} />
                         </Box>
-                        <HStack spacing={2}>
+                        <HStack gap={2}>
                           <Text fontWeight="600" color="#e2e8f0" fontSize="sm" letterSpacing="0.5px">
                             Телефон <Text as="span" color="#94a3b8" fontSize="xs">(опционально)</Text>
                           </Text>
@@ -485,7 +485,7 @@ export default function RegisterPage() {
 
                     {/* Password */}
                     <Box w="full">
-                      <HStack mb={3} spacing={2}>
+                      <HStack mb={3} gap={2}>
                         <Box
                           p={2}
                           borderRadius="10px"
@@ -494,7 +494,7 @@ export default function RegisterPage() {
                         >
                           <FaLock color="#ffd700" size={14} />
                         </Box>
-                        <HStack spacing={2}>
+                        <HStack gap={2}>
                           <Text fontWeight="600" color="#e2e8f0" fontSize="sm" letterSpacing="0.5px">
                             Пароль
                           </Text>
@@ -556,7 +556,7 @@ export default function RegisterPage() {
 
                     {/* Confirm Password */}
                     <Box w="full">
-                      <HStack mb={3} spacing={2}>
+                      <HStack mb={3} gap={2}>
                         <Box
                           p={2}
                           borderRadius="10px"
@@ -565,7 +565,7 @@ export default function RegisterPage() {
                         >
                           <FaLock color="#ffd700" size={14} />
                         </Box>
-                        <HStack spacing={2}>
+                        <HStack gap={2}>
                           <Text fontWeight="600" color="#e2e8f0" fontSize="sm" letterSpacing="0.5px">
                             Подтвердить пароль
                           </Text>

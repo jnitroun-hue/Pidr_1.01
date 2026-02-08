@@ -302,7 +302,7 @@ export default function LoginPage() {
                   <VStack gap={6}>
                     {/* Identifier Input */}
                     <Box w="full">
-                      <HStack mb={3} spacing={2}>
+                      <HStack mb={3} gap={2}>
                         <Box
                           p={2}
                           borderRadius="10px"
@@ -344,7 +344,7 @@ export default function LoginPage() {
 
                     {/* Password Input */}
                     <Box w="full">
-                      <HStack mb={3} spacing={2}>
+                      <HStack mb={3} gap={2}>
                         <Box
                           p={2}
                           borderRadius="10px"
