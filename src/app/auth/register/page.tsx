@@ -257,19 +257,6 @@ export default function RegisterPage() {
           zIndex={2}
           maxH="90vh"
           overflowY="auto"
-          sx={{
-            '&::-webkit-scrollbar': {
-              width: '8px',
-            },
-            '&::-webkit-scrollbar-track': {
-              background: 'rgba(15, 23, 42, 0.5)',
-              borderRadius: '10px',
-            },
-            '&::-webkit-scrollbar-thumb': {
-              background: 'rgba(34, 197, 94, 0.5)',
-              borderRadius: '10px',
-            },
-          }}
         >
           <VStack gap={6}>
             {/* Header */}
