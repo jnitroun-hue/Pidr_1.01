@@ -85,7 +85,7 @@ export default function VKAutoAuth() {
       <VStack gap={6}>
         {isAuthenticating && (
           <>
-            <Spinner size="xl" color="#22c55e" thickness="4px" />
+            <Spinner size="xl" color="#22c55e" />
             <Text color="#e2e8f0" fontSize="lg" fontWeight="600">
               Авторизация через VK...
             </Text>
