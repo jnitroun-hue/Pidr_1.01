@@ -36,13 +36,9 @@ export default function TelegramInvitations({ onJoinRoom }: TelegramInvitationsP
   const loadInvitations = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('auth_token');
-      if (!token) return;
 
       const response = await fetch('/api/telegram-multiplayer?type=pending', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        credentials: 'include'
       });
 
       const data = await response.json();
@@ -59,15 +55,12 @@ export default function TelegramInvitations({ onJoinRoom }: TelegramInvitationsP
   // Принять приглашение
   const acceptInvitation = async (invitation: TelegramInvitation) => {
     try {
-      const token = localStorage.getItem('auth_token');
-      if (!token) return;
-
       const response = await fetch('/api/telegram-multiplayer', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
+        credentials: 'include',
         body: JSON.stringify({
           action: 'accept-invitation',
           invitationId: invitation.id
@@ -94,18 +87,15 @@ export default function TelegramInvitations({ onJoinRoom }: TelegramInvitationsP
   // Создать комнату для Telegram
   const createTelegramRoom = async () => {
     try {
-      const token = localStorage.getItem('auth_token');
-      if (!token) return;
-
       // Генерируем код комнаты
       const roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
       
       const response = await fetch('/api/telegram-multiplayer', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
+        credentials: 'include',
         body: JSON.stringify({
           action: 'create-telegram-room',
           roomCode,

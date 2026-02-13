@@ -248,18 +248,12 @@ export class HDWalletService {
   // Сохранение адреса в базу данных через новый API
   private async saveAddressToDatabase(walletAddress: HDWalletAddress): Promise<void> {
     try {
-      // Получаем токен авторизации
-      const token = this.getAuthToken();
-      if (!token) {
-        throw new Error('Нет токена авторизации');
-      }
-
       const response = await fetch('/api/wallet/hd-addresses', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           coin: walletAddress.coin
         }),
@@ -284,28 +278,19 @@ export class HDWalletService {
     }
   }
 
-  // Получение токена авторизации
-  private getAuthToken(): string | null {
-    if (typeof window === 'undefined') return null;
-    return localStorage.getItem('auth_token');
-  }
+  // Токен авторизации теперь в cookies, не используем localStorage
 
   // Получение адреса пользователя для монеты
   async getUserAddress(userId: string, coin: string): Promise<HDWalletAddress | null> {
     try {
-      // Получаем токен авторизации
-      const token = this.getAuthToken();
-      if (!token) {
-        console.warn('⚠️ Нет токена авторизации, генерируем адрес локально');
-        return await this.generateUserAddress(userId, coin);
-      }
+      // Токен авторизации теперь в cookies, проверка происходит на сервере
 
       const response = await fetch('/api/wallet/hd-addresses', {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
-        }
+        },
+        credentials: 'include'
       });
 
       if (!response.ok) {
@@ -342,19 +327,13 @@ export class HDWalletService {
   // Получение всех адресов пользователя
   async getAllUserAddresses(userId: string): Promise<HDWalletAddress[]> {
     try {
-      // Получаем токен авторизации
-      const token = this.getAuthToken();
-      if (!token) {
-        console.warn('⚠️ Нет токена авторизации для получения всех адресов');
-        return [];
-      }
-
+      // Токен авторизации теперь в cookies, проверка происходит на сервере
       const response = await fetch('/api/wallet/hd-addresses', {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
-        }
+        },
+        credentials: 'include'
       });
 
       if (!response.ok) {

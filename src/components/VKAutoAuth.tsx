@@ -20,15 +20,30 @@ export default function VKAutoAuth() {
       return;
     }
 
-    // Проверяем, авторизован ли пользователь уже
-    const existingToken = localStorage.getItem('auth_token');
-    if (existingToken) {
-      console.log('✅ Пользователь уже авторизован');
-      return;
-    }
+    // Проверяем сессию через API (без localStorage)
+    const checkSession = async () => {
+      try {
+        const response = await fetch('/api/auth', {
+          method: 'GET',
+          credentials: 'include'
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.user) {
+            console.log('✅ Пользователь уже авторизован');
+            return;
+          }
+        }
+      } catch (error) {
+        // Игнорируем ошибки
+      }
+      // Если нет сессии - запускаем авторизацию
+      handleVKAuth();
+    };
+    
+    checkSession();
 
-    // Автоматически авторизуемся через VK
-    handleVKAuth();
+    // Авторизация будет запущена в checkSession
   }, []);
 
   const handleVKAuth = async () => {

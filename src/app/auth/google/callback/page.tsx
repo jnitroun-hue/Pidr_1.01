@@ -42,14 +42,14 @@ function GoogleCallbackContent() {
         const data = await response.json();
 
         if (data.success) {
-          localStorage.setItem('auth_token', data.token);
-          localStorage.setItem('user', JSON.stringify(data.user));
-          
+          // Токен сохраняется в cookies сервером, не используем localStorage
           setStatus('success');
           setMessage(data.message || 'Успешная авторизация!');
           
-          // Проверяем реферальный код
-          const pendingReferral = localStorage.getItem('pending_referral_code');
+          // Проверяем реферальный код из cookies
+          const cookies = document.cookie.split(';');
+          const pendingReferralCookie = cookies.find(c => c.trim().startsWith('pending_referral_code='));
+          const pendingReferral = pendingReferralCookie ? pendingReferralCookie.split('=')[1] : null;
           if (pendingReferral) {
             await handlePendingReferral(pendingReferral, data.token);
           }
@@ -86,7 +86,8 @@ function GoogleCallbackContent() {
       });
 
       if (response.ok) {
-        localStorage.removeItem('pending_referral_code');
+        // Удаляем реферальный код из cookies
+        document.cookie = 'pending_referral_code=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
       }
     } catch (error) {
       console.error('Error processing pending referral:', error);

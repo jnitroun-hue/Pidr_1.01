@@ -31,6 +31,7 @@ function HomeWithParams() {
   const [showMainMenu, setShowMainMenu] = useState(false);
   const [error, setError] = useState<string>('');
   const [isBrowser, setIsBrowser] = useState(false); // ✅ НОВОЕ: Определяем браузер vs mini app
+  const [checkingAuth, setCheckingAuth] = useState(false); // ✅ Проверка авторизации в браузере
   const [retryCount, setRetryCount] = useState(0); // ✅ НОВОЕ: Счетчик попыток
   const initialized = useRef(false); // ✅ useRef - НЕ СБРАСЫВАЕТСЯ при рендере
   const { user: telegramUser, isReady } = useTelegram();
@@ -64,8 +65,9 @@ function HomeWithParams() {
     
     if (!isMiniApp) {
       console.log('🌐 Обнаружен браузер - проверяем авторизацию');
+      setCheckingAuth(true);
       
-      // Проверяем, есть ли токен авторизации
+      // Проверяем сессию через API (без localStorage)
       const checkAuth = async () => {
         try {
           const sessionResponse = await fetch('/api/auth', {
@@ -93,6 +95,7 @@ function HomeWithParams() {
               };
               
               setUser(existingUser);
+              setCheckingAuth(false);
               initialized.current = true;
               setTimeout(() => {
                 setLoading(false);
@@ -107,6 +110,7 @@ function HomeWithParams() {
         
         // Если нет авторизации - показываем страницу входа/регистрации
         console.log('📝 Нет активной сессии - показываем страницу входа/регистрации');
+        setCheckingAuth(false);
         setIsBrowser(true);
         setLoading(false);
         initialized.current = true;
@@ -117,10 +121,11 @@ function HomeWithParams() {
     }
     
     // ✅ ПРОВЕРКА ПЕРВОГО ВХОДА - ПЕРЕНАПРАВЛЕНИЕ НА WELCOME
-    const isFirstVisit = typeof window !== 'undefined' && !localStorage.getItem('pidr_visited');
+    // Используем cookies вместо localStorage
+    const isFirstVisit = typeof window !== 'undefined' && !document.cookie.includes('pidr_visited=true');
     if (isFirstVisit) {
       console.log('👋 Первый визит - перенаправление на welcome');
-      localStorage.setItem('pidr_visited', 'true');
+      document.cookie = 'pidr_visited=true; path=/; max-age=31536000'; // 1 год
       router.push('/welcome');
       return;
     }
@@ -451,8 +456,8 @@ function HomeWithParams() {
     }
   };
 
-  // Показываем экран загрузки с картами
-  if (loading) {
+  // Показываем экран загрузки с картами (пока идет загрузка ИЛИ проверка авторизации)
+  if (loading || checkingAuth) {
     return (
       <CardLoadingScreen 
         language={language}
@@ -674,66 +679,17 @@ function HomeWithParams() {
     );
   }
 
-  // ✅ БРАУЗЕРНАЯ ВЕРСИЯ - ПОКАЗЫВАЕМ РЕГИСТРАЦИЮ
-  if (isBrowser) {
+  // ✅ БРАУЗЕРНАЯ ВЕРСИЯ - РЕДИРЕКТ НА ВХОД (если нет пользователя)
+  if (isBrowser && !user && !checkingAuth) {
+    // Редирект на страницу входа
+    if (typeof window !== 'undefined') {
+      router.push('/auth/login');
+    }
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900 flex items-center justify-center p-4">
-        <div className="text-center max-w-md mx-auto">
-          {/* Логотип */}
-          <div className="mb-8">
-            <div className="w-24 h-24 mx-auto bg-gradient-to-br from-purple-500 via-pink-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-2xl border border-white/20 mb-4">
-              <div className="text-4xl font-black text-white">P</div>
-            </div>
-            <h1 className="text-4xl font-black bg-gradient-to-r from-purple-400 via-pink-400 to-indigo-400 bg-clip-text text-transparent">
-              P.I.D.R.
-            </h1>
-            <p className="text-xl text-gray-300 mt-2">Game</p>
-          </div>
-
-          {/* Информация */}
-          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 mb-6">
-            <h2 className="text-xl font-bold text-white mb-4">🎮 Играй в Telegram!</h2>
-            <p className="text-gray-300 mb-4">
-              P.I.D.R. - это карточная игра, доступная как Telegram Mini App.
-            </p>
-            <p className="text-gray-400 text-sm mb-6">
-              Для игры откройте бота в Telegram и нажмите кнопку "Играть".
-            </p>
-            
-            {/* Кнопки авторизации */}
-            <div className="flex flex-col gap-3 mb-4">
-              <a 
-                href="/auth/login"
-                className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-green-500/50 w-full"
-              >
-                🔐 Войти
-              </a>
-              <a 
-                href="/auth/register"
-                className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-purple-500/50 w-full"
-              >
-                ✨ Зарегистрироваться
-              </a>
-            </div>
-
-            {/* Кнопка открыть в Telegram */}
-            <a 
-              href="https://t.me/NotPidrBot"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-blue-500/50 w-full"
-            >
-              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.161c-.18 1.897-.962 6.502-1.359 8.627-.168.9-.5 1.201-.82 1.23-.697.064-1.226-.461-1.901-.903-1.056-.692-1.653-1.123-2.678-1.799-1.185-.781-.417-1.21.258-1.911.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.139-5.062 3.345-.479.329-.913.489-1.302.481-.428-.009-1.252-.242-1.865-.442-.752-.244-1.349-.374-1.297-.789.027-.216.324-.437.893-.663 3.498-1.524 5.831-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635.099-.002.321.023.465.141.121.099.154.232.17.325.015.093.034.305.019.471z"/>
-              </svg>
-              Открыть в Telegram
-            </a>
-          </div>
-
-          {/* QR код или инструкции */}
-          <div className="text-gray-400 text-sm">
-            <p>Или найдите бота: <span className="text-purple-400 font-mono">@NotPidrBot</span></p>
-          </div>
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-4xl mb-4">⏳</div>
+          <p className="text-gray-300">Перенаправление...</p>
         </div>
       </div>
     );
