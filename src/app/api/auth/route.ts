@@ -52,8 +52,9 @@ export async function GET(req: NextRequest) {
     let userId: string;
     let telegramIdFromToken: string | null = null;
     let deviceFingerprintFromToken: string | null = null;
+    let payload: any;
     try {
-      const payload = jwt.verify(token, JWT_SECRET) as any;
+      payload = jwt.verify(token, JWT_SECRET) as any;
       userId = payload.userId;
       telegramIdFromToken = payload.telegramId || null;
       deviceFingerprintFromToken = payload.deviceFingerprint || null;
@@ -66,13 +67,15 @@ export async function GET(req: NextRequest) {
       }, { status: 401 });
     }
 
-    // ✅ ПРОВЕРКА БЕЗОПАСНОСТИ: x-telegram-id header
+    // ✅ ПРОВЕРКА БЕЗОПАСНОСТИ: x-telegram-id header (только для Telegram авторизации)
+    // Для локальной авторизации (логин/пароль) этот header не требуется
     const telegramIdHeader = req.headers.get('x-telegram-id');
+    const authMethod = payload?.authMethod || 'telegram';
     
-    // ✅ ИСПРАВЛЕНО: Если header отсутствует - просто возвращаем 401 (не авторизован)
-    // Это позволяет клиенту корректно обработать ситуацию и переавторизоваться
-    if (!telegramIdHeader) {
-      console.log('⚠️ x-telegram-id header отсутствует, возвращаем 401');
+    // Если это Telegram авторизация - проверяем header
+    // Если это локальная авторизация - пропускаем проверку header
+    if (authMethod === 'telegram' && !telegramIdHeader) {
+      console.log('⚠️ x-telegram-id header отсутствует для Telegram авторизации, возвращаем 401');
       return NextResponse.json({ 
         success: false, 
         message: 'Требуется авторизация через Telegram' 
@@ -80,30 +83,82 @@ export async function GET(req: NextRequest) {
     }
 
     // ✅ ИСПРАВЛЕНО: userId из токена может быть как id из БД, так и telegram_id
-    // Сначала пробуем найти по id, если не найдено - ищем по telegram_id
+    // Для локальной авторизации проверяем только по id
+    // Для Telegram авторизации проверяем по telegram_id и header
     let userForCheck: any = null;
     let userCheckError: any = null;
     
-    // Пробуем найти по id (если userId - это числовой id из БД)
-    if (!isNaN(Number(userId))) {
+    if (authMethod === 'local') {
+      // Для локальной авторизации - просто находим пользователя по id
       const { data, error } = await supabase
         .from('_pidr_users')
-        .select('id, telegram_id')
+        .select('id, telegram_id, auth_method')
         .eq('id', parseInt(userId))
+        .eq('auth_method', 'local')
         .single();
       userForCheck = data;
       userCheckError = error;
-    }
-    
-    // Если не найдено по id, ищем по telegram_id
-    if (!userForCheck) {
-      const { data, error } = await supabase
-        .from('_pidr_users')
-        .select('id, telegram_id')
-        .eq('telegram_id', userId)
-        .single();
-      userForCheck = data;
-      userCheckError = error;
+    } else {
+      // Для Telegram авторизации - проверяем по id или telegram_id
+      // Пробуем найти по id (если userId - это числовой id из БД)
+      if (!isNaN(Number(userId))) {
+        const { data, error } = await supabase
+          .from('_pidr_users')
+          .select('id, telegram_id')
+          .eq('id', parseInt(userId))
+          .single();
+        userForCheck = data;
+        userCheckError = error;
+      }
+      
+      // Если не найдено по id, ищем по telegram_id
+      if (!userForCheck) {
+        const { data, error } = await supabase
+          .from('_pidr_users')
+          .select('id, telegram_id')
+          .eq('telegram_id', userId)
+          .single();
+        userForCheck = data;
+        userCheckError = error;
+      }
+
+      // ✅ КРИТИЧНО: Для Telegram авторизации проверяем что telegram_id из БД совпадает с header
+      if (userForCheck && telegramIdHeader) {
+        const dbTelegramId = String(userForCheck.telegram_id || '');
+        const headerTelegramId = String(telegramIdHeader);
+        
+        if (dbTelegramId !== headerTelegramId) {
+          console.error('🚨 КРИТИЧЕСКАЯ ОШИБКА БЕЗОПАСНОСТИ: x-telegram-id не совпадает с токеном!', {
+            userId,
+            dbTelegramId,
+            headerTelegramId,
+            tokenTelegramId: telegramIdFromToken,
+            action: 'БЛОКИРУЕМ ДОСТУП И УДАЛЯЕМ НЕВЕРНЫЙ ТОКЕН'
+          });
+          
+          // ✅ УДАЛЯЕМ НЕВЕРНЫЙ ТОКЕН ИЗ COOKIE
+          const errorResponse = NextResponse.json({ 
+            success: false, 
+            message: 'Несоответствие токена и Telegram ID. Доступ запрещен. Пожалуйста, перезайдите.' 
+          }, { status: 403 });
+          
+          // Удаляем неверный токен
+          errorResponse.cookies.set('auth_token', '', {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'none',
+            path: '/',
+            maxAge: 0
+          });
+          
+          return errorResponse;
+        }
+        
+        console.log('✅ Безопасность: x-telegram-id совпадает с токеном', {
+          userId,
+          telegramId: dbTelegramId
+        });
+      }
     }
 
     if (userCheckError || !userForCheck) {
@@ -113,42 +168,6 @@ export async function GET(req: NextRequest) {
         message: 'Пользователь не найден' 
       }, { status: 404 });
     }
-
-    // ✅ КРИТИЧНО: Проверяем что telegram_id из БД совпадает с header
-    const dbTelegramId = String(userForCheck.telegram_id || '');
-    const headerTelegramId = String(telegramIdHeader);
-    
-    if (dbTelegramId !== headerTelegramId) {
-      console.error('🚨 КРИТИЧЕСКАЯ ОШИБКА БЕЗОПАСНОСТИ: x-telegram-id не совпадает с токеном!', {
-        userId,
-        dbTelegramId,
-        headerTelegramId,
-        tokenTelegramId: telegramIdFromToken,
-        action: 'БЛОКИРУЕМ ДОСТУП И УДАЛЯЕМ НЕВЕРНЫЙ ТОКЕН'
-      });
-      
-      // ✅ УДАЛЯЕМ НЕВЕРНЫЙ ТОКЕН ИЗ COOKIE
-      const errorResponse = NextResponse.json({ 
-        success: false, 
-        message: 'Несоответствие токена и Telegram ID. Доступ запрещен. Пожалуйста, перезайдите.' 
-      }, { status: 403 });
-      
-      // Удаляем неверный токен
-      errorResponse.cookies.set('auth_token', '', {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'none',
-        path: '/',
-        maxAge: 0
-      });
-      
-      return errorResponse;
-    }
-    
-    console.log('✅ Безопасность: x-telegram-id совпадает с токеном', {
-      userId,
-      telegramId: dbTelegramId
-    });
 
     // ✅ ПРОВЕРКА УСТРОЙСТВА: Проверяем device fingerprint (мягкая проверка)
     // ⚠️ ВАЖНО: Не блокируем если fingerprint отсутствует - это нормально для разных браузеров

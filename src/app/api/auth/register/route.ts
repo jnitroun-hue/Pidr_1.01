@@ -174,12 +174,23 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Пользователь успешно зарегистрирован:', username);
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       message: 'Регистрация успешна',
       user: userData,
       token
     });
+
+    // Устанавливаем cookie с токеном
+    response.cookies.set('auth_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 30 * 24 * 60 * 60, // 30 дней
+      path: '/'
+    });
+
+    return response;
 
   } catch (error) {
     console.error('❌ Ошибка регистрации:', error);
