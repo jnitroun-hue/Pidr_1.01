@@ -2,11 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Box, Button, Input, VStack, Text, Alert, Flex, HStack } from '@chakra-ui/react';
-import { FaEye, FaEyeSlash, FaTelegram, FaVk } from 'react-icons/fa';
-import Link from 'next/link';
+import { motion } from 'framer-motion';
+import { LogIn, Eye, EyeOff, Mail, Lock, User, Phone } from 'lucide-react';
 import { isVKMiniApp, loginWithVKMiniApp } from '@/lib/auth/vk-bridge';
-import VKAutoAuth from '@/components/VKAutoAuth';
+import Link from 'next/link';
 
 export default function LoginPage() {
   const [credentials, setCredentials] = useState({ 
@@ -51,6 +50,7 @@ export default function LoginPage() {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(loginData)
       });
 
@@ -66,7 +66,7 @@ export default function LoginPage() {
         }));
 
         setTimeout(() => {
-          window.location.href = '/';
+          router.push('/');
         }, 500);
       } else {
         setError(data.message || 'Ошибка входа');
@@ -96,6 +96,7 @@ export default function LoginPage() {
         const response = await fetch('/api/auth', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({
             type: 'telegram',
             id: user.id,
@@ -119,7 +120,7 @@ export default function LoginPage() {
           }));
 
           setTimeout(() => {
-            window.location.href = '/';
+            router.push('/');
           }, 500);
         } else {
           setError(data.message || 'Ошибка входа');
@@ -152,7 +153,7 @@ export default function LoginPage() {
         }));
 
         setTimeout(() => {
-          window.location.href = '/';
+          router.push('/');
         }, 500);
       } else {
         setError(result.message || 'Ошибка входа');
@@ -165,211 +166,305 @@ export default function LoginPage() {
   };
 
   return (
-    <>
-      <VKAutoAuth />
-      <Box 
-        minH="100vh"
-        display="flex"
-        alignItems="center"
-        justifyContent="center"
-        bg="#0f172a"
-        p={4}
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)',
+      padding: '20px',
+      paddingTop: '80px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }}>
+      <motion.div
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        style={{
+          width: '100%',
+          maxWidth: '420px'
+        }}
       >
-        <Box 
-          w="full"
-          maxW="420px"
-          bg="rgba(15, 23, 42, 0.9)"
-          backdropFilter="blur(20px)"
-          border="1px solid rgba(255, 215, 0, 0.2)"
-          borderRadius="20px"
-          p={8}
-          boxShadow="0 20px 60px rgba(0, 0, 0, 0.5)"
-        >
-          <VStack gap={6}>
-            {/* Header */}
-            <VStack gap={2}>
-              <Text 
-                fontSize="3xl" 
-                fontWeight="900" 
-                color="#ffd700"
-                letterSpacing="2px"
-              >
-                P.I.D.R.
-              </Text>
-              <Text color="#94a3b8" fontSize="md">
-                Вход в аккаунт
-              </Text>
-            </VStack>
+        <div style={{
+          background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
+          border: '2px solid rgba(99, 102, 241, 0.3)',
+          borderRadius: '20px',
+          padding: '32px',
+          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)'
+        }}>
+          {/* Header */}
+          <motion.div
+            initial={{ y: -10, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            style={{ textAlign: 'center', marginBottom: '32px' }}
+          >
+            <div style={{ fontSize: '48px', marginBottom: '12px' }}>🔐</div>
+            <h1 style={{
+              fontSize: '32px',
+              fontWeight: '900',
+              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              marginBottom: '8px'
+            }}>
+              Вход
+            </h1>
+            <p style={{ color: '#94a3b8', fontSize: '14px' }}>
+              Войдите в свой аккаунт
+            </p>
+          </motion.div>
 
-            {/* Error */}
-            {error && (
-              <Alert.Root status="error" w="full" borderRadius="12px">
-                <Alert.Content 
-                  p={3} 
-                  bg="rgba(239, 68, 68, 0.1)" 
-                  border="1px solid rgba(239, 68, 68, 0.3)" 
-                  color="#fca5a5"
-                  borderRadius="12px"
-                >
-                  {error}
-                </Alert.Content>
-              </Alert.Root>
-            )}
+          {/* Error */}
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              style={{
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                borderRadius: '12px',
+                padding: '12px',
+                marginBottom: '20px',
+                color: '#fca5a5',
+                fontSize: '14px'
+              }}
+            >
+              {error}
+            </motion.div>
+          )}
 
-            {/* Login Form */}
-            <Box w="full">
-              <form onSubmit={handleLogin}>
-                <VStack gap={4}>
-                  <Box w="full">
-                    <Text mb={2} color="#e2e8f0" fontSize="sm" fontWeight="500">
-                      Логин, Email или Телефон
-                    </Text>
-                    <Input
-                      type="text"
-                      value={credentials.identifier}
-                      onChange={(e) => setCredentials({ ...credentials, identifier: e.target.value })}
-                      placeholder="Введите логин, email или телефон"
-                      bg="rgba(30, 41, 59, 0.5)"
-                      border="1px solid rgba(255, 215, 0, 0.2)"
-                      borderRadius="12px"
-                      color="#ffffff"
-                      h="48px"
-                      _placeholder={{ color: '#64748b' }}
-                      _hover={{ borderColor: 'rgba(255, 215, 0, 0.4)' }}
-                      _focus={{ 
-                        borderColor: 'rgba(255, 215, 0, 0.6)',
-                        boxShadow: '0 0 0 3px rgba(255, 215, 0, 0.1)'
-                      }}
-                    />
-                  </Box>
+          {/* Login Form */}
+          <form onSubmit={handleLogin}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{
+                  display: 'block',
+                  color: '#e2e8f0',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  marginBottom: '8px'
+                }}>
+                  Логин, Email или Телефон
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <User style={{
+                    position: 'absolute',
+                    left: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    color: '#64748b',
+                    width: '18px',
+                    height: '18px'
+                  }} />
+                  <input
+                    type="text"
+                    value={credentials.identifier}
+                    onChange={(e) => setCredentials({ ...credentials, identifier: e.target.value })}
+                    placeholder="Введите логин, email или телефон"
+                    style={{
+                      width: '100%',
+                      background: 'rgba(30, 41, 59, 0.5)',
+                      border: '1px solid rgba(99, 102, 241, 0.3)',
+                      borderRadius: '12px',
+                      padding: '12px 12px 12px 40px',
+                      color: '#ffffff',
+                      fontSize: '14px',
+                      outline: 'none',
+                      transition: 'all 0.3s ease'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = 'rgba(99, 102, 241, 0.6)'}
+                    onBlur={(e) => e.target.style.borderColor = 'rgba(99, 102, 241, 0.3)'}
+                  />
+                </div>
+              </div>
 
-                  <Box w="full">
-                    <Text mb={2} color="#e2e8f0" fontSize="sm" fontWeight="500">
-                      Пароль
-                    </Text>
-                    <Box position="relative">
-                      <Input
-                        type={showPassword ? 'text' : 'password'}
-                        value={credentials.password}
-                        onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
-                        placeholder="Введите пароль"
-                        bg="rgba(30, 41, 59, 0.5)"
-                        border="1px solid rgba(255, 215, 0, 0.2)"
-                        borderRadius="12px"
-                        color="#ffffff"
-                        h="48px"
-                        pr="3.5rem"
-                        _placeholder={{ color: '#64748b' }}
-                        _hover={{ borderColor: 'rgba(255, 215, 0, 0.4)' }}
-                        _focus={{ 
-                          borderColor: 'rgba(255, 215, 0, 0.6)',
-                          boxShadow: '0 0 0 3px rgba(255, 215, 0, 0.1)'
-                        }}
-                      />
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        position="absolute"
-                        right={2}
-                        top="50%"
-                        transform="translateY(-50%)"
-                        onClick={() => setShowPassword(!showPassword)}
-                        color="#94a3b8"
-                        _hover={{ color: '#ffd700' }}
-                      >
-                        {showPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
-                      </Button>
-                    </Box>
-                  </Box>
-
-                  <Button
-                    type="submit"
-                    w="full"
-                    h="50px"
-                    bg="#ffd700"
-                    color="#0f172a"
-                    fontWeight="700"
-                    fontSize="md"
-                    borderRadius="12px"
-                    disabled={loading}
-                    _hover={{ bg: '#ffed4e', transform: 'translateY(-2px)' }}
-                    _active={{ transform: 'translateY(0)' }}
-                    _disabled={{ opacity: 0.6, cursor: 'not-allowed' }}
+              <div>
+                <label style={{
+                  display: 'block',
+                  color: '#e2e8f0',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  marginBottom: '8px'
+                }}>
+                  Пароль
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <Lock style={{
+                    position: 'absolute',
+                    left: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    color: '#64748b',
+                    width: '18px',
+                    height: '18px'
+                  }} />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={credentials.password}
+                    onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
+                    placeholder="Введите пароль"
+                    style={{
+                      width: '100%',
+                      background: 'rgba(30, 41, 59, 0.5)',
+                      border: '1px solid rgba(99, 102, 241, 0.3)',
+                      borderRadius: '12px',
+                      padding: '12px 40px 12px 40px',
+                      color: '#ffffff',
+                      fontSize: '14px',
+                      outline: 'none',
+                      transition: 'all 0.3s ease'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = 'rgba(99, 102, 241, 0.6)'}
+                    onBlur={(e) => e.target.style.borderColor = 'rgba(99, 102, 241, 0.3)'}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{
+                      position: 'absolute',
+                      right: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      color: '#94a3b8',
+                      cursor: 'pointer',
+                      padding: '4px'
+                    }}
                   >
-                    {loading ? 'Вход...' : 'Войти'}
-                  </Button>
-                </VStack>
-              </form>
-            </Box>
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
 
-            {/* Divider */}
-            <Flex align="center" w="full" gap={3}>
-              <Box flex="1" h="1px" bg="rgba(255, 215, 0, 0.2)" />
-              <Text color="#64748b" fontSize="sm">или</Text>
-              <Box flex="1" h="1px" bg="rgba(255, 215, 0, 0.2)" />
-            </Flex>
-
-            {/* Social Buttons */}
-            <VStack gap={3} w="full">
-              <Button
-                onClick={handleTelegramLogin}
-                w="full"
-                h="50px"
-                bg="rgba(0, 136, 204, 0.2)"
-                border="1px solid rgba(0, 136, 204, 0.4)"
-                color="#ffffff"
-                fontWeight="600"
-                borderRadius="12px"
+              <motion.button
+                type="submit"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 disabled={loading}
-                _hover={{ 
-                  bg: 'rgba(0, 136, 204, 0.3)',
-                  borderColor: 'rgba(0, 136, 204, 0.6)'
+                style={{
+                  width: '100%',
+                  background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                  border: 'none',
+                  borderRadius: '12px',
+                  padding: '14px',
+                  color: '#ffffff',
+                  fontSize: '16px',
+                  fontWeight: '700',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  opacity: loading ? 0.6 : 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  marginTop: '8px'
                 }}
-                _disabled={{ opacity: 0.5 }}
               >
-                <FaTelegram style={{ marginRight: 10 }} size={18} />
-                Telegram
-              </Button>
+                <LogIn size={20} />
+                {loading ? 'Вход...' : 'Войти'}
+              </motion.button>
+            </div>
+          </form>
 
-              <Button
-                onClick={handleVKLogin}
-                w="full"
-                h="50px"
-                bg={isVKMiniApp() ? "rgba(74, 118, 168, 0.2)" : "rgba(74, 118, 168, 0.1)"}
-                border="1px solid"
-                borderColor={isVKMiniApp() ? "rgba(74, 118, 168, 0.4)" : "rgba(74, 118, 168, 0.2)"}
-                color="#ffffff"
-                fontWeight="600"
-                borderRadius="12px"
-                disabled={loading || !isVKMiniApp()}
-                _hover={isVKMiniApp() ? { 
-                  bg: 'rgba(74, 118, 168, 0.3)',
-                  borderColor: 'rgba(74, 118, 168, 0.6)'
-                } : {}}
-                _disabled={{ opacity: 0.3 }}
-              >
-                <FaVk style={{ marginRight: 10 }} size={18} />
-                VKontakte
-              </Button>
-            </VStack>
+          {/* Divider */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            margin: '24px 0'
+          }}>
+            <div style={{ flex: 1, height: '1px', background: 'rgba(99, 102, 241, 0.2)' }} />
+            <span style={{ color: '#64748b', fontSize: '12px' }}>или</span>
+            <div style={{ flex: 1, height: '1px', background: 'rgba(99, 102, 241, 0.2)' }} />
+          </div>
 
-            {/* Register Link */}
-            <Text textAlign="center" color="#94a3b8" fontSize="sm">
-              Нет аккаунта?{' '}
-              <Link href="/auth/register">
-                <Text 
-                  as="span" 
-                  color="#ffd700" 
-                  fontWeight="600"
-                  _hover={{ textDecoration: 'underline' }}
-                >
-                  Зарегистрироваться
-                </Text>
-              </Link>
-            </Text>
-          </VStack>
-        </Box>
-      </Box>
-    </>
+          {/* Social Buttons */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleTelegramLogin}
+              disabled={loading}
+              style={{
+                width: '100%',
+                background: 'rgba(0, 136, 204, 0.2)',
+                border: '1px solid rgba(0, 136, 204, 0.4)',
+                borderRadius: '12px',
+                padding: '14px',
+                color: '#ffffff',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.5 : 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
+              }}
+            >
+              <span style={{ fontSize: '20px' }}>✈️</span>
+              Telegram
+            </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleVKLogin}
+              disabled={loading || !isVKMiniApp()}
+              style={{
+                width: '100%',
+                background: isVKMiniApp() ? 'rgba(74, 118, 168, 0.2)' : 'rgba(74, 118, 168, 0.1)',
+                border: `1px solid ${isVKMiniApp() ? 'rgba(74, 118, 168, 0.4)' : 'rgba(74, 118, 168, 0.2)'}`,
+                borderRadius: '12px',
+                padding: '14px',
+                color: '#ffffff',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: loading || !isVKMiniApp() ? 'not-allowed' : 'pointer',
+                opacity: loading || !isVKMiniApp() ? 0.3 : 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
+              }}
+            >
+              <span style={{ fontSize: '20px' }}>🔵</span>
+              VKontakte
+            </motion.button>
+          </div>
+
+          {/* Register Link */}
+          <div style={{
+            textAlign: 'center',
+            marginTop: '24px',
+            color: '#94a3b8',
+            fontSize: '14px'
+          }}>
+            Нет аккаунта?{' '}
+            <Link href="/auth/register" style={{
+              color: '#6366f1',
+              fontWeight: '600',
+              textDecoration: 'none'
+            }}>
+              Зарегистрироваться
+            </Link>
+          </div>
+
+          {/* Back to Main Menu */}
+          <div style={{
+            textAlign: 'center',
+            marginTop: '16px'
+          }}>
+            <Link href="/" style={{
+              color: '#64748b',
+              fontSize: '12px',
+              textDecoration: 'none'
+            }}>
+              ← Вернуться в главное меню
+            </Link>
+          </div>
+        </div>
+      </motion.div>
+    </div>
   );
 }
+

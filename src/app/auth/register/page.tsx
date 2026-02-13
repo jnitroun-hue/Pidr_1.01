@@ -2,30 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Box, Button, Input, VStack, Text, Alert, Flex, HStack } from '@chakra-ui/react';
-import { FaEye, FaEyeSlash, FaTelegram, FaCheckCircle, FaVk } from 'react-icons/fa';
-import Link from 'next/link';
+import { motion } from 'framer-motion';
+import { UserPlus, Eye, EyeOff, Mail, Lock, User, Phone, CheckCircle } from 'lucide-react';
 import { isVKMiniApp, loginWithVKMiniApp } from '@/lib/auth/vk-bridge';
-import VKAutoAuth from '@/components/VKAutoAuth';
-
-interface FormData {
-  username: string;
-  email: string;
-  phone: string;
-  password: string;
-  confirmPassword: string;
-}
-
-interface FormValidation {
-  username: boolean;
-  email: boolean;
-  phone: boolean;
-  password: boolean;
-  confirmPassword: boolean;
-}
+import Link from 'next/link';
 
 export default function RegisterPage() {
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState({
     username: '',
     email: '',
     phone: '',
@@ -37,10 +20,10 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [validation, setValidation] = useState<FormValidation>({
+  const [validation, setValidation] = useState({
     username: false,
-    email: false,
-    phone: true,
+    email: true, // Email опциональный
+    phone: true, // Phone опциональный
     password: false,
     confirmPassword: false
   });
@@ -57,7 +40,7 @@ export default function RegisterPage() {
   useEffect(() => {
     setValidation({
       username: formData.username.length >= 3 && formData.username.length <= 32 && /^[a-zA-Z0-9_]+$/.test(formData.username),
-      email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email),
+      email: !formData.email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email),
       phone: !formData.phone || /^\+?[1-9]\d{1,14}$/.test(formData.phone),
       password: formData.password.length >= 6,
       confirmPassword: formData.password === formData.confirmPassword && formData.confirmPassword.length > 0
@@ -67,8 +50,18 @@ export default function RegisterPage() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validation.username || !validation.email || !validation.password || !validation.confirmPassword) {
+    if (!validation.username || !validation.password || !validation.confirmPassword) {
       setError('Исправьте ошибки в форме');
+      return;
+    }
+
+    if (formData.email && !validation.email) {
+      setError('Неверный формат email');
+      return;
+    }
+
+    if (formData.phone && !validation.phone) {
+      setError('Неверный формат телефона');
       return;
     }
 
@@ -78,15 +71,16 @@ export default function RegisterPage() {
     try {
       const registerData: Record<string, string> = {
         username: formData.username,
-        email: formData.email,
         password: formData.password
       };
 
+      if (formData.email) registerData.email = formData.email;
       if (formData.phone) registerData.phone = formData.phone;
 
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(registerData)
       });
 
@@ -102,7 +96,7 @@ export default function RegisterPage() {
         }));
 
         setTimeout(() => {
-          window.location.href = '/';
+          router.push('/');
         }, 500);
       } else {
         setError(data.message || 'Ошибка регистрации');
@@ -131,6 +125,7 @@ export default function RegisterPage() {
         const response = await fetch('/api/auth', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({
             type: 'telegram',
             id: user.id,
@@ -149,7 +144,7 @@ export default function RegisterPage() {
           localStorage.setItem('user', JSON.stringify(data.user));
           
           setTimeout(() => {
-            window.location.href = '/';
+            router.push('/');
           }, 500);
         } else {
           setError(data.message || 'Ошибка регистрации');
@@ -182,7 +177,7 @@ export default function RegisterPage() {
         }));
 
         setTimeout(() => {
-          window.location.href = '/';
+          router.push('/');
         }, 500);
       } else {
         setError(result.message || 'Ошибка регистрации');
@@ -194,345 +189,474 @@ export default function RegisterPage() {
     }
   };
 
-  const getInputBorderColor = (field: keyof FormValidation, hasValue: boolean) => {
-    if (!hasValue) return 'rgba(255, 215, 0, 0.2)';
+  const getInputBorderColor = (field: keyof typeof validation, hasValue: boolean) => {
+    if (!hasValue) return 'rgba(99, 102, 241, 0.3)';
     return validation[field] ? 'rgba(34, 197, 94, 0.4)' : 'rgba(239, 68, 68, 0.4)';
   };
 
   return (
-    <>
-      <VKAutoAuth />
-      <Box 
-        minH="100vh"
-        display="flex"
-        alignItems="center"
-        justifyContent="center"
-        bg="#0f172a"
-        p={4}
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)',
+      padding: '20px',
+      paddingTop: '80px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }}>
+      <motion.div
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        style={{
+          width: '100%',
+          maxWidth: '420px',
+          maxHeight: '90vh',
+          overflowY: 'auto'
+        }}
       >
-        <Box 
-          w="full"
-          maxW="420px"
-          bg="rgba(15, 23, 42, 0.9)"
-          backdropFilter="blur(20px)"
-          border="1px solid rgba(255, 215, 0, 0.2)"
-          borderRadius="20px"
-          p={8}
-          boxShadow="0 20px 60px rgba(0, 0, 0, 0.5)"
-          maxH="90vh"
-          overflowY="auto"
-        >
-          <VStack gap={5}>
-            {/* Header */}
-            <VStack gap={2}>
-              <Text 
-                fontSize="3xl" 
-                fontWeight="900" 
-                color="#ffd700"
-                letterSpacing="2px"
-              >
-                P.I.D.R.
-              </Text>
-              <Text color="#94a3b8" fontSize="md">
-                Создание аккаунта
-              </Text>
-            </VStack>
+        <div style={{
+          background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
+          border: '2px solid rgba(99, 102, 241, 0.3)',
+          borderRadius: '20px',
+          padding: '32px',
+          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)'
+        }}>
+          {/* Header */}
+          <motion.div
+            initial={{ y: -10, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            style={{ textAlign: 'center', marginBottom: '32px' }}
+          >
+            <div style={{ fontSize: '48px', marginBottom: '12px' }}>✨</div>
+            <h1 style={{
+              fontSize: '32px',
+              fontWeight: '900',
+              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              marginBottom: '8px'
+            }}>
+              Регистрация
+            </h1>
+            <p style={{ color: '#94a3b8', fontSize: '14px' }}>
+              Создайте новый аккаунт
+            </p>
+          </motion.div>
 
-            {/* Error */}
-            {error && (
-              <Alert.Root status="error" w="full" borderRadius="12px">
-                <Alert.Content 
-                  p={3} 
-                  bg="rgba(239, 68, 68, 0.1)" 
-                  border="1px solid rgba(239, 68, 68, 0.3)" 
-                  color="#fca5a5"
-                  borderRadius="12px"
-                >
-                  {error}
-                </Alert.Content>
-              </Alert.Root>
-            )}
+          {/* Error */}
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              style={{
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                borderRadius: '12px',
+                padding: '12px',
+                marginBottom: '20px',
+                color: '#fca5a5',
+                fontSize: '14px'
+              }}
+            >
+              {error}
+            </motion.div>
+          )}
 
-            {/* Registration Form */}
-            <Box w="full">
-              <form onSubmit={handleRegister}>
-                <VStack gap={3}>
-                  <Box w="full">
-                    <HStack mb={2} gap={2}>
-                      <Text color="#e2e8f0" fontSize="sm" fontWeight="500">
-                        Логин
-                      </Text>
-                      {formData.username && (
-                        validation.username ? 
-                          <FaCheckCircle color="#22c55e" size={12} /> : 
-                          <Text as="span" color="#ef4444" fontSize="xs">(3-32 символа)</Text>
-                      )}
-                    </HStack>
-                    <Input
-                      type="text"
-                      value={formData.username}
-                      onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                      placeholder="username123"
-                      bg="rgba(30, 41, 59, 0.5)"
-                      border="1px solid"
-                      borderColor={getInputBorderColor('username', !!formData.username)}
-                      borderRadius="12px"
-                      color="#ffffff"
-                      h="44px"
-                      _placeholder={{ color: '#64748b' }}
-                      _hover={{ borderColor: validation.username ? 'rgba(34, 197, 94, 0.6)' : 'rgba(239, 68, 68, 0.6)' }}
-                      _focus={{ 
-                        borderColor: validation.username ? 'rgba(34, 197, 94, 0.8)' : 'rgba(239, 68, 68, 0.8)',
-                        boxShadow: validation.username ? '0 0 0 3px rgba(34, 197, 94, 0.1)' : '0 0 0 3px rgba(239, 68, 68, 0.1)'
-                      }}
-                    />
-                  </Box>
+          {/* Registration Form */}
+          <form onSubmit={handleRegister}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <label style={{
+                    color: '#e2e8f0',
+                    fontSize: '14px',
+                    fontWeight: '500'
+                  }}>
+                    Логин *
+                  </label>
+                  {formData.username && (
+                    validation.username ? 
+                      <CheckCircle size={14} color="#22c55e" /> : 
+                      <span style={{ color: '#ef4444', fontSize: '12px' }}>(3-32 символа)</span>
+                  )}
+                </div>
+                <div style={{ position: 'relative' }}>
+                  <User style={{
+                    position: 'absolute',
+                    left: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    color: '#64748b',
+                    width: '18px',
+                    height: '18px'
+                  }} />
+                  <input
+                    type="text"
+                    value={formData.username}
+                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                    placeholder="username123"
+                    style={{
+                      width: '100%',
+                      background: 'rgba(30, 41, 59, 0.5)',
+                      border: `1px solid ${getInputBorderColor('username', !!formData.username)}`,
+                      borderRadius: '12px',
+                      padding: '12px 12px 12px 40px',
+                      color: '#ffffff',
+                      fontSize: '14px',
+                      outline: 'none',
+                      transition: 'all 0.3s ease'
+                    }}
+                  />
+                </div>
+              </div>
 
-                  <Box w="full">
-                    <HStack mb={2} gap={2}>
-                      <Text color="#e2e8f0" fontSize="sm" fontWeight="500">
-                        Email
-                      </Text>
-                      {formData.email && (
-                        validation.email ? 
-                          <FaCheckCircle color="#22c55e" size={12} /> : 
-                          <Text as="span" color="#ef4444" fontSize="xs">(неверный формат)</Text>
-                      )}
-                    </HStack>
-                    <Input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      placeholder="example@email.com"
-                      bg="rgba(30, 41, 59, 0.5)"
-                      border="1px solid"
-                      borderColor={getInputBorderColor('email', !!formData.email)}
-                      borderRadius="12px"
-                      color="#ffffff"
-                      h="44px"
-                      _placeholder={{ color: '#64748b' }}
-                      _hover={{ borderColor: validation.email ? 'rgba(34, 197, 94, 0.6)' : 'rgba(239, 68, 68, 0.6)' }}
-                      _focus={{ 
-                        borderColor: validation.email ? 'rgba(34, 197, 94, 0.8)' : 'rgba(239, 68, 68, 0.8)',
-                        boxShadow: validation.email ? '0 0 0 3px rgba(34, 197, 94, 0.1)' : '0 0 0 3px rgba(239, 68, 68, 0.1)'
-                      }}
-                    />
-                  </Box>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <label style={{
+                    color: '#e2e8f0',
+                    fontSize: '14px',
+                    fontWeight: '500'
+                  }}>
+                    Email <span style={{ color: '#64748b', fontSize: '12px' }}>(опционально)</span>
+                  </label>
+                  {formData.email && (
+                    validation.email ? 
+                      <CheckCircle size={14} color="#22c55e" /> : 
+                      <span style={{ color: '#ef4444', fontSize: '12px' }}>(неверный формат)</span>
+                  )}
+                </div>
+                <div style={{ position: 'relative' }}>
+                  <Mail style={{
+                    position: 'absolute',
+                    left: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    color: '#64748b',
+                    width: '18px',
+                    height: '18px'
+                  }} />
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="example@email.com"
+                    style={{
+                      width: '100%',
+                      background: 'rgba(30, 41, 59, 0.5)',
+                      border: `1px solid ${getInputBorderColor('email', !!formData.email)}`,
+                      borderRadius: '12px',
+                      padding: '12px 12px 12px 40px',
+                      color: '#ffffff',
+                      fontSize: '14px',
+                      outline: 'none',
+                      transition: 'all 0.3s ease'
+                    }}
+                  />
+                </div>
+              </div>
 
-                  <Box w="full">
-                    <HStack mb={2} gap={2}>
-                      <Text color="#e2e8f0" fontSize="sm" fontWeight="500">
-                        Телефон <Text as="span" color="#64748b" fontSize="xs">(опционально)</Text>
-                      </Text>
-                      {formData.phone && (
-                        validation.phone ? 
-                          <FaCheckCircle color="#22c55e" size={12} /> : 
-                          <Text as="span" color="#ef4444" fontSize="xs">(неверный формат)</Text>
-                      )}
-                    </HStack>
-                    <Input
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      placeholder="+1234567890"
-                      bg="rgba(30, 41, 59, 0.5)"
-                      border="1px solid"
-                      borderColor={getInputBorderColor('phone', !!formData.phone)}
-                      borderRadius="12px"
-                      color="#ffffff"
-                      h="44px"
-                      _placeholder={{ color: '#64748b' }}
-                      _hover={{ borderColor: validation.phone ? 'rgba(34, 197, 94, 0.6)' : 'rgba(239, 68, 68, 0.6)' }}
-                      _focus={{ 
-                        borderColor: validation.phone ? 'rgba(34, 197, 94, 0.8)' : 'rgba(239, 68, 68, 0.8)',
-                        boxShadow: validation.phone ? '0 0 0 3px rgba(34, 197, 94, 0.1)' : '0 0 0 3px rgba(239, 68, 68, 0.1)'
-                      }}
-                    />
-                  </Box>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <label style={{
+                    color: '#e2e8f0',
+                    fontSize: '14px',
+                    fontWeight: '500'
+                  }}>
+                    Телефон <span style={{ color: '#64748b', fontSize: '12px' }}>(опционально)</span>
+                  </label>
+                  {formData.phone && (
+                    validation.phone ? 
+                      <CheckCircle size={14} color="#22c55e" /> : 
+                      <span style={{ color: '#ef4444', fontSize: '12px' }}>(неверный формат)</span>
+                  )}
+                </div>
+                <div style={{ position: 'relative' }}>
+                  <Phone style={{
+                    position: 'absolute',
+                    left: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    color: '#64748b',
+                    width: '18px',
+                    height: '18px'
+                  }} />
+                  <input
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="+1234567890"
+                    style={{
+                      width: '100%',
+                      background: 'rgba(30, 41, 59, 0.5)',
+                      border: `1px solid ${getInputBorderColor('phone', !!formData.phone)}`,
+                      borderRadius: '12px',
+                      padding: '12px 12px 12px 40px',
+                      color: '#ffffff',
+                      fontSize: '14px',
+                      outline: 'none',
+                      transition: 'all 0.3s ease'
+                    }}
+                  />
+                </div>
+              </div>
 
-                  <Box w="full">
-                    <HStack mb={2} gap={2}>
-                      <Text color="#e2e8f0" fontSize="sm" fontWeight="500">
-                        Пароль
-                      </Text>
-                      {formData.password && (
-                        validation.password ? 
-                          <FaCheckCircle color="#22c55e" size={12} /> : 
-                          <Text as="span" color="#ef4444" fontSize="xs">(мин. 6 символов)</Text>
-                      )}
-                    </HStack>
-                    <Box position="relative">
-                      <Input
-                        type={showPassword ? 'text' : 'password'}
-                        value={formData.password}
-                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        placeholder="Введите пароль"
-                        bg="rgba(30, 41, 59, 0.5)"
-                        border="1px solid"
-                        borderColor={getInputBorderColor('password', !!formData.password)}
-                        borderRadius="12px"
-                        color="#ffffff"
-                        h="44px"
-                        pr="3.5rem"
-                        _placeholder={{ color: '#64748b' }}
-                        _hover={{ borderColor: validation.password ? 'rgba(34, 197, 94, 0.6)' : 'rgba(239, 68, 68, 0.6)' }}
-                        _focus={{ 
-                          borderColor: validation.password ? 'rgba(34, 197, 94, 0.8)' : 'rgba(239, 68, 68, 0.8)',
-                          boxShadow: validation.password ? '0 0 0 3px rgba(34, 197, 94, 0.1)' : '0 0 0 3px rgba(239, 68, 68, 0.1)'
-                        }}
-                      />
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        position="absolute"
-                        right={2}
-                        top="50%"
-                        transform="translateY(-50%)"
-                        onClick={() => setShowPassword(!showPassword)}
-                        color="#94a3b8"
-                        _hover={{ color: '#ffd700' }}
-                      >
-                        {showPassword ? <FaEyeSlash size={16} /> : <FaEye size={16} />}
-                      </Button>
-                    </Box>
-                  </Box>
-
-                  <Box w="full">
-                    <HStack mb={2} gap={2}>
-                      <Text color="#e2e8f0" fontSize="sm" fontWeight="500">
-                        Подтвердить пароль
-                      </Text>
-                      {formData.confirmPassword && (
-                        validation.confirmPassword ? 
-                          <FaCheckCircle color="#22c55e" size={12} /> : 
-                          <Text as="span" color="#ef4444" fontSize="xs">(не совпадают)</Text>
-                      )}
-                    </HStack>
-                    <Box position="relative">
-                      <Input
-                        type={showConfirmPassword ? 'text' : 'password'}
-                        value={formData.confirmPassword}
-                        onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                        placeholder="Повторите пароль"
-                        bg="rgba(30, 41, 59, 0.5)"
-                        border="1px solid"
-                        borderColor={getInputBorderColor('confirmPassword', !!formData.confirmPassword)}
-                        borderRadius="12px"
-                        color="#ffffff"
-                        h="44px"
-                        pr="3.5rem"
-                        _placeholder={{ color: '#64748b' }}
-                        _hover={{ borderColor: validation.confirmPassword ? 'rgba(34, 197, 94, 0.6)' : 'rgba(239, 68, 68, 0.6)' }}
-                        _focus={{ 
-                          borderColor: validation.confirmPassword ? 'rgba(34, 197, 94, 0.8)' : 'rgba(239, 68, 68, 0.8)',
-                          boxShadow: validation.confirmPassword ? '0 0 0 3px rgba(34, 197, 94, 0.1)' : '0 0 0 3px rgba(239, 68, 68, 0.1)'
-                        }}
-                      />
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        position="absolute"
-                        right={2}
-                        top="50%"
-                        transform="translateY(-50%)"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        color="#94a3b8"
-                        _hover={{ color: '#ffd700' }}
-                      >
-                        {showConfirmPassword ? <FaEyeSlash size={16} /> : <FaEye size={16} />}
-                      </Button>
-                    </Box>
-                  </Box>
-
-                  <Button
-                    type="submit"
-                    w="full"
-                    h="50px"
-                    bg="#ffd700"
-                    color="#0f172a"
-                    fontWeight="700"
-                    fontSize="md"
-                    borderRadius="12px"
-                    disabled={loading || !validation.username || !validation.email || !validation.password || !validation.confirmPassword}
-                    mt={2}
-                    _hover={{ bg: '#ffed4e', transform: 'translateY(-2px)' }}
-                    _active={{ transform: 'translateY(0)' }}
-                    _disabled={{ opacity: 0.6, cursor: 'not-allowed' }}
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <label style={{
+                    color: '#e2e8f0',
+                    fontSize: '14px',
+                    fontWeight: '500'
+                  }}>
+                    Пароль *
+                  </label>
+                  {formData.password && (
+                    validation.password ? 
+                      <CheckCircle size={14} color="#22c55e" /> : 
+                      <span style={{ color: '#ef4444', fontSize: '12px' }}>(мин. 6 символов)</span>
+                  )}
+                </div>
+                <div style={{ position: 'relative' }}>
+                  <Lock style={{
+                    position: 'absolute',
+                    left: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    color: '#64748b',
+                    width: '18px',
+                    height: '18px'
+                  }} />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    placeholder="Введите пароль"
+                    style={{
+                      width: '100%',
+                      background: 'rgba(30, 41, 59, 0.5)',
+                      border: `1px solid ${getInputBorderColor('password', !!formData.password)}`,
+                      borderRadius: '12px',
+                      padding: '12px 40px 12px 40px',
+                      color: '#ffffff',
+                      fontSize: '14px',
+                      outline: 'none',
+                      transition: 'all 0.3s ease'
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{
+                      position: 'absolute',
+                      right: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      color: '#94a3b8',
+                      cursor: 'pointer',
+                      padding: '4px'
+                    }}
                   >
-                    {loading ? 'Создание...' : 'Создать аккаунт'}
-                  </Button>
-                </VStack>
-              </form>
-            </Box>
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
 
-            {/* Divider */}
-            <Flex align="center" w="full" gap={3}>
-              <Box flex="1" h="1px" bg="rgba(255, 215, 0, 0.2)" />
-              <Text color="#64748b" fontSize="sm">или</Text>
-              <Box flex="1" h="1px" bg="rgba(255, 215, 0, 0.2)" />
-            </Flex>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <label style={{
+                    color: '#e2e8f0',
+                    fontSize: '14px',
+                    fontWeight: '500'
+                  }}>
+                    Подтвердить пароль *
+                  </label>
+                  {formData.confirmPassword && (
+                    validation.confirmPassword ? 
+                      <CheckCircle size={14} color="#22c55e" /> : 
+                      <span style={{ color: '#ef4444', fontSize: '12px' }}>(не совпадают)</span>
+                  )}
+                </div>
+                <div style={{ position: 'relative' }}>
+                  <Lock style={{
+                    position: 'absolute',
+                    left: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    color: '#64748b',
+                    width: '18px',
+                    height: '18px'
+                  }} />
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={formData.confirmPassword}
+                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                    placeholder="Повторите пароль"
+                    style={{
+                      width: '100%',
+                      background: 'rgba(30, 41, 59, 0.5)',
+                      border: `1px solid ${getInputBorderColor('confirmPassword', !!formData.confirmPassword)}`,
+                      borderRadius: '12px',
+                      padding: '12px 40px 12px 40px',
+                      color: '#ffffff',
+                      fontSize: '14px',
+                      outline: 'none',
+                      transition: 'all 0.3s ease'
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    style={{
+                      position: 'absolute',
+                      right: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      color: '#94a3b8',
+                      cursor: 'pointer',
+                      padding: '4px'
+                    }}
+                  >
+                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
 
-            {/* Social Buttons */}
-            <VStack gap={3} w="full">
-              <Button
-                onClick={handleTelegramRegister}
-                w="full"
-                h="50px"
-                bg="rgba(0, 136, 204, 0.2)"
-                border="1px solid rgba(0, 136, 204, 0.4)"
-                color="#ffffff"
-                fontWeight="600"
-                borderRadius="12px"
-                disabled={loading}
-                _hover={{ 
-                  bg: 'rgba(0, 136, 204, 0.3)',
-                  borderColor: 'rgba(0, 136, 204, 0.6)'
+              <motion.button
+                type="submit"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                disabled={loading || !validation.username || !validation.password || !validation.confirmPassword}
+                style={{
+                  width: '100%',
+                  background: validation.username && validation.password && validation.confirmPassword
+                    ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
+                    : 'rgba(99, 102, 241, 0.3)',
+                  border: 'none',
+                  borderRadius: '12px',
+                  padding: '14px',
+                  color: '#ffffff',
+                  fontSize: '16px',
+                  fontWeight: '700',
+                  cursor: loading || !validation.username || !validation.password || !validation.confirmPassword
+                    ? 'not-allowed' : 'pointer',
+                  opacity: loading ? 0.6 : 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  marginTop: '8px'
                 }}
-                _disabled={{ opacity: 0.5 }}
               >
-                <FaTelegram style={{ marginRight: 10 }} size={18} />
-                Telegram
-              </Button>
+                <UserPlus size={20} />
+                {loading ? 'Создание...' : 'Создать аккаунт'}
+              </motion.button>
+            </div>
+          </form>
 
-              <Button
-                onClick={handleVKRegister}
-                w="full"
-                h="50px"
-                bg={isVKMiniApp() ? "rgba(74, 118, 168, 0.2)" : "rgba(74, 118, 168, 0.1)"}
-                border="1px solid"
-                borderColor={isVKMiniApp() ? "rgba(74, 118, 168, 0.4)" : "rgba(74, 118, 168, 0.2)"}
-                color="#ffffff"
-                fontWeight="600"
-                borderRadius="12px"
-                disabled={loading || !isVKMiniApp()}
-                _hover={isVKMiniApp() ? { 
-                  bg: 'rgba(74, 118, 168, 0.3)',
-                  borderColor: 'rgba(74, 118, 168, 0.6)'
-                } : {}}
-                _disabled={{ opacity: 0.3 }}
-              >
-                <FaVk style={{ marginRight: 10 }} size={18} />
-                VKontakte
-              </Button>
-            </VStack>
+          {/* Divider */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            margin: '24px 0'
+          }}>
+            <div style={{ flex: 1, height: '1px', background: 'rgba(99, 102, 241, 0.2)' }} />
+            <span style={{ color: '#64748b', fontSize: '12px' }}>или</span>
+            <div style={{ flex: 1, height: '1px', background: 'rgba(99, 102, 241, 0.2)' }} />
+          </div>
 
-            {/* Login Link */}
-            <Text textAlign="center" color="#94a3b8" fontSize="sm">
-              Уже есть аккаунт?{' '}
-              <Link href="/auth/login">
-                <Text 
-                  as="span" 
-                  color="#ffd700" 
-                  fontWeight="600"
-                  _hover={{ textDecoration: 'underline' }}
-                >
-                  Войти
-                </Text>
-              </Link>
-            </Text>
-          </VStack>
-        </Box>
-      </Box>
-    </>
+          {/* Social Buttons */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleTelegramRegister}
+              disabled={loading}
+              style={{
+                width: '100%',
+                background: 'rgba(0, 136, 204, 0.2)',
+                border: '1px solid rgba(0, 136, 204, 0.4)',
+                borderRadius: '12px',
+                padding: '14px',
+                color: '#ffffff',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.5 : 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
+              }}
+            >
+              <span style={{ fontSize: '20px' }}>✈️</span>
+              Telegram
+            </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleVKRegister}
+              disabled={loading || !isVKMiniApp()}
+              style={{
+                width: '100%',
+                background: isVKMiniApp() ? 'rgba(74, 118, 168, 0.2)' : 'rgba(74, 118, 168, 0.1)',
+                border: `1px solid ${isVKMiniApp() ? 'rgba(74, 118, 168, 0.4)' : 'rgba(74, 118, 168, 0.2)'}`,
+                borderRadius: '12px',
+                padding: '14px',
+                color: '#ffffff',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: loading || !isVKMiniApp() ? 'not-allowed' : 'pointer',
+                opacity: loading || !isVKMiniApp() ? 0.3 : 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
+              }}
+            >
+              <span style={{ fontSize: '20px' }}>🔵</span>
+              VKontakte
+            </motion.button>
+          </div>
+
+          {/* Login Link */}
+          <div style={{
+            textAlign: 'center',
+            marginTop: '24px',
+            color: '#94a3b8',
+            fontSize: '14px'
+          }}>
+            Уже есть аккаунт?{' '}
+            <Link href="/auth/login" style={{
+              color: '#6366f1',
+              fontWeight: '600',
+              textDecoration: 'none'
+            }}>
+              Войти
+            </Link>
+          </div>
+
+          {/* Back to Main Menu */}
+          <div style={{
+            textAlign: 'center',
+            marginTop: '16px'
+          }}>
+            <Link href="/" style={{
+              color: '#64748b',
+              fontSize: '12px',
+              textDecoration: 'none'
+            }}>
+              ← Вернуться в главное меню
+            </Link>
+          </div>
+        </div>
+      </motion.div>
+    </div>
   );
 }
+

@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Play, User, Book, Store, Users, Image } from 'lucide-react'
+import { Play, User, Book, Store, Users, Image, LogIn, UserPlus } from 'lucide-react'
 import { useGameStore } from '../store/gameStore'
 import { useTelegram } from '../hooks/useTelegram'
 import { useWalletStore } from '../store/walletStore'
@@ -75,7 +75,10 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
     }
   }
 
-  const menuButtons = [
+  // Проверяем, авторизован ли пользователь
+  const isAuthenticated = !!user;
+
+  const menuButtons = isAuthenticated ? [
     {
       icon: <Play size={32} />,
       emoji: '🎮',
@@ -120,6 +123,34 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
       onClick: () => {
         hapticFeedback('medium');
         router.push('/profile');
+      }
+    },
+    {
+      icon: <Book size={32} />,
+      emoji: '📖',
+      label: t.mainMenu.rules,
+      onClick: () => {
+        hapticFeedback('medium');
+        router.push('/rules');
+      }
+    }
+  ] : [
+    {
+      icon: <LogIn size={32} />,
+      emoji: '🔐',
+      label: 'Вход',
+      onClick: () => {
+        hapticFeedback('medium');
+        router.push('/auth/login');
+      }
+    },
+    {
+      icon: <UserPlus size={32} />,
+      emoji: '✨',
+      label: 'Регистрация',
+      onClick: () => {
+        hapticFeedback('medium');
+        router.push('/auth/register');
       }
     },
     {
