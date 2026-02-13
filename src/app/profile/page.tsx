@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Trophy, Medal, Users, User, Star, Award, Target, Camera, Upload, Wallet, Palette, Sparkles, Gift, Frame } from 'lucide-react';
+import { ArrowLeft, Trophy, Medal, Users, User, Star, Award, Target, Camera, Upload, Wallet, Palette, Sparkles, Gift, Frame, LogOut } from 'lucide-react';
 import GameWallet from '../../components/GameWallet';
 import { useLanguage } from '../../components/LanguageSwitcher';
 import { useTranslations } from '../../lib/i18n/translations';
@@ -998,6 +998,28 @@ export default function ProfilePage() {
 
   // Данные пользователя загружаются через useEffect выше
   
+  const handleLogout = async () => {
+    try {
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+      });
+
+      if (response.ok) {
+        // Перенаправляем на страницу входа
+        router.push('/auth/login');
+      } else {
+        console.error('Ошибка выхода');
+        // Все равно перенаправляем
+        router.push('/auth/login');
+      }
+    } catch (error) {
+      console.error('Ошибка выхода:', error);
+      // Все равно перенаправляем
+      router.push('/auth/login');
+    }
+  };
+
   const handleBalanceUpdate = (newBalance: number) => {
     // Обновляем баланс в состоянии пользователя (БД обновляется через API)
     if (user) {
@@ -2211,6 +2233,44 @@ export default function ProfilePage() {
           </motion.div>
         </div>
       )}
+
+      {/* Кнопка выхода внизу страницы */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.5 }}
+        style={{
+          position: 'fixed',
+          bottom: '20px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 1000
+        }}
+      >
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={handleLogout}
+          style={{
+            background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.9) 0%, rgba(220, 38, 38, 0.9) 100%)',
+            border: '2px solid rgba(239, 68, 68, 0.4)',
+            borderRadius: '12px',
+            padding: '12px 24px',
+            color: '#ffffff',
+            fontSize: '14px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)',
+            transition: 'all 0.3s ease'
+          }}
+        >
+          <LogOut size={18} />
+          Выйти из профиля
+        </motion.button>
+      </motion.div>
     </div>
   );
 } 
