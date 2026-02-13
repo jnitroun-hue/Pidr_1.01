@@ -53,9 +53,9 @@ export async function GET(request: NextRequest) {
     // Подсчитываем по статусам
     const stats = {
       total: activeUsers.length,
-      online: onlineDetails.filter(u => (u.online_status || u.status) === 'online').length,
-      in_room: onlineDetails.filter(u => (u.online_status || u.status) === 'in_room').length,
-      playing: onlineDetails.filter(u => (u.online_status || u.status) === 'playing').length,
+      online: onlineDetails.filter((u: any) => (u.online_status || u.status) === 'online').length,
+      in_room: onlineDetails.filter((u: any) => (u.online_status || u.status) === 'in_room').length,
+      playing: onlineDetails.filter((u: any) => (u.online_status || u.status) === 'playing').length,
       cached: true, // Указываем что данные из кеша
       timestamp: new Date().toISOString()
     };
@@ -79,9 +79,9 @@ export async function GET(request: NextRequest) {
 
       const stats = {
         total: users?.length || 0,
-        online: users?.filter(u => (u.online_status || u.status) === 'online').length || 0,
-        in_room: users?.filter(u => (u.online_status || u.status) === 'in_room').length || 0,
-        playing: users?.filter(u => (u.online_status || u.status) === 'playing').length || 0,
+        online: users?.filter((u: any) => (u.online_status || u.status) === 'online').length || 0,
+        in_room: users?.filter((u: any) => (u.online_status || u.status) === 'in_room').length || 0,
+        playing: users?.filter((u: any) => (u.online_status || u.status) === 'playing').length || 0,
         cached: false,
         timestamp: new Date().toISOString()
       };
