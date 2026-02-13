@@ -63,10 +63,56 @@ function HomeWithParams() {
     console.log('📱 Telegram Mini App:', isMiniApp);
     
     if (!isMiniApp) {
-      console.log('🌐 Обнаружен браузер - показываем регистрацию');
-      setIsBrowser(true);
-      setLoading(false);
-      initialized.current = true;
+      console.log('🌐 Обнаружен браузер - проверяем авторизацию');
+      
+      // Проверяем, есть ли токен авторизации
+      const checkAuth = async () => {
+        try {
+          const sessionResponse = await fetch('/api/auth', {
+            method: 'GET',
+            credentials: 'include'
+          });
+
+          if (sessionResponse.ok) {
+            const sessionData = await sessionResponse.json();
+            
+            if (sessionData.success && sessionData.user) {
+              console.log('✅ Найдена активная сессия в браузере:', sessionData.user.username);
+              
+              const existingUser: User = {
+                id: sessionData.user.id,
+                username: sessionData.user.username,
+                firstName: sessionData.user.firstName || sessionData.user.username,
+                lastName: sessionData.user.lastName || '',
+                telegramId: sessionData.user.telegramId || '',
+                coins: sessionData.user.coins || 1000,
+                rating: sessionData.user.rating || 0,
+                gamesPlayed: sessionData.user.gamesPlayed || 0,
+                gamesWon: sessionData.user.gamesWon || 0,
+                photoUrl: sessionData.user.photoUrl || ''
+              };
+              
+              setUser(existingUser);
+              initialized.current = true;
+              setTimeout(() => {
+                setLoading(false);
+                setTimeout(() => setShowMainMenu(true), 100);
+              }, 500);
+              return;
+            }
+          }
+        } catch (error) {
+          console.error('❌ Ошибка проверки авторизации:', error);
+        }
+        
+        // Если нет авторизации - показываем страницу входа/регистрации
+        console.log('📝 Нет активной сессии - показываем страницу входа/регистрации');
+        setIsBrowser(true);
+        setLoading(false);
+        initialized.current = true;
+      };
+      
+      checkAuth();
       return;
     }
     
