@@ -3,11 +3,32 @@ import { supabase } from '@/lib/supabase';
 import { getUserIdFromRequest } from '@/lib/auth-utils';
 import { Redis } from '@upstash/redis';
 
-// Инициализация Redis для кеширования онлайн статуса
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL || process.env.REDIS_URL || '',
-  token: process.env.UPSTASH_REDIS_REST_TOKEN || process.env.REDIS_TOKEN || '',
-});
+// Безопасная инициализация Redis (только для Upstash REST API)
+let redis: Redis | null = null;
+try {
+  // Vercel Upstash использует KV_REST_API_URL и KV_REST_API_TOKEN
+  // Также поддерживаем старые имена для совместимости
+  const redisUrl = process.env.KV_REST_API_URL || 
+                   process.env.UPSTASH_REDIS_REST_URL || 
+                   process.env.REDIS_URL || '';
+  const redisToken = process.env.KV_REST_API_TOKEN || 
+                     process.env.UPSTASH_REDIS_REST_TOKEN || 
+                     process.env.REDIS_TOKEN || '';
+  
+  // Upstash Redis требует URL начинающийся с https://
+  if (redisUrl && redisUrl.startsWith('https://') && redisToken) {
+    redis = new Redis({
+      url: redisUrl,
+      token: redisToken,
+    });
+    console.log('✅ Redis инициализирован (Upstash REST API)');
+  } else if (redisUrl && !redisUrl.startsWith('https://')) {
+    console.warn('⚠️ Redis URL не поддерживается для Upstash клиента. Используйте KV_REST_API_URL (https://) из Vercel.');
+  }
+} catch (error) {
+  console.warn('⚠️ Не удалось инициализировать Redis:', error);
+  redis = null;
+}
 
 // Ключи Redis для онлайн статуса
 const REDIS_KEYS = {
@@ -39,25 +60,30 @@ export async function POST(request: NextRequest) {
     const nowTimestamp = Date.now();
 
     // ✅ ОБНОВЛЯЕМ REDIS КЕШ (быстро)
-    try {
-      // Устанавливаем онлайн статус в Redis (TTL 5 минут)
-      await redis.set(REDIS_KEYS.userOnline(userId), '1', { ex: 300 }); // 5 минут
-      await redis.set(REDIS_KEYS.userLastSeen(userId), nowTimestamp.toString(), { ex: 300 });
-      
-      // Добавляем в SET онлайн пользователей
-      await redis.sadd(REDIS_KEYS.onlineUsers(), userId);
-      await redis.expire(REDIS_KEYS.onlineUsers(), 300); // Обновляем TTL для SET
-      
-      console.log(`💓 [HEARTBEAT REDIS] Обновлен кеш для ${userId}`);
-    } catch (redisError) {
-      console.error('⚠️ [HEARTBEAT] Ошибка Redis (не критично):', redisError);
-      // Продолжаем даже если Redis недоступен
+    if (redis) {
+      try {
+        // Устанавливаем онлайн статус в Redis (TTL 5 минут)
+        await redis.set(REDIS_KEYS.userOnline(userId), '1', { ex: 300 }); // 5 минут
+        await redis.set(REDIS_KEYS.userLastSeen(userId), nowTimestamp.toString(), { ex: 300 });
+        
+        // Добавляем в SET онлайн пользователей
+        await redis.sadd(REDIS_KEYS.onlineUsers(), userId);
+        await redis.expire(REDIS_KEYS.onlineUsers(), 300); // Обновляем TTL для SET
+        
+        console.log(`💓 [HEARTBEAT REDIS] Обновлен кеш для ${userId}`);
+      } catch (redisError) {
+        console.error('⚠️ [HEARTBEAT] Ошибка Redis (не критично):', redisError);
+        // Продолжаем даже если Redis недоступен
+      }
     }
 
     // ✅ ОБНОВЛЯЕМ БД (реже, для персистентности)
     // Обновляем БД только раз в 30 секунд для каждого пользователя
-    const lastDbUpdate = await redis.get(`user:${userId}:last_db_update`);
-    const shouldUpdateDb = !lastDbUpdate || (Date.now() - parseInt(lastDbUpdate as string)) > 30000;
+    let shouldUpdateDb = true;
+    if (redis) {
+      const lastDbUpdate = await redis.get(`user:${userId}:last_db_update`);
+      shouldUpdateDb = !lastDbUpdate || (Date.now() - parseInt(lastDbUpdate as string)) > 30000;
+    }
 
     if (shouldUpdateDb) {
       const updateData: any = {
@@ -80,20 +106,26 @@ export async function POST(request: NextRequest) {
         console.error('❌ [HEARTBEAT] Ошибка обновления онлайн статуса:', error);
         // Не возвращаем ошибку, т.к. Redis уже обновлен
       } else {
-        // Сохраняем время последнего обновления БД
-        await redis.set(`user:${userId}:last_db_update`, Date.now().toString(), { ex: 60 });
+        // Сохраняем время последнего обновления БД (если Redis доступен)
+        if (redis) {
+          await redis.set(`user:${userId}:last_db_update`, Date.now().toString(), { ex: 60 });
+        }
       }
     }
 
     // ✅ ОБНОВЛЯЕМ is_online В _pidr_room_players И last_activity КОМНАТЫ (с Redis кешем)
     try {
-      // Проверяем Redis кеш для комнаты
-      const cachedRoomId = await redis.get(`user:${userId}:room`);
-      
       let roomId: string | null = null;
-      if (cachedRoomId) {
-        roomId = cachedRoomId as string;
-      } else {
+      
+      if (redis) {
+        // Проверяем Redis кеш для комнаты
+        const cachedRoomId = await redis.get(`user:${userId}:room`);
+        if (cachedRoomId) {
+          roomId = cachedRoomId as string;
+        }
+      }
+      
+      if (!roomId) {
         // Если нет в кеше, запрашиваем из БД
         const { data: playerRoom } = await supabase
           .from('_pidr_room_players')
@@ -103,8 +135,8 @@ export async function POST(request: NextRequest) {
         
         roomId = playerRoom?.room_id?.toString() || null;
         
-        // Сохраняем в кеш
-        if (roomId) {
+        // Сохраняем в кеш если Redis доступен
+        if (roomId && redis) {
           await redis.set(`user:${userId}:room`, roomId, { ex: 300 });
         }
       }
@@ -112,17 +144,41 @@ export async function POST(request: NextRequest) {
       if (roomId) {
         const now = new Date().toISOString();
         
-        // Обновляем Redis кеш для комнаты
-        await redis.set(`room:${roomId}:last_activity`, nowTimestamp.toString(), { ex: 300 });
-        await redis.sadd(`room:${roomId}:online_players`, userId);
-        await redis.expire(`room:${roomId}:online_players`, 300);
-        
-        // Обновляем БД (реже)
-        const lastRoomDbUpdate = await redis.get(`room:${roomId}:last_db_update`);
-        const shouldUpdateRoomDb = !lastRoomDbUpdate || (Date.now() - parseInt(lastRoomDbUpdate as string)) > 30000;
-        
-        if (shouldUpdateRoomDb) {
-          // ✅ ИСПРАВЛЕНО: Обновляем is_online в _pidr_room_players
+        // Обновляем Redis кеш для комнаты (если доступен)
+        if (redis) {
+          await redis.set(`room:${roomId}:last_activity`, nowTimestamp.toString(), { ex: 300 });
+          await redis.sadd(`room:${roomId}:online_players`, userId);
+          await redis.expire(`room:${roomId}:online_players`, 300);
+          
+          // Обновляем БД (реже)
+          const lastRoomDbUpdate = await redis.get(`room:${roomId}:last_db_update`);
+          const shouldUpdateRoomDb = !lastRoomDbUpdate || (Date.now() - parseInt(lastRoomDbUpdate as string)) > 30000;
+          
+          if (shouldUpdateRoomDb) {
+            // ✅ ИСПРАВЛЕНО: Обновляем is_online в _pidr_room_players
+            await supabase
+              .from('_pidr_room_players')
+              .update({ 
+                is_online: true,
+                last_activity: now
+              })
+              .eq('user_id', userIdBigInt)
+              .eq('room_id', parseInt(roomId));
+            
+            // Обновляем last_activity комнаты
+            await supabase
+              .from('_pidr_rooms')
+              .update({ 
+                last_activity: now,
+                updated_at: now
+              })
+              .eq('id', parseInt(roomId));
+            
+            await redis.set(`room:${roomId}:last_db_update`, Date.now().toString(), { ex: 60 });
+            console.log(`✅ [HEARTBEAT] Обновлена активность комнаты ${roomId} и is_online для игрока`);
+          }
+        } else {
+          // Если Redis недоступен, обновляем БД напрямую
           await supabase
             .from('_pidr_room_players')
             .update({ 
@@ -132,7 +188,6 @@ export async function POST(request: NextRequest) {
             .eq('user_id', userIdBigInt)
             .eq('room_id', parseInt(roomId));
           
-          // Обновляем last_activity комнаты
           await supabase
             .from('_pidr_rooms')
             .update({ 
@@ -140,9 +195,6 @@ export async function POST(request: NextRequest) {
               updated_at: now
             })
             .eq('id', parseInt(roomId));
-          
-          await redis.set(`room:${roomId}:last_db_update`, Date.now().toString(), { ex: 60 });
-          console.log(`✅ [HEARTBEAT] Обновлена активность комнаты ${roomId} и is_online для игрока`);
         }
       }
     } catch (roomError) {

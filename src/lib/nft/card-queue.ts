@@ -6,8 +6,9 @@
 import { Redis } from '@upstash/redis';
 
 // Проверяем переменные окружения
-const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
-const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+// Vercel Upstash использует KV_REST_API_URL и KV_REST_API_TOKEN
+const redisUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+const redisToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 
 if (!redisUrl || !redisToken) {
   console.warn('⚠️ Redis credentials not found for card queue');

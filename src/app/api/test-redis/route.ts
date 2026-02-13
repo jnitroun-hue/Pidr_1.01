@@ -6,14 +6,16 @@ export async function GET(req: NextRequest) {
     console.log('🔍 Тестирование Redis подключения...');
 
     // Проверяем переменные окружения
-    const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
-    const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+    // Vercel Upstash использует KV_REST_API_URL и KV_REST_API_TOKEN
+    const redisUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+    const redisToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 
     console.log('📊 Redis переменные:', {
       hasUrl: !!redisUrl,
       hasToken: !!redisToken,
       urlStart: redisUrl?.substring(0, 30),
-      tokenStart: redisToken?.substring(0, 10)
+      tokenStart: redisToken?.substring(0, 10),
+      usingKV: !!process.env.KV_REST_API_URL
     });
 
     if (!redisUrl || !redisToken) {
@@ -21,8 +23,10 @@ export async function GET(req: NextRequest) {
         success: false,
         message: 'Redis переменные не настроены',
         details: {
-          UPSTASH_REDIS_REST_URL: !!redisUrl,
-          UPSTASH_REDIS_REST_TOKEN: !!redisToken
+          KV_REST_API_URL: !!process.env.KV_REST_API_URL,
+          KV_REST_API_TOKEN: !!process.env.KV_REST_API_TOKEN,
+          UPSTASH_REDIS_REST_URL: !!process.env.UPSTASH_REDIS_REST_URL,
+          UPSTASH_REDIS_REST_TOKEN: !!process.env.UPSTASH_REDIS_REST_TOKEN
         }
       }, { status: 400 });
     }
