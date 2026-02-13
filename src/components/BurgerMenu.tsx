@@ -1,9 +1,9 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Gamepad2, Users, Info, BookOpen, Coins, Settings, Wallet, Trophy, Store, User } from 'lucide-react'
+import { X, Gamepad2, Users, Info, BookOpen, Coins, Settings, Wallet, Trophy, Store, User, Shield } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface BurgerMenuProps {
   isOpen: boolean
@@ -14,6 +14,25 @@ interface BurgerMenuProps {
 
 export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuProps) {
   const router = useRouter()
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  // Проверка прав администратора
+  useEffect(() => {
+    if (user?.id) {
+      fetch('/api/admin/check', {
+        credentials: 'include'
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.isAdmin) {
+            setIsAdmin(true)
+          }
+        })
+        .catch(() => {
+          setIsAdmin(false)
+        })
+    }
+  }, [user?.id])
 
   // Левое меню - навигация
   const leftMenuItems = [
@@ -120,7 +139,18 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
         onClose()
       },
       gradient: 'linear-gradient(135deg, #64748b 0%, #475569 100%)'
-    }
+    },
+    // Админ-панель (только для админов)
+    ...(isAdmin ? [{
+      icon: <Shield size={24} />,
+      label: 'Админ Панель',
+      emoji: '🔐',
+      onClick: () => {
+        router.push('/admin')
+        onClose()
+      },
+      gradient: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
+    }] : [])
   ] : []
 
   const menuItems = side === 'left' ? leftMenuItems : rightMenuItems

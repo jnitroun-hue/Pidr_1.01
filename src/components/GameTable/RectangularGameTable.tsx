@@ -261,12 +261,17 @@ const RectangularGameTable: React.FC<RectangularGameTableProps> = ({
                   }}
                 >
                   {player.cards.slice(0, Math.min(3, player.cards.length)).map((_, cardIndex) => {
-                    // ✅ ИСПРАВЛЕНО: Для второй стадии - более профессиональное отображение
-                    const isStage2 = gameStage >= 2;
-                    // Во второй стадии уменьшаем перекрытие и убираем сильный поворот
-                    const overlap = isStage2 ? 6 : 10; // Меньше перекрытие во 2-й стадии
-                    const rotation = isStage2 ? (cardIndex - 1) * 2 : (cardIndex - 1) * 5; // Меньше поворот во 2-й стадии
-                    const verticalOffset = isStage2 ? cardIndex * 1 : 0; // Небольшое вертикальное смещение для глубины
+                    // ✅ ИСПРАВЛЕНО: Динамическое перекрытие - чем больше карт, тем ближе друг к другу
+                    const totalCards = player.cards.length;
+                    // Чем больше карт, тем меньше перекрытие (карты ближе друг к другу)
+                    // Формула: базовое перекрытие уменьшается с ростом количества карт
+                    const baseOverlap = 15; // Размер закрытой карты
+                    const minOverlap = 3; // Минимальное перекрытие (px)
+                    // Динамическое перекрытие: чем больше карт, тем меньше перекрытие
+                    const dynamicOverlap = totalCards > 1 
+                      ? Math.max(minOverlap, baseOverlap - (totalCards - 1) * 1.5) 
+                      : 0;
+                    const rotation = (cardIndex - 1) * 2; // Небольшой поворот для глубины
                     
                     return (
                       <div 
@@ -275,8 +280,8 @@ const RectangularGameTable: React.FC<RectangularGameTableProps> = ({
                         style={{
                           zIndex: cardIndex,
                           transform: cardsOnLeft 
-                            ? `translateX(${-cardIndex * overlap}px) translateY(${verticalOffset}px) rotate(${rotation}deg)`
-                            : `translateX(${cardIndex * overlap}px) translateY(${verticalOffset}px) rotate(${rotation}deg)`,
+                            ? `translateX(${-cardIndex * dynamicOverlap}px) rotate(${rotation}deg)`
+                            : `translateX(${cardIndex * dynamicOverlap}px) rotate(${rotation}deg)`,
                           transition: 'all 0.2s ease',
                         }}
                       >

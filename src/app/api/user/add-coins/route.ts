@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     // Получаем текущие данные пользователя (баланс и статистика)
     const { data: userData, error: fetchError } = await supabase
       .from('_pidr_users')
-      .select('coins, games_played, wins, losses')
+      .select('coins, games_played, wins, losses, total_games')
       .eq('telegram_id', userId)
       .single();
     
@@ -74,7 +74,8 @@ export async function POST(req: NextRequest) {
       
       if (updateStats.gamesPlayed) {
         updateData.games_played = (userData.games_played || 0) + 1;
-        console.log(`📊 [${traceId || 'NO_TRACE'}] Игр сыграно: ${userData.games_played || 0} → ${updateData.games_played}`);
+        updateData.total_games = (userData.total_games || 0) + 1; // ✅ ОБНОВЛЯЕМ total_games для обучения
+        console.log(`📊 [${traceId || 'NO_TRACE'}] Игр сыграно: ${userData.games_played || 0} → ${updateData.games_played}, total_games: ${userData.total_games || 0} → ${updateData.total_games}`);
       }
       if (updateStats.wins) {
         updateData.wins = (userData.wins || 0) + 1;
@@ -87,6 +88,7 @@ export async function POST(req: NextRequest) {
       
       console.log(`📊 [${traceId || 'NO_TRACE'}] [Add Coins] ИТОГОВЫЕ значения для записи:`, {
         games_played: updateData.games_played,
+        total_games: updateData.total_games,
         wins: updateData.wins,
         losses: updateData.losses
       });

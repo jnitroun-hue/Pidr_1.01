@@ -139,22 +139,36 @@ export function useTutorial(
     return [];
   }, []);
 
-  // Инициализация туториала для первой игры
+  // Инициализация туториала для обучающих игр (1, 2, 3)
   useEffect(() => {
+    console.log('🎓 [useTutorial] Проверка инициализации:', { 
+      isTutorialGame, 
+      tutorialGameNumber, 
+      enabled: tutorialConfig.enabled 
+    });
+    
     if (isTutorialGame && tutorialGameNumber && !tutorialConfig.enabled) {
+      console.log(`✅ [useTutorial] Инициализируем обучение для игры #${tutorialGameNumber}`);
       const steps = generateTutorialSteps(tutorialGameNumber);
+      console.log(`📚 [useTutorial] Сгенерировано шагов: ${steps.length}`);
+      
       setTutorialConfig({
         enabled: true,
         shownSteps: new Set(),
         steps
       });
+      
       // Показываем приветствие
       const firstStep = steps[0];
       if (firstStep) {
+        console.log(`🎯 [useTutorial] Показываем первый шаг: ${firstStep.id}`);
         setCurrentStep(firstStep);
         setIsTutorialPaused(true);
+      } else {
+        console.warn('⚠️ [useTutorial] Первый шаг не найден!');
       }
     } else if (!isTutorialGame && tutorialConfig.enabled) {
+      console.log('❌ [useTutorial] Отключаем обучение - это не обучающая игра');
       // Отключаем туториал если это не обучающая игра
       setTutorialConfig({
         enabled: false,

@@ -314,12 +314,18 @@ function GamePageContentComponent({
     isTutorialActive 
   } = useTutorial(gameStage, isTutorialGame, tutorialGameNumber, isUserTurn, currentPlayerId, userPlayerId, players, deck.length);
 
-  // ✅ Загружаем количество игр
+  // ✅ Загружаем количество игр ПЕРЕД началом игры
   useEffect(() => {
-    if (!user?.id || isMultiplayer) return;
+    if (!user?.id || isMultiplayer) {
+      // Если мультиплеер - отключаем обучение
+      setIsTutorialGame(false);
+      setTutorialGameNumber(null);
+      return;
+    }
 
     const loadGamesCount = async () => {
       try {
+        console.log('📊 [GamePageContent] Загружаем количество игр для обучения...');
         const response = await fetch('/api/user/bot-games', {
           method: 'GET',
           headers: {
@@ -338,11 +344,24 @@ function GamePageContentComponent({
             const isTutorial = gamesCount < 3;
             setIsTutorialGame(isTutorial);
             setTutorialGameNumber(isTutorial ? gamesCount + 1 : null);
-            console.log(`📊 [GamePageContent] Игр сыграно: ${gamesCount}, обучающая игра: ${isTutorial ? gamesCount + 1 : 'нет'}`);
+            console.log(`✅ [GamePageContent] Игр сыграно: ${gamesCount}, обучающая игра: ${isTutorial ? gamesCount + 1 : 'нет'}`);
+          } else {
+            console.warn('⚠️ [GamePageContent] Не удалось получить данные игр');
+            // По умолчанию включаем обучение для новых пользователей
+            setIsTutorialGame(true);
+            setTutorialGameNumber(1);
           }
+        } else {
+          console.warn('⚠️ [GamePageContent] Ошибка ответа API, включаем обучение по умолчанию');
+          // По умолчанию включаем обучение для новых пользователей
+          setIsTutorialGame(true);
+          setTutorialGameNumber(1);
         }
       } catch (error: unknown) {
         console.error('❌ [GamePageContent] Ошибка загрузки игр:', error);
+        // По умолчанию включаем обучение для новых пользователей
+        setIsTutorialGame(true);
+        setTutorialGameNumber(1);
       }
     };
 
@@ -2125,13 +2144,19 @@ function GamePageContentComponent({
                                 : (isCardAlreadyNftUrl ? cardImage : `${CARDS_PATH}${cardImage}`))
                             : `${CARDS_PATH}${CARD_BACK}`;
                           
-                          // ✅ ИСПРАВЛЕНО: Для второй стадии - более профессиональное отображение карт соперников
-                          const isStage2 = gameStage >= 2;
+                          // ✅ ИСПРАВЛЕНО: Динамическое перекрытие - чем больше карт, тем ближе друг к другу
                           const isOpponentCard = !isHumanPlayer;
-                          // Во второй стадии для соперников - меньше перекрытие, более аккуратный вид
-                          const overlap = isStage2 && isOpponentCard 
-                            ? '-20px' // Во 2-й стадии видно больше карты (30px видно из 50px)
-                            : cardIndex > 0 ? '-35px' : '0'; // В 1-й стадии умеренное перекрытие
+                          const isStage2 = gameStage >= 2;
+                          const totalCards = playerCards.length;
+                          // Чем больше карт, тем меньше перекрытие (карты ближе друг к другу)
+                          // Формула: базовое перекрытие уменьшается с ростом количества карт
+                          const baseOverlap = 50; // Размер карты
+                          const minVisible = 8; // Минимум видимой части карты (px)
+                          // Динамическое перекрытие: чем больше карт, тем меньше перекрытие
+                          const dynamicOverlap = totalCards > 1 
+                            ? Math.max(minVisible, baseOverlap - (totalCards - 1) * 2) 
+                            : 0;
+                          const overlap = cardIndex > 0 ? `-${dynamicOverlap}px` : '0';
                           
                           return (
                             <div 
@@ -2912,7 +2937,7 @@ function GamePageContentComponent({
       />
 
       {/* ✅ МОДАЛКА ОБУЧЕНИЯ (ТУТОРИАЛ) */}
-      {isTutorialActive && currentStep && (
+      {currentStep && (
         <TutorialModal
           isOpen={isTutorialPaused}
           step={currentStep}

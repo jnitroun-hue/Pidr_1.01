@@ -1517,6 +1517,45 @@ export default function ProfilePage() {
                 <div className="stat-label">Процент побед</div>
               </div>
             </div>
+            
+            {/* Кнопка выхода под статистикой */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.2 }}
+              style={{
+                marginTop: '30px',
+                display: 'flex',
+                justifyContent: 'center'
+              }}
+            >
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleLogout}
+                style={{
+                  background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.9) 0%, rgba(220, 38, 38, 0.9) 100%)',
+                  border: '2px solid rgba(239, 68, 68, 0.4)',
+                  borderRadius: '12px',
+                  padding: '14px 28px',
+                  color: '#ffffff',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)',
+                  transition: 'all 0.3s ease',
+                  width: '100%',
+                  maxWidth: '300px',
+                  justifyContent: 'center'
+                }}
+              >
+                <LogOut size={20} />
+                Выйти из профиля
+              </motion.button>
+            </motion.div>
           </motion.div>
         )}
 
@@ -1526,9 +1565,48 @@ export default function ProfilePage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
-            style={{ padding: '0 20px', marginBottom: '100px' }}
+            style={{ padding: '0 20px', marginBottom: '30px' }}
           >
             <GameWallet user={user} onBalanceUpdate={handleBalanceUpdate} />
+            
+            {/* Кнопка выхода под кошельком */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.2 }}
+              style={{
+                marginTop: '30px',
+                display: 'flex',
+                justifyContent: 'center'
+              }}
+            >
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleLogout}
+                style={{
+                  background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.9) 0%, rgba(220, 38, 38, 0.9) 100%)',
+                  border: '2px solid rgba(239, 68, 68, 0.4)',
+                  borderRadius: '12px',
+                  padding: '14px 28px',
+                  color: '#ffffff',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)',
+                  transition: 'all 0.3s ease',
+                  width: '100%',
+                  maxWidth: '300px',
+                  justifyContent: 'center'
+                }}
+              >
+                <LogOut size={20} />
+                Выйти из профиля
+              </motion.button>
+            </motion.div>
           </motion.div>
         )}
 
@@ -2234,43 +2312,6 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* Кнопка выхода внизу страницы */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: 0.5 }}
-        style={{
-          position: 'fixed',
-          bottom: '20px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          zIndex: 1000
-        }}
-      >
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={handleLogout}
-          style={{
-            background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.9) 0%, rgba(220, 38, 38, 0.9) 100%)',
-            border: '2px solid rgba(239, 68, 68, 0.4)',
-            borderRadius: '12px',
-            padding: '12px 24px',
-            color: '#ffffff',
-            fontSize: '14px',
-            fontWeight: '600',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)',
-            transition: 'all 0.3s ease'
-          }}
-        >
-          <LogOut size={18} />
-          Выйти из профиля
-        </motion.button>
-      </motion.div>
     </div>
   );
 } 

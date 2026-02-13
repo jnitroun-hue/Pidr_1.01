@@ -191,15 +191,15 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
         />
       </motion.div>
 
-      {/* Индикатор онлайн игроков */}
+      {/* Индикатор онлайн игроков - перемещен ниже бургер-меню */}
       <motion.div
         initial={{ x: 20, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         style={{
           position: 'fixed',
-          top: '20px',
+          top: '70px', // ✅ ИЗМЕНЕНО: ниже бургер-меню (20px + 50px высота кнопки)
           right: '20px',
-          zIndex: 100
+          zIndex: 999 // ✅ ИЗМЕНЕНО: ниже бургер-меню (1000), но выше контента
         }}
       >
         <OnlineIndicator />
