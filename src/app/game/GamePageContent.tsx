@@ -298,9 +298,10 @@ function GamePageContentComponent({
   const [selectedPlayerProfile, setSelectedPlayerProfile] = useState<any>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
-  // ✅ СИСТЕМА ОБУЧЕНИЯ: Проверяем первую игру
+  // ✅ СИСТЕМА ОБУЧЕНИЯ: Проверяем первые 3 игры
   const [gamesPlayed, setGamesPlayed] = useState<number | null>(null);
-  const [isFirstGame, setIsFirstGame] = useState(false);
+  const [isTutorialGame, setIsTutorialGame] = useState(false);
+  const [tutorialGameNumber, setTutorialGameNumber] = useState<number | null>(null);
   const isUserTurn = currentPlayerId && players.find(p => p.id === currentPlayerId)?.isUser || false;
   const userPlayer = players.find(p => p.isUser);
   const userPlayerId = userPlayer?.id || null;
@@ -311,7 +312,7 @@ function GamePageContentComponent({
     nextStep, 
     closeTutorial, 
     isTutorialActive 
-  } = useTutorial(gameStage, isFirstGame, isUserTurn, currentPlayerId, userPlayerId, players, deck.length);
+  } = useTutorial(gameStage, isTutorialGame, tutorialGameNumber, isUserTurn, currentPlayerId, userPlayerId, players, deck.length);
 
   // ✅ Загружаем количество игр
   useEffect(() => {
@@ -331,9 +332,13 @@ function GamePageContentComponent({
         if (response.ok) {
           const data = await response.json();
           if (data.success) {
-            setGamesPlayed(data.gamesPlayed || 0);
-            setIsFirstGame(data.gamesPlayed === 0);
-            console.log(`📊 [GamePageContent] Игр сыграно: ${data.gamesPlayed}, первая игра: ${data.gamesPlayed === 0}`);
+            const gamesCount = data.gamesPlayed || 0;
+            setGamesPlayed(gamesCount);
+            // Обучение для первых 3 игр (0, 1, 2)
+            const isTutorial = gamesCount < 3;
+            setIsTutorialGame(isTutorial);
+            setTutorialGameNumber(isTutorial ? gamesCount + 1 : null);
+            console.log(`📊 [GamePageContent] Игр сыграно: ${gamesCount}, обучающая игра: ${isTutorial ? gamesCount + 1 : 'нет'}`);
           }
         }
       } catch (error: unknown) {
@@ -2120,15 +2125,25 @@ function GamePageContentComponent({
                                 : (isCardAlreadyNftUrl ? cardImage : `${CARDS_PATH}${cardImage}`))
                             : `${CARDS_PATH}${CARD_BACK}`;
                           
+                          // ✅ ИСПРАВЛЕНО: Для второй стадии - более профессиональное отображение карт соперников
+                          const isStage2 = gameStage >= 2;
+                          const isOpponentCard = !isHumanPlayer;
+                          // Во второй стадии для соперников - меньше перекрытие, более аккуратный вид
+                          const overlap = isStage2 && isOpponentCard 
+                            ? '-20px' // Во 2-й стадии видно больше карты (30px видно из 50px)
+                            : cardIndex > 0 ? '-35px' : '0'; // В 1-й стадии умеренное перекрытие
+                          
                           return (
                             <div 
                               key={cardIndex} 
                               className={styles.cardOnPenki} 
                               style={{
-                                marginLeft: cardIndex > 0 ? '-48px' : '0', // 80% перекрытие (60px * 0.8 = 48px) - ВИДНО 12px каждой карты!
+                                marginLeft: overlap,
                                 zIndex: cardIndex + 1, // ВЕРХНЯЯ карта (последняя, больший индекс) ПОВЕРХ всех! Первая=1, последняя=макс
                                 cursor: (shouldHighlight || isAvailableTarget) ? 'pointer' : 'default',
                                 position: 'relative',
+                                transform: isStage2 && isOpponentCard ? `translateY(${cardIndex * 2}px)` : 'none', // Небольшое вертикальное смещение для глубины
+                                transition: 'all 0.2s ease',
                               }}
                               onClick={() => {
                                 if (gameStage === 1) {
@@ -2169,8 +2184,8 @@ function GamePageContentComponent({
                                       }
                                   }}
                                   style={{ 
-                                    width: '60px',
-                                    height: '90px',
+                                    width: '50px',
+                                    height: '75px',
                                     borderRadius: '8px',
                                     background: '#ffffff',
                                     opacity: 1,

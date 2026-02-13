@@ -260,24 +260,34 @@ const RectangularGameTable: React.FC<RectangularGameTableProps> = ({
                     flexDirection: isVerticalLayout ? 'row' : 'row', // Горизонтально всегда для карт
                   }}
                 >
-                  {player.cards.slice(0, Math.min(3, player.cards.length)).map((_, cardIndex) => (
-                    <div 
-                      key={cardIndex}
-                      className={styles.playerCard}
-                      style={{
-                        zIndex: cardIndex,
-                        transform: cardsOnLeft 
-                          ? `translateX(${-cardIndex * 3}px) rotate(${(cardIndex - 1) * 5}deg)`
-                          : `translateX(${cardIndex * 3}px) rotate(${(cardIndex - 1) * 5}deg)`
-                      }}
-                    >
-                      <img 
-                        src="/img/cards/back.png" 
-                        alt="Card back"
-                        className={styles.cardBackImage}
-                      />
-                    </div>
-                  ))}
+                  {player.cards.slice(0, Math.min(3, player.cards.length)).map((_, cardIndex) => {
+                    // ✅ ИСПРАВЛЕНО: Для второй стадии - более профессиональное отображение
+                    const isStage2 = gameStage >= 2;
+                    // Во второй стадии уменьшаем перекрытие и убираем сильный поворот
+                    const overlap = isStage2 ? 6 : 10; // Меньше перекрытие во 2-й стадии
+                    const rotation = isStage2 ? (cardIndex - 1) * 2 : (cardIndex - 1) * 5; // Меньше поворот во 2-й стадии
+                    const verticalOffset = isStage2 ? cardIndex * 1 : 0; // Небольшое вертикальное смещение для глубины
+                    
+                    return (
+                      <div 
+                        key={cardIndex}
+                        className={styles.playerCard}
+                        style={{
+                          zIndex: cardIndex,
+                          transform: cardsOnLeft 
+                            ? `translateX(${-cardIndex * overlap}px) translateY(${verticalOffset}px) rotate(${rotation}deg)`
+                            : `translateX(${cardIndex * overlap}px) translateY(${verticalOffset}px) rotate(${rotation}deg)`,
+                          transition: 'all 0.2s ease',
+                        }}
+                      >
+                        <img 
+                          src="/img/cards/back.png" 
+                          alt="Card back"
+                          className={styles.cardBackImage}
+                        />
+                      </div>
+                    );
+                  })}
                   {player.cards.length > 3 && (
                     <div className={styles.moreCards}>+{player.cards.length - 3}</div>
                   )}

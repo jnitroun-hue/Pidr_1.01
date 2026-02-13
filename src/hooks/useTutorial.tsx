@@ -10,13 +10,19 @@ export interface TutorialConfig {
 
 export function useTutorial(
   gameStage: number, 
-  isFirstGame: boolean, 
+  isTutorialGame: boolean, 
+  tutorialGameNumber: number | null,
   isUserTurn: boolean,
   currentPlayerId: string | null,
   userPlayerId: string | null,
   players: any[],
   deckLength: number = 0
 ) {
+  // Сохраняем tutorialGameNumber в ref для использования в useEffect
+  const tutorialGameNumberRef = useRef<number | null>(tutorialGameNumber);
+  useEffect(() => {
+    tutorialGameNumberRef.current = tutorialGameNumber;
+  }, [tutorialGameNumber]);
   const [tutorialConfig, setTutorialConfig] = useState<TutorialConfig>({
     enabled: false,
     shownSteps: new Set(),
@@ -31,9 +37,11 @@ export function useTutorial(
   const lastCurrentPlayerRef = useRef<string | null>(null);
   const penkiOpenedRef = useRef<boolean>(false);
 
-  // Генерируем шаги для первой игры
-  const generateFirstGameSteps = useCallback((): TutorialStep[] => {
-    return [
+  // Генерируем шаги для обучающих игр (1, 2, 3)
+  const generateTutorialSteps = useCallback((gameNumber: number): TutorialStep[] => {
+    if (gameNumber === 1) {
+      // Первая игра - полное обучение
+      return [
       {
         id: 'welcome',
         title: 'Добро пожаловать в игру!',
@@ -88,23 +96,75 @@ export function useTutorial(
         icon: '🎯',
         content: 'У вас закончились карты в руке во второй стадии, поэтому открылись ваши пеньки (2 закрытые карты, которые вы получили в начале игры). Теперь вы играете с этими картами до их окончания. Это третья стадия игры.'
       }
-    ];
+      ];
+    } else if (gameNumber === 2) {
+      // Вторая игра - напоминание основных правил
+      return [
+        {
+          id: 'welcome_game2',
+          title: 'Вторая обучающая игра',
+          icon: '🎮',
+          content: 'Это ваша вторая игра! Мы напомним вам основные правила. В первой стадии: положите карту на соперника с младшей картой. Во второй стадии: козырь бьет любую некозырную карту, пики можно бить только пиками.'
+        },
+        {
+          id: 'your_turn_stage1_game2',
+          title: 'Ваш ход',
+          icon: '🎴',
+          content: 'Сейчас ваш ход! Найдите соперника с младшей картой и положите на него свою карту. Если не можете сходить - возьмите карту из колоды.'
+        },
+        {
+          id: 'stage2_transition_game2',
+          title: 'Вторая стадия',
+          icon: '🔄',
+          content: 'Колода закончилась! Начинается вторая стадия. Помните: козырь бьет любую некозырную карту, пики можно бить только пиками!'
+        }
+      ];
+    } else if (gameNumber === 3) {
+      // Третья игра - краткое напоминание
+      return [
+        {
+          id: 'welcome_game3',
+          title: 'Третья обучающая игра',
+          icon: '🎯',
+          content: 'Это ваша последняя обучающая игра! Напоминание: в первой стадии бейте младшие карты, во второй стадии используйте козыри. Пики можно бить только пиками!'
+        },
+        {
+          id: 'one_card_reminder',
+          title: 'Важно помнить!',
+          icon: '⚠️',
+          content: 'Когда у вас остается одна карта, обязательно объявите "Одна карта!"! Если забудете - получите штрафные карты от всех игроков.'
+        }
+      ];
+    }
+    return [];
   }, []);
 
   // Инициализация туториала для первой игры
   useEffect(() => {
-    if (isFirstGame && !tutorialConfig.enabled) {
-      const steps = generateFirstGameSteps();
+    if (isTutorialGame && tutorialGameNumber && !tutorialConfig.enabled) {
+      const steps = generateTutorialSteps(tutorialGameNumber);
       setTutorialConfig({
         enabled: true,
         shownSteps: new Set(),
         steps
       });
       // Показываем приветствие
-      setCurrentStep(steps[0]);
-      setIsTutorialPaused(true);
+      const firstStep = steps[0];
+      if (firstStep) {
+        setCurrentStep(firstStep);
+        setIsTutorialPaused(true);
+      }
+    } else if (!isTutorialGame && tutorialConfig.enabled) {
+      // Отключаем туториал если это не обучающая игра
+      setTutorialConfig({
+        enabled: false,
+        shownSteps: new Set(),
+        steps: []
+      });
+      setCurrentStep(null);
+      setIsTutorialPaused(false);
     }
-  }, [isFirstGame, tutorialConfig.enabled, generateFirstGameSteps]);
+  }, [isTutorialGame, tutorialGameNumber, tutorialConfig.enabled, generateTutorialSteps]);
 
   // Переход к следующему шагу
   const nextStep = useCallback(() => {
@@ -146,10 +206,14 @@ export function useTutorial(
     const isNewTurn = currentPlayerId !== lastCurrentPlayerRef.current && currentPlayerId !== null;
     const isFirstTurn = !lastCurrentPlayerRef.current && currentPlayerId !== null;
     
-    if ((isNewTurn || isFirstTurn) && gameStage === 1 && !tutorialConfig.shownSteps.has('first_turn_start')) {
+    // Проверяем шаги для разных игр
+    const stepId = tutorialGameNumber === 1 ? 'first_turn_start' : 
+                   tutorialGameNumber === 2 ? 'your_turn_stage1_game2' : null;
+    
+    if ((isNewTurn || isFirstTurn) && gameStage === 1 && stepId && !tutorialConfig.shownSteps.has(stepId)) {
       lastCurrentPlayerRef.current = currentPlayerId;
       
-      const step = tutorialConfig.steps.find(s => s.id === 'first_turn_start');
+      const step = tutorialConfig.steps.find(s => s.id === stepId);
       if (step) {
         setCurrentStep(step);
         setIsTutorialPaused(true);
