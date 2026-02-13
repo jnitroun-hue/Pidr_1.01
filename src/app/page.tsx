@@ -20,6 +20,9 @@ import NeonMainMenu from '../components/main_menu_component';
 import CardLoadingScreen from '../components/CardLoadingScreen';
 import { useLanguage } from '../components/LanguageSwitcher';
 import RoomInviteModal from '../components/RoomInviteModal';
+import BurgerMenu from '../components/BurgerMenu';
+import { motion } from 'framer-motion';
+import { Menu, X } from 'lucide-react';
 
 /**
  * P.I.D.R. Game - Автоматическая авторизация через Telegram WebApp
@@ -33,6 +36,8 @@ function HomeWithParams() {
   const [isBrowser, setIsBrowser] = useState(false); // ✅ НОВОЕ: Определяем браузер vs mini app
   const [checkingAuth, setCheckingAuth] = useState(false); // ✅ Проверка авторизации в браузере
   const [retryCount, setRetryCount] = useState(0); // ✅ НОВОЕ: Счетчик попыток
+  const [leftMenuOpen, setLeftMenuOpen] = useState(false); // ✅ Бургер-меню слева
+  const [rightMenuOpen, setRightMenuOpen] = useState(false); // ✅ Бургер-меню справа
   const initialized = useRef(false); // ✅ useRef - НЕ СБРАСЫВАЕТСЯ при рендере
   const { user: telegramUser, isReady } = useTelegram();
   const { language } = useLanguage();
@@ -653,7 +658,70 @@ function HomeWithParams() {
   // Показываем главное меню игры
   if (user && showMainMenu) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 relative">
+        {/* Бургер-меню */}
+        <BurgerMenu 
+          isOpen={leftMenuOpen} 
+          onClose={() => setLeftMenuOpen(false)} 
+          side="left" 
+          user={user}
+        />
+        <BurgerMenu 
+          isOpen={rightMenuOpen} 
+          onClose={() => setRightMenuOpen(false)} 
+          side="right" 
+          user={user}
+        />
+        
+        {/* Кнопки бургер-меню */}
+        <motion.button
+          initial={{ x: -20, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ delay: 0.5 }}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => setLeftMenuOpen(true)}
+          style={{
+            position: 'fixed',
+            top: '20px',
+            left: '20px',
+            zIndex: 1000,
+            background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
+            border: '2px solid rgba(99, 102, 241, 0.3)',
+            borderRadius: '12px',
+            padding: '12px',
+            cursor: 'pointer',
+            color: '#ffffff',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
+          }}
+        >
+          <Menu size={24} />
+        </motion.button>
+        
+        <motion.button
+          initial={{ x: 20, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ delay: 0.5 }}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => setRightMenuOpen(true)}
+          style={{
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            zIndex: 1000,
+            background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
+            border: '2px solid rgba(99, 102, 241, 0.3)',
+            borderRadius: '12px',
+            padding: '12px',
+            cursor: 'pointer',
+            color: '#ffffff',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
+          }}
+        >
+          <Menu size={24} />
+        </motion.button>
+        
         <NeonMainMenu 
           user={user} 
           onLogout={handleLogout}
@@ -679,17 +747,302 @@ function HomeWithParams() {
     );
   }
 
-  // ✅ БРАУЗЕРНАЯ ВЕРСИЯ - РЕДИРЕКТ НА ВХОД (если нет пользователя)
+  // ✅ БРАУЗЕРНАЯ ВЕРСИЯ - КРАСИВАЯ ГЛАВНАЯ СТРАНИЦА (если нет пользователя)
   if (isBrowser && !user && !checkingAuth) {
-    // Редирект на страницу входа
-    if (typeof window !== 'undefined') {
-      router.push('/auth/login');
-    }
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-4xl mb-4">⏳</div>
-          <p className="text-gray-300">Перенаправление...</p>
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 30%, #334155 60%, #475569 100%)',
+        position: 'relative',
+        overflow: 'hidden'
+      }}>
+        {/* Анимированный фон */}
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: `
+            radial-gradient(circle at 20% 30%, rgba(99, 102, 241, 0.3) 0%, transparent 50%),
+            radial-gradient(circle at 80% 70%, rgba(139, 92, 246, 0.3) 0%, transparent 50%),
+            radial-gradient(circle at 50% 50%, rgba(236, 72, 153, 0.2) 0%, transparent 50%)
+          `,
+          animation: 'pulse 8s ease-in-out infinite'
+        }} />
+        
+        {/* Плавающие частицы */}
+        {typeof window !== 'undefined' && [...Array(20)].map((_, i) => {
+          const randomX = Math.random() * (window.innerWidth || 1920);
+          const randomY = Math.random() * (window.innerHeight || 1080);
+          return (
+            <motion.div
+              key={i}
+              initial={{ 
+                x: randomX,
+                y: randomY,
+                opacity: 0.3
+              }}
+              animate={{
+                y: [null, Math.random() * (window.innerHeight || 1080)],
+                x: [null, Math.random() * (window.innerWidth || 1920)],
+                opacity: [0.3, 0.6, 0.3]
+              }}
+              transition={{
+                duration: 10 + Math.random() * 10,
+                repeat: Infinity,
+                ease: 'easeInOut',
+                delay: Math.random() * 2
+              }}
+              style={{
+                position: 'absolute',
+                width: '4px',
+                height: '4px',
+                background: 'rgba(99, 102, 241, 0.6)',
+                borderRadius: '50%',
+                boxShadow: '0 0 10px rgba(99, 102, 241, 0.8)'
+              }}
+            />
+          );
+        })}
+        
+        {/* Бургер-меню слева */}
+        <BurgerMenu 
+          isOpen={leftMenuOpen} 
+          onClose={() => setLeftMenuOpen(false)} 
+          side="left" 
+        />
+        
+        <motion.button
+          initial={{ x: -20, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => setLeftMenuOpen(true)}
+          style={{
+            position: 'fixed',
+            top: '24px',
+            left: '24px',
+            zIndex: 1000,
+            background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
+            border: '2px solid rgba(99, 102, 241, 0.3)',
+            borderRadius: '12px',
+            padding: '12px',
+            cursor: 'pointer',
+            color: '#ffffff',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+            backdropFilter: 'blur(10px)'
+          }}
+        >
+          <Menu size={24} />
+        </motion.button>
+        
+        {/* Основной контент */}
+        <div style={{
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '40px 20px',
+          position: 'relative',
+          zIndex: 1
+        }}>
+          <motion.div
+            initial={{ y: 30, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.8 }}
+            style={{
+              textAlign: 'center',
+              maxWidth: '600px',
+              width: '100%'
+            }}
+          >
+            {/* Логотип с анимацией */}
+            <motion.div
+              initial={{ scale: 0.8, rotate: -10 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ 
+                type: 'spring',
+                stiffness: 200,
+                damping: 15,
+                delay: 0.2
+              }}
+              whileHover={{ scale: 1.1, rotate: 5 }}
+              style={{
+                width: '120px',
+                height: '120px',
+                margin: '0 auto 24px',
+                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%)',
+                borderRadius: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '64px',
+                boxShadow: '0 20px 60px rgba(99, 102, 241, 0.4)',
+                position: 'relative'
+              }}
+            >
+              <motion.div
+                animate={{ 
+                  rotate: [0, 360],
+                  scale: [1, 1.1, 1]
+                }}
+                transition={{ 
+                  duration: 3,
+                  repeat: Infinity,
+                  ease: 'easeInOut'
+                }}
+              >
+                🎴
+              </motion.div>
+              
+              {/* Свечение вокруг логотипа */}
+              <motion.div
+                animate={{
+                  boxShadow: [
+                    '0 0 30px rgba(99, 102, 241, 0.6)',
+                    '0 0 50px rgba(139, 92, 246, 0.8)',
+                    '0 0 30px rgba(99, 102, 241, 0.6)'
+                  ]
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: 'easeInOut'
+                }}
+                style={{
+                  position: 'absolute',
+                  inset: '-10px',
+                  borderRadius: '24px',
+                  background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%)',
+                  opacity: 0.3,
+                  filter: 'blur(20px)',
+                  zIndex: -1
+                }}
+              />
+            </motion.div>
+            
+            {/* Заголовок */}
+            <motion.h1
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.4 }}
+              style={{
+                fontSize: '56px',
+                fontWeight: '900',
+                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                marginBottom: '16px',
+                lineHeight: '1.2'
+              }}
+            >
+              P.I.D.R.
+            </motion.h1>
+            
+            <motion.p
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.5 }}
+              style={{
+                fontSize: '24px',
+                color: '#94a3b8',
+                marginBottom: '40px',
+                fontWeight: '600'
+              }}
+            >
+              Карточная игра нового поколения
+            </motion.p>
+            
+            {/* Описание */}
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.6 }}
+              style={{
+                background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.8) 100%)',
+                border: '2px solid rgba(99, 102, 241, 0.3)',
+                borderRadius: '20px',
+                padding: '32px',
+                marginBottom: '40px',
+                backdropFilter: 'blur(10px)'
+              }}
+            >
+              <p style={{
+                color: '#e2e8f0',
+                fontSize: '18px',
+                lineHeight: '1.6',
+                marginBottom: '20px'
+              }}>
+                🎮 Играй в увлекательную карточную игру с друзьями
+              </p>
+              <p style={{
+                color: '#94a3b8',
+                fontSize: '16px',
+                lineHeight: '1.6'
+              }}>
+                P.I.D.R. - это карточная игра, доступная как Telegram Mini App. 
+                Для игры откройте бота в Telegram и нажмите кнопку "Играть".
+              </p>
+            </motion.div>
+            
+            {/* Кнопки действий */}
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.7 }}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px',
+                maxWidth: '400px',
+                margin: '0 auto'
+              }}
+            >
+              <motion.button
+                whileHover={{ scale: 1.02, y: -2 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => router.push('/auth/login')}
+                style={{
+                  width: '100%',
+                  background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                  border: '2px solid rgba(34, 197, 94, 0.3)',
+                  borderRadius: '16px',
+                  padding: '18px',
+                  color: '#ffffff',
+                  fontSize: '18px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 20px rgba(34, 197, 94, 0.3)'
+                }}
+              >
+                🔐 Войти
+              </motion.button>
+              
+              <motion.button
+                whileHover={{ scale: 1.02, y: -2 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => router.push('/auth/register')}
+                style={{
+                  width: '100%',
+                  background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)',
+                  border: '2px solid rgba(139, 92, 246, 0.3)',
+                  borderRadius: '16px',
+                  padding: '18px',
+                  color: '#ffffff',
+                  fontSize: '18px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 20px rgba(139, 92, 246, 0.3)'
+                }}
+              >
+                ✨ Зарегистрироваться
+              </motion.button>
+            </motion.div>
+          </motion.div>
         </div>
       </div>
     );
