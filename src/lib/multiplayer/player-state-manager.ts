@@ -17,9 +17,10 @@
 
 import { getRedis, isRedisAvailable } from '../redis/init';
 import { supabase } from '../supabase';
+import type { Redis } from '@upstash/redis';
 
 // Получаем Redis клиент через универсальную инициализацию
-const redis = getRedis();
+const redis: Redis | null = getRedis();
 
 // ============================================================
 // TYPES
@@ -78,11 +79,13 @@ export async function acquirePlayerLock(
     return null;
   }
   
+  // TypeScript type narrowing: после проверки redis точно не null
+  const redisClient = redis;
   const lockKey = KEYS.playerLock(userId);
   const lockId = `${Date.now()}-${Math.random()}`;
   
   // Пробуем получить блокировку
-  const result = await redis.set(lockKey, lockId, {
+  const result = await redisClient.set(lockKey, lockId, {
     nx: true, // Только если ключ не существует
     px: timeoutMs, // Автоматическое удаление через timeout
   });
@@ -102,13 +105,15 @@ export async function releasePlayerLock(
     return false;
   }
   
+  // TypeScript type narrowing: после проверки redis точно не null
+  const redisClient = redis;
   const lockKey = KEYS.playerLock(userId);
   
   // Проверяем что это наша блокировка перед удалением
-  const currentLock = await redis.get(lockKey);
+  const currentLock = await redisClient.get(lockKey);
   
   if (currentLock === lockId) {
-    await redis.del(lockKey);
+    await redisClient.del(lockKey);
     return true;
   }
   
@@ -122,10 +127,17 @@ export async function acquireRoomLock(
   roomId: string,
   timeoutMs: number = 5000
 ): Promise<string | null> {
+  if (!redis) {
+    console.warn('⚠️ [acquireRoomLock] Redis недоступен, блокировка не получена');
+    return null;
+  }
+  
+  // TypeScript type narrowing: после проверки redis точно не null
+  const redisClient = redis;
   const lockKey = KEYS.roomLock(roomId);
   const lockId = `${Date.now()}-${Math.random()}`;
   
-  const result = await redis.set(lockKey, lockId, {
+  const result = await redisClient.set(lockKey, lockId, {
     nx: true,
     px: timeoutMs,
   });
@@ -145,11 +157,13 @@ export async function releaseRoomLock(
     return false;
   }
   
+  // TypeScript type narrowing: после проверки redis точно не null
+  const redisClient = redis;
   const lockKey = KEYS.roomLock(roomId);
-  const currentLock = await redis.get(lockKey);
+  const currentLock = await redisClient.get(lockKey);
   
   if (currentLock === lockId) {
-    await redis.del(lockKey);
+    await redisClient.del(lockKey);
     return true;
   }
   
@@ -171,8 +185,10 @@ export async function getPlayerState(
     return null;
   }
   
+  // TypeScript type narrowing: после проверки redis точно не null
+  const redisClient = redis;
   const key = KEYS.playerState(userId);
-  const state = await redis.get<PlayerState>(key);
+  const state = await redisClient.get<PlayerState>(key);
   return state;
 }
 
@@ -189,8 +205,10 @@ export async function setPlayerState(
     return;
   }
   
+  // TypeScript type narrowing: после проверки redis точно не null
+  const redisClient = redis;
   const key = KEYS.playerState(userId);
-  await redis.set(key, state, { ex: ttlSeconds });
+  await redisClient.set(key, state, { ex: ttlSeconds });
 }
 
 /**
@@ -202,7 +220,9 @@ export async function getPlayerRoom(userId: string): Promise<string | null> {
     return null;
   }
   
-  return await redis.get(KEYS.userRoom(userId));
+  // TypeScript type narrowing: после проверки redis точно не null
+  const redisClient = redis;
+  return await redisClient.get(KEYS.userRoom(userId));
 }
 
 /**
@@ -217,12 +237,14 @@ export async function setPlayerRoom(
     return;
   }
   
+  // TypeScript type narrowing: после проверки redis точно не null
+  const redisClient = redis;
   const key = KEYS.userRoom(userId);
   
   if (roomId) {
-    await redis.set(key, roomId, { ex: 7200 }); // 2 часа
+    await redisClient.set(key, roomId, { ex: 7200 }); // 2 часа
   } else {
-    await redis.del(key);
+    await redisClient.del(key);
   }
 }
 
@@ -266,8 +288,10 @@ export async function getRoomPlayers(roomId: string): Promise<string[]> {
     return [];
   }
   
+  // TypeScript type narrowing: после проверки redis точно не null
+  const redisClient = redis;
   const key = KEYS.roomPlayers(roomId);
-  const players = await redis.smembers(key);
+  const players = await redisClient.smembers(key);
   return players as string[];
 }
 
@@ -283,9 +307,11 @@ export async function addPlayerToRoom(
     return;
   }
   
+  // TypeScript type narrowing: после проверки redis точно не null
+  const redisClient = redis;
   const key = KEYS.roomPlayers(roomId);
-  await redis.sadd(key, userId);
-  await redis.expire(key, 7200); // 2 часа
+  await redisClient.sadd(key, userId);
+  await redisClient.expire(key, 7200); // 2 часа
 }
 
 /**
@@ -300,8 +326,10 @@ export async function removePlayerFromRoom(
     return;
   }
   
+  // TypeScript type narrowing: после проверки redis точно не null
+  const redisClient = redis;
   const key = KEYS.roomPlayers(roomId);
-  await redis.srem(key, userId);
+  await redisClient.srem(key, userId);
 }
 
 /**
@@ -313,8 +341,10 @@ export async function getRoomPlayerCount(roomId: string): Promise<number> {
     return 0;
   }
   
+  // TypeScript type narrowing: после проверки redis точно не null
+  const redisClient = redis;
   const key = KEYS.roomPlayers(roomId);
-  const count = await redis.scard(key);
+  const count = await redisClient.scard(key);
   return count || 0;
 }
 
@@ -341,8 +371,10 @@ export async function getFreePosition(
     return null;
   }
   
+  // TypeScript type narrowing: после проверки redis точно не null
+  const redisClient = redis;
   const slotsKey = KEYS.roomSlots(roomId);
-  const occupiedSlots = await redis.hgetall(slotsKey);
+  const occupiedSlots = await redisClient.hgetall(slotsKey);
   
   // Позиции от 1 до maxPlayers
   for (let pos = 1; pos <= maxPlayers; pos++) {
@@ -367,9 +399,11 @@ export async function occupyPosition(
     return;
   }
   
+  // TypeScript type narrowing: после проверки redis точно не null
+  const redisClient = redis;
   const slotsKey = KEYS.roomSlots(roomId);
-  await redis.hset(slotsKey, { [position.toString()]: userId });
-  await redis.expire(slotsKey, 7200);
+  await redisClient.hset(slotsKey, { [position.toString()]: userId });
+  await redisClient.expire(slotsKey, 7200);
 }
 
 /**
@@ -384,8 +418,10 @@ export async function freePosition(
     return;
   }
   
+  // TypeScript type narrowing: после проверки redis точно не null
+  const redisClient = redis;
   const slotsKey = KEYS.roomSlots(roomId);
-  await redis.hdel(slotsKey, position.toString());
+  await redisClient.hdel(slotsKey, position.toString());
 }
 
 /**
@@ -400,8 +436,10 @@ export async function getPlayerPosition(
     return null;
   }
   
+  // TypeScript type narrowing: после проверки redis точно не null
+  const redisClient = redis;
   const slotsKey = KEYS.roomSlots(roomId);
-  const slots = await redis.hgetall(slotsKey);
+  const slots = await redisClient.hgetall(slotsKey);
   
   if (!slots) return null;
   
@@ -899,8 +937,10 @@ export async function getRoomDetails(roomId: string): Promise<{
       return null;
     }
     
+    // TypeScript type narrowing: после проверки redis точно не null
+    const redisClient = redis;
     const slotsKey = KEYS.roomSlots(roomId);
-    const slots = await redis.hgetall(slotsKey) || {};
+    const slots = await redisClient.hgetall(slotsKey) || {};
     
     return {
       players,
@@ -927,8 +967,10 @@ export async function healthCheck(): Promise<{
   
   // Проверка Redis
   if (redis) {
+    // TypeScript type narrowing: после проверки redis точно не null
+    const redisClient = redis;
     try {
-      await redis.ping();
+      await redisClient.ping();
       redisOk = true;
     } catch (error: any) {
       errors.push(`Redis: ${error instanceof Error ? error.message : String(error)}`);
