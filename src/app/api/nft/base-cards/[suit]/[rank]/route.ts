@@ -38,7 +38,7 @@ export async function GET(
 
     // Получаем публичный URL
     const { data } = supabase.storage
-      .from('nft-cards')
+      .from('nft-card')
       .getPublicUrl(filePath);
 
     if (!data.publicUrl) {

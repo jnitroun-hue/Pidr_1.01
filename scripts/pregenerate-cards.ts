@@ -63,7 +63,7 @@ async function pregenerateCards() {
       const storagePath = `base-cards/${card.suit}/${fileName}`;
       
       const { data, error } = await supabase.storage
-        .from('nft-cards')
+        .from('nft-card')
         .upload(storagePath, Buffer.from(svg), {
           contentType: 'image/svg+xml',
           upsert: true
@@ -76,7 +76,7 @@ async function pregenerateCards() {
 
       // Получаем публичный URL
       const { data: publicUrlData } = supabase.storage
-        .from('nft-cards')
+        .from('nft-card')
         .getPublicUrl(storagePath);
 
       console.log(`✅ Карта загружена: ${publicUrlData.publicUrl}\n`);

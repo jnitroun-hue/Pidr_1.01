@@ -13,32 +13,20 @@
  * - Fallback на JWT если Redis недоступен
  */
 
-import { Redis } from '@upstash/redis';
+import { getRedis } from '../redis/init';
 import * as jwt from 'jsonwebtoken';
 import * as crypto from 'crypto';
 
 const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || 'fallback-secret';
 const SESSION_TTL = 30 * 24 * 60 * 60; // 30 дней в секундах
 
-// Инициализация Redis
-let redis: Redis | null = null;
-const redisUrl = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
-const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
+// Получаем Redis клиент через универсальную инициализацию
+const redis = getRedis();
 
-const isRedisConfigured = redisUrl && redisToken && 
-  redisUrl.startsWith('https://') && 
-  redisToken.length > 10;
-
-if (isRedisConfigured) {
-  try {
-    redis = new Redis({
-      url: redisUrl!,
-      token: redisToken!,
-    });
-    console.log('✅ Redis Session Manager инициализирован');
-  } catch (error) {
-    console.warn('⚠️ Redis недоступен, используется fallback на JWT:', error);
-  }
+if (redis) {
+  console.log('✅ [RedisSessionManager] Redis инициализирован');
+} else {
+  console.warn('⚠️ [RedisSessionManager] Redis недоступен, используется fallback на JWT');
 }
 
 // ============================================================

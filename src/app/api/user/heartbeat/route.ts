@@ -1,34 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { getUserIdFromRequest } from '@/lib/auth-utils';
-import { Redis } from '@upstash/redis';
+import { getRedis } from '@/lib/redis/init';
 
-// Безопасная инициализация Redis (только для Upstash REST API)
-let redis: Redis | null = null;
-try {
-  // Vercel Upstash использует KV_REST_API_URL и KV_REST_API_TOKEN
-  // Также поддерживаем старые имена для совместимости
-  const redisUrl = process.env.KV_REST_API_URL || 
-                   process.env.UPSTASH_REDIS_REST_URL || 
-                   process.env.REDIS_URL || '';
-  const redisToken = process.env.KV_REST_API_TOKEN || 
-                     process.env.UPSTASH_REDIS_REST_TOKEN || 
-                     process.env.REDIS_TOKEN || '';
-  
-  // Upstash Redis требует URL начинающийся с https://
-  if (redisUrl && redisUrl.startsWith('https://') && redisToken) {
-    redis = new Redis({
-      url: redisUrl,
-      token: redisToken,
-    });
-    console.log('✅ Redis инициализирован (Upstash REST API)');
-  } else if (redisUrl && !redisUrl.startsWith('https://')) {
-    console.warn('⚠️ Redis URL не поддерживается для Upstash клиента. Используйте KV_REST_API_URL (https://) из Vercel.');
-  }
-} catch (error) {
-  console.warn('⚠️ Не удалось инициализировать Redis:', error);
-  redis = null;
-}
+// Получаем Redis клиент через универсальную инициализацию
+const redis = getRedis();
 
 // Ключи Redis для онлайн статуса
 const REDIS_KEYS = {

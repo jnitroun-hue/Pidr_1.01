@@ -3,20 +3,14 @@
  * Используется для сложных/анимированных карт
  */
 
-import { Redis } from '@upstash/redis';
+import { getRedis } from '../redis/init';
 
-// Проверяем переменные окружения
-// Vercel Upstash использует KV_REST_API_URL и KV_REST_API_TOKEN
-const redisUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-const redisToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+// Получаем Redis клиент через универсальную инициализацию
+const redis = getRedis();
 
-if (!redisUrl || !redisToken) {
-  console.warn('⚠️ Redis credentials not found for card queue');
+if (!redis) {
+  console.warn('⚠️ [CardQueue] Redis не настроен, очередь карт будет недоступна');
 }
-
-const redis = redisUrl && redisToken 
-  ? new Redis({ url: redisUrl, token: redisToken })
-  : null;
 
 export interface CardGenerationJob {
   id: string;

@@ -1,37 +1,26 @@
 import { Ratelimit } from "@upstash/ratelimit";
-import { Redis } from "@upstash/redis";
 import { NextRequest } from 'next/server';
+import { getRedis } from './redis/init';
 
-// Создаем Redis клиент только если переменные окружения настроены
-let redis: Redis | null = null;
+// Получаем Redis клиент через универсальную инициализацию
+const redis = getRedis();
+
+// Создаем rate limiter только если Redis доступен
 let ratelimit: Ratelimit | null = null;
 
-// Vercel Upstash использует KV_REST_API_URL и KV_REST_API_TOKEN
-const redisUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-const redisToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
-
-// Проверяем, что Redis правильно настроен
-const isRedisConfigured = redisUrl && redisToken && 
-  redisUrl !== '<!-- ВСТАВЬ_СЮДА -->' && 
-  !redisUrl.includes('your-redis') &&
-  redisUrl.startsWith('https://') &&
-  redisToken.length > 10;
-
-if (isRedisConfigured) {
+if (redis) {
   try {
-    redis = new Redis({
-      url: redisUrl,
-      token: redisToken,
-    });
-
     ratelimit = new Ratelimit({
       redis: redis,
       limiter: Ratelimit.slidingWindow(10, "10 s"), // 10 запросов в 10 секунд
       analytics: true,
     });
+    console.log('✅ [RateLimit] Инициализирован с Redis');
   } catch (error: unknown) {
-    console.warn('Redis not available, rate limiting disabled:', error);
+    console.warn('⚠️ [RateLimit] Redis not available, rate limiting disabled:', error);
   }
+} else {
+  console.warn('⚠️ [RateLimit] Redis не настроен, используется fallback в памяти');
 }
 
 // Fallback rate limiter (в памяти)

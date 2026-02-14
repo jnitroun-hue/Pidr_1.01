@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
 
     // Генерируем имя файла
     const fileName = `${userId}/${suit}_${rank}_${rarity}_${Date.now()}.png`;
-    const bucketName = 'nft-cards';
+    const bucketName = 'nft-card';
 
     console.log('📤 [NFT Canvas] Загружаем в Storage:', {
       bucketName,

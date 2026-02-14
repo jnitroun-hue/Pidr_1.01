@@ -142,7 +142,7 @@ export async function uploadMetadata(
     });
 
     const { data, error } = await supabase.storage
-      .from('nft-cards')
+      .from('nft-card')
       .upload(`metadata/${fileName}.json`, metadataBlob, {
         contentType: 'application/json',
         upsert: true
@@ -155,7 +155,7 @@ export async function uploadMetadata(
 
     // Получаем публичный URL
     const { data: publicUrlData } = supabase.storage
-      .from('nft-cards')
+      .from('nft-card')
       .getPublicUrl(`metadata/${fileName}.json`);
 
     return publicUrlData.publicUrl;

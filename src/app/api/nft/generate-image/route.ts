@@ -136,7 +136,7 @@ export async function POST(req: NextRequest) {
 
     const timestamp = Date.now();
     const fileName = `${userId}/${suit}_${rank}_${timestamp}.png`;
-    const bucketName = 'nft-cards';
+    const bucketName = 'nft-card';
 
     console.log('📤 [NFT Image] Загружаем в Storage:', {
       bucketName,

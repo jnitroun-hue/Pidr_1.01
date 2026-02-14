@@ -154,7 +154,7 @@ async function generateCardImage(job: any): Promise<string> {
   // Если есть кастомное изображение, загружаем его
   if (job.customImage) {
     const { data, error } = await supabase.storage
-      .from('nft-cards')
+      .from('nft-card')
       .upload(`generated/${fileName}`, job.customImage, {
         contentType: 'image/png'
       });
@@ -162,7 +162,7 @@ async function generateCardImage(job: any): Promise<string> {
     if (error) throw error;
 
     const { data: publicUrlData } = supabase.storage
-      .from('nft-cards')
+      .from('nft-card')
       .getPublicUrl(`generated/${fileName}`);
 
     return publicUrlData.publicUrl;
@@ -170,7 +170,7 @@ async function generateCardImage(job: any): Promise<string> {
 
   // Возвращаем URL базовой карты
   const { data: publicUrlData } = supabase.storage
-    .from('nft-cards')
+    .from('nft-card')
     .getPublicUrl(`base-cards/${job.suit}/${job.rank}.png`);
 
   return publicUrlData.publicUrl;
@@ -191,7 +191,7 @@ async function uploadMetadata(jobId: string, metadata: any): Promise<string> {
   });
 
   const { data, error } = await supabase.storage
-    .from('nft-cards')
+    .from('nft-card')
     .upload(`metadata/${fileName}`, metadataBlob, {
       contentType: 'application/json'
     });
@@ -199,7 +199,7 @@ async function uploadMetadata(jobId: string, metadata: any): Promise<string> {
   if (error) throw error;
 
   const { data: publicUrlData } = supabase.storage
-    .from('nft-cards')
+    .from('nft-card')
     .getPublicUrl(`metadata/${fileName}`);
 
   return publicUrlData.publicUrl;

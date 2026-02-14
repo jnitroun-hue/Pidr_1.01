@@ -1,41 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Redis } from '@upstash/redis';
+import { getRedis, isRedisAvailable } from '@/lib/redis/init';
 
 export async function GET(req: NextRequest) {
   try {
     console.log('🔍 Тестирование Redis подключения...');
 
     // Проверяем переменные окружения
-    // Vercel Upstash использует KV_REST_API_URL и KV_REST_API_TOKEN
-    const redisUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-    const redisToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+    const redisUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL || process.env.REDIS_URL;
+    const redisToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN || process.env.REDIS_TOKEN;
 
     console.log('📊 Redis переменные:', {
       hasUrl: !!redisUrl,
       hasToken: !!redisToken,
       urlStart: redisUrl?.substring(0, 30),
       tokenStart: redisToken?.substring(0, 10),
-      usingKV: !!process.env.KV_REST_API_URL
+      usingKV: !!process.env.KV_REST_API_URL,
+      isAvailable: isRedisAvailable()
     });
 
-    if (!redisUrl || !redisToken) {
+    // Получаем Redis клиент через универсальную инициализацию
+    const redis = getRedis();
+
+    if (!redis) {
       return NextResponse.json({
         success: false,
-        message: 'Redis переменные не настроены',
+        message: 'Redis не инициализирован',
         details: {
           KV_REST_API_URL: !!process.env.KV_REST_API_URL,
           KV_REST_API_TOKEN: !!process.env.KV_REST_API_TOKEN,
           UPSTASH_REDIS_REST_URL: !!process.env.UPSTASH_REDIS_REST_URL,
-          UPSTASH_REDIS_REST_TOKEN: !!process.env.UPSTASH_REDIS_REST_TOKEN
+          UPSTASH_REDIS_REST_TOKEN: !!process.env.UPSTASH_REDIS_REST_TOKEN,
+          REDIS_URL: !!process.env.REDIS_URL,
+          REDIS_TOKEN: !!process.env.REDIS_TOKEN,
+          hint: 'Добавьте KV_REST_API_URL и KV_REST_API_TOKEN в Vercel Environment Variables'
         }
       }, { status: 400 });
     }
-
-    // Создаем Redis клиент
-    const redis = new Redis({
-      url: redisUrl,
-      token: redisToken,
-    });
 
     console.log('🔗 Redis клиент создан, тестируем подключение...');
 

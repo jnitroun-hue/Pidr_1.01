@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Trophy, Medal, Users, User, Star, Award, Target, Camera, Upload, Wallet, Palette, Sparkles, Gift, Frame, LogOut } from 'lucide-react';
+import { ArrowLeft, Trophy, Medal, Users, User, Star, Award, Target, Camera, Upload, Wallet, Palette, Sparkles, Gift, Frame, LogOut, Shield } from 'lucide-react';
 import GameWallet from '../../components/GameWallet';
 import { useLanguage } from '../../components/LanguageSwitcher';
 import { useTranslations } from '../../lib/i18n/translations';
@@ -107,6 +107,7 @@ export default function ProfilePage() {
   });
 
   const [user, setUser] = useState<any>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
   const [avatarUrl, setAvatarUrl] = useState('😎');
 
@@ -152,10 +153,12 @@ export default function ProfilePage() {
             wins: result.user.wins || 0,        // ✅ ИСПРАВЛЕНО: wins вместо gamesWon!
             losses: result.user.losses || 0,    // ✅ ДОБАВЛЕНО: losses из API
             status: result.user.status,
-            avatar_url: result.user.avatar_url
+            avatar_url: result.user.avatar_url,
+            is_admin: result.user.is_admin || false
           };
           
           setUser(userData);
+          setIsAdmin(userData.is_admin || false);
           setAvatarUrl(userData.avatar_url || '😎');
           
           // Обновляем статистику
@@ -1419,6 +1422,43 @@ export default function ProfilePage() {
             </h3>
             <Trophy size={32} style={{ color: '#6366f1' }} />
           </motion.button>
+
+          {/* АДМИН ПАНЕЛЬ (только для админов) */}
+          {isAdmin && (
+            <motion.button
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.6 }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => router.push('/admin')}
+              style={{
+                width: '100%',
+                background: 'linear-gradient(145deg, rgba(239, 68, 68, 0.95) 0%, rgba(220, 38, 38, 0.95) 100%)',
+                border: '2px solid rgba(239, 68, 68, 0.3)',
+                borderRadius: '16px',
+                padding: '20px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '15px',
+                boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)'
+              }}
+            >
+              <div style={{ fontSize: '32px' }}>🔐</div>
+              <h3 style={{
+                color: '#ffffff',
+                fontSize: '20px',
+                fontWeight: '700',
+                margin: 0,
+                flex: 1,
+                textAlign: 'left'
+              }}>
+                АДМИН ПАНЕЛЬ
+              </h3>
+              <Shield size={32} style={{ color: '#ffffff' }} />
+            </motion.button>
+          )}
         </div>
 
         {/* Content Sections */}

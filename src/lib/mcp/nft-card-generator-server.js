@@ -157,7 +157,7 @@ async function uploadCardImage(userId, suit, rank, canvas) {
   
   // Генерируем уникальное имя файла
   const fileName = `${userId}/${suit}_${rank}_${Date.now()}.png`;
-  const bucketName = 'nft-cards'; // Имя bucket в Supabase Storage
+  const bucketName = 'nft-card'; // Имя bucket в Supabase Storage
 
   // Загружаем в Storage
   const { data: uploadData, error: uploadError } = await supabase.storage

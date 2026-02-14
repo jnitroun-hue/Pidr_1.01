@@ -308,7 +308,8 @@ export async function GET(req: NextRequest) {
         gamesPlayed: user.total_games_played || user.games_played || 0,
         wins: user.wins || user.games_won || 0,
         losses: user.losses || 0,
-        status: user.online_status || user.status || 'offline'
+        status: user.online_status || user.status || 'offline',
+        is_admin: user.is_admin || false
       }
     });
 

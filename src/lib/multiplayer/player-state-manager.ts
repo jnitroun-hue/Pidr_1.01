@@ -15,18 +15,11 @@
  * - Правильное управление счетчиками
  */
 
-import { Redis } from '@upstash/redis';
+import { getRedis, isRedisAvailable } from '../redis/init';
 import { supabase } from '../supabase';
 
-// Инициализация Redis
-// Vercel Upstash использует KV_REST_API_URL и KV_REST_API_TOKEN
-const redisUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL || '';
-const redisToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN || '';
-
-const redis = new Redis({
-  url: redisUrl,
-  token: redisToken,
-});
+// Получаем Redis клиент через универсальную инициализацию
+const redis = getRedis();
 
 // ============================================================
 // TYPES
@@ -80,6 +73,11 @@ export async function acquirePlayerLock(
   userId: string,
   timeoutMs: number = 5000
 ): Promise<string | null> {
+  if (!redis) {
+    console.warn('⚠️ [acquirePlayerLock] Redis недоступен, блокировка не получена');
+    return null;
+  }
+  
   const lockKey = KEYS.playerLock(userId);
   const lockId = `${Date.now()}-${Math.random()}`;
   
@@ -99,6 +97,11 @@ export async function releasePlayerLock(
   userId: string,
   lockId: string
 ): Promise<boolean> {
+  if (!redis) {
+    console.warn('⚠️ [releasePlayerLock] Redis недоступен');
+    return false;
+  }
+  
   const lockKey = KEYS.playerLock(userId);
   
   // Проверяем что это наша блокировка перед удалением
@@ -137,6 +140,11 @@ export async function releaseRoomLock(
   roomId: string,
   lockId: string
 ): Promise<boolean> {
+  if (!redis) {
+    console.warn('⚠️ [releaseRoomLock] Redis недоступен');
+    return false;
+  }
+  
   const lockKey = KEYS.roomLock(roomId);
   const currentLock = await redis.get(lockKey);
   
@@ -158,6 +166,11 @@ export async function releaseRoomLock(
 export async function getPlayerState(
   userId: string
 ): Promise<PlayerState | null> {
+  if (!redis) {
+    console.warn('⚠️ [getPlayerState] Redis недоступен');
+    return null;
+  }
+  
   const key = KEYS.playerState(userId);
   const state = await redis.get<PlayerState>(key);
   return state;
@@ -171,6 +184,11 @@ export async function setPlayerState(
   state: PlayerState,
   ttlSeconds: number = 3600 // 1 час
 ): Promise<void> {
+  if (!redis) {
+    console.warn('⚠️ [setPlayerState] Redis недоступен');
+    return;
+  }
+  
   const key = KEYS.playerState(userId);
   await redis.set(key, state, { ex: ttlSeconds });
 }
@@ -179,6 +197,11 @@ export async function setPlayerState(
  * Получить текущую комнату игрока
  */
 export async function getPlayerRoom(userId: string): Promise<string | null> {
+  if (!redis) {
+    console.warn('⚠️ [getPlayerRoom] Redis недоступен');
+    return null;
+  }
+  
   return await redis.get(KEYS.userRoom(userId));
 }
 
@@ -189,6 +212,11 @@ export async function setPlayerRoom(
   userId: string,
   roomId: string | null
 ): Promise<void> {
+  if (!redis) {
+    console.warn('⚠️ [setPlayerRoom] Redis недоступен');
+    return;
+  }
+  
   const key = KEYS.userRoom(userId);
   
   if (roomId) {
@@ -233,6 +261,11 @@ export async function canPlayerJoinRoom(
  * Получить список игроков в комнате из Redis
  */
 export async function getRoomPlayers(roomId: string): Promise<string[]> {
+  if (!redis) {
+    console.warn('⚠️ [getRoomPlayers] Redis недоступен');
+    return [];
+  }
+  
   const key = KEYS.roomPlayers(roomId);
   const players = await redis.smembers(key);
   return players as string[];
@@ -245,6 +278,11 @@ export async function addPlayerToRoom(
   roomId: string,
   userId: string
 ): Promise<void> {
+  if (!redis) {
+    console.warn('⚠️ [addPlayerToRoom] Redis недоступен');
+    return;
+  }
+  
   const key = KEYS.roomPlayers(roomId);
   await redis.sadd(key, userId);
   await redis.expire(key, 7200); // 2 часа
@@ -257,6 +295,11 @@ export async function removePlayerFromRoom(
   roomId: string,
   userId: string
 ): Promise<void> {
+  if (!redis) {
+    console.warn('⚠️ [removePlayerFromRoom] Redis недоступен');
+    return;
+  }
+  
   const key = KEYS.roomPlayers(roomId);
   await redis.srem(key, userId);
 }
@@ -265,6 +308,11 @@ export async function removePlayerFromRoom(
  * Получить количество игроков в комнате
  */
 export async function getRoomPlayerCount(roomId: string): Promise<number> {
+  if (!redis) {
+    console.warn('⚠️ [getRoomPlayerCount] Redis недоступен');
+    return 0;
+  }
+  
   const key = KEYS.roomPlayers(roomId);
   const count = await redis.scard(key);
   return count || 0;
@@ -288,6 +336,11 @@ export async function getFreePosition(
   roomId: string,
   maxPlayers: number
 ): Promise<number | null> {
+  if (!redis) {
+    console.warn('⚠️ [getFreePosition] Redis недоступен');
+    return null;
+  }
+  
   const slotsKey = KEYS.roomSlots(roomId);
   const occupiedSlots = await redis.hgetall(slotsKey);
   
@@ -309,6 +362,11 @@ export async function occupyPosition(
   userId: string,
   position: number
 ): Promise<void> {
+  if (!redis) {
+    console.warn('⚠️ [occupyPosition] Redis недоступен');
+    return;
+  }
+  
   const slotsKey = KEYS.roomSlots(roomId);
   await redis.hset(slotsKey, { [position.toString()]: userId });
   await redis.expire(slotsKey, 7200);
@@ -321,6 +379,11 @@ export async function freePosition(
   roomId: string,
   position: number
 ): Promise<void> {
+  if (!redis) {
+    console.warn('⚠️ [freePosition] Redis недоступен');
+    return;
+  }
+  
   const slotsKey = KEYS.roomSlots(roomId);
   await redis.hdel(slotsKey, position.toString());
 }
@@ -332,6 +395,11 @@ export async function getPlayerPosition(
   roomId: string,
   userId: string
 ): Promise<number | null> {
+  if (!redis) {
+    console.warn('⚠️ [getPlayerPosition] Redis недоступен');
+    return null;
+  }
+  
   const slotsKey = KEYS.roomSlots(roomId);
   const slots = await redis.hgetall(slotsKey);
   
@@ -826,6 +894,11 @@ export async function getRoomDetails(roomId: string): Promise<{
   try {
     const players = await getRoomPlayers(roomId);
     const playerCount = players.length;
+    if (!redis) {
+      console.warn('⚠️ [getRoomDetails] Redis недоступен');
+      return null;
+    }
+    
     const slotsKey = KEYS.roomSlots(roomId);
     const slots = await redis.hgetall(slotsKey) || {};
     
@@ -853,11 +926,15 @@ export async function healthCheck(): Promise<{
   let dbOk = false;
   
   // Проверка Redis
-  try {
-    await redis.ping();
-    redisOk = true;
-  } catch (error: any) {
-    errors.push(`Redis: ${error instanceof Error ? error.message : String(error)}`);
+  if (redis) {
+    try {
+      await redis.ping();
+      redisOk = true;
+    } catch (error: any) {
+      errors.push(`Redis: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  } else {
+    errors.push('Redis: не инициализирован (переменные окружения не настроены)');
   }
   
   // Проверка БД
