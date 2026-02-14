@@ -5,6 +5,10 @@ import { cookies } from 'next/headers';
 import { lightCleanup } from '../../../lib/auto-cleanup';
 import crypto from 'crypto';
 
+// ✅ Явная конфигурация runtime для Next.js 15
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 const JWT_SECRET = process.env.JWT_SECRET;
 const SESSION_SECRET = process.env.SESSION_SECRET;
 const NEXTAUTH_URL = process.env.NEXTAUTH_URL || process.env.VERCEL_URL;
@@ -606,15 +610,27 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    // Устанавливаем HTTP-only cookie с правильными настройками для Telegram WebApp
+    // Устанавливаем HTTP-only cookie с правильными настройками
+    // ✅ ИСПРАВЛЕНО: Определяем настройки в зависимости от окружения
+    const isProduction = process.env.NODE_ENV === 'production';
+    const isTelegramWebApp = req.headers.get('user-agent')?.includes('Telegram') || 
+                            req.headers.get('x-telegram-id') !== null;
+    
     const cookieSettings = {
       httpOnly: true,
-      secure: true, // Всегда true для HTTPS (обязательно для sameSite: 'none')
-      sameSite: 'none' as const, // Для Telegram WebApp нужно 'none'
+      secure: isProduction, // В production всегда true, в dev может быть false для localhost
+      sameSite: (isTelegramWebApp ? 'none' : 'lax') as 'none' | 'lax', // Для Telegram WebApp 'none', для браузера 'lax'
       path: '/',
       maxAge: 30 * 24 * 60 * 60, // 30 дней
       domain: undefined // Автоопределение домена
     };
+    
+    console.log('🍪 Cookie настройки:', {
+      ...cookieSettings,
+      isProduction,
+      isTelegramWebApp,
+      userAgent: req.headers.get('user-agent')?.substring(0, 50)
+    });
     
     response.cookies.set('auth_token', token, cookieSettings);
 

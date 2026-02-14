@@ -75,13 +75,25 @@ function HomeWithParams() {
       // Проверяем сессию через API (без localStorage)
       const checkAuth = async () => {
         try {
+          console.log('🔍 [Браузер] Проверяем сессию через /api/auth...');
+          
           const sessionResponse = await fetch('/api/auth', {
             method: 'GET',
             credentials: 'include'
           });
 
+          console.log('📥 [Браузер] Ответ от /api/auth:', {
+            status: sessionResponse.status,
+            statusText: sessionResponse.statusText,
+            ok: sessionResponse.ok
+          });
+
           if (sessionResponse.ok) {
             const sessionData = await sessionResponse.json();
+            console.log('📊 [Браузер] Данные сессии:', {
+              success: sessionData.success,
+              hasUser: !!sessionData.user
+            });
             
             if (sessionData.success && sessionData.user) {
               console.log('✅ Найдена активная сессия в браузере:', sessionData.user.username);
@@ -108,9 +120,21 @@ function HomeWithParams() {
               }, 500);
               return;
             }
+          } else if (sessionResponse.status === 404) {
+            console.error('❌ [Браузер] API endpoint /api/auth не найден (404)');
+            console.error('❌ Это критическая ошибка - API route не работает!');
           }
-        } catch (error) {
-          console.error('❌ Ошибка проверки авторизации:', error);
+        } catch (error: any) {
+          console.error('❌ [Браузер] Ошибка проверки авторизации:', {
+            message: error?.message,
+            name: error?.name,
+            stack: error?.stack
+          });
+          
+          // ✅ Если это ошибка сети - показываем сообщение
+          if (error?.message?.includes('fetch') || error?.message?.includes('network')) {
+            console.error('❌ [Браузер] Ошибка сети при проверке авторизации');
+          }
         }
         
         // Если нет авторизации - редиректим на страницу входа
@@ -333,6 +357,12 @@ function HomeWithParams() {
       console.log('📤 Отправляем данные:', authData);
       
       try {
+        console.log('📤 Отправляем запрос на /api/auth:', {
+          method: 'POST',
+          hasAuthData: !!authData,
+          telegramId: authData.telegramId
+        });
+        
         const response = await fetch('/api/auth', {
           method: 'POST',
           headers: {
@@ -342,11 +372,28 @@ function HomeWithParams() {
           body: JSON.stringify(authData)
         });
         
+        console.log('📥 Ответ от /api/auth:', {
+          status: response.status,
+          statusText: response.statusText,
+          ok: response.ok
+        });
+        
         if (!response.ok) {
-          throw new Error(`API ответил с ошибкой: ${response.status}`);
+          const errorText = await response.text();
+          console.error('❌ Ошибка API:', {
+            status: response.status,
+            statusText: response.statusText,
+            body: errorText
+          });
+          throw new Error(`API ответил с ошибкой ${response.status}: ${errorText.substring(0, 200)}`);
         }
         
         const data = await response.json();
+        console.log('📊 Данные ответа:', {
+          success: data.success,
+          hasUser: !!data.user,
+          message: data.message
+        });
         
         if (data.success && data.user) {
           console.log('✅ Пользователь создан/авторизован:', data.user.username);
@@ -439,9 +486,35 @@ function HomeWithParams() {
         }
         
       } catch (error: any) {
-        console.error('❌ Ошибка создания пользователя:', error);
-        setError('Не удалось авторизоваться. Попробуйте перезапустить бота.');
+        console.error('❌ Ошибка создания пользователя:', {
+          message: error?.message,
+          stack: error?.stack,
+          name: error?.name,
+          fullError: error
+        });
+        
+        // ✅ Более информативное сообщение об ошибке
+        let errorMessage = 'Не удалось авторизоваться. ';
+        if (error?.message?.includes('404')) {
+          errorMessage += 'Сервер не отвечает. Проверьте подключение к интернету.';
+        } else if (error?.message?.includes('500')) {
+          errorMessage += 'Ошибка сервера. Попробуйте позже.';
+        } else if (error?.message?.includes('network') || error?.message?.includes('fetch')) {
+          errorMessage += 'Ошибка подключения к серверу.';
+        } else {
+          errorMessage += error?.message || 'Попробуйте перезапустить бота.';
+        }
+        
+        setError(errorMessage);
         setLoading(false);
+        
+        // ✅ Для браузерной версии - редирект на страницу входа
+        if (!isTelegramMiniApp()) {
+          console.log('🌐 Браузерная версия - редирект на /auth/login');
+          setTimeout(() => {
+            router.push('/auth/login');
+          }, 2000);
+        }
       }
     };
 
