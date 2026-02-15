@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
         email: email || null,
         phone: phone || null,
         password_hash: passwordHash,
-        auth_method: 'local',
+        auth_method: 'web',
         coins: 1000,
         rating: 0,
         email_verified: false,
@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
     const { token } = await createSession({
       userId: newUser.id.toString(),
       username: newUser.username,
-      authMethod: 'local',
+      authMethod: 'web',
       email: newUser.email || undefined,
       phone: newUser.phone || undefined,
       userAgent: request.headers.get('user-agent') || undefined,

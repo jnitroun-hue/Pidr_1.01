@@ -36,7 +36,7 @@ if (redis) {
 export interface SessionData {
   userId: string;
   username: string;
-  authMethod: 'telegram' | 'vk' | 'google' | 'local';
+  authMethod: 'telegram' | 'vk' | 'google' | 'web';
   telegramId?: string;
   vkId?: string;
   googleId?: string;
@@ -77,7 +77,7 @@ const KEYS = {
 export async function createSession(data: {
   userId: string;
   username: string;
-  authMethod: 'telegram' | 'vk' | 'google' | 'local';
+  authMethod: 'telegram' | 'vk' | 'google' | 'web';
   telegramId?: string;
   vkId?: string;
   googleId?: string;
@@ -116,7 +116,7 @@ export async function createSession(data: {
   };
   
   // Добавляем специфичные поля для разных методов авторизации
-  if (data.authMethod === 'local') {
+  if (data.authMethod === 'web') {
     tokenPayload.authSource = 'web';
   } else if (data.authMethod === 'telegram' && data.telegramId) {
     tokenPayload.telegramId = data.telegramId;

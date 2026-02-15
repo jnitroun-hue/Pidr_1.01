@@ -28,7 +28,7 @@ supabase db push
 Добавляет поддержку множественных методов авторизации:
 - Добавляет поля `email`, `phone`, `password_hash`
 - Добавляет поля `vk_id`, `google_id` для OAuth
-- Добавляет поле `auth_method` (telegram, vk, google, local)
+- Добавляет поле `auth_method` (telegram, vk, google, web)
 - Создает индексы для быстрого поиска
 - **Включает RLS (Row Level Security) для всех таблиц**
 - Создает политики доступа для безопасности данных
@@ -47,6 +47,21 @@ supabase db push
 ⚠️ **ВАЖНО:** Используйте `0002_auth_system_update_fixed.sql`, а не `0002_auth_system_update.sql`!
 
 **Если получили ошибку:** Смотрите `FIX_MIGRATION_ERROR.md` для инструкций по исправлению.
+
+### 3. Замена 'local' на 'web' (0006_replace_local_with_web.sql) ⚠️ ОБЯЗАТЕЛЬНО
+Заменяет все упоминания 'local' на 'web' в auth_method:
+- Обновляет CHECK constraint для auth_method (telegram, vk, google, web)
+- Обновляет все существующие записи с 'local' на 'web'
+- Обновляет значение по умолчанию на 'web'
+- **Веб-версия теперь работает только через БД, без локальных данных**
+
+**Применение:**
+```bash
+# Через Supabase Dashboard (РЕКОМЕНДУЕТСЯ)
+1. Откройте Supabase Dashboard → SQL Editor
+2. Скопируйте содержимое файла 0006_replace_local_with_web.sql
+3. Выполните SQL
+```
 
 ## Важные замечания
 

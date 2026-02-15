@@ -83,12 +83,12 @@ export async function GET(req: NextRequest) {
     }
 
     // ✅ ПРОВЕРКА БЕЗОПАСНОСТИ: x-telegram-id header (только для Telegram авторизации)
-    // Для локальной авторизации (логин/пароль) этот header не требуется
+    // Для веб-версии этот header не требуется
     const telegramIdHeader = req.headers.get('x-telegram-id');
-    const authMethod = payload?.authMethod || 'telegram';
+    const authMethod = payload?.authMethod || payload?.authSource || 'telegram';
     
     // Если это Telegram авторизация - проверяем header
-    // Если это локальная авторизация - пропускаем проверку header
+    // Если это веб-версия - пропускаем проверку header
     if (authMethod === 'telegram' && !telegramIdHeader) {
       console.log('⚠️ x-telegram-id header отсутствует для Telegram авторизации, возвращаем 401');
       return NextResponse.json({ 
@@ -98,18 +98,17 @@ export async function GET(req: NextRequest) {
     }
 
     // ✅ ИСПРАВЛЕНО: userId из токена может быть как id из БД, так и telegram_id
-    // Для локальной авторизации проверяем только по id
+    // Для веб-версии проверяем только по id из БД
     // Для Telegram авторизации проверяем по telegram_id и header
     let userForCheck: any = null;
     let userCheckError: any = null;
     
-    if (authMethod === 'local') {
-      // Для локальной авторизации - просто находим пользователя по id
+    if (authMethod === 'web') {
+      // Для веб-версии - находим пользователя по id из БД
       const { data, error } = await supabase
         .from('_pidr_users')
         .select('id, telegram_id, auth_method')
         .eq('id', parseInt(userId))
-        .eq('auth_method', 'local')
         .single();
       userForCheck = data;
       userCheckError = error;
@@ -245,7 +244,7 @@ export async function GET(req: NextRequest) {
     }
 
     // ✅ КРИТИЧНО: Финальная проверка - только для Telegram авторизации
-    // Для веб-версии (local) проверка telegram_id не требуется
+    // Для веб-версии проверка telegram_id не требуется
     if (authMethod === 'telegram') {
       const finalTelegramId = String(user.telegram_id || '');
       const finalHeaderTelegramId = String(telegramIdHeader || '');
@@ -285,7 +284,7 @@ export async function GET(req: NextRequest) {
         return errorResponse;
       }
     } else {
-      console.log('👤 [GET /api/auth] Веб-версия (local), проверка telegram_id не требуется:', {
+      console.log('👤 [GET /api/auth] Веб-версия, проверка telegram_id не требуется:', {
         userId: user.id,
         username: user.username,
         authMethod

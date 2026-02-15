@@ -9,7 +9,7 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { username, email, phone, password, type = 'local' } = body;
+    const { username, email, phone, password, type = 'web' } = body;
 
     // Валидация
     if (!password) {
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     let query = supabase
       .from('_pidr_users')
       .select('*')
-      .eq('auth_method', 'local')
+      .eq('auth_method', 'web')
       .eq('is_active', true);
 
     if (username) {
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     const { token } = await createSession({
       userId: user.id.toString(),
       username: user.username,
-      authMethod: 'local',
+      authMethod: 'web',
       email: user.email || undefined,
       phone: user.phone || undefined,
       userAgent: request.headers.get('user-agent') || undefined,

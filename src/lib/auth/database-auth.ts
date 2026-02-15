@@ -202,7 +202,7 @@ export class DatabaseAuth {
       // Создаем сессию в БД
       const sessionInfo = await SessionManager.createSession(
         user.id.toString(),
-        'local',
+        'web',
         {
           userAgent: 'WebBrowser',
           ipAddress: '127.0.0.1'

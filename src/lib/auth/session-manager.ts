@@ -15,7 +15,7 @@ export interface SessionInfo {
 export interface AuthLogEntry {
   userId: string;
   action: 'login' | 'logout' | 'token_refresh' | 'token_revoke' | 'session_cleanup';
-  authType: 'telegram' | 'local' | 'google' | 'vk' | 'system';
+    authType: 'telegram' | 'web' | 'google' | 'vk' | 'system';
   ipAddress?: string;
   userAgent?: string;
   success: boolean;

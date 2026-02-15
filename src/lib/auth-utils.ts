@@ -121,7 +121,7 @@ export function getUserIdFromRequest(req: NextRequest): { userId: string | null;
         // ✅ ДЛЯ ВЕБ: userId в токене - это id из БД (число)
         userId = payload.userId.toString();
         // Определяем окружение по authMethod или authSource из токена
-        if (payload.authMethod === 'local' || payload.authSource === 'web') {
+        if (payload.authMethod === 'web' || payload.authSource === 'web') {
           detectedEnv = 'web';
         } else {
           detectedEnv = payload.authSource || 'web';
