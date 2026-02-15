@@ -16,22 +16,22 @@ const REDIS_KEYS = {
 // 💓 API: Heartbeat для обновления онлайн статуса с Redis кешированием
 export async function POST(request: NextRequest) {
   try {
-    // ✅ ИСПРАВЛЕНО: Используем x-telegram-id как fallback
-    let userId: string | null = getUserIdFromRequest(request);
-    
-    // Если нет из токена, пробуем из header
-    if (!userId) {
-      const telegramIdHeader = request.headers.get('x-telegram-id');
-      if (telegramIdHeader) {
-        userId = telegramIdHeader;
-      }
-    }
+    // ✅ ИСПРАВЛЕНО: Используем универсальную систему авторизации
+    const { userId, environment } = getUserIdFromRequest(request);
     
     if (!userId) {
       return NextResponse.json({ success: false, error: 'Не авторизован' }, { status: 401 });
     }
 
-    const userIdBigInt = parseInt(userId, 10);
+    // ✅ УНИВЕРСАЛЬНО: Получаем id из БД для обновления статуса
+    const { getUserIdFromDatabase } = await import('@/lib/auth-utils');
+    const { dbUserId } = await getUserIdFromDatabase(userId, environment);
+    
+    if (!dbUserId) {
+      return NextResponse.json({ success: false, error: 'Пользователь не найден в БД' }, { status: 404 });
+    }
+
+    const userIdBigInt = dbUserId;
     const now = new Date().toISOString();
     const nowTimestamp = Date.now();
 
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
       const { error, data: updatedUser } = await supabaseAdmin
         .from('_pidr_users')
         .update(updateData)
-        .eq('telegram_id', userIdBigInt)
+        .eq('id', userIdBigInt)
         .select();
       
       console.log(`💓 [HEARTBEAT DB] Обновлен статус для ${userId}:`, updatedUser ? 'успешно' : 'ошибка');
