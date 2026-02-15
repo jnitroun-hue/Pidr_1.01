@@ -144,28 +144,44 @@ export function useTutorial(
     console.log('🎓 [useTutorial] Проверка инициализации:', { 
       isTutorialGame, 
       tutorialGameNumber, 
-      enabled: tutorialConfig.enabled 
+      enabled: tutorialConfig.enabled,
+      stepsCount: tutorialConfig.steps.length
     });
     
-    if (isTutorialGame && tutorialGameNumber && !tutorialConfig.enabled) {
-      console.log(`✅ [useTutorial] Инициализируем обучение для игры #${tutorialGameNumber}`);
-      const steps = generateTutorialSteps(tutorialGameNumber);
-      console.log(`📚 [useTutorial] Сгенерировано шагов: ${steps.length}`);
-      
-      setTutorialConfig({
-        enabled: true,
-        shownSteps: new Set(),
-        steps
-      });
-      
-      // Показываем приветствие
-      const firstStep = steps[0];
-      if (firstStep) {
-        console.log(`🎯 [useTutorial] Показываем первый шаг: ${firstStep.id}`);
-        setCurrentStep(firstStep);
-        setIsTutorialPaused(true);
+    // ✅ ИСПРАВЛЕНО: Инициализируем туториал если это обучающая игра
+    if (isTutorialGame && tutorialGameNumber) {
+      // Если туториал еще не инициализирован или шаги пустые
+      if (!tutorialConfig.enabled || tutorialConfig.steps.length === 0) {
+        console.log(`✅ [useTutorial] Инициализируем обучение для игры #${tutorialGameNumber}`);
+        const steps = generateTutorialSteps(tutorialGameNumber);
+        console.log(`📚 [useTutorial] Сгенерировано шагов: ${steps.length}`, steps.map(s => s.id));
+        
+        if (steps.length === 0) {
+          console.warn('⚠️ [useTutorial] Нет шагов для туториала!');
+          return;
+        }
+        
+        setTutorialConfig({
+          enabled: true,
+          shownSteps: new Set(),
+          steps
+        });
+        
+        // ✅ Показываем приветствие СРАЗУ с небольшой задержкой для анимации
+        const firstStep = steps[0];
+        if (firstStep) {
+          console.log(`🎯 [useTutorial] Показываем первый шаг: ${firstStep.id} - "${firstStep.title}"`);
+          // Небольшая задержка для плавной анимации
+          setTimeout(() => {
+            setCurrentStep(firstStep);
+            setIsTutorialPaused(true);
+            console.log('✅ [useTutorial] Модалка туториала открыта!');
+          }, 500);
+        } else {
+          console.error('❌ [useTutorial] Первый шаг не найден! Шаги:', steps);
+        }
       } else {
-        console.warn('⚠️ [useTutorial] Первый шаг не найден!');
+        console.log('ℹ️ [useTutorial] Туториал уже инициализирован');
       }
     } else if (!isTutorialGame && tutorialConfig.enabled) {
       console.log('❌ [useTutorial] Отключаем обучение - это не обучающая игра');
@@ -177,8 +193,10 @@ export function useTutorial(
       });
       setCurrentStep(null);
       setIsTutorialPaused(false);
+    } else if (!isTutorialGame) {
+      console.log('ℹ️ [useTutorial] Это не обучающая игра, туториал не нужен');
     }
-  }, [isTutorialGame, tutorialGameNumber, tutorialConfig.enabled, generateTutorialSteps]);
+  }, [isTutorialGame, tutorialGameNumber, tutorialConfig.enabled, tutorialConfig.steps.length, generateTutorialSteps]);
 
   // Переход к следующему шагу
   const nextStep = useCallback(() => {

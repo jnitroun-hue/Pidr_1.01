@@ -318,6 +318,7 @@ function GamePageContentComponent({
   useEffect(() => {
     if (!user?.id || isMultiplayer) {
       // Если мультиплеер - отключаем обучение
+      console.log('⚠️ [GamePageContent] Туториал отключен:', { hasUser: !!user?.id, isMultiplayer });
       setIsTutorialGame(false);
       setTutorialGameNumber(null);
       return;
@@ -325,7 +326,7 @@ function GamePageContentComponent({
 
     const loadGamesCount = async () => {
       try {
-        console.log('📊 [GamePageContent] Загружаем количество игр для обучения...');
+        console.log('📊 [GamePageContent] Загружаем количество игр для обучения...', { userId: user.id });
         const response = await fetch('/api/user/bot-games', {
           method: 'GET',
           headers: {
@@ -334,17 +335,30 @@ function GamePageContentComponent({
           },
           credentials: 'include'
         });
+        
+        console.log('📥 [GamePageContent] Ответ от /api/user/bot-games:', { status: response.status, ok: response.ok });
 
         if (response.ok) {
           const data = await response.json();
           if (data.success) {
             const gamesCount = data.gamesPlayed || 0;
             setGamesPlayed(gamesCount);
-            // Обучение для первых 3 игр (0, 1, 2)
-            const isTutorial = gamesCount < 3;
+            
+            // ✅ ИСПРАВЛЕНО: Обучение только для новых пользователей (после 10.02.2026) в первых 3 играх
+            const isNewUser = data.isNewUser !== false; // По умолчанию true если не указано
+            const showTutorial = data.showTutorial !== false; // Используем флаг из API
+            const isTutorial = showTutorial && gamesCount < 3;
+            
             setIsTutorialGame(isTutorial);
             setTutorialGameNumber(isTutorial ? gamesCount + 1 : null);
-            console.log(`✅ [GamePageContent] Игр сыграно: ${gamesCount}, обучающая игра: ${isTutorial ? gamesCount + 1 : 'нет'}`);
+            
+            console.log(`✅ [GamePageContent] Игр сыграно: ${gamesCount}, новый пользователь: ${isNewUser}, обучающая игра: ${isTutorial ? gamesCount + 1 : 'нет'}`);
+            
+            if (!isTutorial && isNewUser && gamesCount >= 3) {
+              console.log('ℹ️ [GamePageContent] Новый пользователь, но уже сыграно 3+ игр - туториал не нужен');
+            } else if (!isNewUser) {
+              console.log('ℹ️ [GamePageContent] Старый пользователь (до 10.02.2026) - туториал отключен');
+            }
           } else {
             console.warn('⚠️ [GamePageContent] Не удалось получить данные игр');
             // По умолчанию включаем обучение для новых пользователей

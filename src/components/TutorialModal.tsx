@@ -32,11 +32,12 @@ export default function TutorialModal({
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Затемнение фона */}
+          {/* Затемнение фона - УЛУЧШЕННАЯ АНИМАЦИЯ */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
             onClick={onClose}
             style={{
               position: 'fixed',
@@ -46,17 +47,37 @@ export default function TutorialModal({
               bottom: 0,
               background: 'rgba(0, 0, 0, 0.85)',
               zIndex: 9999,
-              backdropFilter: 'blur(4px)',
-              WebkitBackdropFilter: 'blur(4px)'
+              backdropFilter: 'blur(8px)', // ✅ УВЕЛИЧЕНО: было 4px
+              WebkitBackdropFilter: 'blur(8px)'
             }}
           />
           
-          {/* Модалка - 60% ширины, 10% отступы от краев */}
+          {/* Модалка - УЛУЧШЕННЫЕ АНИМАЦИИ */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            initial={{ opacity: 0, scale: 0.8, y: 50, rotateX: -15 }} // ✅ ДОБАВЛЕНА 3D АНИМАЦИЯ
+            animate={{ 
+              opacity: 1, 
+              scale: 1, 
+              y: 0, 
+              rotateX: 0,
+              transition: {
+                type: 'spring',
+                damping: 20,
+                stiffness: 300,
+                mass: 0.8
+              }
+            }}
+            exit={{ 
+              opacity: 0, 
+              scale: 0.9, 
+              y: 30,
+              rotateX: 10,
+              transition: {
+                duration: 0.2,
+                ease: 'easeIn'
+              }
+            }}
+            whileHover={{ scale: 1.01 }} // ✅ ЛЕГКОЕ УВЕЛИЧЕНИЕ ПРИ НАВЕДЕНИИ
             style={{
               position: 'fixed',
               top: '10%',
@@ -102,13 +123,23 @@ export default function TutorialModal({
                 minWidth: 0
               }}>
                 {step.icon && (
-                  <div style={{
-                    fontSize: '48px',
-                    filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))',
-                    flexShrink: 0
-                  }}>
+                  <motion.div
+                    initial={{ scale: 0, rotate: -180 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{ 
+                      type: 'spring',
+                      damping: 15,
+                      stiffness: 200,
+                      delay: 0.2
+                    }}
+                    style={{
+                      fontSize: '48px',
+                      filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))',
+                      flexShrink: 0
+                    }}
+                  >
                     {step.icon}
-                  </div>
+                  </motion.div>
                 )}
                 {!step.icon && (
                   <Lightbulb 
@@ -164,16 +195,21 @@ export default function TutorialModal({
               )}
             </div>
 
-            {/* Контент - растягивается */}
-            <div style={{
-              color: '#e2e8f0',
-              fontSize: 'clamp(16px, 2.5vw, 20px)',
-              lineHeight: '1.8',
-              marginBottom: '32px',
-              flex: 1,
-              overflowY: 'auto',
-              wordBreak: 'break-word'
-            }}>
+            {/* Контент - УЛУЧШЕННАЯ АНИМАЦИЯ */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.4 }}
+              style={{
+                color: '#e2e8f0',
+                fontSize: 'clamp(16px, 2.5vw, 20px)',
+                lineHeight: '1.8',
+                marginBottom: '32px',
+                flex: 1,
+                overflowY: 'auto',
+                wordBreak: 'break-word'
+              }}
+            >
               {typeof step.content === 'string' ? (
                 <p style={{ margin: 0, whiteSpace: 'pre-line' }}>
                   {step.content}
@@ -181,13 +217,19 @@ export default function TutorialModal({
               ) : (
                 step.content
               )}
-            </div>
+            </motion.div>
 
-            {/* Кнопка - внизу */}
+            {/* Кнопка - УЛУЧШЕННЫЕ АНИМАЦИИ */}
             <motion.button
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.3 }}
               onClick={showNext && onNext ? onNext : onClose}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={{ 
+                scale: 1.05, // ✅ УВЕЛИЧЕНО: было 1.02
+                boxShadow: '0 15px 40px rgba(99, 102, 241, 0.7), 0 0 60px rgba(99, 102, 241, 0.5)'
+              }}
+              whileTap={{ scale: 0.95 }} // ✅ УВЕЛИЧЕНО: было 0.98
               style={{
                 width: '100%',
                 padding: '20px 32px',
@@ -202,10 +244,37 @@ export default function TutorialModal({
                 transition: 'all 0.3s',
                 touchAction: 'manipulation',
                 WebkitTapHighlightColor: 'transparent',
-                flexShrink: 0
+                flexShrink: 0,
+                position: 'relative',
+                overflow: 'hidden'
               }}
             >
-              {showNext ? 'Далее →' : 'Понятно ✓'}
+              {/* ✅ ДОБАВЛЕНА АНИМАЦИЯ СВЕЧЕНИЯ */}
+              <motion.div
+                animate={{
+                  background: [
+                    'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%)',
+                    'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%)'
+                  ],
+                  x: ['-100%', '200%']
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  repeatDelay: 1
+                }}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  pointerEvents: 'none'
+                }}
+              />
+              <span style={{ position: 'relative', zIndex: 1 }}>
+                {showNext ? 'Далее →' : 'Понятно ✓'}
+              </span>
             </motion.button>
           </motion.div>
         </>
