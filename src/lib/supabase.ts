@@ -217,4 +217,17 @@ export function getSupabaseAdmin() {
   }
 
   return supabaseAdminClient;
-} 
+}
+
+// ✅ ЭКСПОРТ АДМИНСКОГО КЛИЕНТА (для обхода RLS)
+export const supabaseAdmin = new Proxy({} as any, {
+  get(target, prop) {
+    const client = getSupabaseAdmin();
+    if (!client) {
+      // Возвращаем mock если админский клиент недоступен
+      return () => Promise.resolve({ data: null, error: { message: 'Supabase admin not configured' } });
+    }
+    const value = (client as any)[prop];
+    return typeof value === 'function' ? value.bind(client) : value;
+  }
+}); 

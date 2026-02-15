@@ -214,16 +214,19 @@
   opacity: 0.8;
 }
 
-/* Места игроков */
+/* Места игроков - УМЕНЬШЕНЫ РАЗМЕРЫ И РАССТОЯНИЯ */
 .playerSeat {
   position: absolute;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 4px; /* ✅ УМЕНЬШЕНО: было 8px */
   cursor: pointer;
   transition: all 0.3s ease;
   z-index: 10;
+  padding: 4px 6px; /* ✅ ДОБАВЛЕНО: минимальный padding */
+  min-width: auto; /* ✅ Убираем минимальную ширину */
+  min-height: auto; /* ✅ Убираем минимальную высоту */
 }
 
 /* ✅ НОВОЕ: Игроки справа - карты СЛЕВА от аватара! */
@@ -252,13 +255,13 @@
   box-shadow: 0 0 20px rgba(40, 167, 69, 0.6);
 }
 
-/* Аватар игрока - УМЕНЬШЕН В 3 РАЗА */
+/* Аватар игрока - ЕЩЁ УМЕНЬШЕН */
 .playerAvatar {
   position: relative;
-  width: 40px; /* ✅ УМЕНЬШЕНО В 3 РАЗА (было ~120px изначально)! */
-  height: 40px;
+  width: 32px; /* ✅ УМЕНЬШЕНО: было 40px */
+  height: 32px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  border: 1.5px solid rgba(255, 255, 255, 0.3); /* ✅ УМЕНЬШЕНА ТОЛЩИНА */
   overflow: hidden;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   transition: all 0.3s ease;
@@ -305,28 +308,30 @@
   }
 }
 
-/* Информация об игроке */
+/* Информация об игроке - УМЕНЬШЕНА */
 .playerInfo {
   text-align: center;
   color: white;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  margin-top: 2px; /* ✅ ДОБАВЛЕНО: небольшой отступ */
 }
 
 .playerName {
-  font-size: 13px;
+  font-size: 11px; /* ✅ УМЕНЬШЕНО: было 13px */
   font-weight: bold;
-  margin-bottom: 2px;
-  max-width: 80px;
+  margin-bottom: 1px; /* ✅ УМЕНЬШЕНО: было 2px */
+  max-width: 60px; /* ✅ УМЕНЬШЕНО: было 80px */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  line-height: 1.2; /* ✅ ДОБАВЛЕНО: компактная высота строки */
 }
 
 .playerStats {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  font-size: 10px;
+  gap: 1px; /* ✅ УМЕНЬШЕНО: было 2px */
+  font-size: 9px; /* ✅ УМЕНЬШЕНО: было 10px */
   opacity: 0.9;
 }
 
@@ -343,14 +348,15 @@
   border: 1px solid rgba(255, 215, 0, 0.3);
 }
 
-/* Карты игроков */
+/* Карты игроков - УМЕНЬШЕНЫ РАССТОЯНИЯ */
 .playerCards {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-top: -28px; /* ✅ ЕЩЁ ВЫШЕ: Карты НАД аватаром! */
-  z-index: 30; /* ✅ МАКСИМАЛЬНЫЙ: Карты ВСЕГДА ПОВЕРХ аватара */
+  margin-top: -20px; /* ✅ УМЕНЬШЕНО: было -28px */
+  z-index: 30;
+  gap: 2px; /* ✅ ДОБАВЛЕНО: минимальный gap между картами */
 }
 
 /* Карты слева направо (для левых игроков) */
@@ -365,12 +371,13 @@
 
 .playerCard {
   position: relative;
-  width: 15px; /* ✅ УМЕНЬШЕНО: В 2 раза меньше (было 20px) */
-  height: 21px; /* ✅ УМЕНЬШЕНО: В 2 раза меньше (было 28px) */
-  border-radius: 3px;
+  width: 12px; /* ✅ УМЕНЬШЕНО: было 15px */
+  height: 17px; /* ✅ УМЕНЬШЕНО: было 21px */
+  border-radius: 2px; /* ✅ УМЕНЬШЕНО: было 3px */
   overflow: hidden;
   transition: all 0.3s ease;
-  z-index: 11; /* ✅ НОВОЕ: Карты выше всего */
+  z-index: 11;
+  margin-left: -2px; /* ✅ ДОБАВЛЕНО: перекрытие карт для компактности */
 }
 
 .cardBackImage {

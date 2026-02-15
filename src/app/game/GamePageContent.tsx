@@ -136,9 +136,9 @@ const getRectanglePosition = (index: number, totalPlayers: number, gameStage: nu
   if (totalPlayers === 4) {
     // 4 игрока: 1 сверху, 1 справа, 1 слева, 1 внизу (главный)
     const positions = [
-      { left: '50%', top: '5%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 55 }, side: 'top' as const }, // 1: сверху
-      { left: '95%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 }, side: 'right' as const }, // 2: справа
-      { left: '5%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 }, side: 'left' as const }, // 3: слева
+      { left: '50%', top: '8%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 55 }, side: 'top' as const }, // ✅ УВЕЛИЧЕН ОТСТУП: было 5%
+      { left: '92%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 }, side: 'right' as const }, // ✅ УВЕЛИЧЕН ОТСТУП: было 95%
+      { left: '8%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 }, side: 'left' as const }, // ✅ УВЕЛИЧЕН ОТСТУП: было 5%
     ];
     return positions[adjustedIndex] || positions[0];
   }
@@ -146,10 +146,10 @@ const getRectanglePosition = (index: number, totalPlayers: number, gameStage: nu
   if (totalPlayers === 5) {
     // 5 игроков: 2 сверху, 1 справа, 1 слева, 1 внизу (главный)
     const positions = [
-      { left: '35%', top: '5%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 55 }, side: 'top' as const }, // 1: сверху слева
-      { left: '65%', top: '5%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 55 }, side: 'top' as const }, // 2: сверху справа
-      { left: '95%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 }, side: 'right' as const }, // 3: справа
-      { left: '5%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 }, side: 'left' as const }, // 4: слева
+      { left: '35%', top: '8%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 55 }, side: 'top' as const }, // ✅ УВЕЛИЧЕН ОТСТУП: было 5%
+      { left: '65%', top: '8%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 55 }, side: 'top' as const }, // ✅ УВЕЛИЧЕН ОТСТУП: было 5%
+      { left: '92%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 }, side: 'right' as const }, // ✅ УВЕЛИЧЕН ОТСТУП: было 95%
+      { left: '8%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 }, side: 'left' as const }, // ✅ УВЕЛИЧЕН ОТСТУП: было 5%
     ];
     return positions[adjustedIndex] || positions[0];
   }
@@ -157,11 +157,11 @@ const getRectanglePosition = (index: number, totalPlayers: number, gameStage: nu
   if (totalPlayers === 6) {
     // 6 игроков: 1 сверху, 2 справа, 2 слева, 1 внизу (главный)
     const positions = [
-      { left: '50%', top: '5%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 55 }, side: 'top' as const }, // 1: сверху
-      { left: '95%', top: '35%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 }, side: 'right' as const }, // 2: справа вверху
-      { left: '95%', top: '65%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 }, side: 'right' as const }, // 3: справа внизу
-      { left: '5%', top: '35%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 }, side: 'left' as const }, // 4: слева вверху
-      { left: '5%', top: '65%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 }, side: 'left' as const }, // 5: слева внизу
+      { left: '50%', top: '8%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 55 }, side: 'top' as const }, // ✅ УВЕЛИЧЕН ОТСТУП: было 5%
+      { left: '92%', top: '35%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 }, side: 'right' as const }, // ✅ УВЕЛИЧЕН ОТСТУП: было 95%
+      { left: '92%', top: '65%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 }, side: 'right' as const }, // ✅ УВЕЛИЧЕН ОТСТУП: было 95%
+      { left: '8%', top: '35%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 }, side: 'left' as const }, // ✅ УВЕЛИЧЕН ОТСТУП: было 5%
+      { left: '8%', top: '65%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 }, side: 'left' as const }, // ✅ УВЕЛИЧЕН ОТСТУП: было 5%
     ];
     return positions[adjustedIndex] || positions[0];
   }
@@ -169,12 +169,12 @@ const getRectanglePosition = (index: number, totalPlayers: number, gameStage: nu
   if (totalPlayers === 7) {
     // 7 игроков: 2 сверху, 2 слева, 2 справа, 1 внизу (главный)
     const positions = [
-      { left: '35%', top: '5%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 55 }, side: 'top' as const }, // 1: сверху слева
-      { left: '65%', top: '5%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 55 }, side: 'top' as const }, // 2: сверху справа
-      { left: '5%', top: '35%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 }, side: 'left' as const }, // 3: слева вверху
-      { left: '5%', top: '65%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 }, side: 'left' as const }, // 4: слева внизу
-      { left: '95%', top: '35%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 }, side: 'right' as const }, // 5: справа вверху
-      { left: '95%', top: '65%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 }, side: 'right' as const }, // 6: справа внизу
+      { left: '35%', top: '8%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 55 }, side: 'top' as const }, // ✅ УВЕЛИЧЕН ОТСТУП: было 5%
+      { left: '65%', top: '8%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 55 }, side: 'top' as const }, // ✅ УВЕЛИЧЕН ОТСТУП: было 5%
+      { left: '8%', top: '35%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 }, side: 'left' as const }, // ✅ УВЕЛИЧЕН ОТСТУП: было 5%
+      { left: '8%', top: '65%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 }, side: 'left' as const }, // ✅ УВЕЛИЧЕН ОТСТУП: было 5%
+      { left: '92%', top: '35%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 }, side: 'right' as const }, // ✅ УВЕЛИЧЕН ОТСТУП: было 95%
+      { left: '92%', top: '65%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 }, side: 'right' as const }, // ✅ УВЕЛИЧЕН ОТСТУП: было 95%
     ];
     return positions[adjustedIndex] || positions[0];
   }
@@ -407,10 +407,10 @@ function GamePageContentComponent({
               isUser: true,
               level: Math.floor((result.user.experience || 0) / 1000) + 1,
               rating: result.user.rating || 0,
-              gamesPlayed: result.user.games_played || 0,
-              wins: result.user.wins || 0,
-              winRate: result.user.games_played > 0 
-                ? Math.round((result.user.wins / result.user.games_played) * 100) 
+              gamesPlayed: result.user.games_played || result.user.gamesPlayed || 0,
+              wins: result.user.games_won || result.user.gamesWon || result.user.wins || 0,
+              winRate: (result.user.games_played || result.user.gamesPlayed || 0) > 0 
+                ? Math.round(((result.user.games_won || result.user.gamesWon || result.user.wins || 0) / (result.user.games_played || result.user.gamesPlayed || 1)) * 100) 
                 : 0,
               bestStreak: result.user.best_win_streak || 0,
               status: '🟢 Online',
@@ -468,6 +468,52 @@ function GamePageContentComponent({
     console.log('📋 [handlePlayerClick] Сгенерированный профиль:', profile);
     setSelectedPlayerProfile(profile);
     setIsProfileModalOpen(true);
+    
+    // ✅ СИНХРОНИЗАЦИЯ: Если это текущий пользователь, обновляем данные при открытии модального окна
+    if (player.isUser) {
+      const syncUserProfile = async () => {
+        try {
+          const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+          const telegramId = telegramUser?.id?.toString() || '';
+          const username = telegramUser?.username || telegramUser?.first_name || '';
+          
+          if (!telegramId) return;
+          
+          const response = await fetch('/api/user/me', {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-telegram-id': telegramId,
+              'x-username': username
+            }
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            if (result.success && result.user) {
+              console.log('✅ [handlePlayerClick] Данные пользователя обновлены для профиля:', result.user);
+              setSelectedPlayerProfile(prev => prev ? {
+                ...prev,
+                name: result.user.username || result.user.firstName || prev.name,
+                avatar: result.user.avatar_url || prev.avatar || '',
+                rating: result.user.rating || prev.rating || 0,
+                gamesPlayed: result.user.games_played || result.user.gamesPlayed || prev.gamesPlayed || 0,
+                wins: result.user.games_won || result.user.gamesWon || prev.wins || 0,
+                winRate: result.user.games_played && result.user.games_won 
+                  ? Math.round((result.user.games_won / result.user.games_played) * 100)
+                  : prev.winRate || 0
+              } : null);
+            }
+          }
+        } catch (error) {
+          console.warn('⚠️ Ошибка синхронизации профиля пользователя:', error);
+        }
+      };
+      
+      // ✅ Обновляем данные с небольшой задержкой
+      setTimeout(syncUserProfile, 300);
+    }
   };
 
 
@@ -561,6 +607,161 @@ function GamePageContentComponent({
 
     fetchUserData();
   }, []);
+
+  // ✅ СИНХРОНИЗАЦИЯ ДАННЫХ ПОЛЬЗОВАТЕЛЯ: Слушаем события обновления монет
+  useEffect(() => {
+    const handleCoinsUpdate = (event: CustomEvent) => {
+      console.log('💰 [GamePageContent] Получено событие обновления монет:', event.detail);
+      if (event.detail?.coins !== undefined && userData) {
+        setUserData(prev => prev ? { ...prev, coins: event.detail.coins } : null);
+      }
+    };
+
+    // ✅ Слушаем событие обновления монет
+    window.addEventListener('coinsUpdated', handleCoinsUpdate as EventListener);
+
+    return () => {
+      window.removeEventListener('coinsUpdated', handleCoinsUpdate as EventListener);
+    };
+  }, [userData]);
+
+  // ✅ ПЕРИОДИЧЕСКАЯ СИНХРОНИЗАЦИЯ: Обновляем данные пользователя каждые 30 секунд
+  useEffect(() => {
+    const syncUserData = async () => {
+      try {
+        const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+        const telegramId = telegramUser?.id?.toString() || '';
+        const username = telegramUser?.username || telegramUser?.first_name || '';
+        
+        if (!telegramId) return;
+        
+        const response = await fetch('/api/user/me', {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-telegram-id': telegramId,
+            'x-username': username
+          }
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.user) {
+            console.log('🔄 [GamePageContent] Синхронизация данных пользователя:', result.user.username);
+            setUserData(prev => ({
+              coins: result.user.coins || prev?.coins || 0,
+              avatar: result.user.avatar_url || prev?.avatar || '',
+              username: result.user.username || result.user.firstName || prev?.username || 'Игрок',
+              telegramId: result.user.telegramId || prev?.telegramId || telegramId
+            }));
+          }
+        }
+      } catch (error) {
+        console.warn('⚠️ Ошибка синхронизации данных пользователя:', error);
+      }
+    };
+
+    // ✅ Обновляем сразу и затем каждые 30 секунд
+    syncUserData();
+    const interval = setInterval(syncUserData, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // ✅ СИНХРОНИЗАЦИЯ ПРОФИЛЯ: Обновляем данные профиля при открытии модального окна
+  useEffect(() => {
+    if (isProfileModalOpen && selectedPlayerProfile?.isUser) {
+      const syncProfileData = async () => {
+        try {
+          const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+          const telegramId = telegramUser?.id?.toString() || '';
+          const username = telegramUser?.username || telegramUser?.first_name || '';
+          
+          if (!telegramId) return;
+          
+          const response = await fetch('/api/user/me', {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-telegram-id': telegramId,
+              'x-username': username
+            }
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            if (result.success && result.user) {
+              console.log('✅ [useEffect] Данные профиля обновлены:', result.user);
+              setSelectedPlayerProfile(prev => prev ? {
+                ...prev,
+                name: result.user.username || result.user.firstName || prev.name,
+                avatar: result.user.avatar_url || prev.avatar || '',
+                rating: result.user.rating || prev.rating || 0,
+                gamesPlayed: result.user.games_played || result.user.gamesPlayed || prev.gamesPlayed || 0,
+                wins: result.user.games_won || result.user.gamesWon || prev.wins || 0,
+                winRate: result.user.games_played && result.user.games_won 
+                  ? Math.round((result.user.games_won / result.user.games_played) * 100)
+                  : prev.winRate || 0
+              } : null);
+            }
+          }
+        } catch (error) {
+          console.warn('⚠️ Ошибка синхронизации профиля:', error);
+        }
+      };
+      
+      // ✅ Обновляем данные при открытии и каждые 10 секунд пока открыто
+      syncProfileData();
+      const interval = setInterval(syncProfileData, 10000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [isProfileModalOpen, selectedPlayerProfile?.isUser]);
+
+  // ✅ СИНХРОНИЗАЦИЯ ПОСЛЕ ОКОНЧАНИЯ ИГРЫ: Обновляем данные при показе модального окна результатов
+  useEffect(() => {
+    if (showGameResultsModal && gameResults) {
+      const syncAfterGame = async () => {
+        try {
+          const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+          const telegramId = telegramUser?.id?.toString() || '';
+          const username = telegramUser?.username || telegramUser?.first_name || '';
+          
+          if (!telegramId) return;
+          
+          const response = await fetch('/api/user/me', {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-telegram-id': telegramId,
+              'x-username': username
+            }
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            if (result.success && result.user) {
+              console.log('✅ [GamePageContent] Данные пользователя обновлены после игры:', result.user.coins);
+              setUserData(prev => ({
+                coins: result.user.coins || prev?.coins || 0,
+                avatar: result.user.avatar_url || prev?.avatar || '',
+                username: result.user.username || result.user.firstName || prev?.username || 'Игрок',
+                telegramId: result.user.telegramId || prev?.telegramId || telegramId
+              }));
+            }
+          }
+        } catch (error) {
+          console.warn('⚠️ Ошибка обновления данных после игры:', error);
+        }
+      };
+
+      // ✅ Обновляем данные с небольшой задержкой, чтобы сервер успел обработать изменения
+      setTimeout(syncAfterGame, 1000);
+    }
+  }, [showGameResultsModal, gameResults]);
 
   // ✅ ЗАГРУЗКА NFT КАРТ ИЗ КОЛОДЫ (только для игрока)
   useEffect(() => {
@@ -1967,9 +2168,9 @@ function GamePageContentComponent({
                     flexDirection: 'column', // ✅ ВСЕГДА ВЕРТИКАЛЬНО: аватар сверху, карты снизу
                     // ✅ ОБЕСПЕЧИВАЕМ ОДИНАКОВЫЕ СТИЛИ ДЛЯ ВСЕХ ИГРОКОВ (как у игроков сверху)
                     background: 'linear-gradient(145deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.2) 100%), radial-gradient(circle at center, rgba(255, 215, 0, 0.1) 0%, transparent 70%)',
-                    border: isCurrentTurn ? '3px solid rgba(34, 197, 94, 1)' : '2px solid rgba(255, 215, 0, 0.5)',
-                    borderRadius: '16px',
-                    padding: '10px 8px',
+                    border: isCurrentTurn ? '2px solid rgba(34, 197, 94, 1)' : '1.5px solid rgba(255, 215, 0, 0.5)', /* ✅ УМЕНЬШЕНА ТОЛЩИНА */
+                    borderRadius: '12px', /* ✅ УМЕНЬШЕНО: было 16px */
+                    padding: '4px 6px', /* ✅ УМЕНЬШЕНО: было 10px 8px */
                     backdropFilter: 'blur(8px)',
                     boxShadow: isCurrentTurn 
                       ? '0 8px 30px rgba(0, 0, 0, 0.5), 0 0 30px rgba(34, 197, 94, 0.8), 0 0 50px rgba(34, 197, 94, 0.6), 0 0 70px rgba(34, 197, 94, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
@@ -2048,17 +2249,17 @@ function GamePageContentComponent({
                         alt={player.name}
                             className={styles.avatar}
                           style={{
-                            width: '30px', // ✅ УМЕНЬШЕНО В 2 РАЗА: 60px → 30px!
-                            height: '30px',
+                            width: '26px', // ✅ УМЕНЬШЕНО: было 30px
+                            height: '26px',
                             borderRadius: '50%',
                             boxShadow: currentPlayerId === player.id 
-                              ? '0 0 30px rgba(34, 197, 94, 1), 0 0 50px rgba(34, 197, 94, 0.9), 0 0 70px rgba(34, 197, 94, 0.7), 0 0 90px rgba(34, 197, 94, 0.5)' // ✅ УСИЛЕННОЕ ЗЕЛЁНОЕ СВЕЧЕНИЕ!
-                              : '0 2px 8px rgba(0, 0, 0, 0.3)',
-                            border: `${currentPlayerId === player.id ? '5px' : '2px'} solid ${currentPlayerId === player.id ? '#22c55e' : 'rgba(255, 255, 255, 0.2)'}`, // ✅ ЕЩЁ БОЛЕЕ ЖИРНАЯ ЗЕЛЁНАЯ РАМКА 5px!
+                              ? '0 0 20px rgba(34, 197, 94, 1), 0 0 35px rgba(34, 197, 94, 0.9), 0 0 50px rgba(34, 197, 94, 0.7)' // ✅ УМЕНЬШЕНО СВЕЧЕНИЕ
+                              : '0 2px 6px rgba(0, 0, 0, 0.3)',
+                            border: `${currentPlayerId === player.id ? '3px' : '1.5px'} solid ${currentPlayerId === player.id ? '#22c55e' : 'rgba(255, 255, 255, 0.2)'}`, // ✅ УМЕНЬШЕНА ТОЛЩИНА
                             transition: 'all 0.3s ease',
                             objectFit: 'cover',
                             position: 'relative',
-                            zIndex: 5 // ✅ НИЖЕ КАРТ (карты = 15)
+                            zIndex: 5
                           }}
                           />
                       {player.isBot && (
@@ -2144,17 +2345,20 @@ function GamePageContentComponent({
                                 : (isCardAlreadyNftUrl ? cardImage : `${CARDS_PATH}${cardImage}`))
                             : `${CARDS_PATH}${CARD_BACK}`;
                           
-                          // ✅ ИСПРАВЛЕНО: Динамическое перекрытие - чем больше карт, тем ближе друг к другу
+                          // ✅ ИСПРАВЛЕНО: Динамическое перекрытие - УВЕЛИЧЕНО для закрытых карт
                           const isOpponentCard = !isHumanPlayer;
                           const isStage2 = gameStage >= 2;
                           const totalCards = playerCards.length;
-                          // Чем больше карт, тем меньше перекрытие (карты ближе друг к другу)
-                          // Формула: базовое перекрытие уменьшается с ростом количества карт
-                          const baseOverlap = 50; // Размер карты
-                          const minVisible = 8; // Минимум видимой части карты (px)
+                          const isClosedCard = !showOpen; // ✅ Закрытая карта (рубашкой вверх)
+                          
+                          // ✅ УВЕЛИЧЕНО ПЕРЕКРЫТИЕ: для закрытых карт больше наложение
+                          const baseOverlap = isClosedCard ? 60 : 50; // ✅ Больше перекрытие для закрытых карт
+                          const minVisible = isClosedCard ? 4 : 8; // ✅ Меньше видимой части для закрытых карт
+                          
                           // Динамическое перекрытие: чем больше карт, тем меньше перекрытие
+                          // Но для закрытых карт перекрытие больше
                           const dynamicOverlap = totalCards > 1 
-                            ? Math.max(minVisible, baseOverlap - (totalCards - 1) * 2) 
+                            ? Math.max(minVisible, baseOverlap - (totalCards - 1) * (isClosedCard ? 1.5 : 2)) 
                             : 0;
                           const overlap = cardIndex > 0 ? `-${dynamicOverlap}px` : '0';
                           

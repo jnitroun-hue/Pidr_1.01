@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabase, supabaseAdmin } from '@/lib/supabase';
 import { getUserIdFromRequest } from '@/lib/auth-utils';
 import { getRedis } from '@/lib/redis/init';
 
@@ -70,17 +70,24 @@ export async function POST(request: NextRequest) {
       updateData.online_status = 'online';
       updateData.status = 'online';
       
-      const { error, data: updatedUser } = await supabase
+      // ✅ ИСПРАВЛЕНО: Используем сервисную роль для обновления статуса, чтобы обойти RLS политики
+      // Это предотвращает бесконечную рекурсию в RLS политиках
+      // Используем админский клиент, который обходит RLS
+      const { error, data: updatedUser } = await supabaseAdmin
         .from('_pidr_users')
         .update(updateData)
         .eq('telegram_id', userIdBigInt)
         .select();
       
-      console.log(`💓 [HEARTBEAT DB] Обновлен статус для ${userId}:`, updatedUser);
+      console.log(`💓 [HEARTBEAT DB] Обновлен статус для ${userId}:`, updatedUser ? 'успешно' : 'ошибка');
 
       if (error) {
         console.error('❌ [HEARTBEAT] Ошибка обновления онлайн статуса:', error);
         // Не возвращаем ошибку, т.к. Redis уже обновлен
+        // Если это ошибка рекурсии RLS - просто логируем и продолжаем
+        if (error.code === '42P17') {
+          console.warn('⚠️ [HEARTBEAT] Обнаружена рекурсия RLS, используем только Redis кеш');
+        }
       } else {
         // Сохраняем время последнего обновления БД (если Redis доступен)
         if (redis) {

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '../../../lib/supabase';
+import { supabase, supabaseAdmin } from '../../../lib/supabase';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
 import { lightCleanup } from '../../../lib/auto-cleanup';
@@ -431,7 +431,8 @@ export async function POST(req: NextRequest) {
       
       console.log('💾 Создаем пользователя с данными:', newUserData);
       
-      const { data: newUser, error: createError } = await supabase
+      // ✅ ИСПРАВЛЕНО: Используем админский клиент для создания пользователя, чтобы обойти RLS
+      const { data: newUser, error: createError } = await supabaseAdmin
         .from('_pidr_users')
         .insert([newUserData])
         .select()
@@ -559,7 +560,8 @@ export async function POST(req: NextRequest) {
       updateData.online_status = 'online';
       updateData.status = 'online';
       
-      const { data: updatedUser, error: updateError } = await supabase
+      // ✅ ИСПРАВЛЕНО: Используем админский клиент для обновления статуса, чтобы обойти RLS
+      const { data: updatedUser, error: updateError } = await supabaseAdmin
         .from('_pidr_users')
         .update(updateData)
         .eq('id', existingUser.id)
