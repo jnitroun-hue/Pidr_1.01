@@ -507,7 +507,7 @@ function GamePageContentComponent({
             const result = await response.json();
             if (result.success && result.user) {
               console.log('✅ [handlePlayerClick] Данные пользователя обновлены для профиля:', result.user);
-              setSelectedPlayerProfile(prev => prev ? {
+              setSelectedPlayerProfile((prev: any) => prev ? {
                 ...prev,
                 name: result.user.username || result.user.firstName || prev.name,
                 avatar: result.user.avatar_url || prev.avatar || '',
@@ -708,7 +708,7 @@ function GamePageContentComponent({
             const result = await response.json();
             if (result.success && result.user) {
               console.log('✅ [useEffect] Данные профиля обновлены:', result.user);
-              setSelectedPlayerProfile(prev => prev ? {
+              setSelectedPlayerProfile((prev: any) => prev ? {
                 ...prev,
                 name: result.user.username || result.user.firstName || prev.name,
                 avatar: result.user.avatar_url || prev.avatar || '',
