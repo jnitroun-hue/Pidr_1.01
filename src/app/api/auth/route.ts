@@ -244,43 +244,52 @@ export async function GET(req: NextRequest) {
       }, { status: 404 });
     }
 
-    // ✅ КРИТИЧНО: Финальная проверка - убеждаемся что возвращаем правильного пользователя
-    const finalTelegramId = String(user.telegram_id || '');
-    const finalHeaderTelegramId = String(telegramIdHeader || '');
-    
-    console.log('👤 [GET /api/auth] Финальная проверка пользователя:', {
-      userId: user.id,
-      username: user.username,
-      dbTelegramId: finalTelegramId,
-      headerTelegramId: finalHeaderTelegramId,
-      tokenTelegramId: telegramIdFromToken,
-      match: finalTelegramId === finalHeaderTelegramId
-    });
-
-    // ✅ КРИТИЧНО: Если telegram_id не совпадает - БЛОКИРУЕМ
-    if (finalTelegramId !== finalHeaderTelegramId) {
-      console.error('🚨 КРИТИЧЕСКАЯ ОШИБКА: telegram_id пользователя не совпадает с header!', {
+    // ✅ КРИТИЧНО: Финальная проверка - только для Telegram авторизации
+    // Для веб-версии (local) проверка telegram_id не требуется
+    if (authMethod === 'telegram') {
+      const finalTelegramId = String(user.telegram_id || '');
+      const finalHeaderTelegramId = String(telegramIdHeader || '');
+      
+      console.log('👤 [GET /api/auth] Финальная проверка пользователя (Telegram):', {
         userId: user.id,
-        userTelegramId: finalTelegramId,
+        username: user.username,
+        dbTelegramId: finalTelegramId,
         headerTelegramId: finalHeaderTelegramId,
-        action: 'БЛОКИРУЕМ ДОСТУП'
+        tokenTelegramId: telegramIdFromToken,
+        match: finalTelegramId === finalHeaderTelegramId
       });
-      
-      const errorResponse = NextResponse.json({ 
-        success: false, 
-        message: 'Несоответствие данных пользователя. Доступ запрещен. Пожалуйста, перезайдите.' 
-      }, { status: 403 });
-      
-      // Удаляем неверный токен
-      errorResponse.cookies.set('auth_token', '', {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'none',
-        path: '/',
-        maxAge: 0
+
+      // ✅ КРИТИЧНО: Если telegram_id не совпадает - БЛОКИРУЕМ (только для Telegram)
+      if (finalTelegramId !== finalHeaderTelegramId) {
+        console.error('🚨 КРИТИЧЕСКАЯ ОШИБКА: telegram_id пользователя не совпадает с header!', {
+          userId: user.id,
+          userTelegramId: finalTelegramId,
+          headerTelegramId: finalHeaderTelegramId,
+          action: 'БЛОКИРУЕМ ДОСТУП'
+        });
+        
+        const errorResponse = NextResponse.json({ 
+          success: false, 
+          message: 'Несоответствие данных пользователя. Доступ запрещен. Пожалуйста, перезайдите.' 
+        }, { status: 403 });
+        
+        // Удаляем неверный токен
+        errorResponse.cookies.set('auth_token', '', {
+          httpOnly: true,
+          secure: true,
+          sameSite: 'none',
+          path: '/',
+          maxAge: 0
+        });
+        
+        return errorResponse;
+      }
+    } else {
+      console.log('👤 [GET /api/auth] Веб-версия (local), проверка telegram_id не требуется:', {
+        userId: user.id,
+        username: user.username,
+        authMethod
       });
-      
-      return errorResponse;
     }
     
     console.log('✅ [GET /api/auth] Все проверки пройдены, возвращаем данные пользователя:', user.username);

@@ -107,16 +107,24 @@ export async function createSession(data: {
   };
 
   // Генерируем JWT токен
-  const token = jwt.sign(
-    {
-      sessionId,
-      userId: data.userId,
-      username: data.username,
-      authMethod: data.authMethod,
-    },
-    JWT_SECRET,
-    { expiresIn: '30d' }
-  );
+  // ✅ УНИВЕРСАЛЬНО: Добавляем authSource для правильного определения окружения
+  const tokenPayload: any = {
+    sessionId,
+    userId: data.userId,
+    username: data.username,
+    authMethod: data.authMethod,
+  };
+  
+  // Добавляем специфичные поля для разных методов авторизации
+  if (data.authMethod === 'local') {
+    tokenPayload.authSource = 'web';
+  } else if (data.authMethod === 'telegram' && data.telegramId) {
+    tokenPayload.telegramId = data.telegramId;
+  } else if (data.authMethod === 'vk' && data.vkId) {
+    tokenPayload.vkId = data.vkId;
+  }
+  
+  const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '30d' });
 
   if (redis) {
     try {

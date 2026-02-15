@@ -1,54 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '../../../../lib/supabase';
-import { requireAuth } from '../../../../lib/auth-utils';
+import { requireAuth, getUserIdFromDatabase } from '../../../../lib/auth-utils';
 
-// GET /api/user/balance - Получить текущий баланс пользователя
+// GET /api/user/balance - Получить текущий баланс пользователя (универсально для всех платформ)
 export async function GET(req: NextRequest) {
   console.log('💰 GET /api/user/balance - Получение баланса пользователя...');
   
-  // ✅ ИСПРАВЛЕНО: Получаем telegram_id из header или из auth
-  const telegramIdHeader = req.headers.get('x-telegram-id');
   const auth = requireAuth(req);
   
-  let userId: string | null = null;
-  
-  if (telegramIdHeader) {
-    userId = telegramIdHeader;
-    console.log('✅ Используем telegram_id из header:', userId);
-  } else if (auth.userId) {
-    userId = auth.userId;
-    console.log('✅ Используем userId из auth:', userId);
+  if (auth.error || !auth.userId) {
+    console.error('❌ [GET /api/user/balance] Ошибка авторизации:', auth.error);
+    return NextResponse.json({ success: false, message: auth.error || 'Требуется авторизация' }, { status: 401 });
   }
   
-  if (!userId) {
-    console.error('❌ Ошибка авторизации: userId не найден');
-    return NextResponse.json({ success: false, message: 'Требуется авторизация' }, { status: 401 });
-  }
+  const { userId, environment } = auth;
+  console.log(`✅ [GET /api/user/balance] Пользователь: ${userId} (${environment})`);
   
   try {
-    // ✅ ИСПРАВЛЕНО: Ищем пользователя по telegram_id (приоритет) или по id
-    const { data: user, error: userError } = await supabase
-      .from('_pidr_users')
-      .select('id, username, coins, rating, games_played, games_won, created_at, telegram_id')
-      .or(`telegram_id.eq.${userId},id.eq.${userId}`)
-      .single();
-      
-    if (userError || !user) {
-      console.error('❌ Пользователь не найден:', userError);
+    // ✅ УНИВЕРСАЛЬНО: Получаем пользователя из БД
+    const { getUserIdFromDatabase } = await import('../../../../lib/auth-utils');
+    const { dbUserId, user: dbUser } = await getUserIdFromDatabase(userId, environment);
+    
+    if (!dbUserId || !dbUser) {
+      console.error('❌ [GET /api/user/balance] Пользователь не найден');
       return NextResponse.json({ 
         success: false, 
         message: 'Пользователь не найден' 
       }, { status: 404 });
     }
     
+    const user = dbUser;
+    
     console.log(`💰 Баланс пользователя ${user.username}: ${user.coins} монет`);
     
     // Получаем последние транзакции для истории
-    // ✅ ИСПРАВЛЕНО: Используем _pidr_coin_transactions
+    // ✅ ИСПРАВЛЕНО: Используем _pidr_coin_transactions и dbUserId
     const { data: recentTransactions } = await supabase
       .from('_pidr_coin_transactions')
       .select('id, transaction_type, amount, description, created_at')
-      .eq('user_id', userId)
+      .eq('user_id', dbUserId)
       .order('created_at', { ascending: false })
       .limit(10);
     
@@ -81,24 +71,15 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   console.log('💰 POST /api/user/balance - Обновление баланса пользователя...');
   
-  // ✅ ИСПРАВЛЕНО: Получаем telegram_id из header или из auth
-  const telegramIdHeader = req.headers.get('x-telegram-id');
   const auth = requireAuth(req);
   
-  let userId: string | null = null;
-  
-  if (telegramIdHeader) {
-    userId = telegramIdHeader;
-    console.log('✅ Используем telegram_id из header:', userId);
-  } else if (auth.userId) {
-    userId = auth.userId;
-    console.log('✅ Используем userId из auth:', userId);
+  if (auth.error || !auth.userId) {
+    console.error('❌ [POST /api/user/balance] Ошибка авторизации:', auth.error);
+    return NextResponse.json({ success: false, message: auth.error || 'Требуется авторизация' }, { status: 401 });
   }
   
-  if (!userId) {
-    console.error('❌ Ошибка авторизации: userId не найден');
-    return NextResponse.json({ success: false, message: 'Требуется авторизация' }, { status: 401 });
-  }
+  const { userId, environment } = auth;
+  console.log(`✅ [POST /api/user/balance] Пользователь: ${userId} (${environment})`);
   
   try {
     const { amount, type, description } = await req.json();
@@ -119,12 +100,19 @@ export async function POST(req: NextRequest) {
     
     console.log(`💰 Обновление баланса: ${amount > 0 ? '+' : ''}${amount} (${type})`);
     
-    // ✅ ИСПРАВЛЕНО: Ищем пользователя по telegram_id (приоритет) или по id
-    const { data: user, error: userError } = await supabase
-      .from('_pidr_users')
-      .select('id, username, coins, telegram_id')
-      .or(`telegram_id.eq.${userId},id.eq.${userId}`)
-      .single();
+    // ✅ УНИВЕРСАЛЬНО: Получаем пользователя из БД
+    const { getUserIdFromDatabase } = await import('../../../../lib/auth-utils');
+    const { dbUserId, user: dbUser } = await getUserIdFromDatabase(userId, environment);
+    
+    if (!dbUserId || !dbUser) {
+      console.error('❌ [POST /api/user/balance] Пользователь не найден');
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Пользователь не найден' 
+      }, { status: 404 });
+    }
+    
+    const user = dbUser;
       
     if (userError || !user) {
       console.error('❌ Пользователь не найден:', userError);
@@ -154,7 +142,7 @@ export async function POST(req: NextRequest) {
         coins: newBalance,
         updated_at: new Date().toISOString()
       })
-      .eq('id', userId);
+      .eq('id', dbUserId);
       
     if (updateError) {
       console.error('❌ Ошибка обновления баланса:', updateError);
@@ -169,7 +157,7 @@ export async function POST(req: NextRequest) {
     const { error: transactionError } = await supabase
       .from('_pidr_coin_transactions')
       .insert({
-        user_id: userId,
+        user_id: dbUserId,
         transaction_type: type,
         amount: amount,
         description: description,

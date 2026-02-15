@@ -1,46 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { supabase } from '../../../../lib/supabase';
+import { requireAuth, getUserIdFromDatabase } from '../../../../lib/auth-utils';
 
-// GET /api/user/me - Получить данные текущего пользователя из pidr_session ИЛИ headers
+// GET /api/user/me - Получить данные текущего пользователя (универсально для всех платформ)
 export async function GET(req: NextRequest) {
   try {
-    let userId: string | null = null;
-
-    const telegramIdHeader = req.headers.get('x-telegram-id');
-    if (telegramIdHeader) {
-      userId = telegramIdHeader;
-    } else {
-      const cookieStore = await cookies();
-      const sessionCookie = cookieStore.get('pidr_session');
-
-      if (sessionCookie?.value) {
-        try {
-          const sessionData = JSON.parse(sessionCookie.value);
-          userId = sessionData.userId ||
-            sessionData.user_id ||
-            sessionData.telegramId ||
-            sessionData.telegram_id ||
-            sessionData.id;
-        } catch (parseError) {
-          // Невалидная сессия - игнорируем
-        }
-      }
-    }
-
-    if (!userId) {
+    const auth = requireAuth(req);
+    
+    if (auth.error || !auth.userId) {
       return NextResponse.json(
-        { success: false, message: 'Требуется авторизация' },
+        { success: false, message: auth.error || 'Требуется авторизация' },
         { status: 401 }
       );
     }
-
-    // Ищем пользователя в БД по telegram_id
-    const { data: user, error } = await supabase
-      .from('_pidr_users')
-      .select('*')
-      .eq('telegram_id', userId)
-      .single();
+    
+    const { userId, environment } = auth;
+    
+    // Получаем пользователя из БД
+    const { dbUserId, user: dbUser } = await getUserIdFromDatabase(userId, environment);
+    
+    if (!dbUserId || !dbUser) {
+      return NextResponse.json(
+        { success: false, message: 'Пользователь не найден в БД' },
+        { status: 404 }
+      );
+    }
+    
+    const user = dbUser;
 
     if (error || !user) {
       return NextResponse.json(
@@ -81,7 +68,8 @@ export async function GET(req: NextRequest) {
         losses: user.losses || 0,
         best_win_streak: user.best_win_streak || 0,
         status: user.status,
-        created_at: user.created_at
+        created_at: user.created_at,
+        is_admin: user.is_admin || false // ✅ ДОБАВЛЕНО: is_admin
       }
     });
   } catch (error: any) {

@@ -1,135 +1,244 @@
 /**
- * 🔐 ЕДИНАЯ СИСТЕМА АВТОРИЗАЦИИ
- * Консистентные функции для работы с токенами во всех API
+ * 🔐 УНИВЕРСАЛЬНАЯ СИСТЕМА АВТОРИЗАЦИИ
+ * Поддерживает Telegram, VK и веб-версию
  */
 
 import { NextRequest } from 'next/server';
 import * as jwt from 'jsonwebtoken';
+import { supabase } from './supabase';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
 /**
- * ✅ ЕДИНАЯ функция получения userId из запроса
- * Поддерживает все методы передачи токена:
- * 0. Telegram WebApp headers (ПРИОРИТЕТ для мультиплеера)
- * 1. HTTP-only cookies
- * 2. Authorization header (Bearer token)
- * 3. Query параметры (для тестирования)
+ * Определение типа окружения
  */
-export function getUserIdFromRequest(req: NextRequest): string | null {
-  if (!JWT_SECRET) {
-    console.error('❌ JWT_SECRET не настроен');
-    return null;
+export type AuthEnvironment = 'telegram' | 'vk' | 'web' | 'unknown';
+
+/**
+ * Определение окружения из запроса
+ */
+export function detectAuthEnvironment(req: NextRequest): AuthEnvironment {
+  const telegramIdHeader = req.headers.get('x-telegram-id');
+  const vkIdHeader = req.headers.get('x-vk-id');
+  const authSource = req.headers.get('x-auth-source');
+  
+  if (telegramIdHeader || authSource === 'telegram') {
+    return 'telegram';
   }
   
-  let token: string | null = null;
-  let userIdFromToken: string | null = null;
+  if (vkIdHeader || authSource === 'vk') {
+    return 'vk';
+  }
   
-  // 1. HTTP-only cookies (ПРИОРИТЕТ - самый безопасный)
+  if (authSource === 'web') {
+    return 'web';
+  }
+  
+  // Проверяем токен в cookies
+  const cookieToken = req.cookies.get('auth_token')?.value;
+  if (cookieToken) {
+    try {
+      const payload = jwt.verify(cookieToken, JWT_SECRET || '') as any;
+      if (payload.authSource) {
+        return payload.authSource as AuthEnvironment;
+      }
+      // Если в токене нет authSource, проверяем по userId
+      if (payload.telegramId) return 'telegram';
+      if (payload.vkId) return 'vk';
+      return 'web';
+    } catch {
+      // Токен невалидный
+    }
+  }
+  
+  return 'unknown';
+}
+
+/**
+ * ✅ УНИВЕРСАЛЬНАЯ функция получения userId из запроса
+ * Поддерживает Telegram, VK и веб-версию
+ */
+export function getUserIdFromRequest(req: NextRequest): { userId: string | null; environment: AuthEnvironment; source: string } {
+  const environment = detectAuthEnvironment(req);
+  
+  // 1. ПРИОРИТЕТ: Headers (Telegram или VK)
+  const telegramIdHeader = req.headers.get('x-telegram-id');
+  const vkIdHeader = req.headers.get('x-vk-id');
+  
+  if (telegramIdHeader && environment === 'telegram') {
+    console.log('✅ [getUserIdFromRequest] Используем x-telegram-id из header:', telegramIdHeader);
+    return { userId: telegramIdHeader, environment: 'telegram', source: 'header' };
+  }
+  
+  if (vkIdHeader && environment === 'vk') {
+    console.log('✅ [getUserIdFromRequest] Используем x-vk-id из header:', vkIdHeader);
+    return { userId: vkIdHeader, environment: 'vk', source: 'header' };
+  }
+  
+  // 2. Токен из cookies или Authorization header
+  let token: string | null = null;
+  
   const cookieToken = req.cookies.get('auth_token')?.value;
   if (cookieToken) {
     token = cookieToken;
-    console.log('🍪 Токен найден в cookies');
+    console.log('🍪 [getUserIdFromRequest] Токен найден в cookies');
   }
   
-  // 2. Fallback: Authorization header
   if (!token) {
     const authHeader = req.headers.get('authorization');
     if (authHeader?.startsWith('Bearer ')) {
       token = authHeader.replace('Bearer ', '');
-      console.log('🔑 Токен найден в Authorization header');
+      console.log('🔑 [getUserIdFromRequest] Токен найден в Authorization header');
     }
   }
   
-  // 3. Для тестирования: query параметры (только в dev режиме)
   if (!token && process.env.NODE_ENV === 'development') {
     const url = new URL(req.url);
     const queryToken = url.searchParams.get('token');
     if (queryToken) {
       token = queryToken;
-      console.log('🧪 Токен найден в query (dev режим)');
+      console.log('🧪 [getUserIdFromRequest] Токен найден в query (dev режим)');
     }
   }
   
   // Верифицируем токен
-  if (token) {
+  if (token && JWT_SECRET) {
     try {
       const payload = jwt.verify(token, JWT_SECRET) as any;
-      // ✅ ИСПРАВЛЕНО: Приоритет telegramId над userId (userId - это ID из БД, а telegramId - это ID из Telegram)
-      userIdFromToken = payload.telegramId || payload.userId;
       
-      if (!userIdFromToken) {
-        console.error('❌ userId/telegramId отсутствует в токене');
-        return null;
+      // Извлекаем userId в зависимости от источника
+      let userId: string | null = null;
+      let detectedEnv: AuthEnvironment = environment;
+      
+      // ✅ УНИВЕРСАЛЬНО: Определяем источник авторизации из токена
+      if (payload.telegramId) {
+        userId = payload.telegramId.toString();
+        detectedEnv = 'telegram';
+      } else if (payload.vkId) {
+        userId = payload.vkId.toString();
+        detectedEnv = 'vk';
+      } else if (payload.userId) {
+        // ✅ ДЛЯ ВЕБ: userId в токене - это id из БД (число)
+        userId = payload.userId.toString();
+        // Определяем окружение по authMethod или authSource из токена
+        if (payload.authMethod === 'local' || payload.authSource === 'web') {
+          detectedEnv = 'web';
+        } else {
+          detectedEnv = payload.authSource || 'web';
+        }
       }
       
-      console.log('✅ Пользователь из токена:', userIdFromToken, '(type:', typeof userIdFromToken, ')');
+      if (userId) {
+        console.log(`✅ [getUserIdFromRequest] Пользователь из токена: ${userId} (${detectedEnv})`);
+        return { userId, environment: detectedEnv, source: 'token' };
+      }
     } catch (error: any) {
-      console.error('❌ Ошибка проверки токена:', error.message);
-      return null;
+      console.error('❌ [getUserIdFromRequest] Ошибка проверки токена:', error.message);
     }
   }
   
-  // ✅ ИСПРАВЛЕНО: Проверка с приоритетом header (если нет токена, используем header)
-  const telegramIdHeader = req.headers.get('x-telegram-id');
+  // 3. Fallback: используем headers если они есть
   if (telegramIdHeader) {
-    // Если есть токен - проверяем совпадение
-    if (userIdFromToken) {
-      // Сравниваем как строки (могут быть разные типы)
-      const tokenIdStr = String(userIdFromToken);
-      const headerIdStr = String(telegramIdHeader);
-      
-      if (tokenIdStr !== headerIdStr) {
-        console.error('🚨 SECURITY: x-telegram-id не совпадает с токеном!', {
-          fromToken: tokenIdStr,
-          fromHeader: headerIdStr
-        });
-        // ✅ ИСПРАВЛЕНО: Используем header если токен устарел
-        console.warn('⚠️ Токен устарел, используем header');
-        return telegramIdHeader;
-      }
-      console.log('✅ x-telegram-id совпадает с токеном');
-    } else {
-      // Если токена нет - используем header
-      console.log('✅ Токен отсутствует, используем x-telegram-id из header');
-      return telegramIdHeader;
-    }
+    return { userId: telegramIdHeader, environment: 'telegram', source: 'header-fallback' };
   }
   
-  if (!userIdFromToken) {
-    console.log('❌ Токен не найден');
-    return null;
+  if (vkIdHeader) {
+    return { userId: vkIdHeader, environment: 'vk', source: 'header-fallback' };
   }
   
-  return userIdFromToken;
+  console.log('❌ [getUserIdFromRequest] userId не найден');
+  return { userId: null, environment, source: 'none' };
 }
 
 /**
- * 🛡️ Проверка авторизации с детальным логированием
+ * Получение userId из БД по telegram_id, vk_id или id (для веб)
  */
-export function requireAuth(req: NextRequest): { userId: string; error?: never } | { userId?: never; error: string } {
-  const userId = getUserIdFromRequest(req);
+export async function getUserIdFromDatabase(
+  userId: string, 
+  environment: AuthEnvironment
+): Promise<{ dbUserId: number | null; user: any }> {
+  try {
+    let query = supabase.from('_pidr_users').select('*');
+    
+    if (environment === 'telegram') {
+      // Для Telegram - ищем по telegram_id
+      query = query.eq('telegram_id', userId);
+    } else if (environment === 'vk') {
+      // Для VK - ищем по vk_id
+      query = query.eq('vk_id', userId);
+    } else {
+      // ✅ ДЛЯ ВЕБ: userId из токена - это id из БД (число)
+      const numericId = parseInt(userId, 10);
+      if (!isNaN(numericId)) {
+        query = query.eq('id', numericId);
+      } else {
+        // Fallback: ищем по email или username
+        query = query.or(`email.eq.${userId},username.eq.${userId}`);
+      }
+    }
+    
+    const { data: user, error } = await query.single();
+    
+    if (error || !user) {
+      console.error(`❌ [getUserIdFromDatabase] Пользователь не найден (${environment}, userId=${userId}):`, error);
+      return { dbUserId: null, user: null };
+    }
+    
+    console.log(`✅ [getUserIdFromDatabase] Пользователь найден (${environment}): id=${user.id}, username=${user.username}`);
+    return { dbUserId: user.id, user };
+  } catch (error: any) {
+    console.error('❌ [getUserIdFromDatabase] Ошибка:', error);
+    return { dbUserId: null, user: null };
+  }
+}
+
+/**
+ * 🛡️ УНИВЕРСАЛЬНАЯ проверка авторизации
+ */
+export function requireAuth(req: NextRequest): { 
+  userId: string; 
+  environment: AuthEnvironment;
+  error?: never 
+} | { 
+  userId?: never; 
+  environment?: never;
+  error: string 
+} {
+  const { userId, environment } = getUserIdFromRequest(req);
   
   if (!userId) {
     return { error: 'Unauthorized: Требуется авторизация' };
   }
   
-  return { userId };
+  return { userId, environment };
 }
 
 /**
- * 🔑 Создание JWT токена
+ * 🔑 Создание JWT токена с указанием источника
  */
-export function createAuthToken(userId: string): string {
+export function createAuthToken(
+  userId: string, 
+  environment: AuthEnvironment = 'web',
+  additionalData?: Record<string, any>
+): string {
   if (!JWT_SECRET) {
     throw new Error('JWT_SECRET не настроен');
   }
   
-  const payload = {
+  const payload: any = {
     userId,
+    authSource: environment,
     iat: Math.floor(Date.now() / 1000),
     exp: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60), // 30 дней
+    ...additionalData
   };
+  
+  // Добавляем специфичные поля для каждого источника
+  if (environment === 'telegram') {
+    payload.telegramId = userId;
+  } else if (environment === 'vk') {
+    payload.vkId = userId;
+  }
   
   return jwt.sign(payload, JWT_SECRET);
 }

@@ -1,34 +1,96 @@
 /**
- * 🔐 ЕДИНАЯ СИСТЕМА HEADERS ДЛЯ API ЗАПРОСОВ
- * Автоматически добавляет x-telegram-id и x-username headers
+ * 🔐 УНИВЕРСАЛЬНАЯ СИСТЕМА HEADERS ДЛЯ API ЗАПРОСОВ
+ * Поддерживает Telegram, VK и веб-версию
  */
 
+export type AuthEnvironment = 'telegram' | 'vk' | 'web' | 'unknown';
+
 /**
- * Получить headers для API запроса из Telegram WebApp
+ * Определение окружения на клиенте
+ */
+export function detectClientEnvironment(): AuthEnvironment {
+  if (typeof window === 'undefined') return 'unknown';
+  
+  // Проверяем Telegram
+  if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
+    return 'telegram';
+  }
+  
+  // Проверяем VK
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.has('vk_user_id') && urlParams.has('sign')) {
+    return 'vk';
+  }
+  
+  // Проверяем VK Bridge
+  if ((window as any).VK?.Bridge) {
+    return 'vk';
+  }
+  
+  return 'web';
+}
+
+/**
+ * Получить headers для API запроса (универсально для всех платформ)
  */
 export function getApiHeaders(): HeadersInit {
   const headers: HeadersInit = {
     'Content-Type': 'application/json'
   };
 
-  // Получаем данные из Telegram WebApp
-  if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
+  const environment = detectClientEnvironment();
+  
+  // Telegram WebApp
+  if (environment === 'telegram' && typeof window !== 'undefined' && window.Telegram?.WebApp) {
     const user = window.Telegram.WebApp.initDataUnsafe?.user;
     
     if (user?.id) {
       headers['x-telegram-id'] = String(user.id);
+      headers['x-auth-source'] = 'telegram';
     }
     
     if (user?.username) {
       headers['x-username'] = user.username;
     }
     
-    console.log('🔑 [API Headers] Добавлены headers:', {
+    console.log('🔑 [API Headers] Telegram headers:', {
       telegramId: headers['x-telegram-id'],
       username: headers['x-username']
     });
-  } else {
-    console.warn('⚠️ [API Headers] Telegram WebApp недоступен');
+  }
+  // VK Mini App
+  else if (environment === 'vk') {
+    const urlParams = new URLSearchParams(window.location.search);
+    const vkUserId = urlParams.get('vk_user_id');
+    
+    if (vkUserId) {
+      headers['x-vk-id'] = vkUserId;
+      headers['x-auth-source'] = 'vk';
+    }
+    
+    // Пробуем получить из VK Bridge
+    if (!vkUserId && typeof window !== 'undefined' && (window as any).VK?.Bridge) {
+      try {
+        const vkBridge = (window as any).VK.Bridge;
+        vkBridge.send('VKWebAppGetUserInfo', {}, (data: any) => {
+          if (data?.id) {
+            headers['x-vk-id'] = String(data.id);
+            headers['x-auth-source'] = 'vk';
+          }
+        });
+      } catch (e) {
+        console.warn('⚠️ [API Headers] Не удалось получить VK user info');
+      }
+    }
+    
+    console.log('🔑 [API Headers] VK headers:', {
+      vkId: headers['x-vk-id']
+    });
+  }
+  // Web версия - используем токен из cookies
+  else {
+    headers['x-auth-source'] = 'web';
+    console.log('🔑 [API Headers] Web headers (токен из cookies)');
   }
 
   return headers;

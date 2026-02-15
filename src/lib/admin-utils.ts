@@ -31,7 +31,7 @@ export async function isAdmin(userId: string): Promise<boolean> {
 }
 
 /**
- * Проверка админ-прав из запроса
+ * Проверка админ-прав из запроса (универсально для всех платформ)
  */
 export async function requireAdmin(req: NextRequest): Promise<{ 
   isAdmin: boolean; 
@@ -43,13 +43,25 @@ export async function requireAdmin(req: NextRequest): Promise<{
   if (auth.error || !auth.userId) {
     return { isAdmin: false, userId: '', error: auth.error || 'Unauthorized' };
   }
-
-  const adminStatus = await isAdmin(auth.userId);
   
-  if (!adminStatus) {
-    return { isAdmin: false, userId: auth.userId, error: 'Forbidden: Требуются права администратора' };
+  const { userId, environment } = auth;
+  
+  // Получаем ID пользователя из БД
+  const { getUserIdFromDatabase } = await import('@/lib/auth-utils');
+  const { dbUserId, user } = await getUserIdFromDatabase(userId, environment);
+  
+  if (!dbUserId || !user) {
+    console.error(`❌ [requireAdmin] Пользователь не найден (${environment}):`, userId);
+    return { isAdmin: false, userId: '', error: 'Пользователь не найден' };
   }
 
-  return { isAdmin: true, userId: auth.userId };
+  const adminStatus = user.is_admin === true;
+  console.log(`✅ [requireAdmin] Пользователь ${userId} (${environment}): is_admin = ${adminStatus}`);
+  
+  if (!adminStatus) {
+    return { isAdmin: false, userId: userId, error: 'Forbidden: Требуются права администратора' };
+  }
+
+  return { isAdmin: true, userId: userId };
 }
 

@@ -1,34 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 
 // 🎴 API: Получение игровой колоды пользователя
 
 export async function GET(request: NextRequest) {
   // ✅ ОТКЛЮЧАЕМ КЭШИРОВАНИЕ ДЛЯ РЕАЛЬНОГО ВРЕМЕНИ
   try {
-    // ✅ ИСПРАВЛЕНО: Используем headers напрямую, как в /api/nft/collection
-    const telegramIdHeader = request.headers.get('x-telegram-id');
-    const usernameHeader = request.headers.get('x-username');
+    // ✅ УНИВЕРСАЛЬНО: Используем универсальную систему авторизации
+    const auth = requireAuth(request);
     
-    if (!telegramIdHeader) {
-      console.error('❌ [GET DECK] Не найден x-telegram-id header');
+    if (auth.error || !auth.userId) {
+      console.error('❌ [GET DECK] Ошибка авторизации:', auth.error);
       return NextResponse.json(
-        { success: false, message: 'Требуется авторизация' },
+        { success: false, message: auth.error || 'Требуется авторизация' },
         { status: 401 }
       );
     }
-
-    const userId = parseInt(telegramIdHeader, 10);
     
-    if (isNaN(userId)) {
-      console.error('❌ [GET DECK] Некорректный telegram_id:', telegramIdHeader);
+    const { userId, environment } = auth;
+    console.log(`🎴 [GET DECK] Получение колоды для пользователя ${userId} (${environment})...`);
+
+    // ✅ УНИВЕРСАЛЬНО: Получаем пользователя из БД
+    const { dbUserId, user } = await getUserIdFromDatabase(userId, environment);
+
+    if (!dbUserId || !user) {
+      console.error(`❌ [GET DECK] Пользователь не найден (${environment}):`, userId);
       return NextResponse.json(
-        { success: false, message: 'Некорректный ID пользователя' },
-        { status: 400 }
+        { success: false, message: 'Пользователь не найден' },
+        { status: 404 }
       );
     }
-
-    console.log(`🎴 [GET DECK] Получение колоды для пользователя ${userId} через headers...`);
 
     // ПОЛУЧАЕМ ВСЕ КАРТЫ ИЗ КОЛОДЫ
     // ✅ ИСПРАВЛЕНО: Используем явное указание foreign key через !nft_card_id
@@ -45,7 +47,7 @@ export async function GET(request: NextRequest) {
           metadata
         )
       `)
-      .eq('user_id', userId)
+      .eq('user_id', dbUserId)
       .order('created_at', { ascending: false });
 
     if (error) {
