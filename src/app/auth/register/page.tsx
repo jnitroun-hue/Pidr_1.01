@@ -128,9 +128,39 @@ export default function RegisterPage() {
           detail: { coins: data.user.coins } 
         }));
 
+        console.log('✅ Регистрация успешна, ждем установки cookie и редиректим...');
+        
+        // ✅ УВЕЛИЧИВАЕМ ЗАДЕРЖКУ для установки cookie
+        // Передаем данные пользователя через sessionStorage для немедленного использования
+        if (typeof window !== 'undefined') {
+          // ✅ Нормализуем данные пользователя для совместимости
+          // API возвращает: avatar_url, games_played, games_won
+          // Нужно: photoUrl, gamesPlayed, gamesWon
+          const normalizedUser = {
+            id: data.user.id,
+            username: data.user.username,
+            firstName: data.user.firstName || data.user.username || '',
+            lastName: data.user.lastName || '',
+            telegramId: data.user.telegramId || '',
+            coins: data.user.coins || 1000,
+            rating: data.user.rating || 0,
+            gamesPlayed: data.user.games_played || data.user.gamesPlayed || 0,
+            gamesWon: data.user.games_won || data.user.gamesWon || 0,
+            photoUrl: data.user.avatar_url || data.user.photoUrl || ''
+          };
+          
+          sessionStorage.setItem('pendingAuth', JSON.stringify({
+            user: normalizedUser,
+            timestamp: Date.now()
+          }));
+          
+          console.log('💾 [Register] Сохранены данные pendingAuth:', normalizedUser.username);
+        }
+        
         setTimeout(() => {
+          console.log('🔄 Редирект на главную страницу...');
           router.push('/');
-        }, 500);
+        }, 1000); // Увеличено до 1 секунды
       } else {
         setError(data.message || 'Ошибка регистрации');
       }

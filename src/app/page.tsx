@@ -72,6 +72,54 @@ function HomeWithParams() {
       console.log('🌐 Обнаружен браузер - проверяем сессию');
       setCheckingAuth(true);
       
+      // ✅ ПРОВЕРЯЕМ PENDING AUTH ИЗ SESSIONSTORAGE (после логина/регистрации)
+      if (typeof window !== 'undefined') {
+        const pendingAuthStr = sessionStorage.getItem('pendingAuth');
+        if (pendingAuthStr) {
+          try {
+            const pendingAuth = JSON.parse(pendingAuthStr);
+            const timeDiff = Date.now() - pendingAuth.timestamp;
+            
+            // Используем данные только если они свежие (менее 5 секунд)
+            if (timeDiff < 5000 && pendingAuth.user) {
+              console.log('✅ [Браузер] Найдены данные pendingAuth, используем их:', pendingAuth.user.username);
+              
+              const existingUser: User = {
+                id: pendingAuth.user.id,
+                username: pendingAuth.user.username,
+                firstName: pendingAuth.user.firstName || pendingAuth.user.username,
+                lastName: pendingAuth.user.lastName || '',
+                telegramId: pendingAuth.user.telegramId || '',
+                coins: pendingAuth.user.coins || 1000,
+                rating: pendingAuth.user.rating || 0,
+                gamesPlayed: pendingAuth.user.games_played || pendingAuth.user.gamesPlayed || 0,
+                gamesWon: pendingAuth.user.games_won || pendingAuth.user.gamesWon || 0,
+                photoUrl: pendingAuth.user.avatar_url || pendingAuth.user.photoUrl || ''
+              };
+              
+              setUser(existingUser);
+              setCheckingAuth(false);
+              initialized.current = true;
+              
+              // Удаляем pendingAuth после использования
+              sessionStorage.removeItem('pendingAuth');
+              
+              setTimeout(() => {
+                setLoading(false);
+                setTimeout(() => setShowMainMenu(true), 100);
+              }, 500);
+              return;
+            } else {
+              // Данные устарели, удаляем
+              sessionStorage.removeItem('pendingAuth');
+            }
+          } catch (e) {
+            console.warn('⚠️ [Браузер] Ошибка парсинга pendingAuth:', e);
+            sessionStorage.removeItem('pendingAuth');
+          }
+        }
+      }
+      
       // Проверяем сессию через API (без localStorage)
       const checkAuth = async () => {
         try {
@@ -123,6 +171,64 @@ function HomeWithParams() {
           } else if (sessionResponse.status === 404) {
             console.error('❌ [Браузер] API endpoint /api/auth не найден (404)');
             console.error('❌ Это критическая ошибка - API route не работает!');
+            
+            // ✅ FALLBACK: Проверяем есть ли cookie напрямую
+            // Если cookie есть, но API не работает - ждем и пробуем еще раз
+            const hasAuthCookie = typeof document !== 'undefined' && 
+              document.cookie.includes('auth_token=');
+            
+            if (hasAuthCookie) {
+              console.log('🍪 [Браузер] Cookie найден, но API не работает. Ждем и пробуем еще раз...');
+              setTimeout(async () => {
+                try {
+                  const retryResponse = await fetch('/api/auth', {
+                    method: 'GET',
+                    credentials: 'include'
+                  });
+                  
+                  if (retryResponse.ok) {
+                    const retryData = await retryResponse.json();
+                    if (retryData.success && retryData.user) {
+                      console.log('✅ [Браузер] Повторная проверка успешна!');
+                      const existingUser: User = {
+                        id: retryData.user.id,
+                        username: retryData.user.username,
+                        firstName: retryData.user.firstName || retryData.user.username,
+                        lastName: retryData.user.lastName || '',
+                        telegramId: retryData.user.telegramId || '',
+                        coins: retryData.user.coins || 1000,
+                        rating: retryData.user.rating || 0,
+                        gamesPlayed: retryData.user.gamesPlayed || 0,
+                        gamesWon: retryData.user.gamesWon || 0,
+                        photoUrl: retryData.user.photoUrl || ''
+                      };
+                      
+                      setUser(existingUser);
+                      setCheckingAuth(false);
+                      initialized.current = true;
+                      setTimeout(() => {
+                        setLoading(false);
+                        setTimeout(() => setShowMainMenu(true), 100);
+                      }, 500);
+                      return;
+                    }
+                  }
+                } catch (retryError) {
+                  console.error('❌ [Браузер] Повторная проверка тоже не удалась:', retryError);
+                }
+                
+                // Если повторная проверка не помогла - редиректим на логин
+                console.log('📝 Повторная проверка не помогла - редирект на страницу входа');
+                setCheckingAuth(false);
+                setIsBrowser(true);
+                initialized.current = true;
+                router.push('/auth/login');
+              }, 2000); // Ждем 2 секунды перед повторной попыткой
+              return; // Не продолжаем дальше, ждем результат повторной попытки
+            }
+          } else if (sessionResponse.status === 401) {
+            // 401 = не авторизован (нормально, нет сессии)
+            console.log('📝 [Браузер] Сессия не найдена (401)');
           }
         } catch (error: any) {
           console.error('❌ [Браузер] Ошибка проверки авторизации:', {
