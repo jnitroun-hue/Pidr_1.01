@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,22 +15,23 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { referralCode } = body;
 
-    // Получаем user_id из headers
-    const telegramIdHeader = request.headers.get('x-telegram-id');
-    
-    if (!telegramIdHeader) {
+    // ✅ УНИВЕРСАЛЬНО: Используем универсальную авторизацию
+    const auth = requireAuth(request);
+
+    if (auth.error || !auth.userId) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized: Telegram ID отсутствует' },
+        { success: false, error: auth.error || 'Unauthorized' },
         { status: 401 }
       );
     }
 
-    const userId = parseInt(telegramIdHeader, 10);
+    const { userId, environment } = auth;
+    const { dbUserId } = await getUserIdFromDatabase(userId, environment);
 
-    if (isNaN(userId)) {
+    if (!dbUserId) {
       return NextResponse.json(
-        { success: false, error: 'Invalid user ID' },
-        { status: 400 }
+        { success: false, error: 'User not found' },
+        { status: 404 }
       );
     }
 
@@ -40,11 +42,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`👤 Пользователь ${userId} применяет код: ${referralCode}`);
+    console.log(`👤 Пользователь ${dbUserId} применяет код: ${referralCode}`);
 
     // Вызываем функцию обработки реферала
     const { data, error } = await supabase.rpc('process_referral', {
-      p_referred_id: userId,
+      p_referred_id: dbUserId,
       p_referral_code: referralCode
     });
 

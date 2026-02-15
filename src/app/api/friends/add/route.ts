@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 
 /**
  * POST /api/friends/add
@@ -17,27 +18,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const telegramId = request.headers.get('x-telegram-id');
-    
-    console.log('➕ [FRIENDS ADD] Начало добавления друга');
-    console.log('   Telegram ID из header:', telegramId);
-    
-    if (!telegramId) {
-      console.error('❌ [FRIENDS ADD] Не найден x-telegram-id header');
+    // ✅ УНИВЕРСАЛЬНО: Используем универсальную авторизацию
+    const auth = requireAuth(request);
+
+    if (auth.error || !auth.userId) {
+      console.error('❌ [FRIENDS ADD] Ошибка авторизации:', auth.error);
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
+        { success: false, error: auth.error || 'Unauthorized' },
         { status: 401 }
       );
     }
 
-    const userId = telegramId; // ✅ Оставляем как строку (VARCHAR в БД)
+    const { userId, environment } = auth;
+    const { dbUserId, user: dbUser } = await getUserIdFromDatabase(userId, environment);
+
+    if (!dbUserId || !dbUser) {
+      console.error('❌ [FRIENDS ADD] Пользователь не найден в БД');
+      return NextResponse.json(
+        { success: false, error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    const currentUserTelegramId = dbUser.telegram_id;
     const body = await request.json();
     const { friend_id } = body;
 
-    console.log('   User ID:', userId);
+    console.log('➕ [FRIENDS ADD] Начало добавления друга');
+    console.log('   User ID (db):', dbUserId, 'Telegram ID:', currentUserTelegramId);
     console.log('   Friend ID:', friend_id);
 
-    if (!friend_id || String(friend_id) === String(userId)) {
+    if (!friend_id || String(friend_id) === String(currentUserTelegramId)) {
       console.error('❌ [FRIENDS ADD] Невалидный friend_id или попытка добавить себя');
       return NextResponse.json(
         { success: false, error: 'Invalid friend_id' },
@@ -66,8 +77,8 @@ export async function POST(request: NextRequest) {
     const { data: existing, error: existingError } = await supabase
       .from('_pidr_friends')
       .select('id, status')
-      .eq('user_id', userId)
-      .eq('friend_id', friend_id)
+      .eq('user_id', String(currentUserTelegramId))
+      .eq('friend_id', String(friend_id))
       .maybeSingle(); // ✅ Используем maybeSingle вместо single (не выдаст ошибку если не найдено)
 
     console.log('   Проверка существующей дружбы:', { existing, existingError });
@@ -81,11 +92,11 @@ export async function POST(request: NextRequest) {
     }
 
     // ✅ ИСПРАВЛЕНО: Создаем запрос в друзья (pending), а не сразу accepted
-    console.log('💾 [FRIENDS ADD] Создаём запрос в друзья: user_id =', userId, ', friend_id =', friend_id);
+    console.log('💾 [FRIENDS ADD] Создаём запрос в друзья: user_id =', currentUserTelegramId, ', friend_id =', friend_id);
     const { data: friendship1, error: error1 } = await supabase
       .from('_pidr_friends')
       .insert({
-        user_id: String(userId),
+        user_id: String(currentUserTelegramId),
         friend_id: String(friend_id),
         status: 'pending', // ✅ ИСПРАВЛЕНО: pending вместо accepted
         created_at: new Date().toISOString()

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 
 /**
  * POST /api/friends/accept
@@ -17,16 +18,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const telegramId = request.headers.get('x-telegram-id');
-    
-    if (!telegramId) {
+    // ✅ УНИВЕРСАЛЬНО: Используем универсальную авторизацию
+    const auth = requireAuth(request);
+
+    if (auth.error || !auth.userId) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
+        { success: false, error: auth.error || 'Unauthorized' },
         { status: 401 }
       );
     }
 
-    const userId = telegramId;
+    const { userId, environment } = auth;
+    const { dbUserId, user: dbUser } = await getUserIdFromDatabase(userId, environment);
+
+    if (!dbUserId || !dbUser) {
+      return NextResponse.json(
+        { success: false, error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    const currentUserTelegramId = dbUser.telegram_id;
     const body = await request.json();
     const { friend_id } = body;
 
@@ -37,14 +49,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`✅ [FRIENDS ACCEPT] Пользователь ${userId} принимает запрос от ${friend_id}`);
+    console.log(`✅ [FRIENDS ACCEPT] Пользователь ${currentUserTelegramId} принимает запрос от ${friend_id}`);
 
     // Проверяем, есть ли pending запрос от friend_id к userId
     const { data: pendingRequest, error: checkError } = await supabase
       .from('_pidr_friends')
       .select('id, status')
-      .eq('user_id', friend_id)
-      .eq('friend_id', userId)
+      .eq('user_id', String(friend_id))
+      .eq('friend_id', String(currentUserTelegramId))
       .eq('status', 'pending')
       .maybeSingle();
 
@@ -74,15 +86,15 @@ export async function POST(request: NextRequest) {
     const { data: existingReverse, error: reverseCheckError } = await supabase
       .from('_pidr_friends')
       .select('id')
-      .eq('user_id', userId)
-      .eq('friend_id', friend_id)
+      .eq('user_id', String(currentUserTelegramId))
+      .eq('friend_id', String(friend_id))
       .maybeSingle();
 
     if (!existingReverse) {
       const { error: insertError } = await supabase
         .from('_pidr_friends')
         .insert({
-          user_id: String(userId),
+          user_id: String(currentUserTelegramId),
           friend_id: String(friend_id),
           status: 'accepted',
           created_at: new Date().toISOString()
@@ -95,7 +107,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log(`✅ [FRIENDS ACCEPT] Пользователи ${userId} и ${friend_id} теперь друзья!`);
+    console.log(`✅ [FRIENDS ACCEPT] Пользователи ${currentUserTelegramId} и ${friend_id} теперь друзья!`);
 
     return NextResponse.json({
       success: true,

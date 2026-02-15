@@ -6,35 +6,37 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 
 export async function GET(request: NextRequest) {
   try {
     console.log('📊 [referral/stats] Получение статистики рефералов');
 
-    // Получаем user_id из headers
-    const telegramIdHeader = request.headers.get('x-telegram-id');
-    
-    if (!telegramIdHeader) {
+    // ✅ УНИВЕРСАЛЬНО: Используем универсальную авторизацию
+    const auth = requireAuth(request);
+
+    if (auth.error || !auth.userId) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized: Telegram ID отсутствует' },
+        { success: false, error: auth.error || 'Unauthorized' },
         { status: 401 }
       );
     }
 
-    const userId = parseInt(telegramIdHeader, 10);
+    const { userId, environment } = auth;
+    const { dbUserId } = await getUserIdFromDatabase(userId, environment);
 
-    if (isNaN(userId)) {
+    if (!dbUserId) {
       return NextResponse.json(
-        { success: false, error: 'Invalid user ID' },
-        { status: 400 }
+        { success: false, error: 'User not found' },
+        { status: 404 }
       );
     }
 
-    console.log(`👤 Получаем статистику рефералов для ${userId}`);
+    console.log(`👤 Получаем статистику рефералов для ${dbUserId}`);
 
     // Вызываем функцию получения статистики
     const { data, error } = await supabase.rpc('get_referral_stats', {
-      p_user_id: userId
+      p_user_id: dbUserId
     });
 
     if (error) {

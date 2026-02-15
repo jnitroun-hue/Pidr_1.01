@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 
 /**
  * GET /api/friends/search?query=username
@@ -19,7 +20,6 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('query');
-    const telegramId = request.headers.get('x-telegram-id');
 
     if (!query || query.trim().length === 0) {
       return NextResponse.json({
@@ -28,9 +28,19 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const currentUserId = telegramId || null;
+    // ✅ УНИВЕРСАЛЬНО: Используем универсальную авторизацию (опционально для поиска)
+    const auth = requireAuth(request);
+    let currentUserTelegramId: string | null = null;
+    
+    if (auth.userId && !auth.error) {
+      const { userId, environment } = auth;
+      const { user: dbUser } = await getUserIdFromDatabase(userId, environment);
+      if (dbUser) {
+        currentUserTelegramId = dbUser.telegram_id;
+      }
+    }
 
-    console.log(`🔍 [FRIENDS SEARCH] Поиск по запросу: "${query}", текущий пользователь (telegram_id): ${currentUserId}`);
+    console.log(`🔍 [FRIENDS SEARCH] Поиск по запросу: "${query}", текущий пользователь (telegram_id): ${currentUserTelegramId || 'не авторизован'}`);
 
     // ✅ ПОИСК ПО USERNAME (даже с 1 буквой) - приоритет username
     let usersQuery = supabase
@@ -40,8 +50,8 @@ export async function GET(request: NextRequest) {
       .limit(20); // Увеличиваем лимит для лучших результатов
     
     // ✅ Исключаем себя если есть telegramId
-    if (currentUserId) {
-      usersQuery = usersQuery.neq('telegram_id', currentUserId);
+    if (currentUserTelegramId) {
+      usersQuery = usersQuery.neq('telegram_id', currentUserTelegramId);
     }
     
     const { data: users, error } = await usersQuery;

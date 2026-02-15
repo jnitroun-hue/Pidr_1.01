@@ -119,10 +119,11 @@ export async function POST(request: NextRequest) {
     const isVercel = !!process.env.VERCEL;
     
     // ✅ КРИТИЧНО: Для Vercel используем 'none' для cross-domain cookies
+    const sameSiteValue: 'none' | 'lax' = isVercel ? 'none' : 'lax';
     const cookieSettings = {
       httpOnly: true,
       secure: true, // Всегда true для production
-      sameSite: (isVercel ? 'none' : 'lax') as const, // 'none' для Vercel, 'lax' для localhost
+      sameSite: sameSiteValue, // 'none' для Vercel, 'lax' для localhost
       maxAge: 30 * 24 * 60 * 60, // 30 дней
       path: '/',
       domain: isVercel ? undefined : undefined // Не указываем domain для Vercel

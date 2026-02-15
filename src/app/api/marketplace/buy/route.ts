@@ -17,21 +17,32 @@ import { supabase } from '@/lib/supabase';
  */
 export async function POST(request: NextRequest) {
   try {
-    // Получаем пользователя
-    const telegramIdHeader = request.headers.get('x-telegram-id');
-    
-    if (!telegramIdHeader) {
+    // ✅ УНИВЕРСАЛЬНО: Используем универсальную авторизацию
+    const { requireAuth, getUserIdFromDatabase } = await import('@/lib/auth-utils');
+    const auth = requireAuth(request);
+
+    if (auth.error || !auth.userId) {
       return NextResponse.json(
-        { success: false, error: 'Не авторизован' },
+        { success: false, error: auth.error || 'Не авторизован' },
         { status: 401 }
       );
     }
-    
-    const buyerId = parseInt(telegramIdHeader, 10);
+
+    const { userId, environment } = auth;
+    const { dbUserId, user: dbUser } = await getUserIdFromDatabase(userId, environment);
+
+    if (!dbUserId || !dbUser) {
+      return NextResponse.json(
+        { success: false, error: 'Пользователь не найден' },
+        { status: 404 }
+      );
+    }
+
+    const buyerId = dbUser.telegram_id ? parseInt(dbUser.telegram_id, 10) : dbUserId;
     
     if (isNaN(buyerId)) {
       return NextResponse.json(
-        { success: false, error: 'Неверный формат telegram_id' },
+        { success: false, error: 'Неверный формат user ID' },
         { status: 400 }
       );
     }

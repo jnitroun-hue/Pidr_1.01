@@ -1,20 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 
 export async function POST(req: NextRequest) {
   try {
-    // ✅ Авторизация через Telegram WebApp headers
-    const telegramIdHeader = req.headers.get('x-telegram-id');
-    
-    if (!telegramIdHeader) {
-      console.error('❌ [Add Coins] Не найден x-telegram-id header');
+    // ✅ УНИВЕРСАЛЬНО: Используем универсальную авторизацию
+    const auth = requireAuth(req);
+
+    if (auth.error || !auth.userId) {
+      console.error('❌ [Add Coins] Ошибка авторизации:', auth.error);
       return NextResponse.json(
-        { success: false, error: 'Требуется авторизация' },
+        { success: false, error: auth.error || 'Требуется авторизация' },
         { status: 401 }
       );
     }
-    
-    const userId = telegramIdHeader;
+
+    const { userId, environment } = auth;
+    const { dbUserId, user: dbUser } = await getUserIdFromDatabase(userId, environment);
+
+    if (!dbUserId || !dbUser) {
+      console.error('❌ [Add Coins] Пользователь не найден в БД');
+      return NextResponse.json(
+        { success: false, error: 'Пользователь не найден' },
+        { status: 404 }
+      );
+    }
     
     // Получаем сумму и статистику из тела запроса
     const body = await req.json();
@@ -42,21 +52,8 @@ export async function POST(req: NextRequest) {
       });
     }
     
-    // Получаем текущие данные пользователя (баланс и статистика)
-    const { data: userData, error: fetchError } = await supabase
-      .from('_pidr_users')
-      .select('coins, games_played, wins, losses, total_games')
-      .eq('telegram_id', userId)
-      .single();
-    
-    if (fetchError) {
-      console.error('❌ [Add Coins] Ошибка получения пользователя:', fetchError);
-      return NextResponse.json(
-        { success: false, error: 'Пользователь не найден' },
-        { status: 404 }
-      );
-    }
-    
+    // Используем данные пользователя из getUserIdFromDatabase
+    const userData = dbUser;
     const currentCoins = userData.coins || 0;
     const newBalance = currentCoins + amount;
     
@@ -98,7 +95,7 @@ export async function POST(req: NextRequest) {
     const { error: updateError } = await supabase
       .from('_pidr_users')
       .update(updateData)
-      .eq('telegram_id', userId);
+      .eq('id', dbUserId);
     
     if (updateError) {
       console.error('❌ [Add Coins] Ошибка обновления баланса:', updateError);

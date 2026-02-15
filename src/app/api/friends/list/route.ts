@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 
 /**
  * GET /api/friends/list
@@ -17,18 +18,29 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const telegramId = request.headers.get('x-telegram-id');
-    
-    if (!telegramId) {
+    // ✅ УНИВЕРСАЛЬНО: Используем универсальную авторизацию
+    const auth = requireAuth(request);
+
+    if (auth.error || !auth.userId) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
+        { success: false, error: auth.error || 'Unauthorized' },
         { status: 401 }
       );
     }
 
-    const userId = telegramId; // ✅ Оставляем как строку (VARCHAR в БД)
+    const { userId, environment } = auth;
+    const { dbUserId, user: dbUser } = await getUserIdFromDatabase(userId, environment);
 
-    console.log(`👥 [FRIENDS LIST] Загрузка друзей для telegram_id: ${userId}`);
+    if (!dbUserId || !dbUser) {
+      return NextResponse.json(
+        { success: false, error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    const currentUserTelegramId = dbUser.telegram_id;
+
+    console.log(`👥 [FRIENDS LIST] Загрузка друзей для telegram_id: ${currentUserTelegramId}`);
 
     // Получаем друзей из БД
     const { data: friendships, error } = await supabase
@@ -37,7 +49,7 @@ export async function GET(request: NextRequest) {
         friend_id,
         created_at
       `)
-      .eq('user_id', userId)
+      .eq('user_id', String(currentUserTelegramId))
       .eq('status', 'accepted');
     
     console.log(`📊 [FRIENDS LIST] Найдено дружб: ${friendships?.length || 0}`, friendships);

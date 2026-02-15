@@ -249,7 +249,7 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
   const loadUserData = async () => {
     try {
       // ✅ УНИВЕРСАЛЬНО: Используем универсальные headers для всех платформ
-      const { getApiHeaders } = await import('../../lib/api-headers');
+      const { getApiHeaders } = await import('@/lib/api-headers');
       const headers = getApiHeaders() as Record<string, string>;
       
       // Получаем данные пользователя из API (не из localStorage!)
@@ -308,7 +308,7 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
   const checkDatabaseSession = async () => {
     try {
       // ✅ УНИВЕРСАЛЬНО: Используем универсальные headers для всех платформ
-      const { getApiHeaders } = await import('../../lib/api-headers');
+      const { getApiHeaders } = await import('@/lib/api-headers');
       const headers = getApiHeaders() as Record<string, string>;
       
       const response = await fetch('/api/auth', {
