@@ -149,12 +149,27 @@ export default function RegisterPage() {
             photoUrl: data.user.avatar_url || data.user.photoUrl || ''
           };
           
-          sessionStorage.setItem('pendingAuth', JSON.stringify({
+          const pendingAuthData = {
             user: normalizedUser,
             timestamp: Date.now()
-          }));
+          };
           
-          console.log('💾 [Register] Сохранены данные pendingAuth:', normalizedUser.username);
+          sessionStorage.setItem('pendingAuth', JSON.stringify(pendingAuthData));
+          
+          console.log('💾 [Register] Сохранены данные pendingAuth:', {
+            username: normalizedUser.username,
+            id: normalizedUser.id,
+            timestamp: pendingAuthData.timestamp,
+            fullData: pendingAuthData
+          });
+          
+          // ✅ ПРОВЕРЯЕМ что данные действительно сохранились
+          const verify = sessionStorage.getItem('pendingAuth');
+          if (verify) {
+            console.log('✅ [Register] Проверка: pendingAuth успешно сохранен в sessionStorage');
+          } else {
+            console.error('❌ [Register] ОШИБКА: pendingAuth НЕ сохранен в sessionStorage!');
+          }
         }
         
         setTimeout(() => {
