@@ -29,13 +29,6 @@ export async function GET(req: NextRequest) {
     
     const user = dbUser;
 
-    if (error || !user) {
-      return NextResponse.json(
-        { success: false, message: 'Пользователь не найден в БД' },
-        { status: 404 }
-      );
-    }
-
     // Обновляем last_seen
     await supabase
       .from('_pidr_users')
