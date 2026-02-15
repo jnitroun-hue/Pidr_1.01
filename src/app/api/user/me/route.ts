@@ -30,13 +30,14 @@ export async function GET(req: NextRequest) {
     const user = dbUser;
 
     // Обновляем last_seen
+    // ✅ УНИВЕРСАЛЬНО: Обновляем по id из БД
     await supabase
       .from('_pidr_users')
       .update({
         last_seen: new Date().toISOString(),
         status: 'online'
       })
-      .eq('telegram_id', userId);
+      .eq('id', dbUserId);
 
     // ✅ ЛОГИРОВАНИЕ для отладки
     const totalGames = user.total_games || user.games_played || 0;

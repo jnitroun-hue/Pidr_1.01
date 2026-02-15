@@ -18,7 +18,6 @@ export async function GET(req: NextRequest) {
   
   try {
     // ✅ УНИВЕРСАЛЬНО: Получаем пользователя из БД
-    const { getUserIdFromDatabase } = await import('../../../../lib/auth-utils');
     const { dbUserId, user: dbUser } = await getUserIdFromDatabase(userId, environment);
     
     if (!dbUserId || !dbUser) {
@@ -101,7 +100,6 @@ export async function POST(req: NextRequest) {
     console.log(`💰 Обновление баланса: ${amount > 0 ? '+' : ''}${amount} (${type})`);
     
     // ✅ УНИВЕРСАЛЬНО: Получаем пользователя из БД
-    const { getUserIdFromDatabase } = await import('../../../../lib/auth-utils');
     const { dbUserId, user: dbUser } = await getUserIdFromDatabase(userId, environment);
     
     if (!dbUserId || !dbUser) {

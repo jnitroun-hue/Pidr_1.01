@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, supabaseAdmin } from '@/lib/supabase';
-import { getUserIdFromRequest } from '@/lib/auth-utils';
+import { getUserIdFromRequest, getUserIdFromDatabase } from '@/lib/auth-utils';
 import { getRedis } from '@/lib/redis/init';
 
 // Получаем Redis клиент через универсальную инициализацию
@@ -24,7 +24,6 @@ export async function POST(request: NextRequest) {
     }
 
     // ✅ УНИВЕРСАЛЬНО: Получаем id из БД для обновления статуса
-    const { getUserIdFromDatabase } = await import('@/lib/auth-utils');
     const { dbUserId } = await getUserIdFromDatabase(userId, environment);
     
     if (!dbUserId) {
