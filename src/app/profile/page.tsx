@@ -121,8 +121,8 @@ export default function ProfilePage() {
         const telegramHeaders = getTelegramWebAppHeaders();
         console.log('🔐 [Profile] Отправляем запрос с headers:', telegramHeaders);
         
-        // Получаем данные пользователя из API (Supabase)
-        const response = await fetch('/api/auth', {
+        // ✅ ИСПРАВЛЕНО: Используем /api/user/me для получения данных по telegram_id
+        const response = await fetch('/api/user/me', {
           method: 'GET',
           credentials: 'include',
           headers: {
@@ -141,17 +141,36 @@ export default function ProfilePage() {
         if (result.success && result.user) {
           console.log('✅ Данные пользователя загружены из БД:', result.user);
           
+          // ✅ КРИТИЧНО: Загружаем актуальный баланс из /api/user/balance
+          const balanceResponse = await fetch('/api/user/balance', {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json',
+              ...telegramHeaders
+            }
+          });
+          
+          let actualCoins = result.user.coins || 0;
+          if (balanceResponse.ok) {
+            const balanceResult = await balanceResponse.json();
+            if (balanceResult.success && balanceResult.data) {
+              actualCoins = balanceResult.data.balance || result.user.coins || 0;
+              console.log('💰 Актуальный баланс из БД:', actualCoins);
+            }
+          }
+          
           const userData = {
             id: result.user.id,
             username: result.user.username,
             firstName: result.user.firstName,
             lastName: result.user.lastName,
             telegramId: result.user.telegramId,
-            coins: result.user.coins,
-            rating: result.user.rating,
-            gamesPlayed: result.user.gamesPlayed || result.user.games_played || 0, // ✅ Используем gamesPlayed или games_played
-            wins: result.user.wins || 0,        // ✅ ИСПРАВЛЕНО: wins вместо gamesWon!
-            losses: result.user.losses || 0,    // ✅ ДОБАВЛЕНО: losses из API
+            coins: actualCoins, // ✅ ИСПОЛЬЗУЕМ актуальный баланс из БД
+            rating: result.user.rating || 0,
+            gamesPlayed: result.user.gamesPlayed || result.user.games_played || 0,
+            wins: result.user.wins || 0,
+            losses: result.user.losses || 0,
             status: result.user.status,
             avatar_url: result.user.avatar_url,
             is_admin: result.user.is_admin || false
@@ -166,36 +185,21 @@ export default function ProfilePage() {
             ...prev,
             rating: userData.rating || 0,
             gamesPlayed: userData.gamesPlayed || 0,
-            wins: userData.wins || 0,        // ✅ ИСПРАВЛЕНО: wins вместо gamesWon!
-            losses: userData.losses || 0,    // ✅ ИСПРАВЛЕНО: losses напрямую из БД!
+            wins: userData.wins || 0,
+            losses: userData.losses || 0,
             winRate: userData.gamesPlayed > 0 
-              ? Math.round(((userData.wins || 0) / userData.gamesPlayed) * 100)  // ✅ ИСПРАВЛЕНО!
+              ? Math.round(((userData.wins || 0) / userData.gamesPlayed) * 100)
               : 0
           }));
           
-          console.log('✅ Статистика обновлена из БД');
+          console.log('✅ Статистика и баланс обновлены из БД:', {
+            coins: actualCoins,
+            rating: userData.rating,
+            gamesPlayed: userData.gamesPlayed,
+            wins: userData.wins
+          });
         } else {
           console.error('❌ Пользователь не авторизован');
-        }
-        
-        // Загружаем актуальный баланс
-        const balanceResponse = await fetch('/api/user/balance', {
-          method: 'GET',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-            ...telegramHeaders // ✅ ДОБАВЛЯЕМ x-telegram-id header!
-          }
-        });
-        
-        if (balanceResponse.ok) {
-          const balanceResult = await balanceResponse.json();
-          if (balanceResult.success) {
-            const { balance } = balanceResult.data;
-            console.log('💰 Актуальный баланс из БД:', balance);
-            
-            setUser((prev: any) => prev ? { ...prev, coins: balance } : null);
-          }
         }
         
       } catch (error) {
@@ -1182,10 +1186,10 @@ export default function ProfilePage() {
               💰 {(user?.coins || 0).toLocaleString()}
             </div>
 
-            {/* Кнопки: Друзья и Аватар */}
+            {/* Кнопки: Друзья, Аватар и Админ панель (если админ) */}
             <div style={{
               display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
+              gridTemplateColumns: isAdmin ? '1fr 1fr 1fr' : '1fr 1fr',
               gap: '8px',
               width: '100%'
             }}>
@@ -1241,6 +1245,31 @@ export default function ProfilePage() {
                 <Camera size={20} />
                 АВАТАР
               </motion.label>
+
+              {isAdmin && (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => router.push('/admin')}
+                  style={{
+                    background: 'rgba(239, 68, 68, 0.2)',
+                    border: '2px solid rgba(239, 68, 68, 0.3)',
+                    borderRadius: '10px',
+                    padding: '8px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '4px',
+                    color: '#f87171',
+                    fontWeight: '600',
+                    fontSize: '11px'
+                  }}
+                >
+                  <Shield size={20} />
+                  АДМИН
+                </motion.button>
+              )}
             </div>
           </div>
 

@@ -20,7 +20,9 @@ import {
   Ticket,
   CreditCard,
   Sparkles,
-  Plus
+  Plus,
+  Home,
+  Trophy
 } from 'lucide-react';
 
 interface User {
@@ -36,7 +38,7 @@ interface User {
   is_active: boolean;
 }
 
-type TabType = 'users' | 'promocodes' | 'transactions' | 'card-generator';
+type TabType = 'users' | 'promocodes' | 'transactions' | 'card-generator' | 'rooms' | 'rating';
 
 export default function AdminPanel() {
   const router = useRouter();
@@ -86,6 +88,18 @@ export default function AdminPanel() {
     network: 'TON'
   });
   const [generating, setGenerating] = useState(false);
+  
+  // Rooms state
+  const [rooms, setRooms] = useState<any[]>([]);
+  const [roomsPage, setRoomsPage] = useState(1);
+  const [roomsTotalPages, setRoomsTotalPages] = useState(1);
+  const [roomsLoading, setRoomsLoading] = useState(false);
+  
+  // Rating state
+  const [rating, setRating] = useState<any[]>([]);
+  const [ratingPage, setRatingPage] = useState(1);
+  const [ratingTotalPages, setRatingTotalPages] = useState(1);
+  const [ratingLoading, setRatingLoading] = useState(false);
 
   // Проверка прав администратора
   useEffect(() => {
@@ -270,13 +284,68 @@ export default function AdminPanel() {
     }
   };
 
+  // Загрузка комнат
+  const loadRooms = async () => {
+    setRoomsLoading(true);
+    try {
+      const response = await fetch(`/api/admin/rooms?page=${roomsPage}&limit=20`, {
+        credentials: 'include'
+      });
+      const data = await response.json();
+      if (data.success) {
+        setRooms(data.rooms || []);
+        setRoomsPage(data.pagination.page);
+        setRoomsTotalPages(data.pagination.totalPages);
+      }
+    } catch (error) {
+      console.error('❌ Ошибка загрузки комнат:', error);
+    } finally {
+      setRoomsLoading(false);
+    }
+  };
+
+  // Загрузка рейтинга
+  const loadRating = async () => {
+    setRatingLoading(true);
+    try {
+      const response = await fetch(`/api/admin/rating?page=${ratingPage}&limit=20`, {
+        credentials: 'include'
+      });
+      const data = await response.json();
+      if (data.success) {
+        setRating(data.rating || []);
+        setRatingPage(data.pagination.page);
+        setRatingTotalPages(data.pagination.totalPages);
+      }
+    } catch (error) {
+      console.error('❌ Ошибка загрузки рейтинга:', error);
+    } finally {
+      setRatingLoading(false);
+    }
+  };
+
   // Загрузка данных при смене таба
   useEffect(() => {
     if (isAdmin) {
       if (activeTab === 'promocodes') loadPromocodes();
       if (activeTab === 'transactions') loadTransactions();
+      if (activeTab === 'rooms') loadRooms();
+      if (activeTab === 'rating') loadRating();
     }
   }, [activeTab, isAdmin]);
+
+  // Загрузка данных при изменении страницы
+  useEffect(() => {
+    if (isAdmin && activeTab === 'rooms') {
+      loadRooms();
+    }
+  }, [roomsPage]);
+
+  useEffect(() => {
+    if (isAdmin && activeTab === 'rating') {
+      loadRating();
+    }
+  }, [ratingPage]);
 
   // Фильтрация пользователей
   const filteredUsers = users.filter(user => {
@@ -377,7 +446,7 @@ export default function AdminPanel() {
           borderBottom: '2px solid rgba(100, 116, 139, 0.3)',
           paddingBottom: '12px'
         }}>
-          {(['users', 'promocodes', 'transactions', 'card-generator'] as TabType[]).map((tab) => (
+          {(['users', 'promocodes', 'transactions', 'card-generator', 'rooms', 'rating'] as TabType[]).map((tab) => (
             <motion.button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -403,10 +472,14 @@ export default function AdminPanel() {
               {tab === 'promocodes' && <Ticket size={18} />}
               {tab === 'transactions' && <CreditCard size={18} />}
               {tab === 'card-generator' && <Sparkles size={18} />}
+              {tab === 'rooms' && <Home size={18} />}
+              {tab === 'rating' && <Trophy size={18} />}
               {tab === 'users' && 'Пользователи'}
               {tab === 'promocodes' && 'Промокоды'}
               {tab === 'transactions' && 'Транзакции'}
               {tab === 'card-generator' && 'Генератор карт'}
+              {tab === 'rooms' && 'Комнаты'}
+              {tab === 'rating' && 'Рейтинг'}
             </motion.button>
           ))}
         </div>
@@ -1275,6 +1348,229 @@ export default function AdminPanel() {
                 {generating ? 'Генерация...' : '🎴 Сгенерировать карту'}
               </motion.button>
             </div>
+          </div>
+        )}
+
+        {/* Комнаты */}
+        {activeTab === 'rooms' && (
+          <div>
+            <h2 style={{ color: '#e2e8f0', fontSize: '24px', fontWeight: '700', marginBottom: '20px' }}>Комнаты</h2>
+            
+            {roomsLoading ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                <RefreshCw size={32} style={{ animation: 'spin 1s linear infinite' }} />
+                <div style={{ marginTop: '16px' }}>Загрузка комнат...</div>
+              </div>
+            ) : (
+              <>
+                <div style={{
+                  background: 'rgba(15, 23, 42, 0.6)',
+                  border: '2px solid rgba(100, 116, 139, 0.3)',
+                  borderRadius: '16px',
+                  overflow: 'hidden'
+                }}>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 2fr 1fr 1fr 1fr 1fr',
+                    gap: '16px',
+                    padding: '16px',
+                    background: 'rgba(99, 102, 241, 0.1)',
+                    borderBottom: '2px solid rgba(100, 116, 139, 0.3)',
+                    fontWeight: '700',
+                    fontSize: '14px',
+                    color: '#94a3b8'
+                  }}>
+                    <div>Код</div>
+                    <div>Название</div>
+                    <div>Статус</div>
+                    <div>Игроки</div>
+                    <div>Приватная</div>
+                    <div>Создана</div>
+                  </div>
+                  {rooms.map((room: any) => (
+                    <div
+                      key={room.id}
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 2fr 1fr 1fr 1fr 1fr',
+                        gap: '16px',
+                        padding: '16px',
+                        borderBottom: '1px solid rgba(100, 116, 139, 0.2)',
+                        color: '#e2e8f0'
+                      }}
+                    >
+                      <div style={{ fontWeight: '600', color: '#6366f1' }}>{room.room_code}</div>
+                      <div>{room.name}</div>
+                      <div>
+                        <span style={{
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          background: room.status === 'playing' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(251, 191, 36, 0.2)',
+                          color: room.status === 'playing' ? '#22c55e' : '#fbbf24'
+                        }}>
+                          {room.status === 'playing' ? 'Играет' : room.status === 'waiting' ? 'Ожидание' : room.status}
+                        </span>
+                      </div>
+                      <div>{room.playersCount || room.current_players || 0}/{room.max_players || 4}</div>
+                      <div>{room.is_private ? '🔒 Да' : '🌐 Нет'}</div>
+                      <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+                        {new Date(room.created_at).toLocaleDateString('ru-RU')}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {roomsTotalPages > 1 && (
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginTop: '20px' }}>
+                    <motion.button
+                      onClick={() => setRoomsPage(p => Math.max(1, p - 1))}
+                      disabled={roomsPage === 1}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      style={{
+                        padding: '8px 16px',
+                        background: roomsPage === 1 ? 'rgba(100, 116, 139, 0.2)' : 'rgba(99, 102, 241, 0.2)',
+                        border: '2px solid rgba(100, 116, 139, 0.3)',
+                        borderRadius: '8px',
+                        color: '#cbd5e1',
+                        cursor: roomsPage === 1 ? 'not-allowed' : 'pointer'
+                      }}
+                    >
+                      <ChevronLeft size={18} />
+                    </motion.button>
+                    <div style={{ padding: '8px 16px', color: '#cbd5e1' }}>
+                      {roomsPage} / {roomsTotalPages}
+                    </div>
+                    <motion.button
+                      onClick={() => setRoomsPage(p => Math.min(roomsTotalPages, p + 1))}
+                      disabled={roomsPage === roomsTotalPages}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      style={{
+                        padding: '8px 16px',
+                        background: roomsPage === roomsTotalPages ? 'rgba(100, 116, 139, 0.2)' : 'rgba(99, 102, 241, 0.2)',
+                        border: '2px solid rgba(100, 116, 139, 0.3)',
+                        borderRadius: '8px',
+                        color: '#cbd5e1',
+                        cursor: roomsPage === roomsTotalPages ? 'not-allowed' : 'pointer'
+                      }}
+                    >
+                      <ChevronRight size={18} />
+                    </motion.button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Рейтинг */}
+        {activeTab === 'rating' && (
+          <div>
+            <h2 style={{ color: '#e2e8f0', fontSize: '24px', fontWeight: '700', marginBottom: '20px' }}>Рейтинг игроков</h2>
+            
+            {ratingLoading ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                <RefreshCw size={32} style={{ animation: 'spin 1s linear infinite' }} />
+                <div style={{ marginTop: '16px' }}>Загрузка рейтинга...</div>
+              </div>
+            ) : (
+              <>
+                <div style={{
+                  background: 'rgba(15, 23, 42, 0.6)',
+                  border: '2px solid rgba(100, 116, 139, 0.3)',
+                  borderRadius: '16px',
+                  overflow: 'hidden'
+                }}>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '60px 2fr 1fr 1fr 1fr 1fr 1fr',
+                    gap: '16px',
+                    padding: '16px',
+                    background: 'rgba(99, 102, 241, 0.1)',
+                    borderBottom: '2px solid rgba(100, 116, 139, 0.3)',
+                    fontWeight: '700',
+                    fontSize: '14px',
+                    color: '#94a3b8'
+                  }}>
+                    <div>Ранг</div>
+                    <div>Игрок</div>
+                    <div>Рейтинг</div>
+                    <div>Игры</div>
+                    <div>Победы</div>
+                    <div>Поражения</div>
+                    <div>Винрейт</div>
+                  </div>
+                  {rating.map((player: any) => (
+                    <div
+                      key={player.id}
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: '60px 2fr 1fr 1fr 1fr 1fr 1fr',
+                        gap: '16px',
+                        padding: '16px',
+                        borderBottom: '1px solid rgba(100, 116, 139, 0.2)',
+                        color: '#e2e8f0'
+                      }}
+                    >
+                      <div style={{
+                        fontWeight: '700',
+                        fontSize: '18px',
+                        color: player.rank <= 3 ? '#fbbf24' : '#6366f1'
+                      }}>
+                        #{player.rank}
+                      </div>
+                      <div style={{ fontWeight: '600' }}>{player.username}</div>
+                      <div style={{ color: '#fbbf24', fontWeight: '600' }}>{player.rating}</div>
+                      <div>{player.games_played}</div>
+                      <div style={{ color: '#22c55e' }}>{player.games_won}</div>
+                      <div style={{ color: '#ef4444' }}>{player.losses}</div>
+                      <div>{player.win_rate}%</div>
+                    </div>
+                  ))}
+                </div>
+                {ratingTotalPages > 1 && (
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginTop: '20px' }}>
+                    <motion.button
+                      onClick={() => setRatingPage(p => Math.max(1, p - 1))}
+                      disabled={ratingPage === 1}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      style={{
+                        padding: '8px 16px',
+                        background: ratingPage === 1 ? 'rgba(100, 116, 139, 0.2)' : 'rgba(99, 102, 241, 0.2)',
+                        border: '2px solid rgba(100, 116, 139, 0.3)',
+                        borderRadius: '8px',
+                        color: '#cbd5e1',
+                        cursor: ratingPage === 1 ? 'not-allowed' : 'pointer'
+                      }}
+                    >
+                      <ChevronLeft size={18} />
+                    </motion.button>
+                    <div style={{ padding: '8px 16px', color: '#cbd5e1' }}>
+                      {ratingPage} / {ratingTotalPages}
+                    </div>
+                    <motion.button
+                      onClick={() => setRatingPage(p => Math.min(ratingTotalPages, p + 1))}
+                      disabled={ratingPage === ratingTotalPages}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      style={{
+                        padding: '8px 16px',
+                        background: ratingPage === ratingTotalPages ? 'rgba(100, 116, 139, 0.2)' : 'rgba(99, 102, 241, 0.2)',
+                        border: '2px solid rgba(100, 116, 139, 0.3)',
+                        borderRadius: '8px',
+                        color: '#cbd5e1',
+                        cursor: ratingPage === ratingTotalPages ? 'not-allowed' : 'pointer'
+                      }}
+                    >
+                      <ChevronRight size={18} />
+                    </motion.button>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         )}
       </div>
