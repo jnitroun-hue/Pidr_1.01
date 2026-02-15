@@ -307,15 +307,8 @@ function HomeWithParams() {
       return;
     }
     
-    // ✅ ПРОВЕРКА ПЕРВОГО ВХОДА - ПЕРЕНАПРАВЛЕНИЕ НА WELCOME
-    // Используем cookies вместо localStorage
-    const isFirstVisit = typeof window !== 'undefined' && !document.cookie.includes('pidr_visited=true');
-    if (isFirstVisit) {
-      console.log('👋 Первый визит - перенаправление на welcome');
-      document.cookie = 'pidr_visited=true; path=/; max-age=31536000'; // 1 год
-      router.push('/welcome');
-      return;
-    }
+    // ✅ УБРАНА ПРОВЕРКА ПЕРВОГО ВИЗИТА - сразу авторизуемся
+    // Пользователь сразу попадает в игру после авторизации
     
     const initializePlayer = async () => {
       if (typeof window === 'undefined') {
@@ -358,69 +351,61 @@ function HomeWithParams() {
           headers['x-username'] = telegramUser?.username || telegramUser?.first_name || '';
         }
         
-        const sessionResponse = await fetch('/api/auth', {
-          method: 'GET',
-          credentials: 'include',
-          headers // ✅ ДОБАВЛЯЕМ headers с x-telegram-id!
-        });
+        // ✅ УПРОЩЕННАЯ ПРОВЕРКА: Пробуем проверить сессию, но если не работает - сразу авторизуемся
+        try {
+          const sessionResponse = await fetch('/api/auth', {
+            method: 'GET',
+            credentials: 'include',
+            headers
+          });
 
-        if (sessionResponse.ok) {
-          const sessionData = await sessionResponse.json();
-          
-          if (sessionData.success && sessionData.user) {
-            // ✅ КРИТИЧНО: Проверяем что пользователь из сессии совпадает с Telegram ID
-            const sessionTelegramId = String(sessionData.user.telegramId || '');
-            const currentTelegramId = String(telegramId || '');
+          if (sessionResponse.ok) {
+            const sessionData = await sessionResponse.json();
             
-            if (telegramId && sessionTelegramId !== currentTelegramId) {
-              console.error('🚨 КРИТИЧЕСКАЯ ОШИБКА: Пользователь из сессии не совпадает с Telegram ID!', {
-                sessionUser: sessionData.user.username,
-                sessionTelegramId,
-                currentTelegramId,
-                action: 'ОТКЛОНЯЕМ СЕССИЮ И ПЕРЕАВТОРИЗУЕМСЯ'
-              });
+            if (sessionData.success && sessionData.user) {
+              // ✅ Проверяем что пользователь из сессии совпадает с Telegram ID
+              const sessionTelegramId = String(sessionData.user.telegramId || '');
+              const currentTelegramId = String(telegramId || '');
               
-              // Удаляем неверную сессию и переавторизуемся
-              await fetch('/api/auth', {
-                method: 'DELETE',
-                credentials: 'include'
-              });
-              
-              // Продолжаем с новой авторизацией - не throw, просто продолжаем
-              console.log('🔄 Продолжаем с новой авторизацией...');
-            } else {
-              console.log('✅ Активная сессия найдена и проверена:', sessionData.user.username);
-              
-              const existingUser: User = {
-                id: sessionData.user.id,
-                username: sessionData.user.username,
-                firstName: sessionData.user.firstName || sessionData.user.username,
-                lastName: sessionData.user.lastName || '',
-                telegramId: sessionData.user.telegramId || telegramId,
-                coins: sessionData.user.coins || 1000,
-                rating: sessionData.user.rating || 0,
-                gamesPlayed: sessionData.user.gamesPlayed || 0,
-                gamesWon: sessionData.user.gamesWon || 0,
-                photoUrl: sessionData.user.photoUrl || ''
-              };
-              
-              setUser(existingUser);
-              initialized.current = true;
-              setTimeout(() => {
+              if (telegramId && sessionTelegramId === currentTelegramId) {
+                console.log('✅ Активная сессия найдена:', sessionData.user.username);
+                
+                const existingUser: User = {
+                  id: sessionData.user.id,
+                  username: sessionData.user.username,
+                  firstName: sessionData.user.firstName || sessionData.user.username,
+                  lastName: sessionData.user.lastName || '',
+                  telegramId: sessionData.user.telegramId || telegramId,
+                  coins: sessionData.user.coins || 1000,
+                  rating: sessionData.user.rating || 0,
+                  gamesPlayed: sessionData.user.gamesPlayed || 0,
+                  gamesWon: sessionData.user.gamesWon || 0,
+                  photoUrl: sessionData.user.photoUrl || ''
+                };
+                
+                setUser(existingUser);
+                initialized.current = true;
                 setLoading(false);
-                setTimeout(() => setShowMainMenu(true), 100);
-              }, 1500);
-              console.log('🚀 ДОБРО ПОЖАЛОВАТЬ ОБРАТНО В P.I.D.R.!');
-              return;
+                setTimeout(() => {
+                  setShowMainMenu(true);
+                }, 300);
+                console.log('🚀 ДОБРО ПОЖАЛОВАТЬ ОБРАТНО В P.I.D.R.!');
+                return;
+              } else {
+                console.log('⚠️ Сессия не совпадает с Telegram ID, авторизуемся заново...');
+              }
             }
+          } else {
+            console.log('📝 Сессия не найдена (статус:', sessionResponse.status, '), авторизуемся...');
           }
-        } else if (sessionResponse.status === 401 || sessionResponse.status === 403) {
-          // ✅ 401 = не авторизован (нормально), 403 = запрещено
-          console.log('📝 Сессия не найдена или истекла, авторизуемся заново...');
+        } catch (sessionError) {
+          console.warn('⚠️ Ошибка проверки сессии (не критично), авторизуемся напрямую:', sessionError);
         }
+        
+        // ✅ Если сессия не найдена или ошибка - сразу авторизуемся через БД
 
-        // Если нет сессии, авторизуемся через Telegram
-        // ✅ ПРОСТАЯ ЛОГИКА: Берем данные напрямую из window.Telegram.WebApp
+        // ✅ УПРОЩЕННАЯ АВТОРИЗАЦИЯ: Сразу создаем/авторизуем пользователя через БД
+        // Без лишних проверок - берем данные из Telegram и сразу авторизуемся
         let telegramUserData = null;
         
         // Проверяем window.Telegram.WebApp напрямую
@@ -433,11 +418,20 @@ function HomeWithParams() {
         }
 
         if (telegramUserData && telegramUserData.id) {
-          console.log('📱 Создаем/авторизуем пользователя через БД...');
+          console.log('📱 Создаем/авторизуем пользователя через БД (упрощенная версия)...');
           await createUserThroughDatabase(telegramUserData);
         } else {
-          console.error('❌ Telegram WebApp данные недоступны');
-          // ✅ Показываем браузерную версию вместо ошибки
+          console.warn('⚠️ Telegram WebApp данные недоступны, ждем инициализации...');
+          // ✅ ЖДЕМ ИНИЦИАЛИЗАЦИИ TELEGRAM (до 5 секунд)
+          if (retryCount < 5) {
+            console.log(`🔄 Попытка ${retryCount + 1}/5 - ждем инициализации Telegram...`);
+            setTimeout(() => {
+              setRetryCount(prev => prev + 1);
+            }, 1000);
+            return;
+          }
+          // После 5 попыток показываем браузерную версию
+          console.warn('⚠️ Telegram не инициализировался после 5 попыток, показываем браузерную версию');
           setIsBrowser(true);
           setLoading(false);
           initialized.current = true;
@@ -569,75 +563,26 @@ function HomeWithParams() {
             photoUrl: data.user.photoUrl || ''
           };
           
+          console.log('👤 Устанавливаем пользователя:', newUser.username);
           setUser(newUser);
-          
-          initialized.current = true; // ✅ Устанавливаем флаг через useRef
+          initialized.current = true;
           
           // ✅ ПРОВЕРЯЕМ ПРИГЛАШЕНИЕ В КОМНАТУ ПОСЛЕ АВТОРИЗАЦИИ
-          // Используем roomInviteData из замыкания функции createUserThroughDatabase
           if (roomInviteData) {
-            // Проверяем статус пользователя (онлайн и не в игре)
-            const checkUserStatus = async () => {
-              try {
-                const statusResponse = await fetch('/api/auth', {
-                  method: 'GET',
-                  credentials: 'include',
-                  headers: {
-                    'x-telegram-id': String(telegramUser.id),
-                    'x-username': telegramUser.username || telegramUser.first_name || 'User'
-                  }
-                });
-                
-                if (statusResponse.ok) {
-                  const statusData = await statusResponse.json();
-                  if (statusData.success && statusData.user) {
-                    const userStatus = statusData.user.status;
-                    // Показываем модальное окно только если пользователь онлайн и не в игре
-                    if (userStatus === 'online' && userStatus !== 'playing' && userStatus !== 'in_room') {
-                      console.log('✅ Пользователь онлайн, показываем приглашение в комнату');
-                      setTimeout(() => {
-                        setShowRoomInviteModal(true);
-                      }, 500);
-                    } else {
-                      console.log('⚠️ Пользователь не онлайн или уже в игре, пропускаем приглашение. Статус:', userStatus);
-                    }
-                  }
-                }
-              } catch (err: unknown) {
-                console.error('❌ Ошибка проверки статуса пользователя:', err);
-              }
-            };
-            
-            checkUserStatus();
+            console.log('🎮 Приглашение в комнату обнаружено, показываем модальное окно');
+            setTimeout(() => {
+              setShowRoomInviteModal(true);
+            }, 1000);
           }
           
-          setTimeout(() => {
-            setLoading(false);
-            setTimeout(() => setShowMainMenu(true), 100);
-          }, 2000);
-          
+          // ✅ СРАЗУ ПОКАЗЫВАЕМ ГЛАВНОЕ МЕНЮ БЕЗ ЗАДЕРЖЕК
           console.log('🎉 ДОБРО ПОЖАЛОВАТЬ В P.I.D.R. GAME!');
           console.log(`💰 Ваш баланс: ${newUser.coins} монет`);
           
-          // Проверяем, что cookie установлен
-          setTimeout(async () => {
-            try {
-              const checkResponse = await fetch('/api/auth', {
-                method: 'GET',
-                credentials: 'include',
-                headers: {
-                  'x-telegram-id': String(telegramUser.id),
-                  'x-username': telegramUser.username || telegramUser.first_name || 'User'
-                }
-              });
-              console.log('🍪 Проверка cookie после авторизации:', checkResponse.status);
-              if (!checkResponse.ok) {
-                console.warn('⚠️ Cookie не установлен корректно, но пользователь создан');
-              }
-            } catch (error: unknown) {
-              console.warn('⚠️ Не удалось проверить cookie:', error);
-            }
-          }, 1000);
+          setLoading(false);
+          setTimeout(() => {
+            setShowMainMenu(true);
+          }, 300);
           
         } else {
           throw new Error(data.message || 'Ошибка создания пользователя');
@@ -647,32 +592,27 @@ function HomeWithParams() {
         console.error('❌ Ошибка создания пользователя:', {
           message: error?.message,
           stack: error?.stack,
-          name: error?.name,
-          fullError: error
+          name: error?.name
         });
         
-        // ✅ Более информативное сообщение об ошибке
-        let errorMessage = 'Не удалось авторизоваться. ';
-        if (error?.message?.includes('404')) {
-          errorMessage += 'Сервер не отвечает. Проверьте подключение к интернету.';
-        } else if (error?.message?.includes('500')) {
-          errorMessage += 'Ошибка сервера. Попробуйте позже.';
-        } else if (error?.message?.includes('network') || error?.message?.includes('fetch')) {
-          errorMessage += 'Ошибка подключения к серверу.';
-        } else {
-          errorMessage += error?.message || 'Попробуйте перезапустить бота.';
-        }
-        
-        setError(errorMessage);
-        setLoading(false);
-        
-        // ✅ Для браузерной версии - редирект на страницу входа
-        if (!isTelegramMiniApp()) {
-          console.log('🌐 Браузерная версия - редирект на /auth/login');
-          setTimeout(() => {
-            router.push('/auth/login');
+        // ✅ УПРОЩЕННАЯ ОБРАБОТКА ОШИБОК
+        // Если ошибка сети - пробуем еще раз через 2 секунды
+        if (error?.message?.includes('404') || error?.message?.includes('network') || error?.message?.includes('fetch')) {
+          console.log('🔄 Ошибка сети, пробуем еще раз через 2 секунды...');
+          setTimeout(async () => {
+            try {
+              await createUserThroughDatabase(telegramUser);
+            } catch (retryError) {
+              console.error('❌ Повторная попытка тоже не удалась:', retryError);
+              setError('Ошибка подключения к серверу. Проверьте интернет-соединение.');
+              setLoading(false);
+            }
           }, 2000);
+          return;
         }
+        
+        setError(error?.message || 'Ошибка авторизации. Попробуйте перезапустить бота.');
+        setLoading(false);
       }
     };
 

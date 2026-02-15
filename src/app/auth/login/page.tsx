@@ -98,14 +98,15 @@ export default function LoginPage() {
           detail: { coins: data.user.coins } 
         }));
 
-        console.log('✅ Логин успешен, ждем установки cookie и редиректим...');
+        console.log('✅ Логин успешен!', {
+          username: data.user.username,
+          id: data.user.id,
+          hasToken: !!data.token
+        });
         
-        // ✅ УВЕЛИЧИВАЕМ ЗАДЕРЖКУ для установки cookie
-        // Передаем данные пользователя через sessionStorage для немедленного использования
+        // ✅ Сохраняем данные в sessionStorage для немедленного использования
         if (typeof window !== 'undefined') {
           // ✅ Нормализуем данные пользователя для совместимости
-          // API возвращает: avatar_url, games_played, games_won
-          // Нужно: photoUrl, gamesPlayed, gamesWon
           const normalizedUser = {
             id: data.user.id,
             username: data.user.username,
@@ -129,8 +130,7 @@ export default function LoginPage() {
           console.log('💾 [Login] Сохранены данные pendingAuth:', {
             username: normalizedUser.username,
             id: normalizedUser.id,
-            timestamp: pendingAuthData.timestamp,
-            fullData: pendingAuthData
+            timestamp: pendingAuthData.timestamp
           });
           
           // ✅ ПРОВЕРЯЕМ что данные действительно сохранились
@@ -140,12 +140,22 @@ export default function LoginPage() {
           } else {
             console.error('❌ [Login] ОШИБКА: pendingAuth НЕ сохранен в sessionStorage!');
           }
+          
+          // ✅ ПРОВЕРЯЕМ COOKIE после небольшой задержки
+          setTimeout(() => {
+            const hasCookie = document.cookie.includes('auth_token=');
+            console.log('🍪 [Login] Проверка cookie после логина:', hasCookie ? '✅ НАЙДЕН' : '❌ НЕ НАЙДЕН');
+            if (!hasCookie) {
+              console.warn('⚠️ [Login] Cookie не найден! Возможна проблема с установкой cookie.');
+            }
+          }, 500);
         }
         
+        // ✅ УВЕЛИЧИВАЕМ ЗАДЕРЖКУ для установки cookie и редиректим
         setTimeout(() => {
           console.log('🔄 Редирект на главную страницу...');
           router.push('/');
-        }, 1000); // Увеличено до 1 секунды
+        }, 1500); // Увеличено до 1.5 секунды для надежности
       } else {
         setError(data.message || 'Ошибка входа');
       }

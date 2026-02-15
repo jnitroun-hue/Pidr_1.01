@@ -181,13 +181,24 @@ export async function POST(request: NextRequest) {
       token
     });
 
-    // Устанавливаем cookie с токеном
-    response.cookies.set('auth_token', token, {
+    // ✅ ИСПРАВЛЕНО: Устанавливаем cookie с правильными настройками
+    const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+    const cookieSettings = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: isProduction, // На Vercel всегда true
+      sameSite: 'lax' as const,
       maxAge: 30 * 24 * 60 * 60, // 30 дней
       path: '/'
+    };
+    
+    response.cookies.set('auth_token', token, cookieSettings);
+    
+    console.log('🍪 [Register] Cookie установлен:', {
+      hasToken: !!token,
+      tokenLength: token.length,
+      settings: cookieSettings,
+      isProduction,
+      vercel: process.env.VERCEL
     });
 
     return response;
