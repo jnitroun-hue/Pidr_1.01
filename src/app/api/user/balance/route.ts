@@ -113,14 +113,6 @@ export async function POST(req: NextRequest) {
     }
     
     const user = dbUser;
-      
-    if (userError || !user) {
-      console.error('❌ Пользователь не найден:', userError);
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Пользователь не найден' 
-      }, { status: 404 });
-    }
     
     const oldBalance = user.coins;
     const newBalance = oldBalance + amount;
