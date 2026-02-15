@@ -27,20 +27,11 @@ export default function ShopPage() {
   });
 
   // Telegram WebApp headers - FIXED TypeScript
-  const getTelegramWebAppHeaders = (): Record<string, string> => {
-    if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
-      const user = window.Telegram.WebApp.initDataUnsafe?.user;
-      if (user) {
-        return {
-          'x-telegram-id': user.id.toString(),
-          'x-username': user.username || user.first_name || 'User'
-        };
-      }
-    }
-    return {
-      'x-telegram-id': '',
-      'x-username': ''
-    };
+  // ✅ УНИВЕРСАЛЬНО: Используем универсальные headers для всех платформ
+  const getApiHeaders = (): Record<string, string> => {
+    const { getApiHeaders: getUniversalHeaders } = require('../../lib/api-headers');
+    const headers = getUniversalHeaders();
+    return headers as Record<string, string>;
   };
 
   // Загрузка пользователя
@@ -48,7 +39,7 @@ export default function ShopPage() {
     const loadUser = async () => {
       try {
         const response = await fetch('/api/user/me', {
-          headers: getTelegramWebAppHeaders()
+          headers: getApiHeaders()
         });
         const data = await response.json();
         
@@ -70,7 +61,7 @@ export default function ShopPage() {
     const loadStats = async () => {
       try {
         const response = await fetch('/api/marketplace/list?limit=1000', {
-          headers: getTelegramWebAppHeaders()
+          headers: getApiHeaders()
         });
         const data = await response.json();
         

@@ -48,15 +48,24 @@ interface GameWalletProps {
 type ModalType = 'deposit' | 'withdraw' | 'buy' | null;
 
 export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
-  // ✅ ИСПРАВЛЕНО: Получаем telegramId из Telegram WebApp если user не передан через props
-  const getTelegramUser = () => {
-    if (typeof window === 'undefined') return null;
-    const telegramUser = (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
-    return {
-      id: telegramUser?.id?.toString() || user?.id || '',
-      username: telegramUser?.username || user?.username || '',
-      firstName: telegramUser?.first_name || user?.firstName || ''
-    };
+  // ✅ УНИВЕРСАЛЬНО: Получаем данные пользователя из всех платформ
+  const getCurrentUser = () => {
+    if (user) return user;
+    
+    // Для Telegram WebApp
+    if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
+      const telegramUser = (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+      if (telegramUser) {
+        return {
+          id: telegramUser.id?.toString() || '',
+          username: telegramUser.username || telegramUser.first_name || '',
+          firstName: telegramUser.first_name || ''
+        };
+      }
+    }
+    
+    // Для веб-версии данные будут загружены через API
+    return null;
   };
   
   const [activeTab, setActiveTab] = useState<'main' | 'history' | 'exchange'>('main');
@@ -239,15 +248,9 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
 
   const loadUserData = async () => {
     try {
-      // ✅ Получаем telegram данные для header
-      const tg = (window as any).Telegram?.WebApp;
-      const telegramUser = tg?.initDataUnsafe?.user;
-      
-      const headers: Record<string, string> = {};
-      if (telegramUser?.id) {
-        headers['x-telegram-id'] = String(telegramUser.id);
-        headers['x-username'] = telegramUser.username || telegramUser.first_name || 'User';
-      }
+      // ✅ УНИВЕРСАЛЬНО: Используем универсальные headers для всех платформ
+      const { getApiHeaders } = await import('../../lib/api-headers');
+      const headers = getApiHeaders() as Record<string, string>;
       
       // Получаем данные пользователя из API (не из localStorage!)
       const authResponse = await fetch('/api/auth', {
@@ -304,15 +307,9 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
   // Проверяем активность сессии в БД
   const checkDatabaseSession = async () => {
     try {
-      // ✅ Получаем telegram данные для header
-      const tg = (window as any).Telegram?.WebApp;
-      const telegramUser = tg?.initDataUnsafe?.user;
-      
-      const headers: Record<string, string> = {};
-      if (telegramUser?.id) {
-        headers['x-telegram-id'] = String(telegramUser.id);
-        headers['x-username'] = telegramUser.username || telegramUser.first_name || 'User';
-      }
+      // ✅ УНИВЕРСАЛЬНО: Используем универсальные headers для всех платформ
+      const { getApiHeaders } = await import('../../lib/api-headers');
+      const headers = getApiHeaders() as Record<string, string>;
       
       const response = await fetch('/api/auth', {
         method: 'GET',

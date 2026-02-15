@@ -64,32 +64,37 @@ export default function ProfilePage() {
   const { language } = useLanguage();
   const t = useTranslations(language);
   
-  // ✅ Telegram WebApp Headers Helper
-  const getTelegramWebAppHeaders = (): Record<string, string> => {
+  // ✅ УНИВЕРСАЛЬНЫЙ Headers Helper для всех платформ
+  // ✅ УНИВЕРСАЛЬНО: Используем универсальные headers из lib/api-headers.ts
+  const getApiHeaders = (): Record<string, string> => {
+    return getUniversalApiHeaders() as Record<string, string>;
+  };
+  
+  // ✅ УНИВЕРСАЛЬНО: Получение данных пользователя из всех платформ
+  const getCurrentUser = () => {
+    // Если user уже загружен из API - используем его
+    if (user) {
+      return {
+        id: user.id || user.telegramId || '',
+        username: user.username || '',
+        firstName: user.firstName || ''
+      };
+    }
+    
+    // Для Telegram WebApp (fallback)
     if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
-      const user = window.Telegram.WebApp.initDataUnsafe?.user;
-      if (user) {
+      const telegramUser = (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+      if (telegramUser) {
         return {
-          'x-telegram-id': user.id.toString(),
-          'x-username': user.username || user.first_name || 'User'
+          id: telegramUser.id?.toString() || '',
+          username: telegramUser.username || telegramUser.first_name || '',
+          firstName: telegramUser.first_name || ''
         };
       }
     }
-    return {
-      'x-telegram-id': '',
-      'x-username': ''
-    };
-  };
-  
-  // ✅ НОВОЕ: Получение данных пользователя из Telegram WebApp
-  const getTelegramUser = () => {
-    if (typeof window === 'undefined') return null;
-    const telegramUser = (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
-    return {
-      id: telegramUser?.id?.toString() || user?.telegramId || user?.id || '',
-      username: telegramUser?.username || user?.username || '',
-      firstName: telegramUser?.first_name || user?.firstName || ''
-    };
+    
+    // Для веб-версии данные будут загружены через API
+    return null;
   };
   
   const [stats, setStats] = useState({
@@ -117,18 +122,16 @@ export default function ProfilePage() {
       try {
         console.log('👤 Загружаем данные пользователя из Supabase БД...');
         
-        // ✅ КРИТИЧНО: Добавляем x-telegram-id header для правильной идентификации
-        const telegramHeaders = getTelegramWebAppHeaders();
-        console.log('🔐 [Profile] Отправляем запрос с headers:', telegramHeaders);
+        // ✅ УНИВЕРСАЛЬНО: Используем headers для всех платформ
+        const apiHeaders = getApiHeaders();
+        console.log('🔐 [Profile] Отправляем запрос с headers:', apiHeaders);
         
-        // ✅ ИСПРАВЛЕНО: Используем /api/user/me для получения данных по telegram_id
+        // ✅ УНИВЕРСАЛЬНО: Используем /api/user/me для получения данных
+        // Для веб-версии используется cookie из логина, для Telegram - headers
         const response = await fetch('/api/user/me', {
           method: 'GET',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-            ...telegramHeaders // ✅ ДОБАВЛЯЕМ x-telegram-id header!
-          }
+          credentials: 'include', // ✅ КРИТИЧНО: Отправляем cookies
+          headers: apiHeaders
         });
         
         if (!response.ok) {
@@ -144,11 +147,8 @@ export default function ProfilePage() {
           // ✅ КРИТИЧНО: Загружаем актуальный баланс из /api/user/balance
           const balanceResponse = await fetch('/api/user/balance', {
             method: 'GET',
-            credentials: 'include',
-            headers: {
-              'Content-Type': 'application/json',
-              ...telegramHeaders
-            }
+            credentials: 'include', // ✅ КРИТИЧНО: Отправляем cookies
+            headers: apiHeaders
           });
           
           let actualCoins = result.user.coins || 0;
@@ -210,14 +210,11 @@ export default function ProfilePage() {
     const loadBonuses = async () => {
       try {
         console.log('🎁 Загружаем доступные бонусы...');
-        const telegramHeaders = getTelegramWebAppHeaders();
+        const apiHeaders = getApiHeaders();
         const response = await fetch('/api/bonus', {
           method: 'GET',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-            ...telegramHeaders // ✅ ДОБАВЛЯЕМ x-telegram-id header!
-          }
+          credentials: 'include', // ✅ КРИТИЧНО: Отправляем cookies
+          headers: apiHeaders
         });
         
         if (response.ok) {
@@ -236,23 +233,13 @@ export default function ProfilePage() {
       try {
         console.log('📦 Загружаем инвентарь пользователя...');
         
-        // ✅ Получаем headers из Telegram WebApp
-        const telegramUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-        const headers: HeadersInit = {
-          'Content-Type': 'application/json'
-        };
-        
-        if (telegramUser?.id) {
-          headers['x-telegram-id'] = String(telegramUser.id);
-        }
-        if (telegramUser?.username) {
-          headers['x-username'] = telegramUser.username;
-        }
+        // ✅ УНИВЕРСАЛЬНО: Используем универсальные headers
+        const apiHeaders = getApiHeaders();
         
         const response = await fetch('/api/shop/inventory', {
           method: 'GET',
-          headers,
-          credentials: 'include'
+          credentials: 'include', // ✅ КРИТИЧНО: Отправляем cookies
+          headers: apiHeaders
         });
         
         if (response.ok) {
@@ -283,20 +270,16 @@ export default function ProfilePage() {
         setIsLoadingDeck(true);
         console.log('🎴 Загружаем колоду пользователя...');
         
-        const telegramUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-        const headers: HeadersInit = {
-          'Content-Type': 'application/json',
+        // ✅ УНИВЕРСАЛЬНО: Используем универсальные headers
+        const apiHeaders = {
+          ...getApiHeaders(),
           'Cache-Control': 'no-cache' // ✅ ОТКЛЮЧАЕМ КЭШИРОВАНИЕ
         };
         
-        if (telegramUser?.id) {
-          headers['x-telegram-id'] = String(telegramUser.id);
-        }
-        
         const response = await fetch('/api/user/deck', {
           method: 'GET',
-          headers,
-          credentials: 'include',
+          credentials: 'include', // ✅ КРИТИЧНО: Отправляем cookies
+          headers: apiHeaders,
           cache: 'no-store' // ✅ ОТКЛЮЧАЕМ КЭШИРОВАНИЕ
         });
         
@@ -541,7 +524,7 @@ export default function ProfilePage() {
     // ✅ НОВОЕ: Для реферального бонуса показываем ссылку для приглашения
     if (bonusId === 'referral') {
       try {
-        const currentUser = getTelegramUser();
+        const currentUser = getCurrentUser();
         const referralCode = currentUser?.id || user?.telegramId || user?.id || 'player_' + Date.now();
         // ✅ ИСПРАВЛЕНО: Реферальная ссылка на Telegram бота
         const botUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || 'your_bot_username';
@@ -704,18 +687,8 @@ export default function ProfilePage() {
       setPurchasedItems(prev => [...prev, item.id]);
       
       // Перезагружаем инвентарь
-      // ✅ Получаем headers из Telegram WebApp
-      const telegramUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-      const inventoryHeaders: HeadersInit = {
-        'Content-Type': 'application/json'
-      };
-      
-      if (telegramUser?.id) {
-        inventoryHeaders['x-telegram-id'] = String(telegramUser.id);
-      }
-      if (telegramUser?.username) {
-        inventoryHeaders['x-username'] = telegramUser.username;
-      }
+      // ✅ УНИВЕРСАЛЬНО: Используем универсальные headers
+      const inventoryHeaders = getApiHeaders();
       
       const inventoryResponse = await fetch('/api/shop/inventory', {
         method: 'GET',
@@ -771,18 +744,8 @@ export default function ProfilePage() {
       }
       
       // Перезагружаем инвентарь
-      // ✅ Получаем headers из Telegram WebApp
-      const telegramUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-      const inventoryHeaders: HeadersInit = {
-        'Content-Type': 'application/json'
-      };
-      
-      if (telegramUser?.id) {
-        inventoryHeaders['x-telegram-id'] = String(telegramUser.id);
-      }
-      if (telegramUser?.username) {
-        inventoryHeaders['x-username'] = telegramUser.username;
-      }
+      // ✅ УНИВЕРСАЛЬНО: Используем универсальные headers
+      const inventoryHeaders = getApiHeaders();
       
       const inventoryResponse = await fetch('/api/shop/inventory', {
         method: 'GET',
@@ -812,14 +775,8 @@ export default function ProfilePage() {
     }
 
     try {
-      const telegramUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json'
-      };
-      
-      if (telegramUser?.id) {
-        headers['x-telegram-id'] = String(telegramUser.id);
-      }
+      // ✅ УНИВЕРСАЛЬНО: Используем универсальные headers
+      const headers = getApiHeaders();
 
       const response = await fetch('/api/user/deck', {
         method: 'DELETE',
@@ -860,7 +817,7 @@ export default function ProfilePage() {
         const response = await fetch('/api/nft/connect-wallet', {
           method: 'GET',
           credentials: 'include',
-          headers: getTelegramWebAppHeaders()
+          headers: getApiHeaders()
         });
         
         if (response.ok) {

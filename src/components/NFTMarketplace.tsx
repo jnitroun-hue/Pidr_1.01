@@ -64,20 +64,9 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
   const [sellCurrency, setSellCurrency] = useState<'COINS' | 'TON' | 'SOL'>('COINS');
 
   // Helper функции
-  const getTelegramWebAppHeaders = (): Record<string, string> => {
-    if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
-      const user = window.Telegram.WebApp.initDataUnsafe?.user;
-      if (user) {
-        return {
-          'x-telegram-id': user.id.toString(),
-          'x-username': user.username || user.first_name || 'User'
-        };
-      }
-    }
-    return {
-      'x-telegram-id': '',
-      'x-username': ''
-    };
+  // ✅ УНИВЕРСАЛЬНО: Используем универсальные headers для всех платформ
+  const getApiHeaders = (): Record<string, string> => {
+    return getUniversalApiHeaders() as Record<string, string>;
   };
 
   const getSuitColor = (suit: string) => {
@@ -114,7 +103,7 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
     try {
       const response = await fetch(`/api/marketplace/list?sort=${sortBy}&filter=all`, {
         headers: {
-          ...getTelegramWebAppHeaders(),
+          ...getApiHeaders(),
           'Cache-Control': 'no-cache' // ✅ ОТКЛЮЧАЕМ КЭШИРОВАНИЕ
         },
         cache: 'no-store'
@@ -141,7 +130,7 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
     try {
       const response = await fetch('/api/nft/collection', {
         headers: {
-          ...getTelegramWebAppHeaders(),
+          ...getApiHeaders(),
           'Cache-Control': 'no-cache' // ✅ ОТКЛЮЧАЕМ КЭШИРОВАНИЕ
         },
         cache: 'no-store'
@@ -166,7 +155,7 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
     try {
       const response = await fetch('/api/marketplace/my-sales', {
         headers: {
-          ...getTelegramWebAppHeaders(),
+          ...getApiHeaders(),
           'Cache-Control': 'no-cache' // ✅ ОТКЛЮЧАЕМ КЭШИРОВАНИЕ
         },
         cache: 'no-store'
