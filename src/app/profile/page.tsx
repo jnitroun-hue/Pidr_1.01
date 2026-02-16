@@ -1001,7 +1001,7 @@ export default function ProfilePage() {
         animate={{ x: 0, opacity: 1 }}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-        onClick={() => window.history.back()}
+        onClick={() => router.push('/')}
         style={{
           position: 'fixed',
           top: '20px',

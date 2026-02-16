@@ -457,26 +457,47 @@ export async function POST(req: NextRequest) {
           hint: createError.hint
         });
         
-        // ✅ ПРОБУЕМ НАЙТИ ПОЛЬЗОВАТЕЛЯ ЕСЛИ ОН УЖЕ СУЩЕСТВУЕТ
-        const { data: existingUserRetry } = await supabase
-          .from('_pidr_users')
-          .select('*')
-          .eq('telegram_id', telegramId)
-          .maybeSingle();
-        
-        if (existingUserRetry) {
-          console.log('✅ Пользователь найден после ошибки создания, используем существующего');
-          user = existingUserRetry;
+        // ✅ КРИТИЧНО: Если ошибка дублирования ключа - пользователь уже существует, используем его
+        if (createError.code === '23505' || createError.message?.includes('duplicate key') || createError.message?.includes('_pidr_users_telegram_id_key')) {
+          console.log('⚠️ Пользователь уже существует (duplicate key), ищем его в БД...');
+          const { data: existingUserRetry } = await supabase
+            .from('_pidr_users')
+            .select('*')
+            .eq('telegram_id', telegramId)
+            .maybeSingle();
+          
+          if (existingUserRetry) {
+            console.log('✅ Пользователь найден после ошибки дублирования, используем существующего');
+            user = existingUserRetry;
+          } else {
+            return NextResponse.json({ 
+              success: false, 
+              message: `Ошибка создания пользователя: ${createError.message || 'Неизвестная ошибка'}`,
+              errorDetails: createError
+            }, { status: 500 });
+          }
         } else {
-        return NextResponse.json({ 
-          success: false, 
-            message: `Ошибка создания пользователя: ${createError.message || 'Неизвестная ошибка'}`,
-            errorDetails: createError
-        }, { status: 500 });
+          // ✅ ПРОБУЕМ НАЙТИ ПОЛЬЗОВАТЕЛЯ ЕСЛИ ОН УЖЕ СУЩЕСТВУЕТ (для других ошибок)
+          const { data: existingUserRetry } = await supabase
+            .from('_pidr_users')
+            .select('*')
+            .eq('telegram_id', telegramId)
+            .maybeSingle();
+          
+          if (existingUserRetry) {
+            console.log('✅ Пользователь найден после ошибки создания, используем существующего');
+            user = existingUserRetry;
+          } else {
+            return NextResponse.json({ 
+              success: false, 
+              message: `Ошибка создания пользователя: ${createError.message || 'Неизвестная ошибка'}`,
+              errorDetails: createError
+            }, { status: 500 });
+          }
         }
+      } else {
+        user = newUser;
       }
-
-      user = newUser;
       console.log('✅ Новый пользователь создан:', user.username);
       
       // ✅ ОБРАБОТКА РЕФЕРАЛЬНОЙ ССЫЛКИ
