@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingCart, DollarSign, Package, TrendingUp, Filter, Search, X, Check, Loader2, Heart } from 'lucide-react';
 import Image from 'next/image';
 import { BuyTab, SellTab, MyNFTsTab, SellModal } from './MarketplaceTabs';
+import { getApiHeaders } from '@/lib/api-headers';
 
 // Типы
 interface NFTCard {
@@ -64,10 +65,6 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
   const [sellCurrency, setSellCurrency] = useState<'COINS' | 'TON' | 'SOL'>('COINS');
 
   // Helper функции
-  // ✅ УНИВЕРСАЛЬНО: Используем универсальные headers для всех платформ
-  const getApiHeaders = (): Record<string, string> => {
-    return getUniversalApiHeaders() as Record<string, string>;
-  };
 
   const getSuitColor = (suit: string) => {
     const colors: Record<string, string> = {
@@ -250,7 +247,7 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            ...getTelegramWebAppHeaders()
+            ...getApiHeaders()
           },
           body: JSON.stringify({
             listing_id: listing.id,
@@ -286,7 +283,7 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            ...getTelegramWebAppHeaders()
+            ...getApiHeaders()
           },
           body: JSON.stringify({
             listing_id: listing.id,
@@ -354,7 +351,7 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
           credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
-            ...getTelegramWebAppHeaders()
+            ...getApiHeaders()
           },
           body: JSON.stringify({ wallet_type: walletType })
         });
@@ -401,7 +398,7 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...getTelegramWebAppHeaders()
+          ...getApiHeaders()
         },
         body: JSON.stringify(requestBody)
       });
@@ -442,7 +439,7 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          ...getTelegramWebAppHeaders()
+          ...getApiHeaders()
         },
         body: JSON.stringify({
           nftId: nft.id
@@ -474,7 +471,7 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...getTelegramWebAppHeaders()
+          ...getApiHeaders()
         },
         body: JSON.stringify({ listing_id: listingId })
       });

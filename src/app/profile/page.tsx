@@ -8,6 +8,7 @@ import { useLanguage } from '../../components/LanguageSwitcher';
 import { useTranslations } from '../../lib/i18n/translations';
 import { avatarFrames, getRarityColor, getRarityName } from '../../data/avatar-frames';
 import TonWalletConnect from '../../components/TonWalletConnect';
+import { getApiHeaders } from '@/lib/api-headers';
 
 // Компонент таймера для бонусов
 function BonusCooldownTimer({ bonus, onCooldownEnd }: { bonus: any; onCooldownEnd: () => void }) {
@@ -63,12 +64,6 @@ export default function ProfilePage() {
   const router = useRouter();
   const { language } = useLanguage();
   const t = useTranslations(language);
-  
-  // ✅ УНИВЕРСАЛЬНЫЙ Headers Helper для всех платформ
-  // ✅ УНИВЕРСАЛЬНО: Используем универсальные headers из lib/api-headers.ts
-  const getApiHeaders = (): Record<string, string> => {
-    return getUniversalApiHeaders() as Record<string, string>;
-  };
   
   // ✅ УНИВЕРСАЛЬНО: Получение данных пользователя из всех платформ
   const getCurrentUser = () => {

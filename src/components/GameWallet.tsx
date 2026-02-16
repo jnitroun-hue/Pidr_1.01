@@ -389,7 +389,7 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
         console.warn(`⚠️ Ошибка API ${response.status}, используем fallback`);
         
         // Fallback к старому API
-        const currentUser = getTelegramUser();
+        const currentUser = getCurrentUser();
         if (currentUser && currentUser.id) {
           
           const fallbackResponse = await fetch('/api/pidr-db', {
@@ -427,8 +427,8 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
     try {
       setLoading(true);
       
-      // ✅ ИСПРАВЛЕНО: Берём из Telegram WebApp
-      const currentUser = getTelegramUser();
+      // ✅ УНИВЕРСАЛЬНО: Получаем пользователя из всех платформ
+      const currentUser = getCurrentUser();
       if (!currentUser || !currentUser.id) {
         alert('Пользователь не найден');
         return;
@@ -508,7 +508,8 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
       if (walletType === 'ton') {
         // TonConnect - открываем через tonkeeper/tonhub
         const tonAmountNano = Math.floor(amount * 1e9); // TON в nanoTON
-        const tonLink = `ton://transfer/${masterAddress}?amount=${tonAmountNano}&text=deposit_${getTelegramUser()?.id}`;
+        const currentUser = getCurrentUser();
+        const tonLink = `ton://transfer/${masterAddress}?amount=${tonAmountNano}&text=deposit_${currentUser?.id || user?.id || 'unknown'}`;
         
         // Пробуем открыть через Telegram WebApp
         if ((window as any).Telegram?.WebApp?.openLink) {
@@ -609,8 +610,8 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
     try {
       setLoading(true);
       
-      // ✅ ИСПРАВЛЕНО: Берём из Telegram WebApp
-      const currentUser = getTelegramUser();
+      // ✅ УНИВЕРСАЛЬНО: Получаем пользователя из всех платформ
+      const currentUser = getCurrentUser();
       if (!currentUser || !currentUser.id) {
         alert('Пользователь не найден');
         return;
@@ -730,8 +731,8 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
 
   const handleInviteFriend = async () => {
     try {
-      // ✅ ИСПРАВЛЕНО: Берём из Telegram WebApp
-      const currentUser = getTelegramUser();
+      // ✅ УНИВЕРСАЛЬНО: Получаем пользователя из всех платформ
+      const currentUser = getCurrentUser();
       if (!currentUser || !currentUser.id) {
         alert('Пользователь не найден');
         return;
@@ -897,8 +898,8 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
     try {
       setIsMonitoringPayments(true);
       
-      // ✅ ИСПРАВЛЕНО: Берём из Telegram WebApp
-      const currentUser = getTelegramUser();
+      // ✅ УНИВЕРСАЛЬНО: Получаем пользователя из всех платформ
+      const currentUser = getCurrentUser();
       if (!currentUser || !currentUser.id) {
         alert('Пользователь не найден');
         return;
@@ -1162,7 +1163,7 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
                     textOverflow: 'ellipsis'
                   }}>
                     {(() => {
-                      const currentUser = getTelegramUser();
+                      const currentUser = getCurrentUser();
                       const referralCode = currentUser?.id || user?.id || 'player_' + Date.now();
                       const botUsername = 'NotPidrBot';
                       return `https://t.me/${botUsername}?start=ref_${referralCode}`;
@@ -1170,7 +1171,7 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
                   </span>
                   <button
                     onClick={async () => {
-                      const currentUser = getTelegramUser();
+                      const currentUser = getCurrentUser();
                       const referralCode = currentUser?.id || user?.id || 'player_' + Date.now();
                       const botUsername = 'NotPidrBot';
                       const inviteUrl = `https://t.me/${botUsername}?start=ref_${referralCode}`;
