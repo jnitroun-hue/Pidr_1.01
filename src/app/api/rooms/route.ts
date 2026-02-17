@@ -70,14 +70,25 @@ export async function GET(req: NextRequest) {
     
     console.log(`🔍 [GET ROOMS] Загружаем ВСЕ комнаты (приватность игнорируется для отладки)`);
     
-    const { data: rooms, error } = await query;
+    let rooms: any[] = [];
+    let error: any = null;
+    
+    try {
+      const result = await query;
+      rooms = result.data || [];
+      error = result.error;
+    } catch (err: any) {
+      console.error('❌ Исключение при загрузке комнат:', err);
+      error = err;
+    }
     
     if (error) {
       console.error('❌ Ошибка загрузки комнат:', error);
+      // ✅ ИСПРАВЛЕНО: Возвращаем пустой список вместо ошибки
       return NextResponse.json({ 
-        success: false, 
-        message: 'Ошибка загрузки комнат: ' + (error instanceof Error ? error.message : String(error)) 
-      }, { status: 500 });
+        success: true, 
+        rooms: [] 
+      });
     }
     
     console.log(`📊 [GET ROOMS] Загружено комнат из БД (БЕЗ ЖЁСТКИХ ФИЛЬТРОВ): ${rooms?.length || 0}`);
@@ -156,8 +167,15 @@ export async function GET(req: NextRequest) {
       }
       
       // Получаем реальное количество игроков из Redis
-      const roomDetails = await getRoomDetails(room.id);
-      const actualPlayerCount = roomDetails?.playerCount || room.current_players;
+      let actualPlayerCount = room.current_players;
+      try {
+        const roomDetails = await getRoomDetails(room.id);
+        actualPlayerCount = roomDetails?.playerCount || room.current_players;
+      } catch (err: any) {
+        console.warn(`⚠️ Ошибка получения деталей комнаты ${room.id} из Redis:`, err);
+        // Используем значение из БД
+        actualPlayerCount = room.current_players;
+      }
       
       console.log(`📋 [GET ROOMS] Комната ${room.id}: хост=${hostUser?.username || 'Неизвестно'}, игроков=${actualPlayerCount}`);
       

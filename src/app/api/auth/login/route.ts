@@ -28,12 +28,12 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Ищем пользователя по логину, email или телефону
+    // ✅ ИСПРАВЛЕНО: Ищем пользователя по логину, email или телефону
+    // Убираем фильтры по auth_method и is_active для старых пользователей
+    // Сначала ищем по username/email/phone без фильтров
     let query = supabase
       .from('_pidr_users')
-      .select('*')
-      .eq('auth_method', 'web')
-      .eq('is_active', true);
+      .select('*');
 
     if (username) {
       query = query.eq('username', username);
@@ -43,10 +43,19 @@ export async function POST(request: NextRequest) {
       query = query.eq('phone', phone);
     }
 
-    const { data: user, error: userError } = await query.single();
+    const { data: user, error: userError } = await query.maybeSingle();
 
     if (userError || !user) {
-      console.log('❌ Пользователь не найден');
+      console.log('❌ Пользователь не найден:', userError?.message || 'Не найден');
+      return NextResponse.json(
+        { success: false, message: 'Неверный логин или пароль' },
+        { status: 401 }
+      );
+    }
+
+    // ✅ ПРОВЕРЯЕМ: Если у пользователя нет password_hash - это старый пользователь (Telegram/VK)
+    if (!user.password_hash) {
+      console.log('❌ У пользователя нет пароля (возможно, это Telegram/VK пользователь)');
       return NextResponse.json(
         { success: false, message: 'Неверный логин или пароль' },
         { status: 401 }

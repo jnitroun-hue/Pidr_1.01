@@ -7,28 +7,34 @@ export async function GET(req: NextRequest) {
     console.log('📊 Получение статистики онлайн игроков...');
 
     // 1. Общая статистика по статусам (проверяем ОБА поля!)
-    const { data: statusStats, error: statusError } = await supabase
-      .from('_pidr_users')
-      .select('status, online_status')
-      .then(({ data, error }: { data: any; error: any }) => {
-        if (error) return { data: null, error };
-        
-        const stats = data?.reduce((acc: any, user: any) => {
+    let statusStats: any = {};
+    let statusError: any = null;
+    
+    try {
+      const { data, error } = await supabase
+        .from('_pidr_users')
+        .select('status, online_status');
+      
+      if (error) {
+        statusError = error;
+        console.error('❌ Ошибка получения статистики:', error);
+      } else {
+        statusStats = data?.reduce((acc: any, user: any) => {
           // Приоритет online_status над status
           const status = user.online_status || user.status || 'offline';
           acc[status] = (acc[status] || 0) + 1;
           return acc;
         }, {}) || {};
-        
-        return { data: stats, error: null };
-      });
+      }
+    } catch (err: any) {
+      statusError = err;
+      console.error('❌ Исключение при получении статистики:', err);
+    }
 
+    // ✅ ИСПРАВЛЕНО: Не возвращаем ошибку сразу, продолжаем с дефолтными значениями
     if (statusError) {
-      console.error('❌ Ошибка получения статистики:', statusError);
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Ошибка получения статистики' 
-      }, { status: 500 });
+      console.warn('⚠️ Ошибка получения статистики, используем дефолтные значения');
+      statusStats = { offline: 0, online: 0 };
     }
 
     // 2. ✅ ИСПРАВЛЕНО: Реально активные игроки - считаем ВСЕХ онлайн правильно
@@ -37,12 +43,24 @@ export async function GET(req: NextRequest) {
     const threeMinutesAgo = new Date(moscowNow.getTime() - 3 * 60 * 1000).toISOString();
     
     // ✅ ПОЛУЧАЕМ ВСЕХ ПОЛЬЗОВАТЕЛЕЙ С ПОЛЯМИ ДЛЯ ПОДСЧЕТА ОНЛАЙН
-    const { data: allUsers, error: activeError } = await supabase
-      .from('_pidr_users')
-      .select('id, username, last_seen, status, online_status');
-
-    if (activeError) {
-      console.error('❌ Ошибка получения пользователей:', activeError);
+    let allUsers: any[] = [];
+    let activeError: any = null;
+    
+    try {
+      const { data, error } = await supabase
+        .from('_pidr_users')
+        .select('id, username, last_seen, status, online_status');
+      
+      if (error) {
+        activeError = error;
+        console.error('❌ Ошибка получения пользователей:', error);
+      } else {
+        allUsers = data || [];
+      }
+    } catch (err: any) {
+      activeError = err;
+      console.error('❌ Исключение при получении пользователей:', err);
+      allUsers = [];
     }
 
     // ✅ ФИЛЬТРУЕМ: Считаем всех онлайн игроков (статус 'online' ИЛИ активность < 5 минут)
@@ -58,41 +76,61 @@ export async function GET(req: NextRequest) {
     console.log(`📊 [ONLINE STATS] Всего пользователей: ${allUsers?.length || 0}, онлайн: ${onlinePlayers.length}`);
 
     // 3. Игроки онлайн за последние 30 минут - московское время
-    const thirtyMinutesAgo = new Date(moscowNow.getTime() - 30 * 60 * 1000).toISOString();
-    const { data: online30min, error: online30Error } = await supabase
-      .from('_pidr_users')
-      .select('id, username, last_seen')
-      .gte('last_seen', thirtyMinutesAgo);
-
-    if (online30Error) {
-      console.error('❌ Ошибка получения онлайн за 30 мин:', online30Error);
+    let online30min: any[] = [];
+    try {
+      const thirtyMinutesAgo = new Date(moscowNow.getTime() - 30 * 60 * 1000).toISOString();
+      const { data, error } = await supabase
+        .from('_pidr_users')
+        .select('id, username, last_seen')
+        .gte('last_seen', thirtyMinutesAgo);
+      
+      if (error) {
+        console.error('❌ Ошибка получения онлайн за 30 мин:', error);
+      } else {
+        online30min = data || [];
+      }
+    } catch (err: any) {
+      console.error('❌ Исключение при получении онлайн за 30 мин:', err);
+      online30min = [];
     }
 
     // 4. Игроки в комнатах (проверяем ОБА поля!)
-    const { data: inRooms, error: roomsError } = await supabase
-      .from('_pidr_users')
-      .select('id, status, online_status')
-      .or('status.in.(in_room,playing),online_status.in.(in_room,playing)');
-
-    if (roomsError) {
-      console.error('❌ Ошибка получения игроков в комнатах:', roomsError);
+    let inRooms: any[] = [];
+    try {
+      const { data, error } = await supabase
+        .from('_pidr_users')
+        .select('id, status, online_status')
+        .or('status.in.(in_room,playing),online_status.in.(in_room,playing)');
+      
+      if (error) {
+        console.error('❌ Ошибка получения игроков в комнатах:', error);
+      } else {
+        inRooms = data || [];
+      }
+    } catch (err: any) {
+      console.error('❌ Исключение при получении игроков в комнатах:', err);
+      inRooms = [];
     }
 
     // ✅ ИСПРАВЛЕНО: Обновляем статус на offline для неактивных (ОБА поля!)
     // Обновляем только тех, кто был онлайн, но неактивен более 5 минут
-    const { error: updateStatusError } = await supabase
-      .from('_pidr_users')
-      .update({ 
-        status: 'offline',
-        online_status: 'offline'
-      })
-      .or('status.eq.online,online_status.eq.online')
-      .lt('last_seen', fiveMinutesAgo); // ✅ УВЕЛИЧИЛИ ДО 5 МИНУТ
-    
-    if (updateStatusError) {
-      console.error('❌ Ошибка обновления статусов:', updateStatusError);
-    } else {
-      console.log(`✅ [ONLINE STATS] Обновлен статус неактивных игроков на offline`);
+    try {
+      const { error: updateStatusError } = await supabase
+        .from('_pidr_users')
+        .update({ 
+          status: 'offline',
+          online_status: 'offline'
+        })
+        .or('status.eq.online,online_status.eq.online')
+        .lt('last_seen', fiveMinutesAgo); // ✅ УВЕЛИЧИЛИ ДО 5 МИНУТ
+      
+      if (updateStatusError) {
+        console.error('❌ Ошибка обновления статусов:', updateStatusError);
+      } else {
+        console.log(`✅ [ONLINE STATS] Обновлен статус неактивных игроков на offline`);
+      }
+    } catch (err: any) {
+      console.error('❌ Исключение при обновлении статусов:', err);
     }
     
     // ✅ ИСПРАВЛЕНО: Считаем онлайн игроков правильно

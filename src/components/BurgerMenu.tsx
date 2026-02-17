@@ -15,10 +15,46 @@ interface BurgerMenuProps {
 export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuProps) {
   const router = useRouter()
   const [isAdmin, setIsAdmin] = useState(false)
+  const [loadedUser, setLoadedUser] = useState<any>(user)
+
+  // ✅ ИСПРАВЛЕНО: Загружаем данные пользователя из API если user не передан
+  useEffect(() => {
+    const loadUserData = async () => {
+      if (user?.id) {
+        setLoadedUser(user)
+        return
+      }
+
+      try {
+        console.log('👤 [BurgerMenu] Загружаем данные пользователя из API...')
+        const response = await fetch('/api/user/me', {
+          method: 'GET',
+          credentials: 'include'
+        })
+
+        if (response.ok) {
+          const result = await response.json()
+          if (result.success && result.user) {
+            console.log('✅ [BurgerMenu] Данные пользователя загружены:', result.user.username)
+            setLoadedUser({
+              id: result.user.id,
+              username: result.user.username,
+              coins: result.user.coins || 0,
+              photoUrl: result.user.avatar_url || ''
+            })
+          }
+        }
+      } catch (error) {
+        console.warn('⚠️ [BurgerMenu] Не удалось загрузить данные пользователя:', error)
+      }
+    }
+
+    loadUserData()
+  }, [user])
 
   // Проверка прав администратора
   useEffect(() => {
-    if (user?.id) {
+    if (loadedUser?.id) {
       fetch('/api/admin/check', {
         credentials: 'include'
       })
@@ -32,7 +68,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
           setIsAdmin(false)
         })
     }
-  }, [user?.id])
+  }, [loadedUser?.id])
 
   // Левое меню - навигация
   const leftMenuItems = [
@@ -89,7 +125,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
   ]
 
   // Правое меню - профиль и настройки
-  const rightMenuItems = user ? [
+  const rightMenuItems = loadedUser ? [
     {
       icon: <User size={24} />,
       label: 'Профиль',
@@ -340,7 +376,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
             </div>
 
             {/* Footer */}
-            {user && side === 'right' && (
+            {loadedUser && side === 'right' && (
               <div style={{
                 padding: '20px',
                 borderTop: '1px solid rgba(99, 102, 241, 0.2)',
@@ -362,18 +398,18 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
                     justifyContent: 'center',
                     fontSize: '24px'
                   }}>
-                    {user.photoUrl ? (
-                      <img src={user.photoUrl} alt={user.username} style={{ width: '100%', height: '100%', borderRadius: '50%' }} />
+                    {loadedUser.photoUrl ? (
+                      <img src={loadedUser.photoUrl} alt={loadedUser.username} style={{ width: '100%', height: '100%', borderRadius: '50%' }} />
                     ) : (
                       '👤'
                     )}
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ color: '#ffffff', fontWeight: '600', fontSize: '14px' }}>
-                      {user.username || 'Игрок'}
+                      {loadedUser.username || 'Игрок'}
                     </div>
                     <div style={{ color: '#94a3b8', fontSize: '12px' }}>
-                      {user.coins || 0} монет
+                      {(loadedUser.coins || 0).toLocaleString()} монет
                     </div>
                   </div>
                 </div>
