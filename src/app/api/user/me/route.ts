@@ -3,6 +3,10 @@ import { cookies } from 'next/headers';
 import { supabase } from '../../../../lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '../../../../lib/auth-utils';
 
+// ✅ Явная конфигурация runtime для Next.js 15
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 // GET /api/user/me - Получить данные текущего пользователя (универсально для всех платформ)
 export async function GET(req: NextRequest) {
   try {

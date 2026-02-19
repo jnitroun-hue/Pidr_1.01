@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '../../../lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '../../../lib/auth-utils';
 
+// ✅ Явная конфигурация runtime для Next.js 15
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 // POST /api/bonus - Получить бонус
 export async function POST(req: NextRequest) {
   console.log('🎁 POST /api/bonus - Получение бонуса...');
