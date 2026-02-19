@@ -44,11 +44,20 @@ export async function GET(req: NextRequest) {
     const wins = user.wins || 0;
     console.log(`📊 [API /user/me] Пользователь ${userId}: total_games=${user.total_games}, games_played=${user.games_played}, wins=${user.wins}, losses=${user.losses}`);
 
+    // ✅ ЛОГИРОВАНИЕ: Проверяем что приходит из БД
+    console.log(`📊 [API /user/me] Данные из БД:`, {
+      id: user.id,
+      username: user.username,
+      first_name: user.first_name,
+      email: user.email,
+      telegram_id: user.telegram_id
+    });
+
     return NextResponse.json({
       success: true,
       user: {
         id: user.id,
-        username: user.username,
+        username: user.username, // ✅ Возвращаем username как есть из БД
         firstName: user.first_name,
         lastName: user.last_name,
         avatar_url: user.avatar_url,

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { getSessionFromRequest } from '@/lib/auth/session-utils';
+import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 
 /**
  * POST /api/nft/connect-wallet
@@ -8,29 +8,33 @@ import { getSessionFromRequest } from '@/lib/auth/session-utils';
  */
 export async function POST(req: NextRequest) {
   try {
-    // Проверяем аутентификацию - БЕЗ cookies, только из localStorage через headers
-    const telegramIdHeader = req.headers.get('x-telegram-id');
-    const usernameHeader = req.headers.get('x-username');
+    // ✅ УНИВЕРСАЛЬНО: Используем универсальную систему авторизации
+    const auth = requireAuth(req);
     
-    if (!telegramIdHeader) {
-      console.error('❌ [connect-wallet] Не найден x-telegram-id header');
+    if (auth.error || !auth.userId) {
+      console.error('❌ [connect-wallet] Ошибка авторизации:', auth.error);
       return NextResponse.json(
-        { success: false, message: 'Требуется авторизация' },
+        { success: false, message: auth.error || 'Требуется авторизация' },
         { status: 401 }
       );
     }
-
-    const userId = telegramIdHeader;
-    // ✅ Конвертируем в BIGINT для БД (foreign key требует BIGINT)
-    const userIdBigInt = parseInt(userId, 10);
     
-    if (isNaN(userIdBigInt)) {
-      console.error('❌ [connect-wallet] Некорректный telegram_id:', userId);
+    const { userId, environment } = auth;
+    console.log(`🔗 [connect-wallet] Пользователь: ${userId} (${environment})`);
+    
+    // ✅ УНИВЕРСАЛЬНО: Получаем пользователя из БД
+    const { dbUserId, user } = await getUserIdFromDatabase(userId, environment);
+    
+    if (!dbUserId || !user) {
+      console.error(`❌ [connect-wallet] Пользователь не найден (${environment}):`, userId);
       return NextResponse.json(
-        { success: false, message: 'Некорректный ID пользователя' },
-        { status: 400 }
+        { success: false, message: 'Пользователь не найден' },
+        { status: 404 }
       );
     }
+    
+    // ✅ Конвертируем в BIGINT для БД (foreign key требует BIGINT)
+    const userIdBigInt = dbUserId;
     
     const { wallet_address, wallet_type = 'ton', proof } = await req.json();
     
@@ -70,7 +74,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.log(`✅ ${walletTypeUpper} кошелек ${wallet_address} успешно подключен для пользователя ${userId}`);
+    console.log(`✅ ${walletTypeUpper} кошелек ${wallet_address} успешно подключен для пользователя ${userId} (${environment})`);
     return NextResponse.json({
       success: true,
       message: 'Кошелек успешно подключен',
@@ -93,31 +97,35 @@ export async function POST(req: NextRequest) {
  */
 export async function GET(req: NextRequest) {
   try {
-    // Проверяем аутентификацию - БЕЗ cookies, только из localStorage через headers
-    const telegramIdHeader = req.headers.get('x-telegram-id');
-    const usernameHeader = req.headers.get('x-username');
+    // ✅ УНИВЕРСАЛЬНО: Используем универсальную систему авторизации
+    const auth = requireAuth(req);
     
-    if (!telegramIdHeader) {
-      console.error('❌ [connect-wallet GET] Не найден x-telegram-id header');
+    if (auth.error || !auth.userId) {
+      console.error('❌ [connect-wallet GET] Ошибка авторизации:', auth.error);
       return NextResponse.json(
-        { success: false, message: 'Требуется авторизация' },
+        { success: false, message: auth.error || 'Требуется авторизация' },
         { status: 401 }
       );
     }
-
-    const userId = telegramIdHeader;
-    // ✅ Конвертируем в BIGINT для БД (foreign key требует BIGINT)
-    const userIdBigInt = parseInt(userId, 10);
     
-    if (isNaN(userIdBigInt)) {
-      console.error('❌ [connect-wallet GET] Некорректный telegram_id:', userId);
+    const { userId, environment } = auth;
+    console.log(`📋 [connect-wallet GET] Пользователь: ${userId} (${environment})`);
+    
+    // ✅ УНИВЕРСАЛЬНО: Получаем пользователя из БД
+    const { dbUserId, user } = await getUserIdFromDatabase(userId, environment);
+    
+    if (!dbUserId || !user) {
+      console.error(`❌ [connect-wallet GET] Пользователь не найден (${environment}):`, userId);
       return NextResponse.json(
-        { success: false, message: 'Некорректный ID пользователя' },
-        { status: 400 }
+        { success: false, message: 'Пользователь не найден' },
+        { status: 404 }
       );
     }
     
-    console.log(`📋 Получаем кошельки пользователя ${userId} (BIGINT: ${userIdBigInt}) через headers...`);
+    // ✅ Конвертируем в BIGINT для БД (foreign key требует BIGINT)
+    const userIdBigInt = dbUserId;
+    
+    console.log(`📋 Получаем кошельки пользователя ${userId} (BIGINT: ${userIdBigInt}, ${environment})...`);
 
     const { data: wallets, error } = await supabase
       .from('_pidr_player_wallets')

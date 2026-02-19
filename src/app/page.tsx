@@ -191,15 +191,20 @@ function HomeWithParams() {
               }, 500);
               return;
             }
-          } else if (sessionResponse.status === 404) {
+          } else             if (sessionResponse.status === 404) {
             console.error('❌ [Браузер] API endpoint /api/auth не найден (404)');
             console.error('❌ Это критическая ошибка - API route не работает!');
+            console.error('🔍 [Браузер] Проверяем возможные причины:');
+            console.error('  1. Файл route.ts не задеплоен на Vercel');
+            console.error('  2. Проблема с компиляцией Next.js');
+            console.error('  3. Неправильная конфигурация API routes');
             
             // ✅ FALLBACK: Если API не работает, но есть cookie - используем pendingAuth или ждем
             const hasAuthCookie = typeof document !== 'undefined' && 
               document.cookie.includes('auth_token=');
             
             console.log('🍪 [Браузер] Проверка cookie:', hasAuthCookie ? 'найден' : 'не найден');
+            console.log('🍪 [Браузер] Все cookies:', typeof document !== 'undefined' ? document.cookie : 'N/A');
             
             // ✅ ЕЩЕ РАЗ ПРОВЕРЯЕМ pendingAuth (может быть сохранен после редиректа)
             const pendingAuthRetry = typeof window !== 'undefined' && sessionStorage.getItem('pendingAuth');

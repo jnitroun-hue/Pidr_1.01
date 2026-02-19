@@ -473,7 +473,9 @@ export const useGameStore = create<GameState>()(
             const result = await response.json();
             if (result.success && result.user) {
               userAvatar = result.user.avatar_url || result.user.avatar || '';
-              userName = result.user.username || 'Игрок';
+              // ✅ ИСПРАВЛЕНО: Используем fallback для username
+              userName = result.user.username || result.user.firstName || result.user.first_name || 'Игрок';
+              console.log(`🎮 [gameStore] Загружен username для игры: "${userName}" (из: username="${result.user.username}", firstName="${result.user.firstName}")`);
             }
           }
         } catch (error: unknown) {

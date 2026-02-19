@@ -138,6 +138,9 @@ export default function ProfilePage() {
         
         if (result.success && result.user) {
           console.log('✅ Данные пользователя загружены из БД:', result.user);
+          console.log('📊 [Profile] Username из API:', result.user.username);
+          console.log('📊 [Profile] FirstName из API:', result.user.firstName);
+          console.log('📊 [Profile] Все поля user:', Object.keys(result.user));
           
           // ✅ КРИТИЧНО: Загружаем актуальный баланс из /api/user/balance
           const balanceResponse = await fetch('/api/user/balance', {
@@ -1001,7 +1004,11 @@ export default function ProfilePage() {
         animate={{ x: 0, opacity: 1 }}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-        onClick={() => router.push('/')}
+        onClick={() => {
+          // ✅ Сохраняем сессию перед переходом
+          console.log('🔙 [Profile] Возврат на главную страницу...');
+          router.push('/');
+        }}
         style={{
           position: 'fixed',
           top: '20px',

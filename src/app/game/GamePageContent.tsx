@@ -413,9 +413,13 @@ function GamePageContentComponent({
           console.log('✅ [generatePlayerProfile] Данные из БД:', result);
           
           if (result.success && result.user) {
+            // ✅ ИСПРАВЛЕНО: Используем fallback для username
+            const displayName = result.user.username || result.user.firstName || result.user.first_name || username || 'Игрок';
+            console.log(`🎮 [generatePlayerProfile] Username для игры: "${displayName}" (из: username="${result.user.username}", firstName="${result.user.firstName}")`);
+            
             return {
               id: player.id,
-              name: result.user.username || result.user.firstName || username || 'Игрок',
+              name: displayName,
               avatar: result.user.avatar_url || userData?.avatar || '',
               isBot: false,
               isUser: true,

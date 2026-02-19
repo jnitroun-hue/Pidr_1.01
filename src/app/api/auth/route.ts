@@ -405,20 +405,30 @@ export async function POST(req: NextRequest) {
       .from('_pidr_users')
       .select('*')
       .eq('telegram_id', telegramId)
-      .single();
+      .maybeSingle(); // ✅ ИСПРАВЛЕНО: Используем maybeSingle() вместо single()
       
-    console.log('📊 Результат поиска пользователя:', { user: !!existingUser, error: findError?.message });
+    console.log('📊 Результат поиска пользователя:', { 
+      user: !!existingUser, 
+      userId: existingUser?.id,
+      username: existingUser?.username,
+      error: findError?.message 
+    });
 
     let user = existingUser;
 
-    if (!existingUser) {
+    if (!existingUser || findError) {
+      // ✅ ИСПРАВЛЕНО: Если пользователь не найден ИЛИ есть ошибка - создаем нового
+      if (findError && findError.code !== 'PGRST116') {
+        // PGRST116 = not found (это нормально)
+        console.error('❌ Ошибка поиска пользователя:', findError);
+      }
       // Создаем нового пользователя
       console.log('👤 Создаем нового пользователя...');
       
       // ✅ ИСПРАВЛЕНО: Используем правильные названия столбцов из БД
       const newUserData: any = {
         telegram_id: telegramId,
-        username: username,
+        username: username, // ✅ Сохраняем username как есть
         first_name: firstName || username,
         last_name: lastName || '',
         avatar_url: photoUrl || null,
@@ -427,6 +437,8 @@ export async function POST(req: NextRequest) {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
+      
+      console.log(`📝 [POST /api/auth] Создаем пользователя:`, newUserData);
       
       // Добавляем поля с правильными названиями (поддержка обоих вариантов)
       newUserData.total_games_played = 0; // Из скриншота БД
@@ -460,45 +472,69 @@ export async function POST(req: NextRequest) {
         // ✅ КРИТИЧНО: Если ошибка дублирования ключа - пользователь уже существует, используем его
         if (createError.code === '23505' || createError.message?.includes('duplicate key') || createError.message?.includes('_pidr_users_telegram_id_key')) {
           console.log('⚠️ Пользователь уже существует (duplicate key), ищем его в БД...');
-          const { data: existingUserRetry } = await supabase
+          const { data: existingUserRetry, error: retryError } = await supabaseAdmin
             .from('_pidr_users')
             .select('*')
             .eq('telegram_id', telegramId)
             .maybeSingle();
           
           if (existingUserRetry) {
-            console.log('✅ Пользователь найден после ошибки дублирования, используем существующего');
+            console.log('✅ Пользователь найден после ошибки дублирования, обновляем данные:', existingUserRetry.username);
             user = existingUserRetry;
+            
+            // ✅ СРАЗУ ОБНОВЛЯЕМ ДАННЫЕ ПОЛЬЗОВАТЕЛЯ
+            const updateData: any = {
+              username: username || existingUserRetry.username,
+              first_name: firstName || existingUserRetry.first_name,
+              last_name: lastName || existingUserRetry.last_name,
+              avatar_url: photoUrl || existingUserRetry.avatar_url,
+              last_seen: moscowTime,
+              updated_at: new Date().toISOString(),
+              online_status: 'online',
+              status: 'online'
+            };
+            
+            const { data: updatedUser, error: updateError } = await supabaseAdmin
+              .from('_pidr_users')
+              .update(updateData)
+              .eq('id', existingUserRetry.id)
+              .select()
+              .single();
+            
+            if (!updateError && updatedUser) {
+              user = updatedUser;
+              console.log('✅ Данные пользователя обновлены после ошибки дублирования');
+            } else {
+              console.warn('⚠️ Ошибка обновления данных пользователя:', updateError);
+            }
           } else {
+            console.error('❌ Пользователь не найден после ошибки дублирования:', retryError);
             return NextResponse.json({ 
               success: false, 
-              message: `Ошибка создания пользователя: ${createError.message || 'Неизвестная ошибка'}`,
+              message: `Ошибка создания пользователя: пользователь с таким telegram_id уже существует, но не найден в БД`,
               errorDetails: createError
             }, { status: 500 });
           }
         } else {
-          // ✅ ПРОБУЕМ НАЙТИ ПОЛЬЗОВАТЕЛЯ ЕСЛИ ОН УЖЕ СУЩЕСТВУЕТ (для других ошибок)
-          const { data: existingUserRetry } = await supabase
-            .from('_pidr_users')
-            .select('*')
-            .eq('telegram_id', telegramId)
-            .maybeSingle();
-          
-          if (existingUserRetry) {
-            console.log('✅ Пользователь найден после ошибки создания, используем существующего');
-            user = existingUserRetry;
-          } else {
-            return NextResponse.json({ 
-              success: false, 
-              message: `Ошибка создания пользователя: ${createError.message || 'Неизвестная ошибка'}`,
-              errorDetails: createError
-            }, { status: 500 });
-          }
+          // ✅ ДЛЯ ДРУГИХ ОШИБОК - возвращаем ошибку
+          return NextResponse.json({ 
+            success: false, 
+            message: `Ошибка создания пользователя: ${createError.message || 'Неизвестная ошибка'}`,
+            errorDetails: createError
+          }, { status: 500 });
         }
       } else {
         user = newUser;
+        console.log('✅ Новый пользователь создан:', user.username);
       }
-      console.log('✅ Новый пользователь создан:', user.username);
+      
+      // ✅ ЕСЛИ ПОЛЬЗОВАТЕЛЬ НАЙДЕН (новый или существующий) - ПРОДОЛЖАЕМ
+      if (!user) {
+        return NextResponse.json({ 
+          success: false, 
+          message: 'Не удалось создать или найти пользователя'
+        }, { status: 500 });
+      }
       
       // ✅ ОБРАБОТКА РЕФЕРАЛЬНОЙ ССЫЛКИ
       if (referrerId && referrerId !== String(telegramId)) {
@@ -571,41 +607,43 @@ export async function POST(req: NextRequest) {
           console.error('❌ Ошибка обработки реферальной ссылки:', error);
         }
       }
-    } else {
+    }
+    
+    // ✅ ОБНОВЛЕНИЕ ДАННЫХ ПОЛЬЗОВАТЕЛЯ (для существующих И для найденных после ошибки дублирования)
+    // Обновляем данные только если пользователь уже существовал (не новый)
+    if (user && existingUser) {
       // Обновляем данные существующего пользователя
       console.log('👤 Обновляем данные существующего пользователя...');
+      console.log(`📝 [POST /api/auth] Текущий username в БД: "${user.username}", новый username: "${username}"`);
       
       // ✅ ИСПРАВЛЕНО: Обновляем с правильными названиями столбцов
+      // ✅ Обновляем username только если он передан и не пустой
       const updateData: any = {
-        username: username,
-        first_name: firstName || existingUser.first_name,
-        last_name: lastName || existingUser.last_name,
-        avatar_url: photoUrl || existingUser.avatar_url,
+        username: username || user.username, // ✅ Сохраняем существующий если новый пустой
+        first_name: firstName || user.first_name,
+        last_name: lastName || user.last_name,
+        avatar_url: photoUrl || user.avatar_url,
         last_seen: moscowTime,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        online_status: 'online',
+        status: 'online'
       };
-      
-      // Обновляем статус (поддержка обоих вариантов)
-      updateData.online_status = 'online';
-      updateData.status = 'online';
       
       // ✅ ИСПРАВЛЕНО: Используем админский клиент для обновления статуса, чтобы обойти RLS
       const { data: updatedUser, error: updateError } = await supabaseAdmin
         .from('_pidr_users')
         .update(updateData)
-        .eq('id', existingUser.id)
+        .eq('id', user.id)
         .select()
         .single();
 
       if (updateError) {
         console.error('❌ Ошибка обновления пользователя:', updateError);
         // Продолжаем с существующими данными
-        user = existingUser;
-      } else {
+      } else if (updatedUser) {
         user = updatedUser;
+        console.log('✅ Пользователь обновлен:', user.username);
       }
-
-      console.log('✅ Пользователь обновлен:', user.username);
     }
 
     // ✅ КРИТИЧНО: Создаем device fingerprint для привязки токена к устройству
