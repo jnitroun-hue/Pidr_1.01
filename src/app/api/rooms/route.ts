@@ -95,21 +95,34 @@ export async function GET(req: NextRequest) {
     
     const roomsForListing = rooms || [];
     
-    // Обогащаем данные о хостах
+    // ✅ ОПТИМИЗАЦИЯ ДЛЯ БЕСПЛАТНОГО ПЛАНА: Собираем все host_id и делаем один батч-запрос
+    const hostIds = roomsForListing
+      .map((room: any) => room.host_id)
+      .filter((id: any) => id); // Убираем null/undefined
+    
+    // ✅ БАТЧ-ЗАПРОС: Получаем всех хостов одним запросом (экономия запросов к БД)
+    let hostsMap: Map<string | number, any> = new Map();
+    if (hostIds.length > 0) {
+      const { data: hosts } = await supabase
+        .from('_pidr_users')
+        .select('id, username, avatar_url')
+        .in('id', hostIds);
+      
+      if (hosts) {
+        hosts.forEach((host: any) => {
+          hostsMap.set(host.id, host);
+        });
+        console.log(`✅ [GET ROOMS] Загружено ${hosts.length} хостов одним батч-запросом (экономия ${hostIds.length - 1} запросов)`);
+      }
+    }
+    
+    // Обогащаем данные о хостах (используем кэш из батч-запроса)
     const roomsWithHosts = await Promise.all(roomsForListing.map(async (room: any) => {
-      // ✅ СПОСОБ 1: Получаем хоста через host_id (UUID)
+      // ✅ СПОСОБ 1: Получаем хоста из кэша (батч-запрос) - БЕЗ ДОПОЛНИТЕЛЬНЫХ ЗАПРОСОВ
       let hostUser: any = null;
       
       if (room.host_id) {
-        const { data: hostFromId } = await supabase
-          .from('_pidr_users')
-          .select('username, avatar_url')
-          .eq('id', room.host_id)
-          .maybeSingle();
-        
-        if (hostFromId) {
-          hostUser = hostFromId;
-        }
+        hostUser = hostsMap.get(room.host_id);
       }
       
       // ✅ СПОСОБ 2: Fallback - получаем хоста через _pidr_room_players (is_host = true)

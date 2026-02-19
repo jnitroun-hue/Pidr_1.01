@@ -200,10 +200,16 @@ export async function getUserIdFromDatabase(
       }
     }
     
-    const { data: user, error } = await query.single();
+    // ✅ ИСПРАВЛЕНО: Используем maybeSingle() вместо single() чтобы не выбрасывать ошибку если пользователь не найден
+    const { data: user, error } = await query.maybeSingle();
     
-    if (error || !user) {
-      console.error(`❌ [getUserIdFromDatabase] Пользователь не найден (${environment}, userId=${userId}):`, error);
+    if (error) {
+      console.error(`❌ [getUserIdFromDatabase] Ошибка поиска пользователя (${environment}, userId=${userId}):`, error);
+      return { dbUserId: null, user: null };
+    }
+    
+    if (!user) {
+      console.error(`❌ [getUserIdFromDatabase] Пользователь не найден (${environment}, userId=${userId})`);
       return { dbUserId: null, user: null };
     }
     

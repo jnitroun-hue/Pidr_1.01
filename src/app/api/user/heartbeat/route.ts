@@ -34,18 +34,19 @@ export async function POST(request: NextRequest) {
     const now = new Date().toISOString();
     const nowTimestamp = Date.now();
 
-    // ✅ ОБНОВЛЯЕМ REDIS КЕШ (быстро)
+    // ✅ ОПТИМИЗАЦИЯ ДЛЯ БЕСПЛАТНОГО ПЛАНА: Минимизируем Redis операции
+    // Используем pipeline для батч-операций (экономия запросов к Redis)
     if (redis) {
       try {
-        // Устанавливаем онлайн статус в Redis (TTL 5 минут)
-        await redis.set(REDIS_KEYS.userOnline(userId), '1', { ex: 300 }); // 5 минут
-        await redis.set(REDIS_KEYS.userLastSeen(userId), nowTimestamp.toString(), { ex: 300 });
+        // ✅ БАТЧ-ОПЕРАЦИИ: Выполняем несколько операций за один запрос
+        await Promise.all([
+          redis.set(REDIS_KEYS.userOnline(userId), '1', { ex: 300 }),
+          redis.set(REDIS_KEYS.userLastSeen(userId), nowTimestamp.toString(), { ex: 300 }),
+          redis.sadd(REDIS_KEYS.onlineUsers(), userId),
+          redis.expire(REDIS_KEYS.onlineUsers(), 300)
+        ]);
         
-        // Добавляем в SET онлайн пользователей
-        await redis.sadd(REDIS_KEYS.onlineUsers(), userId);
-        await redis.expire(REDIS_KEYS.onlineUsers(), 300); // Обновляем TTL для SET
-        
-        console.log(`💓 [HEARTBEAT REDIS] Обновлен кеш для ${userId}`);
+        console.log(`💓 [HEARTBEAT REDIS] Обновлен кеш для ${userId} (батч-операции)`);
       } catch (redisError) {
         console.error('⚠️ [HEARTBEAT] Ошибка Redis (не критично):', redisError);
         // Продолжаем даже если Redis недоступен

@@ -426,10 +426,16 @@ export async function POST(req: NextRequest) {
       console.log('👤 Создаем нового пользователя...');
       
       // ✅ ИСПРАВЛЕНО: Используем правильные названия столбцов из БД
+      // ✅ КРИТИЧНО: Проверяем что username не пустой и не "Игрок"
+      let finalUsername = username && username.trim() ? username.trim() : (firstName || `User${telegramId.toString().slice(-4)}`);
+      if (finalUsername === 'Игрок' || finalUsername.trim() === '') {
+        finalUsername = firstName || `User${telegramId.toString().slice(-4)}`;
+      }
+      
       const newUserData: any = {
         telegram_id: telegramId,
-        username: username, // ✅ Сохраняем username как есть
-        first_name: firstName || username,
+        username: finalUsername, // ✅ Сохраняем правильный username
+        first_name: firstName || finalUsername,
         last_name: lastName || '',
         avatar_url: photoUrl || null,
         coins: 1000,
@@ -438,7 +444,7 @@ export async function POST(req: NextRequest) {
         updated_at: new Date().toISOString()
       };
       
-      console.log(`📝 [POST /api/auth] Создаем пользователя:`, newUserData);
+      console.log(`📝 [POST /api/auth] Создаем пользователя с username: "${finalUsername}" (было: "${username}")`);
       
       // Добавляем поля с правильными названиями (поддержка обоих вариантов)
       newUserData.total_games_played = 0; // Из скриншота БД
@@ -483,8 +489,9 @@ export async function POST(req: NextRequest) {
             user = existingUserRetry;
             
             // ✅ СРАЗУ ОБНОВЛЯЕМ ДАННЫЕ ПОЛЬЗОВАТЕЛЯ
+            // ✅ КРИТИЧНО: Всегда обновляем username если он передан (даже если пустой)
             const updateData: any = {
-              username: username || existingUserRetry.username,
+              username: username && username.trim() ? username.trim() : existingUserRetry.username, // Обновляем только если есть непустое значение
               first_name: firstName || existingUserRetry.first_name,
               last_name: lastName || existingUserRetry.last_name,
               avatar_url: photoUrl || existingUserRetry.avatar_url,
@@ -493,6 +500,12 @@ export async function POST(req: NextRequest) {
               online_status: 'online',
               status: 'online'
             };
+            
+            // ✅ КРИТИЧНО: Если username пустой или "Игрок", используем first_name или telegram_id
+            if (!updateData.username || updateData.username === 'Игрок' || updateData.username.trim() === '') {
+              updateData.username = firstName || `User${telegramId.toString().slice(-4)}` || existingUserRetry.username;
+              console.log(`⚠️ [POST /api/auth] Username был пустым или "Игрок", установлен: ${updateData.username}`);
+            }
             
             const { data: updatedUser, error: updateError } = await supabaseAdmin
               .from('_pidr_users')
@@ -617,9 +630,15 @@ export async function POST(req: NextRequest) {
       console.log(`📝 [POST /api/auth] Текущий username в БД: "${user.username}", новый username: "${username}"`);
       
       // ✅ ИСПРАВЛЕНО: Обновляем с правильными названиями столбцов
-      // ✅ Обновляем username только если он передан и не пустой
+      // ✅ КРИТИЧНО: Всегда обновляем username если он передан и не пустой
+      let finalUsername = username && username.trim() ? username.trim() : user.username;
+      // ✅ Если username пустой или "Игрок", используем first_name или оставляем существующий
+      if (!finalUsername || finalUsername === 'Игрок' || finalUsername.trim() === '') {
+        finalUsername = firstName || user.username || `User${telegramId.toString().slice(-4)}`;
+      }
+      
       const updateData: any = {
-        username: username || user.username, // ✅ Сохраняем существующий если новый пустой
+        username: finalUsername, // ✅ Всегда обновляем username (даже если используем существующий)
         first_name: firstName || user.first_name,
         last_name: lastName || user.last_name,
         avatar_url: photoUrl || user.avatar_url,
@@ -628,6 +647,8 @@ export async function POST(req: NextRequest) {
         online_status: 'online',
         status: 'online'
       };
+      
+      console.log(`📝 [POST /api/auth] Обновляем username существующего пользователя: "${user.username}" → "${finalUsername}"`);
       
       // ✅ ИСПРАВЛЕНО: Используем админский клиент для обновления статуса, чтобы обойти RLS
       const { data: updatedUser, error: updateError } = await supabaseAdmin

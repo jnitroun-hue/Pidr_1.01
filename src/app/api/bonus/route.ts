@@ -57,32 +57,30 @@ export async function POST(req: NextRequest) {
         // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Используем уникальную комбинацию user_id + date для проверки
         const todayKey = `${userId}_${todayStart.getTime()}`; // Уникальный ключ на день
         
-        // ✅ ИСПРАВЛЕНО: Используем dbUserId (id из БД) вместо telegram_id
-        const { data: dailyBonusToday, error: dailyError } = await supabase
+        // ✅ ОПТИМИЗАЦИЯ ДЛЯ БЕСПЛАТНОГО ПЛАНА: Один запрос вместо двух
+        const { data: dailyBonuses, error: dailyError } = await supabase
           .from('_pidr_coin_transactions')
-          .select('id, created_at, amount')
+          .select('id, created_at, amount, description')
           .eq('user_id', dbUserId)
           .eq('transaction_type', 'bonus')
           .gte('created_at', todayStart.toISOString())
           .lt('created_at', todayEnd.toISOString())
           .order('created_at', { ascending: false })
-          .limit(1);
+          .limit(5); // Получаем несколько для проверки
         
         if (dailyError) {
           console.error('❌ Ошибка проверки ежедневного бонуса:', dailyError);
         }
         
-        // ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА: Ищем транзакции по описанию с сегодняшней датой
-        const { data: bonusByDescription } = await supabase
-          .from('_pidr_coin_transactions')
-          .select('id, created_at, amount, description')
-          .eq('user_id', dbUserId)
-          .eq('transaction_type', 'bonus')
-          .like('description', `%${todayStart.toDateString()}%`)
-          .limit(1);
+        // ✅ Проверяем по дате создания И по описанию в одном результате
+        const lastBonus = dailyBonuses?.find((bonus: any) => {
+          const bonusDate = new Date(bonus.created_at);
+          const isToday = bonusDate.toDateString() === todayStart.toDateString();
+          const hasTodayInDescription = bonus.description?.includes(todayStart.toDateString());
+          return isToday || hasTodayInDescription;
+        });
         
-        if ((dailyBonusToday && dailyBonusToday.length > 0) || (bonusByDescription && bonusByDescription.length > 0)) {
-          const lastBonus = dailyBonusToday?.[0] || bonusByDescription?.[0];
+        if (lastBonus) {
           const nextBonusTime = new Date(todayEnd.getTime());
           const hoursLeft = Math.ceil((nextBonusTime.getTime() - now.getTime()) / (1000 * 60 * 60));
           
