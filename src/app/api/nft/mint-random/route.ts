@@ -8,6 +8,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '../../../../lib/auth/auth-middleware';
 import { createClient } from '@supabase/supabase-js';
 
+// ✅ Явная конфигурация runtime для Next.js 15
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     // Ленивая инициализация Supabase

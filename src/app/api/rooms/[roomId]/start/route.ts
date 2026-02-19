@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { requireAuth } from '@/lib/auth-utils';
+import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
+
+// ✅ Явная конфигурация runtime для Next.js 15
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 // 🎮 API: Старт игры в комнате
 export async function POST(
@@ -9,29 +13,26 @@ export async function POST(
 ) {
   const { roomId: roomIdStr } = await params;
   try {
-    const auth = await requireAuth(request);
-    if (auth.error) {
-      return NextResponse.json({ success: false, error: auth.error }, { status: 401 });
+    // ✅ ИСПРАВЛЕНО: requireAuth синхронная функция, не нужен await
+    const auth = requireAuth(request);
+    if (auth.error || !auth.userId) {
+      return NextResponse.json({ success: false, error: auth.error || 'Требуется авторизация' }, { status: 401 });
     }
 
-    const userId = auth.userId as string;
+    const { userId, environment } = auth;
     const roomId = parseInt(roomIdStr, 10);
 
-    console.log(`🎮 [START GAME] Комната ${roomId}, хост: ${userId}`);
+    console.log(`🎮 [START GAME] Комната ${roomId}, хост: ${userId} (${environment})`);
 
-    // ✅ ПОЛУЧАЕМ UUID ПОЛЬЗОВАТЕЛЯ ПО TELEGRAM_ID
-    const { data: userData, error: userError } = await supabase
-      .from('_pidr_users')
-      .select('id')
-      .eq('telegram_id', userId)
-      .single();
+    // ✅ УНИВЕРСАЛЬНО: Получаем пользователя из БД
+    const { dbUserId, user: dbUser } = await getUserIdFromDatabase(userId, environment);
     
-    if (userError || !userData) {
-      console.error(`❌ [START GAME] Пользователь не найден:`, userError);
+    if (!dbUserId || !dbUser) {
+      console.error(`❌ [START GAME] Пользователь не найден (${environment}):`, userId);
       return NextResponse.json({ success: false, error: 'Пользователь не найден' }, { status: 404 });
     }
     
-    const userUUID = userData.id;
+    const userUUID = dbUserId;
     console.log(`👤 [START GAME] Пользователь найден: UUID=${userUUID}, telegram_id=${userId}`);
 
     // 1️⃣ ПРОВЕРЯЕМ ЧТО ПОЛЬЗОВАТЕЛЬ - ХОСТ

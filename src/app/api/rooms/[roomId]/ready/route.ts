@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { requireAuth } from '@/lib/auth-utils';
+import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
+
+// ✅ Явная конфигурация runtime для Next.js 15
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 // 🔴 API ДЛЯ УПРАВЛЕНИЯ ГОТОВНОСТЬЮ ИГРОКОВ
 export async function POST(
@@ -9,14 +13,21 @@ export async function POST(
 ) {
   try {
     const params = await context.params;
-    // ПРОВЕРЯЕМ АВТОРИЗАЦИЮ
-    const auth = await requireAuth(request);
-    if (auth.error) {
-      return NextResponse.json({ success: false, message: auth.error }, { status: 401 });
+    // ✅ ИСПРАВЛЕНО: requireAuth синхронная функция, не нужен await
+    const auth = requireAuth(request);
+    if (auth.error || !auth.userId) {
+      return NextResponse.json({ success: false, message: auth.error || 'Требуется авторизация' }, { status: 401 });
     }
 
-    const userId = auth.userId as string; // ✅ Это telegram_id
+    const { userId, environment } = auth;
     const roomId = params.roomId;
+    
+    // ✅ УНИВЕРСАЛЬНО: Получаем пользователя из БД
+    const { dbUserId } = await getUserIdFromDatabase(userId, environment);
+    
+    if (!dbUserId) {
+      return NextResponse.json({ success: false, message: 'Пользователь не найден' }, { status: 404 });
+    }
     
     // ✅ ИСПРАВЛЕНО: Безопасный парсинг body с обработкой ошибок
     let body: any = {};
@@ -44,12 +55,12 @@ export async function POST(
     console.log(`🔴 [READY API] Обновляем готовность: userId=${userId}, roomId=${roomId}, isReady=${isReady}`);
     console.log(`🔍 [READY API] userId type:`, typeof userId, 'roomId type:', typeof roomId);
 
-    // ✅ ОБНОВЛЯЕМ ГОТОВНОСТЬ ИГРОКА (user_id это INT8, room_id это INT4)
+    // ✅ ОБНОВЛЯЕМ ГОТОВНОСТЬ ИГРОКА (user_id это BIGINT из БД)
     const { error, data } = await supabase
       .from('_pidr_room_players')
       .update({ is_ready: isReady })
       .eq('room_id', parseInt(roomId))
-      .eq('user_id', parseInt(userId))
+      .eq('user_id', dbUserId)
       .select();
     
     console.log(`📊 [READY API] Результат обновления:`, data, error);

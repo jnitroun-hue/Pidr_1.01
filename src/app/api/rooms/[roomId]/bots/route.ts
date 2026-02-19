@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { requireAuth } from '@/lib/auth-utils';
+import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 import { atomicJoinRoom } from '@/lib/multiplayer/player-state-manager';
+
+// ✅ Явная конфигурация runtime для Next.js 15
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 // 🤖 API ДЛЯ УПРАВЛЕНИЯ БОТАМИ В КОМНАТЕ
 export async function POST(
@@ -10,33 +14,31 @@ export async function POST(
 ) {
   try {
     const params = await context.params;
-    // ПРОВЕРЯЕМ АВТОРИЗАЦИЮ
-    const auth = await requireAuth(request);
-    if (auth.error) {
-      return NextResponse.json({ success: false, message: auth.error }, { status: 401 });
+    // ✅ ИСПРАВЛЕНО: requireAuth синхронная функция, не нужен await
+    const auth = requireAuth(request);
+    if (auth.error || !auth.userId) {
+      return NextResponse.json({ success: false, message: auth.error || 'Требуется авторизация' }, { status: 401 });
     }
 
-    const telegramId = auth.userId as string; // ✅ Это telegram_id!
+    const { userId, environment } = auth;
+    
+    // ✅ УНИВЕРСАЛЬНО: Получаем пользователя из БД
+    const { dbUserId, user: dbUser } = await getUserIdFromDatabase(userId, environment);
+    
+    if (!dbUserId || !dbUser) {
+      return NextResponse.json({ success: false, message: 'Пользователь не найден' }, { status: 404 });
+    }
+    
+    const telegramId = userId; // Для совместимости с остальным кодом
     const roomId = params.roomId;
     const body = await request.json();
     const { action } = body; // 'add' или 'remove'
 
-    console.log(`🤖 Управление ботами: telegramId=${telegramId}, roomId=${roomId}, action=${action}`);
+    console.log(`🤖 Управление ботами: userId=${userId} (${environment}), roomId=${roomId}, action=${action}`);
 
-    // ✅ ПОЛУЧАЕМ UUID ПОЛЬЗОВАТЕЛЯ ПО TELEGRAM_ID
-    const { data: userData, error: userError } = await supabase
-      .from('_pidr_users')
-      .select('id')
-      .eq('telegram_id', telegramId)
-      .single();
-    
-    if (userError || !userData) {
-      console.error(`❌ [BOTS] Пользователь не найден:`, userError);
-      return NextResponse.json({ success: false, message: 'Пользователь не найден' }, { status: 404 });
-    }
-    
-    const userUUID = userData.id;
-    console.log(`👤 [BOTS] Пользователь найден: UUID=${userUUID}, telegram_id=${telegramId}`);
+    // ✅ ИСПОЛЬЗУЕМ dbUserId из getUserIdFromDatabase
+    const userUUID = dbUserId;
+    console.log(`👤 [BOTS] Пользователь найден: UUID=${userUUID}, userId=${userId}`);
 
     // ПРОВЕРЯЕМ СУЩЕСТВОВАНИЕ КОМНАТЫ И ПРАВА ХОСТА
     const { data: room, error: roomError } = await supabase

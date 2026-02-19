@@ -306,13 +306,25 @@ export async function GET(req: NextRequest) {
       hour12: false
     }).replace(', ', 'T') + '+03:00';
 
+    // ✅ ИСПРАВЛЕНО: userId из токена может быть как id из БД, так и telegram_id
+    // Нужно найти правильный id из БД для обновления
+    let userIdForUpdate: number;
+    
+    if (authMethod === 'web') {
+      // Для веб - userId это уже id из БД
+      userIdForUpdate = parseInt(userId);
+    } else {
+      // Для Telegram - userId это telegram_id, нужно найти id из БД
+      userIdForUpdate = user.id;
+    }
+    
     await supabase
       .from('_pidr_users')
       .update({ 
         last_seen: moscowTime
         // ✅ УБРАНО: status: 'online' - не меняем статус при проверке сессии!
       })
-      .eq('id', userId);
+      .eq('id', userIdForUpdate);
 
     console.log('✅ Активная сессия найдена:', user.username);
 

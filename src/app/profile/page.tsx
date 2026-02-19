@@ -130,7 +130,11 @@ export default function ProfilePage() {
         });
         
         if (!response.ok) {
-          console.error('❌ Ошибка получения данных пользователя:', response.status);
+          console.error('❌ Ошибка получения данных пользователя:', response.status, response.statusText);
+          // ✅ Если 404, это означает что API endpoint не найден - это проблема деплоя
+          if (response.status === 404) {
+            console.error('❌ [Profile] API endpoint /api/user/me не найден (404). Проверьте деплой на Vercel.');
+          }
           return;
         }
         
@@ -1109,7 +1113,7 @@ export default function ProfilePage() {
                 fontWeight: '700',
                 margin: 0
               }}>
-                {user?.username || 'Игрок'}
+                {user?.username || user?.firstName || 'Загрузка...'}
               </h3>
               <button
                 onClick={() => {

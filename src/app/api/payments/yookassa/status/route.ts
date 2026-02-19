@@ -2,14 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getYooKassaPaymentStatus } from '@/lib/payments/yookassa';
 import { requireAuth } from '@/lib/auth-utils';
 
+// ✅ Явная конфигурация runtime для Next.js 15
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/payments/yookassa/status?payment_id=xxx
  * Получить статус платежа
  */
 export async function GET(request: NextRequest) {
   try {
-    // Проверяем авторизацию
-    const auth = await requireAuth(request);
+    // ✅ ИСПРАВЛЕНО: requireAuth синхронная функция, не нужен await
+    const auth = requireAuth(request);
     if (auth.error || !auth.userId) {
       return NextResponse.json(
         { success: false, message: auth.error || 'Не авторизован' },

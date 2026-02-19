@@ -1,17 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-utils';
 
+// ✅ Явная конфигурация runtime для Next.js 15
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 // 💳 API ДЛЯ TELEGRAM PAYMENTS
 
 export async function POST(request: NextRequest) {
   try {
-    // ПРОВЕРЯЕМ АВТОРИЗАЦИЮ
-    const auth = await requireAuth(request);
-    if (auth.error) {
-      return NextResponse.json({ success: false, message: auth.error }, { status: 401 });
+    // ✅ ИСПРАВЛЕНО: requireAuth синхронная функция, не нужен await
+    const auth = requireAuth(request);
+    if (auth.error || !auth.userId) {
+      return NextResponse.json({ success: false, message: auth.error || 'Требуется авторизация' }, { status: 401 });
     }
 
-    const telegramId = auth.userId as string;
+    const { userId } = auth;
+    const telegramId = userId; // Для совместимости
     const body = await request.json();
     const { listingId, currency, amount } = body; // currency: 'TON' или 'SOL'
 

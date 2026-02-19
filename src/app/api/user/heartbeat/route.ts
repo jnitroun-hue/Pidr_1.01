@@ -3,6 +3,10 @@ import { supabase, supabaseAdmin } from '@/lib/supabase';
 import { getUserIdFromRequest, getUserIdFromDatabase } from '@/lib/auth-utils';
 import { getRedis } from '@/lib/redis/init';
 
+// ✅ Явная конфигурация runtime для Next.js 15
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 // Получаем Redis клиент через универсальную инициализацию
 const redis = getRedis();
 

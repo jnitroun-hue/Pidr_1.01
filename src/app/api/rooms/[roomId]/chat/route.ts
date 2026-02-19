@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { requireAuth } from '@/lib/auth-utils';
+import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
+
+// ✅ Явная конфигурация runtime для Next.js 15
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 // 💬 API ДЛЯ ЧАТА В КОМНАТЕ
 
@@ -59,13 +63,22 @@ export async function POST(
 ) {
   try {
     const params = await context.params;
-    // ПРОВЕРЯЕМ АВТОРИЗАЦИЮ
-    const auth = await requireAuth(request);
-    if (auth.error) {
-      return NextResponse.json({ success: false, message: auth.error }, { status: 401 });
+    // ✅ ИСПРАВЛЕНО: requireAuth синхронная функция, не нужен await
+    const auth = requireAuth(request);
+    if (auth.error || !auth.userId) {
+      return NextResponse.json({ success: false, message: auth.error || 'Требуется авторизация' }, { status: 401 });
     }
 
-    const telegramId = auth.userId as string;
+    const { userId, environment } = auth;
+    
+    // ✅ УНИВЕРСАЛЬНО: Получаем пользователя из БД
+    const { dbUserId, user: dbUser } = await getUserIdFromDatabase(userId, environment);
+    
+    if (!dbUserId || !dbUser) {
+      return NextResponse.json({ success: false, message: 'Пользователь не найден' }, { status: 404 });
+    }
+    
+    const telegramId = userId; // Для совместимости
     const roomId = params.roomId;
     const body = await request.json();
     const { message, message_type = 'text' } = body;
@@ -77,24 +90,10 @@ export async function POST(
       }, { status: 400 });
     }
 
-    console.log(`💬 [CHAT] Отправка сообщения от ${telegramId} в комнату ${roomId}`);
+    console.log(`💬 [CHAT] Отправка сообщения от ${userId} (${environment}) в комнату ${roomId}`);
 
-    // ПОЛУЧАЕМ ДАННЫЕ ПОЛЬЗОВАТЕЛЯ
-    const { data: userData, error: userError } = await supabase
-      .from('_pidr_users')
-      .select('username, first_name')
-      .eq('telegram_id', telegramId)
-      .single();
-
-    if (userError || !userData) {
-      console.error(`❌ [CHAT] Пользователь не найден:`, userError);
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Пользователь не найден' 
-      }, { status: 404 });
-    }
-
-    const username = userData.username || userData.first_name || 'Аноним';
+    // ✅ ИСПОЛЬЗУЕМ ДАННЫЕ ИЗ getUserIdFromDatabase
+    const username = dbUser.username || dbUser.first_name || 'Аноним';
 
     // ПРОВЕРЯЕМ СУЩЕСТВОВАНИЕ КОМНАТЫ
     const { data: room, error: roomError } = await supabase
@@ -110,13 +109,13 @@ export async function POST(
       }, { status: 404 });
     }
 
-    // ПРОВЕРЯЕМ ЧТО ПОЛЬЗОВАТЕЛЬ В КОМНАТЕ
+    // ПРОВЕРЯЕМ ЧТО ПОЛЬЗОВАТЕЛЬ В КОМНАТЕ (используем dbUserId)
     const { data: playerInRoom } = await supabase
       .from('_pidr_room_players')
       .select('id')
       .eq('room_id', roomId)
-      .eq('user_id', telegramId)
-      .single();
+      .eq('user_id', dbUserId)
+      .maybeSingle();
 
     if (!playerInRoom) {
       return NextResponse.json({ 
@@ -125,12 +124,12 @@ export async function POST(
       }, { status: 403 });
     }
 
-    // ВСТАВЛЯЕМ СООБЩЕНИЕ
+    // ВСТАВЛЯЕМ СООБЩЕНИЕ (используем dbUserId)
     const { data: newMessage, error: insertError } = await supabase
       .from('_pidr_room_chat')
       .insert({
         room_id: parseInt(roomId),
-        user_id: parseInt(telegramId),
+        user_id: dbUserId, // ✅ Используем dbUserId вместо telegramId
         username: username,
         message: message.trim(),
         message_type: message_type

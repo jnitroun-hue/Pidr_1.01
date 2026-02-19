@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { requireAuth } from '@/lib/auth-utils';
+import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 import { supabase } from '@/lib/supabase';
+
+// ✅ Явная конфигурация runtime для Next.js 15
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 // POST /api/rooms/[roomId]/invite
 // Создать приглашение другу в комнату
@@ -28,12 +32,22 @@ export async function POST(
     // ✅ Создаём admin клиент для обхода RLS
     const adminSupabase = createClient(supabaseUrl, supabaseServiceKey);
     
-    const auth = await requireAuth(request);
-    if (auth.error) {
-      return NextResponse.json({ success: false, message: auth.error }, { status: 401 });
+    // ✅ ИСПРАВЛЕНО: requireAuth синхронная функция, не нужен await
+    const auth = requireAuth(request);
+    if (auth.error || !auth.userId) {
+      return NextResponse.json({ success: false, message: auth.error || 'Требуется авторизация' }, { status: 401 });
     }
 
-    const fromTelegramId = auth.userId as string;
+    const { userId, environment } = auth;
+    
+    // ✅ УНИВЕРСАЛЬНО: Получаем пользователя из БД
+    const { dbUserId } = await getUserIdFromDatabase(userId, environment);
+    
+    if (!dbUserId) {
+      return NextResponse.json({ success: false, message: 'Пользователь не найден' }, { status: 404 });
+    }
+    
+    const fromTelegramId = userId; // Для совместимости с остальным кодом
     const body = await request.json();
     const { friendId } = body as { friendId?: string | number };
 

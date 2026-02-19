@@ -7,6 +7,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '../../../../lib/auth/auth-middleware';
 import { linkAuthMethod, type AuthProvider } from '../../../../lib/auth/universal-auth';
 
+// ✅ Явная конфигурация runtime для Next.js 15
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const authContext = await requireAuth(request);

@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { requireAuth } from '@/lib/auth-utils';
+import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
+
+// ✅ Явная конфигурация runtime для Next.js 15
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 // 🚪 API ДЛЯ ПОКИДАНИЯ КОМНАТЫ
 export async function POST(
@@ -11,22 +15,29 @@ export async function POST(
     const params = await context.params;
     const roomId = params.roomId;
 
-    // ПРОВЕРЯЕМ АВТОРИЗАЦИЮ
-    const auth = await requireAuth(request);
-    if (auth.error) {
-      return NextResponse.json({ success: false, message: auth.error }, { status: 401 });
+    // ✅ ИСПРАВЛЕНО: requireAuth синхронная функция, не нужен await
+    const auth = requireAuth(request);
+    if (auth.error || !auth.userId) {
+      return NextResponse.json({ success: false, message: auth.error || 'Требуется авторизация' }, { status: 401 });
     }
 
-    const telegramId = auth.userId as string;
+    const { userId, environment } = auth;
+    
+    // ✅ УНИВЕРСАЛЬНО: Получаем пользователя из БД
+    const { dbUserId } = await getUserIdFromDatabase(userId, environment);
+    
+    if (!dbUserId) {
+      return NextResponse.json({ success: false, message: 'Пользователь не найден' }, { status: 404 });
+    }
 
-    console.log(`🚪 [POST /api/rooms/${roomId}/leave] Игрок ${telegramId} покидает комнату`);
+    console.log(`🚪 [POST /api/rooms/${roomId}/leave] Игрок ${userId} (${environment}) покидает комнату`);
 
-    // Удаляем игрока из комнаты
+    // Удаляем игрока из комнаты (используем dbUserId из БД)
     const { error: deleteError } = await supabase
       .from('_pidr_room_players')
       .delete()
       .eq('room_id', roomId)
-      .eq('user_id', telegramId);
+      .eq('user_id', dbUserId);
 
     if (deleteError) {
       console.error('❌ [leave] Ошибка удаления игрока:', deleteError);
@@ -53,7 +64,7 @@ export async function POST(
         .eq('id', roomId);
     }
 
-    console.log(`✅ [leave] Игрок ${telegramId} покинул комнату ${roomId}`);
+    console.log(`✅ [leave] Игрок ${userId} покинул комнату ${roomId}`);
 
     return NextResponse.json({ 
       success: true, 

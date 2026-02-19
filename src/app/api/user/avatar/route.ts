@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireAuth } from '../../../../lib/auth/auth-middleware';
 
+// ✅ Явная конфигурация runtime для Next.js 15
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 // POST /api/user/avatar - Обновить аватар пользователя
 export async function POST(req: NextRequest) {
   console.log('🖼️ POST /api/user/avatar - Обновление аватара пользователя...');
@@ -21,7 +25,17 @@ export async function POST(req: NextRequest) {
     
     const supabase = createClient(supabaseUrl, supabaseKey);
     
-    const userId = await requireAuth(req);
+    // ✅ ИСПРАВЛЕНО: requireAuth из auth-middleware возвращает AuthContext
+    const authContext = await requireAuth(req);
+    
+    if (!authContext.authenticated || !authContext.userId) {
+      return NextResponse.json(
+        { success: false, message: authContext.error || 'Требуется авторизация' },
+        { status: 401 }
+      );
+    }
+    
+    const userId = authContext.userId;
     console.log(`✅ Авторизован пользователь: ${userId}`);
     
     const body = await req.json();
