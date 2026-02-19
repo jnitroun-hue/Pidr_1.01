@@ -1,17 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '../../../../lib/supabase';
+import { supabaseAdmin } from '../../../../lib/supabase';
+
+// ✅ Явная конфигурация runtime для Next.js 15
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 // GET /api/stats/online - Статистика онлайн игроков
 export async function GET(req: NextRequest) {
   try {
     console.log('📊 Получение статистики онлайн игроков...');
 
+    // ✅ ИСПРАВЛЕНО: Используем supabaseAdmin для обхода RLS политик
     // 1. Общая статистика по статусам (проверяем ОБА поля!)
     let statusStats: any = {};
     let statusError: any = null;
     
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('_pidr_users')
         .select('status, online_status');
       
@@ -43,11 +48,12 @@ export async function GET(req: NextRequest) {
     const threeMinutesAgo = new Date(moscowNow.getTime() - 3 * 60 * 1000).toISOString();
     
     // ✅ ПОЛУЧАЕМ ВСЕХ ПОЛЬЗОВАТЕЛЕЙ С ПОЛЯМИ ДЛЯ ПОДСЧЕТА ОНЛАЙН
+    // ✅ ИСПРАВЛЕНО: Используем supabaseAdmin для обхода RLS
     let allUsers: any[] = [];
     let activeError: any = null;
     
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('_pidr_users')
         .select('id, username, last_seen, status, online_status');
       
@@ -76,10 +82,11 @@ export async function GET(req: NextRequest) {
     console.log(`📊 [ONLINE STATS] Всего пользователей: ${allUsers?.length || 0}, онлайн: ${onlinePlayers.length}`);
 
     // 3. Игроки онлайн за последние 30 минут - московское время
+    // ✅ ИСПРАВЛЕНО: Используем supabaseAdmin для обхода RLS
     let online30min: any[] = [];
     try {
       const thirtyMinutesAgo = new Date(moscowNow.getTime() - 30 * 60 * 1000).toISOString();
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('_pidr_users')
         .select('id, username, last_seen')
         .gte('last_seen', thirtyMinutesAgo);
@@ -95,9 +102,10 @@ export async function GET(req: NextRequest) {
     }
 
     // 4. Игроки в комнатах (проверяем ОБА поля!)
+    // ✅ ИСПРАВЛЕНО: Используем supabaseAdmin для обхода RLS
     let inRooms: any[] = [];
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('_pidr_users')
         .select('id, status, online_status')
         .or('status.in.(in_room,playing),online_status.in.(in_room,playing)');
@@ -113,9 +121,10 @@ export async function GET(req: NextRequest) {
     }
 
     // ✅ ИСПРАВЛЕНО: Обновляем статус на offline для неактивных (ОБА поля!)
+    // ✅ ИСПРАВЛЕНО: Используем supabaseAdmin для обхода RLS
     // Обновляем только тех, кто был онлайн, но неактивен более 5 минут
     try {
-      const { error: updateStatusError } = await supabase
+      const { error: updateStatusError } = await supabaseAdmin
         .from('_pidr_users')
         .update({ 
           status: 'offline',
