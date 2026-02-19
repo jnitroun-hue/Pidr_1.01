@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '../../../lib/supabase';
+import { supabase, supabaseAdmin } from '../../../lib/supabase';
 import { createPidrTables, checkDatabaseStatus } from '../../../lib/database/create-tables';
 
 export async function GET(req: NextRequest) {
@@ -299,7 +299,8 @@ async function getUserBalance(userId: string) {
   try {
     console.log('📊 Получение баланса пользователя:', userId);
     
-    const { data: user, error } = await supabase
+    // ✅ ИСПРАВЛЕНО: Используем supabaseAdmin для обхода RLS
+    const { data: user, error } = await supabaseAdmin
       .from('_pidr_users')
       .select('id, coins, rating, games_played, games_won, username, first_name')
       .eq('telegram_id', userId)
@@ -329,8 +330,9 @@ async function getUserTransactions(userId: string) {
   try {
     console.log('📋 Получение транзакций пользователя:', userId);
     
+    // ✅ ИСПРАВЛЕНО: Используем supabaseAdmin для обхода RLS
     // Сначала получаем пользователя по telegram_id
-    const { data: user, error: userError } = await supabase
+    const { data: user, error: userError } = await supabaseAdmin
       .from('_pidr_users')
       .select('id')
       .eq('telegram_id', userId)

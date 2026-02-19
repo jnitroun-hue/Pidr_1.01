@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '../../../../lib/supabase';
+import { supabase, supabaseAdmin } from '../../../../lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '../../../../lib/auth-utils';
 
 // GET /api/user/balance - Получить текущий баланс пользователя (универсально для всех платформ)
@@ -125,8 +125,9 @@ export async function POST(req: NextRequest) {
     
     console.log(`💰 Баланс ${user.username}: ${oldBalance} → ${newBalance}`);
     
+    // ✅ ИСПРАВЛЕНО: Используем supabaseAdmin для обхода RLS
     // Обновляем баланс в базе данных
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseAdmin
       .from('_pidr_users')
       .update({ 
         coins: newBalance,

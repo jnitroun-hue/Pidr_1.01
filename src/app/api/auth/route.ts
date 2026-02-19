@@ -212,9 +212,10 @@ export async function GET(req: NextRequest) {
     let user: any = null;
     let error: any = null;
     
+    // ✅ ИСПРАВЛЕНО: Используем supabaseAdmin для обхода RLS
     // Пробуем найти по id (если userId - это числовой id из БД)
     if (!isNaN(Number(userId))) {
-      const { data, error: err } = await supabase
+      const { data, error: err } = await supabaseAdmin
         .from('_pidr_users')
         .select('*')
         .eq('id', parseInt(userId))
@@ -226,7 +227,7 @@ export async function GET(req: NextRequest) {
     // Если не найдено по id, ищем по telegram_id
     if (!user && (!error || error.code === 'PGRST116')) {
       console.log('🔍 Пользователь не найден по id, ищем по telegram_id:', userId);
-      const { data, error: err } = await supabase
+      const { data, error: err } = await supabaseAdmin
         .from('_pidr_users')
         .select('*')
         .eq('telegram_id', userId)
@@ -318,7 +319,8 @@ export async function GET(req: NextRequest) {
       userIdForUpdate = user.id;
     }
     
-    await supabase
+    // ✅ ИСПРАВЛЕНО: Используем supabaseAdmin для обхода RLS
+    await supabaseAdmin
       .from('_pidr_users')
       .update({ 
         last_seen: moscowTime
@@ -411,9 +413,10 @@ export async function POST(req: NextRequest) {
       hour12: false
     }).replace(', ', 'T') + '+03:00';
 
+    // ✅ ИСПРАВЛЕНО: Используем supabaseAdmin для обхода RLS
     // Ищем существующего пользователя
     console.log('🔍 Ищем пользователя в БД по telegram_id:', telegramId);
-    let { data: existingUser, error: findError } = await supabase
+    let { data: existingUser, error: findError } = await supabaseAdmin
       .from('_pidr_users')
       .select('*')
       .eq('telegram_id', telegramId)
@@ -565,8 +568,9 @@ export async function POST(req: NextRequest) {
       if (referrerId && referrerId !== String(telegramId)) {
         console.log('🎁 Обрабатываем реферальную ссылку от:', referrerId);
         try {
+          // ✅ ИСПРАВЛЕНО: Используем supabaseAdmin для обхода RLS
           // Проверяем, существует ли пригласивший пользователь
-          const { data: referrerUser, error: referrerError } = await supabase
+          const { data: referrerUser, error: referrerError } = await supabaseAdmin
             .from('_pidr_users')
             .select('telegram_id')
             .eq('telegram_id', referrerId)

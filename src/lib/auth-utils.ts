@@ -5,7 +5,7 @@
 
 import { NextRequest } from 'next/server';
 import * as jwt from 'jsonwebtoken';
-import { supabase } from './supabase';
+import { supabase, supabaseAdmin } from './supabase';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -181,7 +181,8 @@ export async function getUserIdFromDatabase(
   environment: AuthEnvironment
 ): Promise<{ dbUserId: number | null; user: any }> {
   try {
-    let query = supabase.from('_pidr_users').select('*');
+    // ✅ ИСПРАВЛЕНО: Используем supabaseAdmin для обхода RLS политик и предотвращения бесконечной рекурсии
+    let query = supabaseAdmin.from('_pidr_users').select('*');
     
     if (environment === 'telegram') {
       // Для Telegram - ищем по telegram_id

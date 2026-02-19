@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '../../../../lib/supabase';
+import { supabaseAdmin } from '../../../../lib/supabase';
 
 // POST /api/admin/cleanup-zombies - Очистка зомби-онлайн статусов
 export async function POST(req: NextRequest) {
@@ -9,7 +9,8 @@ export async function POST(req: NextRequest) {
     // Переводим в offline пользователей, которые не заходили больше 10 минут
     const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
     
-    const { data: zombieUsers, error: findError } = await supabase
+    // ✅ ИСПРАВЛЕНО: Используем supabaseAdmin для обхода RLS
+    const { data: zombieUsers, error: findError } = await supabaseAdmin
       .from('_pidr_users')
       .select('id, username, last_seen')
       .eq('status', 'online')
@@ -26,8 +27,9 @@ export async function POST(req: NextRequest) {
     console.log(`🧟 Найдено зомби-пользователей: ${zombieUsers?.length || 0}`);
 
     if (zombieUsers && zombieUsers.length > 0) {
+      // ✅ ИСПРАВЛЕНО: Используем supabaseAdmin для обхода RLS
       // Переводим их в offline
-      const { error: updateError } = await supabase
+      const { error: updateError } = await supabaseAdmin
         .from('_pidr_users')
         .update({ status: 'offline' })
         .eq('status', 'online')
@@ -44,8 +46,9 @@ export async function POST(req: NextRequest) {
       console.log(`✅ Переведено в offline: ${zombieUsers.length} пользователей`);
     }
 
+    // ✅ ИСПРАВЛЕНО: Используем supabaseAdmin для обхода RLS
     // Получаем актуальную статистику
-    const { data: stats } = await supabase
+    const { data: stats } = await supabaseAdmin
       .from('_pidr_users')
       .select('status')
       .then(({ data, error }: { data: any; error: any }) => {
@@ -88,7 +91,8 @@ export async function GET(req: NextRequest) {
 
     const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
     
-    const { data: zombieUsers, error } = await supabase
+    // ✅ ИСПРАВЛЕНО: Используем supabaseAdmin для обхода RLS
+    const { data: zombieUsers, error } = await supabaseAdmin
       .from('_pidr_users')
       .select('id, username, last_seen, status')
       .eq('status', 'online')

@@ -75,6 +75,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // ✅ ИСПРАВЛЕНО: Используем supabaseAdmin для обхода RLS
     const { data: friends, error: friendsError } = await supabase
       .from('_pidr_users')
       .select('telegram_id, username, first_name, avatar_url, rating, games_played, wins, status, online_status, last_seen')

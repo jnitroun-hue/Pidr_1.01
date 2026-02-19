@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { supabase } from '../../../../lib/supabase';
+import { supabaseAdmin } from '../../../../lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '../../../../lib/auth-utils';
 
 // ✅ Явная конфигурация runtime для Next.js 15
@@ -34,8 +34,8 @@ export async function GET(req: NextRequest) {
     const user = dbUser;
 
     // Обновляем last_seen
-    // ✅ УНИВЕРСАЛЬНО: Обновляем по id из БД
-    await supabase
+    // ✅ ИСПРАВЛЕНО: Используем supabaseAdmin для обхода RLS
+    await supabaseAdmin
       .from('_pidr_users')
       .update({
         last_seen: new Date().toISOString(),
