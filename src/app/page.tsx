@@ -81,69 +81,7 @@ function HomeWithParams() {
       console.log('🌐 Обнаружен браузер - проверяем сессию');
       setCheckingAuth(true);
       
-      // ✅ ПРОВЕРЯЕМ PENDING AUTH ИЗ SESSIONSTORAGE (после логина/регистрации)
-      // Это должно быть ПЕРВЫМ делом, до любых API запросов!
-      if (typeof window !== 'undefined') {
-        console.log('🔍 [Браузер] Проверяем pendingAuth в sessionStorage...');
-        const pendingAuthStr = sessionStorage.getItem('pendingAuth');
-        
-        if (pendingAuthStr) {
-          console.log('📦 [Браузер] pendingAuth найден в sessionStorage!');
-          try {
-            const pendingAuth = JSON.parse(pendingAuthStr);
-            const timeDiff = Date.now() - pendingAuth.timestamp;
-            
-            console.log('⏱️ [Браузер] Время с момента сохранения:', timeDiff, 'мс');
-            
-            // ✅ УВЕЛИЧЕНО: Используем данные если они свежие (менее 30 секунд)
-            if (timeDiff < 30000 && pendingAuth.user) {
-              console.log('✅ [Браузер] pendingAuth свежий, используем данные:', pendingAuth.user.username);
-              console.log('👤 [Браузер] Данные пользователя:', pendingAuth.user);
-              
-              const existingUser: User = {
-                id: pendingAuth.user.id,
-                username: pendingAuth.user.username,
-                firstName: pendingAuth.user.firstName || pendingAuth.user.username,
-                lastName: pendingAuth.user.lastName || '',
-                telegramId: pendingAuth.user.telegramId || '',
-                coins: pendingAuth.user.coins || 1000,
-                rating: pendingAuth.user.rating || 0,
-                gamesPlayed: pendingAuth.user.games_played || pendingAuth.user.gamesPlayed || 0,
-                gamesWon: pendingAuth.user.games_won || pendingAuth.user.gamesWon || 0,
-                photoUrl: pendingAuth.user.avatar_url || pendingAuth.user.photoUrl || ''
-              };
-              
-              console.log('✅ [Браузер] Устанавливаем пользователя из pendingAuth:', existingUser.username);
-              setUser(existingUser);
-              setCheckingAuth(false);
-              initialized.current = true;
-              
-              // Удаляем pendingAuth после использования
-              sessionStorage.removeItem('pendingAuth');
-              console.log('🗑️ [Браузер] pendingAuth удален из sessionStorage');
-              
-              setTimeout(() => {
-                setLoading(false);
-                setTimeout(() => setShowMainMenu(true), 100);
-              }, 500);
-              
-              console.log('✅ [Браузер] Вход выполнен через pendingAuth, НЕ вызываем checkAuth()');
-              return; // ✅ КРИТИЧНО: Выходим, НЕ вызываем checkAuth()!
-            } else {
-              // Данные устарели, удаляем
-              console.log('⏰ [Браузер] pendingAuth устарел, удаляем');
-              sessionStorage.removeItem('pendingAuth');
-            }
-          } catch (e) {
-            console.warn('⚠️ [Браузер] Ошибка парсинга pendingAuth:', e);
-            sessionStorage.removeItem('pendingAuth');
-          }
-        } else {
-          console.log('📭 [Браузер] pendingAuth не найден в sessionStorage');
-        }
-      }
-      
-      // Проверяем сессию через API (без localStorage)
+      // Проверяем сессию через API (cookie → Redis/БД)
       const checkAuth = async () => {
         try {
           console.log('🔍 [Браузер] Проверяем сессию через /api/auth...');
@@ -199,49 +137,11 @@ function HomeWithParams() {
             console.error('  2. Проблема с компиляцией Next.js');
             console.error('  3. Неправильная конфигурация API routes');
             
-            // ✅ FALLBACK: Если API не работает, но есть cookie - используем pendingAuth или ждем
+            // FALLBACK: Если API не работает — ждем и пробуем ещё раз
             const hasAuthCookie = typeof document !== 'undefined' && 
               document.cookie.includes('auth_token=');
             
             console.log('🍪 [Браузер] Проверка cookie:', hasAuthCookie ? 'найден' : 'не найден');
-            console.log('🍪 [Браузер] Все cookies:', typeof document !== 'undefined' ? document.cookie : 'N/A');
-            
-            // ✅ ЕЩЕ РАЗ ПРОВЕРЯЕМ pendingAuth (может быть сохранен после редиректа)
-            const pendingAuthRetry = typeof window !== 'undefined' && sessionStorage.getItem('pendingAuth');
-            if (pendingAuthRetry) {
-              console.log('🔄 [Браузер] pendingAuth найден при повторной проверке!');
-              try {
-                const pendingAuth = JSON.parse(pendingAuthRetry);
-                if (pendingAuth.user) {
-                  console.log('✅ [Браузер] Используем pendingAuth из повторной проверки');
-                  const existingUser: User = {
-                    id: pendingAuth.user.id,
-                    username: pendingAuth.user.username,
-                    firstName: pendingAuth.user.firstName || pendingAuth.user.username,
-                    lastName: pendingAuth.user.lastName || '',
-                    telegramId: pendingAuth.user.telegramId || '',
-                    coins: pendingAuth.user.coins || 1000,
-                    rating: pendingAuth.user.rating || 0,
-                    gamesPlayed: pendingAuth.user.games_played || pendingAuth.user.gamesPlayed || 0,
-                    gamesWon: pendingAuth.user.games_won || pendingAuth.user.gamesWon || 0,
-                    photoUrl: pendingAuth.user.avatar_url || pendingAuth.user.photoUrl || ''
-                  };
-                  
-                  setUser(existingUser);
-                  setCheckingAuth(false);
-                  initialized.current = true;
-                  sessionStorage.removeItem('pendingAuth');
-                  
-                  setTimeout(() => {
-                    setLoading(false);
-                    setTimeout(() => setShowMainMenu(true), 100);
-                  }, 500);
-                  return;
-                }
-              } catch (e) {
-                console.warn('⚠️ [Браузер] Ошибка парсинга pendingAuth при повторной проверке:', e);
-              }
-            }
             
             if (hasAuthCookie) {
               console.log('🍪 [Браузер] Cookie найден, но API не работает. Ждем и пробуем еще раз...');

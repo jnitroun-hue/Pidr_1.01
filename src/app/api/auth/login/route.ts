@@ -123,31 +123,29 @@ export async function POST(request: NextRequest) {
       token
     });
 
-    // ✅ ИСПРАВЛЕНО: Устанавливаем cookie с правильными настройками для Vercel
+    // ✅ Cookie настройки для веб-логина
+    // sameSite: 'lax' — стандарт для браузера, работает на Vercel
+    // secure: true — обязательно для production HTTPS
     const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
-    const isVercel = !!process.env.VERCEL;
     
-    // ✅ КРИТИЧНО: Для Vercel используем 'none' для cross-domain cookies
-    const sameSiteValue: 'none' | 'lax' = isVercel ? 'none' : 'lax';
+    // Проверяем - это Telegram WebApp запрос? (cross-site iframe)
+    const userAgent = request.headers.get('user-agent') || '';
+    const isTelegramRequest = userAgent.includes('Telegram') || 
+                              !!request.headers.get('x-telegram-id');
+    
+    // Для Telegram WebApp нужен sameSite: 'none' (cross-site iframe)
+    // Для обычного браузера - sameSite: 'lax' (более безопасно и надежно)
+    const sameSiteValue: 'none' | 'lax' = isTelegramRequest ? 'none' : 'lax';
+    
     const cookieSettings = {
       httpOnly: true,
-      secure: true, // Всегда true для production
-      sameSite: sameSiteValue, // 'none' для Vercel, 'lax' для localhost
+      secure: isProduction, // true на Vercel (HTTPS), false на localhost
+      sameSite: sameSiteValue,
       maxAge: 30 * 24 * 60 * 60, // 30 дней
-      path: '/',
-      domain: isVercel ? undefined : undefined // Не указываем domain для Vercel
+      path: '/'
     };
     
-    // ✅ КРИТИЧНО: Сначала удаляем старый cookie (Telegram или другой),
-    // чтобы не было конфликта сессий между веб и Telegram
-    response.cookies.set('auth_token', '', {
-      httpOnly: true,
-      secure: true,
-      sameSite: sameSiteValue,
-      maxAge: 0,
-      path: '/',
-    });
-    // Затем устанавливаем новый
+    // ✅ Устанавливаем новый cookie (перезаписывает старый Telegram-токен)
     response.cookies.set('auth_token', token, cookieSettings);
     
     console.log('🍪 [Login] Cookie установлен:', {

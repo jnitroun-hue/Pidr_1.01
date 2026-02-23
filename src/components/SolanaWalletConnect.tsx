@@ -112,9 +112,6 @@ export default function SolanaWalletConnect({ onConnect, onDisconnect }: SolanaW
           }, 2000);
         }
         
-        // Сохраняем состояние ожидания подключения
-        sessionStorage.setItem('solana_connect_pending', 'true');
-        
         return;
       }
       

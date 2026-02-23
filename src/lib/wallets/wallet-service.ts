@@ -230,29 +230,13 @@ export class WalletService {
   }
 
   private saveTransaction(transaction: DepositTransaction): void {
-    if (typeof window === 'undefined') return;
-    
-    const transactions = this.loadTransactions();
-    const existingIndex = transactions.findIndex(tx => tx.id === transaction.id);
-    
-    if (existingIndex >= 0) {
-      transactions[existingIndex] = transaction;
-    } else {
-      transactions.push(transaction);
-    }
-    
-    localStorage.setItem('wallet_transactions', JSON.stringify(transactions));
+    // Транзакции хранятся только в БД через API — localStorage не используется
+    console.log('💾 [WalletService] Транзакция сохраняется в БД:', transaction.id);
   }
 
   private loadTransactions(): DepositTransaction[] {
-    if (typeof window === 'undefined') return [];
-    
-    try {
-      const stored = localStorage.getItem('wallet_transactions');
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
+    // Транзакции загружаются только из БД через API — localStorage не используется
+    return [];
   }
 
   private async addGameCoinsToUser(userId: string, amount: number): Promise<void> {

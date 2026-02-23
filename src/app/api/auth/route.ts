@@ -105,34 +105,36 @@ export async function GET(req: NextRequest) {
     let userCheckError: any = null;
     
     if (authMethod === 'web') {
-      // Для веб-версии - находим пользователя по id из БД
-      const { data, error } = await supabase
-        .from('_pidr_users')
-        .select('id, telegram_id, auth_method')
-        .eq('id', parseInt(userId))
-        .single();
-      userForCheck = data;
-      userCheckError = error;
+      // Для веб-версии - находим пользователя по id из БД (supabaseAdmin для обхода RLS)
+      const numericId = parseInt(userId);
+      if (!isNaN(numericId)) {
+        const { data, error } = await supabaseAdmin
+          .from('_pidr_users')
+          .select('id, telegram_id, auth_method')
+          .eq('id', numericId)
+          .maybeSingle();
+        userForCheck = data;
+        userCheckError = error;
+      }
     } else {
       // Для Telegram авторизации - проверяем по id или telegram_id
-      // Пробуем найти по id (если userId - это числовой id из БД)
       if (!isNaN(Number(userId))) {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseAdmin
           .from('_pidr_users')
           .select('id, telegram_id')
           .eq('id', parseInt(userId))
-          .single();
+          .maybeSingle();
         userForCheck = data;
         userCheckError = error;
       }
       
       // Если не найдено по id, ищем по telegram_id
       if (!userForCheck) {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseAdmin
           .from('_pidr_users')
           .select('id, telegram_id')
           .eq('telegram_id', userId)
-          .single();
+          .maybeSingle();
         userForCheck = data;
         userCheckError = error;
       }
@@ -206,35 +208,47 @@ export async function GET(req: NextRequest) {
       console.log('ℹ️ Device fingerprint не проверяется (отсутствует в токене или header)');
     }
 
-    // ✅ ИСПРАВЛЕНО: userId из токена может быть как id из БД, так и telegram_id
-    // Сначала пробуем найти по id, если не найдено - ищем по telegram_id
-    console.log('🔍 [GET /api/auth] Запрашиваем пользователя с userId:', userId, 'telegramId из токена:', telegramIdFromToken);
+    console.log('🔍 [GET /api/auth] Ищем пользователя, authMethod:', authMethod, 'userId:', userId);
     
     let user: any = null;
     let error: any = null;
     
-    // ✅ ИСПРАВЛЕНО: Используем supabaseAdmin для обхода RLS
-    // Пробуем найти по id (если userId - это числовой id из БД)
-    if (!isNaN(Number(userId))) {
+    if (authMethod === 'web') {
+      // ✅ ВЕБ: ТОЛЬКО по числовому id из БД — никогда не трогаем telegram_id
+      const numericId = parseInt(userId);
+      if (isNaN(numericId)) {
+        console.error('❌ [GET /api/auth] Для веб userId должен быть числом, получено:', userId);
+        return NextResponse.json({ success: false, message: 'Невалидный токен' }, { status: 401 });
+      }
       const { data, error: err } = await supabaseAdmin
         .from('_pidr_users')
         .select('*')
-        .eq('id', parseInt(userId))
+        .eq('id', numericId)
         .single();
       user = data;
       error = err;
-    }
-    
-    // Если не найдено по id, ищем по telegram_id
-    if (!user && (!error || error.code === 'PGRST116')) {
-      console.log('🔍 Пользователь не найден по id, ищем по telegram_id:', userId);
-      const { data, error: err } = await supabaseAdmin
-        .from('_pidr_users')
-        .select('*')
-        .eq('telegram_id', userId)
-        .single();
-      user = data;
-      error = err;
+    } else {
+      // ✅ TELEGRAM/VK: ищем по id из БД (userId = числовой id пользователя)
+      if (!isNaN(Number(userId))) {
+        const { data, error: err } = await supabaseAdmin
+          .from('_pidr_users')
+          .select('*')
+          .eq('id', parseInt(userId))
+          .single();
+        user = data;
+        error = err;
+      }
+      // Если не найдено по id — fallback по telegram_id
+      if (!user) {
+        console.log('🔍 Fallback: ищем по telegram_id:', userId);
+        const { data, error: err } = await supabaseAdmin
+          .from('_pidr_users')
+          .select('*')
+          .eq('telegram_id', userId)
+          .single();
+        user = data;
+        error = err;
+      }
     }
 
     if (error || !user) {
@@ -697,15 +711,18 @@ export async function POST(req: NextRequest) {
     console.log('🔐 Создаем токен с device fingerprint:', deviceFingerprint.substring(0, 8) + '...');
 
     // Создаем JWT токен с device fingerprint
+    // ✅ КРИТИЧНО: authMethod ОБЯЗАТЕЛЕН чтобы GET не путал Telegram с веб
     const token = jwt.sign(
       { 
         userId: user.id,
         telegramId: user.telegram_id,
         username: user.username,
-        deviceFingerprint // ✅ ПРИВЯЗКА К УСТРОЙСТВУ
+        authMethod: 'telegram',   // ← ОБЯЗАТЕЛЬНО
+        authSource: 'telegram',   // ← дублируем для совместимости
+        deviceFingerprint
       },
       JWT_SECRET,
-      { expiresIn: '30d' } // Токен действует 30 дней
+      { expiresIn: '30d' }
     );
 
     // Устанавливаем cookie с токеном

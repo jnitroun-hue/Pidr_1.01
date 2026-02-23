@@ -54,11 +54,6 @@ export class SolanaWalletConnector {
         }, 2000);
       }
       
-      // Сохраняем состояние ожидания подключения
-      if (typeof sessionStorage !== 'undefined') {
-        sessionStorage.setItem('solana_connect_pending', 'true');
-      }
-      
       // На мобильных устройствах мы не можем сразу получить ответ
       // Пользователь должен будет вернуться в приложение после подключения
       throw new Error('MOBILE_DEEP_LINK'); // Специальная ошибка для обработки

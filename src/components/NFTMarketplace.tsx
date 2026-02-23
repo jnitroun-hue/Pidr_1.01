@@ -208,23 +208,26 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
     };
   }, [activeTab, loadMarketplace, loadMySales, loadMyNFTs]);
 
-  // ✅ АВТОМАТИЧЕСКОЕ ОТКРЫТИЕ МОДАЛКИ ПРОДАЖИ ИЗ КОЛЛЕКЦИИ
+  // ✅ АВТОМАТИЧЕСКОЕ ОТКРЫТИЕ МОДАЛКИ ПРОДАЖИ — через URL-параметр ?sell=<id>
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const nftToSell = sessionStorage.getItem('nft_to_sell');
-      if (nftToSell) {
-        try {
-          const nft = JSON.parse(nftToSell);
+      const params = new URLSearchParams(window.location.search);
+      const sellId = params.get('sell');
+      if (sellId) {
+        // Ищем карту по id в списке NFT пользователя
+        const nft = myNFTs.find((n: any) => String(n.id) === sellId);
+        if (nft) {
           setSelectedNFT(nft);
           setShowSellModal(true);
           setActiveTab('my-nfts');
-          sessionStorage.removeItem('nft_to_sell');
-        } catch (error) {
-          console.error('Ошибка парсинга NFT для продажи:', error);
+          // Убираем параметр из URL без перезагрузки
+          const url = new URL(window.location.href);
+          url.searchParams.delete('sell');
+          window.history.replaceState({}, '', url.toString());
         }
       }
     }
-  }, []);
+  }, [myNFTs]);
 
   // Обработчики
   const handleBuyNFT = async (listing: Listing) => {

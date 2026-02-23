@@ -221,10 +221,8 @@ export default function NFTGallery() {
   };
 
   const handleSell = (card: NFTCard) => {
-    // Передаём данные карты в sessionStorage для страницы магазина
-    sessionStorage.setItem('nft_to_sell', JSON.stringify(card));
-    // Перенаправляем на страницу магазина
-    window.location.href = '/shop';
+    // Передаём id карты через URL-параметр — без sessionStorage
+    window.location.href = `/shop?sell=${encodeURIComponent(card.id)}`;
   };
 
   const handleDelete = async (card: NFTCard) => {

@@ -104,58 +104,10 @@ export default function LoginPage() {
           hasToken: !!data.token
         });
         
-        // ✅ Сохраняем данные в sessionStorage для немедленного использования
-        if (typeof window !== 'undefined') {
-          // ✅ Нормализуем данные пользователя для совместимости
-          const normalizedUser = {
-            id: data.user.id,
-            username: data.user.username,
-            firstName: data.user.firstName || data.user.username || '',
-            lastName: data.user.lastName || '',
-            telegramId: data.user.telegramId || '',
-            coins: data.user.coins || 1000,
-            rating: data.user.rating || 0,
-            gamesPlayed: data.user.games_played || data.user.gamesPlayed || 0,
-            gamesWon: data.user.games_won || data.user.gamesWon || 0,
-            photoUrl: data.user.avatar_url || data.user.photoUrl || ''
-          };
-          
-          const pendingAuthData = {
-            user: normalizedUser,
-            timestamp: Date.now()
-          };
-          
-          sessionStorage.setItem('pendingAuth', JSON.stringify(pendingAuthData));
-          
-          console.log('💾 [Login] Сохранены данные pendingAuth:', {
-            username: normalizedUser.username,
-            id: normalizedUser.id,
-            timestamp: pendingAuthData.timestamp
-          });
-          
-          // ✅ ПРОВЕРЯЕМ что данные действительно сохранились
-          const verify = sessionStorage.getItem('pendingAuth');
-          if (verify) {
-            console.log('✅ [Login] Проверка: pendingAuth успешно сохранен в sessionStorage');
-          } else {
-            console.error('❌ [Login] ОШИБКА: pendingAuth НЕ сохранен в sessionStorage!');
-          }
-          
-          // ✅ ПРОВЕРЯЕМ COOKIE после небольшой задержки
-          setTimeout(() => {
-            const hasCookie = document.cookie.includes('auth_token=');
-            console.log('🍪 [Login] Проверка cookie после логина:', hasCookie ? '✅ НАЙДЕН' : '❌ НЕ НАЙДЕН');
-            if (!hasCookie) {
-              console.warn('⚠️ [Login] Cookie не найден! Возможна проблема с установкой cookie.');
-            }
-          }, 500);
-        }
-        
-        // ✅ УВЕЛИЧИВАЕМ ЗАДЕРЖКУ для установки cookie и редиректим
-        setTimeout(() => {
-          console.log('🔄 Редирект на главную страницу...');
-          router.push('/');
-        }, 1500); // Увеличено до 1.5 секунды для надежности
+        // Cookie устанавливается сервером автоматически
+        // Редиректим на главную
+        console.log('✅ Логин успешен, редирект...');
+        router.push('/');
       } else {
         setError(data.message || 'Ошибка входа');
       }
