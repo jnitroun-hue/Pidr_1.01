@@ -85,7 +85,8 @@ export async function GET(req: NextRequest) {
     // ✅ ПРОВЕРКА БЕЗОПАСНОСТИ: x-telegram-id header (только для Telegram авторизации)
     // Для веб-версии этот header не требуется
     const telegramIdHeader = req.headers.get('x-telegram-id');
-    const authMethod = payload?.authMethod || payload?.authSource || 'telegram';
+    // ✅ ИСПРАВЛЕНО: Дефолт 'web' вместо 'telegram', чтобы веб-пользователи не блокировались
+    const authMethod = payload?.authMethod || payload?.authSource || (payload?.telegramId ? 'telegram' : 'web');
     
     // Если это Telegram авторизация - проверяем header
     // Если это веб-версия - пропускаем проверку header

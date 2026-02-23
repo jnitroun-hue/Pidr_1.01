@@ -138,6 +138,16 @@ export async function POST(request: NextRequest) {
       domain: isVercel ? undefined : undefined // Не указываем domain для Vercel
     };
     
+    // ✅ КРИТИЧНО: Сначала удаляем старый cookie (Telegram или другой),
+    // чтобы не было конфликта сессий между веб и Telegram
+    response.cookies.set('auth_token', '', {
+      httpOnly: true,
+      secure: true,
+      sameSite: sameSiteValue,
+      maxAge: 0,
+      path: '/',
+    });
+    // Затем устанавливаем новый
     response.cookies.set('auth_token', token, cookieSettings);
     
     console.log('🍪 [Login] Cookie установлен:', {

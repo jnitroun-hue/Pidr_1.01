@@ -16,7 +16,21 @@ export async function POST(request: NextRequest) {
 
     const response = NextResponse.json({ success: true });
     
-    // Удаляем cookie
+    // ✅ Удаляем оба возможных cookie (auth_token и pidr_session)
+    response.cookies.set('auth_token', '', {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      maxAge: 0,
+      path: '/',
+    });
+    response.cookies.set('auth_token', '', {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      maxAge: 0,
+      path: '/',
+    });
     response.cookies.delete('pidr_session');
 
     return response;

@@ -133,22 +133,25 @@ export function getUserIdFromRequest(req: NextRequest): { userId: string | null;
       let userId: string | null = null;
       let detectedEnv: AuthEnvironment = environment;
       
-      // ✅ УНИВЕРСАЛЬНО: Определяем источник авторизации из токена
-      if (payload.telegramId) {
-        userId = payload.telegramId.toString();
-        detectedEnv = 'telegram';
-      } else if (payload.vkId) {
-        userId = payload.vkId.toString();
+      // ✅ КРИТИЧНО: Сначала определяем authMethod/authSource из токена
+      // Это предотвращает путаницу между веб и Telegram сессиями
+      const tokenAuthMethod = payload.authMethod || payload.authSource;
+      
+      if (tokenAuthMethod === 'web') {
+        // ✅ ВЕБ-СЕССИЯ: userId это числовой id из БД
+        userId = payload.userId?.toString() || null;
+        detectedEnv = 'web';
+      } else if (tokenAuthMethod === 'vk' || payload.vkId) {
+        userId = payload.vkId?.toString() || payload.userId?.toString() || null;
         detectedEnv = 'vk';
+      } else if (tokenAuthMethod === 'telegram' || payload.telegramId) {
+        // Telegram-сессия: используем telegramId если есть, иначе userId
+        userId = payload.telegramId?.toString() || payload.userId?.toString() || null;
+        detectedEnv = 'telegram';
       } else if (payload.userId) {
-        // ✅ ДЛЯ ВЕБ: userId в токене - это id из БД (число)
+        // Fallback: нет явного authMethod — определяем по наличию полей
         userId = payload.userId.toString();
-        // Определяем окружение по authMethod или authSource из токена
-        if (payload.authMethod === 'web' || payload.authSource === 'web') {
-          detectedEnv = 'web';
-        } else {
-          detectedEnv = payload.authSource || 'web';
-        }
+        detectedEnv = payload.telegramId ? 'telegram' : 'web';
       }
       
       if (userId) {
