@@ -37,15 +37,9 @@ export default function ReferralModal({ isOpen, onClose }: ReferralModalProps) {
   const loadStats = async () => {
     setLoading(true);
     try {
-      const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
-      const telegramId = telegramUser?.id?.toString() || '';
-
       const response = await fetch('/api/referral/stats', {
         method: 'GET',
-        credentials: 'include',
-        headers: {
-          'x-telegram-id': telegramId
-        }
+        credentials: 'include'
       });
 
       const result = await response.json();
@@ -78,15 +72,11 @@ export default function ReferralModal({ isOpen, onClose }: ReferralModalProps) {
 
     setApplying(true);
     try {
-      const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
-      const telegramId = telegramUser?.id?.toString() || '';
-
       const response = await fetch('/api/referral/apply', {
         method: 'POST',
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json',
-          'x-telegram-id': telegramId
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           referralCode: applyCode.trim()

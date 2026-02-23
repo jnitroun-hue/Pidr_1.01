@@ -82,13 +82,8 @@ export default function WalletManager({ showExchange = true, onCoinsAdded }: Wal
   };
 
   useEffect(() => {
-    // ✅ ИСПРАВЛЕНО: Загружаем транзакции пользователя через Telegram WebApp
-    const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
-    const telegramId = telegramUser?.id?.toString() || '';
-    
-    if (telegramId) {
-      loadUserTransactions(telegramId);
-    }
+    // Загружаем транзакции (без привязки к telegramId — данные из БД)
+    loadUserTransactions('');
     
     // Загружаем курсы валют
     loadCryptoPrices();

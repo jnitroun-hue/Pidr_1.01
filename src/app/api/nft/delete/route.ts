@@ -1,41 +1,33 @@
 /**
  * 🗑️ API: Удаление NFT карты
- * 
  * DELETE /api/nft/delete
- * 
- * Удаляет NFT из БД и из Supabase Storage
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export async function DELETE(request: NextRequest) {
   try {
     console.log('🗑️ [delete-nft] Удаление NFT карты');
 
+    // ✅ Авторизация через cookie → Redis/БД
+    const auth = requireAuth(request);
+    if (auth.error || !auth.userId) {
+      return NextResponse.json({ success: false, error: 'Требуется авторизация' }, { status: 401 });
+    }
+
+    const { dbUserId: userId } = await getUserIdFromDatabase(auth.userId, auth.environment);
+    if (!userId) {
+      return NextResponse.json({ success: false, error: 'Пользователь не найден в БД' }, { status: 404 });
+    }
+
     const body = await request.json();
-    // ✅ ИСПРАВЛЕНО: Принимаем nft_card_id или nftId (совместимость)
     const { nft_card_id, nftId } = body;
     const cardId = nft_card_id || nftId;
-
-    // Получаем user_id из headers
-    const telegramIdHeader = request.headers.get('x-telegram-id');
-    
-    if (!telegramIdHeader) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized: Telegram ID отсутствует' },
-        { status: 401 }
-      );
-    }
-
-    const userId = parseInt(telegramIdHeader, 10);
-
-    if (isNaN(userId)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid user ID' },
-        { status: 400 }
-      );
-    }
 
     if (!cardId) {
       return NextResponse.json(
@@ -54,26 +46,14 @@ export async function DELETE(request: NextRequest) {
       .single();
 
     if (fetchError || !nft) {
-      console.error('❌ NFT не найдена:', fetchError);
-      return NextResponse.json(
-        { success: false, error: 'NFT карта не найдена' },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: 'NFT карта не найдена' }, { status: 404 });
     }
 
-    console.log(`🔍 Проверка владельца: nft.user_id=${nft.user_id} (${typeof nft.user_id}), userId=${userId} (${typeof userId})`);
-
-    // Проверяем владельца (приводим оба значения к числу для сравнения)
+    // Проверяем владельца
     const nftUserId = typeof nft.user_id === 'string' ? parseInt(nft.user_id, 10) : nft.user_id;
     if (nftUserId !== userId) {
-      console.error(`❌ НЕ ВЛАДЕЛЕЦ! nftUserId=${nftUserId}, userId=${userId}`);
-      return NextResponse.json(
-        { success: false, error: 'Вы не владелец этой карты' },
-        { status: 403 }
-      );
+      return NextResponse.json({ success: false, error: 'Вы не владелец этой карты' }, { status: 403 });
     }
-
-    console.log('✅ Проверка владельца пройдена!');
 
     // Проверяем, не выставлена ли карта на продажу
     const { data: activeListing } = await supabase
@@ -92,11 +72,8 @@ export async function DELETE(request: NextRequest) {
 
     // Удаляем из Storage
     if (nft.storage_path) {
-      console.log(`📤 Удаляем файл из Storage: ${nft.storage_path}`);
-      
-      // ✅ Формируем правильный путь (может быть как с userId/, так и без)
-      const storagePath = nft.storage_path.startsWith('nft-card/') 
-        ? nft.storage_path.replace('nft-card/', '') 
+      const storagePath = nft.storage_path.startsWith('nft-card/')
+        ? nft.storage_path.replace('nft-card/', '')
         : nft.storage_path;
       
       const { error: storageError } = await supabase.storage
@@ -105,9 +82,6 @@ export async function DELETE(request: NextRequest) {
 
       if (storageError) {
         console.error('⚠️ Ошибка удаления из Storage:', storageError);
-        // Продолжаем удаление из БД даже если файл не удалился
-      } else {
-        console.log('✅ Файл удален из Storage');
       }
     }
 
@@ -118,19 +92,13 @@ export async function DELETE(request: NextRequest) {
       .eq('id', cardId);
 
     if (deleteError) {
-      console.error('❌ Ошибка удаления из БД:', deleteError);
       return NextResponse.json(
         { success: false, error: `Ошибка удаления: ${deleteError.message}` },
         { status: 500 }
       );
     }
 
-    console.log(`✅ NFT ${cardId} удалена`);
-
-    return NextResponse.json({
-      success: true,
-      message: 'NFT карта успешно удалена'
-    });
+    return NextResponse.json({ success: true, message: 'NFT карта успешно удалена' });
 
   } catch (error: any) {
     console.error('❌ [delete-nft] Критическая ошибка:', error);
@@ -140,4 +108,3 @@ export async function DELETE(request: NextRequest) {
     }, { status: 500 });
   }
 }
-

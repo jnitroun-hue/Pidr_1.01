@@ -56,18 +56,9 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
 
   const fetchUserCards = async () => {
     try {
-      // ✅ Берём данные из Telegram WebApp
-      const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
-      const telegramId = telegramUser?.id?.toString() || '';
-      const username = telegramUser?.username || telegramUser?.first_name || '';
-
       const response = await fetch('/api/nft/generate-canvas', {
         method: 'GET',
-        credentials: 'include',
-        headers: {
-          'x-telegram-id': telegramId,
-          'x-username': username
-        }
+        credentials: 'include'
       });
       if (response.ok) {
         const data = await response.json();
@@ -128,17 +119,10 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
       const imageDataUrl = generateCardImage(selectedSuit, selectedRank);
       console.log('✅ Изображение сгенерировано, отправляем на сервер...');
 
-      // ✅ Берём данные из Telegram WebApp
-      const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
-      const telegramId = telegramUser?.id?.toString() || '';
-      const username = telegramUser?.username || telegramUser?.first_name || '';
-
       const response = await fetch('/api/nft/generate-canvas', {
         method: 'POST',
         headers: { 
-          'Content-Type': 'application/json',
-          'x-telegram-id': telegramId,
-          'x-username': username
+          'Content-Type': 'application/json'
         },
         credentials: 'include',
         body: JSON.stringify({

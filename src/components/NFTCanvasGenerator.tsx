@@ -66,20 +66,8 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
 
   const fetchUserCards = async () => {
     try {
-      // Получаем данные пользователя из localStorage
-      // ✅ ИСПРАВЛЕНО: Берём telegramId из Telegram WebApp напрямую
-      const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
-      const telegramId = telegramUser?.id?.toString() || '';
-      const username = telegramUser?.username || telegramUser?.first_name || '';
-      
-      console.log('🎴 [NFT] Отправляем запрос с headers:', { telegramId, username });
-
       const response = await fetch('/api/nft/generate-canvas', {
-        credentials: 'include',
-        headers: {
-          'x-telegram-id': telegramId || '',
-          'x-username': username || ''
-        }
+        credentials: 'include'
       });
       
       if (response.ok) {
@@ -214,20 +202,10 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
       
       console.log('✅ Изображение сгенерировано, отправляем на сервер...');
 
-      // Получаем данные пользователя из localStorage
-      // ✅ ИСПРАВЛЕНО: Берём telegramId из Telegram WebApp напрямую
-      const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
-      const telegramId = telegramUser?.id?.toString() || '';
-      const username = telegramUser?.username || telegramUser?.first_name || '';
-      
-      console.log('🎴 [NFT] Отправляем запрос с headers:', { telegramId, username });
-
       const response = await fetch('/api/nft/generate-canvas', {
         method: 'POST',
         headers: { 
-          'Content-Type': 'application/json',
-          'x-telegram-id': telegramId || '',
-          'x-username': username || ''
+          'Content-Type': 'application/json'
         },
         credentials: 'include',
         body: JSON.stringify({
@@ -307,20 +285,11 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
             // ✅ Генерируем изображение (БЕЗ rarity)
             const imageDataUrl = generateCardImage(suit, rank);
             
-            // ✅ ИСПРАВЛЕНО: Берём telegramId из Telegram WebApp напрямую
-            const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
-            const telegramId = telegramUser?.id?.toString() || '';
-            const username = telegramUser?.username || telegramUser?.first_name || '';
-            
-            console.log('🎴 [NFT Full Deck] Отправляем запрос с headers:', { telegramId, username });
-            
             // Отправляем на сервер
             const response = await fetch('/api/nft/generate-canvas', {
               method: 'POST',
               headers: { 
-                'Content-Type': 'application/json',
-                'x-telegram-id': telegramId || '',
-                'x-username': username || ''
+                'Content-Type': 'application/json'
               },
               credentials: 'include',
               body: JSON.stringify({

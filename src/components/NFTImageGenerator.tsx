@@ -63,17 +63,9 @@ export default function NFTImageGenerator({ userCoins, onBalanceUpdate }: NFTIma
 
   const fetchUserCards = async () => {
     try {
-      const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
-      const telegramId = telegramUser?.id?.toString() || '';
-      const username = telegramUser?.username || telegramUser?.first_name || '';
-
       const response = await fetch('/api/nft/generate-image', {
         method: 'GET',
-        credentials: 'include',
-        headers: {
-          'x-telegram-id': telegramId,
-          'x-username': username
-        }
+        credentials: 'include'
       });
       if (response.ok) {
         const data = await response.json();
@@ -95,10 +87,6 @@ export default function NFTImageGenerator({ userCoins, onBalanceUpdate }: NFTIma
     try {
       setIsGenerating(true);
       console.log('🎨 Генерация NFT карты с готовым изображением...');
-
-      const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
-      const telegramId = telegramUser?.id?.toString() || '';
-      const username = telegramUser?.username || telegramUser?.first_name || '';
 
       // ✅ Получаем изображение из public/cards/
       const imagePath = `/cards/${selectedSuit}/${selectedRank}.png`;
@@ -124,9 +112,7 @@ export default function NFTImageGenerator({ userCoins, onBalanceUpdate }: NFTIma
         method: 'POST',
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json',
-          'x-telegram-id': telegramId,
-          'x-username': username
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           action: 'single',

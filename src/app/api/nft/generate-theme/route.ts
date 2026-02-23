@@ -9,10 +9,14 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabase, supabaseAdmin } from '@/lib/supabase';
+import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 import sharp from 'sharp';
 import path from 'path';
 import fs from 'fs';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 // Конфигурация тем
 const THEMES: Record<string, { prefix: string; folder: string; total: number }> = {
@@ -26,28 +30,20 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🎨 [generate-theme] Генерация тематической NFT карты');
 
+    // ✅ Авторизация через cookie → Redis/БД
+    const auth = requireAuth(request);
+    if (auth.error || !auth.userId) {
+      return NextResponse.json({ success: false, error: 'Требуется авторизация' }, { status: 401 });
+    }
+
+    const { dbUserId: userId, user: dbUser } = await getUserIdFromDatabase(auth.userId, auth.environment);
+    if (!userId || !dbUser) {
+      return NextResponse.json({ success: false, error: 'Пользователь не найден' }, { status: 404 });
+    }
+
     // Получаем данные
     const body = await request.json();
     const { suit, rank, imageData, theme, themeId, action, skipCoinDeduction } = body;
-
-    // Получаем user_id из headers
-    const telegramIdHeader = request.headers.get('x-telegram-id');
-    
-    if (!telegramIdHeader) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized: Telegram ID отсутствует' },
-        { status: 401 }
-      );
-    }
-
-    const userId = parseInt(telegramIdHeader, 10);
-
-    if (isNaN(userId)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid user ID' },
-        { status: 400 }
-      );
-    }
 
     console.log(`👤 Пользователь: ${userId}`);
     console.log(`🎨 Тема: ${theme}, ID: ${themeId}, Карта: ${rank}${suit}`);
@@ -139,54 +135,34 @@ export async function POST(request: NextRequest) {
 
       const cost = costs[action] || 10000;
 
-      // ✅ ПОЛУЧАЕМ ТЕКУЩИЙ БАЛАНС ПОЛЬЗОВАТЕЛЯ
-      const { data: userData, error: userError } = await supabase
-        .from('_pidr_users')
-        .select('coins, id')
-        .eq('telegram_id', userId.toString())
-        .single();
-
-      if (userError || !userData) {
-        console.error('❌ Ошибка получения данных пользователя:', userError);
+      // ✅ ПРОВЕРЯЕМ ДОСТАТОЧНО ЛИ МОНЕТ (используем dbUser из авторизации)
+      if (dbUser.coins < cost) {
         return NextResponse.json(
-          { success: false, error: 'Ошибка получения данных пользователя' },
-          { status: 500 }
-        );
-      }
-
-      // ✅ ПРОВЕРЯЕМ ДОСТАТОЧНО ЛИ МОНЕТ
-      if (userData.coins < cost) {
-        console.error(`❌ Недостаточно монет: требуется ${cost}, есть ${userData.coins}`);
-        return NextResponse.json(
-          { success: false, error: `Недостаточно монет. Требуется: ${cost}, есть: ${userData.coins}` },
+          { success: false, error: `Недостаточно монет. Требуется: ${cost}, есть: ${dbUser.coins}` },
           { status: 400 }
         );
       }
 
-      // ✅ СПИСЫВАЕМ МОНЕТЫ ПРЯМО ЧЕРЕЗ UPDATE
-      newBalance = userData.coins - cost;
-      const { error: updateError } = await supabase
+      // ✅ СПИСЫВАЕМ МОНЕТЫ
+      newBalance = dbUser.coins - cost;
+      const { error: updateError } = await supabaseAdmin
         .from('_pidr_users')
         .update({ coins: newBalance })
-        .eq('id', userData.id);
+        .eq('id', userId);
 
       if (updateError) {
-        console.error('❌ Ошибка списания монет:', updateError);
-        return NextResponse.json(
-          { success: false, error: 'Ошибка списания монет' },
-          { status: 500 }
-        );
+        return NextResponse.json({ success: false, error: 'Ошибка списания монет' }, { status: 500 });
       }
 
       // ✅ СОЗДАЕМ ТРАНЗАКЦИЮ
       await supabase
         .from('_pidr_coin_transactions')
         .insert({
-          user_id: userData.id,
+          user_id: userId,
           amount: -cost,
           transaction_type: 'nft_generation',
           description: `Генерация NFT карты: ${rank} of ${suit} (${theme})`,
-          balance_before: userData.coins,
+          balance_before: dbUser.coins,
           balance_after: newBalance
         });
 

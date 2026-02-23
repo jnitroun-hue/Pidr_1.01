@@ -42,17 +42,9 @@ export default function ConnectedWalletsList({
 
   const loadWallets = async () => {
     try {
-      const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
-      const telegramId = telegramUser?.id?.toString() || '';
-      const username = telegramUser?.username || telegramUser?.first_name || '';
-
       const response = await fetch('/api/nft/connect-wallet', {
         method: 'GET',
-        credentials: 'include',
-        headers: {
-          'x-telegram-id': telegramId || '',
-          'x-username': username || ''
-        }
+        credentials: 'include'
       });
 
       if (response.ok) {

@@ -189,15 +189,11 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
       console.log(`🎨 [Client] Генерируем карту: ${theme}, ID: ${randomId}`);
       const imageData = await generateThemeCardImage(randomSuit, randomRank, randomId, theme);
       
-      const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
-      
       const response = await fetch('/api/nft/generate-theme', {
         method: 'POST',
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json',
-          'x-telegram-id': telegramUser?.id?.toString() || '',
-          'x-username': telegramUser?.username || 'User'
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           suit: randomSuit,
@@ -238,17 +234,14 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
         } else {
           // ✅ ЕСЛИ newBalance НЕ ПРИШЕЛ - ЗАГРУЖАЕМ ИЗ БД
           console.warn('⚠️ newBalance не получен, загружаем из БД...');
-          const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
-          if (telegramUser?.id && onBalanceUpdate) {
+          if (onBalanceUpdate) {
             try {
               const balanceResponse = await fetch('/api/user/me', {
                 method: 'GET',
                 credentials: 'include',
-                cache: 'no-store', // ✅ ОТКЛЮЧАЕМ КЭШИРОВАНИЕ
+                cache: 'no-store',
                 headers: {
-                  'Content-Type': 'application/json',
-                  'x-telegram-id': telegramUser.id.toString(),
-                  'x-username': telegramUser.username || 'User'
+                  'Content-Type': 'application/json'
                 }
               });
               if (balanceResponse.ok) {
@@ -310,15 +303,11 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
           // ✅ ГЕНЕРИРУЕМ ИЗОБРАЖЕНИЕ НА КЛИЕНТЕ!
           const imageData = await generateThemeCardImage(suit, rank, themeId, theme);
           
-          const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
-          
           const response = await fetch('/api/nft/generate-theme', {
             method: 'POST',
             credentials: 'include',
             headers: {
-              'Content-Type': 'application/json',
-              'x-telegram-id': telegramUser?.id?.toString() || '',
-              'x-username': telegramUser?.username || 'User'
+              'Content-Type': 'application/json'
             },
             body: JSON.stringify({
               suit,
@@ -340,15 +329,11 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
       }
 
       // Списываем монеты 1 раз
-      const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
-      
       const deductResponse = await fetch('/api/user/add-coins', {
         method: 'POST',
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json',
-          'x-telegram-id': telegramUser?.id?.toString() || '',
-          'x-username': telegramUser?.username || 'User'
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           amount: -themeConfig.deckCost

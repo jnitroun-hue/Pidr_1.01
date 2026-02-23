@@ -51,19 +51,13 @@ export default function NFTGallery() {
   const loadCollection = async (retryCount = 0) => {
     setIsLoading(true);
     try {
-      const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
-      const telegramId = telegramUser?.id?.toString() || '';
-      const username = telegramUser?.username || telegramUser?.first_name || '';
-
       const response = await fetch('/api/nft/collection', {
         method: 'GET',
         credentials: 'include',
         headers: {
-          'x-telegram-id': telegramId || '',
-          'x-username': username || '',
-          'Cache-Control': 'no-cache' // ✅ ДОПОЛНИТЕЛЬНО ОТКЛЮЧАЕМ КЭШИРОВАНИЕ
+          'Cache-Control': 'no-cache'
         },
-        cache: 'no-store' // ✅ ОТКЛЮЧАЕМ КЭШИРОВАНИЕ
+        cache: 'no-store'
       });
 
       const result = await response.json();
@@ -128,18 +122,13 @@ export default function NFTGallery() {
 
   const handleAddToDeck = async (card: NFTCard, forceReplace: boolean = false) => {
     try {
-      const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
-      const telegramId = telegramUser?.id?.toString() || '';
-      const username = telegramUser?.username || telegramUser?.first_name || '';
-
       // Если это принудительная замена
       if (forceReplace && duplicateInfo) {
         const response = await fetch('/api/nft/replace-deck-card', {
           method: 'POST',
+          credentials: 'include',
           headers: {
-            'Content-Type': 'application/json',
-            'x-telegram-id': telegramId,
-            'x-username': username
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify({
             existingCardId: duplicateInfo.existingCard.id,
@@ -175,10 +164,9 @@ export default function NFTGallery() {
 
       const response = await fetch('/api/nft/add-to-deck', {
         method: 'POST',
+        credentials: 'include',
         headers: {
-          'Content-Type': 'application/json',
-          'x-telegram-id': telegramId,
-          'x-username': username
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           nft_card_id: card.id,
@@ -231,14 +219,11 @@ export default function NFTGallery() {
     }
 
     try {
-      const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
-      const telegramId = telegramUser?.id?.toString() || '';
-
       const response = await fetch('/api/nft/delete', {
         method: 'DELETE',
+        credentials: 'include',
         headers: {
-          'Content-Type': 'application/json',
-          'x-telegram-id': telegramId
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           nftId: card.id

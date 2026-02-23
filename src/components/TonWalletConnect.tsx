@@ -34,18 +34,9 @@ export default function TonWalletConnect({ onConnect, onDisconnect }: TonWalletC
 
   const loadSavedWallets = async () => {
     try {
-      // ✅ ИСПРАВЛЕНО: Берём telegramId из Telegram WebApp напрямую
-      const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
-      const telegramId = telegramUser?.id?.toString() || '';
-      const username = telegramUser?.username || telegramUser?.first_name || '';
-
       const response = await fetch('/api/nft/connect-wallet', {
         method: 'GET',
-        credentials: 'include',
-        headers: {
-          'x-telegram-id': telegramId || '',
-          'x-username': username || ''
-        }
+        credentials: 'include'
       });
 
       if (response.ok) {
@@ -69,17 +60,10 @@ export default function TonWalletConnect({ onConnect, onDisconnect }: TonWalletC
 
     setIsSaving(true);
     try {
-      // ✅ ИСПРАВЛЕНО: Берём telegramId из Telegram WebApp напрямую
-      const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
-      const telegramId = telegramUser?.id?.toString() || '';
-      const username = telegramUser?.username || telegramUser?.first_name || '';
-
       const response = await fetch('/api/nft/connect-wallet', {
         method: 'POST',
         headers: { 
-          'Content-Type': 'application/json',
-          'x-telegram-id': telegramId || '',
-          'x-username': username || ''
+          'Content-Type': 'application/json'
         },
         credentials: 'include',
         body: JSON.stringify({

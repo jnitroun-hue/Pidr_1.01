@@ -908,9 +908,8 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
       // Проверяем новые платежи
       const response = await fetch('/api/wallet/check-payments', {
         method: 'POST',
+        credentials: 'include',
         headers: {
-          'x-telegram-id': currentUser.id,
-          'x-username': currentUser.username,
           'Content-Type': 'application/json'
         }
       });

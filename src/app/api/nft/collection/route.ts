@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { getSessionFromRequest } from '@/lib/auth/session-utils';
+import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/nft/collection
@@ -8,21 +11,18 @@ import { getSessionFromRequest } from '@/lib/auth/session-utils';
  */
 export async function GET(req: NextRequest) {
   try {
-    // Проверяем аутентификацию - БЕЗ cookies, только из localStorage через headers
-    const telegramIdHeader = req.headers.get('x-telegram-id');
-    const usernameHeader = req.headers.get('x-username');
-    
-    if (!telegramIdHeader) {
-      console.error('❌ [collection] Не найден x-telegram-id header');
-      return NextResponse.json(
-        { success: false, message: 'Требуется авторизация' },
-        { status: 401 }
-      );
+    // ✅ Авторизация через cookie → Redis/БД
+    const auth = requireAuth(req);
+    if (auth.error || !auth.userId) {
+      return NextResponse.json({ success: false, message: 'Требуется авторизация' }, { status: 401 });
     }
 
-    const userId = telegramIdHeader;
-    const userIdBigInt = parseInt(userId, 10); // ✅ Конвертируем в BIGINT
-    console.log(`📦 Получаем NFT коллекцию пользователя ${userId} (${userIdBigInt}) через headers...`);
+    const { dbUserId: userIdBigInt } = await getUserIdFromDatabase(auth.userId, auth.environment);
+    if (!userIdBigInt) {
+      return NextResponse.json({ success: false, message: 'Пользователь не найден в БД' }, { status: 404 });
+    }
+
+    console.log(`📦 Получаем NFT коллекцию пользователя id=${userIdBigInt}...`);
 
     // ✅ ПОЛУЧАЕМ ID КАРТ, КОТОРЫЕ ВЫСТАВЛЕНЫ НА ПРОДАЖУ
     const { data: activeListings } = await supabase
@@ -32,7 +32,6 @@ export async function GET(req: NextRequest) {
       .eq('status', 'active');
     
     const listedCardIds = (activeListings || []).map((listing: any) => listing.nft_card_id);
-    console.log(`🛒 [collection] Карты на продаже (${listedCardIds.length}):`, listedCardIds);
 
     // ✅ ПОЛУЧАЕМ ID КАРТ, КОТОРЫЕ УЖЕ В КОЛОДЕ
     const { data: deckCards } = await supabase
@@ -41,7 +40,6 @@ export async function GET(req: NextRequest) {
       .eq('user_id', userIdBigInt);
     
     const deckCardIds = (deckCards || []).map((deckCard: any) => deckCard.nft_card_id);
-    console.log(`🎴 [collection] Карты в колоде (${deckCardIds.length}):`, deckCardIds);
 
     // ✅ ПРЯМОЙ ЗАПРОС к таблице _pidr_nft_cards (ИСКЛЮЧАЕМ КАРТЫ НА ПРОДАЖЕ И В КОЛОДЕ!)
     let query = supabase
@@ -50,12 +48,10 @@ export async function GET(req: NextRequest) {
       .eq('user_id', userIdBigInt)
       .order('created_at', { ascending: false });
     
-    // ✅ ФИЛЬТРУЕМ: Убираем карты, которые на продаже
     if (listedCardIds.length > 0) {
       query = query.not('id', 'in', `(${listedCardIds.join(',')})`);
     }
     
-    // ✅ ФИЛЬТРУЕМ: Убираем карты, которые в колоде
     if (deckCardIds.length > 0) {
       query = query.not('id', 'in', `(${deckCardIds.join(',')})`);
     }
@@ -71,7 +67,7 @@ export async function GET(req: NextRequest) {
     }
 
     const collection = data || [];
-    console.log(`✅ Найдено ${collection.length} NFT карт для пользователя ${userId} (исключая ${listedCardIds.length} карт на продаже и ${deckCardIds.length} карт в колоде)`);
+    console.log(`✅ Найдено ${collection.length} NFT карт (исключая ${listedCardIds.length} на продаже и ${deckCardIds.length} в колоде)`);
 
     const response = NextResponse.json({
       success: true,
@@ -79,7 +75,6 @@ export async function GET(req: NextRequest) {
       total: collection.length
     });
     
-    // ✅ УСТАНАВЛИВАЕМ ЗАГОЛОВКИ ДЛЯ ОТКЛЮЧЕНИЯ КЭШИРОВАНИЯ
     response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     response.headers.set('Pragma', 'no-cache');
     response.headers.set('Expires', '0');
@@ -90,8 +85,7 @@ export async function GET(req: NextRequest) {
     console.error('❌ Ошибка API получения коллекции:', error);
     return NextResponse.json(
       { success: false, message: error.message || 'Ошибка сервера' },
-      { status: 401 }
+      { status: 500 }
     );
   }
 }
-

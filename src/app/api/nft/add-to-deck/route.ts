@@ -13,37 +13,31 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
     console.log('🎴 [add-to-deck] Получен запрос на добавление NFT в колоду');
-    console.log('🔍 [add-to-deck] Headers:', request.headers.get('x-telegram-id'));
+
+    // ✅ Авторизация через cookie → Redis/БД
+    const auth = requireAuth(request);
+    if (auth.error || !auth.userId) {
+      return NextResponse.json({ success: false, error: 'Требуется авторизация' }, { status: 401 });
+    }
+
+    const { dbUserId: userId } = await getUserIdFromDatabase(auth.userId, auth.environment);
+    if (!userId) {
+      return NextResponse.json({ success: false, error: 'Пользователь не найден в БД' }, { status: 404 });
+    }
 
     // Получаем данные из запроса
     const body = await request.json();
-    // ✅ ИСПРАВЛЕНО: Принимаем nft_card_id или nftId (совместимость)
     const { nft_card_id, nftId, suit, rank, image_url, imageUrl } = body;
     const cardId = nft_card_id || nftId;
     const cardImageUrl = image_url || imageUrl;
-
-    // Получаем user_id из headers
-    const telegramIdHeader = request.headers.get('x-telegram-id');
-    
-    if (!telegramIdHeader) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized: Telegram ID отсутствует' },
-        { status: 401 }
-      );
-    }
-
-    const userId = parseInt(telegramIdHeader, 10);
-
-    if (isNaN(userId)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid user ID' },
-        { status: 400 }
-      );
-    }
 
     console.log(`👤 Пользователь: ${userId}`);
     console.log(`🎴 NFT ID: ${cardId}, ${rank}${suit}`);

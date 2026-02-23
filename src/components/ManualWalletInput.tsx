@@ -56,16 +56,10 @@ export default function ManualWalletInput({ walletType, onWalletAdded, savedWall
     setError(null);
 
     try {
-      const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
-      const telegramId = telegramUser?.id?.toString() || '';
-      const username = telegramUser?.username || telegramUser?.first_name || '';
-
       const response = await fetch('/api/nft/connect-wallet', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'x-telegram-id': telegramId || '',
-          'x-username': username || ''
+          'Content-Type': 'application/json'
         },
         credentials: 'include',
         body: JSON.stringify({

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
-import { getSessionFromRequest } from '@/lib/auth/session-utils';
+import { supabase, supabaseAdmin } from '@/lib/supabase';
+import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 /**
  * API для генерации NFT карт через Canvas
@@ -10,41 +13,23 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🎴 [NFT Canvas] Запрос на генерацию карты');
 
-    // Проверяем аутентификацию - БЕЗ cookies, только из localStorage через headers
-    const telegramIdHeader = request.headers.get('x-telegram-id');
-    const usernameHeader = request.headers.get('x-username');
-    
-    if (!telegramIdHeader) {
-      console.error('❌ [NFT Canvas] Не найден x-telegram-id header');
-      return NextResponse.json(
-        { success: false, error: 'Требуется авторизация' },
-        { status: 401 }
-      );
+    // ✅ Авторизация через cookie → Redis/БД
+    const auth = requireAuth(request);
+    if (auth.error || !auth.userId) {
+      return NextResponse.json({ success: false, error: 'Требуется авторизация' }, { status: 401 });
     }
 
-    const session = {
-      userId: telegramIdHeader,
-      telegramId: telegramIdHeader,
-      username: usernameHeader || undefined
-    };
-
-    const userId = session.telegramId;
-    
-    // ✅ КРИТИЧНО: Проверяем что userId валидный ПЕРЕД любыми операциями!
-    const userIdBigInt = parseInt(userId, 10);
-    if (isNaN(userIdBigInt) || !userId) {
-      console.error('❌ [NFT Canvas] Невалидный userId:', { userId, userIdBigInt });
-      return NextResponse.json(
-        { success: false, error: 'Невалидный ID пользователя' },
-        { status: 400 }
-      );
+    const { dbUserId: dbId, user: dbUser } = await getUserIdFromDatabase(auth.userId, auth.environment);
+    if (!dbId || !dbUser) {
+      return NextResponse.json({ success: false, error: 'Пользователь не найден в БД' }, { status: 404 });
     }
 
-    console.log('✅ [NFT Canvas] Авторизован через headers:', { 
-      userId,
-      userIdBigInt,
-      username: session.username 
-    });
+    // userIdBigInt = числовой id из БД
+    const userIdBigInt = dbId;
+    // Для совместимости с остальным кодом (storage path и т.д.) используем telegram_id если есть
+    const userId = dbUser.telegram_id ? String(dbUser.telegram_id) : String(dbId);
+
+    console.log('✅ [NFT Canvas] Авторизован:', { dbId, userId });
 
     const body = await request.json();
     const { 
@@ -93,19 +78,8 @@ export async function POST(request: NextRequest) {
       totalCost: cardCost 
     });
 
-    // Проверяем баланс пользователя
-    const { data: user, error: userError } = await supabase
-      .from('_pidr_users')
-      .select('id, coins, telegram_id')
-      .eq('telegram_id', userId)
-      .single();
-
-    if (userError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'Пользователь не найден в БД' },
-        { status: 404 }
-      );
-    }
+    // Пользователь уже получен из БД через requireAuth — используем dbUser
+    const user = { id: dbUser.id, coins: dbUser.coins, telegram_id: dbUser.telegram_id };
 
     let newBalance = user.coins;
     let actualCost = cost;
@@ -123,7 +97,7 @@ export async function POST(request: NextRequest) {
 
       // Списываем монеты
       newBalance = user.coins - cost;
-      const { error: updateError } = await supabase
+      const { error: updateError } = await supabaseAdmin
         .from('_pidr_users')
         .update({ coins: newBalance })
         .eq('id', user.id);
@@ -194,7 +168,7 @@ export async function POST(request: NextRequest) {
       });
       
       // Возвращаем монеты обратно
-      await supabase
+      await supabaseAdmin
         .from('_pidr_users')
         .update({ coins: user.coins })
         .eq('id', user.id);
@@ -267,7 +241,7 @@ export async function POST(request: NextRequest) {
       // ✅ КРИТИЧНО: Возвращаем монеты если не удалось сохранить карту!
       if (!isPartOfDeck && newBalance !== undefined) {
         console.log('💰 [NFT Canvas] Возвращаем монеты обратно...');
-        await supabase
+        await supabaseAdmin
           .from('_pidr_users')
           .update({ coins: user.coins })
           .eq('id', user.id);
@@ -296,7 +270,7 @@ export async function POST(request: NextRequest) {
       
       // Возвращаем монеты
       if (!isPartOfDeck && newBalance !== undefined) {
-        await supabase
+        await supabaseAdmin
           .from('_pidr_users')
           .update({ coins: user.coins })
           .eq('id', user.id);
@@ -368,32 +342,22 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
-    // Проверяем аутентификацию - БЕЗ cookies, только из localStorage через headers
-    const telegramIdHeader = request.headers.get('x-telegram-id');
-    const usernameHeader = request.headers.get('x-username');
-    
-    if (!telegramIdHeader) {
-      console.error('❌ [NFT Canvas GET] Не найден x-telegram-id header');
-      return NextResponse.json(
-        { success: false, error: 'Требуется авторизация' },
-        { status: 401 }
-      );
+    // ✅ Авторизация через cookie → Redis/БД
+    const auth = requireAuth(request);
+    if (auth.error || !auth.userId) {
+      return NextResponse.json({ success: false, error: 'Требуется авторизация' }, { status: 401 });
     }
 
-    const session = {
-      userId: telegramIdHeader,
-      telegramId: telegramIdHeader,
-      username: usernameHeader || undefined
-    };
-
-    const userId = session.telegramId;
-    const userIdBigInt = parseInt(userId, 10); // ✅ Конвертируем в BIGINT
+    const { dbUserId: userIdBigInt } = await getUserIdFromDatabase(auth.userId, auth.environment);
+    if (!userIdBigInt) {
+      return NextResponse.json({ success: false, error: 'Пользователь не найден в БД' }, { status: 404 });
+    }
 
     // Получаем все карты пользователя
     const { data: cards, error } = await supabase
       .from('_pidr_nft_cards')
       .select('*')
-      .eq('user_id', userIdBigInt) // ✅ Используем BIGINT
+      .eq('user_id', userIdBigInt)
       .order('created_at', { ascending: false });
 
     if (error) {

@@ -1,21 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '../../../../lib/supabase';
-import jwt from 'jsonwebtoken';
+import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 
-const JWT_SECRET = process.env.JWT_SECRET;
-
-function getUserIdFromRequest(req: NextRequest): string | null {
-  if (!JWT_SECRET) return null;
-  const auth = req.headers.get('authorization');
-  if (!auth) return null;
-  const token = auth.replace('Bearer ', '');
-  try {
-    const payload = jwt.verify(token, JWT_SECRET) as any;
-    return payload.userId;
-  } catch {
-    return null;
-  }
-}
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 // Курсы обмена криптовалют на игровые монеты
 const EXCHANGE_RATES = {
@@ -29,10 +17,13 @@ const EXCHANGE_RATES = {
 
 // POST /api/wallet/check-payments - Проверить новые платежи и обновить баланс
 export async function POST(req: NextRequest) {
-  const userId = getUserIdFromRequest(req);
-  if (!userId) {
+  const auth = requireAuth(req);
+  if (auth.error || !auth.userId) {
     return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
   }
+
+  const { dbUserId: dbId } = await getUserIdFromDatabase(auth.userId, auth.environment);
+  const userId = dbId ? String(dbId) : auth.userId;
 
   try {
     console.log(`💳 Проверяем платежи для пользователя ${userId}`);
