@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import { randomUUID } from 'crypto'
 import { checkRateLimit, getRateLimitId } from '../../../lib/ratelimit'
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET || process.env.SUPABASE_JWT_SECRET;
 const BOT_TOKEN = process.env.BOT_TOKEN || '';
 const BOT_USERNAME = process.env.BOT_USERNAME || '';
 const APP_URL = process.env.APP_URL || '';

@@ -15,7 +15,7 @@ import { supabase } from '../../../../lib/supabase';
 
 // 🔐 Получение userId из запроса (исправлено)
 function getUserIdFromRequest(req: NextRequest): string | null {
-  const JWT_SECRET = process.env.JWT_SECRET;
+  const JWT_SECRET = process.env.JWT_SECRET || process.env.SUPABASE_JWT_SECRET;
   if (!JWT_SECRET) return null;
   
   const token = req.cookies.get('auth_token')?.value;

@@ -34,7 +34,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     // Проверяем токен
-    const JWT_SECRET = process.env.JWT_SECRET || '';
+    const JWT_SECRET = process.env.JWT_SECRET || process.env.SUPABASE_JWT_SECRET || '';
     if (!JWT_SECRET) {
       console.error('❌ JWT_SECRET не настроен на сервере');
       return NextResponse.json({ 

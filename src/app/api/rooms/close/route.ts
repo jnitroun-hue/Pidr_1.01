@@ -3,7 +3,7 @@ import { supabase } from '../../../../lib/supabase';
 import jwt from 'jsonwebtoken';
 import { checkRateLimit, getRateLimitId } from '../../../../lib/ratelimit';
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET || process.env.SUPABASE_JWT_SECRET;
 
 function getUserIdFromRequest(req: NextRequest): string | null {
   if (!JWT_SECRET) return null;

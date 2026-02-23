@@ -9,8 +9,8 @@ import crypto from 'crypto';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const JWT_SECRET = process.env.JWT_SECRET;
-const SESSION_SECRET = process.env.SESSION_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET || process.env.SUPABASE_JWT_SECRET;
+const SESSION_SECRET = process.env.SESSION_SECRET || process.env.SUPABASE_JWT_SECRET;
 const NEXTAUTH_URL = process.env.NEXTAUTH_URL || process.env.VERCEL_URL;
 
 // GET /api/auth - Проверка активной сессии

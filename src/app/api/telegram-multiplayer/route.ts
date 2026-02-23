@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '../../../lib/supabase';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET || process.env.SUPABASE_JWT_SECRET;
 const APP_URL = process.env.APP_URL || process.env.NEXTAUTH_URL || 'https://your-app.com';
 
 function getUserIdFromRequest(req: NextRequest): string | null {

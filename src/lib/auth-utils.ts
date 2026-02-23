@@ -7,7 +7,7 @@ import { NextRequest } from 'next/server';
 import * as jwt from 'jsonwebtoken';
 import { supabase, supabaseAdmin } from './supabase';
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET || process.env.SUPABASE_JWT_SECRET;
 
 /**
  * Определение типа окружения

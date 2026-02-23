@@ -17,7 +17,7 @@ import { getRedis } from '../redis/init';
 import * as jwt from 'jsonwebtoken';
 import * as crypto from 'crypto';
 
-const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || 'fallback-secret';
+const JWT_SECRET = process.env.JWT_SECRET || process.env.SUPABASE_JWT_SECRET || process.env.SESSION_SECRET || 'fallback-secret';
 const SESSION_TTL = 30 * 24 * 60 * 60; // 30 дней в секундах
 
 // Получаем Redis клиент через универсальную инициализацию

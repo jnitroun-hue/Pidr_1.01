@@ -182,7 +182,7 @@ export async function POST(request: NextRequest) {
     });
 
     // ТАКЖЕ устанавливаем auth_token (JWT) для совместимости с /api/auth
-    const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET;
+    const JWT_SECRET = process.env.JWT_SECRET || process.env.SUPABASE_JWT_SECRET || process.env.SESSION_SECRET;
     if (JWT_SECRET) {
       const token = jwt.sign(
         { 
