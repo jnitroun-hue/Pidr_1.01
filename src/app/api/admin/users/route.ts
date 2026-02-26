@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin-utils';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 
 /**
  * GET /api/admin/users
@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
     const offset = (page - 1) * limit;
 
     // Получаем список пользователей
-    let query = supabase
+    let query = supabaseAdmin
       .from('_pidr_users')
       .select('telegram_id, username, coins, total_games, wins, losses, is_admin, created_at, last_login_at, is_active')
       .order('created_at', { ascending: false })
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Получаем общее количество
-    const { count: totalCount } = await supabase
+    const { count: totalCount } = await supabaseAdmin
       .from('_pidr_users')
       .select('*', { count: 'exact', head: true });
 
@@ -90,7 +90,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     // Обновляем пользователя
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('_pidr_users')
       .update(updates)
       .eq('telegram_id', userId)

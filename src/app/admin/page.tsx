@@ -45,6 +45,19 @@ export default function AdminPanel() {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>('users');
+  const [isMobile, setIsMobile] = useState(false);
+  const [isTablet, setIsTablet] = useState(false);
+  
+  // Определение размера экрана
+  useEffect(() => {
+    const checkSize = () => {
+      setIsMobile(window.innerWidth <= 480);
+      setIsTablet(window.innerWidth <= 768);
+    };
+    checkSize();
+    window.addEventListener('resize', checkSize);
+    return () => window.removeEventListener('resize', checkSize);
+  }, []);
   
   // Users state
   const [users, setUsers] = useState<User[]>([]);
@@ -384,34 +397,40 @@ export default function AdminPanel() {
     <div style={{
       minHeight: '100vh',
       background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-      padding: '20px',
+      padding: isTablet ? '12px' : '20px',
       color: '#e2e8f0'
     }}>
       {/* Заголовок */}
       <div style={{
         maxWidth: '1400px',
         margin: '0 auto',
-        marginBottom: '30px'
+        marginBottom: isTablet ? '16px' : '30px'
       }}>
         <div style={{
           display: 'flex',
+          flexDirection: isTablet ? 'column' : 'row',
           justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '20px'
+          alignItems: isTablet ? 'flex-start' : 'center',
+          gap: isTablet ? '12px' : '0',
+          marginBottom: isTablet ? '12px' : '20px'
         }}>
-          <div>
+          <div style={{ flex: 1 }}>
             <h1 style={{
-              fontSize: '32px',
+              fontSize: isTablet ? '24px' : '32px',
               fontWeight: '800',
               background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               margin: 0,
-              marginBottom: '8px'
+              marginBottom: '4px'
             }}>
               🔐 Админ Панель
             </h1>
-            <p style={{ color: '#94a3b8', margin: 0 }}>
+            <p style={{ 
+              color: '#94a3b8', 
+              margin: 0,
+              fontSize: isTablet ? '12px' : '14px'
+            }}>
               Управление пользователями и системой
             </p>
           </div>
@@ -420,7 +439,7 @@ export default function AdminPanel() {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             style={{
-              padding: '12px 24px',
+              padding: isTablet ? '8px 16px' : '12px 24px',
               background: 'rgba(100, 116, 139, 0.2)',
               border: '2px solid rgba(100, 116, 139, 0.3)',
               borderRadius: '12px',
@@ -428,23 +447,27 @@ export default function AdminPanel() {
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
-              fontSize: '16px',
-              fontWeight: '600'
+              gap: '6px',
+              fontSize: isTablet ? '14px' : '16px',
+              fontWeight: '600',
+              whiteSpace: 'nowrap'
             }}
           >
-            <ChevronLeft size={20} />
-            Главное меню
+            <ChevronLeft size={isTablet ? 16 : 20} />
+            {isTablet ? 'Назад' : 'Главное меню'}
           </motion.button>
         </div>
 
         {/* Табы */}
         <div style={{
           display: 'flex',
-          gap: '12px',
-          marginBottom: '30px',
+          flexWrap: isTablet ? 'wrap' : 'nowrap',
+          gap: isTablet ? '6px' : '12px',
+          marginBottom: isTablet ? '16px' : '30px',
           borderBottom: '2px solid rgba(100, 116, 139, 0.3)',
-          paddingBottom: '12px'
+          paddingBottom: isTablet ? '8px' : '12px',
+          overflowX: isTablet ? 'auto' : 'visible',
+          WebkitOverflowScrolling: 'touch'
         }}>
           {(['users', 'promocodes', 'transactions', 'card-generator', 'rooms', 'rating'] as TabType[]).map((tab) => (
             <motion.button
@@ -453,7 +476,7 @@ export default function AdminPanel() {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               style={{
-                padding: '12px 24px',
+                padding: isTablet ? '8px 12px' : '12px 24px',
                 background: activeTab === tab 
                   ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
                   : 'rgba(100, 116, 139, 0.2)',
@@ -461,25 +484,30 @@ export default function AdminPanel() {
                 borderRadius: '12px',
                 color: activeTab === tab ? '#ffffff' : '#cbd5e1',
                 cursor: 'pointer',
-                fontSize: '14px',
+                fontSize: isTablet ? '12px' : '14px',
                 fontWeight: '600',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px'
+                gap: isTablet ? '4px' : '8px',
+                whiteSpace: 'nowrap',
+                flex: isTablet ? '1 1 calc(50% - 3px)' : 'none',
+                minWidth: isTablet ? 'calc(50% - 3px)' : 'auto'
               }}
             >
-              {tab === 'users' && <Users size={18} />}
-              {tab === 'promocodes' && <Ticket size={18} />}
-              {tab === 'transactions' && <CreditCard size={18} />}
-              {tab === 'card-generator' && <Sparkles size={18} />}
-              {tab === 'rooms' && <Home size={18} />}
-              {tab === 'rating' && <Trophy size={18} />}
-              {tab === 'users' && 'Пользователи'}
-              {tab === 'promocodes' && 'Промокоды'}
-              {tab === 'transactions' && 'Транзакции'}
-              {tab === 'card-generator' && 'Генератор карт'}
-              {tab === 'rooms' && 'Комнаты'}
-              {tab === 'rating' && 'Рейтинг'}
+              {tab === 'users' && <Users size={isTablet ? 14 : 18} />}
+              {tab === 'promocodes' && <Ticket size={isTablet ? 14 : 18} />}
+              {tab === 'transactions' && <CreditCard size={isTablet ? 14 : 18} />}
+              {tab === 'card-generator' && <Sparkles size={isTablet ? 14 : 18} />}
+              {tab === 'rooms' && <Home size={isTablet ? 14 : 18} />}
+              {tab === 'rating' && <Trophy size={isTablet ? 14 : 18} />}
+              <span style={{ display: isMobile ? 'none' : 'inline' }}>
+                {tab === 'users' && 'Пользователи'}
+                {tab === 'promocodes' && 'Промокоды'}
+                {tab === 'transactions' && 'Транзакции'}
+                {tab === 'card-generator' && 'Генератор карт'}
+                {tab === 'rooms' && 'Комнаты'}
+                {tab === 'rating' && 'Рейтинг'}
+              </span>
             </motion.button>
           ))}
         </div>
@@ -487,9 +515,11 @@ export default function AdminPanel() {
         {/* Статистика */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '16px',
-          marginBottom: '30px'
+          gridTemplateColumns: isTablet 
+            ? 'repeat(2, 1fr)' 
+            : 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: isTablet ? '8px' : '16px',
+          marginBottom: isTablet ? '16px' : '30px'
         }}>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -497,19 +527,28 @@ export default function AdminPanel() {
             style={{
               background: 'rgba(99, 102, 241, 0.1)',
               border: '2px solid rgba(99, 102, 241, 0.3)',
-              borderRadius: '16px',
-              padding: '20px',
+              borderRadius: isTablet ? '12px' : '16px',
+              padding: isTablet ? '12px' : '20px',
               display: 'flex',
               alignItems: 'center',
-              gap: '12px'
+              gap: isTablet ? '8px' : '12px'
             }}
           >
-            <Users size={32} color="#6366f1" />
+            <Users size={isTablet ? 24 : 32} color="#6366f1" />
             <div>
-              <div style={{ fontSize: '24px', fontWeight: '700', color: '#6366f1' }}>
+              <div style={{ 
+                fontSize: isTablet ? '18px' : '24px', 
+                fontWeight: '700', 
+                color: '#6366f1' 
+              }}>
                 {users.length}
               </div>
-              <div style={{ fontSize: '14px', color: '#94a3b8' }}>Пользователей</div>
+              <div style={{ 
+                fontSize: isTablet ? '11px' : '14px', 
+                color: '#94a3b8' 
+              }}>
+                Пользователей
+              </div>
             </div>
           </motion.div>
           {activeTab === 'promocodes' && (
@@ -597,18 +636,21 @@ export default function AdminPanel() {
         <div style={{
           background: 'rgba(15, 23, 42, 0.6)',
           border: '2px solid rgba(100, 116, 139, 0.3)',
-          borderRadius: '16px',
-          overflow: 'hidden'
+          borderRadius: isTablet ? '12px' : '16px',
+          overflow: 'hidden',
+          overflowX: isTablet ? 'auto' : 'visible'
         }}>
           <div style={{
             display: 'grid',
-            gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr 1fr auto',
-            gap: '16px',
-            padding: '16px',
+            gridTemplateColumns: isTablet 
+              ? '80px 1fr 80px 60px 60px 60px auto'
+              : '1fr 1fr 1fr 1fr 1fr 1fr auto',
+            gap: isTablet ? '8px' : '16px',
+            padding: isTablet ? '10px' : '16px',
             background: 'rgba(99, 102, 241, 0.1)',
             borderBottom: '2px solid rgba(100, 116, 139, 0.3)',
             fontWeight: '700',
-            fontSize: '14px',
+            fontSize: isTablet ? '11px' : '14px',
             color: '#94a3b8'
           }}>
             <div>ID</div>
@@ -627,45 +669,77 @@ export default function AdminPanel() {
               animate={{ opacity: 1 }}
               style={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr 1fr auto',
-                gap: '16px',
-                padding: '16px',
+                gridTemplateColumns: isTablet 
+                  ? '80px 1fr 80px 60px 60px 60px auto'
+                  : '1fr 1fr 1fr 1fr 1fr 1fr auto',
+                gap: isTablet ? '8px' : '16px',
+                padding: isTablet ? '10px' : '16px',
                 borderBottom: '1px solid rgba(100, 116, 139, 0.1)',
                 alignItems: 'center'
               }}
             >
-              <div style={{ color: '#cbd5e1', fontSize: '14px' }}>
-                {user.telegram_id}
+              <div style={{ 
+                color: '#cbd5e1', 
+                fontSize: isTablet ? '10px' : '14px',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}>
+                {String(user.telegram_id).slice(0, isTablet ? 6 : 20)}
+                {isTablet && String(user.telegram_id).length > 6 && '...'}
               </div>
-              <div style={{ color: '#e2e8f0', fontWeight: '600' }}>
+              <div style={{ 
+                color: '#e2e8f0', 
+                fontWeight: '600',
+                fontSize: isTablet ? '11px' : '14px',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}>
                 {user.username || 'Без имени'}
               </div>
-              <div style={{ color: '#fbbf24', fontWeight: '600' }}>
+              <div style={{ 
+                color: '#fbbf24', 
+                fontWeight: '600',
+                fontSize: isTablet ? '11px' : '14px'
+              }}>
                 {user.coins.toLocaleString()}
               </div>
-              <div style={{ color: '#cbd5e1' }}>
+              <div style={{ 
+                color: '#cbd5e1',
+                fontSize: isTablet ? '11px' : '14px'
+              }}>
                 {user.total_games || 0}
               </div>
-              <div style={{ color: '#10b981', fontWeight: '600' }}>
+              <div style={{ 
+                color: '#10b981', 
+                fontWeight: '600',
+                fontSize: isTablet ? '11px' : '14px'
+              }}>
                 {user.wins || 0}
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: isTablet ? '4px' : '8px',
+                flexWrap: 'wrap'
+              }}>
                 {user.is_admin && (
                   <span style={{
-                    padding: '4px 8px',
+                    padding: isTablet ? '2px 4px' : '4px 8px',
                     background: 'rgba(239, 68, 68, 0.2)',
                     color: '#ef4444',
                     borderRadius: '6px',
-                    fontSize: '12px',
+                    fontSize: isTablet ? '9px' : '12px',
                     fontWeight: '600'
                   }}>
-                    Админ
+                    {isTablet ? 'A' : 'Админ'}
                   </span>
                 )}
                 {user.is_active ? (
-                  <Check size={16} color="#10b981" />
+                  <Check size={isTablet ? 12 : 16} color="#10b981" />
                 ) : (
-                  <X size={16} color="#ef4444" />
+                  <X size={isTablet ? 12 : 16} color="#ef4444" />
                 )}
               </div>
               <div>
@@ -674,17 +748,18 @@ export default function AdminPanel() {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   style={{
-                    padding: '6px 12px',
+                    padding: isTablet ? '4px 8px' : '6px 12px',
                     background: 'rgba(99, 102, 241, 0.2)',
                     border: '1px solid rgba(99, 102, 241, 0.3)',
                     borderRadius: '8px',
                     color: '#6366f1',
                     cursor: 'pointer',
-                    fontSize: '12px',
-                    fontWeight: '600'
+                    fontSize: isTablet ? '10px' : '12px',
+                    fontWeight: '600',
+                    whiteSpace: 'nowrap'
                   }}
                 >
-                  Изменить
+                  {isTablet ? '✏️' : 'Изменить'}
                 </motion.button>
               </div>
             </motion.div>

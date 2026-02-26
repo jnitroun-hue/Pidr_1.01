@@ -280,6 +280,35 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
+/* ✅ ДЕСКТОП: Уменьшенные размеры для веб-версии */
+@media (min-width: 769px) {
+  .playerSeat {
+    width: 90px; /* Уменьшено с 120px */
+    padding: 6px 5px; /* Уменьшено с 10px 8px */
+    border-radius: 12px; /* Уменьшено с 16px */
+  }
+  
+  .playerAvatar {
+    width: 28px !important; /* Уменьшено */
+    height: 28px !important;
+  }
+  
+  .playerName {
+    font-size: 10px !important; /* Уменьшено */
+    max-width: 70px !important;
+  }
+  
+  .playerCard {
+    width: 10px !important; /* Уменьшено с 12px */
+    height: 14px !important; /* Уменьшено с 17px */
+  }
+  
+  .cardOnPenki {
+    width: 20px !important; /* Уменьшено с 27px */
+    height: 30px !important; /* Уменьшено с 40px */
+  }
+}
+
 /* Структура: аватар → карты → имя */
 .playerSeat .avatarWrap {
   order: -1;
