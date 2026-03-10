@@ -1,48 +1,85 @@
+/**
+ * ============================================================
+ * TELEGRAM MULTIPLAYER API
+ * ============================================================
+ * API для Telegram-интеграции мультиплеера
+ * Использует реальные таблицы _pidr_rooms, _pidr_room_players
+ * Redis для real-time состояний
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '../../../lib/supabase';
-import jwt from 'jsonwebtoken';
+import { supabaseAdmin } from '../../../lib/supabase';
+import { requireAuth, getUserIdFromDatabase } from '../../../lib/auth-utils';
+import {
+  atomicJoinRoom,
+  atomicLeaveRoom,
+  getPlayerRoom,
+  removePlayerFromAllRooms,
+  getRoomDetails,
+} from '../../../lib/multiplayer/player-state-manager';
 
-const JWT_SECRET = process.env.JWT_SECRET || process.env.SUPABASE_JWT_SECRET;
-const APP_URL = process.env.APP_URL || process.env.NEXTAUTH_URL || 'https://your-app.com';
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || process.env.NEXTAUTH_URL || 'https://your-app.com';
 
-function getUserIdFromRequest(req: NextRequest): string | null {
-  if (!JWT_SECRET) return null;
-  const auth = req.headers.get('authorization');
-  if (!auth) return null;
-  const token = auth.replace('Bearer ', '');
-  try {
-    const payload = jwt.verify(token, JWT_SECRET) as any;
-    return payload.userId;
-  } catch {
-    return null;
+// ============================================================
+// UTILITY FUNCTIONS
+// ============================================================
+
+function generateRoomCode(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
   }
+  return code;
 }
 
-// POST /api/telegram-multiplayer - Создать игру и пригласить друзей через Telegram
+// ============================================================
+// POST /api/telegram-multiplayer
+// ============================================================
+
 export async function POST(req: NextRequest) {
-  const userId = getUserIdFromRequest(req);
-  if (!userId) {
-    return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-  }
-
   try {
-    const { action, friendIds, roomId, roomCode, gameSettings } = await req.json();
+    // ✅ Универсальная авторизация через cookie/JWT
+    const auth = requireAuth(req);
+    if (auth.error || !auth.userId) {
+      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+    }
 
+    const { userId, environment } = auth;
+
+    // Получаем ID из БД
+    const { dbUserId, user } = await getUserIdFromDatabase(userId, environment);
+    if (!dbUserId || !user) {
+      return NextResponse.json({ success: false, message: 'Пользователь не найден' }, { status: 404 });
+    }
+
+    const body = await req.json();
+    const { action, friendIds, roomId, roomCode, gameSettings } = body;
+
+    // ============================================================
+    // ACTION: invite-friends — Отправить приглашения друзьям
+    // ============================================================
     if (action === 'invite-friends') {
-      // Отправляем приглашения друзьям
+      if (!friendIds || !Array.isArray(friendIds) || friendIds.length === 0) {
+        return NextResponse.json({ success: false, message: 'Не указаны друзья для приглашения' }, { status: 400 });
+      }
+
+      if (!roomId || !roomCode) {
+        return NextResponse.json({ success: false, message: 'Не указаны roomId/roomCode' }, { status: 400 });
+      }
+
       const invitations = [];
-      
+
       for (const friendId of friendIds) {
-        // Создаем персональную ссылку-приглашение
-        const inviteUrl = `${APP_URL}/game?roomId=${roomId}&roomCode=${roomCode}&invitedBy=${userId}`;
-        
-        // Создаем запись в базе данных
-        const { data: invitation, error } = await supabase
-          .from('game_invitations')
+        const inviteUrl = `${APP_URL}/game?roomId=${roomId}&roomCode=${roomCode}&invitedBy=${dbUserId}`;
+
+        // Сохраняем приглашение в _pidr_room_invites
+        const { data: invitation, error } = await supabaseAdmin
+          .from('_pidr_room_invites')
           .insert({
             room_id: roomId,
-            inviter_id: userId,
-            invited_id: friendId,
+            from_user_id: String(dbUserId),
+            to_user_id: String(friendId),
             invitation_url: inviteUrl,
             status: 'pending'
           })
@@ -55,6 +92,8 @@ export async function POST(req: NextRequest) {
             invitationId: invitation.id,
             inviteUrl
           });
+        } else {
+          console.error(`❌ [Invite] Ошибка создания приглашения для ${friendId}:`, error);
         }
       }
 
@@ -65,74 +104,170 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // ============================================================
+    // ACTION: accept-invitation — Принять приглашение
+    // ============================================================
     if (action === 'accept-invitation') {
-      const { invitationId } = await req.json();
-      
+      const { invitationId } = body;
+
+      if (!invitationId) {
+        return NextResponse.json({ success: false, message: 'Не указан invitationId' }, { status: 400 });
+      }
+
       // Обновляем статус приглашения
-      const { error } = await supabase
-        .from('game_invitations')
-        .update({ 
-          status: 'accepted', 
-          accepted_at: new Date().toISOString() 
+      const { data: invite, error } = await supabaseAdmin
+        .from('_pidr_room_invites')
+        .update({
+          status: 'accepted',
+          accepted_at: new Date().toISOString()
         })
         .eq('id', invitationId)
-        .eq('invited_id', userId);
+        .eq('to_user_id', String(dbUserId))
+        .select('room_id')
+        .single();
 
-      if (error) throw error;
+      if (error || !invite) {
+        return NextResponse.json({ success: false, message: 'Приглашение не найдено или уже обработано' }, { status: 404 });
+      }
+
+      // Получаем комнату
+      const { data: room } = await supabaseAdmin
+        .from('_pidr_rooms')
+        .select('id, room_code, max_players, status')
+        .eq('id', invite.room_id)
+        .in('status', ['waiting', 'playing'])
+        .single();
+
+      if (!room) {
+        return NextResponse.json({ success: false, message: 'Комната не найдена или уже закрыта' }, { status: 404 });
+      }
+
+      // Атомарно присоединяемся через Redis
+      const telegramId = user.telegram_id || String(dbUserId);
+      const joinResult = await atomicJoinRoom({
+        userId: telegramId,
+        username: user.username || user.first_name || 'Игрок',
+        roomId: room.id,
+        roomCode: room.room_code,
+        maxPlayers: room.max_players,
+        isHost: false,
+      });
+
+      if (!joinResult.success) {
+        return NextResponse.json({
+          success: false,
+          message: joinResult.error || 'Не удалось присоединиться к комнате'
+        }, { status: 400 });
+      }
 
       return NextResponse.json({
         success: true,
-        message: 'Приглашение принято'
+        message: 'Приглашение принято',
+        room: {
+          id: room.id,
+          roomCode: room.room_code,
+          position: joinResult.position
+        }
       });
     }
 
+    // ============================================================
+    // ACTION: create-telegram-room — Создать комнату из Telegram
+    // ============================================================
     if (action === 'create-telegram-room') {
-      // Создаем комнату специально для Telegram игры
-      const { data: room, error: roomError } = await supabase
-        .from('game_rooms')
+      const telegramId = user.telegram_id || String(dbUserId);
+
+      // Проверяем нет ли активной комнаты
+      const currentRoomId = await getPlayerRoom(telegramId);
+      if (currentRoomId) {
+        // Проверяем существует ли комната в БД
+        const { data: existingRoom } = await supabaseAdmin
+          .from('_pidr_rooms')
+          .select('id, name, room_code')
+          .eq('id', currentRoomId)
+          .in('status', ['waiting', 'playing'])
+          .single();
+
+        if (existingRoom) {
+          return NextResponse.json({
+            success: false,
+            message: `У вас уже есть активная комната "${existingRoom.name}" (${existingRoom.room_code})`,
+            currentRoom: existingRoom
+          }, { status: 400 });
+        } else {
+          // Комната в Redis но не в БД — чистим
+          await removePlayerFromAllRooms(telegramId);
+        }
+      }
+
+      // Создаём комнату в БД
+      const newRoomCode = roomCode || generateRoomCode();
+      const now = new Date().toISOString();
+
+      const { data: room, error: roomError } = await supabaseAdmin
+        .from('_pidr_rooms')
         .insert({
-          room_code: roomCode,
-          name: `Telegram игра ${new Date().toLocaleTimeString()}`,
-          host_id: userId,
+          room_code: newRoomCode,
+          name: `Telegram игра ${new Date().toLocaleTimeString('ru-RU')}`,
+          host_id: dbUserId,
           max_players: gameSettings?.maxPlayers || 4,
-          current_players: 1,
+          current_players: 0,
+          status: 'waiting',
           is_private: false,
-          source: 'telegram',
-          game_settings: {
-            ...gameSettings,
+          settings: {
+            ...(gameSettings || {}),
+            source: 'telegram',
             telegramIntegration: true
-          }
+          },
+          created_at: now,
+          updated_at: now,
+          last_activity: now
         })
         .select()
         .single();
 
-      if (roomError) throw roomError;
+      if (roomError || !room) {
+        console.error('❌ [Telegram Room] Ошибка создания комнаты:', roomError);
+        return NextResponse.json({ success: false, message: 'Ошибка создания комнаты' }, { status: 500 });
+      }
 
-      // Добавляем хоста как первого игрока
-      await supabase
-        .from('room_players')
-        .insert({
-          room_id: room.id,
-          user_id: userId,
-          position: 0,
-          is_ready: true,
-          source: 'telegram'
-        });
+      // Атомарно добавляем хоста через Redis
+      const joinResult = await atomicJoinRoom({
+        userId: telegramId,
+        username: user.username || user.first_name || 'Хост',
+        roomId: room.id,
+        roomCode: newRoomCode,
+        maxPlayers: gameSettings?.maxPlayers || 4,
+        isHost: true,
+      });
+
+      if (!joinResult.success) {
+        // Откатываем
+        await supabaseAdmin.from('_pidr_rooms').delete().eq('id', room.id);
+        return NextResponse.json({
+          success: false,
+          message: joinResult.error || 'Ошибка добавления хоста в комнату'
+        }, { status: 500 });
+      }
+
+      // Формируем Telegram Share URL
+      const gameUrl = `${APP_URL}/game?roomId=${room.id}&roomCode=${newRoomCode}&host=true`;
+      const telegramShareUrl = `https://t.me/share/url?url=${encodeURIComponent(gameUrl)}&text=${encodeURIComponent(
+        `🎮 Присоединяйся к игре P.I.D.R.!\n\n` +
+        `🎯 Комната: ${newRoomCode}\n` +
+        `👥 Игроков: 1/${room.max_players}\n\n` +
+        `Нажми на ссылку чтобы играть!`
+      )}`;
 
       return NextResponse.json({
         success: true,
         room: {
           id: room.id,
-          code: room.room_code,
+          code: newRoomCode,
           name: room.name,
-          telegramShareUrl: `https://t.me/share/url?url=${encodeURIComponent(
-            `${APP_URL}/game?roomId=${room.id}&roomCode=${room.room_code}&host=true`
-          )}&text=${encodeURIComponent(
-            `🎮 Присоединяйся к игре P.I.D.R.!\n\n` +
-            `🎯 Комната: ${room.room_code}\n` +
-            `👥 Игроков: ${room.current_players}/${room.max_players}\n\n` +
-            `Нажми на ссылку чтобы играть!`
-          )}`
+          position: joinResult.position,
+          isHost: true,
+          telegramShareUrl
         }
       });
     }
@@ -140,93 +275,145 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, message: 'Unknown action' }, { status: 400 });
 
   } catch (error: unknown) {
-    console.error('Telegram multiplayer API error:', error);
+    console.error('❌ [Telegram Multiplayer] POST error:', error);
     return NextResponse.json({ success: false, message: 'Internal server error' }, { status: 500 });
   }
 }
 
-// GET /api/telegram-multiplayer - Получить информацию о приглашениях
-export async function GET(req: NextRequest) {
-  const userId = getUserIdFromRequest(req);
-  if (!userId) {
-    return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-  }
+// ============================================================
+// GET /api/telegram-multiplayer — Получить приглашения
+// ============================================================
 
+export async function GET(req: NextRequest) {
   try {
+    // ✅ Универсальная авторизация
+    const auth = requireAuth(req);
+    if (auth.error || !auth.userId) {
+      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { userId, environment } = auth;
+    const { dbUserId, user } = await getUserIdFromDatabase(userId, environment);
+
+    if (!dbUserId || !user) {
+      return NextResponse.json({ success: false, message: 'Пользователь не найден' }, { status: 404 });
+    }
+
     const { searchParams } = new URL(req.url);
     const type = searchParams.get('type') || 'pending';
 
+    // ============================================================
+    // type: pending — Входящие приглашения
+    // ============================================================
     if (type === 'pending') {
-      // Получаем входящие приглашения
-      const { data: invitations, error } = await supabase
-        .from('game_invitations')
-        .select(`
-          id, room_id, created_at, invitation_url,
-          users!game_invitations_inviter_id_fkey (username, firstName, avatar),
-          game_rooms (room_code, name, current_players, max_players, status)
-        `)
-        .eq('invited_id', userId)
+      const { data: invites, error } = await supabaseAdmin
+        .from('_pidr_room_invites')
+        .select('id, room_id, from_user_id, invitation_url, status, created_at')
+        .eq('to_user_id', String(dbUserId))
         .eq('status', 'pending')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      const pendingInvitations = invitations?.map((inv: any) => ({
-        id: inv.id,
-        roomId: inv.room_id,
-        inviterName: inv.users?.username || inv.users?.firstName || 'Игрок',
-        inviterAvatar: inv.users?.avatar || '🎮',
-        roomCode: inv.game_rooms?.room_code,
-        roomName: inv.game_rooms?.name,
-        playerCount: `${inv.game_rooms?.current_players}/${inv.game_rooms?.max_players}`,
-        status: inv.game_rooms?.status,
-        inviteUrl: inv.invitation_url,
-        createdAt: inv.created_at
-      })) || [];
-
-      return NextResponse.json({
-        success: true,
-        invitations: pendingInvitations
-      });
-    }
-
-    if (type === 'sent') {
-      // Получаем отправленные приглашения
-      const { data: invitations, error } = await supabase
-        .from('game_invitations')
-        .select(`
-          id, room_id, status, created_at, accepted_at,
-          users!game_invitations_invited_id_fkey (username, firstName, avatar),
-          game_rooms (room_code, name, status)
-        `)
-        .eq('inviter_id', userId)
         .order('created_at', { ascending: false })
         .limit(20);
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ [Telegram Multiplayer] Ошибка загрузки приглашений:', error);
+        return NextResponse.json({ success: false, message: 'Ошибка загрузки приглашений' }, { status: 500 });
+      }
 
-      const sentInvitations = invitations?.map((inv: any) => ({
-        id: inv.id,
-        roomId: inv.room_id,
-        invitedName: inv.users?.username || inv.users?.firstName || 'Игрок',
-        invitedAvatar: inv.users?.avatar || '🎮',
-        roomCode: inv.game_rooms?.room_code,
-        roomName: inv.game_rooms?.name,
-        status: inv.status,
-        createdAt: inv.created_at,
-        acceptedAt: inv.accepted_at
-      })) || [];
+      // Обогащаем данными из БД
+      const enrichedInvites = await Promise.all((invites || []).map(async (inv: any) => {
+        // Получаем данные приглашающего
+        const { data: inviter } = await supabaseAdmin
+          .from('_pidr_users')
+          .select('username, first_name, avatar_url')
+          .or(`id.eq.${inv.from_user_id},telegram_id.eq.${inv.from_user_id}`)
+          .single();
+
+        // Получаем данные комнаты
+        const { data: room } = await supabaseAdmin
+          .from('_pidr_rooms')
+          .select('room_code, name, current_players, max_players, status')
+          .eq('id', inv.room_id)
+          .single();
+
+        // Обогащаем кол-вом игроков из Redis
+        let actualPlayers = room?.current_players || 0;
+        try {
+          const details = await getRoomDetails(inv.room_id);
+          if (details) actualPlayers = details.playerCount;
+        } catch {}
+
+        return {
+          id: inv.id,
+          roomId: inv.room_id,
+          inviterName: inviter?.username || inviter?.first_name || 'Игрок',
+          inviterAvatar: inviter?.avatar_url || '🎮',
+          roomCode: room?.room_code,
+          roomName: room?.name,
+          playerCount: `${actualPlayers}/${room?.max_players || 4}`,
+          status: room?.status,
+          inviteUrl: inv.invitation_url,
+          createdAt: inv.created_at
+        };
+      }));
 
       return NextResponse.json({
         success: true,
-        invitations: sentInvitations
+        invitations: enrichedInvites
+      });
+    }
+
+    // ============================================================
+    // type: sent — Отправленные приглашения
+    // ============================================================
+    if (type === 'sent') {
+      const { data: invites, error } = await supabaseAdmin
+        .from('_pidr_room_invites')
+        .select('id, room_id, to_user_id, status, created_at, accepted_at')
+        .eq('from_user_id', String(dbUserId))
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (error) {
+        console.error('❌ [Telegram Multiplayer] Ошибка загрузки отправленных:', error);
+        return NextResponse.json({ success: false, message: 'Ошибка загрузки приглашений' }, { status: 500 });
+      }
+
+      const enrichedSent = await Promise.all((invites || []).map(async (inv: any) => {
+        const { data: invited } = await supabaseAdmin
+          .from('_pidr_users')
+          .select('username, first_name, avatar_url')
+          .or(`id.eq.${inv.to_user_id},telegram_id.eq.${inv.to_user_id}`)
+          .single();
+
+        const { data: room } = await supabaseAdmin
+          .from('_pidr_rooms')
+          .select('room_code, name, status')
+          .eq('id', inv.room_id)
+          .single();
+
+        return {
+          id: inv.id,
+          roomId: inv.room_id,
+          invitedName: invited?.username || invited?.first_name || 'Игрок',
+          invitedAvatar: invited?.avatar_url || '🎮',
+          roomCode: room?.room_code,
+          roomName: room?.name,
+          status: inv.status,
+          createdAt: inv.created_at,
+          acceptedAt: inv.accepted_at
+        };
+      }));
+
+      return NextResponse.json({
+        success: true,
+        invitations: enrichedSent
       });
     }
 
     return NextResponse.json({ success: false, message: 'Invalid type' }, { status: 400 });
 
   } catch (error: unknown) {
-    console.error('Telegram multiplayer GET error:', error);
+    console.error('❌ [Telegram Multiplayer] GET error:', error);
     return NextResponse.json({ success: false, message: 'Internal server error' }, { status: 500 });
   }
 }

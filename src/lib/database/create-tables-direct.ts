@@ -170,6 +170,12 @@ CREATE TABLE IF NOT EXISTS _pidr_users (
     games_played INTEGER DEFAULT 0,
     games_won INTEGER DEFAULT 0,
     avatar_url TEXT,
+    is_admin BOOLEAN DEFAULT false,
+    is_active BOOLEAN DEFAULT true,
+    last_seen TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(20) DEFAULT 'offline',
+    password_hash TEXT,
+    email VARCHAR(255),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -185,6 +191,10 @@ CREATE TABLE IF NOT EXISTS _pidr_rooms (
     status VARCHAR(20) DEFAULT 'waiting',
     is_private BOOLEAN DEFAULT false,
     password VARCHAR(255),
+    settings JSONB DEFAULT '{}',
+    last_activity TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    finished_at TIMESTAMP WITH TIME ZONE,
+    game_mode VARCHAR(50) DEFAULT 'casual',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -223,6 +233,61 @@ CREATE TABLE IF NOT EXISTS _pidr_user_status (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 6. Приглашения в комнаты
+CREATE TABLE IF NOT EXISTS _pidr_room_invites (
+    id BIGSERIAL PRIMARY KEY,
+    room_id BIGINT NOT NULL,
+    from_user_id VARCHAR(255) NOT NULL,
+    to_user_id VARCHAR(255) NOT NULL,
+    invitation_url TEXT,
+    status VARCHAR(20) DEFAULT 'pending',
+    accepted_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 7. Промокоды
+CREATE TABLE IF NOT EXISTS _pidr_promocodes (
+    id BIGSERIAL PRIMARY KEY,
+    code VARCHAR(50) UNIQUE NOT NULL,
+    description TEXT,
+    reward_type VARCHAR(50) NOT NULL DEFAULT 'coins',
+    reward_value INTEGER NOT NULL DEFAULT 0,
+    max_uses INTEGER,
+    used_count INTEGER DEFAULT 0,
+    expires_at TIMESTAMP WITH TIME ZONE,
+    is_active BOOLEAN DEFAULT true,
+    created_by VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 8. Игры
+CREATE TABLE IF NOT EXISTS _pidr_games (
+    id BIGSERIAL PRIMARY KEY,
+    room_id BIGINT,
+    status VARCHAR(20) DEFAULT 'waiting',
+    winner_id VARCHAR(255),
+    total_players INTEGER DEFAULT 0,
+    game_duration_seconds INTEGER DEFAULT 0,
+    game_mode VARCHAR(50) DEFAULT 'casual',
+    game_data JSONB DEFAULT '{}',
+    started_at TIMESTAMP WITH TIME ZONE,
+    finished_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 9. Результаты игр
+CREATE TABLE IF NOT EXISTS _pidr_game_results (
+    id BIGSERIAL PRIMARY KEY,
+    game_id BIGINT NOT NULL,
+    user_id VARCHAR(255) NOT NULL,
+    position INTEGER NOT NULL,
+    rating_change INTEGER DEFAULT 0,
+    coins_change INTEGER DEFAULT 0,
+    is_winner BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- ИНДЕКСЫ
 CREATE INDEX IF NOT EXISTS idx_pidr_users_telegram_id ON _pidr_users (telegram_id);
 CREATE INDEX IF NOT EXISTS idx_pidr_rooms_code ON _pidr_rooms (room_code);
@@ -230,16 +295,18 @@ CREATE INDEX IF NOT EXISTS idx_pidr_rooms_status ON _pidr_rooms (status);
 CREATE INDEX IF NOT EXISTS idx_pidr_room_invites_to_user ON _pidr_room_invites (to_user_id, status);
 CREATE INDEX IF NOT EXISTS idx_pidr_room_invites_room ON _pidr_room_invites (room_id);
 
--- RLS ПОЛИТИКИ (открытые для разработки)
+-- RLS ПОЛИТИКИ
 ALTER TABLE _pidr_users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE _pidr_rooms ENABLE ROW LEVEL SECURITY;
 ALTER TABLE _pidr_room_players ENABLE ROW LEVEL SECURITY;
 ALTER TABLE _pidr_coin_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE _pidr_user_status ENABLE ROW LEVEL SECURITY;
 ALTER TABLE _pidr_room_invites ENABLE ROW LEVEL SECURITY;
+ALTER TABLE _pidr_promocodes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE _pidr_games ENABLE ROW LEVEL SECURITY;
+ALTER TABLE _pidr_game_results ENABLE ROW LEVEL SECURITY;
 
--- Политики доступа (открытые для разработки)
--- Удаляем существующие политики если есть, затем создаем новые
+-- Политики: Service Role — полный доступ, Anon — чтение
 DROP POLICY IF EXISTS "Enable all for all users" ON _pidr_users;
 CREATE POLICY "Enable all for all users" ON _pidr_users FOR ALL USING (true);
 
@@ -257,6 +324,15 @@ CREATE POLICY "Enable all for all users" ON _pidr_user_status FOR ALL USING (tru
 
 DROP POLICY IF EXISTS "Enable all for all users" ON _pidr_room_invites;
 CREATE POLICY "Enable all for all users" ON _pidr_room_invites FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Enable all for all users" ON _pidr_promocodes;
+CREATE POLICY "Enable all for all users" ON _pidr_promocodes FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Enable all for all users" ON _pidr_games;
+CREATE POLICY "Enable all for all users" ON _pidr_games FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Enable all for all users" ON _pidr_game_results;
+CREATE POLICY "Enable all for all users" ON _pidr_game_results FOR ALL USING (true);
 
 -- ГОТОВО! Все таблицы P.I.D.R. созданы!
   `;

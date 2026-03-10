@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin-utils';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 
 /**
  * GET /api/admin/transactions
@@ -25,9 +25,9 @@ export async function GET(req: NextRequest) {
     const transactionType = searchParams.get('type');
     const status = searchParams.get('status');
 
-    // Строим запрос
-    let query = supabase
-      .from('_pidr_transactions')
+    // Строим запрос (используем _pidr_coin_transactions — реальная таблица в БД)
+    let query = supabaseAdmin
+      .from('_pidr_coin_transactions')
       .select('*', { count: 'exact' });
 
     if (userId) {

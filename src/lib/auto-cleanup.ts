@@ -3,7 +3,7 @@
  * Вызывается при обычных запросах, не требует Vercel Cron
  */
 
-import { supabase } from './supabase';
+import { supabaseAdmin as supabase } from './supabase';
 
 let lastCleanup = 0;
 const CLEANUP_INTERVAL = 5 * 60 * 1000; // 5 минут

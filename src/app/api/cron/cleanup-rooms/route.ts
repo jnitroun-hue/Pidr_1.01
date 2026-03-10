@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin as supabase } from '@/lib/supabase';
 
 // ✅ VERCEL CRON JOB - АВТООЧИСТКА КОМНАТ ЕЖЕДНЕВНО (FREE PLAN)
 // На бесплатном плане Vercel cron работает только раз в день

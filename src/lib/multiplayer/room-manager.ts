@@ -1,4 +1,4 @@
-import { supabase } from '../supabase';
+import { supabaseAdmin as supabase } from '../supabase';
 import { RealtimeChannel } from '@supabase/supabase-js';
 
 interface Room {

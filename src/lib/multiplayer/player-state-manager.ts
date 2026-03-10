@@ -16,7 +16,7 @@
  */
 
 import { getRedis, isRedisAvailable } from '../redis/init';
-import { supabase } from '../supabase';
+import { supabaseAdmin as supabase } from '../supabase';
 import type { Redis } from '@upstash/redis';
 
 // Получаем Redis клиент через универсальную инициализацию

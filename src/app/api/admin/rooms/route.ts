@@ -1,25 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '../../../../lib/supabase';
-import { requireAuth } from '../../../../lib/auth-utils';
+import { supabaseAdmin } from '../../../../lib/supabase';
+import { requireAdmin } from '../../../../lib/admin-utils';
 
 // GET /api/admin/rooms - Получить список комнат для админа
 export async function GET(req: NextRequest) {
   try {
     // Проверка прав администратора
-    const auth = requireAuth(req);
-    if (auth.error) {
-      return NextResponse.json({ success: false, error: 'Требуется авторизация' }, { status: 401 });
-    }
-
-    // Проверяем, является ли пользователь админом
-    const { data: user } = await supabase
-      .from('_pidr_users')
-      .select('is_admin')
-      .or(`telegram_id.eq.${auth.userId},id.eq.${auth.userId}`)
-      .single();
-
-    if (!user || !user.is_admin) {
-      return NextResponse.json({ success: false, error: 'Доступ запрещен' }, { status: 403 });
+    const adminCheck = await requireAdmin(req);
+    if (!adminCheck.isAdmin) {
+      return NextResponse.json({
+        success: false,
+        error: adminCheck.error || 'Требуются права администратора'
+      }, { status: adminCheck.error?.includes('Unauthorized') ? 401 : 403 });
     }
 
     // Получаем параметры пагинации
@@ -29,7 +21,7 @@ export async function GET(req: NextRequest) {
     const offset = (page - 1) * limit;
 
     // Загружаем комнаты
-    const { data: rooms, error: roomsError } = await supabase
+    const { data: rooms, error: roomsError } = await supabaseAdmin
       .from('_pidr_rooms')
       .select('*')
       .order('created_at', { ascending: false })
@@ -41,13 +33,13 @@ export async function GET(req: NextRequest) {
     }
 
     // Получаем общее количество комнат
-    const { count } = await supabase
+    const { count } = await supabaseAdmin
       .from('_pidr_rooms')
       .select('*', { count: 'exact', head: true });
 
     // Обогащаем данные о комнатах информацией о игроках
     const roomsWithPlayers = await Promise.all((rooms || []).map(async (room: any) => {
-      const { data: players } = await supabase
+      const { data: players } = await supabaseAdmin
         .from('_pidr_room_players')
         .select('user_id, username, is_host, is_ready')
         .eq('room_id', room.id);
@@ -74,4 +66,3 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
-

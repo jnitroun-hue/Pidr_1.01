@@ -1,25 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '../../../../lib/supabase';
-import { requireAuth } from '../../../../lib/auth-utils';
+import { supabaseAdmin } from '../../../../lib/supabase';
+import { requireAdmin } from '../../../../lib/admin-utils';
 
 // GET /api/admin/rating - Получить рейтинг пользователей для админа
 export async function GET(req: NextRequest) {
   try {
     // Проверка прав администратора
-    const auth = requireAuth(req);
-    if (auth.error) {
-      return NextResponse.json({ success: false, error: 'Требуется авторизация' }, { status: 401 });
-    }
-
-    // Проверяем, является ли пользователь админом
-    const { data: user } = await supabase
-      .from('_pidr_users')
-      .select('is_admin')
-      .or(`telegram_id.eq.${auth.userId},id.eq.${auth.userId}`)
-      .single();
-
-    if (!user || !user.is_admin) {
-      return NextResponse.json({ success: false, error: 'Доступ запрещен' }, { status: 403 });
+    const adminCheck = await requireAdmin(req);
+    if (!adminCheck.isAdmin) {
+      return NextResponse.json({
+        success: false,
+        error: adminCheck.error || 'Требуются права администратора'
+      }, { status: adminCheck.error?.includes('Unauthorized') ? 401 : 403 });
     }
 
     // Получаем параметры пагинации
@@ -28,10 +20,10 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20');
     const offset = (page - 1) * limit;
 
-    // Загружаем пользователей с рейтингом
-    const { data: users, error: usersError } = await supabase
+    // Загружаем пользователей с рейтингом (реальные колонки из БД)
+    const { data: users, error: usersError } = await supabaseAdmin
       .from('_pidr_users')
-      .select('id, telegram_id, username, first_name, last_name, rating, games_played, games_won, wins, losses, coins, created_at')
+      .select('id, telegram_id, username, first_name, last_name, rating, games_played, games_won, coins, created_at')
       .order('rating', { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -41,7 +33,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Получаем общее количество пользователей
-    const { count } = await supabase
+    const { count } = await supabaseAdmin
       .from('_pidr_users')
       .select('*', { count: 'exact', head: true });
 
@@ -53,10 +45,10 @@ export async function GET(req: NextRequest) {
       username: user.username || user.first_name || 'Без имени',
       rating: user.rating || 0,
       games_played: user.games_played || 0,
-      games_won: user.games_won || user.wins || 0,
-      losses: user.losses || 0,
+      games_won: user.games_won || 0,
+      losses: Math.max(0, (user.games_played || 0) - (user.games_won || 0)),
       win_rate: user.games_played > 0 
-        ? Math.round(((user.games_won || user.wins || 0) / user.games_played) * 100)
+        ? Math.round(((user.games_won || 0) / user.games_played) * 100)
         : 0,
       coins: user.coins || 0,
       created_at: user.created_at
@@ -77,4 +69,3 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
-

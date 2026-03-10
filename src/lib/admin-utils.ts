@@ -4,7 +4,7 @@
  */
 
 import { NextRequest } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/auth-utils';
 
 /**
@@ -12,11 +12,32 @@ import { requireAuth } from '@/lib/auth-utils';
  */
 export async function isAdmin(userId: string): Promise<boolean> {
   try {
-    const { data, error } = await supabase
-      .from('_pidr_users')
-      .select('is_admin')
-      .eq('telegram_id', userId)
-      .single();
+    // Ищем по telegram_id ИЛИ по id (для web-авторизации)
+    const numericId = parseInt(userId, 10);
+    let data: any = null;
+    let error: any = null;
+
+    if (!isNaN(numericId)) {
+      // Пробуем сначала по id (numeric)
+      const res = await supabaseAdmin
+        .from('_pidr_users')
+        .select('is_admin')
+        .eq('id', numericId)
+        .single();
+      data = res.data;
+      error = res.error;
+    }
+
+    if (!data) {
+      // Пробуем по telegram_id (string)
+      const res = await supabaseAdmin
+        .from('_pidr_users')
+        .select('is_admin')
+        .eq('telegram_id', userId)
+        .single();
+      data = res.data;
+      error = res.error;
+    }
 
     if (error || !data) {
       console.error('❌ [isAdmin] Ошибка проверки админ-прав:', error);

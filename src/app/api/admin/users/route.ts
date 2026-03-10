@@ -23,10 +23,10 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = (page - 1) * limit;
 
-    // Получаем список пользователей
+    // Получаем список пользователей (колонки из реальной БД)
     let query = supabaseAdmin
       .from('_pidr_users')
-      .select('telegram_id, username, coins, total_games, wins, losses, is_admin, created_at, last_login_at, is_active')
+      .select('id, telegram_id, username, first_name, last_name, coins, rating, games_played, games_won, avatar_url, is_admin, is_active, last_seen, created_at, updated_at')
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 

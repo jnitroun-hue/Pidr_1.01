@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin-utils';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdminAdmin } from '@/lib/supabaseAdmin';
 
 /**
  * GET /api/admin/promocodes
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
     const offset = (page - 1) * limit;
 
     // Получаем промокоды
-    const { data: promocodes, error: promocodesError } = await supabase
+    const { data: promocodes, error: promocodesError } = await supabaseAdmin
       .from('_pidr_promocodes')
       .select('*')
       .order('created_at', { ascending: false })
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Получаем общее количество
-    const { count, error: countError } = await supabase
+    const { count, error: countError } = await supabaseAdmin
       .from('_pidr_promocodes')
       .select('*', { count: 'exact', head: true });
 
@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Проверяем уникальность кода
-    const { data: existing } = await supabase
+    const { data: existing } = await supabaseAdmin
       .from('_pidr_promocodes')
       .select('id')
       .eq('code', code.toUpperCase())
@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Создаем промокод
-    const { data: promocode, error: createError } = await supabase
+    const { data: promocode, error: createError } = await supabaseAdmin
       .from('_pidr_promocodes')
       .insert({
         code: code.toUpperCase(),
@@ -166,7 +166,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     // Обновляем промокод
-    const { data: promocode, error: updateError } = await supabase
+    const { data: promocode, error: updateError } = await supabaseAdmin
       .from('_pidr_promocodes')
       .update({
         ...updates,

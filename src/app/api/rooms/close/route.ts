@@ -1,27 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '../../../../lib/supabase';
-import jwt from 'jsonwebtoken';
+import { supabaseAdmin as supabase } from '../../../../lib/supabase';
+import { requireAuth, getUserIdFromDatabase } from '../../../../lib/auth-utils';
 import { checkRateLimit, getRateLimitId } from '../../../../lib/ratelimit';
-
-const JWT_SECRET = process.env.JWT_SECRET || process.env.SUPABASE_JWT_SECRET;
-
-function getUserIdFromRequest(req: NextRequest): string | null {
-  if (!JWT_SECRET) return null;
-  const auth = req.headers.get('authorization');
-  if (!auth) return null;
-  const token = auth.replace('Bearer ', '');
-  try {
-    const payload = jwt.verify(token, JWT_SECRET) as any;
-    return payload.userId;
-  } catch {
-    return null;
-  }
-}
+import { removePlayerFromAllRooms } from '../../../../lib/multiplayer/player-state-manager';
 
 // POST /api/rooms/close - Закрыть комнату (только для создателя)
 export async function POST(req: NextRequest) {
-  const userId = getUserIdFromRequest(req);
-  if (!userId) {
+  // ✅ Универсальная авторизация
+  const auth = requireAuth(req);
+  if (auth.error || !auth.userId) {
     return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
   }
 
@@ -32,7 +19,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, message: 'Too many requests' }, { status: 429 });
   }
 
+  const { userId, environment } = auth;
+
   try {
+    // Получаем данные пользователя из БД
+    const { dbUserId, user } = await getUserIdFromDatabase(userId, environment);
+    if (!dbUserId || !user) {
+      return NextResponse.json({ success: false, message: 'Пользователь не найден' }, { status: 404 });
+    }
+
     const { roomId } = await req.json();
 
     if (!roomId) {
@@ -50,7 +45,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Комната не найдена' }, { status: 404 });
     }
 
-    if (room.host_id !== userId) {
+    // Проверяем что пользователь — хост (сравниваем с dbUserId)
+    if (String(room.host_id) !== String(dbUserId)) {
       return NextResponse.json({ 
         success: false, 
         message: 'Только создатель комнаты может её закрыть' 
@@ -89,14 +85,14 @@ export async function POST(req: NextRequest) {
 
     if (deletePlayersError) throw deletePlayersError;
 
-    // ✅ ИСПРАВЛЕНО: Обновляем статус ТОЛЬКО РЕАЛЬНЫХ игроков (НЕ БОТОВ)
+    // Обновляем статус реальных игроков + очищаем Redis
     if (players && players.length > 0) {
-      // Фильтруем только реальных игроков (положительные ID)
       const realPlayerIds = players
         .filter((p: any) => parseInt(p.user_id) > 0)
         .map((p: any) => p.user_id);
       
       if (realPlayerIds.length > 0) {
+        // Обновляем статус в БД
         await supabase
           .from('_pidr_user_status')
           .update({ 
@@ -105,8 +101,17 @@ export async function POST(req: NextRequest) {
             updated_at: new Date().toISOString()
           })
           .in('user_id', realPlayerIds);
+
+        // Очищаем Redis для каждого игрока
+        for (const playerId of realPlayerIds) {
+          try {
+            await removePlayerFromAllRooms(playerId);
+          } catch (err) {
+            console.warn(`⚠️ [Close Room] Ошибка очистки Redis для ${playerId}:`, err);
+          }
+        }
         
-        console.log(`✅ [Close Room] Обновлен статус ${realPlayerIds.length} реальных игроков (боты исключены)`);
+        console.log(`✅ [Close Room] Обновлен статус ${realPlayerIds.length} игроков`);
       }
     }
 
@@ -116,7 +121,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error: unknown) {
-    console.error('Room close error:', error);
+    console.error('❌ [Close Room] Ошибка:', error);
     return NextResponse.json({ 
       success: false, 
       message: 'Внутренняя ошибка сервера' 

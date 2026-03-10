@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin as supabase } from '@/lib/supabase';
 
 // ✅ Явная конфигурация runtime для Next.js 15
 export const runtime = 'nodejs';

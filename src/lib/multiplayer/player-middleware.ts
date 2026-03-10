@@ -12,7 +12,7 @@
 
 import { NextRequest } from 'next/server';
 import { getPlayerState, getPlayerRoom } from './player-state-manager';
-import { supabase } from '../supabase';
+import { supabaseAdmin as supabase } from '../supabase';
 
 export interface PlayerValidationResult {
   valid: boolean;

@@ -26,16 +26,21 @@ import {
 } from 'lucide-react';
 
 interface User {
+  id: number;
   telegram_id: string;
   username: string | null;
+  first_name: string | null;
+  last_name: string | null;
   coins: number;
-  total_games: number;
-  wins: number;
-  losses: number;
+  rating: number;
+  games_played: number;
+  games_won: number;
+  avatar_url: string | null;
   is_admin: boolean;
-  created_at: string;
-  last_login_at: string | null;
   is_active: boolean;
+  last_seen: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 type TabType = 'users' | 'promocodes' | 'transactions' | 'card-generator' | 'rooms' | 'rating';
@@ -599,228 +604,6 @@ export default function AdminPanel() {
           )}
         </div>
 
-        {/* Поиск */}
-        <div style={{
-          marginBottom: '20px',
-          position: 'relative'
-        }}>
-          <Search 
-            size={20} 
-            style={{
-              position: 'absolute',
-              left: '16px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: '#64748b'
-            }}
-          />
-          <input
-            type="text"
-            placeholder="Поиск по имени или ID..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '12px 16px 12px 48px',
-              background: 'rgba(15, 23, 42, 0.6)',
-              border: '2px solid rgba(100, 116, 139, 0.3)',
-              borderRadius: '12px',
-              color: '#e2e8f0',
-              fontSize: '16px',
-              outline: 'none'
-            }}
-          />
-        </div>
-
-        {/* Таблица пользователей */}
-        <div style={{
-          background: 'rgba(15, 23, 42, 0.6)',
-          border: '2px solid rgba(100, 116, 139, 0.3)',
-          borderRadius: isTablet ? '12px' : '16px',
-          overflow: 'hidden',
-          overflowX: isTablet ? 'auto' : 'visible'
-        }}>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: isTablet 
-              ? '80px 1fr 80px 60px 60px 60px auto'
-              : '1fr 1fr 1fr 1fr 1fr 1fr auto',
-            gap: isTablet ? '8px' : '16px',
-            padding: isTablet ? '10px' : '16px',
-            background: 'rgba(99, 102, 241, 0.1)',
-            borderBottom: '2px solid rgba(100, 116, 139, 0.3)',
-            fontWeight: '700',
-            fontSize: isTablet ? '11px' : '14px',
-            color: '#94a3b8'
-          }}>
-            <div>ID</div>
-            <div>Имя</div>
-            <div>Монеты</div>
-            <div>Игры</div>
-            <div>Победы</div>
-            <div>Статус</div>
-            <div>Действия</div>
-          </div>
-
-          {filteredUsers.map((user) => (
-            <motion.div
-              key={user.telegram_id}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              style={{
-                display: 'grid',
-                gridTemplateColumns: isTablet 
-                  ? '80px 1fr 80px 60px 60px 60px auto'
-                  : '1fr 1fr 1fr 1fr 1fr 1fr auto',
-                gap: isTablet ? '8px' : '16px',
-                padding: isTablet ? '10px' : '16px',
-                borderBottom: '1px solid rgba(100, 116, 139, 0.1)',
-                alignItems: 'center'
-              }}
-            >
-              <div style={{ 
-                color: '#cbd5e1', 
-                fontSize: isTablet ? '10px' : '14px',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
-              }}>
-                {String(user.telegram_id).slice(0, isTablet ? 6 : 20)}
-                {isTablet && String(user.telegram_id).length > 6 && '...'}
-              </div>
-              <div style={{ 
-                color: '#e2e8f0', 
-                fontWeight: '600',
-                fontSize: isTablet ? '11px' : '14px',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
-              }}>
-                {user.username || 'Без имени'}
-              </div>
-              <div style={{ 
-                color: '#fbbf24', 
-                fontWeight: '600',
-                fontSize: isTablet ? '11px' : '14px'
-              }}>
-                {user.coins.toLocaleString()}
-              </div>
-              <div style={{ 
-                color: '#cbd5e1',
-                fontSize: isTablet ? '11px' : '14px'
-              }}>
-                {user.total_games || 0}
-              </div>
-              <div style={{ 
-                color: '#10b981', 
-                fontWeight: '600',
-                fontSize: isTablet ? '11px' : '14px'
-              }}>
-                {user.wins || 0}
-              </div>
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: isTablet ? '4px' : '8px',
-                flexWrap: 'wrap'
-              }}>
-                {user.is_admin && (
-                  <span style={{
-                    padding: isTablet ? '2px 4px' : '4px 8px',
-                    background: 'rgba(239, 68, 68, 0.2)',
-                    color: '#ef4444',
-                    borderRadius: '6px',
-                    fontSize: isTablet ? '9px' : '12px',
-                    fontWeight: '600'
-                  }}>
-                    {isTablet ? 'A' : 'Админ'}
-                  </span>
-                )}
-                {user.is_active ? (
-                  <Check size={isTablet ? 12 : 16} color="#10b981" />
-                ) : (
-                  <X size={isTablet ? 12 : 16} color="#ef4444" />
-                )}
-              </div>
-              <div>
-                <motion.button
-                  onClick={() => setSelectedUser(user)}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  style={{
-                    padding: isTablet ? '4px 8px' : '6px 12px',
-                    background: 'rgba(99, 102, 241, 0.2)',
-                    border: '1px solid rgba(99, 102, 241, 0.3)',
-                    borderRadius: '8px',
-                    color: '#6366f1',
-                    cursor: 'pointer',
-                    fontSize: isTablet ? '10px' : '12px',
-                    fontWeight: '600',
-                    whiteSpace: 'nowrap'
-                  }}
-                >
-                  {isTablet ? '✏️' : 'Изменить'}
-                </motion.button>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* Пагинация */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          gap: '12px',
-          marginTop: '20px'
-        }}>
-          <motion.button
-            onClick={() => loadUsers(currentPage - 1)}
-            disabled={currentPage === 1}
-            whileHover={{ scale: currentPage > 1 ? 1.05 : 1 }}
-            whileTap={{ scale: currentPage > 1 ? 0.95 : 1 }}
-            style={{
-              padding: '10px 16px',
-              background: currentPage === 1 ? 'rgba(100, 116, 139, 0.1)' : 'rgba(99, 102, 241, 0.2)',
-              border: `2px solid ${currentPage === 1 ? 'rgba(100, 116, 139, 0.2)' : 'rgba(99, 102, 241, 0.3)'}`,
-              borderRadius: '10px',
-              color: currentPage === 1 ? '#64748b' : '#6366f1',
-              cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}
-          >
-            <ChevronLeft size={18} />
-            Назад
-          </motion.button>
-          
-          <span style={{ color: '#cbd5e1', fontSize: '16px' }}>
-            Страница {currentPage} из {totalPages}
-          </span>
-          
-          <motion.button
-            onClick={() => loadUsers(currentPage + 1)}
-            disabled={currentPage >= totalPages}
-            whileHover={{ scale: currentPage < totalPages ? 1.05 : 1 }}
-            whileTap={{ scale: currentPage < totalPages ? 0.95 : 1 }}
-            style={{
-              padding: '10px 16px',
-              background: currentPage >= totalPages ? 'rgba(100, 116, 139, 0.1)' : 'rgba(99, 102, 241, 0.2)',
-              border: `2px solid ${currentPage >= totalPages ? 'rgba(100, 116, 139, 0.2)' : 'rgba(99, 102, 241, 0.3)'}`,
-              borderRadius: '10px',
-              color: currentPage >= totalPages ? '#64748b' : '#6366f1',
-              cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}
-          >
-            Вперед
-            <ChevronRight size={18} />
-          </motion.button>
-        </div>
-
         {/* Контент табов */}
         {activeTab === 'users' && (
           <>
@@ -908,10 +691,10 @@ export default function AdminPanel() {
                     {user.coins.toLocaleString()}
                   </div>
                   <div style={{ color: '#cbd5e1' }}>
-                    {user.total_games || 0}
+                    {user.games_played || 0}
                   </div>
                   <div style={{ color: '#10b981', fontWeight: '600' }}>
-                    {user.wins || 0}
+                    {user.games_won || 0}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     {user.is_admin && (

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { requireAuth } from '@/lib/auth-utils';
 
 // POST /api/admin/fix-multiplayer - Исправление проблем мультиплеера
