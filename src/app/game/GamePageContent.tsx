@@ -311,7 +311,9 @@ function GamePageContentComponent({
     isTutorialPaused, 
     nextStep, 
     closeTutorial, 
-    isTutorialActive 
+    isTutorialActive,
+    totalSteps,
+    currentStepIndex,
   } = useTutorial(gameStage, isTutorialGame, tutorialGameNumber, isUserTurn, currentPlayerId, userPlayerId, players, deck.length);
 
   // ✅ Загружаем количество игр ПЕРЕД началом игры
@@ -3163,7 +3165,7 @@ function GamePageContentComponent({
         }
       />
 
-      {/* ✅ МОДАЛКА ОБУЧЕНИЯ (ТУТОРИАЛ) */}
+      {/* ✅ МОДАЛКА ОБУЧЕНИЯ (ТУТОРИАЛ) - УЛУЧШЕННАЯ С АНИМАЦИЯМИ */}
       {currentStep && (
         <TutorialModal
           isOpen={isTutorialPaused}
@@ -3171,6 +3173,8 @@ function GamePageContentComponent({
           onClose={closeTutorial}
           onNext={nextStep}
           showNext={false}
+          totalSteps={totalSteps}
+          currentStepIndex={currentStepIndex}
         />
       )}
     </div>

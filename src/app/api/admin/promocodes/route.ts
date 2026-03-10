@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin-utils';
-import { supabaseAdminAdmin } from '@/lib/supabaseAdmin';
+import { supabaseAdmin } from '@/lib/supabase';
 
 /**
  * GET /api/admin/promocodes

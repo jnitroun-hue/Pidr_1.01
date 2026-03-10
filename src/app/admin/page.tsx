@@ -22,7 +22,11 @@ import {
   Sparkles,
   Plus,
   Home,
-  Trophy
+  Trophy,
+  Swords,
+  Bot,
+  Play,
+  UserPlus
 } from 'lucide-react';
 
 interface User {
@@ -43,7 +47,7 @@ interface User {
   updated_at: string;
 }
 
-type TabType = 'users' | 'promocodes' | 'transactions' | 'card-generator' | 'rooms' | 'rating';
+type TabType = 'users' | 'promocodes' | 'transactions' | 'card-generator' | 'rooms' | 'rating' | 'online-game';
 
 export default function AdminPanel() {
   const router = useRouter();
@@ -474,7 +478,7 @@ export default function AdminPanel() {
           overflowX: isTablet ? 'auto' : 'visible',
           WebkitOverflowScrolling: 'touch'
         }}>
-          {(['users', 'promocodes', 'transactions', 'card-generator', 'rooms', 'rating'] as TabType[]).map((tab) => (
+          {(['users', 'promocodes', 'transactions', 'card-generator', 'rooms', 'rating', 'online-game'] as TabType[]).map((tab) => (
             <motion.button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -483,9 +487,11 @@ export default function AdminPanel() {
               style={{
                 padding: isTablet ? '8px 12px' : '12px 24px',
                 background: activeTab === tab 
-                  ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
+                  ? tab === 'online-game' 
+                    ? 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)'
+                    : 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
                   : 'rgba(100, 116, 139, 0.2)',
-                border: `2px solid ${activeTab === tab ? 'rgba(99, 102, 241, 0.5)' : 'rgba(100, 116, 139, 0.3)'}`,
+                border: `2px solid ${activeTab === tab ? (tab === 'online-game' ? 'rgba(34, 197, 94, 0.5)' : 'rgba(99, 102, 241, 0.5)') : 'rgba(100, 116, 139, 0.3)'}`,
                 borderRadius: '12px',
                 color: activeTab === tab ? '#ffffff' : '#cbd5e1',
                 cursor: 'pointer',
@@ -505,6 +511,7 @@ export default function AdminPanel() {
               {tab === 'card-generator' && <Sparkles size={isTablet ? 14 : 18} />}
               {tab === 'rooms' && <Home size={isTablet ? 14 : 18} />}
               {tab === 'rating' && <Trophy size={isTablet ? 14 : 18} />}
+              {tab === 'online-game' && <Swords size={isTablet ? 14 : 18} />}
               <span style={{ display: isMobile ? 'none' : 'inline' }}>
                 {tab === 'users' && 'Пользователи'}
                 {tab === 'promocodes' && 'Промокоды'}
@@ -512,6 +519,7 @@ export default function AdminPanel() {
                 {tab === 'card-generator' && 'Генератор карт'}
                 {tab === 'rooms' && 'Комнаты'}
                 {tab === 'rating' && 'Рейтинг'}
+                {tab === 'online-game' && 'Онлайн Игра'}
               </span>
             </motion.button>
           ))}
@@ -1429,6 +1437,149 @@ export default function AdminPanel() {
                 )}
               </>
             )}
+          </div>
+        )}
+
+        {/* ✅ ОНЛАЙН ИГРА — АДМИНСКИЙ ДОСТУП */}
+        {activeTab === 'online-game' && (
+          <div>
+            <h2 style={{ color: '#e2e8f0', fontSize: '24px', fontWeight: '700', marginBottom: '20px' }}>
+              🎮 Онлайн Игра — Управление
+            </h2>
+
+            {/* Быстрые действия */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: isTablet ? '1fr' : 'repeat(3, 1fr)',
+              gap: '16px',
+              marginBottom: '30px',
+            }}>
+              {/* Играть онлайн */}
+              <motion.button
+                onClick={() => router.push('/multiplayer')}
+                whileHover={{ scale: 1.03, boxShadow: '0 10px 40px rgba(34, 197, 94, 0.4)' }}
+                whileTap={{ scale: 0.97 }}
+                style={{
+                  padding: '24px',
+                  background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(22, 163, 74, 0.15) 100%)',
+                  border: '2px solid rgba(34, 197, 94, 0.4)',
+                  borderRadius: '16px',
+                  color: '#22c55e',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '12px',
+                  transition: 'all 0.3s',
+                }}
+              >
+                <Play size={40} />
+                <span style={{ fontSize: '18px', fontWeight: '700' }}>Играть Онлайн</span>
+                <span style={{ fontSize: '13px', color: '#94a3b8', textAlign: 'center' }}>
+                  Создать комнату или присоединиться к игре
+                </span>
+              </motion.button>
+
+              {/* Играть с ботами */}
+              <motion.button
+                onClick={() => router.push('/game')}
+                whileHover={{ scale: 1.03, boxShadow: '0 10px 40px rgba(99, 102, 241, 0.4)' }}
+                whileTap={{ scale: 0.97 }}
+                style={{
+                  padding: '24px',
+                  background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%)',
+                  border: '2px solid rgba(99, 102, 241, 0.4)',
+                  borderRadius: '16px',
+                  color: '#6366f1',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '12px',
+                  transition: 'all 0.3s',
+                }}
+              >
+                <Bot size={40} />
+                <span style={{ fontSize: '18px', fontWeight: '700' }}>Играть с Ботами</span>
+                <span style={{ fontSize: '13px', color: '#94a3b8', textAlign: 'center' }}>
+                  Одиночная игра с AI-ботами
+                </span>
+              </motion.button>
+
+              {/* Управление ботами */}
+              <motion.button
+                onClick={async () => {
+                  try {
+                    const response = await fetch('/api/admin/seed-bots', {
+                      method: 'POST',
+                      credentials: 'include',
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                      alert(`✅ Боты обновлены! Всего ботов в БД: ${data.totalBots}`);
+                    } else {
+                      alert('❌ Ошибка: ' + data.error);
+                    }
+                  } catch (error) {
+                    console.error('Ошибка посева ботов:', error);
+                    alert('❌ Ошибка создания ботов');
+                  }
+                }}
+                whileHover={{ scale: 1.03, boxShadow: '0 10px 40px rgba(251, 191, 36, 0.4)' }}
+                whileTap={{ scale: 0.97 }}
+                style={{
+                  padding: '24px',
+                  background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 11, 0.15) 100%)',
+                  border: '2px solid rgba(251, 191, 36, 0.4)',
+                  borderRadius: '16px',
+                  color: '#fbbf24',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '12px',
+                  transition: 'all 0.3s',
+                }}
+              >
+                <UserPlus size={40} />
+                <span style={{ fontSize: '18px', fontWeight: '700' }}>Создать/Обновить Ботов</span>
+                <span style={{ fontSize: '13px', color: '#94a3b8', textAlign: 'center' }}>
+                  Создать 15 ботов с реалистичными никами и аватарами
+                </span>
+              </motion.button>
+            </div>
+
+            {/* Инструкция */}
+            <div style={{
+              background: 'rgba(15, 23, 42, 0.6)',
+              border: '2px solid rgba(100, 116, 139, 0.3)',
+              borderRadius: '16px',
+              padding: '24px',
+            }}>
+              <h3 style={{ color: '#e2e8f0', fontSize: '18px', fontWeight: '700', marginBottom: '16px' }}>
+                📋 Как протестировать мультиплеер:
+              </h3>
+              <div style={{ color: '#94a3b8', fontSize: '15px', lineHeight: '2' }}>
+                <div>1️⃣ Нажмите <b style={{ color: '#22c55e' }}>«Играть Онлайн»</b> чтобы открыть лобби</div>
+                <div>2️⃣ Создайте комнату (до 7 игроков)</div>
+                <div>3️⃣ С 4 устройств зайдите по коду комнаты</div>
+                <div>4️⃣ Добавьте ботов до 7 человек кнопкой <b style={{ color: '#fbbf24' }}>«+ Бот»</b></div>
+                <div>5️⃣ Когда все готовы — нажмите <b style={{ color: '#6366f1' }}>«Начать игру»</b></div>
+              </div>
+              
+              <div style={{
+                marginTop: '16px',
+                padding: '12px 16px',
+                background: 'rgba(251, 191, 36, 0.1)',
+                border: '1px solid rgba(251, 191, 36, 0.2)',
+                borderRadius: '10px',
+                color: '#fbbf24',
+                fontSize: '13px',
+              }}>
+                💡 <b>Совет:</b> Нажмите «Создать/Обновить Ботов» чтобы заполнить БД реалистичными ботами с прикольными аватарами. 
+                Они будут автоматически использоваться при добавлении ботов в комнату.
+              </div>
+            </div>
           </div>
         )}
       </div>
