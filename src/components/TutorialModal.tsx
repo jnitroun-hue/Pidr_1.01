@@ -228,7 +228,6 @@ export default function TutorialModal({
   if (!isOpen || !step) return null;
 
   const colors = getStepColors(step.stepType);
-  const positionStyles = getPositionStyles(step.position);
 
   return (
     <AnimatePresence>
@@ -308,13 +307,28 @@ export default function TutorialModal({
             )}
           </motion.div>
 
+          {/* Центрирующий контейнер (не анимируется, чтобы не сбить transform) */}
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 10000,
+              pointerEvents: 'none',
+              padding: '16px',
+            }}
+          >
           {/* Основная модалка */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.7, y: 60 }}
+            initial={{ opacity: 0, scale: 0.85 }}
             animate={{
               opacity: 1,
               scale: 1,
-              y: 0,
               transition: {
                 type: 'spring',
                 damping: 22,
@@ -325,24 +339,18 @@ export default function TutorialModal({
             exit={{
               opacity: 0,
               scale: 0.85,
-              y: 40,
               transition: { duration: 0.25, ease: 'easeIn' },
             }}
             style={{
-              position: 'fixed',
-              left: '5%',
-              right: '5%',
-              width: '90%',
-              maxWidth: '500px',
-              margin: '0 auto',
+              width: 'min(90vw, 500px)',
+              maxHeight: '80vh',
+              overflowY: 'auto',
               background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.99) 100%)',
               borderRadius: '24px',
               border: `3px solid ${colors.border}`,
               boxShadow: `0 30px 80px rgba(0, 0, 0, 0.6), 0 0 60px ${colors.glow}, inset 0 1px 0 rgba(255, 255, 255, 0.1)`,
-              zIndex: 10000,
               padding: '0',
-              overflow: 'hidden',
-              ...positionStyles,
+              pointerEvents: 'auto',
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -621,20 +629,9 @@ export default function TutorialModal({
               </motion.button>
             </div>
           </motion.div>
+          </div>
         </>
       )}
     </AnimatePresence>
   );
-}
-
-function getPositionStyles(position?: string): React.CSSProperties {
-  switch (position) {
-    case 'top':
-      return { top: '5%', bottom: 'auto' };
-    case 'bottom':
-      return { bottom: '5%', top: 'auto' };
-    case 'center':
-    default:
-      return { top: '50%', transform: 'translateY(-50%)' };
-  }
 }

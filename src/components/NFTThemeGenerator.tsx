@@ -80,6 +80,9 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
   const [showModal, setShowModal] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [selectedTheme, setSelectedTheme] = useState<ThemeType | null>(null);
+  const [genProgress, setGenProgress] = useState(0);
+  const [genTotal, setGenTotal] = useState(0);
+  const [genStatus, setGenStatus] = useState('');
   const [showCryptoModal, setShowCryptoModal] = useState(false);
   const [cryptoTheme, setCryptoTheme] = useState<keyof typeof THEMES | null>(null);
   const [tonConnectUI] = useTonConnectUI();
@@ -178,16 +181,18 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
 
     setGenerating(true);
     setSelectedTheme(theme);
+    setGenProgress(0);
+    setGenTotal(1);
+    setGenStatus('Генерация изображения...');
 
     try {
-      // Случайная масть и ранг
       const randomSuit = SUITS[Math.floor(Math.random() * SUITS.length)];
       const randomRank = RANKS[Math.floor(Math.random() * RANKS.length)];
       const randomId = Math.floor(Math.random() * themeConfig.total) + 1;
 
-      // ✅ ГЕНЕРИРУЕМ ИЗОБРАЖЕНИЕ НА КЛИЕНТЕ С РЕАЛЬНЫМИ PNG!
       console.log(`🎨 [Client] Генерируем карту: ${theme}, ID: ${randomId}`);
       const imageData = await generateThemeCardImage(randomSuit, randomRank, randomId, theme);
+      setGenStatus('Сохранение в коллекцию...');
       
       const response = await fetch('/api/nft/generate-theme', {
         method: 'POST',
@@ -257,6 +262,9 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
           }
         }
         
+        setGenProgress(1);
+        setGenStatus('Готово!');
+        
         alert(`✅ Карта ${themeConfig.name} создана!\n\n${randomRank.toUpperCase()} ${getSuitSymbol(randomSuit)}\n\nСохранено в коллекцию!`);
         
         setShowModal(false);
@@ -269,6 +277,9 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
     } finally {
       setGenerating(false);
       setSelectedTheme(null);
+      setGenProgress(0);
+      setGenTotal(0);
+      setGenStatus('');
     }
   };
 
@@ -289,18 +300,19 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
 
     setGenerating(true);
     setSelectedTheme(theme);
+    setGenProgress(0);
+    setGenTotal(52);
+    setGenStatus('Подготовка генерации колоды...');
 
     try {
       let successCount = 0;
       const themeConfig = THEMES[theme];
 
-      // ✅ Генерируем все 52 карты с РАНДОМНЫМИ картинками темы
       for (const suit of SUITS) {
         for (const rank of RANKS) {
-          // 🎲 ЖЕСТКИЙ РАНДОМ: случайная картинка из темы (1 → total)
           const themeId = Math.floor(Math.random() * themeConfig.total) + 1;
           
-          // ✅ ГЕНЕРИРУЕМ ИЗОБРАЖЕНИЕ НА КЛИЕНТЕ!
+          setGenStatus(`${getSuitSymbol(suit)} ${rank.toUpperCase()} — генерация...`);
           const imageData = await generateThemeCardImage(suit, rank, themeId, theme);
           
           const response = await fetch('/api/nft/generate-theme', {
@@ -325,10 +337,11 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
           if (response.ok && result.success) {
             successCount++;
           }
+          setGenProgress(successCount);
         }
       }
 
-      // Списываем монеты 1 раз
+      setGenStatus('Списание монет...');
       const deductResponse = await fetch('/api/user/add-coins', {
         method: 'POST',
         credentials: 'include',
@@ -358,13 +371,14 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
           window.dispatchEvent(new CustomEvent('nft-deck-updated'));
         }, 3000);
         
+        setGenStatus('Колода готова!');
+        
         alert(`✅ Колода ${themeConfig.name} создана!\n\n${successCount} уникальных карт\nСохранено в коллекцию!`);
         
         if (onBalanceUpdate && deductResult.newBalance !== undefined) {
           onBalanceUpdate(deductResult.newBalance);
         }
         
-        // ✅ ОТПРАВЛЯЕМ СОБЫТИЕ ДЛЯ ОБНОВЛЕНИЯ БАЛАНСА В ПРОФИЛЕ
         window.dispatchEvent(new CustomEvent('balance-updated'));
         
         setShowModal(false);
@@ -377,6 +391,9 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
     } finally {
       setGenerating(false);
       setSelectedTheme(null);
+      setGenProgress(0);
+      setGenTotal(0);
+      setGenStatus('');
     }
   };
 
@@ -633,6 +650,52 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
                   isLegendary={true}
                 />
               </div>
+
+              {/* ПРОГРЕСС-БАР ГЕНЕРАЦИИ */}
+              {generating && genTotal > 0 && (
+                <div style={{
+                  padding: '20px', borderRadius: '16px', marginBottom: '16px',
+                  background: 'linear-gradient(135deg, rgba(255,215,0,0.08) 0%, rgba(6,182,212,0.06) 100%)',
+                  border: '1.5px solid rgba(255,215,0,0.25)',
+                  boxShadow: '0 4px 24px rgba(255,215,0,0.08)',
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                    <span style={{ fontSize: '14px', fontWeight: '700', color: '#ffd700' }}>
+                      {genTotal === 1 ? 'Генерация карты...' : `Генерация колоды`}
+                    </span>
+                    <span style={{ fontSize: '13px', fontWeight: '600', color: '#06b6d4' }}>
+                      {genProgress}/{genTotal}
+                    </span>
+                  </div>
+                  <div style={{
+                    width: '100%', height: '10px', borderRadius: '5px',
+                    background: 'rgba(0,0,0,0.4)', overflow: 'hidden',
+                    border: '1px solid rgba(255,215,0,0.1)',
+                  }}>
+                    <motion.div
+                      initial={{ width: '0%' }}
+                      animate={{ width: `${genTotal > 0 ? (genProgress / genTotal) * 100 : 0}%` }}
+                      transition={{ duration: 0.4, ease: 'easeOut' }}
+                      style={{
+                        height: '100%', borderRadius: '5px',
+                        background: 'linear-gradient(90deg, #ffd700 0%, #06b6d4 50%, #ffd700 100%)',
+                        backgroundSize: '200% 100%',
+                        animation: 'shimmer 2s linear infinite',
+                        boxShadow: '0 0 12px rgba(255,215,0,0.4)',
+                      }}
+                    />
+                  </div>
+                  <div style={{ marginTop: '8px', fontSize: '12px', color: '#94a3b8', textAlign: 'center' }}>
+                    {genStatus}
+                  </div>
+                  <style>{`
+                    @keyframes shimmer {
+                      0% { background-position: 200% 0; }
+                      100% { background-position: -200% 0; }
+                    }
+                  `}</style>
+                </div>
+              )}
 
               {/* БАЛАНС */}
               <div style={{
@@ -938,10 +1001,10 @@ function ThemeCard({ theme, themeConfig, generating, onGenerateSingle, onGenerat
           zIndex: 2
         }}
       >
-        {generating ? '⏳' : `🎴 Карта (${(themeConfig.singleCost / 1000).toFixed(0)}K)`}
+        {generating ? '⏳' : `🎴 Карта (${(themeConfig.singleCost / 50).toFixed(0)}₽)`}
       </motion.button>
 
-      {/* КНОПКА: КОЛОДА - УМЕНЬШЕНА В 2 РАЗА */}
+      {/* КНОПКА: КОЛОДА */}
       <motion.button
         whileHover={{ scale: disabled ? 1 : 1.03 }}
         whileTap={{ scale: disabled ? 1 : 0.97 }}
@@ -961,10 +1024,10 @@ function ThemeCard({ theme, themeConfig, generating, onGenerateSingle, onGenerat
           zIndex: 2
         }}
       >
-        {generating ? '⏳' : `🎴 Колода (${(themeConfig.deckCost / 1000).toFixed(0)}K)`}
+        {generating ? '⏳' : `🎴 Колода (${(themeConfig.deckCost / 50).toFixed(0)}₽)`}
       </motion.button>
 
-      {/* КНОПКА: ЗА КРИПТУ - НОВАЯ! */}
+      {/* КНОПКА: ЗА КРИПТУ */}
       <motion.button
         whileHover={{ scale: disabled ? 1 : 1.03 }}
         whileTap={{ scale: disabled ? 1 : 0.97 }}

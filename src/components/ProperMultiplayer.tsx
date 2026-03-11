@@ -197,22 +197,8 @@ export const ProperMultiplayer: React.FC = () => {
   const [showAccessModal, setShowAccessModal] = useState(false);
   const [accessChecked, setAccessChecked] = useState(false);
 
-  // ✅ Загружаем количество игр — работает и для Telegram и для Web
+  // ✅ Загружаем количество игр — НЕ ЖДЁМ fetchUser, сразу пробуем через Telegram headers
   useEffect(() => {
-    // Ждём пока загрузится юзер (fetchUser), но не бесконечно
-    const timer = setTimeout(() => {
-      if (!accessChecked && !user?.id) {
-        // Юзер так и не загрузился за 3 секунды — показываем модалку блокировки
-        console.warn('⚠️ [ProperMultiplayer] Юзер не загружен — блокируем доступ к мультиплееру');
-        setGamesPlayed(0);
-        setShowAccessModal(true);
-        setAccessChecked(true);
-      }
-    }, 3000);
-
-    if (!user?.id) return () => clearTimeout(timer);
-    clearTimeout(timer);
-
     const loadGamesCount = async () => {
       try {
         const tg = (typeof window !== 'undefined') ? (window as any).Telegram?.WebApp : null;
@@ -233,12 +219,14 @@ export const ProperMultiplayer: React.FC = () => {
           const data = await response.json();
           if (data.success) {
             setGamesPlayed(data.gamesPlayed || 0);
-            if (!data.canPlayMultiplayer && view === 'lobby') {
+            if (!data.canPlayMultiplayer) {
               setShowAccessModal(true);
             }
+          } else {
+            setGamesPlayed(0);
+            setShowAccessModal(true);
           }
         } else {
-          // Если API вернул ошибку — блокируем доступ
           console.warn('⚠️ [ProperMultiplayer] bot-games вернул ошибку — блокируем доступ');
           setGamesPlayed(0);
           setShowAccessModal(true);
@@ -252,9 +240,9 @@ export const ProperMultiplayer: React.FC = () => {
       }
     };
 
+    // Запускаем проверку сразу, не дожидаясь fetchUser
     loadGamesCount();
-    return () => clearTimeout(timer);
-  }, [user?.id, view]);
+  }, []);
 
   const handleCreateRoom = async (forceReplace: boolean = false) => {
     if (!roomName.trim()) {
@@ -636,6 +624,35 @@ export const ProperMultiplayer: React.FC = () => {
       setCurrentRoom({ ...currentRoom, ...updates });
     }
   };
+
+  // ✅ БЛОКИРОВКА: Показываем ТОЛЬКО модалку доступа, если не прошли проверку
+  if (!accessChecked) {
+    return (
+      <div className={styles.container}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', color: '#94a3b8', fontSize: '16px' }}>
+          ⏳ Проверка доступа...
+        </div>
+      </div>
+    );
+  }
+
+  if (gamesPlayed !== null && gamesPlayed < 3) {
+    return (
+      <div className={styles.container}>
+        <MultiplayerAccessModal
+          isOpen={true}
+          gamesPlayed={gamesPlayed}
+          requiredGames={3}
+          onClose={() => {
+            if (typeof window !== 'undefined') window.history.back();
+          }}
+          onPlayBots={() => {
+            if (typeof window !== 'undefined') window.location.href = '/';
+          }}
+        />
+      </div>
+    );
+  }
 
   // Рендер комнаты ожидания
   if (view === 'waiting' && currentRoom) {

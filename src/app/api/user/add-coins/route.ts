@@ -26,9 +26,8 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    // Получаем сумму и статистику из тела запроса
     const body = await req.json();
-    const { amount, updateStats, traceId } = body;
+    const { amount, updateStats, traceId, ratingChange } = body;
     
     // ✅ ЛОГИРУЕМ С TRACE ID
     console.log(`💰💰💰 [${traceId || 'NO_TRACE'}] [Add Coins] Запрос на добавление монет от пользователя: ${userId}`);
@@ -71,24 +70,21 @@ export async function POST(req: NextRequest) {
       
       if (updateStats.gamesPlayed) {
         updateData.games_played = (userData.games_played || 0) + 1;
-        updateData.total_games = (userData.total_games || 0) + 1; // ✅ ОБНОВЛЯЕМ total_games для обучения
-        console.log(`📊 [${traceId || 'NO_TRACE'}] Игр сыграно: ${userData.games_played || 0} → ${updateData.games_played}, total_games: ${userData.total_games || 0} → ${updateData.total_games}`);
+        updateData.total_games = (userData.total_games || 0) + 1;
+        console.log(`📊 [${traceId || 'NO_TRACE'}] Игр сыграно: ${userData.games_played || 0} → ${updateData.games_played}`);
       }
       if (updateStats.wins) {
-        updateData.wins = (userData.wins || 0) + 1;
-        console.log(`🏆 [${traceId || 'NO_TRACE'}] Побед: ${userData.wins || 0} → ${updateData.wins}`);
-      }
-      if (updateStats.losses) {
-        updateData.losses = (userData.losses || 0) + 1;
-        console.log(`💀 [${traceId || 'NO_TRACE'}] Поражений: ${userData.losses || 0} → ${updateData.losses}`);
+        updateData.games_won = (userData.games_won || 0) + 1;
+        console.log(`🏆 [${traceId || 'NO_TRACE'}] Побед: ${userData.games_won || 0} → ${updateData.games_won}`);
       }
       
-      console.log(`📊 [${traceId || 'NO_TRACE'}] [Add Coins] ИТОГОВЫЕ значения для записи:`, {
-        games_played: updateData.games_played,
-        total_games: updateData.total_games,
-        wins: updateData.wins,
-        losses: updateData.losses
-      });
+      console.log(`📊 [${traceId || 'NO_TRACE'}] [Add Coins] ИТОГОВЫЕ значения для записи:`, updateData);
+    }
+    
+    if (ratingChange && typeof ratingChange === 'number') {
+      const currentRating = userData.rating || 1000;
+      updateData.rating = Math.max(0, currentRating + ratingChange);
+      console.log(`📈 [${traceId || 'NO_TRACE'}] Рейтинг: ${currentRating} → ${updateData.rating} (${ratingChange > 0 ? '+' : ''}${ratingChange})`);
     }
     
     // Обновляем баланс и статистику в БД

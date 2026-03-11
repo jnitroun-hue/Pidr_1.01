@@ -17,8 +17,11 @@ import {
   FaArrowDown,
   FaKey,
   FaDatabase,
-  FaBars
+  FaBars,
+  FaBolt,
+  FaMoneyBillWave
 } from 'react-icons/fa';
+import { SiVisa, SiMastercard } from 'react-icons/si';
 import { MasterWalletService } from '@/lib/wallets/master-wallet-service';
 import styles from './GameWallet.module.css';
 import ConnectedWalletsList from './ConnectedWalletsList';
@@ -1134,31 +1137,15 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
               </motion.button>
 
               <motion.button
-                className="action-button buy"
-                whileHover={{ scale: 1.02, y: -2 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setActiveModal('buy')}
-                disabled={loading}
-              >
-                <div className="button-glow"></div>
-                <FaShoppingCart className="action-icon" />
-                <span>Купить</span>
-              </motion.button>
-
-              <motion.button
                 className="action-button monitor"
                 whileHover={{ scale: 1.02, y: -2 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={checkPaymentsAndUpdateBalance}
-                disabled={isMonitoringPayments}
-                style={{ 
-                  backgroundColor: isMonitoringPayments ? '#666' : '#00d2d3',
-                  opacity: isMonitoringPayments ? 0.6 : 1
-                }}
+                onClick={() => setActiveTab('history')}
+                disabled={loading}
               >
                 <div className="button-glow"></div>
-                <FaArrowDown className="action-icon" />
-                <span>{isMonitoringPayments ? 'Проверка...' : '📊 Обновить'}</span>
+                <FaHistory className="action-icon" />
+                <span>История</span>
               </motion.button>
             </div>
 
@@ -1402,55 +1389,26 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
                   {depositMethod === 'rub' ? (
                     /* ========== ОПЛАТА РУБЛЯМИ / ДОЛЛАРАМИ (YuKassa) ========== */
                     <div>
-                      {/* Переключатель режима: Монеты / Пополнение баланса */}
+                      {/* Переключатель валюты: RUB / USD */}
                       <div style={{
                         display: 'flex', gap: '4px', marginBottom: '12px',
-                        background: 'rgba(0,0,0,0.2)', borderRadius: '10px', padding: '3px',
+                        background: 'rgba(0,0,0,0.15)', borderRadius: '8px', padding: '3px',
                       }}>
-                        <button onClick={() => setPurchaseMode('coins')} style={{
-                          flex: 1, padding: '8px', border: 'none', borderRadius: '8px', cursor: 'pointer',
-                          fontSize: '11px', fontWeight: purchaseMode === 'coins' ? '700' : '500',
-                          background: purchaseMode === 'coins' ? 'linear-gradient(135deg, rgba(255,215,0,0.2), rgba(6,182,212,0.15))' : 'transparent',
-                          color: purchaseMode === 'coins' ? '#ffd700' : '#64748b',
+                        <button onClick={() => { setCurrencyMode('RUB'); setUsdAmount(''); }} style={{
+                          flex: 1, padding: '8px', border: 'none', borderRadius: '6px', cursor: 'pointer',
+                          fontSize: '12px', fontWeight: currencyMode === 'RUB' ? '700' : '500',
+                          background: currencyMode === 'RUB' ? 'rgba(255,255,255,0.1)' : 'transparent',
+                          color: currencyMode === 'RUB' ? '#e2e8f0' : '#64748b',
                           transition: 'all 0.2s',
-                        }}>
-                          🪙 Купить монеты
-                        </button>
-                        <button onClick={() => setPurchaseMode('balance')} style={{
-                          flex: 1, padding: '8px', border: 'none', borderRadius: '8px', cursor: 'pointer',
-                          fontSize: '11px', fontWeight: purchaseMode === 'balance' ? '700' : '500',
-                          background: purchaseMode === 'balance' ? 'linear-gradient(135deg, rgba(59,130,246,0.2), rgba(139,92,246,0.15))' : 'transparent',
-                          color: purchaseMode === 'balance' ? '#60a5fa' : '#64748b',
+                        }}>🇷🇺 Рубли (₽)</button>
+                        <button onClick={() => { setCurrencyMode('USD'); setRubAmount(''); }} style={{
+                          flex: 1, padding: '8px', border: 'none', borderRadius: '6px', cursor: 'pointer',
+                          fontSize: '12px', fontWeight: currencyMode === 'USD' ? '700' : '500',
+                          background: currencyMode === 'USD' ? 'rgba(255,255,255,0.1)' : 'transparent',
+                          color: currencyMode === 'USD' ? '#e2e8f0' : '#64748b',
                           transition: 'all 0.2s',
-                        }}>
-                          💰 Пополнить ₽ (для NFT)
-                        </button>
+                        }}>🇺🇸 Доллары ($)</button>
                       </div>
-
-                      {purchaseMode === 'coins' && (
-                        <>
-                          {/* Переключатель валюты: RUB / USD */}
-                          <div style={{
-                            display: 'flex', gap: '4px', marginBottom: '12px',
-                            background: 'rgba(0,0,0,0.15)', borderRadius: '8px', padding: '3px',
-                          }}>
-                            <button onClick={() => { setCurrencyMode('RUB'); setUsdAmount(''); }} style={{
-                              flex: 1, padding: '7px', border: 'none', borderRadius: '6px', cursor: 'pointer',
-                              fontSize: '11px', fontWeight: currencyMode === 'RUB' ? '700' : '500',
-                              background: currencyMode === 'RUB' ? 'rgba(255,255,255,0.1)' : 'transparent',
-                              color: currencyMode === 'RUB' ? '#e2e8f0' : '#64748b',
-                              transition: 'all 0.2s',
-                            }}>🇷🇺 Рубли (₽)</button>
-                            <button onClick={() => { setCurrencyMode('USD'); setRubAmount(''); }} style={{
-                              flex: 1, padding: '7px', border: 'none', borderRadius: '6px', cursor: 'pointer',
-                              fontSize: '11px', fontWeight: currencyMode === 'USD' ? '700' : '500',
-                              background: currencyMode === 'USD' ? 'rgba(255,255,255,0.1)' : 'transparent',
-                              color: currencyMode === 'USD' ? '#e2e8f0' : '#64748b',
-                              transition: 'all 0.2s',
-                            }}>🇺🇸 Доллары ($)</button>
-                          </div>
-                        </>
-                      )}
 
                       {/* Курс */}
                       <div style={{
@@ -1459,95 +1417,66 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
                         border: '1px solid rgba(255,215,0,0.2)',
                         fontSize: '12px', color: '#ffd700', textAlign: 'center',
                       }}>
-                        {purchaseMode === 'coins' 
-                          ? (currencyMode === 'RUB' 
-                            ? '100 руб. = 5 000 монет  |  1₽ = 50 монет'
-                            : '1$ ≈ 95 руб.  |  1$ = 4 750 монет')
-                          : 'Пополнение баланса в рублях для покупки NFT карт'
-                        }
+                        {currencyMode === 'RUB' 
+                          ? '100 руб. = 5 000 монет  |  1₽ = 50 монет'
+                          : '1$ ≈ 80 руб.  |  1$ = 4 000 монет'}
                       </div>
 
                       {/* Быстрые суммы */}
-                      {purchaseMode === 'coins' ? (
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginBottom: '12px' }}>
-                          {(currencyMode === 'RUB' ? [
-                            { val: '100', coins: '5 000', display: '100 ₽' },
-                            { val: '300', coins: '15 000', display: '300 ₽' },
-                            { val: '500', coins: '25 000', display: '500 ₽' },
-                            { val: '1000', coins: '50 000', display: '1 000 ₽' },
-                            { val: '2000', coins: '100 000', display: '2 000 ₽' },
-                            { val: '5000', coins: '250 000', display: '5 000 ₽' },
-                          ] : [
-                            { val: '1', coins: '4 750', display: '$1' },
-                            { val: '5', coins: '23 750', display: '$5' },
-                            { val: '10', coins: '47 500', display: '$10' },
-                            { val: '25', coins: '118 750', display: '$25' },
-                            { val: '50', coins: '237 500', display: '$50' },
-                            { val: '100', coins: '475 000', display: '$100' },
-                          ]).map(p => {
-                            const isActive = currencyMode === 'RUB' ? rubAmount === p.val : usdAmount === p.val;
-                            return (
-                              <button key={p.val} onClick={() => {
-                                if (currencyMode === 'RUB') { setRubAmount(p.val); }
-                                else { setUsdAmount(p.val); setRubAmount(String(Math.round(parseFloat(p.val) * 95))); }
-                              }} style={{
-                                padding: '10px 4px', borderRadius: '10px', cursor: 'pointer',
-                                background: isActive
-                                  ? 'linear-gradient(135deg, rgba(255,215,0,0.2) 0%, rgba(6,182,212,0.15) 100%)'
-                                  : 'rgba(100, 116, 139, 0.1)',
-                                border: isActive ? '1.5px solid rgba(255,215,0,0.6)' : '1.5px solid rgba(100, 116, 139, 0.15)',
-                                color: isActive ? '#ffd700' : '#94a3b8',
-                                fontSize: '11px', fontWeight: '600', transition: 'all 0.25s ease',
-                                boxShadow: isActive ? '0 2px 12px rgba(255,215,0,0.15), inset 0 1px 0 rgba(255,255,255,0.1)' : 'none',
-                              }}>
-                                <div style={{ fontSize: '15px', fontWeight: '700', color: isActive ? '#ffd700' : '#e2e8f0' }}>
-                                  {p.display}
-                                </div>
-                                <div style={{ marginTop: '2px', opacity: 0.7, fontSize: '10px' }}>{p.coins} монет</div>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginBottom: '12px' }}>
-                          {[
-                            { val: '100', display: '100 ₽' },
-                            { val: '300', display: '300 ₽' },
-                            { val: '500', display: '500 ₽' },
-                            { val: '1000', display: '1 000 ₽' },
-                            { val: '2000', display: '2 000 ₽' },
-                            { val: '5000', display: '5 000 ₽' },
-                          ].map(p => (
-                            <button key={p.val} onClick={() => setRubAmount(p.val)} style={{
-                              padding: '12px 4px', borderRadius: '10px', cursor: 'pointer',
-                              background: rubAmount === p.val
-                                ? 'linear-gradient(135deg, rgba(59,130,246,0.2) 0%, rgba(139,92,246,0.15) 100%)'
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginBottom: '12px' }}>
+                        {(currencyMode === 'RUB' ? [
+                          { val: '100', coins: '5 000', display: '100 ₽' },
+                          { val: '300', coins: '15 000', display: '300 ₽' },
+                          { val: '500', coins: '25 000', display: '500 ₽' },
+                          { val: '1000', coins: '50 000', display: '1 000 ₽' },
+                          { val: '2000', coins: '100 000', display: '2 000 ₽' },
+                          { val: '5000', coins: '250 000', display: '5 000 ₽' },
+                        ] : [
+                          { val: '1', coins: '4 000', display: '$1' },
+                          { val: '5', coins: '20 000', display: '$5' },
+                          { val: '10', coins: '40 000', display: '$10' },
+                          { val: '25', coins: '100 000', display: '$25' },
+                          { val: '50', coins: '200 000', display: '$50' },
+                          { val: '100', coins: '400 000', display: '$100' },
+                        ]).map(p => {
+                          const isActive = currencyMode === 'RUB' ? rubAmount === p.val : usdAmount === p.val;
+                          return (
+                            <button key={p.val} onClick={() => {
+                              if (currencyMode === 'RUB') { setRubAmount(p.val); }
+                              else { setUsdAmount(p.val); setRubAmount(String(Math.round(parseFloat(p.val) * 80))); }
+                            }} style={{
+                              padding: '10px 4px', borderRadius: '10px', cursor: 'pointer',
+                              background: isActive
+                                ? 'linear-gradient(135deg, rgba(255,215,0,0.2) 0%, rgba(6,182,212,0.15) 100%)'
                                 : 'rgba(100, 116, 139, 0.1)',
-                              border: rubAmount === p.val ? '1.5px solid rgba(59,130,246,0.6)' : '1.5px solid rgba(100, 116, 139, 0.15)',
-                              color: rubAmount === p.val ? '#60a5fa' : '#94a3b8',
-                              fontSize: '15px', fontWeight: '700', transition: 'all 0.25s ease',
-                              boxShadow: rubAmount === p.val ? '0 2px 12px rgba(59,130,246,0.15)' : 'none',
+                              border: isActive ? '1.5px solid rgba(255,215,0,0.6)' : '1.5px solid rgba(100, 116, 139, 0.15)',
+                              color: isActive ? '#ffd700' : '#94a3b8',
+                              fontSize: '11px', fontWeight: '600', transition: 'all 0.25s ease',
+                              boxShadow: isActive ? '0 2px 12px rgba(255,215,0,0.15), inset 0 1px 0 rgba(255,255,255,0.1)' : 'none',
                             }}>
-                              {p.display}
+                              <div style={{ fontSize: '15px', fontWeight: '700', color: isActive ? '#ffd700' : '#e2e8f0' }}>
+                                {p.display}
+                              </div>
+                              <div style={{ marginTop: '2px', opacity: 0.7, fontSize: '10px' }}>{p.coins} монет</div>
                             </button>
-                          ))}
-                        </div>
-                      )}
+                          );
+                        })}
+                      </div>
 
                       {/* Своя сумма */}
                       <div style={{ display: 'flex', gap: '6px', marginBottom: '14px' }}>
                         <input
                           type="number"
-                          value={currencyMode === 'USD' && purchaseMode === 'coins' ? usdAmount : rubAmount}
+                          value={currencyMode === 'USD' ? usdAmount : rubAmount}
                           onChange={e => {
-                            if (currencyMode === 'USD' && purchaseMode === 'coins') {
+                            if (currencyMode === 'USD') {
                               setUsdAmount(e.target.value);
-                              setRubAmount(e.target.value ? String(Math.round(parseFloat(e.target.value) * 95)) : '');
+                              setRubAmount(e.target.value ? String(Math.round(parseFloat(e.target.value) * 80)) : '');
                             } else {
                               setRubAmount(e.target.value);
                             }
                           }}
-                          placeholder={currencyMode === 'USD' && purchaseMode === 'coins' ? 'Сумма в долларах' : 'Сумма в рублях'}
+                          placeholder={currencyMode === 'USD' ? 'Сумма в долларах' : 'Сумма в рублях'}
                           min={currencyMode === 'USD' ? '1' : '100'} step={currencyMode === 'USD' ? '1' : '50'}
                           style={{
                             flex: 1, padding: '12px', borderRadius: '10px',
@@ -1560,11 +1489,11 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
                           background: 'linear-gradient(135deg, rgba(255,215,0,0.15), rgba(6,182,212,0.1))',
                           color: '#ffd700', fontWeight: '700', fontSize: '14px', display: 'flex', alignItems: 'center',
                           border: '1px solid rgba(255,215,0,0.2)',
-                        }}>{currencyMode === 'USD' && purchaseMode === 'coins' ? '$' : '₽'}</span>
+                        }}>{currencyMode === 'USD' ? '$' : '₽'}</span>
                       </div>
 
-                      {/* Итого */}
-                      {rubAmount && parseFloat(rubAmount) >= 100 && purchaseMode === 'coins' && (
+                      {/* Итого монет */}
+                      {rubAmount && parseFloat(rubAmount) >= 100 && (
                         <div style={{
                           padding: '10px', borderRadius: '10px', marginBottom: '14px',
                           background: 'linear-gradient(135deg, rgba(255,215,0,0.06), rgba(6,182,212,0.04))',
@@ -1574,34 +1503,21 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
                           Вы получите: <strong style={{ color: '#ffd700', fontSize: '16px' }}>{(parseFloat(rubAmount) * 50).toLocaleString()}</strong> монет
                           {currencyMode === 'USD' && usdAmount && (
                             <span style={{ display: 'block', fontSize: '11px', opacity: 0.7, marginTop: '2px' }}>
-                              ≈ {rubAmount} ₽ по курсу 1$ = 95₽
+                              ≈ {rubAmount} ₽ по курсу 1$ = 80₽
                             </span>
                           )}
                         </div>
                       )}
 
-                      {purchaseMode === 'balance' && rubAmount && parseFloat(rubAmount) >= 100 && (
-                        <div style={{
-                          padding: '10px', borderRadius: '10px', marginBottom: '14px',
-                          background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.2)',
-                          textAlign: 'center', fontSize: '13px', color: '#93c5fd',
-                        }}>
-                          На баланс поступит: <strong style={{ color: '#60a5fa', fontSize: '16px' }}>{parseFloat(rubAmount).toLocaleString()} ₽</strong>
-                          <span style={{ display: 'block', fontSize: '11px', opacity: 0.7, marginTop: '2px' }}>
-                            Для покупки NFT карт и других товаров
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Способы оплаты с иконками и золотым переливом */}
+                      {/* Способы оплаты с НАСТОЯЩИМИ иконками */}
                       <div style={{ marginBottom: '14px' }}>
                         <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '8px', fontWeight: '600' }}>Способ оплаты:</div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
                           {([
-                            { id: 'bank_card' as const, name: 'Visa / MC', icon: '💳' },
-                            { id: 'sberbank' as const, name: 'СберПей', icon: '🟢' },
-                            { id: 'yoo_money' as const, name: 'ЮMoney', icon: '🟣' },
-                            { id: 'sbp' as const, name: 'СБП', icon: '⚡' },
+                            { id: 'bank_card' as const, name: 'Visa / MC', iconEl: <span style={{ display: 'flex', gap: '2px' }}><SiVisa size={18} /><SiMastercard size={14} /></span> },
+                            { id: 'sberbank' as const, name: 'СберПей', iconEl: <FaMoneyBillWave size={16} style={{ color: selectedPayMethod === 'sberbank' ? '#22c55e' : '#64748b' }} /> },
+                            { id: 'yoo_money' as const, name: 'ЮMoney', iconEl: <FaWallet size={15} style={{ color: selectedPayMethod === 'yoo_money' ? '#8b5cf6' : '#64748b' }} /> },
+                            { id: 'sbp' as const, name: 'СБП', iconEl: <FaBolt size={15} style={{ color: selectedPayMethod === 'sbp' ? '#f59e0b' : '#64748b' }} /> },
                           ]).map(m => (
                             <button key={m.id} onClick={() => setSelectedPayMethod(m.id)} style={{
                               padding: '11px 10px', borderRadius: '10px', cursor: 'pointer',
@@ -1617,14 +1533,14 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
                               boxShadow: selectedPayMethod === m.id
                                 ? '0 2px 12px rgba(255,215,0,0.12), inset 0 1px 0 rgba(255,255,255,0.08)' : 'none',
                             }}>
-                              <span style={{ fontSize: '16px' }}>{m.icon}</span>
+                              {m.iconEl}
                               {m.name}
                             </button>
                           ))}
                         </div>
                       </div>
 
-                      {/* Кнопка оплаты - золотой градиент */}
+                      {/* Кнопка оплаты */}
                       <button
                         onClick={handleRubPayment}
                         disabled={yookassaLoading || !rubAmount || parseFloat(rubAmount) < 100}
@@ -1642,7 +1558,7 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
                           transition: 'all 0.3s ease',
                         }}
                       >
-                        {yookassaLoading ? '⏳ Создание платежа...' : `💳 Оплатить ${rubAmount ? parseFloat(rubAmount).toLocaleString() : '0'} ₽`}
+                        {yookassaLoading ? '⏳ Создание платежа...' : <><FaCreditCard size={16} /> Оплатить {rubAmount ? parseFloat(rubAmount).toLocaleString() : '0'} ₽</>}
                       </button>
 
                       <div style={{
@@ -1652,60 +1568,57 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
                       </div>
                     </div>
                   ) : (
-                    /* ========== ОПЛАТА КРИПТОЙ (НОВАЯ КРАСИВАЯ МОДАЛКА) ========== */
+                    /* ========== ОПЛАТА КРИПТОЙ — ОБНОВЛЁННЫЙ ДИЗАЙН ========== */
                     <div>
-                      {/* Выбор криптовалюты - карточки */}
+                      {/* Выбор криптовалюты — стильные карточки */}
                       <div style={{ marginBottom: '16px' }}>
                         <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '8px', fontWeight: '600' }}>Криптовалюта:</div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px' }}>
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' as const }}>
                           {[
-                            { id: 'TON', icon: '💎', name: 'TON', color: '#0098EA' },
-                            { id: 'ETH', icon: '⟠', name: 'ETH', color: '#627EEA' },
-                            { id: 'SOL', icon: '◎', name: 'SOL', color: '#9945FF' },
-                            { id: 'USDT', icon: '💵', name: 'USDT', color: '#26A17B' },
-                            { id: 'BTC', icon: '₿', name: 'BTC', color: '#F7931A' },
+                            { id: 'TON', icon: '💎', name: 'TON', color: '#0098EA', net: 'TON Network' },
+                            { id: 'ETH', icon: '⟠', name: 'ETH', color: '#627EEA', net: 'ERC-20' },
+                            { id: 'SOL', icon: '◎', name: 'SOL', color: '#9945FF', net: 'Solana' },
+                            { id: 'USDT', icon: '₮', name: 'USDT', color: '#26A17B', net: 'Tether' },
+                            { id: 'BTC', icon: '₿', name: 'BTC', color: '#F7931A', net: 'Bitcoin' },
                           ].map(c => (
                             <button key={c.id} onClick={() => setSelectedCrypto(c.id)} style={{
-                              padding: '12px 6px', borderRadius: '12px', cursor: 'pointer',
+                              flex: '1 1 0', minWidth: '56px', padding: '10px 4px', borderRadius: '12px', cursor: 'pointer',
                               background: selectedCrypto === c.id
-                                ? `linear-gradient(135deg, ${c.color}25 0%, rgba(255,215,0,0.1) 100%)`
+                                ? `linear-gradient(135deg, ${c.color}30 0%, rgba(255,215,0,0.12) 100%)`
                                 : 'rgba(100,116,139,0.06)',
                               border: selectedCrypto === c.id
-                                ? `2px solid ${c.color}80` : '1.5px solid rgba(100,116,139,0.12)',
+                                ? `2px solid ${c.color}90` : '1.5px solid rgba(100,116,139,0.12)',
                               color: selectedCrypto === c.id ? '#fff' : '#94a3b8',
-                              fontSize: '12px', fontWeight: '700', transition: 'all 0.25s ease',
-                              display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: '4px',
-                              boxShadow: selectedCrypto === c.id ? `0 4px 15px ${c.color}20` : 'none',
+                              fontSize: '11px', fontWeight: '700', transition: 'all 0.25s ease',
+                              display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: '3px',
+                              boxShadow: selectedCrypto === c.id ? `0 4px 15px ${c.color}25` : 'none',
                             }}>
-                              <span style={{ fontSize: '20px' }}>{c.icon}</span>
-                              {c.name}
+                              <span style={{ fontSize: '22px', lineHeight: '1' }}>{c.icon}</span>
+                              <span>{c.name}</span>
                             </button>
                           ))}
                         </div>
                       </div>
 
-                      {/* Информация о сети - компактная */}
+                      {/* Сеть + время */}
                       <div style={{
-                        padding: '12px', borderRadius: '12px', marginBottom: '16px',
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        padding: '10px 14px', borderRadius: '10px', marginBottom: '14px',
                         background: 'linear-gradient(135deg, rgba(255,215,0,0.06), rgba(6,182,212,0.04))',
-                        border: '1px solid rgba(255,215,0,0.15)',
+                        border: '1px solid rgba(255,215,0,0.12)',
                       }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                          <span style={{ fontSize: '18px' }}>{selectedCrypto === 'TON' ? '💎' : selectedCrypto === 'ETH' ? '⟠' : selectedCrypto === 'SOL' ? '◎' : selectedCrypto === 'BTC' ? '₿' : '💵'}</span>
-                          <span style={{ fontSize: '14px', fontWeight: '700', color: '#ffd700' }}>
-                            {selectedCrypto === 'TON' ? 'TON Network' : selectedCrypto === 'ETH' ? 'Ethereum (ERC-20)' : selectedCrypto === 'SOL' ? 'Solana (SPL)' : selectedCrypto === 'BTC' ? 'Bitcoin' : 'Tether (USDT)'}
-                          </span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#94a3b8' }}>
-                          <span>Мин: {selectedCrypto === 'TON' ? '1 TON' : selectedCrypto === 'ETH' ? '0.01 ETH' : selectedCrypto === 'SOL' ? '0.1 SOL' : selectedCrypto === 'BTC' ? '0.0001 BTC' : '10 USDT'}</span>
-                          <span>⏱ {selectedCrypto === 'TON' ? '~5 сек' : selectedCrypto === 'SOL' ? '~30 сек' : selectedCrypto === 'BTC' ? '10-60 мин' : '2-15 мин'}</span>
-                        </div>
+                        <span style={{ fontSize: '12px', color: '#ffd700', fontWeight: '600' }}>
+                          {selectedCrypto === 'TON' ? 'TON Network' : selectedCrypto === 'ETH' ? 'Ethereum (ERC-20)' : selectedCrypto === 'SOL' ? 'Solana (SPL)' : selectedCrypto === 'BTC' ? 'Bitcoin' : 'Tether (USDT)'}
+                        </span>
+                        <span style={{ fontSize: '11px', color: '#64748b' }}>
+                          {selectedCrypto === 'TON' ? '~5 сек' : selectedCrypto === 'SOL' ? '~30 сек' : selectedCrypto === 'BTC' ? '10-60 мин' : '2-15 мин'}
+                        </span>
                       </div>
 
-                      {/* Подключенные кошельки */}
-                      <div style={{ marginBottom: '16px' }}>
+                      {/* Кошелёк для оплаты */}
+                      <div style={{ marginBottom: '14px' }}>
                         <div style={{ fontSize: '12px', fontWeight: '600', color: '#e2e8f0', marginBottom: '8px' }}>
-                          Кошелёк для пополнения:
+                          Оплата через кошелёк:
                         </div>
                         <ConnectedWalletsList
                           onWalletSelect={(wallet) => {
@@ -1719,18 +1632,25 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
                       
                       {selectedWalletForDeposit && (
                         <div style={{
-                          padding: '10px', borderRadius: '10px',
-                          background: 'linear-gradient(135deg, rgba(255,215,0,0.06), rgba(34,197,94,0.06))',
-                          border: '1.5px solid rgba(255,215,0,0.3)',
-                          marginBottom: '14px', fontSize: '12px', color: '#ffd700', textAlign: 'center',
+                          padding: '8px 12px', borderRadius: '8px',
+                          background: 'linear-gradient(135deg, rgba(34,197,94,0.08), rgba(255,215,0,0.06))',
+                          border: '1px solid rgba(34,197,94,0.3)',
+                          marginBottom: '12px', fontSize: '12px', color: '#22c55e',
+                          display: 'flex', alignItems: 'center', gap: '6px',
                         }}>
-                          ✅ {selectedWalletForDeposit.wallet_type.toUpperCase()} — {selectedWalletForDeposit.wallet_address.slice(0, 6)}...{selectedWalletForDeposit.wallet_address.slice(-4)}
+                          <span style={{ fontSize: '14px' }}>✓</span>
+                          {selectedWalletForDeposit.wallet_type.toUpperCase()} — {selectedWalletForDeposit.wallet_address.slice(0, 8)}...{selectedWalletForDeposit.wallet_address.slice(-4)}
                         </div>
                       )}
 
-                      {/* Адрес для пополнения */}
-                      <div className="address-section">
-                        <label>Адрес MASTER_WALLET для пополнения</label>
+                      {/* Адрес для пополнения — compact */}
+                      <div style={{
+                        padding: '12px', borderRadius: '12px', marginBottom: '14px',
+                        background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,215,0,0.1)',
+                      }}>
+                        <label style={{ display: 'block', fontSize: '11px', color: '#94a3b8', marginBottom: '6px', fontWeight: '600' }}>
+                          Адрес для пополнения ({selectedCrypto})
+                        </label>
                         <HDAddressDisplay 
                           crypto={selectedCrypto} 
                           userId={user?.id || ''} 
@@ -1739,87 +1659,86 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
                         />
                       </div>
                   
-                      {/* Ввод суммы */}
-                      <div style={{
-                        marginTop: '16px', padding: '14px',
-                        background: 'linear-gradient(135deg, rgba(255,215,0,0.05), rgba(6,182,212,0.04))',
-                        borderRadius: '12px', border: '1px solid rgba(255,215,0,0.15)',
-                      }}>
-                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#ffd700', marginBottom: '10px' }}>
+                      {/* Сумма */}
+                      <div style={{ marginBottom: '12px' }}>
+                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#ffd700', marginBottom: '8px' }}>
                           Сумма ({selectedCrypto})
                         </label>
-                        <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+                        <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                           <input
                             type="number" value={depositAmount}
                             onChange={(e) => setDepositAmount(e.target.value)}
                             placeholder={selectedCrypto === 'TON' ? '1.0' : selectedCrypto === 'SOL' ? '0.1' : '0.01'}
                             step="0.01" min="0"
                             style={{
-                              flex: 1, padding: '13px', borderRadius: '10px',
+                              flex: 1, padding: '12px', borderRadius: '10px',
                               border: '1.5px solid rgba(255,215,0,0.2)', background: 'rgba(0,0,0,0.3)',
-                              color: '#fff', fontSize: '17px', fontWeight: '600',
+                              color: '#fff', fontSize: '16px', fontWeight: '600',
                             }}
                           />
                           <span style={{
-                            padding: '13px 14px', borderRadius: '10px',
+                            padding: '12px 14px', borderRadius: '10px',
                             background: 'linear-gradient(135deg, rgba(255,215,0,0.15), rgba(6,182,212,0.1))',
-                            color: '#ffd700', fontWeight: '700', fontSize: '15px',
-                            border: '1px solid rgba(255,215,0,0.2)',
+                            color: '#ffd700', fontWeight: '700', fontSize: '14px',
+                            border: '1px solid rgba(255,215,0,0.2)', display: 'flex', alignItems: 'center',
                           }}>{selectedCrypto}</span>
                         </div>
                     
                         {/* Быстрые суммы */}
-                        <div style={{ display: 'flex', gap: '6px', marginBottom: '14px' }}>
+                        <div style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}>
                           {(selectedCrypto === 'TON' ? ['1', '5', '10', '25'] : 
                             selectedCrypto === 'SOL' ? ['0.1', '0.5', '1', '5'] :
-                            ['0.01', '0.05', '0.1', '0.5']).map((amount) => (
+                            selectedCrypto === 'BTC' ? ['0.001', '0.005', '0.01', '0.05'] :
+                            ['5', '10', '25', '50']).map((amount) => (
                             <button key={amount} onClick={() => setDepositAmount(amount)} style={{
-                              flex: 1, padding: '9px', borderRadius: '8px',
-                              border: depositAmount === amount ? '1.5px solid rgba(255,215,0,0.5)' : '1px solid rgba(255,255,255,0.15)',
+                              flex: 1, padding: '8px', borderRadius: '8px',
+                              border: depositAmount === amount ? '1.5px solid rgba(255,215,0,0.5)' : '1px solid rgba(255,255,255,0.1)',
                               background: depositAmount === amount
                                 ? 'linear-gradient(135deg, rgba(255,215,0,0.15), rgba(6,182,212,0.1))'
                                 : 'rgba(255,255,255,0.03)',
                               color: depositAmount === amount ? '#ffd700' : '#94a3b8',
-                              fontSize: '13px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s',
+                              fontSize: '12px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s',
                             }}>
                               {amount}
                             </button>
                           ))}
                         </div>
-                    
-                        {/* Кнопка пополнения */}
-                        {selectedWalletForDeposit ? (
-                          <button
-                            onClick={() => handleDepositViaWallet()}
-                            disabled={loading || !depositAmount || parseFloat(depositAmount) <= 0}
-                            style={{
-                              width: '100%', padding: '14px', borderRadius: '12px',
-                              border: '1.5px solid rgba(255,215,0,0.4)',
-                              background: loading ? 'rgba(100,100,100,0.4)'
-                                : 'linear-gradient(135deg, rgba(255,215,0,0.2) 0%, rgba(6,182,212,0.15) 50%, rgba(255,215,0,0.2) 100%)',
-                              color: '#fff', fontSize: '15px', fontWeight: '700',
-                              cursor: loading ? 'not-allowed' : 'pointer',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                              boxShadow: loading ? 'none' : '0 4px 20px rgba(255,215,0,0.15), 0 0 40px rgba(6,182,212,0.08)',
-                              transition: 'all 0.3s ease',
-                            }}
-                          >
-                            {loading ? '⏳ Обработка...' : `⚡ Пополнить через ${selectedWalletForDeposit.wallet_type === 'ton' ? 'TonConnect' : selectedWalletForDeposit.wallet_type === 'sol' ? 'Phantom' : 'MetaMask'}`}
-                          </button>
-                        ) : (
-                          <div style={{
-                            padding: '12px', borderRadius: '10px',
-                            background: 'rgba(255,215,0,0.06)', border: '1px solid rgba(255,215,0,0.2)',
-                            color: '#fbbf24', fontSize: '13px', textAlign: 'center',
-                          }}>
-                            ⚠️ Выберите кошелёк выше для пополнения через приложение
-                          </div>
-                        )}
                       </div>
-                  
-                      <div className="hd-info" style={{ marginTop: '14px' }}>
-                        <FaKey className="hd-icon" />
-                        <span>Или скопируйте адрес и отправьте {selectedCrypto} вручную. Баланс обновится автоматически.</span>
+
+                      {/* Кнопка пополнения */}
+                      {selectedWalletForDeposit ? (
+                        <button
+                          onClick={() => handleDepositViaWallet()}
+                          disabled={loading || !depositAmount || parseFloat(depositAmount) <= 0}
+                          style={{
+                            width: '100%', padding: '14px', borderRadius: '12px',
+                            border: '1.5px solid rgba(255,215,0,0.4)',
+                            background: loading ? 'rgba(100,100,100,0.4)'
+                              : 'linear-gradient(135deg, rgba(255,215,0,0.2) 0%, rgba(6,182,212,0.15) 50%, rgba(255,215,0,0.2) 100%)',
+                            color: '#fff', fontSize: '15px', fontWeight: '700',
+                            cursor: loading ? 'not-allowed' : 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                            boxShadow: loading ? 'none' : '0 4px 20px rgba(255,215,0,0.15)',
+                            transition: 'all 0.3s ease',
+                          }}
+                        >
+                          {loading ? '⏳ Обработка...' : <><FaWallet size={14} /> Пополнить через {selectedWalletForDeposit.wallet_type === 'ton' ? 'TON Wallet' : selectedWalletForDeposit.wallet_type === 'sol' ? 'Phantom' : 'MetaMask'}</>}
+                        </button>
+                      ) : (
+                        <div style={{
+                          padding: '12px', borderRadius: '10px',
+                          background: 'rgba(255,215,0,0.04)', border: '1px dashed rgba(255,215,0,0.2)',
+                          color: '#94a3b8', fontSize: '12px', textAlign: 'center',
+                        }}>
+                          Подключите кошелёк выше или отправьте {selectedCrypto} на адрес вручную
+                        </div>
+                      )}
+
+                      <div style={{
+                        marginTop: '10px', fontSize: '10px', color: '#475569', textAlign: 'center',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+                      }}>
+                        <FaKey size={10} /> Баланс обновится автоматически после подтверждения сети
                       </div>
                     </div>
                   )}
@@ -1829,92 +1748,119 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
               {activeModal === 'withdraw' && (
                 <div className="modal-inner">
                   <div className="modal-header">
-                    <h3>💸 Вывод через Блокчейн</h3>
+                    <h3 style={{ margin: 0, fontSize: '16px' }}>Вывод средств</h3>
                     <button className="close-btn" onClick={() => setActiveModal(null)}>×</button>
                   </div>
                   
-                  <div className="crypto-select">
-                    <label>💰 Выберите криптовалюту для вывода</label>
-                    <select value={selectedCrypto} onChange={(e) => setSelectedCrypto(e.target.value)} className="crypto-selector">
-                      <option value="TON">TON (The Open Network)</option>
-                      <option value="ETH">ETH (Ethereum ERC-20)</option>
-                      <option value="SOL">SOL (Solana SPL)</option>
-                      <option value="USDT">USDT (Tether)</option>
-                      <option value="BTC">BTC (Bitcoin)</option>
-                    </select>
+                  {/* Выбор криптовалюты - карточки как в пополнении */}
+                  <div style={{ marginBottom: '16px' }}>
+                    <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '8px', fontWeight: '600' }}>Криптовалюта для вывода:</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px' }}>
+                      {[
+                        { id: 'TON', icon: '💎', name: 'TON', color: '#0098EA' },
+                        { id: 'ETH', icon: '⟠', name: 'ETH', color: '#627EEA' },
+                        { id: 'SOL', icon: '◎', name: 'SOL', color: '#9945FF' },
+                        { id: 'USDT', icon: '💵', name: 'USDT', color: '#26A17B' },
+                        { id: 'BTC', icon: '₿', name: 'BTC', color: '#F7931A' },
+                      ].map(c => (
+                        <button key={c.id} onClick={() => setSelectedCrypto(c.id)} style={{
+                          padding: '12px 6px', borderRadius: '12px', cursor: 'pointer',
+                          background: selectedCrypto === c.id
+                            ? `linear-gradient(135deg, ${c.color}25 0%, rgba(255,215,0,0.1) 100%)`
+                            : 'rgba(100,116,139,0.06)',
+                          border: selectedCrypto === c.id
+                            ? `2px solid ${c.color}80` : '1.5px solid rgba(100,116,139,0.12)',
+                          color: selectedCrypto === c.id ? '#fff' : '#94a3b8',
+                          fontSize: '12px', fontWeight: '700', transition: 'all 0.25s ease',
+                          display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: '4px',
+                          boxShadow: selectedCrypto === c.id ? `0 4px 15px ${c.color}20` : 'none',
+                        }}>
+                          <span style={{ fontSize: '20px' }}>{c.icon}</span>
+                          {c.name}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
-                  <div className="input-section">
-                    <label>Адрес для вывода</label>
+                  {/* Адрес вывода */}
+                  <div style={{ marginBottom: '14px' }}>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#e2e8f0', marginBottom: '8px' }}>
+                      Адрес получателя
+                    </label>
                     <input 
-                      type="text" 
-                      value={withdrawAddress}
+                      type="text" value={withdrawAddress}
                       onChange={(e) => setWithdrawAddress(e.target.value)}
-                      placeholder="Введите адрес получателя"
+                      placeholder="Введите адрес кошелька"
+                      style={{
+                        width: '100%', padding: '13px', borderRadius: '10px',
+                        border: '1.5px solid rgba(255,215,0,0.2)', background: 'rgba(0,0,0,0.3)',
+                        color: '#fff', fontSize: '14px', fontWeight: '500', boxSizing: 'border-box' as const,
+                      }}
                     />
                   </div>
 
-                  <div className="input-section">
-                    <label>Сумма вывода</label>
-                    <div className="amount-container">
+                  {/* Сумма вывода */}
+                  <div style={{ marginBottom: '14px' }}>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#e2e8f0', marginBottom: '8px' }}>
+                      Сумма вывода
+                    </label>
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                       <input 
-                        type="number" 
-                        value={withdrawAmount}
+                        type="number" value={withdrawAmount}
                         onChange={(e) => setWithdrawAmount(e.target.value)}
                         placeholder="0.00"
+                        style={{
+                          flex: 1, padding: '13px', borderRadius: '10px',
+                          border: '1.5px solid rgba(255,215,0,0.2)', background: 'rgba(0,0,0,0.3)',
+                          color: '#fff', fontSize: '17px', fontWeight: '600',
+                        }}
                       />
-                      <span className="currency">{selectedCrypto}</span>
+                      <span style={{
+                        padding: '13px 14px', borderRadius: '10px',
+                        background: 'linear-gradient(135deg, rgba(255,215,0,0.15), rgba(6,182,212,0.1))',
+                        color: '#ffd700', fontWeight: '700', fontSize: '15px',
+                        border: '1px solid rgba(255,215,0,0.2)',
+                      }}>{selectedCrypto}</span>
                     </div>
-                    <div className="balance-info">Доступно: 0.0431 USDT</div>
-                    <div className="percentage-buttons">
-                      <button onClick={() => setWithdrawAmount((balance * 0.25).toString())}>25%</button>
-                      <button onClick={() => setWithdrawAmount((balance * 0.5).toString())}>50%</button>
-                      <button onClick={() => setWithdrawAmount(balance.toString())}>100%</button>
+                    <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px' }}>
+                      Доступно: {cryptoBalances[selectedCrypto] || 0} {selectedCrypto}
+                    </div>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      {['25%', '50%', '100%'].map(pct => {
+                        const mult = pct === '25%' ? 0.25 : pct === '50%' ? 0.5 : 1;
+                        return (
+                          <button key={pct} onClick={() => setWithdrawAmount(((cryptoBalances[selectedCrypto] || 0) * mult).toString())} style={{
+                            flex: 1, padding: '9px', borderRadius: '8px', cursor: 'pointer',
+                            border: '1px solid rgba(255,215,0,0.2)', fontSize: '13px', fontWeight: '600',
+                            background: 'linear-gradient(135deg, rgba(255,215,0,0.08), rgba(6,182,212,0.05))',
+                            color: '#ffd700', transition: 'all 0.2s',
+                          }}>
+                            {pct}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
-                  <button className="withdraw-btn" onClick={handleWithdraw} disabled={loading}>
-                    💸 Вывод
+                  {/* Кнопка вывода */}
+                  <button onClick={handleWithdraw} disabled={loading || !withdrawAddress || !withdrawAmount} style={{
+                    width: '100%', padding: '14px', borderRadius: '12px',
+                    border: '1.5px solid rgba(255,215,0,0.4)',
+                    background: loading || !withdrawAddress || !withdrawAmount
+                      ? 'rgba(100,100,100,0.3)'
+                      : 'linear-gradient(135deg, rgba(255,215,0,0.2) 0%, rgba(6,182,212,0.15) 50%, rgba(255,215,0,0.2) 100%)',
+                    color: '#fff', fontSize: '15px', fontWeight: '700',
+                    cursor: loading || !withdrawAddress || !withdrawAmount ? 'not-allowed' : 'pointer',
+                    opacity: loading || !withdrawAddress || !withdrawAmount ? 0.5 : 1,
+                    boxShadow: loading ? 'none' : '0 4px 20px rgba(255,215,0,0.15)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                    transition: 'all 0.3s ease',
+                  }}>
+                    <FaArrowUp size={14} /> Вывести {selectedCrypto}
                   </button>
 
-                  <div className="warning">⚠️ Мы не применяем мемо/таг!</div>
-                </div>
-              )}
-
-              {activeModal === 'buy' && (
-                <div className="modal-inner">
-                  <div className="modal-header">
-                    <h3>💳 Купить Криптовалюту</h3>
-                    <button className="close-btn" onClick={() => setActiveModal(null)}>×</button>
-                  </div>
-
-                  <div className="buy-description">
-                    <p>Мгновенно купайте криптовалюту и автоматически переводите ее на свой кошелек Whale. Услуги, связанные с платежами, предоставляются отдельной платформой, с обратной стороны.</p>
-                  </div>
-
-                  <div className="buy-amount">
-                    <label>Вы Платите</label>
-                    <div className="amount-input">
-                      <span className="amount">50</span>
-                      <select>
-                        <option>евро</option>
-                        <option>USD</option>
-                        <option>RUB</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="provider">
-                    <label>Провайдер</label>
-                    <div className="provider-info">💜 swapped.com</div>
-                  </div>
-
-                  <button className="buy-btn">
-                    💳 Купить криптовалюту
-                  </button>
-
-                  <div className="buy-warning">
-                    ⚠️ В зависимости от сети стационара покупка может быть оставлена на несколько минут.
+                  <div style={{ marginTop: '10px', fontSize: '10px', color: '#475569', textAlign: 'center' }}>
+                    Комиссия сети оплачивается отдельно. Мемо/таг не применяется.
                   </div>
                 </div>
               )}

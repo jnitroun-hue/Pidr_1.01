@@ -22,6 +22,8 @@ import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { useGameStore } from '@/store/gameStore';
 import { AIPlayer, AIDifficulty } from '@/lib/game/ai-player';
 import MultiplayerGame from '@/components/MultiplayerGame';
+import GameChat from '@/components/GameChat';
+import GameWallet from '@/components/GameWallet';
 import { useLanguage } from '../../components/LanguageSwitcher';
 import { useTranslations } from '../../lib/i18n/translations';
 import { useWebSocket } from '@/hooks/useWebSocket';
@@ -293,6 +295,8 @@ function GamePageContentComponent({
   // Модальное окно профиля игрока
   const [selectedPlayerProfile, setSelectedPlayerProfile] = useState<any>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   // ✅ СИСТЕМА ОБУЧЕНИЯ: Проверяем первые 3 игры
   const [gamesPlayed, setGamesPlayed] = useState<number | null>(null);
@@ -310,7 +314,7 @@ function GamePageContentComponent({
     isTutorialActive,
     totalSteps,
     currentStepIndex,
-  } = useTutorial(gameStage, isTutorialGame, tutorialGameNumber, isUserTurn, currentPlayerId, userPlayerId, players, deck.length);
+  } = useTutorial(gameStage, isTutorialGame, tutorialGameNumber, isUserTurn, currentPlayerId, userPlayerId, players, deck.length, playersWithOneCard, pendingPenalty, penaltyDeck, oneCardDeclarations);
 
   // ✅ Загружаем количество игр ПЕРЕД началом игры
   useEffect(() => {
@@ -920,6 +924,22 @@ function GamePageContentComponent({
   // ✅ ИСПРАВЛЕНО: Находим РЕАЛЬНОГО ИГРОКА (не бота)
   const myPlayer = useMemo(() => players.find(p => !p.isBot), [players]);
   const isMyTurn = currentPlayerId === myPlayer?.id;
+
+  // ✅ ТАЙМЕР ХОДА: 30 секунд на ход, обратный отсчёт
+  const [turnTimeLeft, setTurnTimeLeft] = useState(30);
+  const turnTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (turnTimerRef.current) clearInterval(turnTimerRef.current);
+    setTurnTimeLeft(30);
+    if (!currentPlayerId || !isGameActive) return;
+    turnTimerRef.current = setInterval(() => {
+      setTurnTimeLeft(prev => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => { if (turnTimerRef.current) clearInterval(turnTimerRef.current); };
+  }, [currentPlayerId, isGameActive]);
+
+  const turnTimerPercent = Math.max(0, (turnTimeLeft / 30) * 100);
   
   // ОТЛАДКА убрана - логи были слишком многословные
   
@@ -1734,6 +1754,15 @@ function GamePageContentComponent({
               </div>
               
               <div className={styles.menuDivider}></div>
+
+              <button className={styles.menuItem} onClick={() => setShowProfileModal(true)}>
+                👤 Профиль
+              </button>
+              <button className={styles.menuItem} onClick={() => setShowWalletModal(true)}>
+                💰 Кошелёк
+              </button>
+              
+              <div className={styles.menuDivider}></div>
               
               <button className={styles.menuItem} onClick={() => typeof window !== 'undefined' && window.history.back()}>
                 🏠 Главная
@@ -2179,14 +2208,21 @@ function GamePageContentComponent({
                     left: `${position.x}%`,
                     top: `${position.y}%`,
                     flexDirection: 'column',
-                    background: 'linear-gradient(145deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.2) 100%), radial-gradient(circle at center, rgba(255, 215, 0, 0.1) 0%, transparent 70%)',
-                    border: isCurrentTurn ? '2px solid rgba(34, 197, 94, 1)' : '1px solid rgba(255, 215, 0, 0.4)',
                     backdropFilter: 'blur(8px)',
-                    boxShadow: isCurrentTurn 
-                      ? '0 8px 30px rgba(0, 0, 0, 0.5), 0 0 30px rgba(34, 197, 94, 0.8), 0 0 50px rgba(34, 197, 94, 0.6), 0 0 70px rgba(34, 197, 94, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
-                      : '0 4px 20px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
                   }}
                 >
+                  {/* Таймер-бар вокруг контейнера активного игрока */}
+                  {isCurrentTurn && (
+                    <div style={{
+                      position: 'absolute', inset: '-3px', borderRadius: 'inherit', zIndex: -1, pointerEvents: 'none',
+                      background: `conic-gradient(${turnTimeLeft > 20 ? '#22c55e' : turnTimeLeft > 10 ? '#eab308' : '#ef4444'} ${turnTimerPercent}%, transparent ${turnTimerPercent}%)`,
+                      WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+                      WebkitMaskComposite: 'xor',
+                      maskComposite: 'exclude' as any,
+                      padding: '3px',
+                      transition: 'background 1s linear',
+                    }} />
+                  )}
                   {/* ✅ АВАТАР СВЕРХУ, КАРТЫ СНИЗУ ДЛЯ ВСЕХ ИГРОКОВ */}
                     <div className={styles.avatarWrap} style={{ order: 1 }}>
                       {/* Сообщение над игроком (как в чате) */}
@@ -2253,19 +2289,35 @@ function GamePageContentComponent({
                           position: 'relative'
                         }}
                       >
-                        {/* ✅ ИСПРАВЛЕНО: Используем <img> вместо <Image> для поддержки SVG data URLs */}
+                        {/* Пульсирующее кольцо вокруг активного игрока */}
+                        {isCurrentTurn && (
+                          <>
+                            <div style={{
+                              position: 'absolute', inset: '-6px', borderRadius: '50%',
+                              border: '3px solid #22c55e',
+                              animation: 'avatarPulseRing 1.2s ease-in-out infinite',
+                              zIndex: 4, pointerEvents: 'none',
+                            }} />
+                            <div style={{
+                              position: 'absolute', inset: '-10px', borderRadius: '50%',
+                              border: '2px solid rgba(34,197,94,0.3)',
+                              animation: 'avatarPulseRing 1.2s ease-in-out infinite 0.3s',
+                              zIndex: 3, pointerEvents: 'none',
+                            }} />
+                          </>
+                        )}
                         <img 
                         src={playerAvatars[player.id] || player.avatar || '/images/default-avatar.png'}
                         alt={player.name}
                             className={styles.avatar}
                           style={{
-                            width: '24px',
-                            height: '24px',
+                            width: '28px',
+                            height: '28px',
                             borderRadius: '50%',
-                            boxShadow: currentPlayerId === player.id 
-                              ? '0 0 10px rgba(34, 197, 94, 0.9), 0 0 20px rgba(34, 197, 94, 0.5)'
+                            boxShadow: isCurrentTurn 
+                              ? '0 0 15px rgba(34, 197, 94, 1), 0 0 30px rgba(34, 197, 94, 0.6), 0 0 45px rgba(34, 197, 94, 0.3)'
                               : '0 1px 4px rgba(0, 0, 0, 0.3)',
-                            border: `${currentPlayerId === player.id ? '2px' : '1px'} solid ${currentPlayerId === player.id ? '#22c55e' : 'rgba(255, 255, 255, 0.2)'}`,
+                            border: `${isCurrentTurn ? '3px' : '1px'} solid ${isCurrentTurn ? '#22c55e' : 'rgba(255, 255, 255, 0.2)'}`,
                             transition: 'all 0.3s ease',
                             objectFit: 'cover',
                             position: 'relative',
@@ -2549,12 +2601,83 @@ function GamePageContentComponent({
                       </div>
                     </div>
                   )}
+
+                  {/* Имя игрока + таймер хода */}
+                  <div style={{ order: 3, textAlign: 'center', marginTop: '2px', maxWidth: '70px' }}>
+                    <div style={{
+                      fontSize: '9px', fontWeight: '600', color: isCurrentTurn ? '#22c55e' : '#cbd5e1',
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      textShadow: '0 1px 3px rgba(0,0,0,0.7)',
+                    }}>
+                      {player.name}
+                    </div>
+                    {isCurrentTurn && (
+                      <div style={{
+                        fontSize: '10px', fontWeight: '800', marginTop: '1px',
+                        color: turnTimeLeft > 20 ? '#22c55e' : turnTimeLeft > 10 ? '#eab308' : '#ef4444',
+                        textShadow: `0 0 6px ${turnTimeLeft > 20 ? 'rgba(34,197,94,0.6)' : turnTimeLeft > 10 ? 'rgba(234,179,8,0.6)' : 'rgba(239,68,68,0.6)'}`,
+                      }}>
+                        {turnTimeLeft}с
+                      </div>
+                    )}
+                  </div>
                   </div>
                 );
               })}
             </div>
           </div>
       )}
+
+      {/* Зелёная анимированная стрелка от активного игрока к центру стола */}
+      {currentPlayerId && players.length > 0 && (() => {
+        const activeIdx = players.findIndex(p => p.id === currentPlayerId);
+        if (activeIdx < 0) return null;
+        const activePos = getPlayerPosition(activeIdx, players.length);
+        const centerX = 50;
+        const centerY = 45;
+        const dx = centerX - activePos.x;
+        const dy = centerY - activePos.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 5) return null;
+        const normX = dx / dist;
+        const normY = dy / dist;
+        const startX = activePos.x + normX * 8;
+        const startY = activePos.y + normY * 8;
+        const endX = activePos.x + normX * (dist * 0.55);
+        const endY = activePos.y + normY * (dist * 0.55);
+        return (
+          <svg style={{
+            position: 'absolute', inset: 0, width: '100%', height: '100%',
+            zIndex: 150, pointerEvents: 'none', overflow: 'visible',
+          }}>
+            <defs>
+              <marker id="turn-arrow" markerWidth="10" markerHeight="8" refX="8" refY="4" orient="auto">
+                <path d="M0,0 L10,4 L0,8 L2,4 Z" fill="#22c55e" />
+              </marker>
+              <filter id="turn-glow">
+                <feGaussianBlur stdDeviation="3" result="b" />
+                <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+              </filter>
+            </defs>
+            <line
+              x1={`${startX}%`} y1={`${startY}%`}
+              x2={`${endX}%`} y2={`${endY}%`}
+              stroke="rgba(34,197,94,0.2)" strokeWidth="10"
+              strokeLinecap="round"
+            />
+            <line
+              x1={`${startX}%`} y1={`${startY}%`}
+              x2={`${endX}%`} y2={`${endY}%`}
+              stroke="#22c55e" strokeWidth="3.5"
+              strokeLinecap="round" markerEnd="url(#turn-arrow)"
+              filter="url(#turn-glow)"
+              opacity="0.9"
+            >
+              <animate attributeName="opacity" values="0.6;1;0.6" dur="1.5s" repeatCount="indefinite" />
+            </line>
+          </svg>
+        );
+      })()}
 
       {/* ПАНЕЛЬ КНОПОК ДЕЙСТВИЙ - УБРАНА, КНОПКА ПЕРЕНЕСЕНА В РУКУ ИГРОКА */}
 
@@ -3045,6 +3168,9 @@ function GamePageContentComponent({
           place={winnerModalData.place}
           avatar={winnerModalData.avatar}
           isCurrentUser={winnerModalData.isCurrentUser}
+          coinsEarned={winnerModalData.place === 1 ? 350 : winnerModalData.place === 2 ? 250 : winnerModalData.place === 3 ? 150 : winnerModalData.place === 4 ? 100 : winnerModalData.place === 5 ? 70 : 30}
+          ratingChange={winnerModalData.place === 1 ? 50 : winnerModalData.place === 2 ? 25 : winnerModalData.place === 3 ? 10 : 0}
+          isBotGame={!isMultiplayer}
           onClose={() => {
             useGameStore.setState({
               showWinnerModal: false,
@@ -3292,9 +3418,9 @@ function GamePageContentComponent({
             </div>
             <div style={{ color: '#94a3b8', fontSize: '11px', lineHeight: '1.5' }}>
               {gameStage === 1 ? (
-                <>Бот ищет соперника, у которого открытая карта <span style={{ color: '#fbbf24' }}>МЕНЬШЕ</span> его. Если найдёт — положит свою карту сверху. Старшая бьёт младшую!</>
+                <>Бот ищет соперника, у которого открытая карта <span style={{ color: '#fbbf24' }}>ровно на 1 МЛАДШЕ</span>. Если найдёт — положит свою карту сверху!</>
               ) : (
-                <>Бот выбирает карту из руки и кладёт на того, у кого карта слабее. Козырь бьёт все некозырные!</>
+                <>Бот ищет карту в руке чтобы <span style={{ color: '#fbbf24' }}>побить карту на столе</span> — той же масти, но старше. Козырь бьёт некозырь, пики — только пиками!</>
               )}
             </div>
           </motion.div>
@@ -3313,6 +3439,163 @@ function GamePageContentComponent({
           currentStepIndex={currentStepIndex}
         />
       )}
+
+      {/* 💬 ЧАТ ЗА СТОЛОМ */}
+      {players.length > 0 && (
+        <GameChat
+          playerName={userData?.username || 'Игрок'}
+          playerId={userPlayerId || 'user'}
+          isMultiplayer={isMultiplayer}
+        />
+      )}
+
+      {/* 👤 МОДАЛКА ПРОФИЛЯ (из бургер-меню) */}
+      <AnimatePresence>
+        {showProfileModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowProfileModal(false)}
+              style={{
+                position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
+                zIndex: 8000, backdropFilter: 'blur(6px)',
+              }}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              style={{
+                position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                zIndex: 8001, padding: '16px', pointerEvents: 'none',
+              }}
+            >
+              <div
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  width: 'min(400px, 92vw)',
+                  maxHeight: '80vh',
+                  overflowY: 'auto',
+                  background: 'linear-gradient(145deg, rgba(30,41,59,0.98), rgba(15,23,42,0.99))',
+                  borderRadius: '24px',
+                  border: '2px solid rgba(99,102,241,0.3)',
+                  boxShadow: '0 25px 60px rgba(0,0,0,0.5), 0 0 40px rgba(99,102,241,0.15)',
+                  padding: '28px',
+                  pointerEvents: 'auto',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                  <h2 style={{ color: '#e2e8f0', fontSize: '20px', fontWeight: '800', margin: 0 }}>👤 Профиль</h2>
+                  <button onClick={() => setShowProfileModal(false)} style={{
+                    background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)',
+                    borderRadius: '10px', padding: '6px 10px', cursor: 'pointer', color: '#f87171', fontSize: '14px',
+                  }}>✕</button>
+                </div>
+                <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                  <div style={{
+                    width: '80px', height: '80px', borderRadius: '50%', margin: '0 auto 12px',
+                    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    border: '3px solid rgba(99,102,241,0.4)',
+                    boxShadow: '0 4px 20px rgba(99,102,241,0.3)',
+                    overflow: 'hidden',
+                  }}>
+                    {userData?.avatar ? (
+                      <img src={userData.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <span style={{ fontSize: '36px' }}>👤</span>
+                    )}
+                  </div>
+                  <div style={{ color: '#e2e8f0', fontSize: '18px', fontWeight: '700' }}>{userData?.username || 'Игрок'}</div>
+                </div>
+                <div style={{
+                  background: 'rgba(15,23,42,0.5)', borderRadius: '16px',
+                  padding: '16px', border: '1px solid rgba(51,65,85,0.3)',
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <span style={{ color: '#94a3b8', fontSize: '13px' }}>Баланс</span>
+                    <span style={{ color: '#fbbf24', fontSize: '16px', fontWeight: '700' }}>🪙 {userData?.coins || 0}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <span style={{ color: '#94a3b8', fontSize: '13px' }}>ID</span>
+                    <span style={{ color: '#64748b', fontSize: '12px', fontFamily: 'monospace' }}>{userData?.telegramId || userPlayerId || '—'}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#94a3b8', fontSize: '13px' }}>Стадия</span>
+                    <span style={{ color: '#a5b4fc', fontSize: '14px', fontWeight: '600' }}>
+                      {gameStage === 1 ? '1-я стадия' : gameStage === 2 ? '2-я стадия' : '3-я стадия (пеньки)'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* 💰 МОДАЛКА КОШЕЛЬКА (из бургер-меню) */}
+      <AnimatePresence>
+        {showWalletModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowWalletModal(false)}
+              style={{
+                position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
+                zIndex: 8000, backdropFilter: 'blur(6px)',
+              }}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              style={{
+                position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                zIndex: 8001, padding: '12px', pointerEvents: 'none',
+              }}
+            >
+              <div
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  width: 'min(440px, 95vw)',
+                  maxHeight: '85vh',
+                  overflowY: 'auto',
+                  background: 'linear-gradient(145deg, rgba(30,41,59,0.98), rgba(15,23,42,0.99))',
+                  borderRadius: '24px',
+                  border: '2px solid rgba(251,191,36,0.3)',
+                  boxShadow: '0 25px 60px rgba(0,0,0,0.5), 0 0 40px rgba(251,191,36,0.1)',
+                  pointerEvents: 'auto',
+                  position: 'relative',
+                }}
+              >
+                <button onClick={() => setShowWalletModal(false)} style={{
+                  position: 'absolute', top: '14px', right: '14px', zIndex: 10,
+                  background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)',
+                  borderRadius: '10px', padding: '6px 10px', cursor: 'pointer', color: '#f87171', fontSize: '14px',
+                }}>✕</button>
+                <GameWallet
+                  user={userData ? {
+                    id: userData.telegramId || userPlayerId || '',
+                    username: userData.username || 'Игрок',
+                    firstName: userData.username || 'Игрок',
+                    coins: userData.coins || 0,
+                    rating: 0,
+                  } : undefined}
+                  onBalanceUpdate={(newBalance) => {
+                    setUserData(prev => prev ? { ...prev, coins: newBalance } : prev);
+                  }}
+                />
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

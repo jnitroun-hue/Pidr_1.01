@@ -8,6 +8,9 @@ interface WinnerModalProps {
   place: number;
   avatar?: string;
   isCurrentUser?: boolean;
+  coinsEarned?: number;
+  ratingChange?: number;
+  isBotGame?: boolean;
   onClose: () => void;
   onContinueWatching?: () => void;
   onExitToMenu?: () => void;
@@ -17,7 +20,10 @@ export default function WinnerModal({
   playerName, 
   place, 
   avatar, 
-  isCurrentUser, 
+  isCurrentUser,
+  coinsEarned = 0,
+  ratingChange = 0,
+  isBotGame = false,
   onClose, 
   onContinueWatching, 
   onExitToMenu 
@@ -154,101 +160,104 @@ export default function WinnerModal({
           </div>
 
           {/* Аватар и имя */}
-          <div style={{ marginBottom: '25px' }}>
+          <div style={{ marginBottom: '16px' }}>
             {avatar && (
               <div style={{
-                width: '100px',
-                height: '100px',
-                margin: '0 auto 15px',
+                width: '80px',
+                height: '80px',
+                margin: '0 auto 10px',
                 borderRadius: '50%',
-                background: `linear-gradient(135deg, ${placeData.borderColor}, ${placeData.borderColor}aa)`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                border: `4px solid rgba(${placeData.borderColor === '#FFD700' ? '255, 215, 0' : placeData.borderColor === '#C0C0C0' ? '192, 192, 192' : placeData.borderColor === '#CD7F32' ? '205, 127, 50' : '139, 92, 246'}, 0.3)`,
-                boxShadow: `0 10px 30px rgba(${placeData.borderColor === '#FFD700' ? '255, 215, 0' : placeData.borderColor === '#C0C0C0' ? '192, 192, 192' : placeData.borderColor === '#CD7F32' ? '205, 127, 50' : '139, 92, 246'}, 0.4)`,
+                border: `3px solid ${placeData.borderColor}`,
+                boxShadow: `0 8px 24px rgba(0,0,0,0.4)`,
                 overflow: 'hidden'
               }}>
-                <img 
-                  src={avatar} 
-                  alt={playerName}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover'
-                  }}
-                />
+                <img src={avatar} alt={playerName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
             )}
             <h3 style={{
-              color: '#ffffff',
-              fontSize: '24px',
-              fontWeight: 'bold',
-              textShadow: '0 2px 8px rgba(0,0,0,0.3)'
+              color: '#ffffff', fontSize: '20px', fontWeight: 'bold',
+              textShadow: '0 2px 8px rgba(0,0,0,0.3)', margin: 0,
             }}>
               {playerName}
             </h3>
           </div>
 
-          {/* Кнопки для ПОЛЬЗОВАТЕЛЯ */}
-          {isCurrentUser && onContinueWatching && onExitToMenu && (
+          {/* Инфо: место, монеты, рейтинг */}
+          {isCurrentUser && (
             <div style={{
+              background: 'rgba(15,23,42,0.5)',
+              borderRadius: '16px',
+              padding: '14px 18px',
+              marginBottom: '16px',
+              border: '1px solid rgba(99,102,241,0.15)',
               display: 'flex',
               flexDirection: 'column',
-              gap: '12px'
+              gap: '8px',
             }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: '#94a3b8', fontSize: '13px' }}>Место</span>
+                <span style={{ color: placeData.borderColor, fontSize: '16px', fontWeight: '800' }}>
+                  {placeData.subtitle}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: '#94a3b8', fontSize: '13px' }}>Награда</span>
+                <span style={{ color: '#22c55e', fontSize: '16px', fontWeight: '800' }}>
+                  +{coinsEarned} 🪙
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: '#94a3b8', fontSize: '13px' }}>Рейтинг</span>
+                {isBotGame ? (
+                  <span style={{ color: '#64748b', fontSize: '13px', fontStyle: 'italic' }}>
+                    Игра с ботами
+                  </span>
+                ) : (
+                  <span style={{
+                    color: ratingChange >= 0 ? '#22c55e' : '#ef4444',
+                    fontSize: '16px', fontWeight: '800',
+                  }}>
+                    {ratingChange > 0 ? '+' : ''}{ratingChange} 📈
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Кнопки для ПОЛЬЗОВАТЕЛЯ — компактные */}
+          {isCurrentUser && onContinueWatching && onExitToMenu && (
+            <div style={{ display: 'flex', gap: '10px' }}>
               <motion.button
-                whileHover={{ scale: 1.05, y: -2 }}
-                whileTap={{ scale: 0.98, y: 0 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={onContinueWatching}
                 style={{
-                  width: '100%',
-                  padding: '14px 20px',
-                  borderRadius: '16px',
-                  fontWeight: 'bold',
-                  fontSize: '16px',
-                  color: '#ffffff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '10px',
+                  flex: 1, padding: '10px 12px', borderRadius: '12px',
+                  fontWeight: '700', fontSize: '13px', color: '#ffffff',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
                   background: 'linear-gradient(145deg, #10b981 0%, #059669 100%)',
-                  boxShadow: '0 8px 20px rgba(16, 185, 129, 0.35), inset 0 2px 4px rgba(255, 255, 255, 0.4), inset 0 -2px 4px rgba(0, 0, 0, 0.2)',
-                  border: '2px solid rgba(255, 255, 255, 0.3)',
-                  textShadow: '0 2px 6px rgba(0, 0, 0, 0.4)',
+                  boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+                  border: '1.5px solid rgba(255,255,255,0.2)',
                   cursor: 'pointer',
-                  transition: 'all 0.2s'
                 }}
               >
-                <Eye size={20} strokeWidth={2.5} />
-                Продолжить просмотр
+                <Eye size={16} strokeWidth={2.5} />
+                Смотреть
               </motion.button>
-
               <motion.button
-                whileHover={{ scale: 1.05, y: -2 }}
-                whileTap={{ scale: 0.98, y: 0 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={onExitToMenu}
                 style={{
-                  width: '100%',
-                  padding: '14px 20px',
-                  borderRadius: '16px',
-                  fontWeight: 'bold',
-                  fontSize: '16px',
-                  color: '#ffffff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '10px',
+                  flex: 1, padding: '10px 12px', borderRadius: '12px',
+                  fontWeight: '700', fontSize: '13px', color: '#ffffff',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
                   background: 'linear-gradient(145deg, #6366f1 0%, #4f46e5 100%)',
-                  boxShadow: '0 8px 20px rgba(99, 102, 241, 0.35), inset 0 2px 4px rgba(255, 255, 255, 0.4), inset 0 -2px 4px rgba(0, 0, 0, 0.2)',
-                  border: '2px solid rgba(255, 255, 255, 0.3)',
-                  textShadow: '0 2px 6px rgba(0, 0, 0, 0.4)',
+                  boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
+                  border: '1.5px solid rgba(255,255,255,0.2)',
                   cursor: 'pointer',
-                  transition: 'all 0.2s'
                 }}
               >
-                <Home size={20} strokeWidth={2.5} />
-                Выйти в главное меню
+                <Home size={16} strokeWidth={2.5} />
+                Главная
               </motion.button>
             </div>
           )}

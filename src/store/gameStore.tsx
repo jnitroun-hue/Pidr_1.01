@@ -2780,16 +2780,22 @@ export const useGameStore = create<GameState>()(
                 
                 if (position === 1) {
                   coinsEarned = 350;
-                  ratingChange = 50; // 🥇 Золото
+                  ratingChange = 50;
                 } else if (position === 2) {
                   coinsEarned = 250;
-                  ratingChange = 25; // 🥈 Серебро
+                  ratingChange = 25;
                 } else if (position === 3) {
                   coinsEarned = 150;
-                  ratingChange = 10; // 🥉 Бронза
-                } else if (position >= 4 && position <= 8) {
-                  coinsEarned = seededRandom(winner.id, 50, 100); // ✅ Рандом 50-100
-                  ratingChange = 0; // Нейтрально
+                  ratingChange = 10;
+                } else if (position === 4) {
+                  coinsEarned = 100;
+                  ratingChange = 0;
+                } else if (position === 5) {
+                  coinsEarned = 70;
+                  ratingChange = 0;
+                } else if (position >= 6) {
+                  coinsEarned = 30;
+                  ratingChange = 0;
                 }
                 // Для 9-го места (последнего) монеты и рейтинг начисляются в конце игры
                 
@@ -2806,50 +2812,43 @@ export const useGameStore = create<GameState>()(
                   telegramId: currentUserTelegramId
                 });
                 
-                // ✅ УСТАНАВЛИВАЕМ ФЛАГ ЧТО СТАТИСТИКА ОБНОВЛЕНА!
-                set({ statsUpdatedThisGame: true });
-                console.log(`🚩 [${traceId}] ФЛАГ statsUpdatedThisGame УСТАНОВЛЕН В TRUE!`);
+                // ✅ Только для ТЕКУЩЕГО пользователя отправляем запрос на обновление
+                const isCurrentUserWinner = winner.isUser || winner.id === currentUserTelegramId;
                 
-                // ✅ СРАЗУ ОТПРАВЛЯЕМ ЗАПРОС НА ОБНОВЛЕНИЕ!
-                console.log(`📤 [${traceId}] ОТПРАВЛЯЕМ FETCH для победителя места ${position}`);
-                fetch('/api/user/add-coins', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'x-telegram-id': currentUserTelegramId,
-                    'x-username': telegramUser?.username || telegramUser?.first_name || ''
-                  },
-                  body: JSON.stringify({
-                    amount: coinsEarned,
-                    source: `game_finish_place_${position}`,
-                    updateStats: {
-                      gamesPlayed: true,  // ✅ Всегда +1
-                      wins: isTopThree,   // ✅ +1 если ТОП-3
-                      losses: false       // ✅ Не последнее место
+                if (isCurrentUserWinner && !get().statsUpdatedThisGame) {
+                  set({ statsUpdatedThisGame: true });
+                  console.log(`🚩 [${traceId}] ФЛАГ statsUpdatedThisGame УСТАНОВЛЕН В TRUE!`);
+                  
+                  console.log(`📤 [${traceId}] ОТПРАВЛЯЕМ FETCH для победителя места ${position}`);
+                  fetch('/api/user/add-coins', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      ...(currentUserTelegramId ? { 'x-telegram-id': currentUserTelegramId } : {}),
+                      ...(telegramUser?.username ? { 'x-username': telegramUser.username } : telegramUser?.first_name ? { 'x-username': telegramUser.first_name } : {})
                     },
-                    traceId: traceId,
-                    debug: {
-                      position,
-                      isTopThree,
-                      playerName: winner.name,
-                      finishTime: winner.finishTime
-                    }
-                  })
-                }).then(res => res.json())
-                  .then(data => {
-                    if (data.success) {
-                      console.log(`✅✅✅ [${traceId}] СТАТИСТИКА ОБНОВЛЕНА! Место ${position}, Победа: ${isTopThree}, Монеты: +${coinsEarned}`);
-                      
-                      // ✅ ОБНОВЛЯЕМ РЕЙТИНГ ЕСЛИ ЭТО РЕЙТИНГОВАЯ ИГРА
-                      if (get().isRankedGame && ratingChange !== 0) {
-                        console.log(`🏆 [${traceId}] РЕЙТИНГОВАЯ ИГРА! Обновляем рейтинг: ${ratingChange > 0 ? '+' : ''}${ratingChange}`);
-                        get().updatePlayerRewards(0, 0, ratingChange);
+                    body: JSON.stringify({
+                      amount: coinsEarned,
+                      source: `game_finish_place_${position}`,
+                      ratingChange: get().isRankedGame ? ratingChange : 0,
+                      updateStats: {
+                        gamesPlayed: true,
+                        wins: isTopThree,
+                        losses: false
+                      },
+                      traceId: traceId,
+                    })
+                  }).then(res => res.json())
+                    .then(data => {
+                      if (data.success) {
+                        console.log(`✅✅✅ [${traceId}] СТАТИСТИКА ОБНОВЛЕНА! Место ${position}, Монеты: +${coinsEarned}`);
+                      } else {
+                        console.error(`❌❌❌ [${traceId}] Ошибка обновления:`, data.error);
                       }
-                    } else {
-                      console.error(`❌❌❌ [${traceId}] Ошибка обновления статистики:`, data.error);
-                    }
-                  })
-                  .catch((err: unknown) => console.error(`❌❌❌ [${traceId}] Ошибка fetch:`, err));
+                    })
+                    .catch((err: unknown) => console.error(`❌❌❌ [${traceId}] Ошибка fetch:`, err));
+                }
               }
             });
             
@@ -3045,47 +3044,19 @@ export const useGameStore = create<GameState>()(
             let coinsEarned = 0;
             let ratingChange = 0;
             
-            if (player.isUser || player.id === currentUserTelegramId) {
-              // Пользователь
-              if (place === 1) {
-                coinsEarned = 350; // 🥇 Победитель
-                ratingChange = 50;
-              } else if (place === 2) {
-                coinsEarned = 250; // 🥈 Второе место
-                ratingChange = 25;
-              } else if (place === 3) {
-                coinsEarned = 150; // 🥉 Третье место
-                ratingChange = 10;
-              } else if (place >= 4 && place <= 8) {
-                // 🎲 Места 4-8: детерминированный рандом от 50 до 100 монет
-                // Используем ID игрока для seed - все устройства увидят одинаковый результат!
-                coinsEarned = seededRandom(player.id, 50, 100);
-                ratingChange = 0;
-              } else if (isLastPlace) {
-                coinsEarned = 5; // 🎁 Утешительный приз за участие!
-                ratingChange = -25;
-              }
-            } else if (!player.isBot) {
-              // Другие реальные игроки (НЕ боты)
-              if (place === 1) {
-                coinsEarned = 350; // 🥇 Победитель
-                ratingChange = 50;
-              } else if (place === 2) {
-                coinsEarned = 250; // 🥈 Второе место
-                ratingChange = 25;
-              } else if (place === 3) {
-                coinsEarned = 150; // 🥉 Третье место
-                ratingChange = 10;
-              } else if (place >= 4 && place <= 8) {
-                // 🎲 Места 4-8: детерминированный рандом от 50 до 100 монет
-                // Используем ID игрока для seed - все устройства увидят одинаковый результат!
-                coinsEarned = seededRandom(player.id, 50, 100);
-                ratingChange = 0;
-              } else if (isLastPlace) {
-                coinsEarned = 5; // 🎁 Утешительный приз за участие!
-                ratingChange = -25;
-              }
-            }
+            const getRewards = (p: number, last: boolean) => {
+              if (p === 1) return { coins: 350, rating: 50 };
+              if (p === 2) return { coins: 250, rating: 25 };
+              if (p === 3) return { coins: 150, rating: 10 };
+              if (p === 4) return { coins: 100, rating: 0 };
+              if (p === 5) return { coins: 70, rating: 0 };
+              if (last) return { coins: 5, rating: -25 };
+              return { coins: 30, rating: 0 };
+            };
+
+            const rewards = getRewards(place, isLastPlace);
+            coinsEarned = rewards.coins;
+            ratingChange = rewards.rating;
             // Боты не получают монеты/рейтинг
             
             return {
@@ -3134,14 +3105,15 @@ export const useGameStore = create<GameState>()(
                 const traceId = `LOSER_${userResult.place}_${Date.now()}`;
                 
                 const requestBody = {
-                  amount: userResult.coinsEarned, // 5 монет
+                  amount: userResult.coinsEarned,
                   source: 'game_loss',
+                  ratingChange: get().isRankedGame ? (userResult.ratingChange || -25) : 0,
                   updateStats: {
-                    gamesPlayed: true, // ✅ +1 к играм
-                    wins: false,       // ✅ Не победа
-                    losses: true       // ✅ +1 к поражениям
+                    gamesPlayed: true,
+                    wins: false,
+                    losses: true
                   },
-                  traceId: traceId // ✅ Передаем trace ID
+                  traceId: traceId
                 };
                 
                 console.log(`🔥🔥🔥 [${traceId}] [calculateAndShowGameResults] ПОСЛЕДНИЙ ИГРОК! Обновляем статистику:`, {
@@ -3163,10 +3135,11 @@ export const useGameStore = create<GameState>()(
                 console.log(`📤 [${traceId}] ОТПРАВЛЯЕМ FETCH для последнего игрока`);
                 fetch('/api/user/add-coins', {
                 method: 'POST',
+                credentials: 'include',
                 headers: {
                   'Content-Type': 'application/json',
-                  'x-telegram-id': currentUserTelegramId,
-                  'x-username': telegramUser?.username || telegramUser?.first_name || ''
+                  ...(currentUserTelegramId ? { 'x-telegram-id': currentUserTelegramId } : {}),
+                  ...(telegramUser?.username ? { 'x-username': telegramUser.username } : telegramUser?.first_name ? { 'x-username': telegramUser.first_name } : {})
                 },
                 body: JSON.stringify(requestBody)
               })
@@ -3177,25 +3150,14 @@ export const useGameStore = create<GameState>()(
                 .then(data => {
                   console.log(`📥 [${traceId}] Response data:`, data);
                   if (data.success) {
-                    console.log(`✅✅✅ [${traceId}] СТАТИСТИКА ПОСЛЕДНЕГО ИГРОКА ОБНОВЛЕНА: Поражение +1, Монеты: +${userResult.coinsEarned}`);
-                    
-                    // ✅ ОБНОВЛЯЕМ РЕЙТИНГ ЕСЛИ ЭТО РЕЙТИНГОВАЯ ИГРА
-                    if (get().isRankedGame && userResult.ratingChange !== undefined) {
-                      console.log(`🏆 [${traceId}] РЕЙТИНГОВАЯ ИГРА! Обновляем рейтинг: ${userResult.ratingChange > 0 ? '+' : ''}${userResult.ratingChange}`);
-                      get().updatePlayerRewards(0, 0, userResult.ratingChange);
-                    }
+                    console.log(`✅✅✅ [${traceId}] СТАТИСТИКА ПОСЛЕДНЕГО ИГРОКА ОБНОВЛЕНА! Монеты: +${userResult.coinsEarned}`);
                   } else {
                     console.error(`❌❌❌ [${traceId}] API вернул ошибку:`, data.error);
                   }
                 })
                 .catch((err: unknown) => {
-                  console.error(`❌❌❌ [${traceId}] КРИТИЧЕСКАЯ ОШИБКА ОБНОВЛЕНИЯ:`, err);
-                  console.error('Полная ошибка:', {
-                    message: err instanceof Error ? err.message : String(err),
-                    stack: err instanceof Error ? err.stack : undefined,
-                    name: err instanceof Error ? err.name : 'Unknown'
-                    });
-                  });
+                  console.error(`❌❌❌ [${traceId}] Ошибка fetch:`, err);
+                });
               } // ✅ Закрываем else блок для statsUpdatedThisGame
             } else {
               console.log(`✅ [calculateAndShowGameResults] Игрок на месте ${userResult.place} УЖЕ обновил статистику при выходе!`);

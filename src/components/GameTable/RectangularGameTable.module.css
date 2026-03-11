@@ -303,28 +303,7 @@
   object-fit: cover;
 }
 
-/* Индикатор хода */
-.turnIndicator {
-  position: absolute;
-  top: -5px;
-  right: -5px;
-  width: 20px;
-  height: 20px;
-  background: #28a745;
-  border-radius: 50%;
-  border: 2px solid white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.turnPulse {
-  width: 8px;
-  height: 8px;
-  background: white;
-  border-radius: 50%;
-  animation: pulse 1.5s ease-in-out infinite;
-}
+/* Индикатор хода - кольцо вокруг аватара (без отдельного кружка) */
 
 @keyframes pulse {
   0%, 100% {

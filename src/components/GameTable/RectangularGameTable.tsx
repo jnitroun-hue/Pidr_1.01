@@ -237,9 +237,13 @@ const RectangularGameTable: React.FC<RectangularGameTableProps> = ({
                   className={styles.avatarImage}
                 />
                 {isActivePlayer && (
-                  <div className={styles.turnIndicator}>
-                    <div className={styles.turnPulse}></div>
-                  </div>
+                  <div style={{
+                    position: 'absolute', inset: '-4px', borderRadius: '50%',
+                    border: '3px solid #22c55e',
+                    boxShadow: '0 0 12px rgba(34,197,94,0.8), 0 0 24px rgba(34,197,94,0.4)',
+                    animation: 'turnGlow 1.2s ease-in-out infinite',
+                    pointerEvents: 'none',
+                  }} />
                 )}
               </div>
 
