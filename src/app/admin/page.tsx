@@ -467,62 +467,84 @@ export default function AdminPanel() {
           </motion.button>
         </div>
 
-        {/* Табы */}
+        {/* Табы — минималистичная навигация */}
         <div style={{
           display: 'flex',
-          flexWrap: isTablet ? 'wrap' : 'nowrap',
-          gap: isTablet ? '6px' : '12px',
-          marginBottom: isTablet ? '16px' : '30px',
-          borderBottom: '2px solid rgba(100, 116, 139, 0.3)',
-          paddingBottom: isTablet ? '8px' : '12px',
-          overflowX: isTablet ? 'auto' : 'visible',
-          WebkitOverflowScrolling: 'touch'
+          gap: '2px',
+          marginBottom: isTablet ? '16px' : '28px',
+          background: 'rgba(15, 23, 42, 0.6)',
+          borderRadius: '14px',
+          padding: '4px',
+          overflowX: 'auto',
+          WebkitOverflowScrolling: 'touch',
+          border: '1px solid rgba(100, 116, 139, 0.15)',
+          scrollbarWidth: 'none',
         }}>
-          {(['users', 'promocodes', 'transactions', 'card-generator', 'rooms', 'rating', 'online-game'] as TabType[]).map((tab) => (
-            <motion.button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              style={{
-                padding: isTablet ? '8px 12px' : '12px 24px',
-                background: activeTab === tab 
-                  ? tab === 'online-game' 
-                    ? 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)'
-                    : 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
-                  : 'rgba(100, 116, 139, 0.2)',
-                border: `2px solid ${activeTab === tab ? (tab === 'online-game' ? 'rgba(34, 197, 94, 0.5)' : 'rgba(99, 102, 241, 0.5)') : 'rgba(100, 116, 139, 0.3)'}`,
-                borderRadius: '12px',
-                color: activeTab === tab ? '#ffffff' : '#cbd5e1',
-                cursor: 'pointer',
-                fontSize: isTablet ? '12px' : '14px',
-                fontWeight: '600',
-                display: 'flex',
-                alignItems: 'center',
-                gap: isTablet ? '4px' : '8px',
-                whiteSpace: 'nowrap',
-                flex: isTablet ? '1 1 calc(50% - 3px)' : 'none',
-                minWidth: isTablet ? 'calc(50% - 3px)' : 'auto'
-              }}
-            >
-              {tab === 'users' && <Users size={isTablet ? 14 : 18} />}
-              {tab === 'promocodes' && <Ticket size={isTablet ? 14 : 18} />}
-              {tab === 'transactions' && <CreditCard size={isTablet ? 14 : 18} />}
-              {tab === 'card-generator' && <Sparkles size={isTablet ? 14 : 18} />}
-              {tab === 'rooms' && <Home size={isTablet ? 14 : 18} />}
-              {tab === 'rating' && <Trophy size={isTablet ? 14 : 18} />}
-              {tab === 'online-game' && <Swords size={isTablet ? 14 : 18} />}
-              <span style={{ display: isMobile ? 'none' : 'inline' }}>
-                {tab === 'users' && 'Пользователи'}
-                {tab === 'promocodes' && 'Промокоды'}
-                {tab === 'transactions' && 'Транзакции'}
-                {tab === 'card-generator' && 'Генератор карт'}
-                {tab === 'rooms' && 'Комнаты'}
-                {tab === 'rating' && 'Рейтинг'}
-                {tab === 'online-game' && 'Онлайн Игра'}
-              </span>
-            </motion.button>
-          ))}
+          {([
+            { key: 'users' as TabType, label: 'Игроки', icon: Users },
+            { key: 'promocodes' as TabType, label: 'Промокоды', icon: Ticket },
+            { key: 'transactions' as TabType, label: 'Транзакции', icon: CreditCard },
+            { key: 'card-generator' as TabType, label: 'Карты', icon: Sparkles },
+            { key: 'rooms' as TabType, label: 'Комнаты', icon: Home },
+            { key: 'rating' as TabType, label: 'Рейтинг', icon: Trophy },
+            { key: 'online-game' as TabType, label: 'Онлайн', icon: Swords },
+          ]).map(({ key, label, icon: Icon }) => {
+            const isActive = activeTab === key;
+            return (
+              <motion.button
+                key={key}
+                onClick={() => setActiveTab(key)}
+                whileTap={{ scale: 0.97 }}
+                style={{
+                  position: 'relative',
+                  padding: isTablet ? '8px 10px' : '10px 18px',
+                  background: isActive 
+                    ? 'rgba(99, 102, 241, 0.15)'
+                    : 'transparent',
+                  border: 'none',
+                  borderRadius: '10px',
+                  color: isActive ? '#a5b4fc' : '#64748b',
+                  cursor: 'pointer',
+                  fontSize: isTablet ? '11px' : '13px',
+                  fontWeight: isActive ? '600' : '500',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: isTablet ? '5px' : '7px',
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.2s ease',
+                  flex: isTablet ? '1 0 auto' : 'none',
+                  letterSpacing: '0.01em',
+                }}
+              >
+                <Icon size={isTablet ? 14 : 16} style={{
+                  color: isActive ? '#818cf8' : '#64748b',
+                  transition: 'color 0.2s ease',
+                }} />
+                <span style={{ 
+                  display: isMobile ? 'none' : 'inline',
+                  transition: 'color 0.2s ease', 
+                }}>
+                  {label}
+                </span>
+                {/* Нижний индикатор активного таба */}
+                {isActive && (
+                  <motion.div
+                    layoutId="admin-tab-indicator"
+                    style={{
+                      position: 'absolute',
+                      bottom: '2px',
+                      left: '20%',
+                      right: '20%',
+                      height: '2px',
+                      borderRadius: '1px',
+                      background: '#818cf8',
+                    }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                  />
+                )}
+              </motion.button>
+            );
+          })}
         </div>
 
         {/* Статистика */}

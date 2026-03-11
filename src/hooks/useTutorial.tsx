@@ -74,7 +74,7 @@ export function useTutorial(
           position: 'top',
           arrowDirection: 'down',
           spotlightText: 'Активный игрок подсвечен зелёным',
-          content: 'Первый ход у игрока с самой младшей открытой картой.\n\n📋 Иерархия карт (от старшей к младшей):\n🃏 Туз → Король → Дама → Валет → 10 → 9 → ... → 3 → 2\n\n⚡ Двойка — особая! Она бьёт ТОЛЬКО Туза.\n♠♥♦♣ Масти НЕ важны в 1-й стадии!'
+          content: 'Первый ход у игрока с самой СТАРШЕЙ открытой картой.\n\n📋 Иерархия карт (от старшей к младшей):\n🃏 Туз → Король → Дама → Валет → 10 → 9 → ... → 3 → 2\n\n⚡ Двойка — особая! Она бьёт ТОЛЬКО Туза.\n♠♥♦♣ Масти НЕ важны в 1-й стадии!'
         },
         {
           id: 'your_turn_stage1',
@@ -84,7 +84,16 @@ export function useTutorial(
           position: 'top',
           arrowDirection: 'down',
           spotlightText: 'Нажмите на игрока с младшей картой',
-          content: '👆 Посмотрите на открытые карты соперников вокруг стола.\n\n✅ Если у кого-то карта МЛАДШЕ вашей — нажмите на его аватар, чтобы положить свою карту на него!\n\n❌ Если положить некуда — нажмите на КОЛОДУ в центре стола, чтобы взять новую карту.\n\n💡 Цель: избавиться от всех карт!'
+          content: '👆 Посмотрите на открытые карты соперников вокруг стола.\n\n✅ Если у кого-то карта МЛАДШЕ вашей — нажмите на его аватар, чтобы положить свою карту на него!\n\n❌ Если положить некуда — нажмите на КОЛОДУ в центре стола.\n\n🃏 Карта из колоды: если она СТАРШЕ чьей-то открытой — можете СРАЗУ сходить ею на этого игрока! Если нет — она остаётся у вас.\n\n💡 Цель: избавиться от всех карт!'
+        },
+        {
+          id: 'bot_placed_on_you',
+          title: '🤖 Бот положил карту на вас!',
+          icon: '😮',
+          stepType: 'warning',
+          position: 'center',
+          arrowDirection: 'none',
+          content: 'Бот положил свою карту поверх вашей — это значит его карта СТАРШЕ!\n\n📌 Пример: у вас была 2, бот положил 3 — потому что 3 > 2.\n\n⚠️ Теперь ваша открытая карта — это карта бота (3). Следующий игрок будет сравнивать с ней!\n\n💡 Не переживайте — когда будет ваш ход, вы сможете сделать то же самое с другими!'
         },
         {
           id: 'no_cards_stage1',
@@ -94,7 +103,7 @@ export function useTutorial(
           position: 'center',
           arrowDirection: 'down',
           spotlightText: 'Нажмите на колоду чтобы взять карту',
-          content: 'У вас больше нет карт на руке!\n\n👆 Нажмите на КОЛОДУ в центре стола чтобы взять новую карту.\n\n💡 Если взятая карта старше вашей открытой — можете положить её на себя.\n\n⚠️ Если не можете сходить — ход переходит дальше.'
+          content: 'У вас больше нет карт на руке!\n\n👆 Нажмите на КОЛОДУ в центре стола чтобы взять новую карту.\n\n🃏 Если взятая карта СТАРШЕ чьей-то открытой — можете СРАЗУ сходить ею!\n\n💡 Если не можете сходить — карта остаётся у вас как новая открытая.'
         },
         {
           id: 'stage2_transition',
@@ -283,6 +292,35 @@ export function useTutorial(
     setCurrentStep(null);
     setIsTutorialPaused(false);
   }, [tutorialConfig, currentStep]);
+
+  // ✅ 0. Модалка когда бот положил карту на игрока (объяснение ПОЧЕМУ)
+  const userCardCountRef = useRef<number>(0);
+  useEffect(() => {
+    if (!tutorialConfig.enabled || isTutorialPaused || !userPlayerId) return;
+    if (tutorialConfig.shownSteps.has('bot_placed_on_you')) return;
+    
+    const userPlayer = players.find(p => p.id === userPlayerId);
+    if (!userPlayer) return;
+    
+    const currentCardCount = userPlayer.cards?.length || 0;
+    const prevCount = userCardCountRef.current;
+    
+    // Если количество карт у юзера УВЕЛИЧИЛОСЬ на 1 (бот положил на него) и это не ход юзера
+    if (gameStage === 1 && prevCount > 0 && currentCardCount > prevCount && !isUserTurn) {
+      userCardCountRef.current = currentCardCount;
+      
+      const step = tutorialConfig.steps.find(s => s.id === 'bot_placed_on_you');
+      if (step) {
+        // Небольшая задержка чтобы игрок увидел анимацию карты
+        setTimeout(() => {
+          setCurrentStep(step);
+          setIsTutorialPaused(true);
+        }, 600);
+      }
+    } else {
+      userCardCountRef.current = currentCardCount;
+    }
+  }, [players, userPlayerId, gameStage, isUserTurn, tutorialConfig, isTutorialPaused]);
 
   // ✅ 1. Модалка при начале хода - кто ходит и цель 1-й стадии
   useEffect(() => {

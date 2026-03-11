@@ -134,47 +134,43 @@ const getRectanglePosition = (index: number, totalPlayers: number, gameStage: nu
   const adjustedIndex = index - 1; // Индекс без главного игрока (0-based)
   
   if (totalPlayers === 4) {
-    // 4 игрока: 1 сверху, 1 справа, 1 слева, 1 внизу (главный)
     const positions = [
-      { left: '50%', top: '10%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 100 }, side: 'top' as const }, // ✅ ИСПРАВЛЕНО: Увеличен отступ карт до 100px для лучшей видимости
-      { left: '92%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 }, side: 'right' as const },
-      { left: '8%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 }, side: 'left' as const },
+      { left: '50%', top: '10%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
+      { left: '92%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
+      { left: '8%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
     ];
     return positions[adjustedIndex] || positions[0];
   }
   
   if (totalPlayers === 5) {
-    // 5 игроков: 2 сверху, 1 справа, 1 слева, 1 внизу (главный)
     const positions = [
-      { left: '25%', top: '10%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 100 }, side: 'top' as const }, // ✅ ИСПРАВЛЕНО: Увеличен отступ карт до 100px, раздвинуты игроки (25% и 75%)
-      { left: '75%', top: '10%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 100 }, side: 'top' as const }, // ✅ ИСПРАВЛЕНО: Увеличен отступ карт до 100px, раздвинуты игроки
-      { left: '92%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 }, side: 'right' as const },
-      { left: '8%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 }, side: 'left' as const },
+      { left: '25%', top: '10%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
+      { left: '75%', top: '10%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
+      { left: '92%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
+      { left: '8%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
     ];
     return positions[adjustedIndex] || positions[0];
   }
   
   if (totalPlayers === 6) {
-    // 6 игроков: 1 сверху, 2 справа, 2 слева, 1 внизу (главный)
     const positions = [
-      { left: '50%', top: '10%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 100 }, side: 'top' as const }, // ✅ ИСПРАВЛЕНО: Увеличен отступ карт до 100px для лучшей видимости
-      { left: '92%', top: '35%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 }, side: 'right' as const },
-      { left: '92%', top: '65%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 }, side: 'right' as const },
-      { left: '8%', top: '35%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 }, side: 'left' as const },
-      { left: '8%', top: '65%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 }, side: 'left' as const },
+      { left: '50%', top: '10%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
+      { left: '92%', top: '35%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
+      { left: '92%', top: '65%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
+      { left: '8%', top: '35%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
+      { left: '8%', top: '65%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
     ];
     return positions[adjustedIndex] || positions[0];
   }
   
   if (totalPlayers === 7) {
-    // 7 игроков: 2 сверху, 2 слева, 2 справа, 1 внизу (главный)
     const positions = [
-      { left: '25%', top: '10%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 100 }, side: 'top' as const }, // ✅ ИСПРАВЛЕНО: Увеличен отступ карт до 100px, раздвинуты игроки (25% и 75%)
-      { left: '75%', top: '10%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 100 }, side: 'top' as const }, // ✅ ИСПРАВЛЕНО: Увеличен отступ карт до 100px, раздвинуты игроки
-      { left: '8%', top: '35%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 }, side: 'left' as const },
-      { left: '8%', top: '65%', cardDirection: 'vertical' as const, cardOffset: { x: 55, y: 0 }, side: 'left' as const },
-      { left: '92%', top: '35%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 }, side: 'right' as const },
-      { left: '92%', top: '65%', cardDirection: 'vertical' as const, cardOffset: { x: -55, y: 0 }, side: 'right' as const },
+      { left: '25%', top: '10%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
+      { left: '75%', top: '10%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
+      { left: '8%', top: '35%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
+      { left: '8%', top: '65%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
+      { left: '92%', top: '35%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
+      { left: '92%', top: '65%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
     ];
     return positions[adjustedIndex] || positions[0];
   }
@@ -2173,11 +2169,7 @@ function GamePageContentComponent({
               const playerCards = player.cards || []; // ИСПРАВЛЕНО: используем player.cards из gameStore!
               const isHumanPlayer = player.isUser === true; // ИСПРАВЛЕНО: используем флаг isUser из gameStore!
               
-              // ✅ НОВОЕ: Определяем расположение карт относительно аватара
-              const cardsOnLeft = position.side === 'right'; // Справа - карты слева от аватара
-              const cardsOnRight = position.side === 'left'; // Слева - карты справа от аватара
-              const cardsOnBottom = position.side === 'top'; // Сверху - карты снизу от аватара
-              const isVerticalLayout = cardsOnBottom; // Вертикальная компоновка для игроков сверху
+              // Расположение карт — всегда снизу аватара (столбик)
 
                 return (
                   <div
@@ -2290,20 +2282,9 @@ function GamePageContentComponent({
                   {playerCards.length > 0 && (
                     <div className={styles.cardsContainer} style={{ 
                       order: 2,
-                      flexDirection: 'row', // ✅ Горизонтально для карт (они идут в ряд)
-                      // ✅ ИСПРАВЛЕНО: Применяем cardOffset для правильного позиционирования карт верхних игроков
-                      marginTop: isVerticalLayout ? `${Math.max(0, position.cardOffset.y)}px` : '0',
-                      marginLeft: !isVerticalLayout && cardsOnLeft ? `${Math.abs(position.cardOffset.x)}px` : '0',
-                      marginRight: !isVerticalLayout && cardsOnRight ? `${Math.abs(position.cardOffset.x)}px` : '0',
+                      flexDirection: 'row',
                     }}>
-                      {/* УБРАНЫ ДУБЛИРУЮЩИЕСЯ КНОПКИ - оставлены только внизу экрана */}
-                      
-                      <div className={styles.activeCardContainer} style={{
-                        left: isVerticalLayout ? 'auto' : (cardsOnLeft ? 'auto' : '5px'),
-                        right: isVerticalLayout ? 'auto' : (cardsOnLeft ? '5px' : 'auto'),
-                        top: isVerticalLayout ? '5px' : 'auto',
-                        bottom: isVerticalLayout ? 'auto' : 'auto',
-                      }}>
+                      <div className={styles.activeCardContainer}>
                         {playerCards.map((card: any, cardIndex: number) => {
                           // Карта может быть строкой "7_of_spades.png(open)" или объектом {rank, suit, image}
                           const cardImage = typeof card === 'string' 
@@ -3166,16 +3147,19 @@ function GamePageContentComponent({
 
       {/* ✅ ЖИВЫЕ АНИМИРОВАННЫЕ СТРЕЛКИ НА ИГРОВОМ ПОЛЕ (только в туториале) */}
       {isTutorialActive && !isTutorialPaused && isUserTurn && players.length > 0 && (() => {
-        // Определяем позицию юзера и лучшей цели
         const userIndex = players.findIndex(p => p.isUser);
         if (userIndex < 0) return null;
         const userPos = getPlayerPosition(userIndex, players.length);
 
-        // В 1-й стадии — ищем слабейшего противника
+        // В 1-й стадии — толстая изогнутая стрелка к доступной цели
         if (gameStage === 1 && availableTargets.length > 0) {
           const targetIdx = availableTargets[0];
           const targetPos = getPlayerPosition(targetIdx, players.length);
           const targetPlayer = players[targetIdx];
+          // Контрольная точка для кривой Безье — смещаем вбок для изгиба
+          const midX = (userPos.x + targetPos.x) / 2;
+          const midY = (userPos.y + targetPos.y) / 2;
+          const curveOffset = targetPos.x > userPos.x ? -12 : 12; // изгиб в сторону
           return (
             <svg
               style={{
@@ -3184,57 +3168,71 @@ function GamePageContentComponent({
               }}
             >
               <defs>
-                <marker id="tut-arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
-                  <path d="M0,0 L10,4 L0,8 Z" fill="#22c55e" />
+                <marker id="tut-arrowhead" markerWidth="14" markerHeight="12" refX="12" refY="6" orient="auto">
+                  <path d="M0,0 L14,6 L0,12 L3,6 Z" fill="#22c55e" />
                 </marker>
-                <filter id="tut-glow">
-                  <feGaussianBlur stdDeviation="3" result="blur" />
+                <linearGradient id="arrow-grad" x1="0%" y1="100%" x2="0%" y2="0%">
+                  <stop offset="0%" stopColor="#22c55e" stopOpacity="0.3" />
+                  <stop offset="100%" stopColor="#4ade80" stopOpacity="1" />
+                </linearGradient>
+                <filter id="tut-glow2">
+                  <feGaussianBlur stdDeviation="4" result="blur" />
                   <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
                 </filter>
               </defs>
-              {/* Пульсирующий круг на цели */}
-              <circle
-                cx={`${targetPos.x}%`} cy={`${targetPos.y}%`} r="30"
-                fill="none" stroke="#22c55e" strokeWidth="2" opacity="0.7"
-                filter="url(#tut-glow)"
-              >
-                <animate attributeName="r" values="22;34;22" dur="1.5s" repeatCount="indefinite" />
-                <animate attributeName="opacity" values="0.8;0.3;0.8" dur="1.5s" repeatCount="indefinite" />
+              {/* Толстое свечение-подложка */}
+              <path
+                d={`M ${userPos.x}% ${userPos.y - 5}% Q ${midX + curveOffset}% ${midY}% ${targetPos.x}% ${targetPos.y + 5}%`}
+                stroke="rgba(34,197,94,0.25)" strokeWidth="12" fill="none"
+                strokeLinecap="round"
+              />
+              {/* Основная толстая изогнутая стрелка */}
+              <path
+                d={`M ${userPos.x}% ${userPos.y - 5}% Q ${midX + curveOffset}% ${midY}% ${targetPos.x}% ${targetPos.y + 5}%`}
+                stroke="url(#arrow-grad)" strokeWidth="5" fill="none"
+                strokeLinecap="round" markerEnd="url(#tut-arrowhead)"
+                filter="url(#tut-glow2)"
+              />
+              {/* Пульсирующий круг-цель */}
+              <circle cx={`${targetPos.x}%`} cy={`${targetPos.y}%`} r="24"
+                fill="none" stroke="#4ade80" strokeWidth="2.5" opacity="0.7">
+                <animate attributeName="r" values="20;30;20" dur="1.3s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.9;0.3;0.9" dur="1.3s" repeatCount="indefinite" />
               </circle>
-              {/* Стрелка от юзера к цели */}
-              <line
-                x1={`${userPos.x}%`} y1={`${userPos.y - 4}%`}
-                x2={`${targetPos.x}%`} y2={`${targetPos.y + 4}%`}
-                stroke="#22c55e" strokeWidth="2.5" strokeDasharray="8 4"
-                markerEnd="url(#tut-arrow)" filter="url(#tut-glow)"
+              {/* Подпись на середине стрелки */}
+              <foreignObject
+                x={`${midX + curveOffset - 15}%`} y={`${midY - 3}%`}
+                width="30%" height="6%"
               >
-                <animate attributeName="stroke-dashoffset" values="24;0" dur="0.8s" repeatCount="indefinite" />
-              </line>
-              {/* Подпись */}
-              <text
-                x={`${(userPos.x + targetPos.x) / 2}%`}
-                y={`${(userPos.y + targetPos.y) / 2 - 2}%`}
-                textAnchor="middle" fill="#22c55e" fontSize="11" fontWeight="700"
-                filter="url(#tut-glow)"
-              >
-                Положи карту на {targetPlayer?.name || 'соперника'}! ⬆️
-              </text>
+                <div style={{
+                  display: 'flex', justifyContent: 'center', alignItems: 'center',
+                  width: '100%', height: '100%',
+                }}>
+                  <span style={{
+                    color: '#fff', fontSize: '11px', fontWeight: '700',
+                    background: 'rgba(34,197,94,0.85)', padding: '3px 10px',
+                    borderRadius: '8px', whiteSpace: 'nowrap',
+                    boxShadow: '0 2px 12px rgba(34,197,94,0.5)',
+                  }}>
+                    Положи на {targetPlayer?.name || 'соперника'} 👆
+                  </span>
+                </div>
+              </foreignObject>
             </svg>
           );
         }
 
-        // В 2-й стадии — стрелка на руку / выбранную карту
+        // В 2-й стадии — подсказка
         if (gameStage >= 2 && selectedHandCard) {
           return (
             <div style={{
               position: 'absolute', bottom: '22%', left: '50%', transform: 'translateX(-50%)',
               zIndex: 200, pointerEvents: 'none',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
             }}>
               <span style={{
-                color: '#fbbf24', fontSize: '12px', fontWeight: '700',
-                background: 'rgba(0,0,0,0.7)', padding: '4px 10px', borderRadius: '8px',
-                border: '1px solid rgba(251, 191, 36, 0.4)',
+                color: '#fff', fontSize: '12px', fontWeight: '700',
+                background: 'rgba(34,197,94,0.85)', padding: '6px 14px', borderRadius: '10px',
+                boxShadow: '0 4px 16px rgba(34,197,94,0.4)',
               }}>Теперь нажмите на соперника! ⬆️</span>
             </div>
           );
@@ -3245,12 +3243,11 @@ function GamePageContentComponent({
             <div style={{
               position: 'absolute', bottom: '14%', left: '50%', transform: 'translateX(-50%)',
               zIndex: 200, pointerEvents: 'none',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
             }}>
               <span style={{
-                color: '#818cf8', fontSize: '12px', fontWeight: '700',
-                background: 'rgba(0,0,0,0.7)', padding: '4px 10px', borderRadius: '8px',
-                border: '1px solid rgba(99, 102, 241, 0.4)',
+                color: '#fff', fontSize: '12px', fontWeight: '700',
+                background: 'rgba(99,102,241,0.85)', padding: '6px 14px', borderRadius: '10px',
+                boxShadow: '0 4px 16px rgba(99,102,241,0.4)',
                 animation: 'pulse 2s ease-in-out infinite',
               }}>⬇️ Выберите карту из руки внизу</span>
             </div>
@@ -3260,10 +3257,18 @@ function GamePageContentComponent({
         return null;
       })()}
 
-      {/* Подсказка «не ваш ход» — объяснение хода бота (в туториале) */}
+      {/* Подсказка хода бота — ОБЪЯСНЕНИЕ почему бот кладёт карту */}
       {isTutorialActive && !isTutorialPaused && !isUserTurn && currentPlayerId && players.length > 0 && (() => {
         const activePlayer = players.find(p => p.id === currentPlayerId);
         if (!activePlayer || activePlayer.isUser) return null;
+        // Находим позицию бота
+        const botIndex = players.findIndex(p => p.id === currentPlayerId);
+        const botPos = botIndex >= 0 ? getPlayerPosition(botIndex, players.length) : null;
+        // Ищем цель бота (юзер или другой игрок с младшей картой)
+        const userPlayer = players.find(p => p.isUser);
+        const userTopCard = userPlayer?.cards?.length ? userPlayer.cards[userPlayer.cards.length - 1] : null;
+        const botTopCard = activePlayer?.cards?.length ? activePlayer.cards[activePlayer.cards.length - 1] : null;
+
         return (
           <motion.div
             key={currentPlayerId}
@@ -3271,20 +3276,26 @@ function GamePageContentComponent({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
             style={{
-              position: 'absolute', top: '6%', left: '50%', transform: 'translateX(-50%)',
+              position: 'absolute',
+              top: botPos && botPos.y < 30 ? '18%' : '4%',
+              left: '50%', transform: 'translateX(-50%)',
               zIndex: 200, pointerEvents: 'none',
-              background: 'rgba(15, 23, 42, 0.92)', border: '1px solid rgba(99, 102, 241, 0.3)',
-              borderRadius: '12px', padding: '8px 16px', backdropFilter: 'blur(8px)',
-              maxWidth: '280px', textAlign: 'center',
+              background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%)',
+              border: '1.5px solid rgba(139, 92, 246, 0.4)',
+              borderRadius: '14px', padding: '10px 16px', backdropFilter: 'blur(10px)',
+              maxWidth: '300px', textAlign: 'center',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.4), 0 0 20px rgba(139,92,246,0.15)',
             }}
           >
-            <div style={{ color: '#e2e8f0', fontSize: '12px', fontWeight: '600' }}>
-              🤖 <span style={{ color: '#818cf8' }}>{activePlayer.name}</span> думает...
+            <div style={{ color: '#e2e8f0', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>
+              🤖 Ходит <span style={{ color: '#a78bfa' }}>{activePlayer.name}</span>
             </div>
-            <div style={{ color: '#94a3b8', fontSize: '11px', marginTop: '2px' }}>
-              {gameStage === 1
-                ? 'Бот ищет соперника с младшей картой'
-                : 'Бот выбирает карту из руки'}
+            <div style={{ color: '#94a3b8', fontSize: '11px', lineHeight: '1.5' }}>
+              {gameStage === 1 ? (
+                <>Бот ищет соперника, у которого открытая карта <span style={{ color: '#fbbf24' }}>МЕНЬШЕ</span> его. Если найдёт — положит свою карту сверху. Старшая бьёт младшую!</>
+              ) : (
+                <>Бот выбирает карту из руки и кладёт на того, у кого карта слабее. Козырь бьёт все некозырные!</>
+              )}
             </div>
           </motion.div>
         );
