@@ -45,8 +45,8 @@ export async function GET(req: NextRequest) {
 
     // ✅ ЛОГИРОВАНИЕ для отладки
     const totalGames = user.total_games || user.games_played || 0;
-    const wins = user.wins || 0;
-    console.log(`📊 [API /user/me] Пользователь ${userId}: total_games=${user.total_games}, games_played=${user.games_played}, wins=${user.wins}, losses=${user.losses}`);
+    const wins = user.games_won || user.wins || 0;
+    console.log(`📊 [API /user/me] Пользователь ${userId}: total_games=${user.total_games}, games_played=${user.games_played}, games_won=${user.games_won}, wins=${user.wins}`);
 
     // ✅ ЛОГИРОВАНИЕ: Проверяем что приходит из БД
     console.log(`📊 [API /user/me] Данные из БД:`, {
@@ -71,6 +71,7 @@ export async function GET(req: NextRequest) {
         experience: user.experience || 0,
         games_played: totalGames,
         gamesPlayed: totalGames,
+        games_won: wins,
         wins: wins,
         losses: user.losses || 0,
         best_win_streak: user.best_win_streak || 0,

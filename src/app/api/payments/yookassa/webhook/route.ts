@@ -105,7 +105,7 @@ async function handlePaymentSucceeded(supabase: any, payment: any) {
       .single();
 
     if (user) {
-      const coinsToAdd = Math.floor(amount * 10); // 10 монет за 1 рубль (можно настроить)
+      const coinsToAdd = Math.floor(amount * 50); // 50 монет за 1 рубль (100 руб = 5000 монет)
       const newBalance = (user.coins || 0) + coinsToAdd;
 
       await supabase
@@ -113,7 +113,20 @@ async function handlePaymentSucceeded(supabase: any, payment: any) {
         .update({ coins: newBalance })
         .eq('id', userId);
 
-      console.log(`💰 Added ${coinsToAdd} coins to user ${userId}, new balance: ${newBalance}`);
+      // Записываем транзакцию монет
+      await supabase
+        .from('_pidr_coin_transactions')
+        .insert({
+          user_id: parseInt(userId) || 0,
+          amount: coinsToAdd,
+          transaction_type: 'deposit_rub',
+          description: `Пополнение через ЮКассу: ${amount} ₽ → ${coinsToAdd} монет`,
+          balance_before: user.coins || 0,
+          balance_after: newBalance,
+          status: 'completed'
+        });
+
+      console.log(`💰 Добавлено ${coinsToAdd} монет пользователю ${userId} (${amount} ₽), новый баланс: ${newBalance}`);
     }
   } else if (itemType === 'premium' || itemType === 'item') {
     // Обработка покупки премиум-функций или предметов

@@ -51,12 +51,12 @@ export default function RatingPage() {
           }
         }
 
-        // Загружаем топ игроков
-        const ratingRes = await fetch('/api/admin/rating?page=1&limit=20', { credentials: 'include' });
+        // Загружаем топ игроков (публичный API)
+        const ratingRes = await fetch('/api/rating/top?limit=20', { credentials: 'include' });
         if (ratingRes.ok) {
           const ratingData = await ratingRes.json();
-          if (ratingData.success && ratingData.users) {
-            setTopPlayers(ratingData.users);
+          if (ratingData.success && ratingData.players) {
+            setTopPlayers(ratingData.players);
           }
         }
       } catch (e) {
