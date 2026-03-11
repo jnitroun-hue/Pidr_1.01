@@ -2186,12 +2186,9 @@ function GamePageContentComponent({
                     style={{
                     left: `${position.x}%`,
                     top: `${position.y}%`,
-                    flexDirection: 'column', // ✅ ВСЕГДА ВЕРТИКАЛЬНО: аватар сверху, карты снизу
-                    // ✅ ОБЕСПЕЧИВАЕМ ОДИНАКОВЫЕ СТИЛИ ДЛЯ ВСЕХ ИГРОКОВ (как у игроков сверху)
+                    flexDirection: 'column',
                     background: 'linear-gradient(145deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.2) 100%), radial-gradient(circle at center, rgba(255, 215, 0, 0.1) 0%, transparent 70%)',
-                    border: isCurrentTurn ? '2px solid rgba(34, 197, 94, 1)' : '1.5px solid rgba(255, 215, 0, 0.5)', /* ✅ УМЕНЬШЕНА ТОЛЩИНА */
-                    borderRadius: '12px', /* ✅ УМЕНЬШЕНО: было 16px */
-                    padding: '4px 6px', /* ✅ УМЕНЬШЕНО: было 10px 8px */
+                    border: isCurrentTurn ? '2px solid rgba(34, 197, 94, 1)' : '1px solid rgba(255, 215, 0, 0.4)',
                     backdropFilter: 'blur(8px)',
                     boxShadow: isCurrentTurn 
                       ? '0 8px 30px rgba(0, 0, 0, 0.5), 0 0 30px rgba(34, 197, 94, 0.8), 0 0 50px rgba(34, 197, 94, 0.6), 0 0 70px rgba(34, 197, 94, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
@@ -2270,13 +2267,13 @@ function GamePageContentComponent({
                         alt={player.name}
                             className={styles.avatar}
                           style={{
-                            width: '26px', // ✅ УМЕНЬШЕНО: было 30px
-                            height: '26px',
+                            width: '24px',
+                            height: '24px',
                             borderRadius: '50%',
                             boxShadow: currentPlayerId === player.id 
-                              ? '0 0 20px rgba(34, 197, 94, 1), 0 0 35px rgba(34, 197, 94, 0.9), 0 0 50px rgba(34, 197, 94, 0.7)' // ✅ УМЕНЬШЕНО СВЕЧЕНИЕ
-                              : '0 2px 6px rgba(0, 0, 0, 0.3)',
-                            border: `${currentPlayerId === player.id ? '3px' : '1.5px'} solid ${currentPlayerId === player.id ? '#22c55e' : 'rgba(255, 255, 255, 0.2)'}`, // ✅ УМЕНЬШЕНА ТОЛЩИНА
+                              ? '0 0 10px rgba(34, 197, 94, 0.9), 0 0 20px rgba(34, 197, 94, 0.5)'
+                              : '0 1px 4px rgba(0, 0, 0, 0.3)',
+                            border: `${currentPlayerId === player.id ? '2px' : '1px'} solid ${currentPlayerId === player.id ? '#22c55e' : 'rgba(255, 255, 255, 0.2)'}`,
                             transition: 'all 0.3s ease',
                             objectFit: 'cover',
                             position: 'relative',
@@ -2423,36 +2420,35 @@ function GamePageContentComponent({
                             >
                               {/* ✅ ИСПРАВЛЕНО: NFT карты для ВСЕХ игроков (не только главного) */}
                               {nftImageUrl && showOpen ? (
-                                <div style={{ position: 'relative', width: '60px', height: '90px' }}>
+                                <div style={{ position: 'relative', width: '100%', height: '100%' }}>
                                 <img
                                   src={nftImageUrl}
                                   alt={cardImage}
                                   onError={(e) => {
                                     console.log('❌ NFT не загрузилась, показываем стандартную:', cardImage);
-                                      // Заменяем на обычную карту (если cardImage не URL)
                                     const target = e.currentTarget;
-                                      if (!cardImage.startsWith('http')) {
-                                    target.src = `${CARDS_PATH}${cardImage}`;
-                                      } else {
-                                        target.src = `${CARDS_PATH}${cardRank}_of_${cardSuit}.png`;
-                                      }
+                                    if (!cardImage.startsWith('http')) {
+                                      target.src = `${CARDS_PATH}${cardImage}`;
+                                    } else {
+                                      target.src = `${CARDS_PATH}${cardRank}_of_${cardSuit}.png`;
+                                    }
                                   }}
                                   style={{ 
-                                    width: '50px',
-                                    height: '75px',
-                                    borderRadius: '8px',
+                                    width: '100%',
+                                    height: '100%',
+                                    borderRadius: 'inherit',
                                     background: '#ffffff',
                                     opacity: 1,
                                     filter: shouldHighlight || isAvailableTarget ? 'brightness(1.2)' : 'none',
                                     visibility: 'visible',
                                     display: 'block',
                                     boxShadow: shouldHighlight 
-                                      ? '0 0 20px rgba(40, 167, 69, 0.8), 0 0 30px rgba(40, 167, 69, 0.5)' 
+                                      ? '0 0 12px rgba(40, 167, 69, 0.8)' 
                                       : isAvailableTarget 
-                                      ? '0 0 20px rgba(59, 130, 246, 0.8), 0 0 30px rgba(59, 130, 246, 0.5)'
+                                      ? '0 0 12px rgba(59, 130, 246, 0.8)'
                                       : 'none',
                                     transition: 'all 0.3s ease',
-                                    objectFit: 'contain', // ✅ ИСПРАВЛЕНО: contain вместо cover - карта не обрезается
+                                    objectFit: 'cover',
                                   }}
                                 />
                                   {/* ✅ ОВЕРЛЕЙ РАНГА И МАСТИ НА NFT КАРТЕ */}
@@ -2474,9 +2470,9 @@ function GamePageContentComponent({
                                     return (
                                       <div style={{
                                         position: 'absolute',
-                                        top: '3px',
-                                        left: '4px',
-                                        fontSize: '11px',
+                                        top: '1px',
+                                        left: '2px',
+                                        fontSize: '8px',
                                         fontWeight: 'bold',
                                         color: cardSuit === 'hearts' || cardSuit === 'diamonds' ? '#dc2626' : '#1f2937',
                                         textShadow: '0 0 2px white, 0 0 2px white',
@@ -2497,18 +2493,21 @@ function GamePageContentComponent({
                                   height={90}
                                   loading="eager"
                                   style={{ 
-                                    borderRadius: '8px',
+                                    width: '100%',
+                                    height: '100%',
+                                    borderRadius: 'inherit',
                                     background: '#ffffff',
                                     opacity: 1,
                                     filter: shouldHighlight || isAvailableTarget ? 'brightness(1.2)' : 'none',
                                     visibility: 'visible',
                                     display: 'block',
                                     boxShadow: shouldHighlight 
-                                      ? '0 0 20px rgba(40, 167, 69, 0.8), 0 0 30px rgba(40, 167, 69, 0.5)' 
+                                      ? '0 0 12px rgba(40, 167, 69, 0.8)' 
                                       : isAvailableTarget 
-                                      ? '0 0 20px rgba(59, 130, 246, 0.8), 0 0 30px rgba(59, 130, 246, 0.5)'
+                                      ? '0 0 12px rgba(59, 130, 246, 0.8)'
                                       : 'none',
                                     transition: 'all 0.3s ease',
+                                    objectFit: 'cover',
                                   }}
                                   priority
                                 />
@@ -2547,18 +2546,18 @@ function GamePageContentComponent({
                                   transform: 'translate(-50%, -50%)',
                                   background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.95) 0%, rgba(37, 99, 235, 0.95) 100%)',
                                   color: 'white',
-                                  fontSize: '20px',
+                                  fontSize: '11px',
                                   fontWeight: '900',
-                                  width: '36px',
-                                  height: '36px',
+                                  width: '20px',
+                                  height: '20px',
                                   borderRadius: '50%',
                                   display: 'flex',
                                   alignItems: 'center',
                                   justifyContent: 'center',
-                                  boxShadow: '0 4px 12px rgba(59, 130, 246, 0.6), 0 0 20px rgba(59, 130, 246, 0.3)',
-                                  border: '2px solid white',
+                                  boxShadow: '0 2px 8px rgba(59, 130, 246, 0.6)',
+                                  border: '1.5px solid white',
                                   zIndex: 20,
-                                  textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)'
+                                  textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)'
                                 }}>
                                   {playerCards.length}
                                 </div>
@@ -3164,6 +3163,132 @@ function GamePageContentComponent({
             : undefined
         }
       />
+
+      {/* ✅ ЖИВЫЕ АНИМИРОВАННЫЕ СТРЕЛКИ НА ИГРОВОМ ПОЛЕ (только в туториале) */}
+      {isTutorialActive && !isTutorialPaused && isUserTurn && players.length > 0 && (() => {
+        // Определяем позицию юзера и лучшей цели
+        const userIndex = players.findIndex(p => p.isUser);
+        if (userIndex < 0) return null;
+        const userPos = getPlayerPosition(userIndex, players.length);
+
+        // В 1-й стадии — ищем слабейшего противника
+        if (gameStage === 1 && availableTargets.length > 0) {
+          const targetIdx = availableTargets[0];
+          const targetPos = getPlayerPosition(targetIdx, players.length);
+          const targetPlayer = players[targetIdx];
+          return (
+            <svg
+              style={{
+                position: 'absolute', inset: 0, width: '100%', height: '100%',
+                zIndex: 200, pointerEvents: 'none', overflow: 'visible',
+              }}
+            >
+              <defs>
+                <marker id="tut-arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+                  <path d="M0,0 L10,4 L0,8 Z" fill="#22c55e" />
+                </marker>
+                <filter id="tut-glow">
+                  <feGaussianBlur stdDeviation="3" result="blur" />
+                  <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                </filter>
+              </defs>
+              {/* Пульсирующий круг на цели */}
+              <circle
+                cx={`${targetPos.x}%`} cy={`${targetPos.y}%`} r="30"
+                fill="none" stroke="#22c55e" strokeWidth="2" opacity="0.7"
+                filter="url(#tut-glow)"
+              >
+                <animate attributeName="r" values="22;34;22" dur="1.5s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.8;0.3;0.8" dur="1.5s" repeatCount="indefinite" />
+              </circle>
+              {/* Стрелка от юзера к цели */}
+              <line
+                x1={`${userPos.x}%`} y1={`${userPos.y - 4}%`}
+                x2={`${targetPos.x}%`} y2={`${targetPos.y + 4}%`}
+                stroke="#22c55e" strokeWidth="2.5" strokeDasharray="8 4"
+                markerEnd="url(#tut-arrow)" filter="url(#tut-glow)"
+              >
+                <animate attributeName="stroke-dashoffset" values="24;0" dur="0.8s" repeatCount="indefinite" />
+              </line>
+              {/* Подпись */}
+              <text
+                x={`${(userPos.x + targetPos.x) / 2}%`}
+                y={`${(userPos.y + targetPos.y) / 2 - 2}%`}
+                textAnchor="middle" fill="#22c55e" fontSize="11" fontWeight="700"
+                filter="url(#tut-glow)"
+              >
+                Положи карту на {targetPlayer?.name || 'соперника'}! ⬆️
+              </text>
+            </svg>
+          );
+        }
+
+        // В 2-й стадии — стрелка на руку / выбранную карту
+        if (gameStage >= 2 && selectedHandCard) {
+          return (
+            <div style={{
+              position: 'absolute', bottom: '22%', left: '50%', transform: 'translateX(-50%)',
+              zIndex: 200, pointerEvents: 'none',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
+            }}>
+              <span style={{
+                color: '#fbbf24', fontSize: '12px', fontWeight: '700',
+                background: 'rgba(0,0,0,0.7)', padding: '4px 10px', borderRadius: '8px',
+                border: '1px solid rgba(251, 191, 36, 0.4)',
+              }}>Теперь нажмите на соперника! ⬆️</span>
+            </div>
+          );
+        }
+
+        if (gameStage >= 2 && !selectedHandCard) {
+          return (
+            <div style={{
+              position: 'absolute', bottom: '14%', left: '50%', transform: 'translateX(-50%)',
+              zIndex: 200, pointerEvents: 'none',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
+            }}>
+              <span style={{
+                color: '#818cf8', fontSize: '12px', fontWeight: '700',
+                background: 'rgba(0,0,0,0.7)', padding: '4px 10px', borderRadius: '8px',
+                border: '1px solid rgba(99, 102, 241, 0.4)',
+                animation: 'pulse 2s ease-in-out infinite',
+              }}>⬇️ Выберите карту из руки внизу</span>
+            </div>
+          );
+        }
+
+        return null;
+      })()}
+
+      {/* Подсказка «не ваш ход» — объяснение хода бота (в туториале) */}
+      {isTutorialActive && !isTutorialPaused && !isUserTurn && currentPlayerId && players.length > 0 && (() => {
+        const activePlayer = players.find(p => p.id === currentPlayerId);
+        if (!activePlayer || activePlayer.isUser) return null;
+        return (
+          <motion.div
+            key={currentPlayerId}
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'absolute', top: '6%', left: '50%', transform: 'translateX(-50%)',
+              zIndex: 200, pointerEvents: 'none',
+              background: 'rgba(15, 23, 42, 0.92)', border: '1px solid rgba(99, 102, 241, 0.3)',
+              borderRadius: '12px', padding: '8px 16px', backdropFilter: 'blur(8px)',
+              maxWidth: '280px', textAlign: 'center',
+            }}
+          >
+            <div style={{ color: '#e2e8f0', fontSize: '12px', fontWeight: '600' }}>
+              🤖 <span style={{ color: '#818cf8' }}>{activePlayer.name}</span> думает...
+            </div>
+            <div style={{ color: '#94a3b8', fontSize: '11px', marginTop: '2px' }}>
+              {gameStage === 1
+                ? 'Бот ищет соперника с младшей картой'
+                : 'Бот выбирает карту из руки'}
+            </div>
+          </motion.div>
+        );
+      })()}
 
       {/* ✅ МОДАЛКА ОБУЧЕНИЯ (ТУТОРИАЛ) - УЛУЧШЕННАЯ С АНИМАЦИЯМИ */}
       {currentStep && (

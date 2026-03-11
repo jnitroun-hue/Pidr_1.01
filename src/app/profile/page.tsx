@@ -340,7 +340,7 @@ export default function ProfilePage() {
     };
   }, []);
   const [activeSection, setActiveSection] = useState('stats'); // 'stats', 'achievements', 'wallet'
-  const [showModal, setShowModal] = useState<'skins' | 'effects' | 'bonuses' | 'frames' | 'deck' | null>(null);
+  const [showModal, setShowModal] = useState<'skins' | 'effects' | 'bonuses' | 'frames' | 'deck' | 'wallet' | null>(null);
   const [selectedSkin, setSelectedSkin] = useState('classic');
   const [selectedEffect, setSelectedEffect] = useState('none');
   const [selectedFrame, setSelectedFrame] = useState('default');
@@ -1304,439 +1304,277 @@ export default function ProfilePage() {
           </div>
         </motion.div>
 
-        {/* 4 основные кнопки вертикально */}
+        {/* 2 кнопки: КОШЕЛЕК (модалка) и РЕЙТИНГ */}
         <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '15px'
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: '15px',
+          marginBottom: '20px'
         }}>
-          {/* КОШЕЛЕК */}
+          {/* КОШЕЛЕК → МОДАЛКА */}
           <motion.button
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.3 }}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setActiveSection('wallet')}
+            whileHover={{ scale: 1.03, boxShadow: '0 8px 30px rgba(99, 102, 241, 0.4)' }}
+            whileTap={{ scale: 0.97 }}
+            onClick={() => setShowModal('wallet')}
             style={{
-              width: '100%',
               background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
-              border: '2px solid rgba(99, 102, 241, 0.3)',
+              border: '2px solid rgba(99, 102, 241, 0.4)',
               borderRadius: '16px',
               padding: '20px',
               cursor: 'pointer',
               display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
-              gap: '15px',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+              gap: '10px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+              transition: 'all 0.3s',
             }}
           >
-            <div style={{ fontSize: '32px' }}>💳</div>
-            <h3 style={{
-              color: '#f1f5f9',
-              fontSize: '20px',
-              fontWeight: '700',
-              margin: 0,
-              flex: 1,
-              textAlign: 'left'
-            }}>
-              КОШЕЛЕК
-            </h3>
             <Wallet size={32} style={{ color: '#6366f1' }} />
-          </motion.button>
-
-          {/* СТАТИСТИКА */}
-          <motion.button
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setActiveSection('stats')}
-            style={{
-              width: '100%',
-              background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
-              border: '2px solid rgba(99, 102, 241, 0.3)',
-              borderRadius: '16px',
-              padding: '20px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '15px',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
-            }}
-          >
-            <div style={{ fontSize: '32px' }}>📊</div>
-            <h3 style={{
-              color: '#f1f5f9',
-              fontSize: '20px',
-              fontWeight: '700',
-              margin: 0,
-              flex: 1,
-              textAlign: 'left'
-            }}>
-              СТАТИСТИКА
-            </h3>
-            <Target size={32} style={{ color: '#6366f1' }} />
+            <span style={{ color: '#f1f5f9', fontSize: '16px', fontWeight: '700' }}>КОШЕЛЕК</span>
           </motion.button>
 
           {/* РЕЙТИНГ */}
           <motion.button
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.35 }}
+            whileHover={{ scale: 1.03, boxShadow: '0 8px 30px rgba(251, 191, 36, 0.4)' }}
+            whileTap={{ scale: 0.97 }}
+            onClick={() => router.push('/rating')}
+            style={{
+              background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
+              border: '2px solid rgba(251, 191, 36, 0.4)',
+              borderRadius: '16px',
+              padding: '20px',
+              cursor: 'pointer',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '10px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+              transition: 'all 0.3s',
+            }}
+          >
+            <Trophy size={32} style={{ color: '#fbbf24' }} />
+            <span style={{ color: '#f1f5f9', fontSize: '16px', fontWeight: '700' }}>РЕЙТИНГ</span>
+          </motion.button>
+        </div>
+
+        {/* СТАТИСТИКА — всегда видна inline */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.4 }}
+          style={{ marginBottom: '20px' }}
+        >
+          <h3 style={{
+            color: '#94a3b8',
+            fontSize: '14px',
+            fontWeight: '700',
+            textTransform: 'uppercase',
+            letterSpacing: '2px',
+            textAlign: 'center',
+            marginBottom: '12px'
+          }}>
+            📊 Статистика
+          </h3>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '10px',
+          }}>
+            <div style={{
+              background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%)',
+              border: '1px solid rgba(99, 102, 241, 0.25)',
+              borderRadius: '12px',
+              padding: '14px',
+              textAlign: 'center'
+            }}>
+              <div style={{ color: '#6366f1', fontSize: '22px', fontWeight: '800' }}>{stats.rating}</div>
+              <div style={{ color: '#64748b', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '4px' }}>Рейтинг</div>
+            </div>
+            <div style={{
+              background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%)',
+              border: '1px solid rgba(59, 130, 246, 0.25)',
+              borderRadius: '12px',
+              padding: '14px',
+              textAlign: 'center'
+            }}>
+              <div style={{ color: '#3b82f6', fontSize: '22px', fontWeight: '800' }}>{stats.gamesPlayed}</div>
+              <div style={{ color: '#64748b', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '4px' }}>Игр</div>
+            </div>
+            <div style={{
+              background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%)',
+              border: '1px solid rgba(34, 197, 94, 0.25)',
+              borderRadius: '12px',
+              padding: '14px',
+              textAlign: 'center'
+            }}>
+              <div style={{ color: '#22c55e', fontSize: '22px', fontWeight: '800' }}>{stats.wins}</div>
+              <div style={{ color: '#64748b', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '4px' }}>Побед</div>
+            </div>
+            <div style={{
+              background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%)',
+              border: '1px solid rgba(239, 68, 68, 0.25)',
+              borderRadius: '12px',
+              padding: '14px',
+              textAlign: 'center'
+            }}>
+              <div style={{ color: '#ef4444', fontSize: '22px', fontWeight: '800' }}>{stats.winRate}%</div>
+              <div style={{ color: '#64748b', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '4px' }}>Винрейт</div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* АДМИН ПАНЕЛЬ (только для админов) */}
+        {isAdmin && (
+          <motion.button
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.5 }}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={() => setActiveSection('rating')}
+            onClick={() => router.push('/admin')}
             style={{
               width: '100%',
-              background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
-              border: '2px solid rgba(99, 102, 241, 0.3)',
+              background: 'linear-gradient(145deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.15) 100%)',
+              border: '2px solid rgba(239, 68, 68, 0.3)',
               borderRadius: '16px',
-              padding: '20px',
+              padding: '16px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '15px',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+              gap: '12px',
+              boxShadow: '0 4px 12px rgba(239, 68, 68, 0.15)',
+              marginBottom: '15px',
             }}
           >
-            <div style={{ fontSize: '32px' }}>🏆</div>
-            <h3 style={{
-              color: '#f1f5f9',
-              fontSize: '20px',
-              fontWeight: '700',
-              margin: 0,
-              flex: 1,
-              textAlign: 'left'
-            }}>
-              РЕЙТИНГ
-            </h3>
-            <Trophy size={32} style={{ color: '#6366f1' }} />
+            <Shield size={24} style={{ color: '#f87171' }} />
+            <span style={{ color: '#f87171', fontSize: '16px', fontWeight: '700', flex: 1, textAlign: 'left' }}>
+              АДМИН ПАНЕЛЬ
+            </span>
           </motion.button>
+        )}
 
-          {/* АДМИН ПАНЕЛЬ (только для админов) */}
-          {isAdmin && (
-            <motion.button
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.6 }}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => router.push('/admin')}
-              style={{
-                width: '100%',
-                background: 'linear-gradient(145deg, rgba(239, 68, 68, 0.95) 0%, rgba(220, 38, 38, 0.95) 100%)',
-                border: '2px solid rgba(239, 68, 68, 0.3)',
-                borderRadius: '16px',
-                padding: '20px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '15px',
-                boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)'
-              }}
-            >
-              <div style={{ fontSize: '32px' }}>🔐</div>
-              <h3 style={{
-                color: '#ffffff',
-                fontSize: '20px',
-                fontWeight: '700',
-                margin: 0,
-                flex: 1,
-                textAlign: 'left'
-              }}>
-                АДМИН ПАНЕЛЬ
-              </h3>
-              <Shield size={32} style={{ color: '#ffffff' }} />
-            </motion.button>
-          )}
-        </div>
-
-        {/* Content Sections */}
-        <motion.div 
-          className="profile-nav"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
+        {/* КНОПКА ВЫХОДА */}
+        <motion.button
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.55 }}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={handleLogout}
           style={{
+            width: '100%',
+            background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.1) 100%)',
+            border: '2px solid rgba(239, 68, 68, 0.25)',
+            borderRadius: '16px',
+            padding: '14px',
+            color: '#ef4444',
+            fontSize: '15px',
+            fontWeight: '600',
+            cursor: 'pointer',
             display: 'flex',
+            alignItems: 'center',
             justifyContent: 'center',
-            gap: '12px',
-            margin: '20px 0',
-            padding: '0 20px'
+            gap: '10px',
+            marginBottom: '40px',
           }}
         >
-          <button
-            onClick={() => setActiveSection('stats')}
-            className={`nav-tab ${activeSection === 'stats' ? 'active' : ''}`}
-            style={{
-              background: activeSection === 'stats' ? 
-                'linear-gradient(135deg, rgba(34, 197, 94, 0.8) 0%, rgba(22, 163, 74, 0.6) 100%)' : 
-                'linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.6) 100%)',
-              border: '1px solid',
-              borderColor: activeSection === 'stats' ? 'rgba(34, 197, 94, 0.4)' : 'rgba(100, 116, 139, 0.3)',
-              borderRadius: '12px',
-              padding: '8px 16px',
-              color: activeSection === 'stats' ? '#e2e8f0' : '#94a3b8',
-              fontSize: '0.9rem',
-              fontWeight: '600',
-              cursor: 'pointer',
-              transition: 'all 0.3s ease',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-          >
-            <Target size={16} />
-            Статистика
-          </button>
-          
-          <button
-            onClick={() => setActiveSection('wallet')}
-            className={`nav-tab ${activeSection === 'wallet' ? 'active' : ''}`}
-            style={{
-              background: activeSection === 'wallet' ? 
-                'linear-gradient(135deg, rgba(59, 130, 246, 0.8) 0%, rgba(37, 99, 235, 0.6) 100%)' : 
-                'linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.6) 100%)',
-              border: '1px solid',
-              borderColor: activeSection === 'wallet' ? 'rgba(59, 130, 246, 0.4)' : 'rgba(100, 116, 139, 0.3)',
-              borderRadius: '12px',
-              padding: '8px 16px',
-              color: activeSection === 'wallet' ? '#e2e8f0' : '#94a3b8',
-              fontSize: '0.9rem',
-              fontWeight: '600',
-              cursor: 'pointer',
-              transition: 'all 0.3s ease',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-          >
-            <Wallet size={16} />
-            Кошелек
-          </button>
-        </motion.div>
-
-        {/* Content Sections */}
-        {activeSection === 'stats' && (
-          <motion.div 
-            className="stats-container"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <h3 className="stats-title">СТАТИСТИКА</h3>
-            <div className="stats-grid">
-              <div className="stat-card">
-                <div className="stat-value rating">{stats.rating}</div>
-                <div className="stat-label">Рейтинг</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-value games">{stats.gamesPlayed}</div>
-                <div className="stat-label">Игр сыграно</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-value wins">{stats.wins}</div>
-                <div className="stat-label">Побед</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-value losses">{stats.losses}</div>
-                <div className="stat-label">Поражений</div>
-              </div>
-              <div className="stat-card full-width">
-                <div className="stat-value winrate">{stats.winRate}%</div>
-                <div className="stat-label">Процент побед</div>
-              </div>
-            </div>
-            
-            {/* Кнопка выхода под статистикой */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.2 }}
-              style={{
-                marginTop: '30px',
-                display: 'flex',
-                justifyContent: 'center'
-              }}
-            >
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleLogout}
-                style={{
-                  background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.9) 0%, rgba(220, 38, 38, 0.9) 100%)',
-                  border: '2px solid rgba(239, 68, 68, 0.4)',
-                  borderRadius: '12px',
-                  padding: '14px 28px',
-                  color: '#ffffff',
-                  fontSize: '16px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)',
-                  transition: 'all 0.3s ease',
-                  width: '100%',
-                  maxWidth: '300px',
-                  justifyContent: 'center'
-                }}
-              >
-                <LogOut size={20} />
-                Выйти из профиля
-              </motion.button>
-            </motion.div>
-          </motion.div>
-        )}
-
-        {activeSection === 'wallet' && (
-          <motion.div 
-            className="wallet-section"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            style={{ padding: '0 20px', marginBottom: '30px' }}
-          >
-            <GameWallet user={user} onBalanceUpdate={handleBalanceUpdate} />
-            
-            {/* Кнопка выхода под кошельком */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.2 }}
-              style={{
-                marginTop: '30px',
-                display: 'flex',
-                justifyContent: 'center'
-              }}
-            >
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleLogout}
-                style={{
-                  background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.9) 0%, rgba(220, 38, 38, 0.9) 100%)',
-                  border: '2px solid rgba(239, 68, 68, 0.4)',
-                  borderRadius: '12px',
-                  padding: '14px 28px',
-                  color: '#ffffff',
-                  fontSize: '16px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)',
-                  transition: 'all 0.3s ease',
-                  width: '100%',
-                  maxWidth: '300px',
-                  justifyContent: 'center'
-                }}
-              >
-                <LogOut size={20} />
-                Выйти из профиля
-              </motion.button>
-            </motion.div>
-          </motion.div>
-        )}
-
-        {activeSection === 'rating' && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            style={{
-              padding: '20px',
-              marginBottom: '100px'
-            }}
-          >
-            <h3 style={{
-              color: '#fbbf24',
-              fontSize: '24px',
-              fontWeight: '700',
-              marginBottom: '20px',
-              textAlign: 'center'
-            }}>
-              🏆 ИСТОРИЯ РЕЙТИНГОВЫХ ИГР
-            </h3>
-            
-            <div style={{
-              background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
-              border: '2px solid rgba(99, 102, 241, 0.3)',
-              borderRadius: '16px',
-              padding: '20px',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
-            }}>
-              <p style={{
-                color: '#94a3b8',
-                fontSize: '16px',
-                textAlign: 'center',
-                margin: 0
-              }}>
-                Здесь будет отображаться история ваших рейтинговых игр, побед, поражений и заработанных очков.
-              </p>
-              
-              {/* Пример записи */}
-              <div style={{
-                marginTop: '20px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '12px'
-              }}>
-                <div style={{
-                  background: 'rgba(34, 197, 94, 0.1)',
-                  border: '1px solid rgba(34, 197, 94, 0.3)',
-                  borderRadius: '12px',
-                  padding: '15px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between'
-                }}>
-                  <div>
-                    <div style={{ color: '#4ade80', fontWeight: '700', fontSize: '16px' }}>✅ ПОБЕДА</div>
-                    <div style={{ color: '#94a3b8', fontSize: '14px', marginTop: '4px' }}>12.11.2025, 19:30</div>
-                  </div>
-                  <div style={{
-                    color: '#4ade80',
-                    fontWeight: '700',
-                    fontSize: '20px'
-                  }}>
-                    +50 🏆
-                  </div>
-                </div>
-
-                <div style={{
-                  background: 'rgba(239, 68, 68, 0.1)',
-                  border: '1px solid rgba(239, 68, 68, 0.3)',
-                  borderRadius: '12px',
-                  padding: '15px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between'
-                }}>
-                  <div>
-                    <div style={{ color: '#f87171', fontWeight: '700', fontSize: '16px' }}>❌ ПОРАЖЕНИЕ</div>
-                    <div style={{ color: '#94a3b8', fontSize: '14px', marginTop: '4px' }}>12.11.2025, 18:15</div>
-                  </div>
-                  <div style={{
-                    color: '#f87171',
-                    fontWeight: '700',
-                    fontSize: '20px'
-                  }}>
-                    -25 🏆
-                  </div>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
+          <LogOut size={18} />
+          Выйти из профиля
+        </motion.button>
 
       </div>
 
-      {/* Модальные окна */}
-      {showModal && (
+      {/* МОДАЛКА КОШЕЛЬКА */}
+      {showModal === 'wallet' && (
+        <div 
+          onClick={() => setShowModal(null)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.85)',
+            backdropFilter: 'blur(12px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '10px'
+          }}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.85, y: 40 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.85, y: 40 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'linear-gradient(145deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.98) 100%)',
+              borderRadius: '24px',
+              padding: '0',
+              width: '95vw',
+              maxWidth: '480px',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              border: '1px solid rgba(99, 102, 241, 0.3)',
+              boxShadow: '0 25px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(99, 102, 241, 0.1)'
+            }}
+          >
+            {/* Хедер кошелька */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '18px 20px',
+              borderBottom: '1px solid rgba(99, 102, 241, 0.15)',
+              background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Wallet size={22} style={{ color: '#818cf8' }} />
+                <h3 style={{ color: '#e2e8f0', fontSize: '1.2rem', fontWeight: '700', margin: 0 }}>
+                  Кошелёк
+                </h3>
+              </div>
+              <motion.button
+                whileHover={{ scale: 1.1, rotate: 90 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => setShowModal(null)}
+                style={{
+                  background: 'rgba(239, 68, 68, 0.15)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  borderRadius: '10px',
+                  color: '#f87171',
+                  width: '36px',
+                  height: '36px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  fontSize: '18px',
+                  fontWeight: '700',
+                }}
+              >
+                ✕
+              </motion.button>
+            </div>
+            {/* Содержимое кошелька */}
+            <div style={{ padding: '0' }}>
+              <GameWallet user={user} onBalanceUpdate={handleBalanceUpdate} />
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Модальные окна (бонусы, рамки, колода) */}
+      {showModal && showModal !== 'wallet' && (
         <div style={{
           position: 'fixed',
           top: 0,
