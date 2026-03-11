@@ -1,63 +1,88 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTelegram } from '../hooks/useTelegram';
 
 /**
  * Компонент для автоматического обновления онлайн статуса
- * Отправляет heartbeat каждые 15 секунд для более точного отслеживания
+ * Поддерживает и Telegram WebApp, и веб-версию с JWT авторизацией
  */
 export default function OnlineHeartbeat() {
-  const { user } = useTelegram();
+  const { user: telegramUser } = useTelegram();
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [resolvedUserId, setResolvedUserId] = useState<string | null>(null);
+  const [authSource, setAuthSource] = useState<'telegram' | 'web'>('web');
 
   useEffect(() => {
-    if (!user?.id) return;
+    const resolveUser = async () => {
+      const tg = typeof window !== 'undefined' ? (window as any).Telegram?.WebApp : null;
+      const realTelegramUser = tg?.initDataUnsafe?.user;
+      
+      if (realTelegramUser?.id) {
+        setResolvedUserId(realTelegramUser.id.toString());
+        setAuthSource('telegram');
+        return;
+      }
+      
+      try {
+        const resp = await fetch('/api/auth', { method: 'GET', credentials: 'include' });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.user?.id) {
+            setResolvedUserId(data.user.id.toString());
+            setAuthSource('web');
+            return;
+          }
+        }
+      } catch {}
+      
+      if (telegramUser?.id && telegramUser.id !== 123456789) {
+        setResolvedUserId(telegramUser.id.toString());
+        setAuthSource('telegram');
+      }
+    };
+    
+    resolveUser();
+  }, [telegramUser?.id]);
 
-    // Отправляем первый heartbeat сразу
+  useEffect(() => {
+    if (!resolvedUserId) return;
+
     sendHeartbeat();
-
-    // ✅ УМЕНЬШЕНО: Затем каждые 15 секунд (было 30)
     intervalRef.current = setInterval(sendHeartbeat, 15000);
 
-    // Отправляем heartbeat перед закрытием страницы
-    const handleBeforeUnload = () => {
-      sendHeartbeat();
-    };
-
+    const handleBeforeUnload = () => { sendHeartbeat(); };
     window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
+      if (intervalRef.current) clearInterval(intervalRef.current);
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      
-      // Отправляем последний heartbeat при размонтировании
       sendHeartbeat();
     };
-  }, [user?.id]);
+  }, [resolvedUserId]);
 
   const sendHeartbeat = async () => {
-    if (!user?.id) return;
+    if (!resolvedUserId) return;
 
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      
+      if (authSource === 'telegram') {
+        headers['x-telegram-id'] = resolvedUserId;
+      } else {
+        headers['x-auth-source'] = 'web';
+      }
+      
       await fetch('/api/user/heartbeat', {
         method: 'POST',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-telegram-id': user.id.toString()
-        }
+        headers,
       });
-      
-      console.log('💓 [HEARTBEAT] Онлайн статус обновлён');
     } catch (error) {
       console.error('❌ [HEARTBEAT] Ошибка:', error);
     }
   };
 
-  // Этот компонент не рендерит ничего
   return null;
 }
 

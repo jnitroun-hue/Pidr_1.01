@@ -448,6 +448,12 @@ export const ProperMultiplayer: React.FC = () => {
       return;
     }
 
+    // ✅ ПРОВЕРКА ДОСТУПА
+    if (gamesPlayed !== null && gamesPlayed < 3) {
+      setShowAccessModal(true);
+      return;
+    }
+
     setLoading(true);
     setError('');
 
@@ -694,7 +700,13 @@ export const ProperMultiplayer: React.FC = () => {
           <div className={styles.actions}>
             <button 
               className={`${styles.button} ${styles.primary}`}
-              onClick={() => setView('create')}
+              onClick={() => {
+                if (gamesPlayed !== null && gamesPlayed < 3) {
+                  setShowAccessModal(true);
+                  return;
+                }
+                setView('create');
+              }}
               disabled={loading}
             >
               🏠 Создать комнату
@@ -702,7 +714,13 @@ export const ProperMultiplayer: React.FC = () => {
             
             <button 
               className={`${styles.button} ${styles.secondary}`}
-              onClick={() => setView('join')}
+              onClick={() => {
+                if (gamesPlayed !== null && gamesPlayed < 3) {
+                  setShowAccessModal(true);
+                  return;
+                }
+                setView('join');
+              }}
               disabled={loading}
             >
               🚪 Присоединиться
@@ -930,10 +948,14 @@ export const ProperMultiplayer: React.FC = () => {
         isOpen={showAccessModal}
         gamesPlayed={gamesPlayed || 0}
         requiredGames={3}
-        onClose={() => setShowAccessModal(false)}
+        onClose={() => {
+          setShowAccessModal(false);
+          if (gamesPlayed !== null && gamesPlayed < 3) {
+            if (typeof window !== 'undefined') window.history.back();
+          }
+        }}
         onPlayBots={() => {
           setShowAccessModal(false);
-          // Возвращаемся в главное меню для игры с ботами
           if (typeof window !== 'undefined') {
             window.location.href = '/';
           }
