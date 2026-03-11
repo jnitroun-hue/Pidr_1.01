@@ -46,6 +46,7 @@ interface GameWalletProps {
 }
 
 type ModalType = 'deposit' | 'withdraw' | 'buy' | null;
+type DepositMethod = 'crypto' | 'rub';
 
 export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
   // ✅ УНИВЕРСАЛЬНО: Получаем данные пользователя из всех платформ
@@ -77,6 +78,10 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [selectedCrypto, setSelectedCrypto] = useState('TON');
+  const [depositMethod, setDepositMethod] = useState<DepositMethod>('rub');
+  const [rubAmount, setRubAmount] = useState('');
+  const [selectedPayMethod, setSelectedPayMethod] = useState<'bank_card' | 'sberbank' | 'yoo_money' | 'sbp'>('bank_card');
+  const [yookassaLoading, setYookassaLoading] = useState(false);
   const [masterAddresses, setMasterAddresses] = useState<any[]>([]);
   const [isGeneratingAddress, setIsGeneratingAddress] = useState(false);
   const [isMonitoringPayments, setIsMonitoringPayments] = useState(false);
@@ -798,6 +803,44 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
     return bonusAvailable;
   };
 
+  // ✅ ОПЛАТА РУБЛЯМИ ЧЕРЕЗ ЮКАССУ
+  const handleRubPayment = async () => {
+    const amount = parseFloat(rubAmount);
+    if (!amount || amount < 100) {
+      alert('Минимальная сумма пополнения: 100 руб.');
+      return;
+    }
+    setYookassaLoading(true);
+    try {
+      const coins = Math.round(amount * 50); // 100 руб = 5000 монет => 1 руб = 50 монет
+      const response = await fetch('/api/payments/yookassa/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          amount,
+          description: `Пополнение баланса: ${coins.toLocaleString()} монет`,
+          itemType: 'coins',
+          paymentMethod: selectedPayMethod,
+        })
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Ошибка создания платежа');
+      }
+      if (data.payment?.confirmationUrl) {
+        window.location.href = data.payment.confirmationUrl;
+      } else {
+        throw new Error('URL оплаты не получен');
+      }
+    } catch (error: any) {
+      console.error('❌ YooKassa error:', error);
+      alert(error.message || 'Ошибка создания платежа');
+    } finally {
+      setYookassaLoading(false);
+    }
+  };
+
   // 🔥 ИСПРАВЛЕННАЯ генерация адреса через Unified Master Wallet API
   const generateDepositAddress = async (crypto: string, userId: string): Promise<string> => {
     console.log(`🎯 generateDepositAddress вызвана для ${crypto}, userId: ${userId}`);
@@ -1318,13 +1361,151 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
               {activeModal === 'deposit' && (
                 <div className="modal-inner">
                   <div className="modal-header">
-                    <h3>💰 Пополнение баланса</h3>
+                    <h3 style={{ margin: 0, fontSize: '16px' }}>Пополнение баланса</h3>
                     <button className="close-btn" onClick={() => {
                       setActiveModal(null);
                       setSelectedWalletForDeposit(null);
                     }}>×</button>
                   </div>
-                  
+
+                  {/* ✅ ПЕРЕКЛЮЧАТЕЛЬ: Рубли / Крипта */}
+                  <div style={{
+                    display: 'flex', gap: '4px', marginBottom: '16px',
+                    background: 'rgba(0,0,0,0.2)', borderRadius: '10px', padding: '3px',
+                  }}>
+                    {([
+                      { key: 'rub' as DepositMethod, label: 'Рубли (карта)' },
+                      { key: 'crypto' as DepositMethod, label: 'Криптовалюта' },
+                    ]).map(m => (
+                      <button key={m.key} onClick={() => setDepositMethod(m.key)} style={{
+                        flex: 1, padding: '9px 8px', border: 'none', borderRadius: '8px', cursor: 'pointer',
+                        fontSize: '12px', fontWeight: depositMethod === m.key ? '700' : '500',
+                        background: depositMethod === m.key ? 'rgba(34, 197, 94, 0.2)' : 'transparent',
+                        color: depositMethod === m.key ? '#4ade80' : '#64748b',
+                        transition: 'all 0.2s',
+                      }}>
+                        {m.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {depositMethod === 'rub' ? (
+                    /* ========== ОПЛАТА РУБЛЯМИ (YuKassa) ========== */
+                    <div>
+                      {/* Курс */}
+                      <div style={{
+                        padding: '10px 14px', borderRadius: '10px', marginBottom: '14px',
+                        background: 'rgba(234, 179, 8, 0.08)', border: '1px solid rgba(234, 179, 8, 0.2)',
+                        fontSize: '12px', color: '#eab308', textAlign: 'center',
+                      }}>
+                        100 руб. = 5 000 монет &nbsp;|&nbsp; 1$ = 1.20 руб.
+                      </div>
+
+                      {/* Быстрые суммы */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginBottom: '12px' }}>
+                        {[
+                          { rub: '100', coins: '5 000' },
+                          { rub: '300', coins: '15 000' },
+                          { rub: '500', coins: '25 000' },
+                          { rub: '1000', coins: '50 000' },
+                          { rub: '2000', coins: '100 000' },
+                          { rub: '5000', coins: '250 000' },
+                        ].map(p => (
+                          <button key={p.rub} onClick={() => setRubAmount(p.rub)} style={{
+                            padding: '10px 4px', borderRadius: '10px', cursor: 'pointer',
+                            background: rubAmount === p.rub ? 'rgba(34, 197, 94, 0.2)' : 'rgba(100, 116, 139, 0.1)',
+                            border: rubAmount === p.rub ? '1.5px solid #22c55e' : '1.5px solid rgba(100, 116, 139, 0.15)',
+                            color: rubAmount === p.rub ? '#4ade80' : '#94a3b8',
+                            fontSize: '11px', fontWeight: '600', transition: 'all 0.15s',
+                          }}>
+                            <div style={{ fontSize: '15px', fontWeight: '700', color: rubAmount === p.rub ? '#4ade80' : '#e2e8f0' }}>
+                              {p.rub} ₽
+                            </div>
+                            <div style={{ marginTop: '2px', opacity: 0.7, fontSize: '10px' }}>{p.coins} монет</div>
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Своя сумма */}
+                      <div style={{ display: 'flex', gap: '6px', marginBottom: '14px' }}>
+                        <input
+                          type="number" value={rubAmount} onChange={e => setRubAmount(e.target.value)}
+                          placeholder="Сумма в рублях" min="100" step="50"
+                          style={{
+                            flex: 1, padding: '12px', borderRadius: '10px',
+                            border: '1.5px solid rgba(100,116,139,0.2)', background: 'rgba(0,0,0,0.3)',
+                            color: '#fff', fontSize: '16px', fontWeight: '600',
+                          }}
+                        />
+                        <span style={{
+                          padding: '12px 14px', borderRadius: '10px',
+                          background: 'rgba(34, 197, 94, 0.15)', color: '#4ade80',
+                          fontWeight: '700', fontSize: '14px', display: 'flex', alignItems: 'center',
+                        }}>₽</span>
+                      </div>
+
+                      {/* Итого монет */}
+                      {rubAmount && parseFloat(rubAmount) >= 100 && (
+                        <div style={{
+                          padding: '10px', borderRadius: '10px', marginBottom: '14px',
+                          background: 'rgba(99, 102, 241, 0.08)', border: '1px solid rgba(99, 102, 241, 0.2)',
+                          textAlign: 'center', fontSize: '13px', color: '#a5b4fc',
+                        }}>
+                          Вы получите: <strong style={{ color: '#818cf8', fontSize: '16px' }}>{(parseFloat(rubAmount) * 50).toLocaleString()}</strong> монет
+                        </div>
+                      )}
+
+                      {/* Способы оплаты */}
+                      <div style={{ marginBottom: '14px' }}>
+                        <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px' }}>Способ оплаты:</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                          {([
+                            { id: 'bank_card' as const, name: 'Карта Visa/MC' },
+                            { id: 'sberbank' as const, name: 'СберПей' },
+                            { id: 'yoo_money' as const, name: 'ЮMoney' },
+                            { id: 'sbp' as const, name: 'СБП' },
+                          ]).map(m => (
+                            <button key={m.id} onClick={() => setSelectedPayMethod(m.id)} style={{
+                              padding: '10px', borderRadius: '8px', cursor: 'pointer',
+                              background: selectedPayMethod === m.id ? 'rgba(34,197,94,0.15)' : 'rgba(100,116,139,0.08)',
+                              border: selectedPayMethod === m.id ? '1.5px solid #22c55e' : '1.5px solid rgba(100,116,139,0.12)',
+                              color: selectedPayMethod === m.id ? '#4ade80' : '#94a3b8',
+                              fontSize: '12px', fontWeight: selectedPayMethod === m.id ? '700' : '500',
+                              transition: 'all 0.15s',
+                            }}>
+                              {m.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Кнопка оплаты */}
+                      <button
+                        onClick={handleRubPayment}
+                        disabled={yookassaLoading || !rubAmount || parseFloat(rubAmount) < 100}
+                        style={{
+                          width: '100%', padding: '14px', border: 'none', borderRadius: '12px',
+                          cursor: yookassaLoading || !rubAmount || parseFloat(rubAmount) < 100 ? 'not-allowed' : 'pointer',
+                          background: yookassaLoading || !rubAmount || parseFloat(rubAmount) < 100
+                            ? 'rgba(100,100,100,0.3)' : 'linear-gradient(135deg, #14532d 0%, #166534 100%)',
+                          color: '#fff', fontSize: '15px', fontWeight: '700',
+                          opacity: yookassaLoading || !rubAmount || parseFloat(rubAmount) < 100 ? 0.5 : 1,
+                          boxShadow: '0 4px 12px rgba(34,197,94,0.2)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                        }}
+                      >
+                        {yookassaLoading ? 'Создание платежа...' : `Оплатить ${rubAmount ? parseFloat(rubAmount).toLocaleString() : '0'} ₽`}
+                      </button>
+
+                      <div style={{
+                        marginTop: '10px', fontSize: '10px', color: '#475569', textAlign: 'center',
+                      }}>
+                        Безопасная оплата через ЮKassa. Мин. сумма: 100 руб.
+                      </div>
+                    </div>
+                  ) : (
+                    /* ========== ОПЛАТА КРИПТОЙ (исходный блок) ========== */
+                    <div>
                   {/* ✅ СПИСОК ПОДКЛЮЧЕННЫХ КОШЕЛЬКОВ ИЗ NFT КОЛЛЕКЦИИ */}
                   <div style={{ marginBottom: '20px' }}>
                     <div style={{
@@ -1357,12 +1538,12 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
                       color: '#22c55e',
                       textAlign: 'center'
                     }}>
-                      ✅ Выбран: {selectedWalletForDeposit.wallet_type.toUpperCase()} - {selectedWalletForDeposit.wallet_address.slice(0, 6)}...{selectedWalletForDeposit.wallet_address.slice(-4)}
+                      Выбран: {selectedWalletForDeposit.wallet_type.toUpperCase()} - {selectedWalletForDeposit.wallet_address.slice(0, 6)}...{selectedWalletForDeposit.wallet_address.slice(-4)}
                     </div>
                   )}
                   
                   <div className="crypto-select">
-                    <label>💰 Выберите криптовалюту для пополнения</label>
+                    <label>Выберите криптовалюту для пополнения</label>
                     <select value={selectedCrypto} onChange={(e) => setSelectedCrypto(e.target.value)} className="crypto-selector">
                       <option value="TON">TON (The Open Network)</option>
                       <option value="ETH">ETH (Ethereum ERC-20)</option>
@@ -1386,26 +1567,25 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
                     </div>
                     <div className="network-info-body">
                       <p className="network-warning">
-                        ⚠️ <strong>ВАЖНО!</strong> Отправляйте только {selectedCrypto} в {selectedCrypto === 'ETH' ? 'сети Ethereum (ERC-20)' : selectedCrypto === 'SOL' ? 'сети Solana' : selectedCrypto === 'TON' ? 'сети TON' : selectedCrypto === 'BTC' ? 'сети Bitcoin' : 'правильной сети'}!
+                        Отправляйте только {selectedCrypto} в {selectedCrypto === 'ETH' ? 'сети Ethereum (ERC-20)' : selectedCrypto === 'SOL' ? 'сети Solana' : selectedCrypto === 'TON' ? 'сети TON' : selectedCrypto === 'BTC' ? 'сети Bitcoin' : 'правильной сети'}!
                       </p>
                       <p className="network-desc">
-                        {selectedCrypto === 'TON' && '🔹 Минимальная сумма: 1 TON (~$2-5)'}
-                        {selectedCrypto === 'ETH' && '🔹 Минимальная сумма: 0.01 ETH (~$20-50)'}
-                        {selectedCrypto === 'SOL' && '🔹 Минимальная сумма: 0.1 SOL (~$2-5)'}
-                        {selectedCrypto === 'USDT' && '🔹 Минимальная сумма: 10 USDT'}
-                        {selectedCrypto === 'BTC' && '🔹 Минимальная сумма: 0.0001 BTC (~$5-10)'}
+                        {selectedCrypto === 'TON' && 'Минимальная сумма: 1 TON (~$2-5)'}
+                        {selectedCrypto === 'ETH' && 'Минимальная сумма: 0.01 ETH (~$20-50)'}
+                        {selectedCrypto === 'SOL' && 'Минимальная сумма: 0.1 SOL (~$2-5)'}
+                        {selectedCrypto === 'USDT' && 'Минимальная сумма: 10 USDT'}
+                        {selectedCrypto === 'BTC' && 'Минимальная сумма: 0.0001 BTC (~$5-10)'}
                       </p>
                       <p className="network-time">
-                        ⏱️ Время зачисления: {selectedCrypto === 'SOL' ? '~30 сек' : selectedCrypto === 'TON' ? '~5 сек' : selectedCrypto === 'BTC' ? '10-60 мин' : '2-15 мин'}
+                        Время зачисления: {selectedCrypto === 'SOL' ? '~30 сек' : selectedCrypto === 'TON' ? '~5 сек' : selectedCrypto === 'BTC' ? '10-60 мин' : '2-15 мин'}
                       </p>
                     </div>
                   </div>
 
                   <div className="address-section">
                     <label>
-                      🔐 Адрес MASTER_WALLET игры для пополнения
+                      Адрес MASTER_WALLET игры для пополнения
                     </label>
-                    {/* ✅ ИСПРАВЛЕНО: Всегда используем MASTER_WALLET адрес, а не пользовательский */}
                     <HDAddressDisplay 
                       crypto={selectedCrypto} 
                       userId={user?.id || ''} 
@@ -1414,7 +1594,7 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
                     />
                   </div>
                   
-                  {/* ✅ НОВОЕ: Ввод суммы и кнопка пополнения через кошелёк */}
+                  {/* Ввод суммы и кнопка пополнения через кошелёк */}
                   <div style={{
                     marginTop: '16px',
                     padding: '16px',
@@ -1429,7 +1609,7 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
                       color: '#ffffff',
                       marginBottom: '12px'
                     }}>
-                      💰 Сумма для пополнения ({selectedCrypto})
+                      Сумма для пополнения ({selectedCrypto})
                     </label>
                     <div style={{
                       display: 'flex',
@@ -1496,7 +1676,7 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
                       ))}
                     </div>
                     
-                    {/* ✅ Кнопка пополнения через подключенный кошелёк */}
+                    {/* Кнопка пополнения через подключенный кошелёк */}
                     {selectedWalletForDeposit ? (
                       <button
                         onClick={() => handleDepositViaWallet()}
@@ -1545,9 +1725,11 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
                   <div className="hd-info" style={{ marginTop: '16px' }}>
                     <FaKey className="hd-icon" />
                     <span>
-                      💡 Или скопируйте адрес выше и отправьте {selectedCrypto} вручную. Баланс обновится автоматически.
+                      Или скопируйте адрес выше и отправьте {selectedCrypto} вручную. Баланс обновится автоматически.
                     </span>
                   </div>
+                    </div>
+                  )}
                 </div>
               )}
 

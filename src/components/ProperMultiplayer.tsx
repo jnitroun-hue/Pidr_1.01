@@ -195,20 +195,37 @@ export const ProperMultiplayer: React.FC = () => {
   // ✅ ПРОВЕРКА ДОСТУПА К МУЛЬТИПЛЕЕРУ
   const [gamesPlayed, setGamesPlayed] = useState<number | null>(null);
   const [showAccessModal, setShowAccessModal] = useState(false);
+  const [accessChecked, setAccessChecked] = useState(false);
 
-  // ✅ Загружаем количество игр
+  // ✅ Загружаем количество игр — работает и для Telegram и для Web
   useEffect(() => {
-    if (!user?.id) return;
-    const userId = user.id;
+    // Ждём пока загрузится юзер (fetchUser), но не бесконечно
+    const timer = setTimeout(() => {
+      if (!accessChecked && !user?.id) {
+        // Юзер так и не загрузился за 3 секунды — показываем модалку блокировки
+        console.warn('⚠️ [ProperMultiplayer] Юзер не загружен — блокируем доступ к мультиплееру');
+        setGamesPlayed(0);
+        setShowAccessModal(true);
+        setAccessChecked(true);
+      }
+    }, 3000);
+
+    if (!user?.id) return () => clearTimeout(timer);
+    clearTimeout(timer);
 
     const loadGamesCount = async () => {
       try {
+        const tg = (typeof window !== 'undefined') ? (window as any).Telegram?.WebApp : null;
+        const telegramUser = tg?.initDataUnsafe?.user;
+        
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (telegramUser?.id) {
+          headers['x-telegram-id'] = String(telegramUser.id);
+        }
+        
         const response = await fetch('/api/user/bot-games', {
           method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-telegram-id': userId.toString()
-          },
+          headers,
           credentials: 'include'
         });
 
@@ -220,13 +237,23 @@ export const ProperMultiplayer: React.FC = () => {
               setShowAccessModal(true);
             }
           }
+        } else {
+          // Если API вернул ошибку — блокируем доступ
+          console.warn('⚠️ [ProperMultiplayer] bot-games вернул ошибку — блокируем доступ');
+          setGamesPlayed(0);
+          setShowAccessModal(true);
         }
       } catch (error) {
         console.error('❌ [ProperMultiplayer] Ошибка загрузки игр:', error);
+        setGamesPlayed(0);
+        setShowAccessModal(true);
+      } finally {
+        setAccessChecked(true);
       }
     };
 
     loadGamesCount();
+    return () => clearTimeout(timer);
   }, [user?.id, view]);
 
   const handleCreateRoom = async (forceReplace: boolean = false) => {

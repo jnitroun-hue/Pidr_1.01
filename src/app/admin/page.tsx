@@ -467,18 +467,16 @@ export default function AdminPanel() {
           </motion.button>
         </div>
 
-        {/* Табы — минималистичная навигация */}
+        {/* Табы — тёмно-зелёные кнопки с названиями, горизонтальный скролл */}
         <div style={{
           display: 'flex',
-          gap: '2px',
+          gap: '6px',
           marginBottom: isTablet ? '16px' : '28px',
-          background: 'rgba(15, 23, 42, 0.6)',
-          borderRadius: '14px',
-          padding: '4px',
+          padding: '6px',
           overflowX: 'auto',
           WebkitOverflowScrolling: 'touch',
-          border: '1px solid rgba(100, 116, 139, 0.15)',
           scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
         }}>
           {([
             { key: 'users' as TabType, label: 'Игроки', icon: Users },
@@ -494,54 +492,29 @@ export default function AdminPanel() {
               <motion.button
                 key={key}
                 onClick={() => setActiveTab(key)}
-                whileTap={{ scale: 0.97 }}
+                whileTap={{ scale: 0.96 }}
                 style={{
-                  position: 'relative',
-                  padding: isTablet ? '8px 10px' : '10px 18px',
+                  padding: isMobile ? '8px 12px' : '10px 16px',
                   background: isActive 
-                    ? 'rgba(99, 102, 241, 0.15)'
-                    : 'transparent',
-                  border: 'none',
+                    ? 'linear-gradient(135deg, #14532d 0%, #166534 100%)'
+                    : 'rgba(20, 83, 45, 0.25)',
+                  border: `1.5px solid ${isActive ? '#22c55e' : 'rgba(34, 197, 94, 0.2)'}`,
                   borderRadius: '10px',
-                  color: isActive ? '#a5b4fc' : '#64748b',
+                  color: isActive ? '#4ade80' : '#6b7280',
                   cursor: 'pointer',
-                  fontSize: isTablet ? '11px' : '13px',
-                  fontWeight: isActive ? '600' : '500',
+                  fontSize: isMobile ? '11px' : '13px',
+                  fontWeight: isActive ? '700' : '500',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: isTablet ? '5px' : '7px',
+                  gap: '6px',
                   whiteSpace: 'nowrap',
                   transition: 'all 0.2s ease',
-                  flex: isTablet ? '1 0 auto' : 'none',
-                  letterSpacing: '0.01em',
+                  flexShrink: 0,
+                  boxShadow: isActive ? '0 2px 8px rgba(34, 197, 94, 0.2)' : 'none',
                 }}
               >
-                <Icon size={isTablet ? 14 : 16} style={{
-                  color: isActive ? '#818cf8' : '#64748b',
-                  transition: 'color 0.2s ease',
-                }} />
-                <span style={{ 
-                  display: isMobile ? 'none' : 'inline',
-                  transition: 'color 0.2s ease', 
-                }}>
-                  {label}
-                </span>
-                {/* Нижний индикатор активного таба */}
-                {isActive && (
-                  <motion.div
-                    layoutId="admin-tab-indicator"
-                    style={{
-                      position: 'absolute',
-                      bottom: '2px',
-                      left: '20%',
-                      right: '20%',
-                      height: '2px',
-                      borderRadius: '1px',
-                      background: '#818cf8',
-                    }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                  />
-                )}
+                <Icon size={isMobile ? 13 : 15} />
+                {label}
               </motion.button>
             );
           })}
