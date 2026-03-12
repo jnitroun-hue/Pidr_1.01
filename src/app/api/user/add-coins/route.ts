@@ -77,6 +77,11 @@ export async function POST(req: NextRequest) {
         updateData.games_won = (userData.games_won || 0) + 1;
         console.log(`🏆 [${traceId || 'NO_TRACE'}] Побед: ${userData.games_won || 0} → ${updateData.games_won}`);
       }
+      // ✅ КРИТИЧНО: Обновляем поражения (раньше не записывались в БД!)
+      if (updateStats.losses) {
+        updateData.losses = (userData.losses || 0) + 1;
+        console.log(`💀 [${traceId || 'NO_TRACE'}] Поражений: ${userData.losses || 0} → ${updateData.losses}`);
+      }
       
       console.log(`📊 [${traceId || 'NO_TRACE'}] [Add Coins] ИТОГОВЫЕ значения для записи:`, updateData);
     }

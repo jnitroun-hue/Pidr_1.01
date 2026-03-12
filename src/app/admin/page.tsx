@@ -643,102 +643,81 @@ export default function AdminPanel() {
               />
             </div>
 
-            {/* Таблица пользователей */}
+            {/* Таблица пользователей — профессиональный SpaceX-стиль */}
             <div style={{
-              background: 'rgba(15, 23, 42, 0.6)',
-              border: '2px solid rgba(100, 116, 139, 0.3)',
-              borderRadius: '16px',
-              overflow: 'hidden'
+              background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.85) 100%)',
+              border: '1px solid rgba(100, 116, 139, 0.2)',
+              borderRadius: '12px',
+              overflow: 'hidden',
+              boxShadow: '0 4px 24px rgba(0,0,0,0.2)'
             }}>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr 1fr auto',
-                gap: '16px',
-                padding: '16px',
-                background: 'rgba(99, 102, 241, 0.1)',
-                borderBottom: '2px solid rgba(100, 116, 139, 0.3)',
-                fontWeight: '700',
-                fontSize: '14px',
-                color: '#94a3b8'
-              }}>
-                <div>ID</div>
-                <div>Имя</div>
-                <div>Монеты</div>
-                <div>Игры</div>
-                <div>Победы</div>
-                <div>Статус</div>
-                <div>Действия</div>
-              </div>
-
-              {filteredUsers.map((user) => (
-                <motion.div
-                  key={user.telegram_id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr 1fr auto',
-                    gap: '16px',
-                    padding: '16px',
-                    borderBottom: '1px solid rgba(100, 116, 139, 0.1)',
-                    alignItems: 'center'
-                  }}
-                >
-                  <div style={{ color: '#cbd5e1', fontSize: '14px' }}>
-                    {user.telegram_id}
-                  </div>
-                  <div style={{ color: '#e2e8f0', fontWeight: '600' }}>
-                    {user.username || 'Без имени'}
-                  </div>
-                  <div style={{ color: '#fbbf24', fontWeight: '600' }}>
-                    {user.coins.toLocaleString()}
-                  </div>
-                  <div style={{ color: '#cbd5e1' }}>
-                    {user.games_played || 0}
-                  </div>
-                  <div style={{ color: '#10b981', fontWeight: '600' }}>
-                    {user.games_won || 0}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {user.is_admin && (
-                      <span style={{
-                        padding: '4px 8px',
-                        background: 'rgba(239, 68, 68, 0.2)',
-                        color: '#ef4444',
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                        fontWeight: '600'
-                      }}>
-                        Админ
-                      </span>
-                    )}
-                    {user.is_active ? (
-                      <Check size={16} color="#10b981" />
-                    ) : (
-                      <X size={16} color="#ef4444" />
-                    )}
-                  </div>
-                  <div>
-                    <motion.button
-                      onClick={() => setSelectedUser(user)}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                <thead>
+                  <tr style={{
+                    background: 'rgba(99, 102, 241, 0.08)',
+                    borderBottom: '1px solid rgba(100, 116, 139, 0.25)'
+                  }}>
+                    <th style={{ padding: '14px 16px', textAlign: 'left', color: '#94a3b8', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Никнейм</th>
+                    <th style={{ padding: '14px 16px', textAlign: 'right', color: '#94a3b8', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Монеты</th>
+                    <th style={{ padding: '14px 16px', textAlign: 'center', color: '#94a3b8', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Игры</th>
+                    <th style={{ padding: '14px 16px', textAlign: 'center', color: '#94a3b8', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Победы</th>
+                    <th style={{ padding: '14px 16px', textAlign: 'center', color: '#94a3b8', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Статус</th>
+                    <th style={{ padding: '14px 16px', textAlign: 'right', color: '#94a3b8', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Действия</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredUsers.map((user) => (
+                    <motion.tr
+                      key={user.telegram_id}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
                       style={{
-                        padding: '6px 12px',
-                        background: 'rgba(99, 102, 241, 0.2)',
-                        border: '1px solid rgba(99, 102, 241, 0.3)',
-                        borderRadius: '8px',
-                        color: '#6366f1',
-                        cursor: 'pointer',
-                        fontSize: '12px',
-                        fontWeight: '600'
+                        borderBottom: '1px solid rgba(100, 116, 139, 0.08)',
+                        transition: 'background 0.15s'
                       }}
+                      whileHover={{ background: 'rgba(99, 102, 241, 0.04)' }}
                     >
-                      Изменить
-                    </motion.button>
-                  </div>
-                </motion.div>
-              ))}
+                      <td style={{ padding: '14px 16px', color: '#e2e8f0', fontWeight: '600' }}>
+                        {user.username || user.first_name || 'Без имени'}
+                      </td>
+                      <td style={{ padding: '14px 16px', textAlign: 'right', color: '#fbbf24', fontWeight: '600' }}>
+                        {user.coins.toLocaleString()}
+                      </td>
+                      <td style={{ padding: '14px 16px', textAlign: 'center', color: '#cbd5e1' }}>
+                        {user.games_played || 0}
+                      </td>
+                      <td style={{ padding: '14px 16px', textAlign: 'center', color: '#10b981', fontWeight: '600' }}>
+                        {user.games_won || 0}
+                      </td>
+                      <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                        {user.is_admin && (
+                          <span style={{ padding: '2px 8px', background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', borderRadius: '6px', fontSize: '11px', fontWeight: '600' }}>Админ</span>
+                        )}
+                        {user.is_active ? <Check size={16} color="#10b981" /> : <X size={16} color="#ef4444" />}
+                      </td>
+                      <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                        <motion.button
+                          onClick={() => setSelectedUser(user)}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          style={{
+                            padding: '6px 14px',
+                            background: 'rgba(99, 102, 241, 0.15)',
+                            border: '1px solid rgba(99, 102, 241, 0.3)',
+                            borderRadius: '8px',
+                            color: '#818cf8',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            fontWeight: '600'
+                          }}
+                        >
+                          Изменить
+                        </motion.button>
+                      </td>
+                    </motion.tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
 
             {/* Пагинация пользователей */}
@@ -977,58 +956,71 @@ export default function AdminPanel() {
             </motion.button>
 
             <div style={{
-              background: 'rgba(15, 23, 42, 0.6)',
-              border: '2px solid rgba(100, 116, 139, 0.3)',
-              borderRadius: '16px',
-              overflow: 'hidden'
+              background: 'rgba(15, 23, 42, 0.8)',
+              border: '1px solid rgba(100, 116, 139, 0.2)',
+              borderRadius: '12px',
+              overflow: 'auto',
+              maxHeight: '60vh',
+              boxShadow: '0 4px 24px rgba(0,0,0,0.3)'
             }}>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr 1fr',
-                gap: '16px',
-                padding: '16px',
-                background: 'rgba(34, 197, 94, 0.1)',
-                borderBottom: '2px solid rgba(100, 116, 139, 0.3)',
-                fontWeight: '700',
-                fontSize: '14px',
-                color: '#94a3b8'
-              }}>
-                <div>ID</div>
-                <div>Пользователь</div>
-                <div>Тип</div>
-                <div>Сумма</div>
-                <div>Статус</div>
-                <div>Дата</div>
-              </div>
-
-              {transactions.map((tx) => (
-                <div key={tx.id} style={{
+              <div style={{ minWidth: '700px' }}>
+                <div style={{
                   display: 'grid',
-                  gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr 1fr',
-                  gap: '16px',
-                  padding: '16px',
-                  borderBottom: '1px solid rgba(100, 116, 139, 0.1)',
-                  alignItems: 'center'
+                  gridTemplateColumns: '60px minmax(120px, 1fr) minmax(100px, 1fr) minmax(90px, 1fr) minmax(90px, 1fr) minmax(140px, 1fr)',
+                  gap: '12px 20px',
+                  padding: '14px 20px',
+                  background: 'rgba(34, 197, 94, 0.08)',
+                  borderBottom: '1px solid rgba(100, 116, 139, 0.25)',
+                  fontWeight: '600',
+                  fontSize: '12px',
+                  color: '#94a3b8',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  position: 'sticky',
+                  top: 0,
+                  zIndex: 1
                 }}>
-                  <div style={{ color: '#cbd5e1', fontSize: '14px' }}>#{tx.id}</div>
-                  <div style={{ color: '#e2e8f0' }}>{tx.user_id}</div>
-                  <div style={{ color: '#cbd5e1' }}>{tx.transaction_type}</div>
-                  <div style={{ 
-                    color: parseFloat(tx.amount) >= 0 ? '#10b981' : '#ef4444',
-                    fontWeight: '600'
-                  }}>
-                    {parseFloat(tx.amount) >= 0 ? '+' : ''}{tx.amount} {tx.currency}
-                  </div>
-                  <div>
-                    {tx.status === 'completed' && <Check size={16} color="#10b981" />}
-                    {tx.status === 'failed' && <X size={16} color="#ef4444" />}
-                    {tx.status === 'pending' && <span style={{ color: '#fbbf24' }}>⏳</span>}
-                  </div>
-                  <div style={{ color: '#94a3b8', fontSize: '12px' }}>
-                    {new Date(tx.created_at).toLocaleString('ru-RU')}
-                  </div>
+                  <div>#</div>
+                  <div>Пользователь</div>
+                  <div>Тип</div>
+                  <div>Сумма</div>
+                  <div>Статус</div>
+                  <div>Дата</div>
                 </div>
-              ))}
+
+                {transactions.map((tx) => (
+                  <div key={tx.id} style={{
+                    display: 'grid',
+                    gridTemplateColumns: '60px minmax(120px, 1fr) minmax(100px, 1fr) minmax(90px, 1fr) minmax(90px, 1fr) minmax(140px, 1fr)',
+                    gap: '12px 20px',
+                    padding: '12px 20px',
+                    borderBottom: '1px solid rgba(100, 116, 139, 0.08)',
+                    alignItems: 'center',
+                    minWidth: '700px'
+                  }}>
+                    <div style={{ color: '#64748b', fontSize: '13px' }}>#{tx.id}</div>
+                    <div style={{ color: '#e2e8f0', fontWeight: '600', fontSize: '14px' }}>
+                      {tx.username ?? `#${tx.user_id}`}
+                    </div>
+                    <div style={{ color: '#cbd5e1', fontSize: '13px' }}>{tx.transaction_type}</div>
+                    <div style={{ 
+                      color: parseFloat(tx.amount) >= 0 ? '#10b981' : '#ef4444',
+                      fontWeight: '600',
+                      fontSize: '14px'
+                    }}>
+                      {parseFloat(tx.amount) >= 0 ? '+' : ''}{tx.amount} {tx.currency || ''}
+                    </div>
+                    <div>
+                      {tx.status === 'completed' && <span style={{ color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}><Check size={14} /> Готово</span>}
+                      {tx.status === 'failed' && <span style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: '4px' }}><X size={14} /> Ошибка</span>}
+                      {tx.status === 'pending' && <span style={{ color: '#fbbf24' }}>⏳ Ожидает</span>}
+                    </div>
+                    <div style={{ color: '#94a3b8', fontSize: '12px' }}>
+                      {tx.created_at ? new Date(tx.created_at).toLocaleString('ru-RU') : '-'}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}

@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     const transactionType = searchParams.get('type');
     const status = searchParams.get('status');
 
-    // Строим запрос (используем _pidr_coin_transactions — реальная таблица в БД)
+    // Строим запрос
     let query = supabaseAdmin
       .from('_pidr_coin_transactions')
       .select('*', { count: 'exact' });
@@ -59,9 +59,28 @@ export async function GET(req: NextRequest) {
 
     const totalPages = Math.ceil((count || 0) / limit);
 
+    // Обогащаем транзакции никнеймами пользователей из _pidr_users
+    const txList = transactions || [];
+    const userIds = [...new Set(txList.map((t: any) => t.user_id).filter(Boolean))];
+    const userMap: Record<number, string> = {};
+    if (userIds.length > 0) {
+      const { data: users } = await supabaseAdmin
+        .from('_pidr_users')
+        .select('id, username, first_name')
+        .in('id', userIds);
+      (users || []).forEach((u: any) => {
+        userMap[u.id] = u.username || u.first_name || `ID ${u.id}`;
+      });
+    }
+
+    const enrichedTransactions = txList.map((t: any) => ({
+      ...t,
+      username: userMap[t.user_id] || `#${t.user_id}`,
+    }));
+
     return NextResponse.json({
       success: true,
-      transactions: transactions || [],
+      transactions: enrichedTransactions,
       pagination: {
         page,
         limit,

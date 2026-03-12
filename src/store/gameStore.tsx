@@ -2,6 +2,7 @@ import React from 'react'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { createPlayers, generateAvatar } from '../lib/game/avatars'
+import { getApiHeaders } from '../lib/api-headers'
 import { calculateRatingRewards, calculatePlayerPositions } from '../lib/rating/ratingSystem'
 import { RoomManager } from '../lib/multiplayer/room-manager'
 
@@ -271,6 +272,10 @@ interface GameState {
   showNotification: (message: string, type: 'success' | 'error' | 'warning' | 'info', duration?: number) => void
   hideNotification: () => void
   setLoading: (loading: boolean) => void
+
+  // Callback для отображения действий (Одна карта, Сколько карт) над игроком и в чате
+  onPlayerActionDisplay: ((playerId: string, playerName: string, text: string, type: 'info' | 'warning' | 'success' | 'error') => void) | null
+  setOnPlayerActionDisplay: (fn: ((playerId: string, playerName: string, text: string, type: 'info' | 'warning' | 'success' | 'error') => void) | null) => void
 }
 
 // Базовые карты для игры P.I.D.R.
@@ -1205,7 +1210,10 @@ export const useGameStore = create<GameState>()(
       },
       
       setLoading: (loading) => set({ isLoading: loading }),
-      
+
+      onPlayerActionDisplay: null,
+      setOnPlayerActionDisplay: (fn) => set({ onPlayerActionDisplay: fn }),
+
       // ===== МЕТОДЫ ДЛЯ P.I.D.R ИГРЫ =====
       
       // Определение ранга карты по изображению
@@ -2824,7 +2832,7 @@ export const useGameStore = create<GameState>()(
                     method: 'POST',
                     credentials: 'include',
                     headers: {
-                      'Content-Type': 'application/json',
+                      ...getApiHeaders(),
                       ...(currentUserTelegramId ? { 'x-telegram-id': currentUserTelegramId } : {}),
                       ...(telegramUser?.username ? { 'x-username': telegramUser.username } : telegramUser?.first_name ? { 'x-username': telegramUser.first_name } : {})
                     },
@@ -3137,7 +3145,7 @@ export const useGameStore = create<GameState>()(
                 method: 'POST',
                 credentials: 'include',
                 headers: {
-                  'Content-Type': 'application/json',
+                  ...getApiHeaders(),
                   ...(currentUserTelegramId ? { 'x-telegram-id': currentUserTelegramId } : {}),
                   ...(telegramUser?.username ? { 'x-username': telegramUser.username } : telegramUser?.first_name ? { 'x-username': telegramUser.first_name } : {})
                 },
@@ -3270,6 +3278,8 @@ export const useGameStore = create<GameState>()(
            
           console.log(`✅ [declareOneCard] ${player.name} объявил "ОДНА КАРТА!"`);
           get().showNotification(`✅ ${player.name}: ОДНА КАРТА!`, 'success', 3000);
+          // Отображаем над игроком и в чате (боты и игроки)
+          get().onPlayerActionDisplay?.(playerId, player.name, '☝️ Одна карта!', 'success');
          },
          
        // ✅ ИСПРАВЛЕНО: Спросить "сколько карт?" у другого игрока + автоматическое спрашивание для ботов
@@ -3297,6 +3307,8 @@ export const useGameStore = create<GameState>()(
           
           console.log(`❓ [askHowManyCards] ${asker.name} спрашивает у ${target.name} сколько карт`);
           console.log(`❓ [askHowManyCards] У ${target.name}: всего карт=${targetTotalCards}`);
+          // Отображаем над спрашивающим и в чате
+          get().onPlayerActionDisplay?.(askerPlayerId, asker.name, '❓ Сколько карт?', 'info');
           
           // ✅ ИСПРАВЛЕНО: Проверяем ВСЕХ игроков с 1 картой, а не только цель вопроса!
           // Находим ВСЕХ игроков с 1 картой которые НЕ объявили

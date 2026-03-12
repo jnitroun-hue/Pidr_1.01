@@ -235,9 +235,9 @@ export default function GameResultsModal({
           ))}
         </div>
 
-        {/* Buttons - КАК В ГЛАВНОМ МЕНЮ */}
+        {/* Buttons - друг напротив друга, профессионально */}
         <div 
-          className="px-6 py-4 border-t border-slate-700/50 flex gap-3"
+          className="px-6 py-4 border-t border-slate-700/50 flex flex-row items-center justify-between gap-4"
           style={{
             background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.3) 100%)',
             flexShrink: 0
@@ -247,7 +247,7 @@ export default function GameResultsModal({
             onClick={onPlayAgain}
             className="flex-1 transform transition-all duration-200 hover:scale-105 active:scale-95"
             style={{
-              padding: '14px 20px',
+              padding: '14px 24px',
               borderRadius: '16px',
               border: '2px solid rgba(16, 185, 129, 0.3)',
               background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.1) 100%)',
@@ -263,14 +263,14 @@ export default function GameResultsModal({
             }}
           >
             <RotateCcw size={20} strokeWidth={2.5} />
-            ИГРАТЬ СНОВА
+            Заново
           </button>
 
           <button
             onClick={onMainMenu}
             className="flex-1 transform transition-all duration-200 hover:scale-105 active:scale-95"
             style={{
-              padding: '14px 20px',
+              padding: '14px 24px',
               borderRadius: '16px',
               border: '2px solid rgba(99, 102, 241, 0.3)',
               background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(79, 70, 229, 0.1) 100%)',
@@ -286,7 +286,7 @@ export default function GameResultsModal({
             }}
           >
             <Home size={20} strokeWidth={2.5} />
-            В ГЛАВНОЕ МЕНЮ
+            В меню
           </button>
         </div>
       </div>

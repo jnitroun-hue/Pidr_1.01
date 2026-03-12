@@ -1375,6 +1375,9 @@ function GamePageContentComponent({
   const [showAskCardsButton, setShowAskCardsButton] = useState(false);
   const [lastPlayersWithOneCardUpdate, setLastPlayersWithOneCardUpdate] = useState<string[]>([]);
 
+  // Сообщения действий (Одна карта, Сколько карт) — синхрон с чатом
+  const [chatActionMessages, setChatActionMessages] = useState<Array<{id: string; playerId: string; playerName: string; text: string; timestamp: number; type: 'message'}>>([]);
+
   // Показать сообщение над конкретным игроком
   const showPlayerMessage = (playerId: string, text: string, type: 'info' | 'warning' | 'success' | 'error' = 'info', duration: number = 3000) => {
     setPlayerMessages(prev => ({
@@ -1391,6 +1394,23 @@ function GamePageContentComponent({
       });
     }, duration);
   };
+
+  // Callback: действия игроков/ботов (Одна карта, Сколько карт) — показываем над игроком и в чате
+  useEffect(() => {
+    const handler = (playerId: string, playerName: string, text: string, type: 'info' | 'warning' | 'success' | 'error') => {
+      showPlayerMessage(playerId, text, type, 4000);
+      setChatActionMessages(prev => [...prev, {
+        id: `act-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        playerId,
+        playerName,
+        text,
+        timestamp: Date.now(),
+        type: 'message'
+      }]);
+    };
+    useGameStore.getState().setOnPlayerActionDisplay(handler);
+    return () => { useGameStore.getState().setOnPlayerActionDisplay(null); };
+  }, [players.length]); // showPlayerMessage стабильна
 
   // Отслеживаем изменения playersWithOneCard и показываем кнопку с задержкой 2 сек
   useEffect(() => {
@@ -3440,12 +3460,17 @@ function GamePageContentComponent({
         />
       )}
 
-      {/* 💬 ЧАТ ЗА СТОЛОМ */}
+      {/* 💬 ЧАТ ЗА СТОЛОМ — сообщения и действия (Одна карта, Сколько карт) над игроками и в чате */}
       {players.length > 0 && (
         <GameChat
           playerName={userData?.username || 'Игрок'}
           playerId={userPlayerId || 'user'}
           isMultiplayer={isMultiplayer}
+          externalMessages={chatActionMessages}
+          onSendMessage={(text) => {
+            const pid = myPlayer?.id || userPlayerId || 'user';
+            if (pid) showPlayerMessage(pid, text, 'info', 4000);
+          }}
         />
       )}
 
