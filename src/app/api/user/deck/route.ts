@@ -107,24 +107,19 @@ export async function GET(request: NextRequest) {
 // 🗑️ DELETE: Удалить карту из колоды
 export async function DELETE(request: NextRequest) {
   try {
-    // ✅ ИСПРАВЛЕНО: Используем headers напрямую
-    const telegramIdHeader = request.headers.get('x-telegram-id');
-    
-    if (!telegramIdHeader) {
-      console.error('❌ [DELETE DECK] Не найден x-telegram-id header');
+    const auth = requireAuth(request);
+    if (auth.error || !auth.userId) {
       return NextResponse.json(
-        { success: false, message: 'Требуется авторизация' },
+        { success: false, message: auth.error || 'Требуется авторизация' },
         { status: 401 }
       );
     }
 
-    const userId = parseInt(telegramIdHeader, 10);
-    
-    if (isNaN(userId)) {
-      console.error('❌ [DELETE DECK] Некорректный telegram_id:', telegramIdHeader);
+    const { dbUserId: userId } = await getUserIdFromDatabase(auth.userId, auth.environment);
+    if (!userId) {
       return NextResponse.json(
-        { success: false, message: 'Некорректный ID пользователя' },
-        { status: 400 }
+        { success: false, message: 'Пользователь не найден' },
+        { status: 404 }
       );
     }
     const body = await request.json();

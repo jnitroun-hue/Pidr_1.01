@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 
 /**
  * POST /api/marketplace/create
@@ -20,22 +21,19 @@ import { supabase } from '@/lib/supabase';
  */
 export async function POST(request: NextRequest) {
   try {
-    // Получаем пользователя из headers
-    const telegramIdHeader = request.headers.get('x-telegram-id');
-    
-    if (!telegramIdHeader) {
+    const auth = requireAuth(request);
+    if (auth.error || !auth.userId) {
       return NextResponse.json(
-        { success: false, error: 'Не авторизован. Требуется x-telegram-id header' },
+        { success: false, error: auth.error || 'Не авторизован' },
         { status: 401 }
       );
     }
-    
-    const userId = parseInt(telegramIdHeader, 10);
-    
-    if (isNaN(userId)) {
+
+    const { dbUserId } = await getUserIdFromDatabase(auth.userId, auth.environment);
+    if (!dbUserId) {
       return NextResponse.json(
-        { success: false, error: 'Неверный формат telegram_id' },
-        { status: 400 }
+        { success: false, error: 'Пользователь не найден' },
+        { status: 404 }
       );
     }
     
@@ -44,7 +42,7 @@ export async function POST(request: NextRequest) {
     const { nft_card_id, price_coins, price_ton, price_sol, crypto_currency } = body;
     
     console.log('🏷️ [Marketplace Create] Создание лота:', { 
-      userId, 
+      userId: dbUserId, 
       nft_card_id, 
       price_coins, 
       price_ton,
@@ -68,11 +66,12 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // ✅ ИСПРАВЛЕНО: Проверяем что NFT принадлежит пользователю (user_id = telegram_id!)
+    // Карта должна принадлежать текущему пользователю по внутреннему id.
     const { data: nftCard, error: nftError } = await supabase
       .from('_pidr_nft_cards')
       .select('id, user_id')
       .eq('id', nft_card_id)
+      .eq('user_id', dbUserId)
       .single();
     
     if (nftError || !nftCard) {
@@ -85,19 +84,10 @@ export async function POST(request: NextRequest) {
     
     console.log('🔍 [Marketplace Create] Проверка владельца:', {
       cardUserId: nftCard.user_id,
-      requestUserId: userId,
-      match: nftCard.user_id == userId
+      requestUserId: dbUserId,
+      match: nftCard.user_id === dbUserId
     });
-    
-    // ✅ ИСПРАВЛЕНО: Используем нестрогое сравнение для поддержки string/number
-    if (nftCard.user_id != userId && nftCard.user_id !== userId) {
-      console.error('❌ [Marketplace Create] Карта не принадлежит пользователю');
-      return NextResponse.json(
-        { success: false, error: 'Эта карта вам не принадлежит' },
-        { status: 403 }
-      );
-    }
-    
+
     console.log('✅ [Marketplace Create] Карта принадлежит пользователю');
     
     // Проверяем что карта еще не выставлена на продажу
@@ -120,7 +110,7 @@ export async function POST(request: NextRequest) {
       .from('_pidr_nft_marketplace')
       .insert({
         nft_card_id,
-        seller_user_id: userId,
+        seller_user_id: dbUserId,
         price_coins: price_coins || null,
         price_ton: price_ton || null,
         price_sol: price_sol || null,

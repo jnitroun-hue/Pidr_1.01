@@ -43,7 +43,7 @@ export async function POST(
         .from('_pidr_room_players')
         .select('is_ready')
         .eq('room_id', parseInt(roomId))
-        .eq('user_id', parseInt(userId))
+        .eq('user_id', dbUserId)
         .maybeSingle();
       
       body.isReady = !currentPlayer?.is_ready; // Переключаем состояние

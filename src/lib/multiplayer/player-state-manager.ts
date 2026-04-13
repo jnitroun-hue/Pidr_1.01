@@ -62,6 +62,52 @@ const KEYS = {
   roomSlots: (roomId: string) => `room:${roomId}:slots`, // HASH {position: userId}
 };
 
+function isBotUserId(userId: string): boolean {
+  const numericUserId = Number(userId);
+  return Number.isFinite(numericUserId) && numericUserId < 0;
+}
+
+async function resolveDatabaseUserId(userId: string): Promise<number> {
+  if (isBotUserId(userId)) {
+    return parseInt(userId, 10);
+  }
+
+  const numericUserId = parseInt(userId, 10);
+  if (Number.isNaN(numericUserId)) {
+    throw new Error(`Некорректный userId: ${userId}`);
+  }
+
+  const { data: telegramUser, error: telegramError } = await supabase
+    .from('_pidr_users')
+    .select('id')
+    .eq('telegram_id', userId)
+    .maybeSingle();
+
+  if (telegramError) {
+    console.warn('⚠️ [resolveDatabaseUserId] Ошибка поиска по telegram_id:', telegramError);
+  }
+
+  if (telegramUser?.id) {
+    return telegramUser.id;
+  }
+
+  const { data: dbUser, error: dbError } = await supabase
+    .from('_pidr_users')
+    .select('id')
+    .eq('id', numericUserId)
+    .maybeSingle();
+
+  if (dbError) {
+    console.warn('⚠️ [resolveDatabaseUserId] Ошибка поиска по id:', dbError);
+  }
+
+  if (dbUser?.id) {
+    return dbUser.id;
+  }
+
+  throw new Error(`Пользователь ${userId} не найден в _pidr_users`);
+}
+
 // ============================================================
 // DISTRIBUTED LOCKS
 // ============================================================
@@ -223,10 +269,11 @@ export async function getPlayerRoom(userId: string): Promise<string | null> {
   
   // Fallback: проверяем БД
   try {
+    const databaseUserId = await resolveDatabaseUserId(userId);
     const { data } = await supabase
       .from('_pidr_room_players')
       .select('room_id')
-      .eq('user_id', parseInt(userId))
+      .eq('user_id', databaseUserId)
       .maybeSingle();
     
     if (data?.room_id) {
@@ -504,6 +551,7 @@ export async function removePlayerFromAllRooms(
   exceptRoomId?: string
 ): Promise<void> {
   const currentRoomId = await getPlayerRoom(userId);
+  const databaseUserId = await resolveDatabaseUserId(userId);
   
   if (currentRoomId && currentRoomId !== exceptRoomId) {
     await removePlayerFromRoom(currentRoomId, userId);
@@ -519,13 +567,13 @@ export async function removePlayerFromAllRooms(
       await supabase
         .from('_pidr_room_players')
         .delete()
-        .eq('user_id', parseInt(userId))
+        .eq('user_id', databaseUserId)
         .neq('room_id', parseInt(exceptRoomId));
     } else {
       await supabase
         .from('_pidr_room_players')
         .delete()
-        .eq('user_id', parseInt(userId));
+        .eq('user_id', databaseUserId);
     }
   } catch (err) {
     console.warn('⚠️ [removePlayerFromAllRooms] DB cleanup error:', err);
@@ -727,6 +775,7 @@ export async function atomicLeaveRoom(params: {
   roomId: string;
 }): Promise<{ success: boolean; error?: string }> {
   const { userId, roomId } = params;
+  const databaseUserId = await resolveDatabaseUserId(userId);
   
   console.log(`🔒 [ATOMIC LEAVE] Начало операции для пользователя ${userId}`);
   
@@ -777,7 +826,7 @@ export async function atomicLeaveRoom(params: {
         .from('_pidr_room_players')
         .delete()
         .eq('room_id', roomId)
-        .eq('user_id', userId);
+        .eq('user_id', databaseUserId);
       
       if (dbError) {
         console.error(`❌ [ATOMIC LEAVE] Ошибка удаления из БД:`, dbError);
@@ -814,6 +863,7 @@ async function syncPlayerToDatabase(params: {
   isHost: boolean;
 }): Promise<void> {
   const { roomId, userId, username, position, isHost } = params;
+  const databaseUserId = await resolveDatabaseUserId(userId);
   
   console.log(`📝 [SYNC DB] Синхронизация: roomId=${roomId}, userId=${userId}, isHost=${isHost} (type: ${typeof isHost}), position=${position}`);
   
@@ -823,7 +873,7 @@ async function syncPlayerToDatabase(params: {
     .from('_pidr_room_players')
     .delete()
     .eq('room_id', parseInt(roomId))
-    .eq('user_id', parseInt(userId));
+    .eq('user_id', databaseUserId);
   
   if (deleteResult.error) {
     console.warn(`⚠️ [SYNC DB] Ошибка удаления старой записи (может не существовать):`, deleteResult.error);
@@ -831,11 +881,11 @@ async function syncPlayerToDatabase(params: {
     console.log(`🗑️ [SYNC DB] Удалена старая запись для userId=${userId}, roomId=${roomId}`);
   }
   
-  // Вставляем свежую запись  
-  // ✅ ВАЖНО: room_id это INT4, user_id это INT8 (telegram_id)!
+  // Вставляем свежую запись.
+  // В БД user_id должен хранить внутренний id пользователя, а не telegram_id.
   const insertData = {
     room_id: parseInt(roomId), // INT4
-    user_id: parseInt(userId), // INT8 (telegram_id)
+    user_id: databaseUserId,
     username,
     position,
     is_host: Boolean(isHost), // ✅ ПРИВОДИМ К BOOLEAN И ОПРЕДЕЛЯЕМ ХОСТА!
@@ -911,7 +961,7 @@ async function syncPlayerToDatabase(params: {
             is_ready: true
           })
           .eq('room_id', parseInt(roomId))
-          .eq('user_id', parseInt(String(userId))) // ✅ user_id в БД это telegram_id (INT8)
+          .eq('user_id', databaseUserId)
           .select();
         
         if (fixError) {
@@ -927,7 +977,7 @@ async function syncPlayerToDatabase(params: {
             .from('_pidr_room_players')
             .update({ is_host: false })
             .eq('room_id', parseInt(roomId))
-            .eq('user_id', parseInt(String(userId)));
+            .eq('user_id', databaseUserId);
         }
       }
     }

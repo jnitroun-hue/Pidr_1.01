@@ -123,7 +123,7 @@ export async function cleanupOfflinePlayers() {
     
     const { data: offlineUsers } = await supabase
       .from('_pidr_users')
-      .select('telegram_id')
+      .select('id')
       .lt('last_seen', new Date(Date.now() - 3 * 60 * 1000).toISOString())
       .neq('status', 'online');
     
@@ -131,7 +131,7 @@ export async function cleanupOfflinePlayers() {
       const { error } = await supabase
         .from('_pidr_room_players')
         .delete()
-        .in('user_id', offlineUsers.map((u: any) => u.telegram_id));
+        .in('user_id', offlineUsers.map((u: any) => u.id));
       
       if (!error) {
         console.log(`✅ [AUTO-CLEANUP] Удалено ${offlineUsers.length} офлайн игроков`);

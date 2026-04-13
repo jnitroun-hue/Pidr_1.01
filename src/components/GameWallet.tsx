@@ -53,6 +53,21 @@ type DepositMethod = 'crypto' | 'rub';
 type PurchaseMode = 'coins' | 'balance';
 type CurrencyMode = 'RUB' | 'USD';
 
+const CRYPTO_OPTIONS = [
+  { id: 'TON', icon: '💎', name: 'TON', color: '#0098EA', net: 'TON Network', eta: '~5 сек' },
+  { id: 'ETH', icon: '⟠', name: 'ETH', color: '#627EEA', net: 'Ethereum (ERC-20)', eta: '2-15 мин' },
+  { id: 'SOL', icon: '◎', name: 'SOL', color: '#9945FF', net: 'Solana (SPL)', eta: '~30 сек' },
+  { id: 'USDT', icon: '₮', name: 'USDT', color: '#26A17B', net: 'Tether (USDT)', eta: '2-15 мин' },
+  { id: 'BTC', icon: '₿', name: 'BTC', color: '#F7931A', net: 'Bitcoin', eta: '10-60 мин' },
+] as const;
+
+const PAYMENT_METHODS = [
+  { id: 'bank_card' as const, name: 'Visa / MC', accent: '#ffd700' },
+  { id: 'sberbank' as const, name: 'СберПей', accent: '#22c55e' },
+  { id: 'yoo_money' as const, name: 'ЮMoney', accent: '#8b5cf6' },
+  { id: 'sbp' as const, name: 'СБП', accent: '#f59e0b' },
+] as const;
+
 export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
   // ✅ УНИВЕРСАЛЬНО: Получаем данные пользователя из всех платформ
   const getCurrentUser = () => {
@@ -99,6 +114,7 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
     BTC: 0,
     SOL: 0
   });
+  const [hasLoadedCryptoBalances, setHasLoadedCryptoBalances] = useState(false);
   const [selectedWalletForDeposit, setSelectedWalletForDeposit] = useState<any>(null);
   const [purchaseMode, setPurchaseMode] = useState<PurchaseMode>('coins');
   const [currencyMode, setCurrencyMode] = useState<CurrencyMode>('RUB');
@@ -119,6 +135,7 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
     lastTransactionsUpdate.current = Date.now();
     
     loadMasterAddresses();
+    loadCryptoBalances();
     checkBonusStatus(); // Проверяем статус бонуса
     
     // Диагностика кошельков
@@ -165,10 +182,17 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
       lastTransactionsUpdate.current = Date.now();
     };
 
+    const handleWalletUpdate = () => {
+      console.log('👛 Кошельки обновлены - перезагружаем балансы');
+      loadCryptoBalances();
+    };
+
     window.addEventListener('transaction-created', handleNewTransaction);
+    window.addEventListener('wallet-updated', handleWalletUpdate);
     
     return () => {
       window.removeEventListener('transaction-created', handleNewTransaction);
+      window.removeEventListener('wallet-updated', handleWalletUpdate);
     };
   }, []);
 
@@ -257,6 +281,55 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
     } catch (error) {
       console.error('❌ Ошибка загрузки мастер адресов:', error);
     }
+  };
+
+  const loadCryptoBalances = async () => {
+    try {
+      const response = await fetch('/api/nft/connect-wallet', {
+        method: 'GET',
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        setHasLoadedCryptoBalances(true);
+        return;
+      }
+
+      const result = await response.json();
+      const nextBalances: Record<string, number> = {
+        TON: 0,
+        ETH: 0,
+        USDT: 0,
+        BTC: 0,
+        SOL: 0
+      };
+
+      if (result.success && Array.isArray(result.wallets)) {
+        result.wallets.forEach((wallet: any) => {
+          const walletType = String(wallet.wallet_type || wallet.coin_type || '').toUpperCase();
+          const rawBalance = wallet.balance ?? wallet.available_balance ?? 0;
+          const parsedBalance = typeof rawBalance === 'number' ? rawBalance : parseFloat(String(rawBalance));
+
+          if (walletType in nextBalances && !Number.isNaN(parsedBalance)) {
+            nextBalances[walletType] = parsedBalance;
+          }
+        });
+      }
+
+      setCryptoBalances(nextBalances);
+    } catch (error) {
+      console.error('❌ Ошибка загрузки крипто-балансов:', error);
+    } finally {
+      setHasLoadedCryptoBalances(true);
+    }
+  };
+
+  const formatCryptoBalance = (crypto: string) => {
+    if (!hasLoadedCryptoBalances) {
+      return '...';
+    }
+
+    return (cryptoBalances[crypto] || 0).toFixed(6);
   };
 
   const loadUserData = async () => {
@@ -507,7 +580,7 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
       console.log(`💳 Пополнение через ${walletType}:`, { amount, crypto: selectedCrypto });
 
       // ✅ Получаем MASTER_WALLET адрес для выбранной криптовалюты
-      const masterAddressResponse = await fetch(`/api/wallet/unified?action=get_master_address&crypto=${selectedCrypto}`);
+      const masterAddressResponse = await fetch(`/api/wallet/unified?action=get_master_address&network=${selectedCrypto}`);
       const masterAddressData = await masterAddressResponse.json();
       
       if (!masterAddressData.success || !masterAddressData.address) {
@@ -1038,7 +1111,7 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
                 {['TON', 'ETH', 'USDT', 'BTC', 'SOL'].map((crypto) => (
                   <div key={crypto} className="crypto-item">
                     <span className="crypto-name">{crypto}</span>
-                    <span className="crypto-balance">{cryptoBalances[crypto].toFixed(6)}</span>
+                    <span className="crypto-balance">{formatCryptoBalance(crypto)}</span>
                     <button 
                       className="crypto-action-btn"
                       onClick={() => {
@@ -1512,13 +1585,8 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
                       {/* Способы оплаты с НАСТОЯЩИМИ иконками */}
                       <div style={{ marginBottom: '14px' }}>
                         <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '8px', fontWeight: '600' }}>Способ оплаты:</div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                          {([
-                            { id: 'bank_card' as const, name: 'Visa / MC', iconEl: <span style={{ display: 'flex', gap: '2px' }}><SiVisa size={18} /><SiMastercard size={14} /></span> },
-                            { id: 'sberbank' as const, name: 'СберПей', iconEl: <FaMoneyBillWave size={16} style={{ color: selectedPayMethod === 'sberbank' ? '#22c55e' : '#64748b' }} /> },
-                            { id: 'yoo_money' as const, name: 'ЮMoney', iconEl: <FaWallet size={15} style={{ color: selectedPayMethod === 'yoo_money' ? '#8b5cf6' : '#64748b' }} /> },
-                            { id: 'sbp' as const, name: 'СБП', iconEl: <FaBolt size={15} style={{ color: selectedPayMethod === 'sbp' ? '#f59e0b' : '#64748b' }} /> },
-                          ]).map(m => (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '6px' }}>
+                          {PAYMENT_METHODS.map(m => (
                             <button key={m.id} onClick={() => setSelectedPayMethod(m.id)} style={{
                               padding: '11px 10px', borderRadius: '10px', cursor: 'pointer',
                               background: selectedPayMethod === m.id
@@ -1530,10 +1598,24 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
                               fontSize: '12px', fontWeight: selectedPayMethod === m.id ? '700' : '500',
                               transition: 'all 0.25s ease',
                               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                              minWidth: 0,
+                              whiteSpace: 'nowrap',
+                              lineHeight: 1.15,
                               boxShadow: selectedPayMethod === m.id
                                 ? '0 2px 12px rgba(255,215,0,0.12), inset 0 1px 0 rgba(255,255,255,0.08)' : 'none',
                             }}>
-                              {m.iconEl}
+                              {m.id === 'bank_card' ? (
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
+                                  <SiVisa size={18} />
+                                  <SiMastercard size={14} />
+                                </span>
+                              ) : m.id === 'sberbank' ? (
+                                <FaMoneyBillWave size={16} style={{ color: selectedPayMethod === m.id ? m.accent : '#64748b', flexShrink: 0 }} />
+                              ) : m.id === 'yoo_money' ? (
+                                <FaWallet size={15} style={{ color: selectedPayMethod === m.id ? m.accent : '#64748b', flexShrink: 0 }} />
+                              ) : (
+                                <FaBolt size={15} style={{ color: selectedPayMethod === m.id ? m.accent : '#64748b', flexShrink: 0 }} />
+                              )}
                               {m.name}
                             </button>
                           ))}
@@ -1574,13 +1656,7 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
                       <div style={{ marginBottom: '16px' }}>
                         <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '8px', fontWeight: '600' }}>Криптовалюта:</div>
                         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' as const }}>
-                          {[
-                            { id: 'TON', icon: '💎', name: 'TON', color: '#0098EA', net: 'TON Network' },
-                            { id: 'ETH', icon: '⟠', name: 'ETH', color: '#627EEA', net: 'ERC-20' },
-                            { id: 'SOL', icon: '◎', name: 'SOL', color: '#9945FF', net: 'Solana' },
-                            { id: 'USDT', icon: '₮', name: 'USDT', color: '#26A17B', net: 'Tether' },
-                            { id: 'BTC', icon: '₿', name: 'BTC', color: '#F7931A', net: 'Bitcoin' },
-                          ].map(c => (
+                          {CRYPTO_OPTIONS.map(c => (
                             <button key={c.id} onClick={() => setSelectedCrypto(c.id)} style={{
                               flex: '1 1 0', minWidth: '56px', padding: '10px 4px', borderRadius: '12px', cursor: 'pointer',
                               background: selectedCrypto === c.id
@@ -1608,10 +1684,10 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
                         border: '1px solid rgba(255,215,0,0.12)',
                       }}>
                         <span style={{ fontSize: '12px', color: '#ffd700', fontWeight: '600' }}>
-                          {selectedCrypto === 'TON' ? 'TON Network' : selectedCrypto === 'ETH' ? 'Ethereum (ERC-20)' : selectedCrypto === 'SOL' ? 'Solana (SPL)' : selectedCrypto === 'BTC' ? 'Bitcoin' : 'Tether (USDT)'}
+                          {CRYPTO_OPTIONS.find((option) => option.id === selectedCrypto)?.net || selectedCrypto}
                         </span>
                         <span style={{ fontSize: '11px', color: '#64748b' }}>
-                          {selectedCrypto === 'TON' ? '~5 сек' : selectedCrypto === 'SOL' ? '~30 сек' : selectedCrypto === 'BTC' ? '10-60 мин' : '2-15 мин'}
+                          {CRYPTO_OPTIONS.find((option) => option.id === selectedCrypto)?.eta || '~'}
                         </span>
                       </div>
 
@@ -1755,14 +1831,8 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
                   {/* Выбор криптовалюты - карточки как в пополнении */}
                   <div style={{ marginBottom: '16px' }}>
                     <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '8px', fontWeight: '600' }}>Криптовалюта для вывода:</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px' }}>
-                      {[
-                        { id: 'TON', icon: '💎', name: 'TON', color: '#0098EA' },
-                        { id: 'ETH', icon: '⟠', name: 'ETH', color: '#627EEA' },
-                        { id: 'SOL', icon: '◎', name: 'SOL', color: '#9945FF' },
-                        { id: 'USDT', icon: '💵', name: 'USDT', color: '#26A17B' },
-                        { id: 'BTC', icon: '₿', name: 'BTC', color: '#F7931A' },
-                      ].map(c => (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '6px' }}>
+                      {CRYPTO_OPTIONS.map(c => (
                         <button key={c.id} onClick={() => setSelectedCrypto(c.id)} style={{
                           padding: '12px 6px', borderRadius: '12px', cursor: 'pointer',
                           background: selectedCrypto === c.id
@@ -1773,6 +1843,7 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
                           color: selectedCrypto === c.id ? '#fff' : '#94a3b8',
                           fontSize: '12px', fontWeight: '700', transition: 'all 0.25s ease',
                           display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: '4px',
+                          minWidth: 0,
                           boxShadow: selectedCrypto === c.id ? `0 4px 15px ${c.color}20` : 'none',
                         }}>
                           <span style={{ fontSize: '20px' }}>{c.icon}</span>
@@ -1823,17 +1894,20 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
                       }}>{selectedCrypto}</span>
                     </div>
                     <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px' }}>
-                      Доступно: {cryptoBalances[selectedCrypto] || 0} {selectedCrypto}
+                      {hasLoadedCryptoBalances
+                        ? `Доступно: ${cryptoBalances[selectedCrypto] || 0} ${selectedCrypto}`
+                        : 'Загружаем доступный баланс...'}
                     </div>
                     <div style={{ display: 'flex', gap: '6px' }}>
                       {['25%', '50%', '100%'].map(pct => {
                         const mult = pct === '25%' ? 0.25 : pct === '50%' ? 0.5 : 1;
                         return (
-                          <button key={pct} onClick={() => setWithdrawAmount(((cryptoBalances[selectedCrypto] || 0) * mult).toString())} style={{
+                          <button key={pct} disabled={!hasLoadedCryptoBalances} onClick={() => setWithdrawAmount(((cryptoBalances[selectedCrypto] || 0) * mult).toString())} style={{
                             flex: 1, padding: '9px', borderRadius: '8px', cursor: 'pointer',
                             border: '1px solid rgba(255,215,0,0.2)', fontSize: '13px', fontWeight: '600',
                             background: 'linear-gradient(135deg, rgba(255,215,0,0.08), rgba(6,182,212,0.05))',
                             color: '#ffd700', transition: 'all 0.2s',
+                            opacity: !hasLoadedCryptoBalances ? 0.5 : 1,
                           }}>
                             {pct}
                           </button>

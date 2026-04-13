@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 
 function getSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -22,26 +23,24 @@ function getSupabaseClient() {
 export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseClient();
-    
-    const telegramIdHeader = request.headers.get('x-telegram-id');
-    
-    if (!telegramIdHeader) {
+
+    const auth = requireAuth(request);
+    if (auth.error || !auth.userId) {
       return NextResponse.json(
-        { success: false, error: 'Не авторизован' },
+        { success: false, error: auth.error || 'Не авторизован' },
         { status: 401 }
       );
     }
-    
-    const userId = parseInt(telegramIdHeader, 10);
-    
-    if (isNaN(userId)) {
+
+    const { dbUserId } = await getUserIdFromDatabase(auth.userId, auth.environment);
+    if (!dbUserId) {
       return NextResponse.json(
-        { success: false, error: 'Неверный формат telegram_id' },
-        { status: 400 }
+        { success: false, error: 'Пользователь не найден' },
+        { status: 404 }
       );
     }
-    
-    console.log('📊 [Marketplace My Sales] Загрузка для пользователя:', userId);
+
+    console.log('📊 [Marketplace My Sales] Загрузка для пользователя:', dbUserId);
     
     // Активные лоты
     const { data: activeListings, error: activeError } = await supabase
@@ -57,7 +56,7 @@ export async function GET(request: NextRequest) {
           metadata
         )
       `)
-      .eq('seller_user_id', userId)
+      .eq('seller_user_id', dbUserId)
       .eq('status', 'active')
       .order('created_at', { ascending: false });
     
@@ -84,7 +83,7 @@ export async function GET(request: NextRequest) {
           first_name
         )
       `)
-      .eq('seller_user_id', userId)
+      .eq('seller_user_id', dbUserId)
       .eq('status', 'sold')
       .order('sold_at', { ascending: false })
       .limit(20);

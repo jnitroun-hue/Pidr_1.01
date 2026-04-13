@@ -38,14 +38,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const buyerId = dbUser.telegram_id ? parseInt(dbUser.telegram_id, 10) : dbUserId;
-    
-    if (isNaN(buyerId)) {
-      return NextResponse.json(
-        { success: false, error: 'Неверный формат user ID' },
-        { status: 400 }
-      );
-    }
+    const buyerId = dbUserId;
     
     const body = await request.json();
     const { listing_id, payment_method } = body;
@@ -122,8 +115,8 @@ export async function POST(request: NextRequest) {
     // Получаем баланс покупателя
     const { data: buyer, error: buyerError } = await supabase
       .from('_pidr_users')
-      .select('telegram_id, coins')
-      .eq('telegram_id', buyerId)
+      .select('id, coins')
+      .eq('id', buyerId)
       .single();
     
     if (buyerError || !buyer) {
@@ -155,7 +148,7 @@ export async function POST(request: NextRequest) {
       const { error: deductError } = await supabase
         .from('_pidr_users')
         .update({ coins: buyer.coins - price })
-        .eq('telegram_id', buyerId);
+        .eq('id', buyerId);
       
       if (deductError) {
         console.error('❌ [Marketplace Buy] Ошибка списания монет:', deductError);
@@ -170,14 +163,14 @@ export async function POST(request: NextRequest) {
       const { data: seller } = await supabase
         .from('_pidr_users')
         .select('coins')
-        .eq('telegram_id', listing.seller_user_id)
+        .eq('id', listing.seller_user_id)
         .single();
       
       if (seller) {
         await supabase
           .from('_pidr_users')
           .update({ coins: seller.coins + sellerAmount })
-          .eq('telegram_id', listing.seller_user_id);
+          .eq('id', listing.seller_user_id);
       }
 
       // 3. Переносим NFT к покупателю
@@ -192,7 +185,7 @@ export async function POST(request: NextRequest) {
         await supabase
           .from('_pidr_users')
           .update({ coins: buyer.coins })
-          .eq('telegram_id', buyerId);
+          .eq('id', buyerId);
         return NextResponse.json(
           { success: false, error: 'Ошибка переноса NFT' },
           { status: 500 }

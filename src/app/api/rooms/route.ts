@@ -136,11 +136,11 @@ export async function GET(req: NextRequest) {
           .maybeSingle();
         
         if (hostPlayer) {
-          // Получаем данные пользователя по user_id (telegram_id)
+          // Получаем данные пользователя по внутреннему user_id из _pidr_room_players
           const { data: userData } = await supabase
             .from('_pidr_users')
-            .select('username, avatar_url')
-            .eq('telegram_id', hostPlayer.user_id)
+            .select('id, username, avatar_url')
+            .eq('id', hostPlayer.user_id)
             .maybeSingle();
           
           if (userData) {
@@ -170,7 +170,7 @@ export async function GET(req: NextRequest) {
           const { data: userData } = await supabase
             .from('_pidr_users')
             .select('username, avatar_url')
-            .eq('telegram_id', firstPlayer.user_id)
+            .eq('id', firstPlayer.user_id)
             .maybeSingle();
           
           if (userData) {
@@ -195,12 +195,26 @@ export async function GET(req: NextRequest) {
       return {
         id: room.id,
         room_code: room.room_code,
+        code: room.room_code,
         name: room.name,
         max_players: room.max_players,
+        maxPlayers: room.max_players,
         current_players: actualPlayerCount, // Реальное количество из Redis
+        players: actualPlayerCount,
         status: room.status,
         is_private: room.is_private,
+        isPrivate: room.is_private,
+        gameMode: room.settings?.gameMode || 'casual',
+        difficulty:
+          room.settings?.gameMode === 'pro'
+            ? 'hard'
+            : room.settings?.gameMode === 'competitive'
+              ? 'medium'
+              : room.settings?.gameMode === 'blitz'
+                ? 'hard'
+                : 'easy',
         created_at: room.created_at,
+        settings: room.settings,
         users: { 
           username: hostUser?.username || 'Хост', 
           avatar: hostUser?.avatar_url || null 

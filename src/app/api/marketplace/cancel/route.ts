@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 
 /**
  * POST /api/marketplace/cancel
@@ -16,28 +17,26 @@ import { supabase } from '@/lib/supabase';
  */
 export async function POST(request: NextRequest) {
   try {
-    const telegramIdHeader = request.headers.get('x-telegram-id');
-    
-    if (!telegramIdHeader) {
+    const auth = requireAuth(request);
+    if (auth.error || !auth.userId) {
       return NextResponse.json(
-        { success: false, error: 'Не авторизован' },
+        { success: false, error: auth.error || 'Не авторизован' },
         { status: 401 }
       );
     }
-    
-    const userId = parseInt(telegramIdHeader, 10);
-    
-    if (isNaN(userId)) {
+
+    const { dbUserId } = await getUserIdFromDatabase(auth.userId, auth.environment);
+    if (!dbUserId) {
       return NextResponse.json(
-        { success: false, error: 'Неверный формат telegram_id' },
-        { status: 400 }
+        { success: false, error: 'Пользователь не найден' },
+        { status: 404 }
       );
     }
     
     const body = await request.json();
     const { listing_id } = body;
     
-    console.log('❌ [Marketplace Cancel] Отмена лота:', { userId, listing_id });
+    console.log('❌ [Marketplace Cancel] Отмена лота:', { userId: dbUserId, listing_id });
     
     if (!listing_id) {
       return NextResponse.json(
@@ -62,7 +61,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Проверяем владельца
-    if (listing.seller_user_id !== userId) {
+    if (listing.seller_user_id !== dbUserId) {
       return NextResponse.json(
         { success: false, error: 'Только владелец может отменить продажу' },
         { status: 403 }

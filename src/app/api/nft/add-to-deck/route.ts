@@ -57,12 +57,12 @@ export async function POST(request: NextRequest) {
       console.log('🔍 [add-to-deck] Карта найдена в списке?', foundCard ? 'ДА' : 'НЕТ');
     }
 
-    // ✅ ИСПРАВЛЕНО: Проверяем что карта принадлежит пользователю (user_id = telegram_id!)
+    // Проверяем что карта принадлежит пользователю по внутреннему id.
     let { data: nftCard, error: nftError } = await supabase
       .from('_pidr_nft_cards')
       .select('*')
       .eq('id', cardId)
-      .eq('user_id', userId) // user_id в _pidr_nft_cards = telegram_id
+      .eq('user_id', userId)
       .single();
 
     if (nftError) {
@@ -83,8 +83,7 @@ export async function POST(request: NextRequest) {
           match: anyCard.user_id === userId
         });
         
-        // ✅ ЕСЛИ КАРТА СУЩЕСТВУЕТ - ДОБАВЛЯЕМ В КОЛОДУ (владелец уже проверен при генерации!)
-        if (anyCard.user_id == userId || anyCard.user_id === userId) {
+        if (anyCard.user_id === userId) {
           nftCard = anyCard;
           console.log('✅ Карта принадлежит пользователю, продолжаем...');
         } else {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
-import { requireAuth } from '@/lib/auth-utils';
+import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 
 // GET /api/rooms/[roomId] - получить информацию о комнате
 export async function GET(req: NextRequest, context: { params: Promise<{ roomId: string }> }) {
@@ -62,11 +62,12 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ room
   try {
     const params = await context.params;
     const auth = requireAuth(req);
-    if (auth.error) {
+    if ('error' in auth) {
       return NextResponse.json({ success: false, message: auth.error }, { status: 401 });
     }
 
-    const userId = auth.userId as string;
+    const userId = auth.userId;
+    const environment = auth.environment;
     const { roomId } = params;
     
     if (!roomId) {
@@ -86,8 +87,13 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ room
       return NextResponse.json({ success: false, message: 'Комната не найдена' }, { status: 404 });
     }
 
+    const { dbUserId } = await getUserIdFromDatabase(userId, environment);
+    if (!dbUserId) {
+      return NextResponse.json({ success: false, message: 'Пользователь не найден' }, { status: 404 });
+    }
+
     // Проверяем что пользователь - хост
-    if (room.host_id !== userId) {
+    if (room.host_id !== dbUserId) {
       return NextResponse.json({ 
         success: false, 
         message: 'Только хост может удалить комнату' 
