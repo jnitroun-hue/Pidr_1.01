@@ -126,7 +126,7 @@ const getRectanglePosition = (index: number, totalPlayers: number, gameStage: nu
   if (index === 0) {
     return { 
       left: '50%', 
-      top: '85%', // ✅ ПОДНЯТО ВЫШЕ - не накладывается на системные кнопки телефона
+      top: '83%',
       cardDirection: 'horizontal',
       cardOffset: { x: 0, y: -40 },
       side: 'bottom'
@@ -138,42 +138,42 @@ const getRectanglePosition = (index: number, totalPlayers: number, gameStage: nu
   
   if (totalPlayers === 4) {
     const positions = [
-      { left: '50%', top: '10%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
-      { left: '92%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
-      { left: '8%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
+      { left: '50%', top: '13%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
+      { left: '87%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
+      { left: '13%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
     ];
     return positions[adjustedIndex] || positions[0];
   }
   
   if (totalPlayers === 5) {
     const positions = [
-      { left: '25%', top: '10%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
-      { left: '75%', top: '10%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
-      { left: '92%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
-      { left: '8%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
+      { left: '28%', top: '13%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
+      { left: '72%', top: '13%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
+      { left: '87%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
+      { left: '13%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
     ];
     return positions[adjustedIndex] || positions[0];
   }
   
   if (totalPlayers === 6) {
     const positions = [
-      { left: '50%', top: '10%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
-      { left: '92%', top: '35%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
-      { left: '92%', top: '65%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
-      { left: '8%', top: '35%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
-      { left: '8%', top: '65%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
+      { left: '50%', top: '13%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
+      { left: '87%', top: '36%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
+      { left: '87%', top: '64%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
+      { left: '13%', top: '36%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
+      { left: '13%', top: '64%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
     ];
     return positions[adjustedIndex] || positions[0];
   }
   
   if (totalPlayers === 7) {
     const positions = [
-      { left: '25%', top: '10%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
-      { left: '75%', top: '10%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
-      { left: '8%', top: '35%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
-      { left: '8%', top: '65%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
-      { left: '92%', top: '35%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
-      { left: '92%', top: '65%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
+      { left: '28%', top: '13%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
+      { left: '72%', top: '13%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
+      { left: '13%', top: '36%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
+      { left: '13%', top: '64%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
+      { left: '87%', top: '36%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
+      { left: '87%', top: '64%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
     ];
     return positions[adjustedIndex] || positions[0];
   }
@@ -1037,6 +1037,107 @@ function GamePageContentComponent({
     }
   }, []);
 
+  const layoutMetrics = useMemo(() => {
+    const vw = screenInfo.viewportWidth || 390;
+    const vh = screenInfo.viewportHeight || 844;
+
+    if (vw >= 1400) {
+      return {
+        centerCardWidth: 82,
+        centerCardHeight: 122,
+        revealedCardWidth: 58,
+        revealedCardHeight: 86,
+        handCardWidth: 96,
+        handCardHeight: 142,
+        tableStackOffset: 28,
+        tableStackMinWidth: 260,
+        tableStackMinHeight: 146,
+      };
+    }
+
+    if (vw >= 1024) {
+      return {
+        centerCardWidth: 76,
+        centerCardHeight: 114,
+        revealedCardWidth: 54,
+        revealedCardHeight: 81,
+        handCardWidth: 88,
+        handCardHeight: 130,
+        tableStackOffset: 26,
+        tableStackMinWidth: 238,
+        tableStackMinHeight: 136,
+      };
+    }
+
+    if (vw >= 769) {
+      return {
+        centerCardWidth: 68,
+        centerCardHeight: 102,
+        revealedCardWidth: 48,
+        revealedCardHeight: 72,
+        handCardWidth: 80,
+        handCardHeight: 118,
+        tableStackOffset: 22,
+        tableStackMinWidth: 214,
+        tableStackMinHeight: 124,
+      };
+    }
+
+    if (screenInfo.isLandscape && vh <= 500) {
+      return {
+        centerCardWidth: 50,
+        centerCardHeight: 75,
+        revealedCardWidth: 38,
+        revealedCardHeight: 57,
+        handCardWidth: 56,
+        handCardHeight: 84,
+        tableStackOffset: 16,
+        tableStackMinWidth: 170,
+        tableStackMinHeight: 92,
+      };
+    }
+
+    if (screenInfo.isVerySmallMobile) {
+      return {
+        centerCardWidth: 48,
+        centerCardHeight: 72,
+        revealedCardWidth: 36,
+        revealedCardHeight: 54,
+        handCardWidth: 54,
+        handCardHeight: 80,
+        tableStackOffset: 15,
+        tableStackMinWidth: 162,
+        tableStackMinHeight: 88,
+      };
+    }
+
+    if (screenInfo.isSmallMobile) {
+      return {
+        centerCardWidth: 54,
+        centerCardHeight: 81,
+        revealedCardWidth: 38,
+        revealedCardHeight: 57,
+        handCardWidth: 60,
+        handCardHeight: 90,
+        tableStackOffset: 18,
+        tableStackMinWidth: 176,
+        tableStackMinHeight: 96,
+      };
+    }
+
+    return {
+      centerCardWidth: 60,
+      centerCardHeight: 90,
+      revealedCardWidth: 42,
+      revealedCardHeight: 63,
+      handCardWidth: 68,
+      handCardHeight: 102,
+      tableStackOffset: 20,
+      tableStackMinWidth: 192,
+      tableStackMinHeight: 104,
+    };
+  }, [screenInfo]);
+
   // Инициализация ИИ игроков
   useEffect(() => {
     const newAiPlayers = new Map<number, AIPlayer>();
@@ -1863,13 +1964,13 @@ function GamePageContentComponent({
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
-                minWidth: '200px',
-                minHeight: '120px'
+                minWidth: `${layoutMetrics.tableStackMinWidth}px`,
+                minHeight: `${layoutMetrics.tableStackMinHeight}px`
               }}>
                 {tableStack.map((card, idx) => {
                   // ГОРИЗОНТАЛЬНАЯ СТОПКА: Каждая следующая карта смещается ВПРАВО
                   // Левая карта = нижняя (первая), правая карта = верхняя (последняя)
-                  const offset = idx * 25; // 25px смещение вправо (примерно 30% от ширины карты 74px)
+                  const offset = idx * layoutMetrics.tableStackOffset;
                   const isTopCard = idx === tableStack.length - 1;
                   
                   // ✅ ИСПРАВЛЕНО: Проверяем является ли card.image NFT URL
@@ -1902,13 +2003,13 @@ function GamePageContentComponent({
                     >
                       {/* ✅ ИСПРАВЛЕНО: Для NFT используем img, для обычных - Image */}
                       {isNftUrl ? (
-                        <div style={{ position: 'relative', width: '74px', height: '111px' }}>
+                        <div style={{ position: 'relative', width: `${layoutMetrics.centerCardWidth}px`, height: `${layoutMetrics.centerCardHeight}px` }}>
                           <img
                             src={tableCardSrc}
                             alt={`Card ${idx + 1}`}
                             style={{ 
-                              width: '74px',
-                              height: '111px',
+                              width: `${layoutMetrics.centerCardWidth}px`,
+                              height: `${layoutMetrics.centerCardHeight}px`,
                               borderRadius: '6px',
                               display: 'block',
                               objectFit: 'cover'
@@ -1951,11 +2052,11 @@ function GamePageContentComponent({
                         <img
                           src={tableCardSrc}
                           alt={`Card ${idx + 1}`}
-                          width={74}
-                          height={111}
+                          width={layoutMetrics.centerCardWidth}
+                          height={layoutMetrics.centerCardHeight}
                           style={{
-                            width: '74px',
-                            height: '111px',
+                            width: `${layoutMetrics.centerCardWidth}px`,
+                            height: `${layoutMetrics.centerCardHeight}px`,
                             borderRadius: '6px',
                             display: 'block',
                             objectFit: 'cover'
@@ -2059,8 +2160,8 @@ function GamePageContentComponent({
                         src={cardSrc}
                         alt="Current Card"
                         style={{ 
-                          width: '54px',
-                          height: '81px',
+                          width: `${layoutMetrics.revealedCardWidth}px`,
+                          height: `${layoutMetrics.revealedCardHeight}px`,
                           borderRadius: '8px',
                           opacity: 1,
                           filter: 'none',
@@ -2073,11 +2174,11 @@ function GamePageContentComponent({
                       <img
                         src={cardSrc}
                         alt="Current Card"
-                        width={54}
-                        height={81}
+                        width={layoutMetrics.revealedCardWidth}
+                        height={layoutMetrics.revealedCardHeight}
                         style={{
-                          width: '54px',
-                          height: '81px',
+                          width: `${layoutMetrics.revealedCardWidth}px`,
+                          height: `${layoutMetrics.revealedCardHeight}px`,
                           borderRadius: '8px',
                           opacity: 1,
                           filter: 'none',
@@ -3070,7 +3171,7 @@ function GamePageContentComponent({
                     }
                   }}
                   style={{
-                    marginLeft: index > 0 ? '-50px' : '0',
+                    marginLeft: index > 0 ? `-${Math.round(layoutMetrics.handCardWidth * 0.42)}px` : '0',
                     zIndex: isSelected ? 100 : index + 1,
                     cursor: isMyTurn && canPlay ? 'grab' : isMyTurn ? 'pointer' : 'not-allowed',
                     position: 'relative',
@@ -3098,7 +3199,7 @@ function GamePageContentComponent({
                     return (
                       <>
                   {nftImageUrl ? (
-                    <div style={{ position: 'relative', width: '55px', height: '82px' }}>
+                    <div style={{ position: 'relative', width: `${layoutMetrics.handCardWidth}px`, height: `${layoutMetrics.handCardHeight}px` }}>
                     <img
                       src={nftImageUrl}
                       alt={cardImage}
@@ -3112,8 +3213,8 @@ function GamePageContentComponent({
                         }
                       }}
                       style={{ 
-                        width: '55px',
-                        height: '82px',
+                        width: `${layoutMetrics.handCardWidth}px`,
+                        height: `${layoutMetrics.handCardHeight}px`,
                         borderRadius: '8px',
                         background: '#ffffff',
                         opacity: 1,
@@ -3163,11 +3264,11 @@ function GamePageContentComponent({
                   <img
                     src={standardHandCardSrc}
                     alt={cardImage}
-                    width={55}
-                    height={82}
+                    width={layoutMetrics.handCardWidth}
+                    height={layoutMetrics.handCardHeight}
                     style={{
-                      width: '55px',
-                      height: '82px',
+                      width: `${layoutMetrics.handCardWidth}px`,
+                      height: `${layoutMetrics.handCardHeight}px`,
                       borderRadius: '8px',
                       background: '#ffffff',
                       opacity: 1,

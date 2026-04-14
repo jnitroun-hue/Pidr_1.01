@@ -3365,4 +3365,312 @@
 .stage2Scale button {
   transform: scale(0.8);
   transform-origin: center;
-} 
+}
+
+/* ===== FINAL RESPONSIVE SYSTEM ===== */
+.gameContainer {
+  --table-width: 82vw;
+  --table-height: 80dvh;
+  --table-max-width: 360px;
+  --table-min-width: 260px;
+  --table-min-height: 540px;
+  --table-radius: 18px;
+
+  --hud-top: calc(env(safe-area-inset-top, 0px) + 8px);
+  --hud-side: calc(env(safe-area-inset-left, 0px) + 8px);
+  --hud-gap: 4px;
+  --hud-pad-y: 6px;
+  --hud-pad-x: 10px;
+  --hud-font: 11px;
+  --hud-radius: 10px;
+
+  --seat-width: 74px;
+  --seat-pad-y: 5px;
+  --seat-pad-x: 4px;
+  --seat-radius: 12px;
+  --seat-cards-gap: 5px;
+  --avatar-size: 28px;
+  --avatar-wrap-pad-y: 2px;
+  --avatar-wrap-pad-x: 4px;
+  --avatar-wrap-gap: 2px;
+  --name-font: 9px;
+
+  --cards-gap: 2px;
+  --opponent-card-width: 30px;
+  --opponent-card-height: 44px;
+  --opponent-card-radius: 6px;
+
+  --deck-card-width: 38px;
+  --deck-card-height: 57px;
+  --deck-count-size: 24px;
+  --deck-count-font: 11px;
+
+  --player-hand-width: min(92vw, 430px);
+  --player-hand-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+  --player-hand-padding-y: 8px;
+  --player-hand-padding-x: 10px;
+  --player-hand-min-height: 108px;
+  --hand-card-width: 60px;
+  --hand-card-height: 90px;
+}
+
+.rectangularTable {
+  width: var(--table-width) !important;
+  height: var(--table-height) !important;
+  max-width: var(--table-max-width) !important;
+  min-width: var(--table-min-width) !important;
+  min-height: var(--table-min-height) !important;
+  border-radius: var(--table-radius) !important;
+}
+
+.gameHeader {
+  top: var(--hud-top) !important;
+  left: var(--hud-side) !important;
+  gap: var(--hud-gap) !important;
+}
+
+.stageInfo,
+.deckInfo {
+  padding: var(--hud-pad-y) var(--hud-pad-x) !important;
+  font-size: var(--hud-font) !important;
+  border-radius: var(--hud-radius) !important;
+}
+
+.playerSeat {
+  width: var(--seat-width) !important;
+  padding: var(--seat-pad-y) var(--seat-pad-x) !important;
+  border-radius: var(--seat-radius) !important;
+}
+
+.avatarWrap {
+  padding: var(--avatar-wrap-pad-y) var(--avatar-wrap-pad-x) !important;
+  gap: var(--avatar-wrap-gap) !important;
+  border-radius: calc(var(--seat-radius) - 2px) !important;
+}
+
+.avatar {
+  width: var(--avatar-size) !important;
+  height: var(--avatar-size) !important;
+}
+
+.botBadge {
+  width: calc(var(--avatar-size) * 0.48) !important;
+  height: calc(var(--avatar-size) * 0.48) !important;
+  font-size: calc(var(--avatar-size) * 0.28) !important;
+}
+
+.playerName {
+  font-size: var(--name-font) !important;
+  max-width: calc(var(--seat-width) - 12px) !important;
+}
+
+.cardsContainer {
+  margin-top: var(--seat-cards-gap) !important;
+  gap: var(--cards-gap) !important;
+}
+
+.cardOnPenki {
+  width: var(--opponent-card-width) !important;
+  height: var(--opponent-card-height) !important;
+  border-radius: var(--opponent-card-radius) !important;
+}
+
+.cardOnPenki img {
+  border-radius: calc(var(--opponent-card-radius) - 1px) !important;
+}
+
+.deckStack img {
+  width: var(--deck-card-width) !important;
+  height: var(--deck-card-height) !important;
+}
+
+.deckCount {
+  width: var(--deck-count-size) !important;
+  height: var(--deck-count-size) !important;
+  font-size: var(--deck-count-font) !important;
+}
+
+.playerHand {
+  width: var(--player-hand-width) !important;
+  bottom: var(--player-hand-bottom) !important;
+  padding: var(--player-hand-padding-y) var(--player-hand-padding-x) !important;
+  min-height: var(--player-hand-min-height) !important;
+}
+
+.handCard {
+  width: var(--hand-card-width) !important;
+  height: var(--hand-card-height) !important;
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+  .gameContainer {
+    --table-width: 70vw;
+    --table-height: 82dvh;
+    --table-max-width: 470px;
+    --table-min-width: 330px;
+    --table-min-height: 580px;
+    --table-radius: 22px;
+
+    --hud-top: calc(env(safe-area-inset-top, 0px) + 10px);
+    --hud-side: calc(env(safe-area-inset-left, 0px) + 10px);
+    --hud-gap: 5px;
+    --hud-pad-y: 7px;
+    --hud-pad-x: 12px;
+    --hud-font: 12px;
+
+    --seat-width: 84px;
+    --seat-pad-y: 6px;
+    --seat-pad-x: 5px;
+    --seat-radius: 13px;
+    --seat-cards-gap: 6px;
+    --avatar-size: 30px;
+    --name-font: 10px;
+
+    --cards-gap: 3px;
+    --opponent-card-width: 34px;
+    --opponent-card-height: 50px;
+    --deck-card-width: 42px;
+    --deck-card-height: 63px;
+    --deck-count-size: 26px;
+    --deck-count-font: 12px;
+
+    --player-hand-width: min(84vw, 500px);
+    --player-hand-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+    --player-hand-padding-y: 10px;
+    --player-hand-padding-x: 12px;
+    --player-hand-min-height: 120px;
+    --hand-card-width: 68px;
+    --hand-card-height: 102px;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1280px) {
+  .gameContainer {
+    --table-width: 58vw;
+    --table-height: 84dvh;
+    --table-max-width: 700px;
+    --table-min-width: 460px;
+    --table-min-height: 620px;
+    --table-radius: 24px;
+
+    --hud-top: 12px;
+    --hud-side: 12px;
+    --hud-gap: 6px;
+    --hud-pad-y: 10px;
+    --hud-pad-x: 16px;
+    --hud-font: 14px;
+    --hud-radius: 12px;
+
+    --seat-width: 98px;
+    --seat-pad-y: 8px;
+    --seat-pad-x: 7px;
+    --seat-radius: 14px;
+    --seat-cards-gap: 7px;
+    --avatar-size: 34px;
+    --avatar-wrap-pad-y: 3px;
+    --avatar-wrap-pad-x: 6px;
+    --avatar-wrap-gap: 3px;
+    --name-font: 11px;
+
+    --cards-gap: 3px;
+    --opponent-card-width: 38px;
+    --opponent-card-height: 56px;
+    --opponent-card-radius: 7px;
+    --deck-card-width: 48px;
+    --deck-card-height: 72px;
+    --deck-count-size: 30px;
+    --deck-count-font: 13px;
+
+    --player-hand-width: min(78vw, 700px);
+    --player-hand-bottom: 26px;
+    --player-hand-padding-y: 12px;
+    --player-hand-padding-x: 16px;
+    --player-hand-min-height: 138px;
+    --hand-card-width: 82px;
+    --hand-card-height: 122px;
+  }
+}
+
+@media (min-width: 1281px) {
+  .gameContainer {
+    --table-width: 52vw;
+    --table-height: 84dvh;
+    --table-max-width: 780px;
+    --table-min-width: 560px;
+    --table-min-height: 680px;
+    --table-radius: 26px;
+
+    --hud-top: 16px;
+    --hud-side: 16px;
+    --hud-gap: 7px;
+    --hud-pad-y: 12px;
+    --hud-pad-x: 20px;
+    --hud-font: 15px;
+    --hud-radius: 14px;
+
+    --seat-width: 112px;
+    --seat-pad-y: 9px;
+    --seat-pad-x: 8px;
+    --seat-radius: 16px;
+    --seat-cards-gap: 8px;
+    --avatar-size: 38px;
+    --avatar-wrap-pad-y: 4px;
+    --avatar-wrap-pad-x: 7px;
+    --avatar-wrap-gap: 4px;
+    --name-font: 12px;
+
+    --cards-gap: 4px;
+    --opponent-card-width: 44px;
+    --opponent-card-height: 64px;
+    --opponent-card-radius: 8px;
+    --deck-card-width: 54px;
+    --deck-card-height: 80px;
+    --deck-count-size: 32px;
+    --deck-count-font: 14px;
+
+    --player-hand-width: min(72vw, 860px);
+    --player-hand-bottom: 32px;
+    --player-hand-padding-y: 14px;
+    --player-hand-padding-x: 18px;
+    --player-hand-min-height: 150px;
+    --hand-card-width: 92px;
+    --hand-card-height: 136px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 720px) {
+  .gameContainer {
+    --table-width: min(58vw, 600px);
+    --table-height: 80dvh;
+    --table-max-width: 600px;
+    --table-min-width: 380px;
+    --table-min-height: 420px;
+
+    --hud-top: 8px;
+    --hud-side: 8px;
+    --hud-pad-y: 5px;
+    --hud-pad-x: 10px;
+    --hud-font: 11px;
+
+    --seat-width: 72px;
+    --seat-pad-y: 4px;
+    --seat-pad-x: 4px;
+    --avatar-size: 24px;
+    --name-font: 8px;
+
+    --opponent-card-width: 30px;
+    --opponent-card-height: 44px;
+    --deck-card-width: 38px;
+    --deck-card-height: 56px;
+    --deck-count-size: 22px;
+    --deck-count-font: 10px;
+
+    --player-hand-width: min(72vw, 520px);
+    --player-hand-bottom: 10px;
+    --player-hand-padding-y: 6px;
+    --player-hand-padding-x: 10px;
+    --player-hand-min-height: 92px;
+    --hand-card-width: 56px;
+    --hand-card-height: 84px;
+  }
+}
