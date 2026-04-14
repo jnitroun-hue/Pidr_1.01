@@ -999,19 +999,45 @@ interface ThemeCardProps {
 function ThemeCard({ theme, themeConfig, generating, onGenerateSingle, onGenerateDeck, disabled, isLegendary, onCryptoClick }: ThemeCardProps) {
   const singleCostLabel = themeConfig.singleCost.toLocaleString('ru-RU');
   const deckCostLabel = themeConfig.deckCost.toLocaleString('ru-RU');
+  const totalLabel = `${themeConfig.total} арт${themeConfig.total > 1 ? 'ов' : ''}`;
+
+  const actionButtonStyle = (background: string, accent: string) => ({
+    padding: '10px 12px',
+    borderRadius: '12px',
+    border: `1px solid ${accent}`,
+    background,
+    color: '#ffffff',
+    fontWeight: 'bold' as const,
+    fontSize: '12px',
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    opacity: disabled ? 0.6 : 1,
+    position: 'relative' as const,
+    zIndex: 2,
+    boxShadow: disabled ? 'none' : `0 8px 20px ${accent.replace('0.55', '0.18')}`,
+    transition: 'all 0.25s ease'
+  });
 
   return (
     <div style={{
       position: 'relative',
-      background: 'rgba(30, 41, 59, 0.6)',
-      borderRadius: '16px',
-      border: `2px solid ${themeConfig.color}40`,
-      padding: '16px',
+      background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.96) 0%, rgba(17, 24, 39, 0.94) 100%)',
+      borderRadius: '22px',
+      border: `1.5px solid ${themeConfig.color}55`,
+      padding: '18px',
       display: 'flex',
       flexDirection: 'column',
-      gap: '8px',
-      overflow: 'hidden'
+      gap: '12px',
+      overflow: 'hidden',
+      minHeight: '100%',
+      boxShadow: `0 18px 40px rgba(2, 6, 23, 0.55), inset 0 1px 0 rgba(255,255,255,0.05), 0 0 0 1px ${themeConfig.color}12`
     }}>
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        background: `radial-gradient(circle at top, ${themeConfig.color}22 0%, transparent 50%)`,
+        pointerEvents: 'none'
+      }} />
+
       {/* 🔥 АНИМАЦИЯ ОГНЯ ДЛЯ ЛЕГЕНДАРНОЙ */}
       {isLegendary && (
         <>
@@ -1072,80 +1098,139 @@ function ThemeCard({ theme, themeConfig, generating, onGenerateSingle, onGenerat
         </>
       )}
 
-      {/* ЗАГОЛОВОК ТЕМЫ */}
-      <div style={{ textAlign: 'center', marginBottom: '4px', position: 'relative', zIndex: 2 }}>
-        <div style={{ fontSize: '36px', marginBottom: '4px' }}>{themeConfig.icon}</div>
-        <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: themeConfig.color }}>
-          {themeConfig.name}
-        </h3>
+      <div style={{
+        position: 'relative',
+        zIndex: 2,
+        borderRadius: '18px',
+        padding: '14px',
+        background: `linear-gradient(135deg, ${themeConfig.color}20 0%, rgba(15, 23, 42, 0.35) 100%)`,
+        border: `1px solid ${themeConfig.color}35`
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', marginBottom: '12px' }}>
+          <div>
+            <div style={{ fontSize: '34px', lineHeight: 1, marginBottom: '6px' }}>{themeConfig.icon}</div>
+            <h3 style={{ fontSize: '17px', fontWeight: 'bold', color: '#f8fafc', margin: 0 }}>
+              {themeConfig.name}
+            </h3>
+          </div>
+          <div style={{
+            padding: '6px 10px',
+            borderRadius: '999px',
+            background: 'rgba(15, 23, 42, 0.75)',
+            color: themeConfig.color,
+            fontSize: '11px',
+            fontWeight: 800,
+            border: `1px solid ${themeConfig.color}40`
+          }}>
+            {theme === 'legendary' ? 'PREMIUM' : 'THEME'}
+          </div>
+        </div>
+
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+          gap: '8px'
+        }}>
+          <div style={{
+            borderRadius: '12px',
+            padding: '10px',
+            background: 'rgba(15, 23, 42, 0.68)',
+            border: '1px solid rgba(148, 163, 184, 0.16)'
+          }}>
+            <div style={{ color: '#94a3b8', fontSize: '10px', fontWeight: 700, marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              Карта
+            </div>
+            <div style={{ color: '#f8fafc', fontSize: '13px', fontWeight: 800 }}>{singleCostLabel}</div>
+            <div style={{ color: '#64748b', fontSize: '10px', marginTop: '2px' }}>монет</div>
+          </div>
+
+          <div style={{
+            borderRadius: '12px',
+            padding: '10px',
+            background: 'rgba(15, 23, 42, 0.68)',
+            border: '1px solid rgba(148, 163, 184, 0.16)'
+          }}>
+            <div style={{ color: '#94a3b8', fontSize: '10px', fontWeight: 700, marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              Колода
+            </div>
+            <div style={{ color: '#f8fafc', fontSize: '13px', fontWeight: 800 }}>{deckCostLabel}</div>
+            <div style={{ color: '#64748b', fontSize: '10px', marginTop: '2px' }}>монет</div>
+          </div>
+        </div>
       </div>
 
-      {/* КНОПКА: ОДНА КАРТА - УМЕНЬШЕНА В 2 РАЗА */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        gap: '8px',
+        position: 'relative',
+        zIndex: 2
+      }}>
+        <div style={{
+          flex: 1,
+          borderRadius: '12px',
+          padding: '8px 10px',
+          background: 'rgba(255,255,255,0.03)',
+          border: '1px solid rgba(148, 163, 184, 0.12)'
+        }}>
+          <div style={{ color: '#94a3b8', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            Набор
+          </div>
+          <div style={{ color: '#e2e8f0', fontSize: '12px', fontWeight: 700, marginTop: '4px' }}>
+            {totalLabel}
+          </div>
+        </div>
+        <div style={{
+          flex: 1,
+          borderRadius: '12px',
+          padding: '8px 10px',
+          background: 'rgba(255,255,255,0.03)',
+          border: '1px solid rgba(148, 163, 184, 0.12)'
+        }}>
+          <div style={{ color: '#94a3b8', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            Оплата
+          </div>
+          <div style={{ color: '#e2e8f0', fontSize: '12px', fontWeight: 700, marginTop: '4px' }}>
+            Монеты / YooKassa
+          </div>
+        </div>
+      </div>
+
       <motion.button
         whileHover={{ scale: disabled ? 1 : 1.03 }}
         whileTap={{ scale: disabled ? 1 : 0.97 }}
         onClick={onGenerateSingle}
         disabled={disabled}
-        style={{
-          padding: '6px',
-          borderRadius: '8px',
-          border: 'none',
-          background: generating ? '#64748b' : themeConfig.gradient,
-          color: '#ffffff',
-          fontWeight: 'bold',
-          fontSize: '11px',
-          cursor: disabled ? 'not-allowed' : 'pointer',
-          opacity: disabled ? 0.6 : 1,
-          position: 'relative',
-          zIndex: 2
-        }}
+        style={actionButtonStyle(
+          generating ? 'linear-gradient(135deg, #475569 0%, #334155 100%)' : themeConfig.gradient,
+          `${themeConfig.color}88`
+        )}
       >
         {generating ? '⏳' : `🎴 Карта (${singleCostLabel} монет)`}
       </motion.button>
 
-      {/* КНОПКА: КОЛОДА */}
       <motion.button
         whileHover={{ scale: disabled ? 1 : 1.03 }}
         whileTap={{ scale: disabled ? 1 : 0.97 }}
         onClick={onGenerateDeck}
         disabled={disabled}
-        style={{
-          padding: '6px',
-          borderRadius: '8px',
-          border: 'none',
-          background: generating ? '#64748b' : themeConfig.gradient,
-          color: '#ffffff',
-          fontWeight: 'bold',
-          fontSize: '11px',
-          cursor: disabled ? 'not-allowed' : 'pointer',
-          opacity: disabled ? 0.6 : 1,
-          position: 'relative',
-          zIndex: 2
-        }}
+        style={actionButtonStyle(
+          generating ? 'linear-gradient(135deg, #475569 0%, #334155 100%)' : `linear-gradient(135deg, rgba(15,23,42,0.82) 0%, ${themeConfig.color}b3 100%)`,
+          `${themeConfig.color}88`
+        )}
       >
         {generating ? '⏳' : `🃏 Колода (${deckCostLabel} монет)`}
       </motion.button>
 
-      {/* КНОПКА: ЗА КРИПТУ */}
       <motion.button
         whileHover={{ scale: disabled ? 1 : 1.03 }}
         whileTap={{ scale: disabled ? 1 : 0.97 }}
         onClick={onCryptoClick}
         disabled={disabled}
-        style={{
-          width: '100%',
-          padding: '6px',
-          borderRadius: '8px',
-          border: 'none',
-          background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-          color: '#ffffff',
-          fontWeight: 'bold',
-          fontSize: '11px',
-          cursor: disabled ? 'not-allowed' : 'pointer',
-          opacity: disabled ? 0.6 : 1,
-          position: 'relative',
-          zIndex: 2
-        }}
+        style={actionButtonStyle(
+          'linear-gradient(135deg, rgba(16,185,129,0.24) 0%, rgba(14,165,233,0.24) 100%)',
+          'rgba(16, 185, 129, 0.55)'
+        )}
       >
         💳 / 💎 ОПЛАТА
       </motion.button>

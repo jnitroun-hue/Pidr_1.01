@@ -28,6 +28,7 @@ import { useLanguage } from '../../components/LanguageSwitcher';
 import { useTranslations } from '../../lib/i18n/translations';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useTelegram } from '@/hooks/useTelegram';
+import { getCardAssetSrc } from '@/lib/game/cardAssets';
 
 const CARD_IMAGES = [
   '2_of_clubs.png','2_of_diamonds.png','2_of_hearts.png','2_of_spades.png',
@@ -45,7 +46,7 @@ const CARD_IMAGES = [
   'queen_of_clubs.png','queen_of_diamonds.png','queen_of_hearts.png','queen_of_spades.png',
 ];
 const CARD_BACK = 'back.png';
-const CARDS_PATH = '/img/cards/'; // ПРАВИЛЬНЫЙ ПУТЬ К КАРТАМ!
+const CARDS_PATH = '/img/cards/'; // legacy путь, стандартные карты теперь рендерятся через inline SVG
 
 // Рассчитываем размеры и позицию стола
 const getTableDimensions = () => {
@@ -1608,6 +1609,21 @@ function GamePageContentComponent({
     };
   };
 
+  const getHintAnchor = (position: { x: number; y: number; side: 'top' | 'bottom' | 'left' | 'right' }) => {
+    switch (position.side) {
+      case 'top':
+        return { x: position.x, y: position.y + 13 };
+      case 'bottom':
+        return { x: position.x, y: position.y - 10 };
+      case 'left':
+        return { x: position.x + 8, y: position.y + 8 };
+      case 'right':
+        return { x: position.x - 8, y: position.y + 8 };
+      default:
+        return { x: position.x, y: position.y };
+    }
+  };
+
   // ✅ УБРАН ЗАГРУЗОЧНЫЙ ЭКРАН - ИГРА ПОКАЗЫВАЕТСЯ СРАЗУ ПОСЛЕ СОЗДАНИЯ ИГРОКОВ!
   // Показываем лоадер ТОЛЬКО если userData еще не загружена
   if (isLoadingUserData) {
@@ -1858,16 +1874,16 @@ function GamePageContentComponent({
                   
                   // ✅ ИСПРАВЛЕНО: Проверяем является ли card.image NFT URL
                   const cardImg = card.image || 'card_back.png';
-                  const isNftUrl = cardImg.startsWith('http://') || cardImg.startsWith('https://');
-                  const tableCardSrc = isNftUrl ? cardImg : `${CARDS_PATH}${cardImg}`;
-                  
-                  // Парсим ранг и масть для оверлея NFT
                   const tableCardRank = String(card.rank || '').toLowerCase();
                   const tableCardSuit = String(card.suit || '').toLowerCase();
+                  const isNftUrl = cardImg.startsWith('http://') || cardImg.startsWith('https://');
+                  const tableCardSrc = isNftUrl
+                    ? cardImg
+                    : getCardAssetSrc({ image: cardImg, rank: tableCardRank, suit: tableCardSuit });
                   
                   return (
                     <div 
-                      key={`table-${card.suit}-${card.rank}-${idx}-${card.id || Math.random()}`} // ✅ УНИКАЛЬНЫЙ КЛЮЧ 
+                      key={card.id || `table-${tableCardSuit}-${tableCardRank}-${idx}`} // ✅ СТАБИЛЬНЫЙ КЛЮЧ 
                       style={{
                         position: 'absolute',
                         left: `${offset}px`, // СЛЕВА НАПРАВО!
@@ -1932,17 +1948,19 @@ function GamePageContentComponent({
                           })()}
                         </div>
                       ) : (
-                      <Image
+                        <img
                           src={tableCardSrc}
-                        alt={`Card ${idx + 1}`}
-                        width={74}
-                        height={111}
-                        style={{ 
-                          borderRadius: '6px',
-                          display: 'block'
-                        }}
-                        priority
-                      />
+                          alt={`Card ${idx + 1}`}
+                          width={74}
+                          height={111}
+                          style={{
+                            width: '74px',
+                            height: '111px',
+                            borderRadius: '6px',
+                            display: 'block',
+                            objectFit: 'cover'
+                          }}
+                        />
                       )}
                     </div>
                   );
@@ -1982,12 +2000,10 @@ function GamePageContentComponent({
                 {/* Открытая карта из колоды (слева) - КЛИКАБЕЛЬНАЯ! */}
                 {currentCard && revealedDeckCard && (() => {
                   // ✅ ИСПРАВЛЕНО: Проверяем является ли карта NFT URL
-                  const isNftUrl = currentCard.startsWith('http://') || currentCard.startsWith('https://');
-                  const cardSrc = isNftUrl ? currentCard : `${CARDS_PATH}${currentCard}`;
-                  
                   // Парсим ранг и масть для оверлея
                   let deckCardRank = '';
                   let deckCardSuit = '';
+                  const isNftUrl = currentCard.startsWith('http://') || currentCard.startsWith('https://');
                   if (!isNftUrl) {
                     const match = currentCard.match(/(\w+)_of_(\w+)\.png/);
                     if (match) {
@@ -1998,6 +2014,9 @@ function GamePageContentComponent({
                     deckCardRank = String(revealedDeckCard.rank || '').toLowerCase();
                     deckCardSuit = String(revealedDeckCard.suit || '').toLowerCase();
                   }
+                  const cardSrc = isNftUrl
+                    ? currentCard
+                    : getCardAssetSrc({ image: currentCard, rank: deckCardRank, suit: deckCardSuit });
                   
                   return (
                   <div 
@@ -2051,20 +2070,22 @@ function GamePageContentComponent({
                         }}
                       />
                     ) : (
-                    <Image
+                      <img
                         src={cardSrc}
-                      alt="Current Card"
-                      width={54}
-                      height={81}
-                      style={{ 
-                        borderRadius: '8px',
-                        opacity: 1,
-                        filter: 'none',
-                        visibility: 'visible',
-                        display: 'block'
-                      }}
-                      priority
-                    />
+                        alt="Current Card"
+                        width={54}
+                        height={81}
+                        style={{
+                          width: '54px',
+                          height: '81px',
+                          borderRadius: '8px',
+                          opacity: 1,
+                          filter: 'none',
+                          visibility: 'visible',
+                          display: 'block',
+                          objectFit: 'cover'
+                        }}
+                      />
                     )}
                     {/* ✅ ОВЕРЛЕЙ РАНГА И МАСТИ ДЛЯ NFT КАРТЫ ИЗ КОЛОДЫ */}
                     {isNftUrl && deckCardRank && deckCardSuit && (() => {
@@ -2162,19 +2183,20 @@ function GamePageContentComponent({
                     e.currentTarget.style.transform = 'scale(1)';
                   }}
                 >
-                  <Image
-                    src={`${CARDS_PATH}${CARD_BACK}`}
+                  <img
+                    src={getCardAssetSrc({ faceDown: true })}
                     alt="Deck"
                     width={36}
                     height={54}
                     className={styles.deckCard}
-                    style={{ 
+                    style={{
+                      width: '36px',
+                      height: '54px',
                       opacity: 1,
                       filter: 'none',
                       visibility: 'visible',
                       display: 'block'
                     }}
-                    priority
                   />
                   <div className={styles.deckCount}>{deck.length}</div>
                   
@@ -2414,11 +2436,11 @@ function GamePageContentComponent({
                           }
                           
                           // ✅ ИСПРАВЛЕНО: Определяем URL изображения (NFT или обычная карта) для ВСЕХ игроков
-                          const cardImageUrl = showOpen 
-                            ? (nftImageUrl 
-                                ? nftImageUrl 
-                                : (isCardAlreadyNftUrl ? cardImage : `${CARDS_PATH}${cardImage}`))
-                            : `${CARDS_PATH}${CARD_BACK}`;
+                          const cardImageUrl = showOpen
+                            ? (nftImageUrl
+                                ? nftImageUrl
+                                : getCardAssetSrc({ image: cardImage, rank: cardRank, suit: cardSuit }))
+                            : getCardAssetSrc({ faceDown: true });
                           
                           // ✅ ИСПРАВЛЕНО: Динамическое перекрытие - УВЕЛИЧЕНО для закрытых карт
                           const isOpponentCard = !isHumanPlayer;
@@ -2439,7 +2461,7 @@ function GamePageContentComponent({
                           
                           return (
                             <div 
-                              key={cardIndex} 
+                              key={card.id || `${player.id}-${cardImage}-${cardIndex}-${showOpen ? 'open' : 'closed'}`} 
                               className={styles.cardOnPenki} 
                               style={{
                                 marginLeft: overlap,
@@ -2481,9 +2503,9 @@ function GamePageContentComponent({
                                     console.log('❌ NFT не загрузилась, показываем стандартную:', cardImage);
                                     const target = e.currentTarget;
                                     if (!cardImage.startsWith('http')) {
-                                      target.src = `${CARDS_PATH}${cardImage}`;
+                                      target.src = getCardAssetSrc({ image: cardImage, rank: cardRank, suit: cardSuit });
                                     } else {
-                                      target.src = `${CARDS_PATH}${cardRank}_of_${cardSuit}.png`;
+                                      target.src = getCardAssetSrc({ rank: cardRank, suit: cardSuit });
                                     }
                                   }}
                                   style={{ 
@@ -2539,13 +2561,12 @@ function GamePageContentComponent({
                                   })()}
                                 </div>
                               ) : (
-                                <Image
+                                <img
                                   src={cardImageUrl}
                                   alt={showOpen ? cardImage : 'Card'}
                                   width={60}
                                   height={90}
-                                  loading="eager"
-                                  style={{ 
+                                  style={{
                                     width: '100%',
                                     height: '100%',
                                     borderRadius: 'inherit',
@@ -2554,15 +2575,14 @@ function GamePageContentComponent({
                                     filter: shouldHighlight || isAvailableTarget ? 'brightness(1.2)' : 'none',
                                     visibility: 'visible',
                                     display: 'block',
-                                    boxShadow: shouldHighlight 
-                                      ? '0 0 12px rgba(40, 167, 69, 0.8)' 
-                                      : isAvailableTarget 
+                                    boxShadow: shouldHighlight
+                                      ? '0 0 12px rgba(40, 167, 69, 0.8)'
+                                      : isAvailableTarget
                                       ? '0 0 12px rgba(59, 130, 246, 0.8)'
                                       : 'none',
                                     transition: 'all 0.3s ease',
                                     objectFit: 'cover',
                                   }}
-                                  priority
                                 />
                               )}
                               {shouldHighlight && (
@@ -2580,14 +2600,34 @@ function GamePageContentComponent({
                                 }}></div>
                               )}
                               {isAvailableTarget && (
-                                <div style={{
-                                  position: 'absolute',
-                                  top: '-10px',
-                                  left: '50%',
-                                  transform: 'translateX(-50%)',
-                                  fontSize: '20px',
-                                  animation: 'bounce 1s ease-in-out infinite',
-                                }}>⬇️</div>
+                                <>
+                                  <div style={{
+                                    position: 'absolute',
+                                    inset: '-5px',
+                                    borderRadius: '12px',
+                                    border: '2px solid rgba(74, 222, 128, 0.92)',
+                                    boxShadow: '0 0 0 7px rgba(34, 197, 94, 0.12), 0 0 20px rgba(34, 197, 94, 0.55)',
+                                    animation: 'pulse 1.4s ease-in-out infinite',
+                                    pointerEvents: 'none'
+                                  }} />
+                                  <div style={{
+                                    position: 'absolute',
+                                    top: '-24px',
+                                    left: '50%',
+                                    transform: 'translateX(-50%)',
+                                    background: 'linear-gradient(135deg, rgba(34,197,94,0.95) 0%, rgba(16,185,129,0.92) 100%)',
+                                    color: '#f8fafc',
+                                    borderRadius: '999px',
+                                    padding: '3px 8px',
+                                    fontSize: '10px',
+                                    fontWeight: '800',
+                                    whiteSpace: 'nowrap',
+                                    boxShadow: '0 6px 14px rgba(16,185,129,0.35)',
+                                    pointerEvents: 'none'
+                                  }}>
+                                    Цель
+                                  </div>
+                                </>
                               )}
                               
                               {/* 🔢 ПОКАЗЫВАЕМ КОЛИЧЕСТВО КАРТ ВО 2-Й СТАДИИ (только для закрытых карт) */}
@@ -3053,6 +3093,10 @@ function GamePageContentComponent({
                   }}
                 >
                   {/* ✅ НОВОЕ: Используем NFT карту если она есть в колоде */}
+                  {(() => {
+                    const standardHandCardSrc = getCardAssetSrc({ image: cardImage, rank: cardRank, suit: cardSuit });
+                    return (
+                      <>
                   {nftImageUrl ? (
                     <div style={{ position: 'relative', width: '55px', height: '82px' }}>
                     <img
@@ -3063,6 +3107,7 @@ function GamePageContentComponent({
                         e.currentTarget.style.display = 'none';
                         const fallbackImg = e.currentTarget.nextSibling as HTMLImageElement;
                         if (fallbackImg) {
+                          fallbackImg.src = standardHandCardSrc;
                           fallbackImg.style.display = 'block';
                         }
                       }}
@@ -3115,13 +3160,14 @@ function GamePageContentComponent({
                       </div>
                     </div>
                   ) : null}
-                  <Image
-                    src={cardImage.startsWith('http') ? `${CARDS_PATH}${cardRank}_of_${cardSuit}.png` : `${CARDS_PATH}${cardImage}`}
+                  <img
+                    src={standardHandCardSrc}
                     alt={cardImage}
                     width={55}
                     height={82}
-                    loading="eager"
-                    style={{ 
+                    style={{
+                      width: '55px',
+                      height: '82px',
                       borderRadius: '8px',
                       background: '#ffffff',
                       opacity: 1,
@@ -3131,9 +3177,12 @@ function GamePageContentComponent({
                       transform: isSelected ? 'translateY(-20px) scale(1.1)' : 'none',
                       transition: 'all 0.3s ease',
                       boxShadow: canPlay ? '0 0 20px rgba(40, 167, 69, 0.6), 0 0 40px rgba(40, 167, 69, 0.3)' : 'none',
+                      objectFit: 'cover'
                     }}
-                    priority
                   />
+                      </>
+                    );
+                  })()}
                   {canPlay && (
                     <div style={{
                       position: 'absolute',
@@ -3297,74 +3346,114 @@ function GamePageContentComponent({
         if (userIndex < 0) return null;
         const userPos = getPlayerPosition(userIndex, players.length);
 
-        // В 1-й стадии — толстая изогнутая стрелка к доступной цели
+        // В 1-й стадии — плавная стрелка к доступной цели
         if (gameStage === 1 && availableTargets.length > 0) {
           const targetIdx = availableTargets[0];
           const targetPos = getPlayerPosition(targetIdx, players.length);
           const targetPlayer = players[targetIdx];
-          // Контрольная точка для кривой Безье — смещаем вбок для изгиба
-          const midX = (userPos.x + targetPos.x) / 2;
-          const midY = (userPos.y + targetPos.y) / 2;
-          const curveOffset = targetPos.x > userPos.x ? -12 : 12; // изгиб в сторону
+          const start = getHintAnchor(userPos);
+          const end = getHintAnchor(targetPos);
+          const midX = (start.x + end.x) / 2;
+          const midY = (start.y + end.y) / 2;
+          const curveOffset = end.x > start.x ? -10 : 10;
+          const labelX = Math.max(20, Math.min(80, midX + curveOffset * 0.45));
+          const labelY = Math.max(18, Math.min(78, midY - 2));
+
           return (
-            <svg
-              style={{
-                position: 'absolute', inset: 0, width: '100%', height: '100%',
-                zIndex: 200, pointerEvents: 'none', overflow: 'visible',
-              }}
-            >
-              <defs>
-                <marker id="tut-arrowhead" markerWidth="14" markerHeight="12" refX="12" refY="6" orient="auto">
-                  <path d="M0,0 L14,6 L0,12 L3,6 Z" fill="#22c55e" />
-                </marker>
-                <linearGradient id="arrow-grad" x1="0%" y1="100%" x2="0%" y2="0%">
-                  <stop offset="0%" stopColor="#22c55e" stopOpacity="0.3" />
-                  <stop offset="100%" stopColor="#4ade80" stopOpacity="1" />
-                </linearGradient>
-                <filter id="tut-glow2">
-                  <feGaussianBlur stdDeviation="4" result="blur" />
-                  <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-                </filter>
-              </defs>
-              {/* Толстое свечение-подложка */}
-              <path
-                d={`M ${userPos.x}% ${userPos.y - 5}% Q ${midX + curveOffset}% ${midY}% ${targetPos.x}% ${targetPos.y + 5}%`}
-                stroke="rgba(34,197,94,0.25)" strokeWidth="12" fill="none"
-                strokeLinecap="round"
+            <>
+              <svg
+                style={{
+                  position: 'absolute', inset: 0, width: '100%', height: '100%',
+                  zIndex: 200, pointerEvents: 'none', overflow: 'visible',
+                }}
+              >
+                <defs>
+                  <marker id="tut-arrowhead" markerWidth="14" markerHeight="12" refX="12" refY="6" orient="auto">
+                    <path d="M0,0 L14,6 L0,12 L3,6 Z" fill="#22c55e" />
+                  </marker>
+                  <linearGradient id="arrow-grad" x1="0%" y1="100%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#34d399" stopOpacity="0.35" />
+                    <stop offset="55%" stopColor="#4ade80" stopOpacity="0.95" />
+                    <stop offset="100%" stopColor="#86efac" stopOpacity="1" />
+                  </linearGradient>
+                  <filter id="tut-glow2">
+                    <feGaussianBlur stdDeviation="4" result="blur" />
+                    <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                  </filter>
+                </defs>
+                <path
+                  d={`M ${start.x}% ${start.y}% Q ${midX + curveOffset}% ${midY}% ${end.x}% ${end.y}%`}
+                  stroke="rgba(34,197,94,0.2)"
+                  strokeWidth="13"
+                  fill="none"
+                  strokeLinecap="round"
+                />
+                <path
+                  d={`M ${start.x}% ${start.y}% Q ${midX + curveOffset}% ${midY}% ${end.x}% ${end.y}%`}
+                  stroke="url(#arrow-grad)"
+                  strokeWidth="5"
+                  fill="none"
+                  strokeLinecap="round"
+                  markerEnd="url(#tut-arrowhead)"
+                  filter="url(#tut-glow2)"
+                />
+                <circle
+                  cx={`${midX + curveOffset * 0.35}%`}
+                  cy={`${midY}%`}
+                  r="6"
+                  fill="#bbf7d0"
+                  filter="url(#tut-glow2)"
+                >
+                  <animate attributeName="opacity" values="0.35;1;0.35" dur="1.4s" repeatCount="indefinite" />
+                </circle>
+              </svg>
+
+              <motion.div
+                style={{
+                  position: 'absolute',
+                  left: `${end.x}%`,
+                  top: `${end.y}%`,
+                  width: '56px',
+                  height: '56px',
+                  transform: 'translate(-50%, -50%)',
+                  borderRadius: '50%',
+                  border: '2px solid rgba(74, 222, 128, 0.9)',
+                  boxShadow: '0 0 0 8px rgba(34, 197, 94, 0.12), 0 0 26px rgba(34, 197, 94, 0.45)',
+                  zIndex: 210,
+                  pointerEvents: 'none',
+                }}
+                animate={{ scale: [0.95, 1.08, 0.95], opacity: [0.85, 1, 0.85] }}
+                transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
               />
-              {/* Основная толстая изогнутая стрелка */}
-              <path
-                d={`M ${userPos.x}% ${userPos.y - 5}% Q ${midX + curveOffset}% ${midY}% ${targetPos.x}% ${targetPos.y + 5}%`}
-                stroke="url(#arrow-grad)" strokeWidth="5" fill="none"
-                strokeLinecap="round" markerEnd="url(#tut-arrowhead)"
-                filter="url(#tut-glow2)"
-              />
-              {/* Пульсирующий круг-цель */}
-              <circle cx={`${targetPos.x}%`} cy={`${targetPos.y}%`} r="24"
-                fill="none" stroke="#4ade80" strokeWidth="2.5" opacity="0.7">
-                <animate attributeName="r" values="20;30;20" dur="1.3s" repeatCount="indefinite" />
-                <animate attributeName="opacity" values="0.9;0.3;0.9" dur="1.3s" repeatCount="indefinite" />
-              </circle>
-              {/* Подпись на середине стрелки */}
-              <foreignObject
-                x={`${midX + curveOffset - 15}%`} y={`${midY - 3}%`}
-                width="30%" height="6%"
+
+              <motion.div
+                style={{
+                  position: 'absolute',
+                  left: `${labelX}%`,
+                  top: `${labelY}%`,
+                  transform: 'translate(-50%, -50%)',
+                  zIndex: 220,
+                  pointerEvents: 'none',
+                  maxWidth: '42vw'
+                }}
+                animate={{ y: [0, -4, 0], opacity: [0.92, 1, 0.92] }}
+                transition={{ duration: 1.9, repeat: Infinity, ease: 'easeInOut' }}
               >
                 <div style={{
-                  display: 'flex', justifyContent: 'center', alignItems: 'center',
-                  width: '100%', height: '100%',
+                  color: '#f8fafc',
+                  fontSize: '11px',
+                  fontWeight: '800',
+                  background: 'linear-gradient(135deg, rgba(22, 163, 74, 0.94) 0%, rgba(34, 197, 94, 0.88) 100%)',
+                  padding: '7px 12px',
+                  borderRadius: '12px',
+                  whiteSpace: 'nowrap',
+                  boxShadow: '0 10px 24px rgba(34,197,94,0.35)',
+                  border: '1px solid rgba(255,255,255,0.18)'
                 }}>
-                  <span style={{
-                    color: '#fff', fontSize: '11px', fontWeight: '700',
-                    background: 'rgba(34,197,94,0.85)', padding: '3px 10px',
-                    borderRadius: '8px', whiteSpace: 'nowrap',
-                    boxShadow: '0 2px 12px rgba(34,197,94,0.5)',
-                  }}>
-                    Положи на {targetPlayer?.name || 'соперника'} 👆
-                  </span>
+                  Положи на {targetPlayer?.name || 'соперника'}
                 </div>
-              </foreignObject>
-            </svg>
+              </motion.div>
+            </>
           );
         }
 

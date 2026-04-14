@@ -1385,12 +1385,14 @@ export const useGameStore = create<GameState>()(
         }
         
         if (!cardToMove) return;
+
+        const movedCard: Card = {
+          ...cardToMove,
+          open: true
+        };
         
         // Запоминаем верхнюю карту цели ДО хода
         const targetTopCard = targetPlayer.cards[targetPlayer.cards.length - 1];
-        
-        // ГАРАНТИРУЕМ что карта открыта в 1-й стадии!
-        cardToMove.open = true;
         
         // СОЗДАЁМ НОВЫЙ МАССИВ ИГРОКОВ с IMMUTABLE обновлениями!
         const newPlayers = players.map(p => {
@@ -1404,7 +1406,7 @@ export const useGameStore = create<GameState>()(
             // Добавляем карту целевому игроку
             return {
               ...p,
-              cards: [...p.cards, cardToMove!] // Добавляем карту!
+              cards: [...p.cards, movedCard] // Добавляем карту поверх стопки сразу открытой
             };
           }
           return p;
@@ -1415,7 +1417,7 @@ export const useGameStore = create<GameState>()(
           players: newPlayers,
           deck: newDeck,
           revealedDeckCard: revealedDeckCard ? null : revealedDeckCard,
-          lastDrawnCard: revealedDeckCard ? cardToMove : null,
+          lastDrawnCard: revealedDeckCard ? movedCard : null,
           lastPlayerToDrawCard: revealedDeckCard ? currentPlayerId : null,
           turnPhase: revealedDeckCard ? 'turn_ended' : turnPhase,
           skipHandAnalysis: false // После хода на соперника - ВСЕГДА анализ руки
@@ -1430,9 +1432,9 @@ export const useGameStore = create<GameState>()(
         
         // ЕДИНСТВЕННЫЙ ЛОГ ХОДА
         if (targetTopCard && targetTopCard.image) {
-          console.log(`🎴 ${currentPlayer.name} положил ${cardToMove.image} на ${targetTopCard.image} (${targetPlayer.name})`);
+          console.log(`🎴 ${currentPlayer.name} положил ${movedCard.image} на ${targetTopCard.image} (${targetPlayer.name})`);
         } else {
-          console.log(`🎴 ${currentPlayer.name} положил ${cardToMove.image} на ${targetPlayer.name}`);
+          console.log(`🎴 ${currentPlayer.name} положил ${movedCard.image} на ${targetPlayer.name}`);
         }
         
         get().showNotification(`Карта переложена на ${targetPlayer.name}!`, 'success');
