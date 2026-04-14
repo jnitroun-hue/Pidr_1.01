@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 
 export async function POST(req: NextRequest) {
@@ -55,6 +55,16 @@ export async function POST(req: NextRequest) {
     const userData = dbUser;
     const currentCoins = userData.coins || 0;
     const newBalance = currentCoins + amount;
+
+    if (newBalance < 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Недостаточно монет. Требуется: ${Math.abs(amount)}, есть: ${currentCoins}`
+        },
+        { status: 400 }
+      );
+    }
     
     // Формируем объект обновления
     const updateData: any = { coins: newBalance };
@@ -93,7 +103,7 @@ export async function POST(req: NextRequest) {
     }
     
     // Обновляем баланс и статистику в БД
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseAdmin
       .from('_pidr_users')
       .update(updateData)
       .eq('id', dbUserId);

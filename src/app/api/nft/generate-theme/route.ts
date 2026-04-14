@@ -125,12 +125,12 @@ export async function POST(request: NextRequest) {
     if (!skipCoinDeduction) {
       const costs: Record<string, number> = {
         random_pokemon: 10000,
-        random_halloween: 10000,
-        random_starwars: 10000,
+        random_halloween: 5000,
+        random_starwars: 5000,
         random_legendary: 50000,
         deck_pokemon: 400000,
-        deck_halloween: 400000,
-        deck_starwars: 400000
+        deck_halloween: 200000,
+        deck_starwars: 200000
       };
 
       const cost = costs[action] || 10000;

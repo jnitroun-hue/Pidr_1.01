@@ -85,8 +85,55 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
   const [genStatus, setGenStatus] = useState('');
   const [showCryptoModal, setShowCryptoModal] = useState(false);
   const [cryptoTheme, setCryptoTheme] = useState<keyof typeof THEMES | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'bank_card' | 'sberbank' | 'yoo_money' | 'sbp'>('bank_card');
   const [tonConnectUI] = useTonConnectUI();
   const userTonAddress = useTonAddress();
+
+  const formatCoins = (amount: number) => amount.toLocaleString('ru-RU');
+  const getRubEquivalent = (amount: number) => Math.ceil(amount / 50);
+
+  const handleCardTopup = async (kind: 'single' | 'deck') => {
+    if (!cryptoTheme) return;
+
+    const themeConfig = THEMES[cryptoTheme];
+    const targetCoins = kind === 'single' ? themeConfig.singleCost : themeConfig.deckCost;
+    const amountRub = getRubEquivalent(targetCoins);
+    const targetLabel = kind === 'single' ? 'карты' : 'колоды';
+
+    try {
+      const response = await fetch('/api/payments/yookassa/create', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          amount: amountRub,
+          description: `Пополнение для генерации ${targetLabel} ${themeConfig.name}: ${formatCoins(targetCoins)} монет`,
+          itemType: 'coins',
+          itemId: `nft-theme-${cryptoTheme}-${kind}`,
+          paymentMethod: selectedPaymentMethod
+        })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success || !result.payment?.confirmationUrl) {
+        throw new Error(result.message || 'Не удалось создать платеж');
+      }
+
+      window.location.href = result.payment.confirmationUrl;
+    } catch (error: any) {
+      console.error('Ошибка создания YooKassa платежа:', error);
+      alert(`❌ Ошибка оплаты: ${error.message || 'Не удалось создать платеж'}`);
+    }
+  };
+
+  const openWalletForCryptoTopup = () => {
+    if (typeof window !== 'undefined') {
+      window.location.href = '/wallet';
+    }
+  };
 
   // ✅ ОПЛАТА ЗА КРИПТУ (TON)
   const handleCryptoPayment = async (crypto: 'TON' | 'SOL' | 'ETH') => {
@@ -715,7 +762,7 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
         )}
       </AnimatePresence>
 
-      {/* МОДАЛКА ВЫБОРА КРИПТОВАЛЮТЫ */}
+      {/* МОДАЛКА ОПЛАТЫ И ПОПОЛНЕНИЯ */}
       <AnimatePresence>
         {showCryptoModal && cryptoTheme && (
           <motion.div
@@ -746,14 +793,13 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
               style={{
                 background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
                 borderRadius: '24px',
-                border: '2px solid rgba(16, 185, 129, 0.4)',
+                border: '2px solid rgba(59, 130, 246, 0.35)',
                 padding: '32px',
                 maxWidth: '500px',
                 width: '100%',
                 boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)'
               }}
             >
-              {/* Заголовок */}
               <div style={{
                 textAlign: 'center',
                 marginBottom: '24px'
@@ -764,103 +810,154 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
                   color: '#fbbf24',
                   marginBottom: '8px'
                 }}>
-                  💎 Оплата криптовалютой
+                  💳 / 💎 Оплата генерации
                 </h2>
-                <p style={{ color: '#94a3b8', fontSize: '16px' }}>
+                <p style={{ color: '#e2e8f0', fontSize: '16px', fontWeight: 700, marginBottom: '6px' }}>
                   {THEMES[cryptoTheme].name}
+                </p>
+                <p style={{ color: '#94a3b8', fontSize: '14px', lineHeight: 1.5 }}>
+                  Генерация выполняется за игровые монеты.
+                  <br />
+                  Здесь можно быстро пополнить баланс под карту или колоду.
                 </p>
               </div>
 
-              {/* Кнопки криптовалют */}
               <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '16px',
+                display: 'grid',
+                gap: '12px',
                 marginBottom: '24px'
               }}>
-                {/* TON */}
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => handleCryptoPayment('TON')}
-                  disabled={!userTonAddress}
-                  style={{
-                    padding: '16px 20px',
-                    borderRadius: '16px',
-                    border: '2px solid rgba(0, 136, 204, 0.4)',
-                    background: userTonAddress 
-                      ? 'linear-gradient(135deg, #0088cc 0%, #005580 100%)'
-                      : 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)',
-                    color: '#ffffff',
-                    fontSize: '18px',
-                    fontWeight: 'bold',
-                    cursor: userTonAddress ? 'pointer' : 'not-allowed',
-                    opacity: userTonAddress ? 1 : 0.6,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    boxShadow: '0 4px 16px rgba(0, 136, 204, 0.3)'
-                  }}
-                >
-                  <span>💎 TON</span>
-                  <span>{THEMES[cryptoTheme].cryptoCost?.ton || 0}</span>
-                </motion.button>
-                {!userTonAddress && (
-                  <div style={{ fontSize: '12px', color: '#94a3b8', textAlign: 'center', marginTop: '-8px' }}>
-                    Подключите TON кошелек
+                {([
+                  {
+                    key: 'single',
+                    title: 'Одна карта',
+                    coins: THEMES[cryptoTheme].singleCost,
+                    rubles: getRubEquivalent(THEMES[cryptoTheme].singleCost)
+                  },
+                  {
+                    key: 'deck',
+                    title: 'Полная колода',
+                    coins: THEMES[cryptoTheme].deckCost,
+                    rubles: getRubEquivalent(THEMES[cryptoTheme].deckCost)
+                  }
+                ] as const).map((option) => (
+                  <div
+                    key={option.key}
+                    style={{
+                      borderRadius: '18px',
+                      padding: '18px',
+                      background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.92) 0%, rgba(30, 41, 59, 0.92) 100%)',
+                      border: '1px solid rgba(148, 163, 184, 0.2)'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginBottom: '12px', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ color: '#ffffff', fontSize: '17px', fontWeight: 'bold' }}>{option.title}</div>
+                        <div style={{ color: '#94a3b8', fontSize: '13px', marginTop: '4px' }}>
+                          {formatCoins(option.coins)} монет
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ color: '#fbbf24', fontSize: '18px', fontWeight: 'bold' }}>
+                          {option.rubles.toLocaleString('ru-RU')} ₽
+                        </div>
+                        <div style={{ color: '#64748b', fontSize: '12px' }}>
+                          через ЮKassa
+                        </div>
+                      </div>
+                    </div>
+
+                    <motion.button
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
+                      onClick={() => handleCardTopup(option.key)}
+                      style={{
+                        width: '100%',
+                        padding: '14px 16px',
+                        borderRadius: '14px',
+                        border: '1px solid rgba(245, 158, 11, 0.35)',
+                        background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.18) 0%, rgba(59, 130, 246, 0.18) 100%)',
+                        color: '#ffffff',
+                        fontSize: '15px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Оплатить и получить {formatCoins(option.coins)} монет
+                    </motion.button>
                   </div>
-                )}
+                ))}
+              </div>
 
-                {/* SOLANA */}
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ color: '#94a3b8', fontSize: '13px', marginBottom: '10px', fontWeight: 'bold' }}>
+                  Способ оплаты картой / YooKassa
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px' }}>
+                  {[
+                    { id: 'bank_card', label: 'Visa / MC' },
+                    { id: 'sberbank', label: 'СберПэй' },
+                    { id: 'yoo_money', label: 'ЮMoney' },
+                    { id: 'sbp', label: 'СБП' }
+                  ].map((method) => (
+                    <button
+                      key={method.id}
+                      onClick={() => setSelectedPaymentMethod(method.id as 'bank_card' | 'sberbank' | 'yoo_money' | 'sbp')}
+                      style={{
+                        padding: '11px 10px',
+                        borderRadius: '12px',
+                        border: selectedPaymentMethod === method.id
+                          ? '1.5px solid rgba(251, 191, 36, 0.6)'
+                          : '1px solid rgba(148, 163, 184, 0.18)',
+                        background: selectedPaymentMethod === method.id
+                          ? 'linear-gradient(135deg, rgba(251, 191, 36, 0.18) 0%, rgba(59, 130, 246, 0.14) 100%)'
+                          : 'rgba(15, 23, 42, 0.7)',
+                        color: selectedPaymentMethod === method.id ? '#fbbf24' : '#cbd5e1',
+                        fontSize: '13px',
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {method.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{
+                borderRadius: '18px',
+                padding: '18px',
+                marginBottom: '24px',
+                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(8, 145, 178, 0.1) 100%)',
+                border: '1px solid rgba(16, 185, 129, 0.2)'
+              }}>
+                <div style={{ color: '#ffffff', fontSize: '16px', fontWeight: 'bold', marginBottom: '6px' }}>
+                  Крипта и другие способы
+                </div>
+                <p style={{ color: '#94a3b8', fontSize: '13px', lineHeight: 1.5, marginBottom: '12px' }}>
+                  Для TON и других криптовалют открой кошелёк, пополни баланс и затем вернись к генерации.
+                  Там уже доступны депозит и вывод в едином интерфейсе.
+                </p>
                 <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => alert(`☀️ SOLANA\n\nСтоимость: ${THEMES[cryptoTheme].cryptoCost?.sol || 0} SOL\n\n(Скоро будет доступна оплата!)`)}
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                  onClick={openWalletForCryptoTopup}
                   style={{
-                    padding: '16px 20px',
-                    borderRadius: '16px',
-                    border: '2px solid rgba(153, 69, 255, 0.4)',
-                    background: 'linear-gradient(135deg, #9945ff 0%, #6a26cd 100%)',
+                    width: '100%',
+                    padding: '14px 16px',
+                    borderRadius: '14px',
+                    border: '1px solid rgba(16, 185, 129, 0.35)',
+                    background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.22) 0%, rgba(8, 145, 178, 0.22) 100%)',
                     color: '#ffffff',
-                    fontSize: '18px',
+                    fontSize: '15px',
                     fontWeight: 'bold',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    boxShadow: '0 4px 16px rgba(153, 69, 255, 0.3)'
+                    cursor: 'pointer'
                   }}
                 >
-                  <span>☀️ SOLANA</span>
-                  <span>{THEMES[cryptoTheme].cryptoCost?.sol || 0}</span>
-                </motion.button>
-
-                {/* ETHEREUM */}
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => alert(`💠 ETHEREUM\n\nСтоимость: ${THEMES[cryptoTheme].cryptoCost?.eth || 0} ETH\n\n(Скоро будет доступна оплата!)`)}
-                  style={{
-                    padding: '16px 20px',
-                    borderRadius: '16px',
-                    border: '2px solid rgba(98, 126, 234, 0.4)',
-                    background: 'linear-gradient(135deg, #627eea 0%, #4a5fd8 100%)',
-                    color: '#ffffff',
-                    fontSize: '18px',
-                    fontWeight: 'bold',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    boxShadow: '0 4px 16px rgba(98, 126, 234, 0.3)'
-                  }}
-                >
-                  <span>💠 ETHEREUM</span>
-                  <span>{THEMES[cryptoTheme].cryptoCost?.eth || 0}</span>
+                  Открыть кошелёк
                 </motion.button>
               </div>
 
-              {/* Кнопка закрыть */}
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
@@ -900,6 +997,8 @@ interface ThemeCardProps {
 }
 
 function ThemeCard({ theme, themeConfig, generating, onGenerateSingle, onGenerateDeck, disabled, isLegendary, onCryptoClick }: ThemeCardProps) {
+  const singleCostLabel = themeConfig.singleCost.toLocaleString('ru-RU');
+  const deckCostLabel = themeConfig.deckCost.toLocaleString('ru-RU');
 
   return (
     <div style={{
@@ -1001,7 +1100,7 @@ function ThemeCard({ theme, themeConfig, generating, onGenerateSingle, onGenerat
           zIndex: 2
         }}
       >
-        {generating ? '⏳' : `🎴 Карта (${(themeConfig.singleCost / 50).toFixed(0)}₽)`}
+        {generating ? '⏳' : `🎴 Карта (${singleCostLabel} монет)`}
       </motion.button>
 
       {/* КНОПКА: КОЛОДА */}
@@ -1024,7 +1123,7 @@ function ThemeCard({ theme, themeConfig, generating, onGenerateSingle, onGenerat
           zIndex: 2
         }}
       >
-        {generating ? '⏳' : `🎴 Колода (${(themeConfig.deckCost / 50).toFixed(0)}₽)`}
+        {generating ? '⏳' : `🃏 Колода (${deckCostLabel} монет)`}
       </motion.button>
 
       {/* КНОПКА: ЗА КРИПТУ */}
@@ -1048,7 +1147,7 @@ function ThemeCard({ theme, themeConfig, generating, onGenerateSingle, onGenerat
           zIndex: 2
         }}
       >
-        💎 ЗА КРИПТУ
+        💳 / 💎 ОПЛАТА
       </motion.button>
     </div>
   );
