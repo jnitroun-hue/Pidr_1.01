@@ -379,6 +379,24 @@ export default function AdminPanel() {
     );
   });
 
+  const tableScrollStyle = {
+    overflowX: 'auto' as const,
+    overflowY: 'hidden' as const,
+    WebkitOverflowScrolling: 'touch' as const,
+    scrollbarWidth: 'thin' as const,
+  };
+
+  const tableHint = isTablet ? (
+    <div style={{
+      fontSize: '11px',
+      color: '#64748b',
+      marginBottom: '10px',
+      paddingLeft: '2px'
+    }}>
+      Свайпните таблицу вбок, чтобы увидеть все столбцы
+    </div>
+  ) : null;
+
   if (loading) {
     return (
       <div style={{
@@ -651,7 +669,10 @@ export default function AdminPanel() {
               overflow: 'hidden',
               boxShadow: '0 4px 24px rgba(0,0,0,0.2)'
             }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+              {tableHint}
+              <div style={tableScrollStyle}>
+              <div style={{ minWidth: isTablet ? '720px' : '100%' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: isTablet ? '13px' : '14px' }}>
                 <thead>
                   <tr style={{
                     background: 'rgba(99, 102, 241, 0.08)',
@@ -718,6 +739,8 @@ export default function AdminPanel() {
                   ))}
                 </tbody>
               </table>
+              </div>
+              </div>
             </div>
 
             {/* Пагинация пользователей */}
@@ -779,14 +802,21 @@ export default function AdminPanel() {
 
         {activeTab === 'promocodes' && (
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: isTablet ? 'stretch' : 'center',
+              flexDirection: isTablet ? 'column' : 'row',
+              gap: isTablet ? '12px' : '0',
+              marginBottom: '20px'
+            }}>
               <h2 style={{ color: '#e2e8f0', fontSize: '24px', fontWeight: '700' }}>Промокоды</h2>
               <motion.button
                 onClick={() => setShowPromocodeModal(true)}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 style={{
-                  padding: '12px 24px',
+                  padding: isTablet ? '12px 16px' : '12px 24px',
                   background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
                   border: 'none',
                   borderRadius: '12px',
@@ -794,9 +824,11 @@ export default function AdminPanel() {
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
+                  justifyContent: 'center',
                   gap: '8px',
                   fontSize: '14px',
-                  fontWeight: '600'
+                  fontWeight: '600',
+                  width: isTablet ? '100%' : 'auto'
                 }}
               >
                 <Plus size={18} />
@@ -810,6 +842,9 @@ export default function AdminPanel() {
               borderRadius: '16px',
               overflow: 'hidden'
             }}>
+              {tableHint}
+              <div style={tableScrollStyle}>
+              <div style={{ minWidth: '860px' }}>
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: '1fr 2fr 1fr 1fr 1fr 1fr auto',
@@ -869,6 +904,8 @@ export default function AdminPanel() {
                   </div>
                 </div>
               ))}
+              </div>
+              </div>
             </div>
           </div>
         )}
@@ -963,7 +1000,9 @@ export default function AdminPanel() {
               maxHeight: '60vh',
               boxShadow: '0 4px 24px rgba(0,0,0,0.3)'
             }}>
-              <div style={{ minWidth: '700px' }}>
+              {tableHint}
+              <div style={{ ...tableScrollStyle, maxHeight: '60vh' }}>
+              <div style={{ minWidth: isTablet ? '760px' : '700px' }}>
                 <div style={{
                   display: 'grid',
                   gridTemplateColumns: '60px minmax(120px, 1fr) minmax(100px, 1fr) minmax(90px, 1fr) minmax(90px, 1fr) minmax(140px, 1fr)',
@@ -1020,6 +1059,7 @@ export default function AdminPanel() {
                     </div>
                   </div>
                 ))}
+              </div>
               </div>
             </div>
           </div>
@@ -1222,6 +1262,9 @@ export default function AdminPanel() {
                   borderRadius: '16px',
                   overflow: 'hidden'
                 }}>
+                  {tableHint}
+                  <div style={tableScrollStyle}>
+                  <div style={{ minWidth: '820px' }}>
                   <div style={{
                     display: 'grid',
                     gridTemplateColumns: '1fr 2fr 1fr 1fr 1fr 1fr',
@@ -1273,6 +1316,8 @@ export default function AdminPanel() {
                       </div>
                     </div>
                   ))}
+                  </div>
+                  </div>
                 </div>
                 {roomsTotalPages > 1 && (
                   <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginTop: '20px' }}>
@@ -1336,6 +1381,9 @@ export default function AdminPanel() {
                   borderRadius: '16px',
                   overflow: 'hidden'
                 }}>
+                  {tableHint}
+                  <div style={tableScrollStyle}>
+                  <div style={{ minWidth: '880px' }}>
                   <div style={{
                     display: 'grid',
                     gridTemplateColumns: '60px 2fr 1fr 1fr 1fr 1fr 1fr',
@@ -1382,6 +1430,8 @@ export default function AdminPanel() {
                       <div>{player.win_rate}%</div>
                     </div>
                   ))}
+                  </div>
+                  </div>
                 </div>
                 {ratingTotalPages > 1 && (
                   <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginTop: '20px' }}>

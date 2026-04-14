@@ -52,6 +52,7 @@ type ModalType = 'deposit' | 'withdraw' | 'buy' | null;
 type DepositMethod = 'crypto' | 'rub';
 type PurchaseMode = 'coins' | 'balance';
 type CurrencyMode = 'RUB' | 'USD';
+type WithdrawMethod = 'crypto' | 'bank_card' | 'sberbank' | 'yoo_money' | 'sbp';
 
 const CRYPTO_OPTIONS = [
   { id: 'TON', icon: '💎', name: 'TON', color: '#0098EA', net: 'TON Network', eta: '~5 сек' },
@@ -97,6 +98,8 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [withdrawAddress, setWithdrawAddress] = useState('');
+  const [withdrawMethod, setWithdrawMethod] = useState<WithdrawMethod>('crypto');
+  const [withdrawRecipient, setWithdrawRecipient] = useState('');
   const [selectedCrypto, setSelectedCrypto] = useState('TON');
   const [depositMethod, setDepositMethod] = useState<DepositMethod>('rub');
   const [rubAmount, setRubAmount] = useState('');
@@ -682,7 +685,7 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
   };
 
   const handleWithdraw = async () => {
-    const amount = parseInt(withdrawAmount);
+    const amount = Math.floor(Number(withdrawAmount));
     if (!amount || amount <= 0) {
       alert('Введите корректную сумму для вывода');
       return;
@@ -702,6 +705,29 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
         alert('Пользователь не найден');
         return;
       }
+
+      const selectedWithdrawMethod = withdrawMethod === 'crypto'
+        ? `crypto:${selectedCrypto}`
+        : withdrawMethod;
+
+      const payoutTarget = withdrawMethod === 'crypto' ? withdrawAddress.trim() : withdrawRecipient.trim();
+      if (!payoutTarget) {
+        alert(withdrawMethod === 'crypto' ? 'Введите адрес кошелька' : 'Введите реквизиты для вывода');
+        return;
+      }
+
+      const methodLabel = withdrawMethod === 'crypto'
+        ? `${selectedCrypto} wallet`
+        : PAYMENT_METHODS.find((method) => method.id === withdrawMethod)?.name || 'Способ вывода';
+
+      const rubEquivalent = Math.floor(amount / 50);
+      const description = [
+        `Заявка на вывод через ${methodLabel}`,
+        `Сумма: ${amount.toLocaleString('ru-RU')} монет`,
+        rubEquivalent > 0 ? `(≈ ${rubEquivalent.toLocaleString('ru-RU')} ₽)` : '',
+        `Реквизиты: ${payoutTarget}`,
+        `Канал: ${selectedWithdrawMethod}`
+      ].filter(Boolean).join(' | ');
       
       // Создаем транзакцию через API
       const response = await fetch('/api/pidr-db', {
@@ -712,7 +738,7 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
           userId: currentUser.id,
           amount: -amount, // Отрицательное значение для вывода
           transactionType: 'withdrawal',
-          description: 'Вывод средств'
+          description
         })
       });
 
@@ -722,6 +748,9 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
         const newBalance = result.newBalance;
         setBalance(newBalance);
         setWithdrawAmount('');
+        setWithdrawAddress('');
+        setWithdrawRecipient('');
+        setActiveModal(null);
         
         // ✅ ИСПРАВЛЕНО: НЕ сохраняем в localStorage, баланс уже в БД
         
@@ -730,7 +759,7 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
         // Перезагружаем транзакции
         loadTransactions();
         
-        alert(`Успешно выведено ${amount} монет!`);
+        alert(`Заявка на вывод создана: ${amount.toLocaleString('ru-RU')} монет через ${methodLabel}.`);
       } else {
         throw new Error(result.error || 'Ошибка вывода');
       }
@@ -757,6 +786,28 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
 
   const getTransactionColor = (amount: number) => {
     return amount > 0 ? 'text-green-400' : 'text-red-400';
+  };
+
+  const getWithdrawMethodLabel = (method: WithdrawMethod) => {
+    if (method === 'crypto') {
+      return 'Криптовалюта';
+    }
+
+    return PAYMENT_METHODS.find((item) => item.id === method)?.name || 'Способ вывода';
+  };
+
+  const getWithdrawRecipientLabel = () => {
+    switch (withdrawMethod) {
+      case 'bank_card':
+        return 'Номер карты';
+      case 'sbp':
+      case 'sberbank':
+        return 'Телефон получателя';
+      case 'yoo_money':
+        return 'ЮMoney кошелек или номер';
+      default:
+        return 'Адрес кошелька';
+    }
   };
   
   const handleDailyBonus = async () => {
@@ -1827,87 +1878,192 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
                     <h3 style={{ margin: 0, fontSize: '16px' }}>Вывод средств</h3>
                     <button className="close-btn" onClick={() => setActiveModal(null)}>×</button>
                   </div>
-                  
-                  {/* Выбор криптовалюты - карточки как в пополнении */}
-                  <div style={{ marginBottom: '16px' }}>
-                    <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '8px', fontWeight: '600' }}>Криптовалюта для вывода:</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '6px' }}>
-                      {CRYPTO_OPTIONS.map(c => (
-                        <button key={c.id} onClick={() => setSelectedCrypto(c.id)} style={{
-                          padding: '12px 6px', borderRadius: '12px', cursor: 'pointer',
-                          background: selectedCrypto === c.id
-                            ? `linear-gradient(135deg, ${c.color}25 0%, rgba(255,215,0,0.1) 100%)`
-                            : 'rgba(100,116,139,0.06)',
-                          border: selectedCrypto === c.id
-                            ? `2px solid ${c.color}80` : '1.5px solid rgba(100,116,139,0.12)',
-                          color: selectedCrypto === c.id ? '#fff' : '#94a3b8',
-                          fontSize: '12px', fontWeight: '700', transition: 'all 0.25s ease',
-                          display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: '4px',
-                          minWidth: 0,
-                          boxShadow: selectedCrypto === c.id ? `0 4px 15px ${c.color}20` : 'none',
-                        }}>
-                          <span style={{ fontSize: '20px' }}>{c.icon}</span>
-                          {c.name}
-                        </button>
-                      ))}
-                    </div>
+
+                  <div style={{
+                    display: 'flex',
+                    gap: '4px',
+                    marginBottom: '16px',
+                    background: 'rgba(0,0,0,0.3)',
+                    borderRadius: '12px',
+                    padding: '4px',
+                    border: '1px solid rgba(255,215,0,0.15)',
+                  }}>
+                    {([
+                      { key: 'crypto' as WithdrawMethod, label: '🪙 Крипта' },
+                      { key: 'bank_card' as WithdrawMethod, label: '💳 YooKassa / карта' },
+                    ]).map((option) => (
+                      <button
+                        key={option.key}
+                        onClick={() => setWithdrawMethod(option.key === 'crypto' ? 'crypto' : 'bank_card')}
+                        style={{
+                          flex: 1,
+                          padding: '10px 8px',
+                          border: 'none',
+                          borderRadius: '10px',
+                          cursor: 'pointer',
+                          fontSize: '13px',
+                          fontWeight: (option.key === 'crypto' ? withdrawMethod === 'crypto' : withdrawMethod !== 'crypto') ? '700' : '500',
+                          background: (option.key === 'crypto' ? withdrawMethod === 'crypto' : withdrawMethod !== 'crypto')
+                            ? 'linear-gradient(135deg, rgba(255,215,0,0.25) 0%, rgba(6,182,212,0.2) 100%)'
+                            : 'transparent',
+                          color: (option.key === 'crypto' ? withdrawMethod === 'crypto' : withdrawMethod !== 'crypto') ? '#ffd700' : '#64748b',
+                          transition: 'all 0.3s ease',
+                          boxShadow: (option.key === 'crypto' ? withdrawMethod === 'crypto' : withdrawMethod !== 'crypto') ? '0 2px 12px rgba(255,215,0,0.15)' : 'none',
+                        }}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
                   </div>
 
-                  {/* Адрес вывода */}
+                  {withdrawMethod === 'crypto' ? (
+                    <div style={{ marginBottom: '16px' }}>
+                      <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '8px', fontWeight: '600' }}>Криптовалюта для вывода:</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '6px' }}>
+                        {CRYPTO_OPTIONS.map(c => (
+                          <button key={c.id} onClick={() => setSelectedCrypto(c.id)} style={{
+                            padding: '12px 6px', borderRadius: '12px', cursor: 'pointer',
+                            background: selectedCrypto === c.id
+                              ? `linear-gradient(135deg, ${c.color}25 0%, rgba(255,215,0,0.1) 100%)`
+                              : 'rgba(100,116,139,0.06)',
+                            border: selectedCrypto === c.id
+                              ? `2px solid ${c.color}80` : '1.5px solid rgba(100,116,139,0.12)',
+                            color: selectedCrypto === c.id ? '#fff' : '#94a3b8',
+                            fontSize: '12px', fontWeight: '700', transition: 'all 0.25s ease',
+                            display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: '4px',
+                            minWidth: 0,
+                            boxShadow: selectedCrypto === c.id ? `0 4px 15px ${c.color}20` : 'none',
+                          }}>
+                            <span style={{ fontSize: '20px' }}>{c.icon}</span>
+                            {c.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ marginBottom: '16px' }}>
+                      <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '8px', fontWeight: '600' }}>Способ выплаты:</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '6px' }}>
+                        {PAYMENT_METHODS.map((method) => (
+                          <button
+                            key={method.id}
+                            onClick={() => setWithdrawMethod(method.id)}
+                            style={{
+                              padding: '11px 10px',
+                              borderRadius: '10px',
+                              cursor: 'pointer',
+                              background: withdrawMethod === method.id
+                                ? 'linear-gradient(135deg, rgba(255,215,0,0.15) 0%, rgba(6,182,212,0.12) 100%)'
+                                : 'rgba(100,116,139,0.06)',
+                              border: withdrawMethod === method.id
+                                ? '1.5px solid rgba(255,215,0,0.5)'
+                                : '1.5px solid rgba(100,116,139,0.12)',
+                              color: withdrawMethod === method.id ? '#ffd700' : '#94a3b8',
+                              fontSize: '12px',
+                              fontWeight: withdrawMethod === method.id ? '700' : '500',
+                              transition: 'all 0.25s ease',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px',
+                              minWidth: 0,
+                              whiteSpace: 'nowrap',
+                              lineHeight: 1.15,
+                            }}
+                          >
+                            {method.id === 'bank_card' ? (
+                              <span style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
+                                <SiVisa size={18} />
+                                <SiMastercard size={14} />
+                              </span>
+                            ) : method.id === 'sberbank' ? (
+                              <FaMoneyBillWave size={16} style={{ color: withdrawMethod === method.id ? method.accent : '#64748b', flexShrink: 0 }} />
+                            ) : method.id === 'yoo_money' ? (
+                              <FaWallet size={15} style={{ color: withdrawMethod === method.id ? method.accent : '#64748b', flexShrink: 0 }} />
+                            ) : (
+                              <FaBolt size={15} style={{ color: withdrawMethod === method.id ? method.accent : '#64748b', flexShrink: 0 }} />
+                            )}
+                            {method.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <div style={{ marginBottom: '14px' }}>
                     <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#e2e8f0', marginBottom: '8px' }}>
-                      Адрес получателя
+                      {getWithdrawRecipientLabel()}
                     </label>
-                    <input 
-                      type="text" value={withdrawAddress}
-                      onChange={(e) => setWithdrawAddress(e.target.value)}
-                      placeholder="Введите адрес кошелька"
+                    <input
+                      type="text"
+                      value={withdrawMethod === 'crypto' ? withdrawAddress : withdrawRecipient}
+                      onChange={(e) => withdrawMethod === 'crypto' ? setWithdrawAddress(e.target.value) : setWithdrawRecipient(e.target.value)}
+                      placeholder={withdrawMethod === 'crypto' ? 'Введите адрес кошелька' : 'Введите реквизиты для выплаты'}
                       style={{
-                        width: '100%', padding: '13px', borderRadius: '10px',
-                        border: '1.5px solid rgba(255,215,0,0.2)', background: 'rgba(0,0,0,0.3)',
-                        color: '#fff', fontSize: '14px', fontWeight: '500', boxSizing: 'border-box' as const,
+                        width: '100%',
+                        padding: '13px',
+                        borderRadius: '10px',
+                        border: '1.5px solid rgba(255,215,0,0.2)',
+                        background: 'rgba(0,0,0,0.3)',
+                        color: '#fff',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        boxSizing: 'border-box' as const,
                       }}
                     />
                   </div>
 
-                  {/* Сумма вывода */}
                   <div style={{ marginBottom: '14px' }}>
                     <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#e2e8f0', marginBottom: '8px' }}>
                       Сумма вывода
                     </label>
                     <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                      <input 
-                        type="number" value={withdrawAmount}
+                      <input
+                        type="number"
+                        value={withdrawAmount}
                         onChange={(e) => setWithdrawAmount(e.target.value)}
-                        placeholder="0.00"
+                        placeholder="0"
                         style={{
-                          flex: 1, padding: '13px', borderRadius: '10px',
-                          border: '1.5px solid rgba(255,215,0,0.2)', background: 'rgba(0,0,0,0.3)',
-                          color: '#fff', fontSize: '17px', fontWeight: '600',
+                          flex: 1,
+                          padding: '13px',
+                          borderRadius: '10px',
+                          border: '1.5px solid rgba(255,215,0,0.2)',
+                          background: 'rgba(0,0,0,0.3)',
+                          color: '#fff',
+                          fontSize: '17px',
+                          fontWeight: '600',
                         }}
                       />
                       <span style={{
-                        padding: '13px 14px', borderRadius: '10px',
+                        padding: '13px 14px',
+                        borderRadius: '10px',
                         background: 'linear-gradient(135deg, rgba(255,215,0,0.15), rgba(6,182,212,0.1))',
-                        color: '#ffd700', fontWeight: '700', fontSize: '15px',
+                        color: '#ffd700',
+                        fontWeight: '700',
+                        fontSize: '15px',
                         border: '1px solid rgba(255,215,0,0.2)',
-                      }}>{selectedCrypto}</span>
+                      }}>монет</span>
                     </div>
                     <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px' }}>
-                      {hasLoadedCryptoBalances
-                        ? `Доступно: ${cryptoBalances[selectedCrypto] || 0} ${selectedCrypto}`
-                        : 'Загружаем доступный баланс...'}
+                      Доступно: {balance.toLocaleString('ru-RU')} монет
+                      {balance > 0 ? ` (≈ ${Math.floor(balance / 50).toLocaleString('ru-RU')} ₽)` : ''}
                     </div>
                     <div style={{ display: 'flex', gap: '6px' }}>
                       {['25%', '50%', '100%'].map(pct => {
                         const mult = pct === '25%' ? 0.25 : pct === '50%' ? 0.5 : 1;
                         return (
-                          <button key={pct} disabled={!hasLoadedCryptoBalances} onClick={() => setWithdrawAmount(((cryptoBalances[selectedCrypto] || 0) * mult).toString())} style={{
-                            flex: 1, padding: '9px', borderRadius: '8px', cursor: 'pointer',
-                            border: '1px solid rgba(255,215,0,0.2)', fontSize: '13px', fontWeight: '600',
+                          <button key={pct} onClick={() => setWithdrawAmount(String(Math.floor(balance * mult)))} style={{
+                            flex: 1,
+                            padding: '9px',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            border: '1px solid rgba(255,215,0,0.2)',
+                            fontSize: '13px',
+                            fontWeight: '600',
                             background: 'linear-gradient(135deg, rgba(255,215,0,0.08), rgba(6,182,212,0.05))',
-                            color: '#ffd700', transition: 'all 0.2s',
-                            opacity: !hasLoadedCryptoBalances ? 0.5 : 1,
+                            color: '#ffd700',
+                            transition: 'all 0.2s',
+                            opacity: balance <= 0 ? 0.5 : 1,
                           }}>
                             {pct}
                           </button>
@@ -1916,25 +2072,44 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
                     </div>
                   </div>
 
-                  {/* Кнопка вывода */}
-                  <button onClick={handleWithdraw} disabled={loading || !withdrawAddress || !withdrawAmount} style={{
+                  {withdrawAmount && Number(withdrawAmount) > 0 && (
+                    <div style={{
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      marginBottom: '14px',
+                      background: 'linear-gradient(135deg, rgba(255,215,0,0.06), rgba(6,182,212,0.04))',
+                      border: '1px solid rgba(255,215,0,0.15)',
+                      fontSize: '12px',
+                      color: '#f8fafc',
+                    }}>
+                      <div style={{ fontWeight: '700', color: '#ffd700', marginBottom: '4px' }}>
+                        {getWithdrawMethodLabel(withdrawMethod)}
+                      </div>
+                      <div>
+                        {Math.floor(Number(withdrawAmount)).toLocaleString('ru-RU')} монет
+                        {Number(withdrawAmount) > 0 ? ` (≈ ${Math.floor(Number(withdrawAmount) / 50).toLocaleString('ru-RU')} ₽)` : ''}
+                      </div>
+                    </div>
+                  )}
+
+                  <button onClick={handleWithdraw} disabled={loading || !(withdrawMethod === 'crypto' ? withdrawAddress : withdrawRecipient) || !withdrawAmount} style={{
                     width: '100%', padding: '14px', borderRadius: '12px',
                     border: '1.5px solid rgba(255,215,0,0.4)',
-                    background: loading || !withdrawAddress || !withdrawAmount
+                    background: loading || !(withdrawMethod === 'crypto' ? withdrawAddress : withdrawRecipient) || !withdrawAmount
                       ? 'rgba(100,100,100,0.3)'
                       : 'linear-gradient(135deg, rgba(255,215,0,0.2) 0%, rgba(6,182,212,0.15) 50%, rgba(255,215,0,0.2) 100%)',
                     color: '#fff', fontSize: '15px', fontWeight: '700',
-                    cursor: loading || !withdrawAddress || !withdrawAmount ? 'not-allowed' : 'pointer',
-                    opacity: loading || !withdrawAddress || !withdrawAmount ? 0.5 : 1,
+                    cursor: loading || !(withdrawMethod === 'crypto' ? withdrawAddress : withdrawRecipient) || !withdrawAmount ? 'not-allowed' : 'pointer',
+                    opacity: loading || !(withdrawMethod === 'crypto' ? withdrawAddress : withdrawRecipient) || !withdrawAmount ? 0.5 : 1,
                     boxShadow: loading ? 'none' : '0 4px 20px rgba(255,215,0,0.15)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                     transition: 'all 0.3s ease',
                   }}>
-                    <FaArrowUp size={14} /> Вывести {selectedCrypto}
+                    <FaArrowUp size={14} /> Оформить вывод через {getWithdrawMethodLabel(withdrawMethod)}
                   </button>
 
                   <div style={{ marginTop: '10px', fontSize: '10px', color: '#475569', textAlign: 'center' }}>
-                    Комиссия сети оплачивается отдельно. Мемо/таг не применяется.
+                    Вывод создаётся как заявка. Для крипты укажите адрес, для YooKassa/карт укажите корректные реквизиты.
                   </div>
                 </div>
               )}
