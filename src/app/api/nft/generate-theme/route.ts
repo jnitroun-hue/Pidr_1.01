@@ -9,7 +9,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, supabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 import sharp from 'sharp';
 import path from 'path';
@@ -48,6 +48,26 @@ export async function POST(request: NextRequest) {
     console.log(`👤 Пользователь: ${userId}`);
     console.log(`🎨 Тема: ${theme}, ID: ${themeId}, Карта: ${rank}${suit}`);
 
+    const costs: Record<string, number> = {
+      random_pokemon: 10000,
+      random_halloween: 5000,
+      random_starwars: 5000,
+      random_legendary: 50000,
+      deck_pokemon: 400000,
+      deck_halloween: 200000,
+      deck_starwars: 200000,
+      deck_legendary: 1000000,
+    };
+
+    const cost = costs[action] || 10000;
+
+    if (!skipCoinDeduction && dbUser.coins < cost) {
+      return NextResponse.json(
+        { success: false, error: `Недостаточно монет. Требуется: ${cost}, есть: ${dbUser.coins}` },
+        { status: 400 }
+      );
+    }
+
     // ✅ КОНВЕРТИРУЕМ BASE64 ИЗ КЛИЕНТА!
     const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
     const imageBuffer = Buffer.from(base64Data, 'base64');
@@ -61,7 +81,7 @@ export async function POST(request: NextRequest) {
     // Загружаем в Supabase Storage
     console.log(`📤 Загружаем файл: ${filePath}`);
     
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabaseAdmin.storage
       .from('nft-card')
       .upload(filePath, imageBuffer, {
         contentType: 'image/png',
@@ -74,7 +94,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Получаем публичный URL
-    const { data: urlData } = supabase.storage
+    const { data: urlData } = supabaseAdmin.storage
       .from('nft-card')
       .getPublicUrl(filePath);
 
@@ -86,7 +106,7 @@ export async function POST(request: NextRequest) {
     console.log(`✅ Файл загружен: ${imageUrl}`);
 
     // Сохраняем в БД
-    const { data: nftData, error: dbError } = await supabase
+    const { data: nftData, error: dbError } = await supabaseAdmin
       .from('_pidr_nft_cards')
       .insert({
         user_id: userId,
@@ -110,7 +130,7 @@ export async function POST(request: NextRequest) {
       console.error('❌ Ошибка сохранения в БД:', dbError);
       
       // Удаляем файл из Storage
-      await supabase.storage
+      await supabaseAdmin.storage
         .from('nft-card')
         .remove([filePath]);
       
@@ -123,26 +143,6 @@ export async function POST(request: NextRequest) {
     let newBalance = undefined;
     
     if (!skipCoinDeduction) {
-      const costs: Record<string, number> = {
-        random_pokemon: 10000,
-        random_halloween: 5000,
-        random_starwars: 5000,
-        random_legendary: 50000,
-        deck_pokemon: 400000,
-        deck_halloween: 200000,
-        deck_starwars: 200000
-      };
-
-      const cost = costs[action] || 10000;
-
-      // ✅ ПРОВЕРЯЕМ ДОСТАТОЧНО ЛИ МОНЕТ (используем dbUser из авторизации)
-      if (dbUser.coins < cost) {
-        return NextResponse.json(
-          { success: false, error: `Недостаточно монет. Требуется: ${cost}, есть: ${dbUser.coins}` },
-          { status: 400 }
-        );
-      }
-
       // ✅ СПИСЫВАЕМ МОНЕТЫ
       newBalance = dbUser.coins - cost;
       const { error: updateError } = await supabaseAdmin
@@ -155,7 +155,7 @@ export async function POST(request: NextRequest) {
       }
 
       // ✅ СОЗДАЕМ ТРАНЗАКЦИЮ
-      await supabase
+      await supabaseAdmin
         .from('_pidr_coin_transactions')
         .insert({
           user_id: userId,

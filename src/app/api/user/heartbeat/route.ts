@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, supabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 import { getUserIdFromRequest, getUserIdFromDatabase } from '@/lib/auth-utils';
 import { getRedis } from '@/lib/redis/init';
 
@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
     }
 
     const userIdBigInt = dbUserId;
+    const cacheUserId = String(dbUserId);
     const now = new Date().toISOString();
     const nowTimestamp = Date.now();
 
@@ -44,13 +45,13 @@ export async function POST(request: NextRequest) {
       try {
         // ✅ БАТЧ-ОПЕРАЦИИ: Выполняем несколько операций за один запрос
         await Promise.all([
-          redis.set(REDIS_KEYS.userOnline(userId), '1', { ex: 300 }),
-          redis.set(REDIS_KEYS.userLastSeen(userId), nowTimestamp.toString(), { ex: 300 }),
-          redis.sadd(REDIS_KEYS.onlineUsers(), userId),
+          redis.set(REDIS_KEYS.userOnline(cacheUserId), '1', { ex: 300 }),
+          redis.set(REDIS_KEYS.userLastSeen(cacheUserId), nowTimestamp.toString(), { ex: 300 }),
+          redis.sadd(REDIS_KEYS.onlineUsers(), cacheUserId),
           redis.expire(REDIS_KEYS.onlineUsers(), 300)
         ]);
         
-        console.log(`💓 [HEARTBEAT REDIS] Обновлен кеш для ${userId} (батч-операции)`);
+        console.log(`💓 [HEARTBEAT REDIS] Обновлен кеш для ${cacheUserId} (батч-операции)`);
       } catch (redisError) {
         console.error('⚠️ [HEARTBEAT] Ошибка Redis (не критично):', redisError);
         // Продолжаем даже если Redis недоступен
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
     // Обновляем БД только раз в 30 секунд для каждого пользователя
     let shouldUpdateDb = true;
     if (redis) {
-      const lastDbUpdate = await redis.get(`user:${userId}:last_db_update`);
+      const lastDbUpdate = await redis.get(`user:${cacheUserId}:last_db_update`);
       shouldUpdateDb = !lastDbUpdate || (Date.now() - parseInt(lastDbUpdate as string)) > 30000;
     }
 
@@ -95,7 +96,7 @@ export async function POST(request: NextRequest) {
       } else {
         // Сохраняем время последнего обновления БД (если Redis доступен)
         if (redis) {
-          await redis.set(`user:${userId}:last_db_update`, Date.now().toString(), { ex: 60 });
+          await redis.set(`user:${cacheUserId}:last_db_update`, Date.now().toString(), { ex: 60 });
         }
       }
     }
@@ -106,7 +107,7 @@ export async function POST(request: NextRequest) {
       
       if (redis) {
         // Проверяем Redis кеш для комнаты
-        const cachedRoomId = await redis.get(`user:${userId}:room`);
+        const cachedRoomId = await redis.get(`user:${cacheUserId}:room`);
         if (cachedRoomId) {
           roomId = cachedRoomId as string;
         }
@@ -114,7 +115,7 @@ export async function POST(request: NextRequest) {
       
       if (!roomId) {
         // Если нет в кеше, запрашиваем из БД
-        const { data: playerRoom } = await supabase
+        const { data: playerRoom } = await supabaseAdmin
           .from('_pidr_room_players')
           .select('room_id')
           .eq('user_id', userIdBigInt)
@@ -124,7 +125,7 @@ export async function POST(request: NextRequest) {
         
         // Сохраняем в кеш если Redis доступен
         if (roomId && redis) {
-          await redis.set(`user:${userId}:room`, roomId, { ex: 300 });
+          await redis.set(`user:${cacheUserId}:room`, roomId, { ex: 300 });
         }
       }
       
@@ -134,7 +135,7 @@ export async function POST(request: NextRequest) {
         // Обновляем Redis кеш для комнаты (если доступен)
         if (redis) {
           await redis.set(`room:${roomId}:last_activity`, nowTimestamp.toString(), { ex: 300 });
-          await redis.sadd(`room:${roomId}:online_players`, userId);
+          await redis.sadd(`room:${roomId}:online_players`, cacheUserId);
           await redis.expire(`room:${roomId}:online_players`, 300);
           
           // Обновляем БД (реже)
@@ -143,7 +144,7 @@ export async function POST(request: NextRequest) {
           
           if (shouldUpdateRoomDb) {
             // ✅ ИСПРАВЛЕНО: Обновляем is_online в _pidr_room_players
-            await supabase
+            await supabaseAdmin
               .from('_pidr_room_players')
               .update({ 
                 is_online: true,
@@ -153,7 +154,7 @@ export async function POST(request: NextRequest) {
               .eq('room_id', parseInt(roomId));
             
             // Обновляем last_activity комнаты
-            await supabase
+            await supabaseAdmin
               .from('_pidr_rooms')
               .update({ 
                 last_activity: now,
@@ -166,7 +167,7 @@ export async function POST(request: NextRequest) {
           }
         } else {
           // Если Redis недоступен, обновляем БД напрямую
-          await supabase
+          await supabaseAdmin
             .from('_pidr_room_players')
             .update({ 
               is_online: true,
@@ -175,7 +176,7 @@ export async function POST(request: NextRequest) {
             .eq('user_id', userIdBigInt)
             .eq('room_id', parseInt(roomId));
           
-          await supabase
+          await supabaseAdmin
             .from('_pidr_rooms')
             .update({ 
               last_activity: now,

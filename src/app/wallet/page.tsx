@@ -9,6 +9,7 @@ import {
 } from 'react-icons/fa';
 import { SiTon } from 'react-icons/si';
 import GameWallet from '@/components/GameWallet';
+import WalletQuickConnect from '@/components/WalletQuickConnect';
 
 // ─── Типы ───────────────────────────────────────────────────────────────────
 interface Transaction {
@@ -152,6 +153,14 @@ export default function WalletPage() {
               <FaWallet />
             </div>
           </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-4"
+        >
+          <WalletQuickConnect />
         </motion.div>
 
         <motion.div

@@ -29,6 +29,7 @@ export default function MultiplayerMenu({ onCreateRoom, onJoinRoom, onBack }: Mu
   
   // ✅ ПРОВЕРКА ДОСТУПА К МУЛЬТИПЛЕЕРУ
   const [gamesPlayed, setGamesPlayed] = useState<number | null>(null);
+  const [canPlayMultiplayer, setCanPlayMultiplayer] = useState(false);
   const [showAccessModal, setShowAccessModal] = useState(false);
   const [checkingAccess, setCheckingAccess] = useState(true);
 
@@ -51,6 +52,7 @@ export default function MultiplayerMenu({ onCreateRoom, onJoinRoom, onBack }: Mu
           const data = await response.json();
           if (data.success) {
             setGamesPlayed(data.gamesPlayed || 0);
+            setCanPlayMultiplayer(Boolean(data.canPlayMultiplayer));
             if (!data.canPlayMultiplayer) {
               setShowAccessModal(true);
             }
@@ -58,6 +60,7 @@ export default function MultiplayerMenu({ onCreateRoom, onJoinRoom, onBack }: Mu
         }
       } catch (error) {
         console.error('❌ [MultiplayerMenu] Ошибка загрузки игр:', error);
+        setCanPlayMultiplayer(false);
       } finally {
         setCheckingAccess(false);
       }
@@ -96,7 +99,7 @@ export default function MultiplayerMenu({ onCreateRoom, onJoinRoom, onBack }: Mu
     }
 
     // ✅ ПРОВЕРКА ДОСТУПА
-    if (gamesPlayed !== null && gamesPlayed < 3) {
+    if (!canPlayMultiplayer) {
       setShowAccessModal(true);
       return;
     }
@@ -151,7 +154,7 @@ export default function MultiplayerMenu({ onCreateRoom, onJoinRoom, onBack }: Mu
     }
 
     // ✅ ПРОВЕРКА ДОСТУПА
-    if (gamesPlayed !== null && gamesPlayed < 3) {
+    if (!canPlayMultiplayer) {
       setShowAccessModal(true);
       return;
     }

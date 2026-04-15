@@ -2517,10 +2517,13 @@ function GamePageContentComponent({
                             nftImageUrl = (nftDeckCards[nftKey] || storeNftDeckCards?.[nftKey]) || null;
                           }
                           
-                          // ИСПРАВЛЕНО: В 1-й стадии ТОЛЬКО ВЕРХНЯЯ карта соперника открыта!
-                          // Во 2-й стадии ТОЛЬКО СВОИ КАРТЫ открыты!
-                          // ЛОГИКА ДЛЯ 1-Й СТАДИИ: подсветка верхней карты если можно ходить
-                          const isTopCard = cardIndex === playerCards.length - 1;
+                          // В 1-й стадии у соперников верхняя карта хранится первой в массиве,
+                          // а у живого игрока используем последний элемент как активную карту для хода.
+                          const isTopCard = isHumanPlayer
+                            ? cardIndex === playerCards.length - 1
+                            : gameStage === 1
+                              ? cardIndex === 0
+                              : cardIndex === playerCards.length - 1;
                           const showOpen = isHumanPlayer || (gameStage === 1 && isTopCard);
                           const isMyTurn = player.id === currentPlayerId;
                           const canMakeMove = gameStage === 1 && isMyTurn && isHumanPlayer && turnPhase === 'analyzing_hand' && availableTargets.length > 0;
@@ -2559,6 +2562,11 @@ function GamePageContentComponent({
                             ? Math.max(minVisible, baseOverlap - (totalCards - 1) * (isClosedCard ? 1.5 : 2)) 
                             : 0;
                           const overlap = cardIndex > 0 ? `-${dynamicOverlap}px` : '0';
+                          const cardStackZIndex = isHumanPlayer
+                            ? cardIndex + 1
+                            : gameStage === 1
+                              ? totalCards - cardIndex
+                              : cardIndex + 1;
                           
                           return (
                             <div 
@@ -2566,7 +2574,7 @@ function GamePageContentComponent({
                               className={styles.cardOnPenki} 
                               style={{
                                 marginLeft: overlap,
-                                zIndex: cardIndex + 1, // ВЕРХНЯЯ карта (последняя, больший индекс) ПОВЕРХ всех! Первая=1, последняя=макс
+                                zIndex: cardStackZIndex,
                                 cursor: (shouldHighlight || isAvailableTarget) ? 'pointer' : 'default',
                                 position: 'relative',
                                 transform: isStage2 && isOpponentCard ? `translateY(${cardIndex * 2}px)` : 'none', // Небольшое вертикальное смещение для глубины

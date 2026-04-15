@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles, Ghost, Swords, Zap } from 'lucide-react';
 import { useTonConnectUI, useTonAddress } from '@tonconnect/ui-react';
@@ -88,6 +88,17 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'bank_card' | 'sberbank' | 'yoo_money' | 'sbp'>('bank_card');
   const [tonConnectUI] = useTonConnectUI();
   const userTonAddress = useTonAddress();
+  const [isCompactLayout, setIsCompactLayout] = useState(false);
+
+  useEffect(() => {
+    const updateLayout = () => {
+      setIsCompactLayout(window.innerWidth < 720);
+    };
+
+    updateLayout();
+    window.addEventListener('resize', updateLayout);
+    return () => window.removeEventListener('resize', updateLayout);
+  }, []);
 
   const formatCoins = (amount: number) => amount.toLocaleString('ru-RU');
   const getRubEquivalent = (amount: number) => Math.ceil(amount / 50);
@@ -617,8 +628,8 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
                 background: 'linear-gradient(145deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.98) 100%)',
                 borderRadius: '24px',
                 border: '2px solid rgba(251, 191, 36, 0.3)',
-                padding: '30px',
-                maxWidth: '600px',
+                padding: isCompactLayout ? '18px' : '30px',
+                maxWidth: isCompactLayout ? '420px' : '760px',
                 width: '100%',
                 maxHeight: '90vh',
                 overflowY: 'auto'
@@ -626,7 +637,7 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
             >
               {/* ЗАГОЛОВОК */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                <h2 style={{ fontSize: '28px', fontWeight: 'bold', color: '#fbbf24', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <h2 style={{ fontSize: isCompactLayout ? '22px' : '28px', fontWeight: 'bold', color: '#fbbf24', display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <Sparkles size={32} />
                   Выберите тему
                 </h2>
@@ -651,7 +662,14 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
               </div>
 
               {/* СЕТКА ТЕМАТИЧЕСКИХ КНОПОК */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: isCompactLayout ? '1fr' : 'repeat(2, minmax(0, 1fr))',
+                  gap: '16px',
+                  marginBottom: '24px'
+                }}
+              >
                 {/* ПОКЕМОН */}
                 <ThemeCard
                   theme="pokemon"

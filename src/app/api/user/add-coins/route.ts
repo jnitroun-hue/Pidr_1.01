@@ -81,10 +81,12 @@ export async function POST(req: NextRequest) {
       if (updateStats.gamesPlayed) {
         updateData.games_played = (userData.games_played || 0) + 1;
         updateData.total_games = (userData.total_games || 0) + 1;
+        updateData.total_games_played = (userData.total_games_played || 0) + 1;
         console.log(`📊 [${traceId || 'NO_TRACE'}] Игр сыграно: ${userData.games_played || 0} → ${updateData.games_played}`);
       }
       if (updateStats.wins) {
         updateData.games_won = (userData.games_won || 0) + 1;
+        updateData.wins = (userData.wins || 0) + 1;
         console.log(`🏆 [${traceId || 'NO_TRACE'}] Побед: ${userData.games_won || 0} → ${updateData.games_won}`);
       }
       // ✅ КРИТИЧНО: Обновляем поражения (раньше не записывались в БД!)

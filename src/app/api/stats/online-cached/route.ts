@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRedis } from '@/lib/redis/init';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 
 // Получаем Redis клиент через универсальную инициализацию
 const redis = getRedis();
@@ -43,13 +43,26 @@ export async function GET(request: NextRequest) {
       const userIds = activeUsers.map(id => parseInt(id, 10)).filter(id => !isNaN(id));
       
       if (userIds.length > 0) {
-        const { data: users } = await supabase
-          .from('_pidr_users')
-          .select('id, username, online_status, status, last_seen')
-          .in('id', userIds)
-          .limit(100); // Ограничиваем для производительности
+        const [{ data: usersById }, { data: usersByTelegramId }] = await Promise.all([
+          supabaseAdmin
+            .from('_pidr_users')
+            .select('id, telegram_id, username, online_status, status, last_seen')
+            .in('id', userIds)
+            .limit(100),
+          supabaseAdmin
+            .from('_pidr_users')
+            .select('id, telegram_id, username, online_status, status, last_seen')
+            .in('telegram_id', activeUsers)
+            .limit(100)
+        ]);
         
-        onlineDetails = users || [];
+        const mergedUsers = [...(usersById || []), ...(usersByTelegramId || [])];
+        const seenIds = new Set<number>();
+        onlineDetails = mergedUsers.filter((user: any) => {
+          if (!user?.id || seenIds.has(user.id)) return false;
+          seenIds.add(user.id);
+          return true;
+        });
       }
     }
 
@@ -82,7 +95,7 @@ export async function GET(request: NextRequest) {
  */
 async function getStatsFromDB() {
   try {
-    const { data: users } = await supabase
+    const { data: users } = await supabaseAdmin
       .from('_pidr_users')
       .select('online_status, status')
       .limit(1000);

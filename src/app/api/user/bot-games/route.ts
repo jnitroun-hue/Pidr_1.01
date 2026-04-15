@@ -24,10 +24,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Пользователь не найден' }, { status: 404 });
     }
 
-    // ✅ ИСПРАВЛЕНО: Получаем total_games И created_at для проверки даты регистрации
+    // ✅ ИСПРАВЛЕНО: учитываем все исторические поля статистики
     const user = dbUser;
-
-    const gamesPlayed = user?.total_games || user?.games_played || 0;
+    const gamesPlayed =
+      user?.total_games_played ||
+      user?.total_games ||
+      user?.games_played ||
+      0;
+    const isAdmin = user?.is_admin === true;
     
     // ✅ ПРОВЕРКА ДАТЫ РЕГИСТРАЦИИ: Только для пользователей после 10.02.2026
     const tutorialCutoffDate = new Date('2026-02-10T00:00:00.000Z');
@@ -39,9 +43,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       gamesPlayed: gamesPlayed,
-      canPlayMultiplayer: gamesPlayed >= 3,
+      canPlayMultiplayer: isAdmin || gamesPlayed >= 3,
+      isAdmin,
       isNewUser: isNewUser, // ✅ НОВОЕ: Флаг нового пользователя
-      showTutorial: isNewUser && gamesPlayed < 3 // ✅ НОВОЕ: Показывать туториал только новым пользователям
+      showTutorial: !isAdmin && isNewUser && gamesPlayed < 3 // ✅ НОВОЕ: Показывать туториал только новым пользователям
     });
 
   } catch (error: any) {

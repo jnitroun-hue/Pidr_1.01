@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 
 // ✅ Явная конфигурация runtime для Next.js 15
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
     // В production необходимо проверить, что пользователь действительно владеет кошельком
 
     // Вызываем SQL функцию для подключения кошелька
-    const { data, error } = await supabase.rpc('connect_player_wallet', {
+    const { data, error } = await supabaseAdmin.rpc('connect_player_wallet', {
       p_user_id: userIdBigInt, // ✅ Передаём BIGINT вместо STRING
       p_wallet_address: wallet_address,
       p_wallet_type: wallet_type
@@ -131,7 +131,7 @@ export async function GET(req: NextRequest) {
     
     console.log(`📋 Получаем кошельки пользователя ${userId} (BIGINT: ${userIdBigInt}, ${environment})...`);
 
-    const { data: wallets, error } = await supabase
+    const { data: wallets, error } = await supabaseAdmin
       .from('_pidr_player_wallets')
       .select('*')
       .eq('user_id', userIdBigInt) // ✅ Передаём BIGINT вместо STRING

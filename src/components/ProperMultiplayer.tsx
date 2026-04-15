@@ -194,6 +194,7 @@ export const ProperMultiplayer: React.FC = () => {
 
   // ✅ ПРОВЕРКА ДОСТУПА К МУЛЬТИПЛЕЕРУ
   const [gamesPlayed, setGamesPlayed] = useState<number | null>(null);
+  const [canPlayMultiplayer, setCanPlayMultiplayer] = useState(false);
   const [showAccessModal, setShowAccessModal] = useState(false);
   const [accessChecked, setAccessChecked] = useState(false);
 
@@ -219,21 +220,25 @@ export const ProperMultiplayer: React.FC = () => {
           const data = await response.json();
           if (data.success) {
             setGamesPlayed(data.gamesPlayed || 0);
+            setCanPlayMultiplayer(Boolean(data.canPlayMultiplayer));
             if (!data.canPlayMultiplayer) {
               setShowAccessModal(true);
             }
           } else {
             setGamesPlayed(0);
+            setCanPlayMultiplayer(false);
             setShowAccessModal(true);
           }
         } else {
           console.warn('⚠️ [ProperMultiplayer] bot-games вернул ошибку — блокируем доступ');
           setGamesPlayed(0);
+          setCanPlayMultiplayer(false);
           setShowAccessModal(true);
         }
       } catch (error) {
         console.error('❌ [ProperMultiplayer] Ошибка загрузки игр:', error);
         setGamesPlayed(0);
+        setCanPlayMultiplayer(false);
         setShowAccessModal(true);
       } finally {
         setAccessChecked(true);
@@ -256,7 +261,7 @@ export const ProperMultiplayer: React.FC = () => {
     }
 
     // ✅ ПРОВЕРКА ДОСТУПА
-    if (gamesPlayed !== null && gamesPlayed < 3) {
+    if (!canPlayMultiplayer) {
       setShowAccessModal(true);
       return;
     }
@@ -437,7 +442,7 @@ export const ProperMultiplayer: React.FC = () => {
     }
 
     // ✅ ПРОВЕРКА ДОСТУПА
-    if (gamesPlayed !== null && gamesPlayed < 3) {
+    if (!canPlayMultiplayer) {
       setShowAccessModal(true);
       return;
     }
@@ -636,12 +641,12 @@ export const ProperMultiplayer: React.FC = () => {
     );
   }
 
-  if (gamesPlayed !== null && gamesPlayed < 3) {
+  if (!canPlayMultiplayer) {
     return (
       <div className={styles.container}>
         <MultiplayerAccessModal
           isOpen={true}
-          gamesPlayed={gamesPlayed}
+          gamesPlayed={gamesPlayed || 0}
           requiredGames={3}
           onClose={() => {
             if (typeof window !== 'undefined') window.history.back();
@@ -718,7 +723,7 @@ export const ProperMultiplayer: React.FC = () => {
             <button 
               className={`${styles.button} ${styles.primary}`}
               onClick={() => {
-                if (gamesPlayed !== null && gamesPlayed < 3) {
+                if (!canPlayMultiplayer) {
                   setShowAccessModal(true);
                   return;
                 }
@@ -732,7 +737,7 @@ export const ProperMultiplayer: React.FC = () => {
             <button 
               className={`${styles.button} ${styles.secondary}`}
               onClick={() => {
-                if (gamesPlayed !== null && gamesPlayed < 3) {
+                if (!canPlayMultiplayer) {
                   setShowAccessModal(true);
                   return;
                 }
@@ -967,7 +972,7 @@ export const ProperMultiplayer: React.FC = () => {
         requiredGames={3}
         onClose={() => {
           setShowAccessModal(false);
-          if (gamesPlayed !== null && gamesPlayed < 3) {
+          if (!canPlayMultiplayer) {
             if (typeof window !== 'undefined') window.history.back();
           }
         }}

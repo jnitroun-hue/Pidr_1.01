@@ -181,8 +181,8 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
         style={{
           position: 'fixed',
           top: '20px',
-          left: '20px',
-          zIndex: 100
+          left: '86px',
+          zIndex: 1100
         }}
       >
         <LanguageSwitcher 
