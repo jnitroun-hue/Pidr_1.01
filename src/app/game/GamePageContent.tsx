@@ -46,7 +46,7 @@ const CARD_IMAGES = [
   'queen_of_clubs.png','queen_of_diamonds.png','queen_of_hearts.png','queen_of_spades.png',
 ];
 const CARD_BACK = 'back.png';
-const CARDS_PATH = '/img/cards/'; // legacy путь, стандартные карты теперь рендерятся через inline SVG
+const CARDS_PATH = '/img/cards/';
 
 // Рассчитываем размеры и позицию стола
 const getTableDimensions = () => {
@@ -2517,13 +2517,8 @@ function GamePageContentComponent({
                             nftImageUrl = (nftDeckCards[nftKey] || storeNftDeckCards?.[nftKey]) || null;
                           }
                           
-                          // В 1-й стадии у соперников верхняя карта хранится первой в массиве,
-                          // а у живого игрока используем последний элемент как активную карту для хода.
-                          const isTopCard = isHumanPlayer
-                            ? cardIndex === playerCards.length - 1
-                            : gameStage === 1
-                              ? cardIndex === 0
-                              : cardIndex === playerCards.length - 1;
+                          // Верхняя карта должна быть последней добавленной для любого игрока.
+                          const isTopCard = cardIndex === playerCards.length - 1;
                           const showOpen = isHumanPlayer || (gameStage === 1 && isTopCard);
                           const isMyTurn = player.id === currentPlayerId;
                           const canMakeMove = gameStage === 1 && isMyTurn && isHumanPlayer && turnPhase === 'analyzing_hand' && availableTargets.length > 0;
@@ -2562,11 +2557,7 @@ function GamePageContentComponent({
                             ? Math.max(minVisible, baseOverlap - (totalCards - 1) * (isClosedCard ? 1.5 : 2)) 
                             : 0;
                           const overlap = cardIndex > 0 ? `-${dynamicOverlap}px` : '0';
-                          const cardStackZIndex = isHumanPlayer
-                            ? cardIndex + 1
-                            : gameStage === 1
-                              ? totalCards - cardIndex
-                              : cardIndex + 1;
+                          const cardStackZIndex = cardIndex + 1;
                           
                           return (
                             <div 

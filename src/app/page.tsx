@@ -850,10 +850,29 @@ function HomeWithParams() {
 
   // Fallback - не должно появляться
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900 flex items-center justify-center">
-      <div className="text-center">
-        <h2 className="text-2xl font-bold text-white mb-4">P.I.D.R. Game</h2>
-        <p className="text-gray-300">Загрузка...</p>
+    <div
+      style={{
+        minHeight: '100vh',
+        width: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '24px',
+        background: 'linear-gradient(145deg, #0f172a 0%, #111827 60%, #1e1b4b 100%)'
+      }}
+    >
+      <div
+        style={{
+          textAlign: 'center',
+          borderRadius: '18px',
+          padding: '22px 24px',
+          border: '1px solid rgba(148,163,184,0.25)',
+          background: 'rgba(15, 23, 42, 0.75)',
+          color: '#f8fafc'
+        }}
+      >
+        <h2 style={{ fontSize: '26px', fontWeight: 800, marginBottom: '8px' }}>P.I.D.R. Game</h2>
+        <p style={{ color: '#cbd5e1' }}>Загрузка...</p>
       </div>
     </div>
   );

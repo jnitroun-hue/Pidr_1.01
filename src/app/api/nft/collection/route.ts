@@ -41,22 +41,13 @@ export async function GET(req: NextRequest) {
     
     const deckCardIds = (deckCards || []).map((deckCard: any) => deckCard.nft_card_id);
 
-    // ✅ ПРЯМОЙ ЗАПРОС к таблице _pidr_nft_cards (ИСКЛЮЧАЕМ КАРТЫ НА ПРОДАЖЕ И В КОЛОДЕ!)
-    let query = supabase
+    // Возвращаем ПОЛНУЮ коллекцию, чтобы новые карты всегда были видны
+    // в "Коллекции" и во вкладке "Мои NFT" сразу после генерации.
+    const { data, error } = await supabase
       .from('_pidr_nft_cards')
       .select('*')
       .eq('user_id', userIdBigInt)
       .order('created_at', { ascending: false });
-    
-    if (listedCardIds.length > 0) {
-      query = query.not('id', 'in', `(${listedCardIds.join(',')})`);
-    }
-    
-    if (deckCardIds.length > 0) {
-      query = query.not('id', 'in', `(${deckCardIds.join(',')})`);
-    }
-    
-    const { data, error } = await query;
 
     if (error) {
       console.error('❌ Ошибка получения коллекции:', error);
@@ -66,8 +57,14 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const collection = data || [];
-    console.log(`✅ Найдено ${collection.length} NFT карт (исключая ${listedCardIds.length} на продаже и ${deckCardIds.length} в колоде)`);
+    const listedSet = new Set((listedCardIds || []).map((id: any) => String(id)));
+    const deckSet = new Set((deckCardIds || []).map((id: any) => String(id)));
+    const collection = (data || []).map((card: any) => ({
+      ...card,
+      is_listed: listedSet.has(String(card.id)),
+      is_in_deck: deckSet.has(String(card.id))
+    }));
+    console.log(`✅ Найдено ${collection.length} NFT карт`);
 
     const response = NextResponse.json({
       success: true,
