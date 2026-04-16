@@ -124,8 +124,34 @@ export default function ConnectedWalletsList({
         <div style={{ marginBottom: '12px', fontSize: '32px' }}>💳</div>
         <div style={{ marginBottom: '8px', fontWeight: '600' }}>Нет подключенных кошельков</div>
         <div style={{ fontSize: '12px', color: '#64748b' }}>
-          Подключите кошельки в разделе NFT коллекции
+          Для пополнения и вывода подключите один из ваших кошельков
         </div>
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => {
+            window.location.href = '/nft-collection';
+          }}
+          style={{
+            marginTop: '14px',
+            width: '100%',
+            padding: '12px 14px',
+            borderRadius: '10px',
+            border: '1px solid rgba(59, 130, 246, 0.55)',
+            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.22), rgba(14, 165, 233, 0.16))',
+            color: '#dbeafe',
+            fontSize: '13px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px'
+          }}
+        >
+          <FaWallet />
+          Подключить кошелек
+        </motion.button>
       </div>
     );
   }

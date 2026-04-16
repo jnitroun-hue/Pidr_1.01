@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { 
   FaCoins, 
   FaPlus, 
@@ -122,12 +122,27 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
   const [purchaseMode, setPurchaseMode] = useState<PurchaseMode>('coins');
   const [currencyMode, setCurrencyMode] = useState<CurrencyMode>('RUB');
   const [usdAmount, setUsdAmount] = useState('');
-  const masterWalletService = new MasterWalletService();
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const reduceMotion = useReducedMotion();
+  const shouldOptimizeAnimations = Boolean(reduceMotion) || isMobileViewport;
+  const masterWalletService = useMemo(() => new MasterWalletService(), []);
+  const currentUser = useMemo(() => getCurrentUser(), [user]);
+  const referralInviteUrl = useMemo(() => {
+    const referralCode = currentUser?.id || user?.id || 'player';
+    return `https://t.me/NotPidrBot?start=ref_${referralCode}`;
+  }, [currentUser?.id, user?.id]);
 
   // Загружаем данные пользователя и транзакции
   // ✅ НОВОЕ: Кеш для истории транзакций
   const lastTransactionsUpdate = useRef(0);
   const transactionsUpdateInterval = 10 * 60 * 1000; // 10 минут
+
+  useEffect(() => {
+    const updateViewport = () => setIsMobileViewport(window.innerWidth <= 768);
+    updateViewport();
+    window.addEventListener('resize', updateViewport);
+    return () => window.removeEventListener('resize', updateViewport);
+  }, []);
 
   useEffect(() => {
     console.log('🔄 GameWallet: инициализация компонента', { user: !!user, userId: user?.id });
@@ -140,20 +155,7 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
     loadMasterAddresses();
     loadCryptoBalances();
     checkBonusStatus(); // Проверяем статус бонуса
-    
-    // Диагностика кошельков
-    if (user?.id) {
-      console.log('🔍 GameWallet: проверяем доступность API кошельков...');
-      fetch('/api/wallet/unified?action=validate_config')
-        .then(res => res.json())
-        .then(data => {
-          console.log('🏦 GameWallet: конфигурация кошельков:', data);
-        })
-        .catch(err => {
-          console.error('❌ GameWallet: ошибка проверки конфигурации:', err);
-        });
-    }
-    
+
     // Запрашиваем разрешение на уведомления
     if (window.Notification && Notification.permission === 'default') {
       Notification.requestPermission().then(permission => {
@@ -199,11 +201,15 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
     };
   }, []);
 
-  // Автоматический мониторинг платежей каждые 30 секунд
+  // Автоматический мониторинг платежей (сниженная частота для мобильной производительности)
   useEffect(() => {
     if (!user?.id) return;
 
     const interval = setInterval(async () => {
+      if (document.hidden || activeModal !== null || loading) {
+        return;
+      }
+
       try {
         // Используем cookies через API (не localStorage!)
         // Token передается автоматически через HTTP-only cookies
@@ -245,10 +251,10 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
       } catch (error) {
         console.warn('⚠️ Ошибка автоматической проверки платежей:', error);
       }
-    }, 30000); // Каждые 30 секунд
+    }, 90000); // Каждые 90 секунд
 
     return () => clearInterval(interval);
-  }, [user?.id, onBalanceUpdate]);
+  }, [user?.id, onBalanceUpdate, activeModal, loading]);
 
   // Загрузка мастер адресов пользователя
   const loadMasterAddresses = async () => {
@@ -426,18 +432,6 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
     if (!user?.id) return;
 
     try {
-      // ✅ НЕ ПОКАЗЫВАЕМ ЗАГРУЗКУ если есть кешированные данные
-      if (transactions.length === 0) {
-        setLoading(true);
-      }
-      
-      // Проверяем сессию в БД
-      const sessionActive = await checkDatabaseSession();
-      if (!sessionActive) {
-        console.warn('⚠️ Сессия неактивна для загрузки транзакций');
-        return;
-      }
-
       const response = await fetch('/api/wallet/transactions?limit=50', {
         credentials: 'include', // Отправляем cookies вместо токена
         headers: {
@@ -501,8 +495,6 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
       }
     } catch (error) {
       console.error('❌ Ошибка загрузки транзакций:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -1238,8 +1230,8 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
             <div className={styles['action-buttons']}>
               <motion.button
                 className={`${styles['action-button']} ${styles['deposit']}`}
-                whileHover={{ scale: 1.02, y: -2 }}
-                whileTap={{ scale: 0.98 }}
+                whileHover={shouldOptimizeAnimations ? undefined : { scale: 1.02, y: -2 }}
+                whileTap={shouldOptimizeAnimations ? undefined : { scale: 0.98 }}
                 onClick={() => setActiveModal('deposit')}
                 disabled={loading}
               >
@@ -1250,8 +1242,8 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
 
               <motion.button
                 className="action-button withdraw"
-                whileHover={{ scale: 1.02, y: -2 }}
-                whileTap={{ scale: 0.98 }}
+                whileHover={shouldOptimizeAnimations ? undefined : { scale: 1.02, y: -2 }}
+                whileTap={shouldOptimizeAnimations ? undefined : { scale: 0.98 }}
                 onClick={() => setActiveModal('withdraw')}
                 disabled={loading}
               >
@@ -1262,8 +1254,8 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
 
               <motion.button
                 className="action-button monitor"
-                whileHover={{ scale: 1.02, y: -2 }}
-                whileTap={{ scale: 0.98 }}
+                whileHover={shouldOptimizeAnimations ? undefined : { scale: 1.02, y: -2 }}
+                whileTap={shouldOptimizeAnimations ? undefined : { scale: 0.98 }}
                 onClick={() => setActiveTab('history')}
                 disabled={loading}
               >
@@ -1320,24 +1312,15 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
                     overflow: 'hidden',
                     textOverflow: 'ellipsis'
                   }}>
-                    {(() => {
-                      const currentUser = getCurrentUser();
-                      const referralCode = currentUser?.id || user?.id || 'player_' + Date.now();
-                      const botUsername = 'NotPidrBot';
-                      return `https://t.me/${botUsername}?start=ref_${referralCode}`;
-                    })()}
+                    {referralInviteUrl}
                   </span>
                   <button
                     onClick={async () => {
-                      const currentUser = getCurrentUser();
-                      const referralCode = currentUser?.id || user?.id || 'player_' + Date.now();
-                      const botUsername = 'NotPidrBot';
-                      const inviteUrl = `https://t.me/${botUsername}?start=ref_${referralCode}`;
                       try {
-                        await navigator.clipboard.writeText(inviteUrl);
+                        await navigator.clipboard.writeText(referralInviteUrl);
                         alert('✅ Реферальная ссылка скопирована!\n\nПоделитесь ей с друзьями и получите +500 монет за каждого активного друга!');
                       } catch (error) {
-                        alert(`Реферальная ссылка:\n\n${inviteUrl}\n\nСкопируйте её вручную`);
+                        alert(`Реферальная ссылка:\n\n${referralInviteUrl}\n\nСкопируйте её вручную`);
                       }
                     }}
                     disabled={loading}
@@ -1462,16 +1445,16 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
         {activeModal && (
           <motion.div
             className="modal-overlay"
-            initial={{ opacity: 0 }}
+            initial={shouldOptimizeAnimations ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            exit={shouldOptimizeAnimations ? undefined : { opacity: 0 }}
             onClick={() => setActiveModal(null)}
           >
             <motion.div
               className="modal-content"
-              initial={{ opacity: 0, scale: 0.8, y: 50 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.8, y: 50 }}
+              initial={shouldOptimizeAnimations ? false : { opacity: 0, scale: 0.8, y: 50 }}
+              animate={shouldOptimizeAnimations ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 }}
+              exit={shouldOptimizeAnimations ? { opacity: 0 } : { opacity: 0, scale: 0.8, y: 50 }}
               onClick={e => e.stopPropagation()}
             >
               {activeModal === 'deposit' && (
@@ -1853,11 +1836,33 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
                         </button>
                       ) : (
                         <div style={{
-                          padding: '12px', borderRadius: '10px',
-                          background: 'rgba(255,215,0,0.04)', border: '1px dashed rgba(255,215,0,0.2)',
-                          color: '#94a3b8', fontSize: '12px', textAlign: 'center',
+                          padding: '12px',
+                          borderRadius: '10px',
+                          background: 'rgba(255,215,0,0.04)',
+                          border: '1px dashed rgba(255,215,0,0.2)',
+                          color: '#94a3b8',
+                          fontSize: '12px',
+                          textAlign: 'center',
                         }}>
-                          Подключите кошелёк выше или отправьте {selectedCrypto} на адрес вручную
+                          <div style={{ marginBottom: '10px' }}>Сначала подключите один из ваших кошельков.</div>
+                          <button
+                            onClick={() => {
+                              window.location.href = '/nft-collection';
+                            }}
+                            style={{
+                              width: '100%',
+                              padding: '10px 12px',
+                              borderRadius: '10px',
+                              border: '1px solid rgba(59,130,246,0.55)',
+                              background: 'linear-gradient(135deg, rgba(59,130,246,0.2), rgba(14,165,233,0.12))',
+                              color: '#dbeafe',
+                              fontSize: '13px',
+                              fontWeight: 700,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Подключить кошелёк
+                          </button>
                         </div>
                       )}
 

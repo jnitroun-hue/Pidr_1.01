@@ -180,9 +180,10 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
         animate={{ x: 0, opacity: 1 }}
         style={{
           position: 'fixed',
-          top: '20px',
-          left: '86px',
-          zIndex: 1100
+          top: '18px',
+          left: '82px',
+          zIndex: 1100,
+          maxWidth: 'calc(100vw - 170px)'
         }}
       >
         <LanguageSwitcher 
@@ -197,9 +198,9 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
         animate={{ x: 0, opacity: 1 }}
         style={{
           position: 'fixed',
-          top: '70px', // ✅ ИЗМЕНЕНО: ниже бургер-меню (20px + 50px высота кнопки)
+          top: '18px',
           right: '20px',
-          zIndex: 999 // ✅ ИЗМЕНЕНО: ниже бургер-меню (1000), но выше контента
+          zIndex: 1090
         }}
       >
         <OnlineIndicator />

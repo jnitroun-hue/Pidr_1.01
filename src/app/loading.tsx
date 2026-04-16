@@ -58,32 +58,17 @@ export default function GlobalLoading() {
             border: '1px solid rgba(148,163,184,0.2)'
           }}
         >
-          <div className="pidr-loading-bar" />
+          <div
+            style={{
+              height: '100%',
+              width: '62%',
+              borderRadius: '999px',
+              background: 'linear-gradient(90deg, #22d3ee 0%, #facc15 50%, #60a5fa 100%)',
+              boxShadow: '0 0 18px rgba(250, 204, 21, 0.35)'
+            }}
+          />
         </div>
       </div>
-
-      <style jsx>{`
-        .pidr-loading-bar {
-          height: 100%;
-          width: 45%;
-          border-radius: 999px;
-          background: linear-gradient(90deg, #22d3ee 0%, #facc15 50%, #60a5fa 100%);
-          animation: pidr-loading-slide 1.3s ease-in-out infinite;
-          box-shadow: 0 0 18px rgba(250, 204, 21, 0.45);
-        }
-
-        @keyframes pidr-loading-slide {
-          0% {
-            transform: translateX(-70%);
-          }
-          50% {
-            transform: translateX(120%);
-          }
-          100% {
-            transform: translateX(-70%);
-          }
-        }
-      `}</style>
     </div>
   );
 }
