@@ -44,7 +44,7 @@ function generateRoomCode(): string {
 // ============================================================
 
 export async function GET(req: NextRequest) {
-  console.log('🔍 GET /api/rooms - загружаем комнаты (УПРОЩЁННЫЙ ФИЛЬТР ДЛЯ ОТЛАДКИ!)');
+  console.log('🔍 GET /api/rooms - загружаем комнаты');
   
   // 🧹 АВТОМАТИЧЕСКАЯ ОЧИСТКА (не блокирует запрос)
   lightCleanup().catch(err => console.error('❌ Ошибка автоочистки:', err));
@@ -54,21 +54,18 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const type = searchParams.get('type') || 'public';
     
-    // ⚠️ ВАЖНО: максимально упрощаем фильтр, чтобы КАЖДАЯ созданная комната была видна всем игрокам
-    // ✅ ОТЛАДКА: Убираем ВСЕ фильтры кроме статуса!
-    const query = supabase
+    let query = supabase
       .from('_pidr_rooms')
       .select('*')
       .in('status', ['waiting', 'playing'])
       .order('created_at', { ascending: false })
       .limit(50);
-    
-    // ✅ ВРЕМЕННО ОТКЛЮЧЕНО: фильтр по приватности - ВСЕ комнаты видны для отладки
-    // if (type === 'public') {
-    //   query = query.eq('is_private', false);
-    // }
-    
-    console.log(`🔍 [GET ROOMS] Загружаем ВСЕ комнаты (приватность игнорируется для отладки)`);
+
+    if (type === 'public') {
+      query = query.eq('is_private', false);
+    }
+
+    console.log(`🔍 [GET ROOMS] Загружаем комнаты типа: ${type}`);
     
     let rooms: any[] = [];
     let error: any = null;
@@ -91,7 +88,7 @@ export async function GET(req: NextRequest) {
       });
     }
     
-    console.log(`📊 [GET ROOMS] Загружено комнат из БД (БЕЗ ЖЁСТКИХ ФИЛЬТРОВ): ${rooms?.length || 0}`);
+    console.log(`📊 [GET ROOMS] Загружено комнат из БД: ${rooms?.length || 0}`);
     
     const roomsForListing = rooms || [];
     

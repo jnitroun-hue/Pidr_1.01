@@ -180,10 +180,10 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
         animate={{ x: 0, opacity: 1 }}
         style={{
           position: 'fixed',
-          top: '18px',
-          left: '82px',
+          top: '76px',
+          left: '20px',
           zIndex: 1100,
-          maxWidth: 'calc(100vw - 170px)'
+          maxWidth: 'calc(100vw - 40px)'
         }}
       >
         <LanguageSwitcher 
@@ -198,7 +198,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
         animate={{ x: 0, opacity: 1 }}
         style={{
           position: 'fixed',
-          top: '18px',
+          top: '76px',
           right: '20px',
           zIndex: 1090
         }}

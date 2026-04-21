@@ -66,41 +66,112 @@ export default function LanguageSwitcher({
   };
 
   return (
-    <div ref={containerRef} className={`relative ${className}`}>
+    <div
+      ref={containerRef}
+      className={className}
+      style={{ position: 'relative' }}
+    >
       <button
         onClick={() => setIsOpen((value) => !value)}
-        className="group flex min-w-[190px] items-center gap-2.5 rounded-2xl border border-indigo-400/35 bg-slate-900/90 px-3.5 py-2.5 text-white shadow-[0_10px_28px_rgba(15,23,42,0.55)] backdrop-blur-md transition-all duration-200 hover:border-indigo-300/60 hover:bg-slate-800/95 active:scale-[0.98]"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          minWidth: '190px',
+          borderRadius: '14px',
+          border: '1px solid rgba(129, 140, 248, 0.45)',
+          background: 'rgba(2, 6, 23, 0.9)',
+          color: '#f8fafc',
+          padding: '10px 12px',
+          backdropFilter: 'blur(10px)',
+          boxShadow: '0 10px 24px rgba(2, 6, 23, 0.45)',
+          cursor: 'pointer'
+        }}
         aria-label="Выбор языка"
         aria-expanded={isOpen}
       >
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/25 to-cyan-400/20 text-cyan-200 ring-1 ring-white/10">
+        <div style={{
+          width: '34px',
+          height: '34px',
+          borderRadius: '10px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'linear-gradient(135deg, rgba(99,102,241,0.35), rgba(34,211,238,0.2))',
+          color: '#bae6fd'
+        }}>
           <Globe2 size={17} />
         </div>
-        <div className="min-w-0 text-left leading-tight">
-          <div className="flex items-center gap-2 truncate text-sm font-semibold">
+        <div style={{ minWidth: 0, textAlign: 'left', lineHeight: 1.2 }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: '14px',
+            fontWeight: 600
+          }}>
             <span>{currentLang.flag}</span>
-            <span className="truncate">{currentLang.name}</span>
+            <span style={{
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}>{currentLang.name}</span>
           </div>
-          <div className="text-[10px] uppercase tracking-[0.16em] text-slate-400">
+          <div style={{
+            marginTop: '2px',
+            fontSize: '10px',
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase',
+            color: '#94a3b8'
+          }}>
             Язык интерфейса
           </div>
         </div>
-        <ChevronDown size={16} className={`ml-auto text-slate-300 transition-transform group-hover:text-white ${isOpen ? 'rotate-180' : ''}`} />
+        <div style={{
+          marginLeft: 'auto',
+          transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+          transition: 'transform 0.2s',
+          color: '#cbd5e1'
+        }}>
+          <ChevronDown size={16} />
+        </div>
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 top-[calc(100%+10px)] z-[1200] w-[280px] overflow-hidden rounded-2xl border border-slate-700/85 bg-slate-950/95 shadow-[0_22px_52px_rgba(2,6,23,0.8)] backdrop-blur-xl">
-          <div className="border-b border-slate-800 px-4 py-3.5">
-            <div className="flex items-center gap-2 text-sm font-semibold text-white">
-              <Languages size={16} className="text-indigo-300" />
+        <div style={{
+          position: 'absolute',
+          left: 0,
+          top: 'calc(100% + 10px)',
+          zIndex: 1200,
+          width: '280px',
+          borderRadius: '14px',
+          overflow: 'hidden',
+          border: '1px solid rgba(51, 65, 85, 0.9)',
+          background: 'rgba(2, 6, 23, 0.96)',
+          boxShadow: '0 20px 46px rgba(2, 6, 23, 0.75)',
+          backdropFilter: 'blur(14px)'
+        }}>
+          <div style={{
+            borderBottom: '1px solid rgba(30, 41, 59, 0.9)',
+            padding: '12px 14px'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              color: '#f8fafc',
+              fontSize: '14px',
+              fontWeight: 600
+            }}>
+              <Languages size={16} color="#a5b4fc" />
               Выбор языка
             </div>
-            <p className="mt-1 text-xs text-slate-400">
+            <p style={{ marginTop: '6px', color: '#94a3b8', fontSize: '12px', lineHeight: 1.35 }}>
               `RU` и `EN` встроены. Остальные открываются через переводчик.
             </p>
           </div>
 
-          <div className="p-2.5">
+          <div style={{ padding: '8px' }}>
             {languages.map((language) => {
               const isActive = currentLanguage === language.code;
 
@@ -108,42 +179,91 @@ export default function LanguageSwitcher({
                 <button
                   key={language.code}
                   onClick={() => handleNativeLanguageChange(language.code)}
-                  className={`mb-1.5 flex w-full items-center justify-between rounded-xl px-3 py-3 text-left transition-all ${
-                    isActive
-                      ? 'bg-gradient-to-r from-indigo-500/20 to-cyan-500/15 text-white ring-1 ring-indigo-300/35'
-                      : 'text-slate-200 hover:bg-slate-800/90'
-                  }`}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    borderRadius: '10px',
+                    border: isActive ? '1px solid rgba(129, 140, 248, 0.45)' : '1px solid transparent',
+                    background: isActive
+                      ? 'linear-gradient(135deg, rgba(99,102,241,0.24), rgba(6,182,212,0.16))'
+                      : 'transparent',
+                    padding: '10px 12px',
+                    marginBottom: '6px',
+                    color: '#e2e8f0',
+                    textAlign: 'left',
+                    cursor: 'pointer'
+                  }}
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="text-lg">{language.flag}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '18px' }}>{language.flag}</span>
                     <div>
-                      <div className="text-sm font-semibold">{language.name}</div>
-                      <div className="text-[11px] uppercase tracking-[0.16em] text-slate-400">
+                      <div style={{ fontSize: '14px', fontWeight: 600, color: '#f8fafc' }}>{language.name}</div>
+                      <div style={{ fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', color: '#94a3b8' }}>
                         {language.short}
                       </div>
                     </div>
                   </div>
-                  {isActive && <span className="rounded-lg bg-indigo-400/15 px-2 py-1 text-[10px] font-semibold tracking-[0.14em] text-indigo-200">ACTIVE</span>}
+                  {isActive && (
+                    <span style={{
+                      borderRadius: '8px',
+                      background: 'rgba(129, 140, 248, 0.2)',
+                      color: '#c7d2fe',
+                      fontSize: '10px',
+                      letterSpacing: '0.14em',
+                      textTransform: 'uppercase',
+                      fontWeight: 700,
+                      padding: '4px 8px'
+                    }}>
+                      Active
+                    </span>
+                  )}
                 </button>
               );
             })}
           </div>
 
-          <div className="border-t border-slate-800 px-3.5 py-3.5">
-            <div className="mb-2.5 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-              <Sparkles size={12} className="text-amber-300" />
+          <div style={{
+            borderTop: '1px solid rgba(30, 41, 59, 0.9)',
+            padding: '12px'
+          }}>
+            <div style={{
+              marginBottom: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              color: '#94a3b8',
+              fontSize: '11px',
+              fontWeight: 700,
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase'
+            }}>
+              <Sparkles size={12} color="#fcd34d" />
               Перевести страницу
             </div>
-            <div className="grid grid-cols-3 gap-2">
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+              gap: '8px'
+            }}>
               {translateTargets.map((language) => (
                 <button
                   key={language.code}
                   onClick={() => openBrowserTranslator(language.code)}
-                  className="flex flex-col items-center justify-center rounded-xl border border-slate-800 bg-slate-900/80 px-2 py-2.5 text-center text-slate-200 transition-all hover:border-indigo-300/35 hover:bg-slate-800"
+                  style={{
+                    borderRadius: '10px',
+                    border: '1px solid rgba(51, 65, 85, 0.85)',
+                    background: 'rgba(15, 23, 42, 0.9)',
+                    color: '#e2e8f0',
+                    textAlign: 'center',
+                    padding: '10px 6px',
+                    cursor: 'pointer'
+                  }}
                 >
-                  <span className="text-xl">{language.flag}</span>
-                  <span className="mt-1 text-[12px] font-semibold">{language.short}</span>
-                  <span className="text-[10px] text-slate-500">
+                  <span style={{ fontSize: '18px' }}>{language.flag}</span>
+                  <span style={{ marginTop: '4px', display: 'block', fontSize: '12px', fontWeight: 700 }}>{language.short}</span>
+                  <span style={{ display: 'block', fontSize: '10px', color: '#94a3b8' }}>
                     {language.name}
                   </span>
                 </button>

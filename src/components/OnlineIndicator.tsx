@@ -82,9 +82,12 @@ export default function OnlineIndicator() {
         display: 'flex',
         alignItems: 'center',
         gap: '8px',
-        padding: '8px 16px',
-        background: 'rgba(0, 0, 0, 0.3)',
-        borderRadius: '20px',
+        minWidth: '98px',
+        justifyContent: 'center',
+        padding: '8px 12px',
+        background: 'rgba(2, 6, 23, 0.7)',
+        border: '1px solid rgba(16, 185, 129, 0.25)',
+        borderRadius: '14px',
         backdropFilter: 'blur(10px)'
       }}>
         <div style={{
@@ -115,12 +118,14 @@ export default function OnlineIndicator() {
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
-          padding: '8px 16px',
-          background: 'rgba(0, 0, 0, 0.3)',
-          borderRadius: '20px',
+          minWidth: '104px',
+          justifyContent: 'center',
+          padding: '8px 12px',
+          background: 'rgba(2, 6, 23, 0.72)',
+          borderRadius: '14px',
           backdropFilter: 'blur(10px)',
           cursor: 'pointer',
-          border: '1px solid rgba(16, 185, 129, 0.3)',
+          border: '1px solid rgba(16, 185, 129, 0.35)',
           boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)'
         }}
       >
@@ -145,12 +150,10 @@ export default function OnlineIndicator() {
         />
         
         {/* Количество онлайн */}
-        <span style={{
-          color: '#10b981',
-          fontSize: '14px',
-          fontWeight: '700',
-          textShadow: '0 0 8px rgba(16, 185, 129, 0.5)'
-        }}>
+        <span style={{ color: '#a7f3d0', fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em' }}>
+          ONLINE
+        </span>
+        <span style={{ color: '#10b981', fontSize: '14px', fontWeight: 800, textShadow: '0 0 8px rgba(16, 185, 129, 0.5)' }}>
           {stats?.reallyActive || 0}
         </span>
       </motion.div>
