@@ -6,6 +6,15 @@ import { requireAuth, getUserIdFromDatabase } from '../../../../lib/auth-utils';
 // ✅ Явная конфигурация runtime для Next.js 15
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+function noStoreJson(body: any, init?: ResponseInit) {
+  const response = NextResponse.json(body, init);
+  response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate');
+  response.headers.set('Pragma', 'no-cache');
+  response.headers.set('Expires', '0');
+  return response;
+}
 
 // GET /api/user/me - Получить данные текущего пользователя (универсально для всех платформ)
 export async function GET(req: NextRequest) {
@@ -13,7 +22,7 @@ export async function GET(req: NextRequest) {
     const auth = requireAuth(req);
     
     if (auth.error || !auth.userId) {
-      return NextResponse.json(
+      return noStoreJson(
         { success: false, message: auth.error || 'Требуется авторизация' },
         { status: 401 }
       );
@@ -25,7 +34,7 @@ export async function GET(req: NextRequest) {
     const { dbUserId, user: dbUser } = await getUserIdFromDatabase(userId, environment);
     
     if (!dbUserId || !dbUser) {
-      return NextResponse.json(
+      return noStoreJson(
         { success: false, message: 'Пользователь не найден в БД' },
         { status: 404 }
       );
@@ -57,7 +66,7 @@ export async function GET(req: NextRequest) {
       telegram_id: user.telegram_id
     });
 
-    return NextResponse.json({
+    return noStoreJson({
       success: true,
       user: {
         id: user.id,
@@ -81,7 +90,7 @@ export async function GET(req: NextRequest) {
       }
     });
   } catch (error: any) {
-    return NextResponse.json(
+    return noStoreJson(
       { success: false, message: 'Ошибка сервера' },
       { status: 500 }
     );

@@ -6,6 +6,15 @@ import { getRedis } from '@/lib/redis/init';
 // ✅ Явная конфигурация runtime для Next.js 15
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+function noStoreJson(body: any, init?: ResponseInit) {
+  const response = NextResponse.json(body, init);
+  response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate');
+  response.headers.set('Pragma', 'no-cache');
+  response.headers.set('Expires', '0');
+  return response;
+}
 
 // Получаем Redis клиент через универсальную инициализацию
 const redis = getRedis();
@@ -24,14 +33,14 @@ export async function POST(request: NextRequest) {
     const { userId, environment } = getUserIdFromRequest(request);
     
     if (!userId) {
-      return NextResponse.json({ success: false, error: 'Не авторизован' }, { status: 401 });
+      return noStoreJson({ success: false, error: 'Не авторизован' }, { status: 401 });
     }
 
     // ✅ УНИВЕРСАЛЬНО: Получаем id из БД для обновления статуса
     const { dbUserId } = await getUserIdFromDatabase(userId, environment);
     
     if (!dbUserId) {
-      return NextResponse.json({ success: false, error: 'Пользователь не найден в БД' }, { status: 404 });
+      return noStoreJson({ success: false, error: 'Пользователь не найден в БД' }, { status: 404 });
     }
 
     const userIdBigInt = dbUserId;
@@ -190,7 +199,7 @@ export async function POST(request: NextRequest) {
       // Не критично, продолжаем
     }
 
-    return NextResponse.json({
+    return noStoreJson({
       success: true,
       message: 'Онлайн статус обновлён',
       timestamp: new Date().toISOString()
@@ -198,7 +207,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('❌ [HEARTBEAT] Ошибка:', error);
-    return NextResponse.json({
+    return noStoreJson({
       success: false,
       error: (error instanceof Error ? error.message : String(error)) || 'Ошибка heartbeat'
     }, { status: 500 });

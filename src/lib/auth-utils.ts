@@ -7,7 +7,13 @@ import { NextRequest } from 'next/server';
 import * as jwt from 'jsonwebtoken';
 import { supabase, supabaseAdmin } from './supabase';
 
-const JWT_SECRET = process.env.JWT_SECRET || process.env.SUPABASE_JWT_SECRET;
+// Важно: этот набор должен совпадать с redis-session-manager/createSession,
+// иначе часть API не сможет валидировать токен после веб-логина.
+const JWT_SECRET =
+  process.env.JWT_SECRET ||
+  process.env.SUPABASE_JWT_SECRET ||
+  process.env.SESSION_SECRET ||
+  'fallback-secret';
 
 /**
  * Определение типа окружения

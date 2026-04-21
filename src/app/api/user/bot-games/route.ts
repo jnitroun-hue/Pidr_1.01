@@ -5,6 +5,15 @@ import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 // ✅ Явная конфигурация runtime для Next.js 15
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+function noStoreJson(body: any, init?: ResponseInit) {
+  const response = NextResponse.json(body, init);
+  response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate');
+  response.headers.set('Pragma', 'no-cache');
+  response.headers.set('Expires', '0');
+  return response;
+}
 
 // GET /api/user/bot-games - Получить количество сыгранных игр (используем total_games)
 export async function GET(request: NextRequest) {
@@ -12,7 +21,7 @@ export async function GET(request: NextRequest) {
     // ✅ ИСПРАВЛЕНО: requireAuth синхронная функция, не нужен await
     const auth = requireAuth(request);
     if (auth.error || !auth.userId) {
-      return NextResponse.json({ success: false, error: auth.error || 'Требуется авторизация' }, { status: 401 });
+      return noStoreJson({ success: false, error: auth.error || 'Требуется авторизация' }, { status: 401 });
     }
 
     const { userId, environment } = auth;
@@ -21,7 +30,7 @@ export async function GET(request: NextRequest) {
     const { dbUserId, user: dbUser } = await getUserIdFromDatabase(userId, environment);
     
     if (!dbUserId || !dbUser) {
-      return NextResponse.json({ success: false, error: 'Пользователь не найден' }, { status: 404 });
+      return noStoreJson({ success: false, error: 'Пользователь не найден' }, { status: 404 });
     }
 
     // ✅ ИСПРАВЛЕНО: учитываем все исторические поля статистики
@@ -40,7 +49,7 @@ export async function GET(request: NextRequest) {
     
     console.log(`📊 [GAMES] Пользователь ${userId} (${environment}): игр=${gamesPlayed}, дата регистрации=${userCreatedAt?.toISOString()}, новый=${isNewUser}`);
 
-    return NextResponse.json({
+    return noStoreJson({
       success: true,
       gamesPlayed: gamesPlayed,
       canPlayMultiplayer: isAdmin || gamesPlayed >= 3,
@@ -51,7 +60,7 @@ export async function GET(request: NextRequest) {
 
   } catch (error: any) {
     console.error('❌ [GAMES] Ошибка:', error);
-    return NextResponse.json({ 
+    return noStoreJson({ 
       success: false, 
       error: 'Внутренняя ошибка сервера' 
     }, { status: 500 });

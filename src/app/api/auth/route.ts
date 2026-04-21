@@ -8,6 +8,7 @@ import crypto from 'crypto';
 // ✅ Явная конфигурация runtime для Next.js 15
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 const JWT_SECRET = process.env.JWT_SECRET || process.env.SUPABASE_JWT_SECRET;
 const SESSION_SECRET = process.env.SESSION_SECRET || process.env.SUPABASE_JWT_SECRET;
@@ -345,7 +346,7 @@ export async function GET(req: NextRequest) {
 
     console.log('✅ Активная сессия найдена:', user.username);
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       message: 'Сессия активна',
       user: {
@@ -364,13 +365,22 @@ export async function GET(req: NextRequest) {
         is_admin: user.is_admin || false
       }
     });
+    // /api/auth зависит от cookie и не должен кешироваться CDN/браузером.
+    response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+    return response;
 
   } catch (error: any) {
     console.error('❌ Ошибка проверки сессии:', error);
-    return NextResponse.json({ 
+    const response = NextResponse.json({ 
       success: false, 
       message: 'Ошибка сервера' 
     }, { status: 500 });
+    response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+    return response;
   }
 }
 

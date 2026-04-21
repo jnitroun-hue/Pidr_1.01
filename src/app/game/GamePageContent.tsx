@@ -257,6 +257,7 @@ function GamePageContentComponent({
     players, currentPlayerId, deck, availableTargets,
     selectedHandCard, revealedDeckCard, tableStack, trumpSuit,
     oneCardDeclarations, playersWithOneCard, pendingPenalty,
+    isGamePaused,
     penaltyDeck, gameCoins, playedCards,
     showPenaltyCardSelection, penaltyCardSelectionPlayerId,
     showWinnerModal, winnerModalData, showLoserModal, loserModalData,

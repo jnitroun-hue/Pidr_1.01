@@ -122,6 +122,9 @@ export async function POST(request: NextRequest) {
       user: userData,
       token
     });
+    response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
 
     // ✅ Cookie настройки для веб-логина
     // sameSite: 'lax' — стандарт для браузера, работает на Vercel

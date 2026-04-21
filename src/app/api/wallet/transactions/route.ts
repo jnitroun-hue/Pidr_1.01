@@ -2,6 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '../../../../lib/supabase';
 import { requireAuth } from '../../../../lib/auth-utils';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+function noStoreJson(body: any, init?: ResponseInit) {
+  const response = NextResponse.json(body, init);
+  response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate');
+  response.headers.set('Pragma', 'no-cache');
+  response.headers.set('Expires', '0');
+  return response;
+}
+
 // Используем единую функцию авторизации из auth-utils
 function getUserIdFromRequest(req: NextRequest): string | null {
   try {
@@ -19,7 +30,7 @@ function getUserIdFromRequest(req: NextRequest): string | null {
 export async function GET(req: NextRequest) {
   const userId = getUserIdFromRequest(req);
   if (!userId) {
-    return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+    return noStoreJson({ success: false, message: 'Unauthorized' }, { status: 401 });
   }
 
   try {
@@ -40,7 +51,7 @@ export async function GET(req: NextRequest) {
     
     if (userError || !userData) {
       console.error('❌ [TRANSACTIONS API] Пользователь не найден по telegram_id:', userId, userError);
-      return NextResponse.json({ 
+      return noStoreJson({ 
         success: false, 
         message: 'Пользователь не найден' 
       }, { status: 404 });
@@ -65,7 +76,7 @@ export async function GET(req: NextRequest) {
 
     if (error) {
       console.error('❌ Ошибка получения транзакций:', error);
-      return NextResponse.json({ 
+      return noStoreJson({ 
         success: false, 
         message: 'Ошибка получения транзакций' 
       }, { status: 500 });
@@ -88,7 +99,7 @@ export async function GET(req: NextRequest) {
 
     console.log(`✅ Найдено ${formattedTransactions.length} транзакций`);
 
-    return NextResponse.json({
+    return noStoreJson({
       success: true,
       transactions: formattedTransactions,
       pagination: {
@@ -100,7 +111,7 @@ export async function GET(req: NextRequest) {
 
   } catch (error: unknown) {
     console.error('❌ Transactions GET error:', error);
-    return NextResponse.json({ 
+    return noStoreJson({ 
       success: false, 
       message: 'Ошибка сервера' 
     }, { status: 500 });
@@ -111,7 +122,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const userId = getUserIdFromRequest(req);
   if (!userId) {
-    return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+    return noStoreJson({ success: false, message: 'Unauthorized' }, { status: 401 });
   }
 
   try {
@@ -126,7 +137,7 @@ export async function POST(req: NextRequest) {
     } = await req.json();
 
     if (!type || !amount) {
-      return NextResponse.json({ 
+      return noStoreJson({ 
         success: false, 
         message: 'Тип и сумма транзакции обязательны' 
       }, { status: 400 });
@@ -154,7 +165,7 @@ export async function POST(req: NextRequest) {
 
     if (createError) {
       console.error('❌ Ошибка создания транзакции:', createError);
-      return NextResponse.json({ 
+      return noStoreJson({ 
         success: false, 
         message: 'Ошибка создания транзакции' 
       }, { status: 500 });
@@ -206,7 +217,7 @@ export async function POST(req: NextRequest) {
 
     console.log(`✅ Транзакция создана: ${transaction.id}`);
 
-    return NextResponse.json({
+    return noStoreJson({
       success: true,
       transaction: {
         id: transaction.id,
@@ -224,7 +235,7 @@ export async function POST(req: NextRequest) {
 
   } catch (error: unknown) {
     console.error('❌ Transactions POST error:', error);
-    return NextResponse.json({ 
+    return noStoreJson({ 
       success: false, 
       message: 'Ошибка сервера' 
     }, { status: 500 });
