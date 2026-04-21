@@ -110,7 +110,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
     {
       icon: <Image size={32} />,
       emoji: '🎴',
-      label: 'NFT Коллекция',
+      label: language === 'en' ? 'NFT Collection' : 'NFT Коллекция',
       onClick: () => {
         hapticFeedback('medium');
         router.push('/nft-collection');
@@ -138,7 +138,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
     {
       icon: <LogIn size={32} />,
       emoji: '🔐',
-      label: 'Вход',
+      label: language === 'en' ? 'Login' : 'Вход',
       onClick: () => {
         hapticFeedback('medium');
         router.push('/auth/login');
@@ -147,7 +147,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
     {
       icon: <UserPlus size={32} />,
       emoji: '✨',
-      label: 'Регистрация',
+      label: language === 'en' ? 'Register' : 'Регистрация',
       onClick: () => {
         hapticFeedback('medium');
         router.push('/auth/register');
@@ -250,7 +250,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
             color: '#94a3b8',
             fontSize: '16px'
           }}>
-            Выберите действие
+            {language === 'en' ? 'Choose an action' : 'Выберите действие'}
           </p>
         </motion.div>
 
@@ -330,7 +330,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
             marginBottom: '15px',
             textAlign: 'center'
           }}>
-            КОШЕЛЕК
+            {language === 'en' ? 'WALLET' : 'КОШЕЛЕК'}
           </div>
           <div style={{
             display: 'flex',

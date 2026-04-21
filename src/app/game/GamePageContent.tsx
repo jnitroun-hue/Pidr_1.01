@@ -29,6 +29,7 @@ import { useTranslations } from '../../lib/i18n/translations';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useTelegram } from '@/hooks/useTelegram';
 import { getCardAssetSrc } from '@/lib/game/cardAssets';
+import { translateGameText } from '@/lib/i18n/gameRuntimeTranslations';
 
 const CARD_IMAGES = [
   '2_of_clubs.png','2_of_diamonds.png','2_of_hearts.png','2_of_spades.png',
@@ -251,6 +252,7 @@ function GamePageContentComponent({
   const { user } = useTelegram();
   const { language } = useLanguage();
   const t = useTranslations(language);
+  const tr = (text: string) => translateGameText(text, language);
   
   const { 
     isGameActive, gameMode, gameStage, turnPhase, stage2TurnPhase,
@@ -2870,13 +2872,13 @@ function GamePageContentComponent({
                 if (totalCards === 1 && !oneCardDeclarations[myPlayer.id]) {
                   console.log('✅ [ОДНА КАРТА] Объявляем!');
                   declareOneCard(myPlayer.id);
-                  showPlayerMessage(myPlayer.id, '☝️ ОДНА КАРТА!', 'success', 4000);
+                showPlayerMessage(myPlayer.id, tr('☝️ ОДНА КАРТА!'), 'success', 4000);
                 } else if (oneCardDeclarations[myPlayer.id]) {
                   console.log('⚠️ [ОДНА КАРТА] Уже объявлено!');
-                  showPlayerMessage(myPlayer.id, '✅ Уже объявлено!', 'info', 2000);
+                  showPlayerMessage(myPlayer.id, tr('✅ Уже объявлено!'), 'info', 2000);
                   } else {
                   console.log(`❌ [ОДНА КАРТА] Недоступно: ${totalCards} карт`);
-                  showPlayerMessage(myPlayer.id, `❌ У вас ${totalCards} ${totalCards === 1 ? 'карта' : totalCards < 5 ? 'карты' : 'карт'}!`, 'error', 3000);
+                  showPlayerMessage(myPlayer.id, tr(`❌ У вас ${totalCards} ${totalCards === 1 ? 'карта' : totalCards < 5 ? 'карты' : 'карт'}!`), 'error', 3000);
                   }
                 }}
                 style={{
@@ -2895,7 +2897,7 @@ function GamePageContentComponent({
                 zIndex: 9999,
                 }}
               >
-                ☝️ Одна карта!
+                {tr('☝️ Одна карта!')}
               </button>
             
             {/* Кнопка "Сколько карт?" - ВСЕГДА ВИДНА, ПРОЗРАЧНАЯ */}
@@ -2920,28 +2922,28 @@ function GamePageContentComponent({
                   
                   if (!isActive) {
                     console.log('⚠️ [СКОЛЬКО КАРТ] Недоступно');
-                    showPlayerMessage(myPlayer.id, '⏳ Недоступно сейчас', 'warning', 2000);
+                    showPlayerMessage(myPlayer.id, tr('⏳ Недоступно сейчас'), 'warning', 2000);
                     return;
                   }
                   
                   console.log('✅ [СКОЛЬКО КАРТ] Спрашиваем...');
-                  showPlayerMessage(myPlayer.id, '❓ Сколько карт?', 'info', 2000);
+                  showPlayerMessage(myPlayer.id, tr('❓ Сколько карт?'), 'info', 2000);
                   
                   const targets = targetsNotDeclared;
                   
                   if (targets.length === 1) {
                     console.log(`🎯 [СКОЛЬКО КАРТ] Проверка 1 игрока: ${targets[0].name}`);
-                    showPlayerMessage(targets[0].id, '🔍 Проверка...', 'warning', 3000);
+                    showPlayerMessage(targets[0].id, tr('🔍 Проверка...'), 'warning', 3000);
                     askHowManyCards(myPlayer.id, targets[0].id);
                   } else if (targets.length > 1) {
                     console.log(`🎯 [СКОЛЬКО КАРТ] Проверка ${targets.length} игроков`);
                     targets.forEach(t => {
-                      showPlayerMessage(t.id, '🔍 Проверка...', 'warning', 3000);
+                      showPlayerMessage(t.id, tr('🔍 Проверка...'), 'warning', 3000);
                       askHowManyCards(myPlayer.id, t.id);
                     });
                   } else {
                     console.log('❌ [СКОЛЬКО КАРТ] Нет целей');
-                    showNotification('Нет доступных целей для проверки', 'warning', 2000);
+                    showNotification(tr('Нет доступных целей для проверки'), 'warning', 2000);
                   }
                 }}
                 style={{
@@ -2959,7 +2961,7 @@ function GamePageContentComponent({
                   pointerEvents: 'auto' // ✅ ВСЕГДА КЛИКАБЕЛЬНА!
                 }}
               >
-                ❓ Сколько карт?
+                {tr('❓ Сколько карт?')}
               </button>
               );
             })()}

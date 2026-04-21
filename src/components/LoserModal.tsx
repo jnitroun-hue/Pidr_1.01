@@ -2,6 +2,8 @@
 import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Skull } from 'lucide-react';
+import { useLanguage } from './LanguageSwitcher';
+import { translateGameText } from '@/lib/i18n/gameRuntimeTranslations';
 
 interface LoserModalProps {
   playerName: string;
@@ -10,6 +12,7 @@ interface LoserModalProps {
 }
 
 export default function LoserModal({ playerName, avatar, onClose }: LoserModalProps) {
+  const { language } = useLanguage();
 
   useEffect(() => {
     // Автозакрытие через 5 секунд
@@ -144,7 +147,7 @@ export default function LoserModal({ playerName, avatar, onClose }: LoserModalPr
             marginTop: '20px',
             textShadow: '0 2px 4px rgba(0, 0, 0, 0.8)'
           }}>
-            💀 Последний игрок в игре 💀
+            💀 {translateGameText('Последний игрок в игре', language)} 💀
           </p>
 
           {/* Индикатор автозакрытия */}

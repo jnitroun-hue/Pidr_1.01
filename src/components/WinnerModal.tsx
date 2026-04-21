@@ -2,6 +2,8 @@
 import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, Eye, Home, Crown, Star, Sparkles } from 'lucide-react';
+import { useLanguage } from './LanguageSwitcher';
+import { translateGameText } from '@/lib/i18n/gameRuntimeTranslations';
 
 interface WinnerModalProps {
   playerName: string;
@@ -28,6 +30,7 @@ export default function WinnerModal({
   onContinueWatching, 
   onExitToMenu 
 }: WinnerModalProps) {
+  const { language } = useLanguage();
 
   useEffect(() => {
     // ✅ АВТОЗАКРЫТИЕ ТОЛЬКО ДЛЯ БОТОВ (не для пользователя)!
@@ -145,7 +148,7 @@ export default function WinnerModal({
             marginBottom: '8px',
             textShadow: '0 2px 10px rgba(0,0,0,0.5)'
           }}>
-            {placeData.title}
+            {translateGameText(placeData.title, language)}
           </h2>
 
           {/* Место */}
@@ -156,7 +159,7 @@ export default function WinnerModal({
             marginBottom: '25px',
             textShadow: '0 2px 8px rgba(0,0,0,0.3)'
           }}>
-            {placeData.subtitle}
+            {translateGameText(placeData.subtitle, language)}
           </div>
 
           {/* Аватар и имя */}
@@ -195,22 +198,22 @@ export default function WinnerModal({
               gap: '8px',
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: '#94a3b8', fontSize: '13px' }}>Место</span>
+                <span style={{ color: '#94a3b8', fontSize: '13px' }}>{translateGameText('Место', language)}</span>
                 <span style={{ color: placeData.borderColor, fontSize: '16px', fontWeight: '800' }}>
                   {placeData.subtitle}
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: '#94a3b8', fontSize: '13px' }}>Награда</span>
+                <span style={{ color: '#94a3b8', fontSize: '13px' }}>{translateGameText('Награда', language)}</span>
                 <span style={{ color: '#22c55e', fontSize: '16px', fontWeight: '800' }}>
                   +{coinsEarned} 🪙
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: '#94a3b8', fontSize: '13px' }}>Рейтинг</span>
+                <span style={{ color: '#94a3b8', fontSize: '13px' }}>{translateGameText('Рейтинг', language)}</span>
                 {isBotGame ? (
                   <span style={{ color: '#64748b', fontSize: '13px', fontStyle: 'italic' }}>
-                    Игра с ботами
+                    {translateGameText('Игра с ботами', language)}
                   </span>
                 ) : (
                   <span style={{
@@ -241,7 +244,7 @@ export default function WinnerModal({
                 }}
               >
                 <Eye size={16} strokeWidth={2.5} />
-                Смотреть
+                {translateGameText('Смотреть', language)}
               </motion.button>
               <motion.button
                 whileTap={{ scale: 0.95 }}
@@ -257,7 +260,7 @@ export default function WinnerModal({
                 }}
               >
                 <Home size={16} strokeWidth={2.5} />
-                Главная
+                {translateGameText('Главная', language)}
               </motion.button>
             </div>
           )}

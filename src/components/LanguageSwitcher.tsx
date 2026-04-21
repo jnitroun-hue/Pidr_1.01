@@ -30,6 +30,19 @@ export default function LanguageSwitcher({
   ];
 
   const currentLang = languages.find((lang) => lang.code === currentLanguage) || languages[0];
+  const ui = currentLanguage === 'en'
+    ? {
+        aria: 'Language selection',
+        uiLang: 'Interface language',
+        title: 'Language selection',
+        hint: '`RU` and `EN` are built-in. Others open via translator.',
+      }
+    : {
+        aria: 'Выбор языка',
+        uiLang: 'Язык интерфейса',
+        title: 'Выбор языка',
+        hint: '`RU` и `EN` встроены. Остальные открываются через переводчик.',
+      };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -87,7 +100,7 @@ export default function LanguageSwitcher({
           boxShadow: '0 10px 24px rgba(2, 6, 23, 0.45)',
           cursor: 'pointer'
         }}
-        aria-label="Выбор языка"
+        aria-label={ui.aria}
         aria-expanded={isOpen}
       >
         <div style={{
@@ -124,7 +137,7 @@ export default function LanguageSwitcher({
             textTransform: 'uppercase',
             color: '#94a3b8'
           }}>
-            Язык интерфейса
+            {ui.uiLang}
           </div>
         </div>
         <div style={{
@@ -164,10 +177,10 @@ export default function LanguageSwitcher({
               fontWeight: 600
             }}>
               <Languages size={16} color="#a5b4fc" />
-              Выбор языка
+              {ui.title}
             </div>
             <p style={{ marginTop: '6px', color: '#94a3b8', fontSize: '12px', lineHeight: 1.35 }}>
-              `RU` и `EN` встроены. Остальные открываются через переводчик.
+              {ui.hint}
             </p>
           </div>
 

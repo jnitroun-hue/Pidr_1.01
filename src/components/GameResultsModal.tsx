@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { Trophy, Medal, Award, Home, RotateCcw, TrendingUp, Coins } from 'lucide-react';
+import { useLanguage } from './LanguageSwitcher';
+import { translateGameText } from '@/lib/i18n/gameRuntimeTranslations';
 
 interface PlayerResult {
   place: number;
@@ -25,6 +27,7 @@ export default function GameResultsModal({
   onPlayAgain, 
   onMainMenu 
 }: GameResultsModalProps) {
+  const { language } = useLanguage();
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -97,13 +100,13 @@ export default function GameResultsModal({
                 textAlign: 'center'
               }}
             >
-              Результаты игры
+              {translateGameText('Результаты игры', language)}
             </h2>
           </div>
           {isRanked && (
             <div className="mt-3 flex items-center justify-center gap-2 text-sm text-amber-400">
               <TrendingUp size={16} />
-              <span className="font-semibold">Рейтинговая игра</span>
+              <span className="font-semibold">{translateGameText('Рейтинговая игра', language)}</span>
             </div>
           )}
         </div>
@@ -194,7 +197,7 @@ export default function GameResultsModal({
                       borderRadius: '4px',
                       fontWeight: '700'
                     }}>
-                      ВЫ
+                      {translateGameText('ВЫ', language)}
                     </span>
                   )}
                 </div>
@@ -202,7 +205,7 @@ export default function GameResultsModal({
                   fontSize: '11px',
                   color: 'rgba(255, 255, 255, 0.5)'
                 }}>
-                  {player.place === results.length ? 'Проигравший' : `${player.place}-е место`}
+                  {translateGameText(player.place === results.length ? 'Проигравший' : `${player.place}-е место`, language)}
                 </div>
               </div>
 
@@ -263,7 +266,7 @@ export default function GameResultsModal({
             }}
           >
             <RotateCcw size={20} strokeWidth={2.5} />
-            Заново
+            {translateGameText('Заново', language)}
           </button>
 
           <button
@@ -286,7 +289,7 @@ export default function GameResultsModal({
             }}
           >
             <Home size={20} strokeWidth={2.5} />
-            В меню
+            {translateGameText('В меню', language)}
           </button>
         </div>
       </div>

@@ -371,24 +371,21 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
       
       const parsedUser = authResult.user;
         
-      // Получаем актуальный баланс из базы данных
-      const balanceResponse = await fetch('/api/pidr-db', {
-        method: 'POST',
+      // Получаем актуальный баланс через универсальный endpoint
+      const balanceResponse = await fetch('/api/user/balance', {
+        method: 'GET',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'get_user_balance',
-          userId: parsedUser.telegramId || parsedUser.id
-        })
+        cache: 'no-store',
+        headers
       });
 
       if (balanceResponse.ok) {
         const data = await balanceResponse.json();
-        if (data.success) {
-          const actualBalance = data.balance || 0;
+        if (data.success && typeof data?.data?.balance === 'number') {
+          const actualBalance = data.data.balance;
           setBalance(actualBalance);
           onBalanceUpdate?.(actualBalance);
-          console.log('✅ Баланс загружен из БД:', actualBalance);
+          console.log('✅ Баланс загружен из /api/user/balance:', actualBalance);
         } else {
           // Используем баланс из auth API
           setBalance(parsedUser.coins || 0);

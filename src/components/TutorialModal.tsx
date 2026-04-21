@@ -2,6 +2,8 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Lightbulb, ChevronRight, Sparkles, Target, MousePointer2 } from 'lucide-react';
+import { useLanguage } from './LanguageSwitcher';
+import { translateGameText } from '@/lib/i18n/gameRuntimeTranslations';
 
 export interface TutorialStep {
   id: string;
@@ -209,6 +211,7 @@ export default function TutorialModal({
   totalSteps = 0,
   currentStepIndex = 0,
 }: TutorialModalProps) {
+  const { language } = useLanguage();
   const [particles, setParticles] = useState<Array<{ id: number; x: number; y: number; size: number; delay: number }>>([]);
 
   // Генерируем частицы для фона
@@ -419,10 +422,13 @@ export default function TutorialModal({
                       textTransform: 'uppercase',
                       letterSpacing: '1.5px',
                     }}>
-                      {step.stepType === 'welcome' ? 'Добро пожаловать' :
-                        step.stepType === 'action' ? 'Действие' :
-                          step.stepType === 'warning' ? 'Важно' :
-                            step.stepType === 'tip' ? 'Подсказка' : 'Обучение'}
+                      {translateGameText(
+                        step.stepType === 'welcome' ? 'Добро пожаловать' :
+                          step.stepType === 'action' ? 'Действие' :
+                            step.stepType === 'warning' ? 'Важно' :
+                              step.stepType === 'tip' ? 'Подсказка' : 'Обучение',
+                        language
+                      )}
                     </span>
                   </div>
                 )}
@@ -494,7 +500,7 @@ export default function TutorialModal({
                       lineHeight: 1.2,
                     }}
                   >
-                    {step.title}
+                    {translateGameText(step.title, language)}
                   </motion.h2>
                 </div>
               </div>
@@ -530,7 +536,7 @@ export default function TutorialModal({
                 <div style={{ paddingLeft: '12px' }}>
                   {typeof step.content === 'string' ? (
                     <p style={{ margin: 0, whiteSpace: 'pre-line' }}>
-                      {step.content}
+                      {translateGameText(step.content, language)}
                     </p>
                   ) : (
                     step.content
@@ -561,7 +567,7 @@ export default function TutorialModal({
                     fontSize: '13px',
                     fontWeight: '600',
                   }}>
-                    {step.spotlightText || 'Обратите внимание на подсвеченный элемент'}
+                    {translateGameText(step.spotlightText || 'Обратите внимание на подсвеченный элемент', language)}
                   </span>
                 </motion.div>
               )}
@@ -619,7 +625,7 @@ export default function TutorialModal({
                   }}
                 />
                 <span style={{ position: 'relative', zIndex: 1 }}>
-                  {showNext ? 'Далее' : 'Понятно'}
+                  {translateGameText(showNext ? 'Далее' : 'Понятно', language)}
                 </span>
                 {showNext ? (
                   <ChevronRight size={18} style={{ position: 'relative', zIndex: 1 }} />

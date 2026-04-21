@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, Gamepad2, Users, Info, BookOpen, Coins, Settings, Wallet, Trophy, Store, User, Shield } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
+import { useLanguage } from './LanguageSwitcher'
+import { useTranslations } from '@/lib/i18n/translations'
 
 interface BurgerMenuProps {
   isOpen: boolean
@@ -14,6 +16,8 @@ interface BurgerMenuProps {
 
 export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuProps) {
   const router = useRouter()
+  const { language } = useLanguage()
+  const t = useTranslations(language)
   const [isAdmin, setIsAdmin] = useState(false)
   const [loadedUser, setLoadedUser] = useState<any>(user)
 
@@ -74,7 +78,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
   const leftMenuItems = [
     {
       icon: <Gamepad2 size={24} />,
-      label: 'Игра',
+      label: t.mainMenu.play,
       emoji: '🎮',
       onClick: () => {
         router.push('/game')
@@ -84,7 +88,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
     },
     {
       icon: <Users size={24} />,
-      label: 'Сообщество',
+      label: language === 'en' ? 'Community' : 'Сообщество',
       emoji: '👥',
       onClick: () => {
         router.push('/multiplayer')
@@ -94,7 +98,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
     },
     {
       icon: <Info size={24} />,
-      label: 'О игре',
+      label: language === 'en' ? 'About Game' : 'О игре',
       emoji: 'ℹ️',
       onClick: () => {
         router.push('/welcome')
@@ -104,7 +108,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
     },
     {
       icon: <BookOpen size={24} />,
-      label: 'Правила',
+      label: t.mainMenu.rules,
       emoji: '📖',
       onClick: () => {
         router.push('/rules')
@@ -114,7 +118,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
     },
     {
       icon: <Coins size={24} />,
-      label: 'Зарабатывай на NFT',
+      label: language === 'en' ? 'Earn with NFT' : 'Зарабатывай на NFT',
       emoji: '💰',
       onClick: () => {
         router.push('/nft-collection')
@@ -128,7 +132,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
   const rightMenuItems = loadedUser ? [
     {
       icon: <User size={24} />,
-      label: 'Профиль',
+      label: t.mainMenu.profile,
       emoji: '👤',
       onClick: () => {
         router.push('/profile')
@@ -138,7 +142,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
     },
     {
       icon: <Store size={24} />,
-      label: 'Магазин',
+      label: t.mainMenu.shop,
       emoji: '🛒',
       onClick: () => {
         router.push('/shop')
@@ -148,7 +152,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
     },
     {
       icon: <Trophy size={24} />,
-      label: 'Рейтинг',
+      label: t.mainMenu.rating,
       emoji: '🏆',
       onClick: () => {
         router.push('/rating')
@@ -158,7 +162,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
     },
     {
       icon: <Wallet size={24} />,
-      label: 'Кошелек',
+      label: t.mainMenu.wallet,
       emoji: '💳',
       onClick: () => {
         router.push('/wallet')
@@ -168,7 +172,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
     },
     {
       icon: <Settings size={24} />,
-      label: 'Настройки',
+      label: t.mainMenu.settings,
       emoji: '⚙️',
       onClick: () => {
         router.push('/settings')
@@ -179,7 +183,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
     // Админ-панель (только для админов)
     ...(isAdmin ? [{
       icon: <Shield size={24} />,
-      label: 'Админ Панель',
+      label: language === 'en' ? 'Admin Panel' : 'Админ Панель',
       emoji: '🔐',
       onClick: () => {
         router.push('/admin')
@@ -253,7 +257,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text'
               }}>
-                {side === 'left' ? 'Меню' : 'Профиль'}
+                {side === 'left' ? (language === 'en' ? 'Menu' : 'Меню') : t.mainMenu.profile}
               </h2>
               <motion.button
                 whileHover={{ scale: 1.1, rotate: 90 }}
@@ -370,7 +374,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
                   textAlign: 'center',
                   color: '#94a3b8'
                 }}>
-                  <p>Войдите, чтобы увидеть меню</p>
+                  <p>{language === 'en' ? 'Sign in to see the menu' : 'Войдите, чтобы увидеть меню'}</p>
                 </div>
               )}
             </div>
@@ -406,10 +410,10 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ color: '#ffffff', fontWeight: '600', fontSize: '14px' }}>
-                      {loadedUser.username || 'Игрок'}
+                      {loadedUser.username || (language === 'en' ? 'Player' : 'Игрок')}
                     </div>
                     <div style={{ color: '#94a3b8', fontSize: '12px' }}>
-                      {(loadedUser.coins || 0).toLocaleString()} монет
+                      {(loadedUser.coins || 0).toLocaleString()} {language === 'en' ? 'coins' : 'монет'}
                     </div>
                   </div>
                 </div>
