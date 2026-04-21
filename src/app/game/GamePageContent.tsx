@@ -2762,34 +2762,14 @@ function GamePageContentComponent({
                                 }}></div>
                               )}
                               {isAvailableTarget && (
-                                <>
-                                  <div style={{
-                                    position: 'absolute',
-                                    inset: '-5px',
-                                    borderRadius: '12px',
-                                    border: '2px solid rgba(74, 222, 128, 0.92)',
-                                    boxShadow: '0 0 0 7px rgba(34, 197, 94, 0.12), 0 0 20px rgba(34, 197, 94, 0.55)',
-                                    animation: 'pulse 1.4s ease-in-out infinite',
-                                    pointerEvents: 'none'
-                                  }} />
-                                  <div style={{
-                                    position: 'absolute',
-                                    top: '-24px',
-                                    left: '50%',
-                                    transform: 'translateX(-50%)',
-                                    background: 'linear-gradient(135deg, rgba(34,197,94,0.95) 0%, rgba(16,185,129,0.92) 100%)',
-                                    color: '#f8fafc',
-                                    borderRadius: '999px',
-                                    padding: '3px 8px',
-                                    fontSize: '10px',
-                                    fontWeight: '800',
-                                    whiteSpace: 'nowrap',
-                                    boxShadow: '0 6px 14px rgba(16,185,129,0.35)',
-                                    pointerEvents: 'none'
-                                  }}>
-                                    Цель
-                                  </div>
-                                </>
+                                <div style={{
+                                  position: 'absolute',
+                                  inset: '-2px',
+                                  borderRadius: '10px',
+                                  border: '2px solid rgba(59, 130, 246, 0.78)',
+                                  boxShadow: '0 0 10px rgba(59, 130, 246, 0.35)',
+                                  pointerEvents: 'none'
+                                }} />
                               )}
                               
                               {/* 🔢 ПОКАЗЫВАЕМ КОЛИЧЕСТВО КАРТ ВО 2-Й СТАДИИ (только для закрытых карт) */}

@@ -40,6 +40,32 @@ export function useTutorial(
   const lastUserTurnRef = useRef<boolean>(false);
   const lastCurrentPlayerRef = useRef<string | null>(null);
   const penkiOpenedRef = useRef<boolean>(false);
+  const tutorialOpenTokenRef = useRef(0);
+  const lastOpenedStepRef = useRef<{ id: string; at: number }>({ id: '', at: 0 });
+
+  const showStep = (step: TutorialStep | undefined, delayMs: number = 0) => {
+    if (!step) return;
+
+    // Не открываем уже показанный шаг и не дублируем один и тот же шаг подряд.
+    if (tutorialConfig.shownSteps.has(step.id)) return;
+    const now = Date.now();
+    if (currentStep?.id === step.id) return;
+    if (lastOpenedStepRef.current.id === step.id && now - lastOpenedStepRef.current.at < 2500) return;
+
+    const token = ++tutorialOpenTokenRef.current;
+    const open = () => {
+      if (tutorialOpenTokenRef.current !== token) return;
+      setCurrentStep(prev => (prev?.id === step.id ? prev : step));
+      setIsTutorialPaused(true);
+      lastOpenedStepRef.current = { id: step.id, at: Date.now() };
+    };
+
+    if (delayMs > 0) {
+      setTimeout(open, delayMs);
+    } else {
+      open();
+    }
+  };
 
   // Индекс текущего шага
   const currentStepIndex = currentStep 
@@ -291,12 +317,8 @@ export function useTutorial(
         const firstStep = steps[0];
         if (firstStep) {
           console.log(`🎯 [useTutorial] Показываем первый шаг: ${firstStep.id} - "${firstStep.title}"`);
-          // Небольшая задержка для плавной анимации
-          setTimeout(() => {
-            setCurrentStep(firstStep);
-            setIsTutorialPaused(true);
-            console.log('✅ [useTutorial] Модалка туториала открыта!');
-          }, 800); // Чуть больше задержки для красивого эффекта
+          showStep(firstStep, 800); // Чуть больше задержки для красивого эффекта
+          console.log('✅ [useTutorial] Модалка туториала открыта!');
         } else {
           console.error('❌ [useTutorial] Первый шаг не найден! Шаги:', steps);
         }
@@ -330,6 +352,7 @@ export function useTutorial(
         shownSteps: newShownSteps 
       }));
       
+      tutorialOpenTokenRef.current += 1;
       setCurrentStep(null);
       setIsTutorialPaused(false);
     }
@@ -346,6 +369,7 @@ export function useTutorial(
         shownSteps: newShownSteps 
       }));
     }
+    tutorialOpenTokenRef.current += 1;
     setCurrentStep(null);
     setIsTutorialPaused(false);
   }, [tutorialConfig, currentStep]);
@@ -369,10 +393,7 @@ export function useTutorial(
       const step = tutorialConfig.steps.find(s => s.id === 'bot_placed_on_you');
       if (step) {
         // Небольшая задержка чтобы игрок увидел анимацию карты
-        setTimeout(() => {
-          setCurrentStep(step);
-          setIsTutorialPaused(true);
-        }, 600);
+        showStep(step, 600);
       }
     } else {
       userCardCountRef.current = currentCardCount;
@@ -396,8 +417,7 @@ export function useTutorial(
       
       const step = tutorialConfig.steps.find(s => s.id === stepId);
       if (step) {
-        setCurrentStep(step);
-        setIsTutorialPaused(true);
+        showStep(step);
       }
     }
   }, [currentPlayerId, gameStage, tutorialConfig, isTutorialPaused]);
@@ -415,8 +435,7 @@ export function useTutorial(
       
       const step = tutorialConfig.steps.find(s => s.id === 'your_turn_stage1');
       if (step) {
-        setCurrentStep(step);
-        setIsTutorialPaused(true);
+        showStep(step);
       }
     }
     
@@ -443,10 +462,7 @@ export function useTutorial(
       circleShownRef.current = true;
       const step = tutorialConfig.steps.find(s => s.id === 'circle_closed');
       if (step) {
-        setTimeout(() => {
-          setCurrentStep(step);
-          setIsTutorialPaused(true);
-        }, 600);
+        showStep(step, 600);
       }
     }
   }, [currentPlayerId, gameStage, players.length, tutorialConfig, isTutorialPaused]);
@@ -463,10 +479,7 @@ export function useTutorial(
       penaltyShownRef.current = true;
       const step = tutorialConfig.steps.find(s => s.id === 'one_card_penalty_explain');
       if (step) {
-        setTimeout(() => {
-          setCurrentStep(step);
-          setIsTutorialPaused(true);
-        }, 800);
+        showStep(step, 800);
       }
     }
   }, [penaltyDeck, gameStage, tutorialConfig, isTutorialPaused]);
@@ -483,10 +496,7 @@ export function useTutorial(
       askCardsShownRef.current = true;
       const step = tutorialConfig.steps.find(s => s.id === 'ask_cards_button_explain');
       if (step) {
-        setTimeout(() => {
-          setCurrentStep(step);
-          setIsTutorialPaused(true);
-        }, 1200);
+        showStep(step, 1200);
       }
     }
   }, [playersWithOneCard, gameStage, tutorialConfig, isTutorialPaused]);
@@ -502,8 +512,7 @@ export function useTutorial(
       
       const step = tutorialConfig.steps.find(s => s.id === 'stage2_transition');
       if (step) {
-        setCurrentStep(step);
-        setIsTutorialPaused(true);
+        showStep(step);
         return;
       }
     }
@@ -512,8 +521,7 @@ export function useTutorial(
     if (gameStage === 2 && tutorialConfig.shownSteps.has('stage2_transition') && !tutorialConfig.shownSteps.has('stage2_rules')) {
       const step = tutorialConfig.steps.find(s => s.id === 'stage2_rules');
       if (step) {
-        setCurrentStep(step);
-        setIsTutorialPaused(true);
+        showStep(step);
         return;
       }
     }
@@ -522,8 +530,7 @@ export function useTutorial(
     if (gameStage === 2 && tutorialConfig.shownSteps.has('stage2_rules') && !tutorialConfig.shownSteps.has('stage2_how_to_play')) {
       const step = tutorialConfig.steps.find(s => s.id === 'stage2_how_to_play');
       if (step) {
-        setCurrentStep(step);
-        setIsTutorialPaused(true);
+        showStep(step);
         return;
       }
     }
@@ -534,8 +541,7 @@ export function useTutorial(
       
       const step = tutorialConfig.steps.find(s => s.id === 'your_turn_stage2');
       if (step) {
-        setCurrentStep(step);
-        setIsTutorialPaused(true);
+        showStep(step);
       }
     }
   }, [gameStage, isUserTurn, tutorialConfig, isTutorialPaused]);
@@ -558,10 +564,7 @@ export function useTutorial(
       drewCardShownRef.current = true;
       const step = tutorialConfig.steps.find(s => s.id === 'drew_card_from_deck');
       if (step) {
-        setTimeout(() => {
-          setCurrentStep(step);
-          setIsTutorialPaused(true);
-        }, 800);
+        showStep(step, 800);
       }
     }
     
@@ -577,10 +580,7 @@ export function useTutorial(
     if (gameStage >= 2 && isUserTurn && tutorialConfig.shownSteps.has('your_turn_stage2')) {
       const step = tutorialConfig.steps.find(s => s.id === 'stage2_take_card');
       if (step) {
-        setTimeout(() => {
-          setCurrentStep(step);
-          setIsTutorialPaused(true);
-        }, 1500);
+        showStep(step, 1500);
       }
     }
   }, [gameStage, isUserTurn, tutorialConfig, isTutorialPaused]);
@@ -602,8 +602,7 @@ export function useTutorial(
       
       const step = tutorialConfig.steps.find(s => s.id === 'no_cards_stage1');
       if (step) {
-        setCurrentStep(step);
-        setIsTutorialPaused(true);
+        showStep(step);
       }
     }
     
@@ -628,8 +627,7 @@ export function useTutorial(
       
       const step = tutorialConfig.steps.find(s => s.id === 'penki_opened');
       if (step) {
-        setCurrentStep(step);
-        setIsTutorialPaused(true);
+        showStep(step);
       }
     }
   }, [players, userPlayerId, gameStage, tutorialConfig, isTutorialPaused]);
