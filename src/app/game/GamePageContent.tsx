@@ -159,9 +159,9 @@ const getRectanglePosition = (index: number, totalPlayers: number, gameStage: nu
     const positions = [
       { left: '50%', top: '13%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
       { left: '87%', top: '36%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
-      { left: '87%', top: '64%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
+      { left: '87%', top: '56%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
       { left: '13%', top: '36%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
-      { left: '13%', top: '64%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
+      { left: '13%', top: '56%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
     ];
     return positions[adjustedIndex] || positions[0];
   }
@@ -171,9 +171,9 @@ const getRectanglePosition = (index: number, totalPlayers: number, gameStage: nu
       { left: '28%', top: '13%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
       { left: '72%', top: '13%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
       { left: '13%', top: '36%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
-      { left: '13%', top: '64%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
+      { left: '13%', top: '56%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
       { left: '87%', top: '36%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
-      { left: '87%', top: '64%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
+      { left: '87%', top: '56%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
     ];
     return positions[adjustedIndex] || positions[0];
   }
@@ -316,6 +316,7 @@ function GamePageContentComponent({
     totalSteps,
     currentStepIndex,
   } = useTutorial(gameStage, isTutorialGame, tutorialGameNumber, isUserTurn, currentPlayerId, userPlayerId, players, deck.length, playersWithOneCard, pendingPenalty, penaltyDeck, oneCardDeclarations);
+  const showTutorialFieldHints = false;
 
   // ✅ Загружаем количество игр ПЕРЕД началом игры
   useEffect(() => {
@@ -933,12 +934,12 @@ function GamePageContentComponent({
   useEffect(() => {
     if (turnTimerRef.current) clearInterval(turnTimerRef.current);
     setTurnTimeLeft(30);
-    if (!currentPlayerId || !isGameActive) return;
+    if (!currentPlayerId || !isGameActive || isTutorialPaused) return;
     turnTimerRef.current = setInterval(() => {
       setTurnTimeLeft(prev => (prev > 0 ? prev - 1 : 0));
     }, 1000);
     return () => { if (turnTimerRef.current) clearInterval(turnTimerRef.current); };
-  }, [currentPlayerId, isGameActive]);
+  }, [currentPlayerId, isGameActive, isTutorialPaused]);
 
   const turnTimerPercent = Math.max(0, (turnTimeLeft / 30) * 100);
   
@@ -950,6 +951,7 @@ function GamePageContentComponent({
   // Защита от повторных вызовов AI (race condition protection)
   const aiProcessingRef = useRef<string | null>(null);
   const aiLastProcessingTimeRef = useRef<number | null>(null);
+  const botStallGuardRef = useRef<{ key: string; since: number }>({ key: '', since: 0 });
   
   // Детектируем размер экрана и ориентацию для адаптивности
   const [screenInfo, setScreenInfo] = useState({
@@ -1171,6 +1173,12 @@ function GamePageContentComponent({
       console.log(`⏸️ [AI] Игра на паузе (сбор штрафа), AI ${currentPlayerId} ждёт...`);
       return;
     }
+
+    if (isTutorialPaused) {
+      aiProcessingRef.current = null;
+      aiLastProcessingTimeRef.current = null;
+      return;
+    }
     
     // ✅ КРИТИЧНО: НЕ ДАЕМ AI ХОДИТЬ ЕСЛИ ЕСТЬ ОЖИДАЮЩИЙ ШТРАФ
     if (pendingPenalty) {
@@ -1374,7 +1382,60 @@ function GamePageContentComponent({
       // Сбрасываем флаг при очистке useEffect
       aiProcessingRef.current = null;
     };
-  }, [isGameActive, currentPlayerId, gameStage, stage2TurnPhase, turnPhase, pendingPenalty]);
+  }, [isGameActive, currentPlayerId, gameStage, stage2TurnPhase, turnPhase, pendingPenalty, isGamePaused, isTutorialPaused]);
+
+  // Защита от зависания раунда, когда бот "застревает" в фазе хода.
+  useEffect(() => {
+    if (!isGameActive || !currentPlayerId || (gameStage !== 2 && gameStage !== 3)) {
+      botStallGuardRef.current = { key: '', since: 0 };
+      return;
+    }
+
+    if (isTutorialPaused || isGamePaused || pendingPenalty) {
+      botStallGuardRef.current = { key: '', since: 0 };
+      return;
+    }
+
+    const currentTurnPlayer = players.find(p => p.id === currentPlayerId);
+    if (!currentTurnPlayer?.isBot) {
+      botStallGuardRef.current = { key: '', since: 0 };
+      return;
+    }
+
+    const stallKey = `${currentPlayerId}:${stage2TurnPhase}:${tableStack.length}`;
+    const now = Date.now();
+
+    if (botStallGuardRef.current.key !== stallKey) {
+      botStallGuardRef.current = { key: stallKey, since: now };
+      return;
+    }
+
+    const stalledFor = now - botStallGuardRef.current.since;
+    if (stalledFor < 7000) return;
+
+    console.warn(`⚠️ [BotStallGuard] Обнаружено зависание у ${currentTurnPlayer.name} (${stage2TurnPhase}), восстановление...`);
+    const state = useGameStore.getState();
+
+    if (state.currentPlayerId !== currentPlayerId || !state.isGameActive) {
+      botStallGuardRef.current = { key: '', since: 0 };
+      return;
+    }
+
+    if (state.stage2TurnPhase === 'card_selected') {
+      useGameStore.setState({ stage2TurnPhase: 'selecting_card', selectedHandCard: null });
+      state.processPlayerTurn(currentPlayerId);
+    } else {
+      state.processPlayerTurn(currentPlayerId);
+      setTimeout(() => {
+        const fresh = useGameStore.getState();
+        if (fresh.currentPlayerId === currentPlayerId && (fresh.stage2TurnPhase === stage2TurnPhase)) {
+          fresh.nextTurn();
+        }
+      }, 1200);
+    }
+
+    botStallGuardRef.current = { key: '', since: 0 };
+  }, [isGameActive, currentPlayerId, gameStage, stage2TurnPhase, tableStack.length, players, isTutorialPaused, isGamePaused, pendingPenalty]);
   
   // ✅ УБРАН ЕБАНЫЙ БАГ: Больше НЕ СБРАСЫВАЕМ игру для single player!
   // Этот useEffect УБИВАЛ только что созданную игру!
@@ -2788,56 +2849,7 @@ function GamePageContentComponent({
           </div>
       )}
 
-      {/* Зелёная анимированная стрелка от активного игрока к центру стола */}
-      {currentPlayerId && players.length > 0 && (() => {
-        const activeIdx = players.findIndex(p => p.id === currentPlayerId);
-        if (activeIdx < 0) return null;
-        const activePos = getPlayerPosition(activeIdx, players.length);
-        const centerX = 50;
-        const centerY = 45;
-        const dx = centerX - activePos.x;
-        const dy = centerY - activePos.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < 5) return null;
-        const normX = dx / dist;
-        const normY = dy / dist;
-        const startX = activePos.x + normX * 8;
-        const startY = activePos.y + normY * 8;
-        const endX = activePos.x + normX * (dist * 0.55);
-        const endY = activePos.y + normY * (dist * 0.55);
-        return (
-          <svg style={{
-            position: 'absolute', inset: 0, width: '100%', height: '100%',
-            zIndex: 150, pointerEvents: 'none', overflow: 'visible',
-          }}>
-            <defs>
-              <marker id="turn-arrow" markerWidth="10" markerHeight="8" refX="8" refY="4" orient="auto">
-                <path d="M0,0 L10,4 L0,8 L2,4 Z" fill="#22c55e" />
-              </marker>
-              <filter id="turn-glow">
-                <feGaussianBlur stdDeviation="3" result="b" />
-                <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
-              </filter>
-            </defs>
-            <line
-              x1={`${startX}%`} y1={`${startY}%`}
-              x2={`${endX}%`} y2={`${endY}%`}
-              stroke="rgba(34,197,94,0.2)" strokeWidth="10"
-              strokeLinecap="round"
-            />
-            <line
-              x1={`${startX}%`} y1={`${startY}%`}
-              x2={`${endX}%`} y2={`${endY}%`}
-              stroke="#22c55e" strokeWidth="3.5"
-              strokeLinecap="round" markerEnd="url(#turn-arrow)"
-              filter="url(#turn-glow)"
-              opacity="0.9"
-            >
-              <animate attributeName="opacity" values="0.6;1;0.6" dur="1.5s" repeatCount="indefinite" />
-            </line>
-          </svg>
-        );
-      })()}
+      {/* Убираем постоянную стрелку хода: визуально перегружала стол */}
 
       {/* ПАНЕЛЬ КНОПОК ДЕЙСТВИЙ - УБРАНА, КНОПКА ПЕРЕНЕСЕНА В РУКУ ИГРОКА */}
 
@@ -3441,7 +3453,7 @@ function GamePageContentComponent({
       />
 
       {/* ✅ ЖИВЫЕ АНИМИРОВАННЫЕ СТРЕЛКИ НА ИГРОВОМ ПОЛЕ (только в туториале) */}
-      {isTutorialActive && !isTutorialPaused && isUserTurn && players.length > 0 && (() => {
+      {showTutorialFieldHints && isTutorialActive && !isTutorialPaused && isUserTurn && players.length > 0 && (() => {
         const userIndex = players.findIndex(p => p.isUser);
         if (userIndex < 0) return null;
         const userPos = getPlayerPosition(userIndex, players.length);
@@ -3593,7 +3605,7 @@ function GamePageContentComponent({
       })()}
 
       {/* Подсказка хода бота — ОБЪЯСНЕНИЕ почему бот кладёт карту */}
-      {isTutorialActive && !isTutorialPaused && !isUserTurn && currentPlayerId && players.length > 0 && (() => {
+      {showTutorialFieldHints && isTutorialActive && !isTutorialPaused && !isUserTurn && currentPlayerId && players.length > 0 && (() => {
         const activePlayer = players.find(p => p.id === currentPlayerId);
         if (!activePlayer || activePlayer.isUser) return null;
         // Находим позицию бота

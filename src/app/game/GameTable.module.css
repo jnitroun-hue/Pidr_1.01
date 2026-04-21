@@ -1136,6 +1136,24 @@
   z-index: 100;
 }
 
+@media (min-width: 769px) {
+  .playerHand {
+    bottom: 10px;
+    max-width: min(62vw, 760px);
+    padding: 4px 10px;
+  }
+
+  .handCards {
+    min-height: 88px;
+    padding: 8px 0;
+  }
+
+  .handCard {
+    width: 48px;
+    height: 72px;
+  }
+}
+
 .playerHand::before {
   content: '';
   position: absolute;

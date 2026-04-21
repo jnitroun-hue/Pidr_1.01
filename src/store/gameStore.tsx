@@ -782,7 +782,11 @@ export const useGameStore = create<GameState>()(
       
       nextTurn: () => {
         try {
-          const { players, currentPlayerId, gameStage } = get()
+          const { players, currentPlayerId, gameStage, isGamePaused } = get()
+          if (isGamePaused) {
+            console.log(`⏸️ [nextTurn] Игра на паузе (штраф/модалка), передача хода отложена`);
+            return;
+          }
           
           if (!players || players.length === 0) {
             console.error(`🔄 [nextTurn] ❌ Нет игроков для передачи хода`);
@@ -1631,10 +1635,15 @@ export const useGameStore = create<GameState>()(
       
       // Обработка хода игрока (НОВАЯ логика)
       processPlayerTurn: (playerId: string) => {
-        const { gameStage, players, skipHandAnalysis, deck, stage2TurnPhase, currentPlayerId } = get();
+        const { gameStage, players, skipHandAnalysis, deck, stage2TurnPhase, currentPlayerId, isGamePaused } = get();
         const currentPlayer = players.find(p => p.id === playerId);
         
         console.log(`🔍 [processPlayerTurn] ВЫЗВАН! playerId: ${playerId}, gameStage: ${gameStage}`);
+
+        if (isGamePaused) {
+          console.log(`⏸️ [processPlayerTurn] Игра на паузе, обработка хода остановлена`);
+          return;
+        }
         
         if (!currentPlayer) {
           console.error(`❌ [processPlayerTurn] Игрок ${playerId} не найден!`);
@@ -1806,16 +1815,21 @@ export const useGameStore = create<GameState>()(
           canPlaceOnSelfByRules = get().canPlaceCardOnSelf(newRevealedCard, topCard);
         }
         
-        // АВТОМАТИЧЕСКИ кладем на себя если можно по правилам И НЕТ ходов на соперников
+        // Для человека НЕ делаем автодействие: игрок должен сам выбрать кнопку действия.
+        // Ботам оставляем автоматический ход для непрерывной симуляции.
         if (!canMoveToOpponents && canPlaceOnSelfByRules) {
           set({
             turnPhase: 'waiting_deck_action',
             canPlaceOnSelfByRules: true,
             availableTargets: []
           });
-          setTimeout(() => {
-            get().placeCardOnSelfByRules();
-          }, currentPlayer.isBot ? 1200 : 800);
+          if (currentPlayer.isBot) {
+            setTimeout(() => {
+              get().placeCardOnSelfByRules();
+            }, 1200);
+          } else {
+            get().showNotification('Выберите действие: положить на себя или пропустить ход', 'info', 2500);
+          }
           return;
         }
         
@@ -2211,7 +2225,11 @@ export const useGameStore = create<GameState>()(
          
          // Розыгрыш выбранной карты (ПРАВИЛА P.I.D.R.)
         playSelectedCard: () => {
-          const { selectedHandCard, currentPlayerId, players, tableStack, roundInProgress, stage2TurnPhase, trumpSuit, roundFinisher, finisherPassed, multiplayerData } = get();
+          const { selectedHandCard, currentPlayerId, players, tableStack, roundInProgress, stage2TurnPhase, trumpSuit, roundFinisher, finisherPassed, multiplayerData, isGamePaused } = get();
+          if (isGamePaused) {
+            console.log('⏸️ [playSelectedCard] Игра на паузе, розыгрыш карты заблокирован');
+            return;
+          }
           if (!selectedHandCard || !currentPlayerId) return;
           
           const currentPlayer = players.find(p => p.id === currentPlayerId);
@@ -2448,7 +2466,12 @@ export const useGameStore = create<GameState>()(
          // Взять НИЖНЮЮ карту со стола (ПРАВИЛА P.I.D.R.)
          takeTableCards: () => {
           console.log('🎴 [takeTableCards] ВЫЗВАНА ФУНКЦИЯ!');
-           const { currentPlayerId, players, tableStack, roundFinisher, currentRoundInitiator, multiplayerData } = get();
+           const { currentPlayerId, players, tableStack, roundFinisher, currentRoundInitiator, multiplayerData, isGamePaused } = get();
+
+          if (isGamePaused) {
+            console.log('⏸️ [takeTableCards] Игра на паузе, взятие карты со стола заблокировано');
+            return;
+          }
           
           console.log(`🎴 [takeTableCards] currentPlayerId=${currentPlayerId}, tableStack.length=${tableStack.length}`);
           
