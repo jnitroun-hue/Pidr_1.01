@@ -16,6 +16,7 @@ export default function LanguageSwitcher({
   className = '' 
 }: LanguageSwitcherProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   const languages = useMemo(() => ([
@@ -45,6 +46,13 @@ export default function LanguageSwitcher({
       };
 
   useEffect(() => {
+    const updateMobileState = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    updateMobileState();
+    window.addEventListener('resize', updateMobileState);
+
     const handleClickOutside = (event: MouseEvent) => {
       if (!containerRef.current?.contains(event.target as Node)) {
         setIsOpen(false);
@@ -52,7 +60,10 @@ export default function LanguageSwitcher({
     };
 
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('resize', updateMobileState);
+    };
   }, []);
 
   const applyPageLanguage = (language: Language) => {
@@ -89,13 +100,13 @@ export default function LanguageSwitcher({
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '10px',
-          minWidth: '190px',
-          borderRadius: '14px',
+          gap: isMobile ? '8px' : '10px',
+          minWidth: isMobile ? '150px' : '190px',
+          borderRadius: isMobile ? '12px' : '14px',
           border: '1px solid rgba(129, 140, 248, 0.45)',
           background: 'rgba(2, 6, 23, 0.9)',
           color: '#f8fafc',
-          padding: '10px 12px',
+          padding: isMobile ? '8px 10px' : '10px 12px',
           backdropFilter: 'blur(10px)',
           boxShadow: '0 10px 24px rgba(2, 6, 23, 0.45)',
           cursor: 'pointer'
@@ -104,23 +115,23 @@ export default function LanguageSwitcher({
         aria-expanded={isOpen}
       >
         <div style={{
-          width: '34px',
-          height: '34px',
-          borderRadius: '10px',
+          width: isMobile ? '28px' : '34px',
+          height: isMobile ? '28px' : '34px',
+          borderRadius: isMobile ? '8px' : '10px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           background: 'linear-gradient(135deg, rgba(99,102,241,0.35), rgba(34,211,238,0.2))',
           color: '#bae6fd'
         }}>
-          <Globe2 size={17} />
+          <Globe2 size={isMobile ? 15 : 17} />
         </div>
         <div style={{ minWidth: 0, textAlign: 'left', lineHeight: 1.2 }}>
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
-            fontSize: '14px',
+            gap: isMobile ? '6px' : '8px',
+            fontSize: isMobile ? '13px' : '14px',
             fontWeight: 600
           }}>
             <span>{currentLang.flag}</span>
@@ -132,7 +143,7 @@ export default function LanguageSwitcher({
           </div>
           <div style={{
             marginTop: '2px',
-            fontSize: '10px',
+            fontSize: isMobile ? '9px' : '10px',
             letterSpacing: '0.14em',
             textTransform: 'uppercase',
             color: '#94a3b8'
@@ -156,8 +167,8 @@ export default function LanguageSwitcher({
           left: 0,
           top: 'calc(100% + 10px)',
           zIndex: 1200,
-          width: '280px',
-          borderRadius: '14px',
+          width: isMobile ? '240px' : '280px',
+          borderRadius: isMobile ? '12px' : '14px',
           overflow: 'hidden',
           border: '1px solid rgba(51, 65, 85, 0.9)',
           background: 'rgba(2, 6, 23, 0.96)',
