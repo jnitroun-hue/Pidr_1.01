@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FaWallet, FaCheckCircle, FaTimes, FaExternalLinkAlt } from 'react-icons/fa';
 import styles from './TonWalletConnect.module.css';
 import ManualWalletInput from './ManualWalletInput';
+import { getApiHeaders } from '@/lib/api-headers';
 
 interface TonWalletConnectProps {
   onConnect?: (address: string) => void;
@@ -36,7 +37,8 @@ export default function TonWalletConnect({ onConnect, onDisconnect }: TonWalletC
     try {
       const response = await fetch('/api/nft/connect-wallet', {
         method: 'GET',
-        credentials: 'include'
+        credentials: 'include',
+        headers: getApiHeaders()
       });
 
       if (response.ok) {
@@ -63,7 +65,8 @@ export default function TonWalletConnect({ onConnect, onDisconnect }: TonWalletC
       const response = await fetch('/api/nft/connect-wallet', {
         method: 'POST',
         headers: { 
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...getApiHeaders()
         },
         credentials: 'include',
         body: JSON.stringify({

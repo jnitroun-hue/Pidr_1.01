@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '../../../lib/supabase';
+import { supabaseAdmin } from '../../../lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '../../../lib/auth-utils';
 
 // ✅ Явная конфигурация runtime для Next.js 15
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 // POST /api/bonus - Получить бонус
 export async function POST(req: NextRequest) {
@@ -62,7 +63,7 @@ export async function POST(req: NextRequest) {
         const todayKey = `${userId}_${todayStart.getTime()}`; // Уникальный ключ на день
         
         // ✅ ОПТИМИЗАЦИЯ ДЛЯ БЕСПЛАТНОГО ПЛАНА: Один запрос вместо двух
-        const { data: dailyBonuses, error: dailyError } = await supabase
+        const { data: dailyBonuses, error: dailyError } = await supabaseAdmin
           .from('_pidr_coin_transactions')
           .select('id, created_at, amount, description')
           .eq('user_id', dbUserId)
@@ -125,7 +126,7 @@ export async function POST(req: NextRequest) {
       case 'telegram_subscribe':
         // ✅ БОНУС ЗА ПОДПИСКУ В TELEGRAM
         // Проверяем, получал ли пользователь уже этот бонус
-        const { data: telegramBonusCheck } = await supabase
+        const { data: telegramBonusCheck } = await supabaseAdmin
           .from('_pidr_coin_transactions')
           .select('id')
           .eq('user_id', dbUserId)
@@ -148,7 +149,7 @@ export async function POST(req: NextRequest) {
       case 'vk_subscribe':
         // ✅ БОНУС ЗА ПОДПИСКУ В ВК
         // Проверяем, получал ли пользователь уже этот бонус
-        const { data: vkBonusCheck } = await supabase
+        const { data: vkBonusCheck } = await supabaseAdmin
           .from('_pidr_coin_transactions')
           .select('id')
           .eq('user_id', dbUserId)
@@ -181,7 +182,7 @@ export async function POST(req: NextRequest) {
     const newBalance = user.coins + bonusAmount;
     
     // 1. Обновляем баланс пользователя
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseAdmin
       .from('_pidr_users')
       .update({ 
         coins: newBalance,
@@ -199,7 +200,7 @@ export async function POST(req: NextRequest) {
     
     // 2. Записываем транзакцию для истории
     // ✅ ИСПРАВЛЕНО: Используем _pidr_coin_transactions и dbUserId (id из БД)
-    const { error: transactionError } = await supabase
+    const { error: transactionError } = await supabaseAdmin
       .from('_pidr_coin_transactions')
       .insert({
         user_id: dbUserId,
@@ -267,7 +268,7 @@ export async function GET(req: NextRequest) {
     
     // Получаем информацию о последних бонусах пользователя
     // ✅ ИСПРАВЛЕНО: Используем _pidr_coin_transactions и dbUserId
-    const { data: recentBonuses } = await supabase
+    const { data: recentBonuses } = await supabaseAdmin
       .from('_pidr_coin_transactions')
       .select('transaction_type, created_at, description')
       .eq('user_id', dbUserId)
@@ -284,7 +285,7 @@ export async function GET(req: NextRequest) {
     );
     
     // Проверяем бонусы за подписки
-    const { data: telegramSubscribeCheck } = await supabase
+    const { data: telegramSubscribeCheck } = await supabaseAdmin
       .from('_pidr_coin_transactions')
       .select('id')
       .eq('user_id', dbUserId)
@@ -292,7 +293,7 @@ export async function GET(req: NextRequest) {
       .eq('description', 'Бонус за подписку в Telegram')
       .limit(1);
     
-    const { data: vkSubscribeCheck } = await supabase
+    const { data: vkSubscribeCheck } = await supabaseAdmin
       .from('_pidr_coin_transactions')
       .select('id')
       .eq('user_id', dbUserId)

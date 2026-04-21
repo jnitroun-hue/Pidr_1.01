@@ -25,6 +25,7 @@ import { SiVisa, SiMastercard } from 'react-icons/si';
 import { MasterWalletService } from '@/lib/wallets/master-wallet-service';
 import styles from './GameWallet.module.css';
 import ConnectedWalletsList from './ConnectedWalletsList';
+import WalletQuickConnect from './WalletQuickConnect';
 
 interface User {
   id: string;
@@ -294,9 +295,12 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
 
   const loadCryptoBalances = async () => {
     try {
+      const { getApiHeaders } = await import('@/lib/api-headers');
       const response = await fetch('/api/nft/connect-wallet', {
         method: 'GET',
-        credentials: 'include'
+        credentials: 'include',
+        cache: 'no-store',
+        headers: getApiHeaders() as Record<string, string>
       });
 
       if (!response.ok) {
@@ -1844,25 +1848,8 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
                           fontSize: '12px',
                           textAlign: 'center',
                         }}>
-                          <div style={{ marginBottom: '10px' }}>Сначала подключите один из ваших кошельков.</div>
-                          <button
-                            onClick={() => {
-                              window.location.href = '/nft-collection';
-                            }}
-                            style={{
-                              width: '100%',
-                              padding: '10px 12px',
-                              borderRadius: '10px',
-                              border: '1px solid rgba(59,130,246,0.55)',
-                              background: 'linear-gradient(135deg, rgba(59,130,246,0.2), rgba(14,165,233,0.12))',
-                              color: '#dbeafe',
-                              fontSize: '13px',
-                              fontWeight: 700,
-                              cursor: 'pointer'
-                            }}
-                          >
-                            Подключить кошелёк
-                          </button>
+                          <div style={{ marginBottom: '10px' }}>Сначала подключите один из ваших кошельков прямо здесь.</div>
+                          <WalletQuickConnect />
                         </div>
                       )}
 

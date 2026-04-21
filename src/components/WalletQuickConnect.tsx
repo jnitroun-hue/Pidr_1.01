@@ -7,6 +7,7 @@ import { useTonAddress, useTonConnectUI } from '@tonconnect/ui-react';
 import { useWalletStore } from '@/store/walletStore';
 import { solanaConnector } from '@/lib/wallets/solana-connector';
 import { ethereumConnector } from '@/lib/wallets/ethereum-connector';
+import { getApiHeaders } from '@/lib/api-headers';
 
 type WalletType = 'ton' | 'sol' | 'eth';
 
@@ -73,6 +74,7 @@ export default function WalletQuickConnect() {
       credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
+        ...getApiHeaders(),
       },
       body: JSON.stringify({
         wallet_address: address,

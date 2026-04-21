@@ -4,6 +4,7 @@ import { supabaseAdmin } from '../../../../lib/supabase';
 // ✅ Явная конфигурация runtime для Next.js 15
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 // GET /api/stats/online - Статистика онлайн игроков
 export async function GET(req: NextRequest) {

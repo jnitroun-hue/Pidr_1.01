@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useTelegram } from '../hooks/useTelegram';
+import { getApiHeaders } from '@/lib/api-headers';
 
 /**
  * Компонент для автоматического обновления онлайн статуса
@@ -25,7 +26,12 @@ export default function OnlineHeartbeat() {
       }
       
       try {
-        const resp = await fetch('/api/auth', { method: 'GET', credentials: 'include' });
+        const resp = await fetch('/api/auth', {
+          method: 'GET',
+          credentials: 'include',
+          cache: 'no-store',
+          headers: getApiHeaders()
+        });
         if (resp.ok) {
           const data = await resp.json();
           if (data.user?.id) {
@@ -65,17 +71,20 @@ export default function OnlineHeartbeat() {
     if (!resolvedUserId) return;
 
     try {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      const baseHeaders = getApiHeaders();
+      const headers = new Headers(baseHeaders as HeadersInit);
+      headers.set('Content-Type', 'application/json');
       
       if (authSource === 'telegram') {
-        headers['x-telegram-id'] = resolvedUserId;
+        headers.set('x-telegram-id', resolvedUserId);
       } else {
-        headers['x-auth-source'] = 'web';
+        headers.set('x-auth-source', 'web');
       }
       
       await fetch('/api/user/heartbeat', {
         method: 'POST',
         credentials: 'include',
+        cache: 'no-store',
         headers,
       });
     } catch (error) {

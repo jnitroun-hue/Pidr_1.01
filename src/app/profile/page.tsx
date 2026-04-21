@@ -567,10 +567,12 @@ export default function ProfilePage() {
       } else {
         window.open(bonus.link, '_blank');
       }
-      
-      // Показываем сообщение с инструкцией
-      alert(`📢 Подпишитесь на ${bonusId === 'telegram_subscribe' ? 'Telegram канал' : 'сообщество ВК'} и вернитесь сюда, чтобы получить бонус!\n\nПосле подписки нажмите кнопку "Получить бонус" еще раз.`);
-      return; // Выходим, пользователь должен подписаться
+
+      const shouldContinue = confirm(
+        `Открыл ссылку на ${bonusId === 'telegram_subscribe' ? 'Telegram канал' : 'сообщество ВК'}.\n\n` +
+        'Если подписка уже выполнена, нажмите OK для начисления бонуса сейчас.'
+      );
+      if (!shouldContinue) return;
     }
     
     try {
@@ -581,6 +583,7 @@ export default function ProfilePage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...getApiHeaders(),
         },
         credentials: 'include', // Включаем cookies (КРИТИЧНО для HttpOnly cookies)
         body: JSON.stringify({
@@ -2008,7 +2011,7 @@ export default function ProfilePage() {
                         >
                           {bonus.id === 'daily' ? '🎁 ПОЛУЧИТЬ' : 
                            bonus.id === 'referral' ? '👥 ПРИГЛАСИТЬ' :
-                           (bonus.id === 'telegram_subscribe' || bonus.id === 'vk_subscribe') ? '📢 ПОДПИСАТЬСЯ' :
+                           (bonus.id === 'telegram_subscribe' || bonus.id === 'vk_subscribe') ? '🎁 ПОЛУЧИТЬ' :
                            '🏆 ПОЛУЧИТЬ'}
                         </button>
                       ) : (

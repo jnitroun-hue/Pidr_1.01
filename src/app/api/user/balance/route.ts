@@ -1,6 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, supabaseAdmin } from '../../../../lib/supabase';
+import { supabaseAdmin } from '../../../../lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '../../../../lib/auth-utils';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+function noStoreJson(body: any, init?: ResponseInit) {
+  const response = NextResponse.json(body, init);
+  response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate');
+  response.headers.set('Pragma', 'no-cache');
+  response.headers.set('Expires', '0');
+  return response;
+}
 
 // GET /api/user/balance - Получить текущий баланс пользователя (универсально для всех платформ)
 export async function GET(req: NextRequest) {
@@ -10,7 +22,7 @@ export async function GET(req: NextRequest) {
   
   if (auth.error || !auth.userId) {
     console.error('❌ [GET /api/user/balance] Ошибка авторизации:', auth.error);
-    return NextResponse.json({ success: false, message: auth.error || 'Требуется авторизация' }, { status: 401 });
+    return noStoreJson({ success: false, message: auth.error || 'Требуется авторизация' }, { status: 401 });
   }
   
   const { userId, environment } = auth;
@@ -22,7 +34,7 @@ export async function GET(req: NextRequest) {
     
     if (!dbUserId || !dbUser) {
       console.error('❌ [GET /api/user/balance] Пользователь не найден');
-      return NextResponse.json({ 
+      return noStoreJson({ 
         success: false, 
         message: 'Пользователь не найден' 
       }, { status: 404 });
@@ -34,14 +46,14 @@ export async function GET(req: NextRequest) {
     
     // Получаем последние транзакции для истории
     // ✅ ИСПРАВЛЕНО: Используем _pidr_coin_transactions и dbUserId
-    const { data: recentTransactions } = await supabase
+    const { data: recentTransactions } = await supabaseAdmin
       .from('_pidr_coin_transactions')
       .select('id, transaction_type, amount, description, created_at')
       .eq('user_id', dbUserId)
       .order('created_at', { ascending: false })
       .limit(10);
     
-    return NextResponse.json({ 
+    return noStoreJson({ 
       success: true, 
       data: {
         balance: user.coins,
@@ -59,7 +71,7 @@ export async function GET(req: NextRequest) {
     
   } catch (error: any) {
     console.error('❌ Ошибка получения баланса:', error);
-    return NextResponse.json({ 
+    return noStoreJson({ 
       success: false, 
       message: `Ошибка получения баланса: ${error?.message || 'Неизвестная ошибка'}` 
     }, { status: 500 });
@@ -74,7 +86,7 @@ export async function POST(req: NextRequest) {
   
   if (auth.error || !auth.userId) {
     console.error('❌ [POST /api/user/balance] Ошибка авторизации:', auth.error);
-    return NextResponse.json({ success: false, message: auth.error || 'Требуется авторизация' }, { status: 401 });
+    return noStoreJson({ success: false, message: auth.error || 'Требуется авторизация' }, { status: 401 });
   }
   
   const { userId, environment } = auth;
@@ -84,14 +96,14 @@ export async function POST(req: NextRequest) {
     const { amount, type, description } = await req.json();
     
     if (typeof amount !== 'number' || amount === 0) {
-      return NextResponse.json({ 
+      return noStoreJson({ 
         success: false, 
         message: 'Некорректная сумма' 
       }, { status: 400 });
     }
     
     if (!type || !description) {
-      return NextResponse.json({ 
+      return noStoreJson({ 
         success: false, 
         message: 'Не указан тип операции или описание' 
       }, { status: 400 });
@@ -104,7 +116,7 @@ export async function POST(req: NextRequest) {
     
     if (!dbUserId || !dbUser) {
       console.error('❌ [POST /api/user/balance] Пользователь не найден');
-      return NextResponse.json({ 
+      return noStoreJson({ 
         success: false, 
         message: 'Пользователь не найден' 
       }, { status: 404 });
@@ -117,7 +129,7 @@ export async function POST(req: NextRequest) {
     
     // Проверяем, что баланс не уходит в минус
     if (newBalance < 0) {
-      return NextResponse.json({ 
+      return noStoreJson({ 
         success: false, 
         message: 'Недостаточно средств' 
       }, { status: 400 });
@@ -137,7 +149,7 @@ export async function POST(req: NextRequest) {
       
     if (updateError) {
       console.error('❌ Ошибка обновления баланса:', updateError);
-      return NextResponse.json({ 
+      return noStoreJson({ 
         success: false, 
         message: 'Ошибка обновления баланса' 
       }, { status: 500 });
@@ -145,7 +157,7 @@ export async function POST(req: NextRequest) {
     
     // Записываем транзакцию
     // ✅ ИСПРАВЛЕНО: Используем _pidr_coin_transactions
-    const { error: transactionError } = await supabase
+    const { error: transactionError } = await supabaseAdmin
       .from('_pidr_coin_transactions')
       .insert({
         user_id: dbUserId,
@@ -164,7 +176,7 @@ export async function POST(req: NextRequest) {
     
     console.log(`✅ Баланс успешно обновлен для ${user.username}`);
     
-    return NextResponse.json({ 
+    return noStoreJson({ 
       success: true, 
       message: `${amount > 0 ? 'Начислено' : 'Списано'} ${Math.abs(amount)} монет`,
       data: {
@@ -178,7 +190,7 @@ export async function POST(req: NextRequest) {
     
   } catch (error: any) {
     console.error('❌ Критическая ошибка обновления баланса:', error);
-    return NextResponse.json({ 
+    return noStoreJson({ 
       success: false, 
       message: `Внутренняя ошибка сервера: ${error?.message || 'Неизвестная ошибка'}` 
     }, { status: 500 });
