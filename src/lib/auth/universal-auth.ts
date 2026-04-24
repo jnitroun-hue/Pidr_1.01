@@ -47,7 +47,7 @@ export async function authenticateUser(params: {
   authProvider: AuthProvider;
   providerUserId: string;
   providerEmail?: string;
-  providerData?: Record<string, any>;
+  providerData?: Record<string, unknown>;
   username?: string;
   avatarUrl?: string;
   supabaseAuthId?: string;
@@ -81,13 +81,16 @@ export async function authenticateUser(params: {
     const isNewUser = result.is_new_user;
 
     // Создаем сессию
+    const providerData = params.providerData || {};
     const sessionToken = await createSession({
       userId,
       authMethod: params.authProvider,
-      userAgent: params.providerData?.userAgent,
-      ipAddress: params.providerData?.ipAddress,
-      deviceInfo: params.providerData?.deviceInfo,
-      telegramInitData: params.providerData?.telegramInitData,
+      userAgent: typeof providerData.userAgent === 'string' ? providerData.userAgent : undefined,
+      ipAddress: typeof providerData.ipAddress === 'string' ? providerData.ipAddress : undefined,
+      deviceInfo: typeof providerData.deviceInfo === 'object' && providerData.deviceInfo !== null
+        ? (providerData.deviceInfo as Record<string, unknown>)
+        : undefined,
+      telegramInitData: typeof providerData.telegramInitData === 'string' ? providerData.telegramInitData : undefined,
     });
 
     console.log(`✅ Пользователь ${isNewUser ? 'создан' : 'авторизован'}: ${userId} через ${params.authProvider}`);
@@ -98,9 +101,9 @@ export async function authenticateUser(params: {
       sessionToken,
       isNewUser,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ Критическая ошибка аутентификации:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
 
@@ -112,7 +115,7 @@ export async function createSession(params: {
   authMethod: AuthProvider;
   userAgent?: string;
   ipAddress?: string;
-  deviceInfo?: Record<string, any>;
+  deviceInfo?: Record<string, unknown>;
   telegramInitData?: string;
   expiresInSeconds?: number;
 }): Promise<string> {
@@ -182,7 +185,7 @@ export async function linkAuthMethod(params: {
   authProvider: AuthProvider;
   providerUserId: string;
   providerEmail?: string;
-  providerData?: Record<string, any>;
+  providerData?: Record<string, unknown>;
 }): Promise<{ success: boolean; authMethodId?: number; error?: string }> {
   try {
     if (!supabase) {
@@ -204,9 +207,9 @@ export async function linkAuthMethod(params: {
 
     console.log('✅ Метод авторизации связан:', data);
     return { success: true, authMethodId: data };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ Критическая ошибка связывания:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
 
@@ -227,7 +230,17 @@ export async function getUserAuthMethods(userId: number): Promise<UserAuthMethod
     return [];
   }
 
-  return data.map((method: any) => ({
+  return data.map((method: {
+    auth_method_id: number;
+    auth_provider: AuthProvider;
+    provider_user_id: string;
+    provider_email?: string;
+    is_primary: boolean;
+    is_verified: boolean;
+    first_login_at: string;
+    last_login_at: string;
+    login_count: number;
+  }) => ({
     authMethodId: method.auth_method_id,
     authProvider: method.auth_provider,
     providerUserId: method.provider_user_id,
@@ -320,9 +333,9 @@ export async function authenticateTelegramWebApp(initData: string): Promise<Auth
         languageCode: userData.language_code,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ Ошибка Telegram Web App auth:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
 
@@ -350,9 +363,9 @@ export async function authenticateGoogle(googleToken: string): Promise<AuthResul
         locale: googleData.locale,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ Ошибка Google auth:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
 
@@ -383,9 +396,9 @@ export async function authenticateVK(vkAccessToken: string): Promise<AuthResult>
         lastName: user.last_name,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ Ошибка VK auth:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
 

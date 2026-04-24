@@ -1,158 +1,137 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '../../../lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
+import { getUserIdFromDatabase, requireAuth } from '@/lib/auth-utils';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function GET(request: NextRequest) {
   try {
+    const auth = requireAuth(request);
+    if (auth.error || !auth.userId) {
+      return NextResponse.json({ success: false, error: auth.error || 'Unauthorized' }, { status: 401 });
+    }
+
+    const { dbUserId } = await getUserIdFromDatabase(auth.userId, auth.environment);
+    if (!dbUserId) {
+      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
+    }
+
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
-    
-    // Получить токен авторизации
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    
-    const token = authHeader.substring(7);
-    // TODO: Проверить токен и получить user_id
-    const userId = 'mock-user-id'; // Заменить на реальную проверку токена
-    
+
     if (action === 'get_code') {
-      // Получить реферальный код пользователя
-      const { data, error } = await supabase
-        .from('users')
+      const { data, error } = await supabaseAdmin
+        .from('_pidr_users')
         .select('referral_code')
-        .eq('id', userId)
-        .single();
-      
+        .eq('id', dbUserId)
+        .maybeSingle();
+
       if (error) {
-        console.error('Error fetching referral code:', error);
-        return NextResponse.json({ error: 'Failed to fetch referral code' }, { status: 500 });
+        return NextResponse.json({ success: false, error: 'Failed to fetch referral code' }, { status: 500 });
       }
-      
-      return NextResponse.json({ 
-        referralCode: data?.referral_code || '',
-        success: true 
-      });
+
+      return NextResponse.json({ success: true, referralCode: data?.referral_code || '' });
     }
-    
+
     if (action === 'stats') {
-      // Получить статистику рефералов
-      const { data: referrals, error } = await supabase
-        .from('referrals')
-        .select(`
-          *,
-          referred:referred_id(username, display_name, created_at)
-        `)
-        .eq('referrer_id', userId)
-        .eq('is_rewarded', true);
-      
-      if (error) {
-        console.error('Error fetching referral stats:', error);
-        return NextResponse.json({ error: 'Failed to fetch referral stats' }, { status: 500 });
-      }
-      
-      const totalReferred = referrals?.length || 0;
-      const totalCoinsEarned = referrals?.reduce((sum: number, ref: any) => sum + (ref.reward_coins || 0), 0) || 0;
-      
-      return NextResponse.json({ 
-        totalReferred,
-        totalCoinsEarned,
-        referrals: referrals || [],
-        success: true 
+      const { data, error } = await supabaseAdmin.rpc('get_referral_stats', {
+        p_user_id: dbUserId,
       });
+
+      if (error) {
+        return NextResponse.json({ success: false, error: 'Failed to fetch referral stats' }, { status: 500 });
+      }
+
+      return NextResponse.json({ success: true, stats: data });
     }
-    
-    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
-    
-  } catch (error: unknown) {
+
+    return NextResponse.json({ success: false, error: 'Invalid action' }, { status: 400 });
+  } catch (error) {
     console.error('Referral API error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = requireAuth(request);
+    if (auth.error || !auth.userId) {
+      return NextResponse.json({ success: false, error: auth.error || 'Unauthorized' }, { status: 401 });
+    }
+
+    const { dbUserId } = await getUserIdFromDatabase(auth.userId, auth.environment);
+    if (!dbUserId) {
+      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
+    }
+
     const body = await request.json();
-    const { action, referralCode } = body;
-    
-    // Получить токен авторизации
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const action = String(body.action || '');
+    const referralCode = String(body.referralCode || '');
+
+    if (action === 'use_referral') {
+      if (!referralCode) {
+        return NextResponse.json({ success: false, error: 'Referral code is required' }, { status: 400 });
+      }
+
+      const { data, error } = await supabaseAdmin.rpc('process_referral', {
+        p_referred_id: dbUserId,
+        p_referral_code: referralCode,
+      });
+
+      if (error) {
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      }
+
+      if (!data?.success) {
+        return NextResponse.json({ success: false, error: data?.error || 'Referral apply failed' }, { status: 400 });
+      }
+
+      return NextResponse.json({ success: true, data });
     }
-    
-    const token = authHeader.substring(7);
-    // TODO: Проверить токен и получить user_id
-    const userId = 'mock-user-id'; // Заменить на реальную проверку токена
-    
+
     if (action === 'create_referral_link') {
-      // Создать реферальную связь при регистрации
-      const { referrerId } = body;
-      
-      if (!referralCode || !referrerId) {
-        return NextResponse.json({ 
-          error: 'Referral code and referrer ID are required',
-          success: false 
-        }, { status: 400 });
+      const referrerId = Number(body.referrerId);
+      if (!referralCode || Number.isNaN(referrerId)) {
+        return NextResponse.json(
+          { success: false, error: 'Referral code and valid referrer ID are required' },
+          { status: 400 }
+        );
       }
-      
-      // Используем новую функцию для создания реферальной связи
-      const { data, error } = await supabase
-        .rpc('create_referral_link', {
-          p_referrer_id: referrerId,
-          p_referred_id: userId,
-          p_referral_code: referralCode
-        });
-      
-      if (error) {
-        console.error('❌ Ошибка создания реферальной связи:', error);
-        return NextResponse.json({ 
-          error: 'Ошибка создания реферальной связи',
-          success: false 
-        }, { status: 500 });
-      }
-      
-      const result = data as any;
-      
-      if (!result.success) {
-        return NextResponse.json({ 
-          error: result.error,
-          success: false 
-        }, { status: 400 });
-      }
-      
-      return NextResponse.json({ 
-        message: 'Реферальная связь создана! Бонус будет начислен рефереру когда вы получите первый ежедневный бонус.',
-        success: true,
-        referralId: result.referral_id
+
+      const { data, error } = await supabaseAdmin.rpc('create_referral_link', {
+        p_referrer_id: referrerId,
+        p_referred_id: dbUserId,
+        p_referral_code: referralCode,
       });
+
+      if (error) {
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      }
+
+      if (!data?.success) {
+        return NextResponse.json({ success: false, error: data?.error || 'Failed to create referral' }, { status: 400 });
+      }
+
+      return NextResponse.json({ success: true, referralId: data.referral_id });
     }
-    
+
     if (action === 'get_stats') {
-      // Получить статистику рефералов
-      const { data, error } = await supabase
-        .rpc('get_referral_stats', {
-          p_user_id: userId
-        });
-      
-      if (error) {
-        console.error('❌ Ошибка получения статистики рефералов:', error);
-        return NextResponse.json({ 
-          error: 'Ошибка получения статистики',
-          success: false 
-        }, { status: 500 });
-      }
-      
-      return NextResponse.json({ 
-        success: true,
-        stats: data
+      const { data, error } = await supabaseAdmin.rpc('get_referral_stats', {
+        p_user_id: dbUserId,
       });
+
+      if (error) {
+        return NextResponse.json({ success: false, error: 'Failed to fetch referral stats' }, { status: 500 });
+      }
+
+      return NextResponse.json({ success: true, stats: data });
     }
-    
-    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
-    
-  } catch (error: unknown) {
+
+    return NextResponse.json({ success: false, error: 'Invalid action' }, { status: 400 });
+  } catch (error) {
     console.error('Referral POST API error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   }
 }

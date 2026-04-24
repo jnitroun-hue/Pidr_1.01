@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
       // Обновляем существующего пользователя
       console.log('🔄 Обновляем существующего пользователя VK:', existingUser.username);
 
-      const updateData: any = {
+      const updateData: Record<string, string | number> = {
         last_login_at: new Date().toISOString(),
         login_count: (existingUser.login_count || 0) + 1,
         online_status: 'online',

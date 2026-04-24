@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { LogIn, Eye, EyeOff, Mail, Lock, User, Phone } from 'lucide-react';
+import { LogIn, Eye, EyeOff, Lock, User } from 'lucide-react';
 import { isVKMiniApp, loginWithVKMiniApp } from '@/lib/auth/vk-bridge';
+import { buildVkOAuthUrl, detectMiniAppContext } from '@/lib/auth/social-auth';
 import Link from 'next/link';
 
 export default function LoginPage() {
@@ -19,6 +20,7 @@ export default function LoginPage() {
     telegram: boolean;
     vk: boolean;
   }>({ telegram: false, vk: false });
+  const autoLoginTriedRef = useRef(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -41,19 +43,11 @@ export default function LoginPage() {
     };
     checkSession();
 
-    // Проверяем доступные методы авторизации
     const checkAvailableAuth = () => {
-      // Проверяем Telegram WebApp
-      const hasTelegram = typeof window !== 'undefined' && 
-        window.Telegram?.WebApp?.initDataUnsafe?.user !== undefined;
-      
-      // Проверяем VK Mini App
-      const hasVK = typeof window !== 'undefined' && 
-        (window as any).VK?.Bridge !== undefined;
-      
+      const context = detectMiniAppContext();
       setAvailableAuthMethods({
-        telegram: hasTelegram,
-        vk: hasVK
+        telegram: context.isTelegramMiniApp,
+        vk: context.isVKMiniApp,
       });
     };
 
@@ -172,6 +166,11 @@ export default function LoginPage() {
     }
   };
 
+  const handleTelegramWebLogin = () => {
+    const redirect = encodeURIComponent('/');
+    router.push(`/auth?redirect=${redirect}`);
+  };
+
   const handleVKLogin = async () => {
     if (!isVKMiniApp()) {
       setError('Доступно только в VK Mini App');
@@ -201,6 +200,29 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
+  const handleVKOAuthWebLogin = () => {
+    const redirectUri = `${window.location.origin}/auth/vk/callback`;
+    const oauthUrl = buildVkOAuthUrl(redirectUri);
+    if (!oauthUrl) {
+      setError('VK OAuth не настроен: отсутствует NEXT_PUBLIC_VK_CLIENT_ID');
+      return;
+    }
+    window.location.href = oauthUrl;
+  };
+
+  useEffect(() => {
+    if (autoLoginTriedRef.current || loading) return;
+    if (availableAuthMethods.telegram) {
+      autoLoginTriedRef.current = true;
+      void handleTelegramLogin();
+      return;
+    }
+    if (availableAuthMethods.vk && isVKMiniApp()) {
+      autoLoginTriedRef.current = true;
+      void handleVKLogin();
+    }
+  }, [availableAuthMethods.telegram, availableAuthMethods.vk, loading]);
 
   return (
     <div style={{
@@ -416,18 +438,60 @@ export default function LoginPage() {
 
           {/* Social Buttons */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {(availableAuthMethods.telegram || typeof window !== 'undefined' && window.Telegram?.WebApp) && (
-              <motion.button
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={availableAuthMethods.telegram ? handleTelegramLogin : handleTelegramWebLogin}
+              disabled={loading}
+              style={{
+                width: '100%',
+                background: availableAuthMethods.telegram
+                  ? 'rgba(0, 136, 204, 0.3)'
+                  : 'rgba(0, 136, 204, 0.2)',
+                border: `1px solid ${availableAuthMethods.telegram ? 'rgba(0, 136, 204, 0.6)' : 'rgba(0, 136, 204, 0.4)'}`,
+                borderRadius: '12px',
+                padding: '14px',
+                color: '#ffffff',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.5 : 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                position: 'relative'
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.161c-.18 1.897-.962 6.502-1.359 8.627-.168.9-.5 1.201-.82 1.23-.697.064-1.226-.461-1.901-.903-1.056-.692-1.653-1.123-2.678-1.799-1.185-.781-.417-1.21.258-1.911.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.139-5.062 3.345-.479.329-.913.489-1.302.481-.428-.009-1.252-.242-1.865-.442-.752-.244-1.349-.374-1.297-.789.027-.216.324-.437.893-.663 3.498-1.524 5.831-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635.099-.002.321.023.465.141.121.099.154.232.17.325.015.093.034.305.019.471z"/>
+              </svg>
+              {availableAuthMethods.telegram ? 'Telegram Mini App' : 'Telegram (Web)'}
+              <span style={{
+                position: 'absolute',
+                right: '12px',
+                background: 'rgba(34, 197, 94, 0.3)',
+                color: '#22c55e',
+                fontSize: '10px',
+                padding: '2px 6px',
+                borderRadius: '8px',
+                fontWeight: '700'
+              }}>
+                ✓ Доступно
+              </span>
+            </motion.button>
+
+            <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={handleTelegramLogin}
+                onClick={availableAuthMethods.vk ? handleVKLogin : handleVKOAuthWebLogin}
                 disabled={loading}
                 style={{
                   width: '100%',
-                  background: availableAuthMethods.telegram 
-                    ? 'rgba(0, 136, 204, 0.3)' 
-                    : 'rgba(0, 136, 204, 0.2)',
-                  border: `1px solid ${availableAuthMethods.telegram ? 'rgba(0, 136, 204, 0.6)' : 'rgba(0, 136, 204, 0.4)'}`,
+                  background: availableAuthMethods.vk
+                    ? 'rgba(74, 118, 168, 0.3)'
+                    : 'rgba(74, 118, 168, 0.2)',
+                  border: `1px solid ${availableAuthMethods.vk ? 'rgba(74, 118, 168, 0.6)' : 'rgba(74, 118, 168, 0.4)'}`,
                   borderRadius: '12px',
                   padding: '14px',
                   color: '#ffffff',
@@ -442,73 +506,21 @@ export default function LoginPage() {
                   position: 'relative'
                 }}
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.161c-.18 1.897-.962 6.502-1.359 8.627-.168.9-.5 1.201-.82 1.23-.697.064-1.226-.461-1.901-.903-1.056-.692-1.653-1.123-2.678-1.799-1.185-.781-.417-1.21.258-1.911.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.139-5.062 3.345-.479.329-.913.489-1.302.481-.428-.009-1.252-.242-1.865-.442-.752-.244-1.349-.374-1.297-.789.027-.216.324-.437.893-.663 3.498-1.524 5.831-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635.099-.002.321.023.465.141.121.099.154.232.17.325.015.093.034.305.019.471z"/>
-                </svg>
-                Telegram
-                {availableAuthMethods.telegram && (
-                  <span style={{
-                    position: 'absolute',
-                    right: '12px',
-                    background: 'rgba(34, 197, 94, 0.3)',
-                    color: '#22c55e',
-                    fontSize: '10px',
-                    padding: '2px 6px',
-                    borderRadius: '8px',
-                    fontWeight: '700'
-                  }}>
-                    ✓ Доступно
-                  </span>
-                )}
-              </motion.button>
-            )}
-
-            {(availableAuthMethods.vk || isVKMiniApp()) && (
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={handleVKLogin}
-                disabled={loading || !isVKMiniApp()}
-                style={{
-                  width: '100%',
-                  background: availableAuthMethods.vk && isVKMiniApp()
-                    ? 'rgba(74, 118, 168, 0.3)' 
-                    : isVKMiniApp() 
-                      ? 'rgba(74, 118, 168, 0.2)' 
-                      : 'rgba(74, 118, 168, 0.1)',
-                  border: `1px solid ${availableAuthMethods.vk && isVKMiniApp() ? 'rgba(74, 118, 168, 0.6)' : isVKMiniApp() ? 'rgba(74, 118, 168, 0.4)' : 'rgba(74, 118, 168, 0.2)'}`,
-                  borderRadius: '12px',
-                  padding: '14px',
-                  color: '#ffffff',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: loading || !isVKMiniApp() ? 'not-allowed' : 'pointer',
-                  opacity: loading || !isVKMiniApp() ? 0.3 : 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  position: 'relative'
-                }}
-              >
                 <span style={{ fontSize: '20px' }}>🔵</span>
-                VKontakte
-                {availableAuthMethods.vk && isVKMiniApp() && (
-                  <span style={{
-                    position: 'absolute',
-                    right: '12px',
-                    background: 'rgba(34, 197, 94, 0.3)',
-                    color: '#22c55e',
-                    fontSize: '10px',
-                    padding: '2px 6px',
-                    borderRadius: '8px',
-                    fontWeight: '700'
-                  }}>
-                    ✓ Доступно
-                  </span>
-                )}
+                {availableAuthMethods.vk ? 'VK Mini App' : 'VK (Web OAuth)'}
+                <span style={{
+                  position: 'absolute',
+                  right: '12px',
+                  background: 'rgba(34, 197, 94, 0.3)',
+                  color: '#22c55e',
+                  fontSize: '10px',
+                  padding: '2px 6px',
+                  borderRadius: '8px',
+                  fontWeight: '700'
+                }}>
+                  ✓ Доступно
+                </span>
               </motion.button>
-            )}
           </div>
 
           {/* Register Link */}

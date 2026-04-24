@@ -1,5 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+
+interface BonusTargetUser {
+  id: number;
+  coins: number | null;
+  telegram_id: string | null;
+  vk_id: string | null;
+}
+
+async function resolveUserByIdentifier(
+  supabase: SupabaseClient,
+  identifier: string
+): Promise<BonusTargetUser | null> {
+  const normalized = identifier.trim();
+  const numeric = Number(normalized);
+
+  if (!Number.isNaN(numeric)) {
+    const { data: byId } = await supabase
+      .from('_pidr_users')
+      .select('id, coins, telegram_id, vk_id')
+      .eq('id', numeric)
+      .maybeSingle();
+    if (byId) return byId;
+  }
+
+  const { data: byTelegram } = await supabase
+    .from('_pidr_users')
+    .select('id, coins, telegram_id, vk_id')
+    .eq('telegram_id', normalized)
+    .maybeSingle();
+  if (byTelegram) return byTelegram;
+
+  const { data: byVk } = await supabase
+    .from('_pidr_users')
+    .select('id, coins, telegram_id, vk_id')
+    .eq('vk_id', normalized)
+    .maybeSingle();
+  if (byVk) return byVk;
+
+  return null;
+}
 
 /**
  * POST /api/referral/bonus
@@ -13,16 +53,17 @@ export async function POST(request: NextRequest) {
     );
 
     const body = await request.json();
-    const { referrer_id, new_user_id } = body;
+    const referrerIdRaw = String(body.referrer_id || '');
+    const newUserIdRaw = String(body.new_user_id || '');
 
-    if (!referrer_id || !new_user_id) {
+    if (!referrerIdRaw || !newUserIdRaw) {
       return NextResponse.json(
         { success: false, error: 'Missing parameters' },
         { status: 400 }
       );
     }
 
-    console.log(`🎁 Начисление реферального бонуса: referrer=${referrer_id}, new_user=${new_user_id}`);
+    console.log(`🎁 Начисление реферального бонуса: referrer=${referrerIdRaw}, new_user=${newUserIdRaw}`);
 
     // ✅ БОНУСЫ:
     // - Пригласивший: +500 монет
@@ -32,11 +73,7 @@ export async function POST(request: NextRequest) {
     const NEW_USER_BONUS = 200;
 
     // Начисляем бонус пригласившему
-    const { data: referrerData } = await supabase
-      .from('_pidr_users')
-      .select('id, coins')
-      .eq('telegram_id', referrer_id)
-      .single();
+    const referrerData = await resolveUserByIdentifier(supabase, referrerIdRaw);
 
     if (referrerData) {
       const oldBalance = referrerData.coins || 0;
@@ -47,12 +84,12 @@ export async function POST(request: NextRequest) {
         .update({
           coins: newBalance
         })
-        .eq('telegram_id', referrer_id);
+        .eq('id', referrerData.id);
 
       if (referrerError) {
         console.error('❌ Ошибка начисления бонуса пригласившему:', referrerError);
       } else {
-        console.log(`✅ Пригласившему ${referrer_id} начислено +${REFERRER_BONUS} монет`);
+        console.log(`✅ Пригласившему ${referrerIdRaw} начислено +${REFERRER_BONUS} монет`);
         
         // ✅ ИСПРАВЛЕНО: Записываем транзакцию в _pidr_coin_transactions
         await supabase
@@ -70,11 +107,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Начисляем бонус новому пользователю
-    const { data: newUserData } = await supabase
-      .from('_pidr_users')
-      .select('id, coins')
-      .eq('telegram_id', new_user_id)
-      .single();
+    const newUserData = await resolveUserByIdentifier(supabase, newUserIdRaw);
 
     if (newUserData) {
       const oldBalance = newUserData.coins || 0;
@@ -85,12 +118,12 @@ export async function POST(request: NextRequest) {
         .update({
           coins: newBalance
         })
-        .eq('telegram_id', new_user_id);
+        .eq('id', newUserData.id);
 
       if (newUserError) {
         console.error('❌ Ошибка начисления бонуса новому пользователю:', newUserError);
       } else {
-        console.log(`✅ Новому пользователю ${new_user_id} начислено +${NEW_USER_BONUS} монет`);
+        console.log(`✅ Новому пользователю ${newUserIdRaw} начислено +${NEW_USER_BONUS} монет`);
         
         // ✅ ИСПРАВЛЕНО: Записываем транзакцию в _pidr_coin_transactions
         await supabase
@@ -108,15 +141,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Создаем запись о реферальном бонусе (для статистики)
-    await supabase
-      .from('_pidr_referral_bonuses')
-      .insert({
-        referrer_id: parseInt(referrer_id),
-        referred_user_id: parseInt(new_user_id),
-        referrer_bonus: REFERRER_BONUS,
-        referred_bonus: NEW_USER_BONUS,
-        created_at: new Date().toISOString()
-      });
+    if (referrerData && newUserData) {
+      await supabase
+        .from('_pidr_referral_bonuses')
+        .insert({
+          referrer_id: referrerData.id,
+          referred_user_id: newUserData.id,
+          referrer_bonus: REFERRER_BONUS,
+          referred_bonus: NEW_USER_BONUS,
+          created_at: new Date().toISOString()
+        });
+    }
 
     return NextResponse.json({
       success: true,
@@ -124,10 +159,10 @@ export async function POST(request: NextRequest) {
       new_user_bonus: NEW_USER_BONUS
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ Ошибка API /api/referral/bonus:', error);
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

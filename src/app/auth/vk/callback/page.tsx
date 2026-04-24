@@ -34,6 +34,7 @@ function VKCallbackContent() {
         const response = await fetch('/api/auth/vk', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({
             code,
             redirect_uri: `${window.location.origin}/auth/vk/callback`
@@ -52,7 +53,7 @@ function VKCallbackContent() {
           const pendingReferralCookie = cookies.find(c => c.trim().startsWith('pending_referral_code='));
           const pendingReferral = pendingReferralCookie ? pendingReferralCookie.split('=')[1] : null;
           if (pendingReferral) {
-            await handlePendingReferral(pendingReferral, data.token);
+            await handlePendingReferral(pendingReferral);
           }
 
           setTimeout(() => router.push('/'), 2000);
@@ -72,16 +73,15 @@ function VKCallbackContent() {
     handleVKCallback();
   }, [searchParams, router]);
 
-  const handlePendingReferral = async (code: string, token: string) => {
+  const handlePendingReferral = async (code: string) => {
     try {
-      const response = await fetch('/api/referral', {
+      const response = await fetch('/api/referral/apply', {
         method: 'POST',
+        credentials: 'include',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          action: 'use_referral',
           referralCode: code
         })
       });

@@ -3,11 +3,13 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import { getTelegramBotUsername } from '@/lib/auth/social-auth';
+import type { TelegramWebAppUser } from '@/types/telegram-webapp';
 
 // Декларация типов для Telegram Login Widget
 declare global {
   interface Window {
-    onTelegramAuth?: (user: any) => void;
+    onTelegramAuth?: (user: TelegramWebAppUser & { auth_date: number; hash: string }) => void;
   }
 }
 
@@ -35,7 +37,7 @@ export default function AuthPage() {
     const script = document.createElement('script');
     script.src = 'https://telegram.org/js/telegram-widget.js?22';
     script.async = true;
-    script.setAttribute('data-telegram-login', 'NotPdr_1_01_bot'); // TODO: Замените на ваш bot username
+    script.setAttribute('data-telegram-login', getTelegramBotUsername());
     script.setAttribute('data-size', 'large');
     script.setAttribute('data-radius', '12');
     script.setAttribute('data-request-access', 'write');
@@ -47,7 +49,7 @@ export default function AuthPage() {
     }
 
     // Обработчик успешной авторизации Telegram
-    window.onTelegramAuth = async (user: any) => {
+    window.onTelegramAuth = async (user: TelegramWebAppUser & { auth_date: number; hash: string }) => {
       console.log('✅ Telegram Auth Success:', user);
       setIsLoading(true);
 

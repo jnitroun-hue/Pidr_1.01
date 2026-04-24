@@ -4,8 +4,12 @@
  */
 
 declare global {
+  interface VKBridgeApi {
+    send(method: string, params?: Record<string, unknown>): Promise<unknown>;
+  }
+
   interface Window {
-    vkBridge?: any;
+    vkBridge?: VKBridgeApi;
   }
 }
 
@@ -119,7 +123,7 @@ export async function getVKUserInfo(): Promise<VKUserInfo | null> {
   }
 
   try {
-    const userInfo = await window.vkBridge.send('VKWebAppGetUserInfo');
+    const userInfo = await window.vkBridge.send('VKWebAppGetUserInfo') as VKUserInfo;
     console.log('✅ VK user info получен:', userInfo);
     return userInfo;
   } catch (error) {
@@ -146,7 +150,16 @@ export function isVKMiniApp(): boolean {
  */
 export async function loginWithVKMiniApp(): Promise<{
   success: boolean;
-  user?: any;
+  user?: {
+    id: number;
+    username: string;
+    first_name?: string;
+    last_name?: string;
+    vk_id?: string;
+    coins?: number;
+    rating?: number;
+    avatar_url?: string;
+  };
   token?: string;
   message?: string;
 }> {
