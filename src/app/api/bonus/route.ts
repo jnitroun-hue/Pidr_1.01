@@ -7,6 +7,13 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+interface BonusTransactionRow {
+  id: number;
+  created_at: string;
+  amount: number;
+  description: string | null;
+}
+
 // POST /api/bonus - Получить бонус
 export async function POST(req: NextRequest) {
   console.log('🎁 POST /api/bonus - Получение бонуса...');
@@ -78,7 +85,7 @@ export async function POST(req: NextRequest) {
         }
         
         // ✅ Проверяем по дате создания И по описанию в одном результате
-        const lastBonus = dailyBonuses?.find((bonus: any) => {
+        const lastBonus = (dailyBonuses as BonusTransactionRow[] | null)?.find((bonus) => {
           const bonusDate = new Date(bonus.created_at);
           const isToday = bonusDate.toDateString() === todayStart.toDateString();
           const hasTodayInDescription = bonus.description?.includes(todayStart.toDateString());
@@ -232,11 +239,12 @@ export async function POST(req: NextRequest) {
       }
     });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ Критическая ошибка API бонусов:', error);
+    const message = error instanceof Error ? error.message : 'Неизвестная ошибка';
     return NextResponse.json({ 
       success: false, 
-      message: `Внутренняя ошибка сервера: ${error?.message || 'Неизвестная ошибка'}` 
+      message: `Внутренняя ошибка сервера: ${message}` 
     }, { status: 500 });
   }
 }
@@ -279,7 +287,7 @@ export async function GET(req: NextRequest) {
     // Проверяем доступность бонусов
     const today = new Date().toDateString();
     // ✅ ИСПРАВЛЕНО: Проверяем по description вместо bonus_type
-    const dailyBonusToday = recentBonuses?.find((b: any) => 
+    const dailyBonusToday = (recentBonuses as BonusTransactionRow[] | null)?.find((b) => 
       b.description?.includes('Ежедневный бонус') && 
       new Date(b.created_at).toDateString() === today
     );
@@ -358,7 +366,7 @@ export async function GET(req: NextRequest) {
       bonuses: availableBonuses 
     });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ Ошибка получения бонусов:', error);
     return NextResponse.json({ 
       success: false, 

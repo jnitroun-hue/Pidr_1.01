@@ -79,11 +79,12 @@ export async function POST(req: NextRequest) {
       }
     });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ Ошибка обновления аватара:', error);
+    const message = error instanceof Error ? error.message : 'Неизвестная ошибка';
     return NextResponse.json({ 
       success: false, 
-      message: `Ошибка обновления аватара: ${error?.message || 'Неизвестная ошибка'}` 
+      message: `Ошибка обновления аватара: ${message}` 
     }, { status: 500 });
   }
 }

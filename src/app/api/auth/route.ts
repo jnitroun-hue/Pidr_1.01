@@ -18,6 +18,33 @@ const JWT_SECRET =
 const SESSION_SECRET = process.env.SESSION_SECRET || process.env.SUPABASE_JWT_SECRET;
 const NEXTAUTH_URL = process.env.NEXTAUTH_URL || process.env.VERCEL_URL;
 
+interface AuthJwtPayload {
+  userId: string;
+  telegramId?: string;
+  deviceFingerprint?: string;
+  authMethod?: string;
+  authSource?: string;
+}
+
+type DbUserRecord = Record<string, unknown> & {
+  id: number;
+  username?: string;
+  first_name?: string;
+  last_name?: string;
+  telegram_id?: string;
+  avatar_url?: string;
+  coins?: number;
+  rating?: number;
+  total_games_played?: number;
+  games_played?: number;
+  wins?: number;
+  games_won?: number;
+  losses?: number;
+  online_status?: string;
+  status?: string;
+  is_admin?: boolean;
+};
+
 // GET /api/auth - Проверка активной сессии
 export async function GET(req: NextRequest) {
   try {
@@ -72,9 +99,9 @@ export async function GET(req: NextRequest) {
     let userId: string;
     let telegramIdFromToken: string | null = null;
     let deviceFingerprintFromToken: string | null = null;
-    let payload: any;
+    let payload: AuthJwtPayload;
     try {
-      payload = jwt.verify(token, JWT_SECRET) as any;
+      payload = jwt.verify(token, JWT_SECRET) as AuthJwtPayload;
       userId = payload.userId;
       telegramIdFromToken = payload.telegramId || null;
       deviceFingerprintFromToken = payload.deviceFingerprint || null;
@@ -106,8 +133,8 @@ export async function GET(req: NextRequest) {
     // ✅ ИСПРАВЛЕНО: userId из токена может быть как id из БД, так и telegram_id
     // Для веб-версии проверяем только по id из БД
     // Для Telegram авторизации проверяем по telegram_id и header
-    let userForCheck: any = null;
-    let userCheckError: any = null;
+    let userForCheck: { id: number; telegram_id?: string; auth_method?: string } | null = null;
+    let userCheckError: Error | null = null;
     
     if (authMethod === 'web') {
       // Для веб-версии - находим пользователя по id из БД (supabaseAdmin для обхода RLS)
@@ -119,7 +146,7 @@ export async function GET(req: NextRequest) {
           .eq('id', numericId)
           .maybeSingle();
         userForCheck = data;
-        userCheckError = error;
+        userCheckError = error ? new Error(error.message) : null;
       }
     } else {
       // Для Telegram авторизации - проверяем по id или telegram_id
@@ -130,7 +157,7 @@ export async function GET(req: NextRequest) {
           .eq('id', parseInt(userId))
           .maybeSingle();
         userForCheck = data;
-        userCheckError = error;
+        userCheckError = error ? new Error(error.message) : null;
       }
       
       // Если не найдено по id, ищем по telegram_id
@@ -141,7 +168,7 @@ export async function GET(req: NextRequest) {
           .eq('telegram_id', userId)
           .maybeSingle();
         userForCheck = data;
-        userCheckError = error;
+        userCheckError = error ? new Error(error.message) : null;
       }
 
       // ✅ КРИТИЧНО: Для Telegram авторизации проверяем что telegram_id из БД совпадает с header
@@ -215,8 +242,8 @@ export async function GET(req: NextRequest) {
 
     console.log('🔍 [GET /api/auth] Ищем пользователя, authMethod:', authMethod, 'userId:', userId);
     
-    let user: any = null;
-    let error: any = null;
+    let user: DbUserRecord | null = null;
+    let error: Error | null = null;
     
     if (authMethod === 'web') {
       // ✅ ВЕБ: ТОЛЬКО по числовому id из БД — никогда не трогаем telegram_id
@@ -231,7 +258,7 @@ export async function GET(req: NextRequest) {
         .eq('id', numericId)
         .single();
       user = data;
-      error = err;
+      error = err ? new Error(err.message) : null;
     } else {
       // ✅ TELEGRAM/VK: ищем по id из БД (userId = числовой id пользователя)
       if (!isNaN(Number(userId))) {
@@ -241,7 +268,7 @@ export async function GET(req: NextRequest) {
           .eq('id', parseInt(userId))
           .single();
         user = data;
-        error = err;
+        error = err ? new Error(err.message) : null;
       }
       // Если не найдено по id — fallback по telegram_id
       if (!user) {
@@ -252,7 +279,7 @@ export async function GET(req: NextRequest) {
           .eq('telegram_id', userId)
           .single();
         user = data;
-        error = err;
+        error = err ? new Error(err.message) : null;
       }
     }
 
@@ -375,7 +402,7 @@ export async function GET(req: NextRequest) {
     response.headers.set('Expires', '0');
     return response;
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ Ошибка проверки сессии:', error);
     const response = NextResponse.json({ 
       success: false, 
@@ -476,7 +503,7 @@ export async function POST(req: NextRequest) {
         finalUsername = firstName || `User${telegramId.toString().slice(-4)}`;
       }
       
-      const newUserData: any = {
+      const newUserData: Record<string, string | number | null> = {
         telegram_id: telegramId,
         username: finalUsername, // ✅ Сохраняем правильный username
         first_name: firstName || finalUsername,
@@ -534,7 +561,7 @@ export async function POST(req: NextRequest) {
             
             // ✅ СРАЗУ ОБНОВЛЯЕМ ДАННЫЕ ПОЛЬЗОВАТЕЛЯ
             // ✅ КРИТИЧНО: Всегда обновляем username если он передан (даже если пустой)
-            const updateData: any = {
+            const updateData: Record<string, string> = {
               username: username && username.trim() ? username.trim() : existingUserRetry.username, // Обновляем только если есть непустое значение
               first_name: firstName || existingUserRetry.first_name,
               last_name: lastName || existingUserRetry.last_name,
@@ -682,7 +709,7 @@ export async function POST(req: NextRequest) {
         finalUsername = firstName || user.username || `User${telegramId.toString().slice(-4)}`;
       }
       
-      const updateData: any = {
+      const updateData: Record<string, string> = {
         username: finalUsername, // ✅ Всегда обновляем username (даже если используем существующий)
         first_name: firstName || user.first_name,
         last_name: lastName || user.last_name,
@@ -752,10 +779,10 @@ export async function POST(req: NextRequest) {
         telegramId: user.telegram_id,
         coins: user.coins,
         rating: user.rating,
-        gamesPlayed: (user as any).total_games_played || (user as any).games_played || 0,
-        wins: (user as any).wins || (user as any).games_won || 0,
-        losses: (user as any).losses || 0,
-        status: (user as any).online_status || (user as any).status || 'offline'
+        gamesPlayed: user.total_games_played || user.games_played || 0,
+        wins: user.wins || user.games_won || 0,
+        losses: user.losses || 0,
+        status: user.online_status || user.status || 'offline'
       }
     });
 
@@ -794,16 +821,18 @@ export async function POST(req: NextRequest) {
 
     return response;
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка';
+    const errorStack = error instanceof Error ? error.stack : undefined;
     console.error('❌ КРИТИЧЕСКАЯ ОШИБКА API авторизации:');
     console.error('- Тип ошибки:', typeof error);
-    console.error('- Сообщение:', error?.message);
-    console.error('- Стек:', error?.stack);
+    console.error('- Сообщение:', errorMessage);
+    console.error('- Стек:', errorStack);
     console.error('- Полный объект:', error);
     
     return NextResponse.json({ 
       success: false, 
-      message: `Внутренняя ошибка сервера: ${error?.message || 'Неизвестная ошибка'}` 
+      message: `Внутренняя ошибка сервера: ${errorMessage}` 
     }, { status: 500 });
   }
 }
@@ -828,7 +857,7 @@ export async function DELETE(req: NextRequest) {
 
     return response;
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ Ошибка выхода:', error);
     return NextResponse.json({ 
       success: false, 

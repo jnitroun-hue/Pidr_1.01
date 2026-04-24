@@ -14,8 +14,7 @@ import styles from './GameTable.module.css';
 import { getPremiumTable } from '@/utils/generatePremiumTable';
 import { useDragAndDrop } from '@/hooks/useDragAndDrop';
 // TableSelector удален - выбор стола больше не нужен
-import type { Player, Card } from '../../types/game';
-import type { Card as StoreCard } from '../../store/gameStore';
+import type { Player as StorePlayer, Card as StoreCard } from '../../store/gameStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import React from 'react';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
@@ -30,6 +29,30 @@ import { useWebSocket } from '@/hooks/useWebSocket';
 import { useTelegram } from '@/hooks/useTelegram';
 import { getCardAssetSrc } from '@/lib/game/cardAssets';
 import { translateGameText } from '@/lib/i18n/gameRuntimeTranslations';
+import type { TelegramWebAppUser } from '@/types/telegram-webapp';
+
+interface PlayerProfile {
+  id: string;
+  name: string;
+  avatar?: string;
+  isBot?: boolean;
+  isUser?: boolean;
+  level?: number;
+  rating?: number;
+  gamesPlayed?: number;
+  wins?: number;
+  winRate?: number;
+  bestStreak?: number;
+  status?: string;
+  joinedDate?: string;
+}
+
+type LegacyCardLike = string | (Partial<StoreCard> & { id?: string; image?: string; rank?: number | string; suit?: string });
+type TouchCardElement = HTMLDivElement & { __draggedCard?: StoreCard; __touchStartY?: number };
+type UserDeckEntry = { rank?: string | number; suit?: string; image_url?: string };
+
+const getTelegramUser = (): TelegramWebAppUser | undefined =>
+  typeof window !== 'undefined' ? window.Telegram?.WebApp?.initDataUnsafe?.user : undefined;
 
 const CARD_IMAGES = [
   '2_of_clubs.png','2_of_diamonds.png','2_of_hearts.png','2_of_spades.png',
@@ -225,7 +248,7 @@ const getCirclePosition = (index: number, totalPlayers: number, gameStage: numbe
   // УДАЛЕН СТАРЫЙ КОД - используется только новая прямоугольная система
 };
 
-function getFirstPlayerIdx(players: Player[]): number {
+function getFirstPlayerIdx(players: StorePlayer[]): number {
   for (let i = 0; i < players.length; i++) {
     if (players[i].isUser) return i;
   }
@@ -297,7 +320,7 @@ function GamePageContentComponent({
   }, [storeNftDeckCards]);
 
   // Модальное окно профиля игрока
-  const [selectedPlayerProfile, setSelectedPlayerProfile] = useState<any>(null);
+  const [selectedPlayerProfile, setSelectedPlayerProfile] = useState<PlayerProfile | null>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -391,15 +414,15 @@ function GamePageContentComponent({
 
   // Модальное окно сдачи штрафных карт (УДАЛЕНО - теперь используется showPenaltyCardSelection из store)
   // const [showPenaltyModal, setShowPenaltyModal] = useState(false);
-  // const [penaltyTargets, setPenaltyTargets] = useState<any[]>([]);
-  // const [selectedCards, setSelectedCards] = useState<{[playerId: string]: any}>({});
+  // const [penaltyTargets, setPenaltyTargets] = useState<StorePlayer[]>([]);
+  // const [selectedCards, setSelectedCards] = useState<Record<string, StoreCard>>({});
 
   // Функция генерации профиля игрока
-  const generatePlayerProfile = async (player: any) => {
+  const generatePlayerProfile = async (player: StorePlayer): Promise<PlayerProfile> => {
     if (player.isUser) {
       // ✅ ИСПРАВЛЕНО: Реальный игрок - данные ИЗ БД через /api/user/me
       try {
-        const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+        const telegramUser = getTelegramUser();
         const telegramId = telegramUser?.id?.toString() || '';
         const username = telegramUser?.username || telegramUser?.first_name || '';
         
@@ -487,7 +510,7 @@ function GamePageContentComponent({
   };
 
   // Обработчик клика на игрока
-  const handlePlayerClick = async (player: any) => {
+  const handlePlayerClick = async (player: StorePlayer) => {
     console.log('👤 [handlePlayerClick] Клик на игрока:', player);
     const profile = await generatePlayerProfile(player);
     console.log('📋 [handlePlayerClick] Сгенерированный профиль:', profile);
@@ -498,7 +521,7 @@ function GamePageContentComponent({
     if (player.isUser) {
       const syncUserProfile = async () => {
         try {
-          const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+          const telegramUser = getTelegramUser();
           const telegramId = telegramUser?.id?.toString() || '';
           const username = telegramUser?.username || telegramUser?.first_name || '';
           
@@ -518,7 +541,7 @@ function GamePageContentComponent({
             const result = await response.json();
             if (result.success && result.user) {
               console.log('✅ [handlePlayerClick] Данные пользователя обновлены для профиля:', result.user);
-              setSelectedPlayerProfile((prev: any) => prev ? {
+              setSelectedPlayerProfile((prev) => prev ? {
                 ...prev,
                 name: result.user.username || result.user.firstName || prev.name,
                 avatar: result.user.avatar_url || prev.avatar || '',
@@ -574,7 +597,7 @@ function GamePageContentComponent({
         setIsLoadingUserData(true);
         
         // ✅ ИСПРАВЛЕНО: Получаем telegramId из Telegram WebApp
-        const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+        const telegramUser = getTelegramUser();
         const telegramId = telegramUser?.id?.toString() || '';
         const username = telegramUser?.username || telegramUser?.first_name || '';
         
@@ -621,7 +644,7 @@ function GamePageContentComponent({
       } catch (error: unknown) {
         console.error('❌ Ошибка загрузки данных пользователя:', error);
         // ✅ Даже при ошибке устанавливаем дефолтные данные
-        const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+        const telegramUser = getTelegramUser();
         const username = telegramUser?.username || telegramUser?.first_name || '';
         const telegramId = telegramUser?.id?.toString() || '';
         setUserData({ coins: 0, username: username || 'Игрок', telegramId });
@@ -654,7 +677,7 @@ function GamePageContentComponent({
   useEffect(() => {
     const syncUserData = async () => {
       try {
-        const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+        const telegramUser = getTelegramUser();
         const telegramId = telegramUser?.id?.toString() || '';
         const username = telegramUser?.username || telegramUser?.first_name || '';
         
@@ -699,7 +722,7 @@ function GamePageContentComponent({
     if (isProfileModalOpen && selectedPlayerProfile?.isUser) {
       const syncProfileData = async () => {
         try {
-          const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+          const telegramUser = getTelegramUser();
           const telegramId = telegramUser?.id?.toString() || '';
           const username = telegramUser?.username || telegramUser?.first_name || '';
           
@@ -719,7 +742,7 @@ function GamePageContentComponent({
             const result = await response.json();
             if (result.success && result.user) {
               console.log('✅ [useEffect] Данные профиля обновлены:', result.user);
-              setSelectedPlayerProfile((prev: any) => prev ? {
+              setSelectedPlayerProfile((prev) => prev ? {
                 ...prev,
                 name: result.user.username || result.user.firstName || prev.name,
                 avatar: result.user.avatar_url || prev.avatar || '',
@@ -750,7 +773,7 @@ function GamePageContentComponent({
     if (showGameResultsModal && gameResults) {
       const syncAfterGame = async () => {
         try {
-          const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+          const telegramUser = getTelegramUser();
           const telegramId = telegramUser?.id?.toString() || '';
           const username = telegramUser?.username || telegramUser?.first_name || '';
           
@@ -792,7 +815,7 @@ function GamePageContentComponent({
   useEffect(() => {
     const loadNFTDeck = async () => {
       try {
-        const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+        const telegramUser = getTelegramUser();
         const telegramId = telegramUser?.id?.toString() || '';
         
         if (!telegramId) {
@@ -817,7 +840,7 @@ function GamePageContentComponent({
           if (result.success && result.deck) {
             // Формируем мапу: "rank_of_suit" -> image_url
             const nftMap: Record<string, string> = {};
-            result.deck.forEach((deckCard: any) => {
+            result.deck.forEach((deckCard: UserDeckEntry) => {
               // ✅ ИСПРАВЛЕНО: Нормализуем rank и suit для правильного ключа
               let rank = String(deckCard.rank || '').toLowerCase().trim();
               let suit = String(deckCard.suit || '').toLowerCase().trim();
@@ -1477,7 +1500,7 @@ function GamePageContentComponent({
     
     try {
       // ✅ Получаем telegram данные для header
-      const tg = (window as any).Telegram?.WebApp;
+      const tg = window.Telegram?.WebApp;
       const telegramUser = tg?.initDataUnsafe?.user;
       
       const authHeaders: Record<string, string> = {};
@@ -2425,7 +2448,7 @@ function GamePageContentComponent({
                       background: `conic-gradient(${turnTimeLeft > 20 ? '#22c55e' : turnTimeLeft > 10 ? '#eab308' : '#ef4444'} ${turnTimerPercent}%, transparent ${turnTimerPercent}%)`,
                       WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
                       WebkitMaskComposite: 'xor',
-                      maskComposite: 'exclude' as any,
+                      maskComposite: 'exclude' as React.CSSProperties['maskComposite'],
                       padding: '3px',
                       transition: 'background 1s linear',
                     }} />
@@ -2544,7 +2567,7 @@ function GamePageContentComponent({
                       flexDirection: 'row',
                     }}>
                       <div className={styles.activeCardContainer}>
-                        {playerCards.map((card: any, cardIndex: number) => {
+                        {playerCards.map((card: LegacyCardLike, cardIndex: number) => {
                           // Карта может быть строкой "7_of_spades.png(open)" или объектом {rank, suit, image}
                           const cardImage = typeof card === 'string' 
                             ? card.replace('(open)', '').replace('(closed)', '')
@@ -2623,9 +2646,10 @@ function GamePageContentComponent({
                           const overlap = cardIndex > 0 ? `-${dynamicOverlap}px` : '0';
                           const cardStackZIndex = cardIndex + 1;
                           
+                          const cardId = typeof card === 'string' ? undefined : card.id;
                           return (
                             <div 
-                              key={card.id || `${player.id}-${cardImage}-${cardIndex}-${showOpen ? 'open' : 'closed'}`} 
+                              key={cardId || `${player.id}-${cardImage}-${cardIndex}-${showOpen ? 'open' : 'closed'}`} 
                               className={styles.cardOnPenki} 
                               style={{
                                 marginLeft: overlap,
@@ -3054,7 +3078,7 @@ function GamePageContentComponent({
           </div>
           
           <div className={styles.handCards}>
-            {myPlayer && myPlayer.cards.map((card: any, index: number) => {
+            {myPlayer && myPlayer.cards.map((card: LegacyCardLike, index: number) => {
               // Карта может быть строкой "7_of_spades.png(open)" или объектом {rank, suit, image}
               const cardImage = typeof card === 'string' 
                 ? card.replace('(open)', '').replace('(closed)', '')
@@ -3090,9 +3114,10 @@ function GamePageContentComponent({
                 nftImageUrl = (nftDeckCards[nftKey] || storeNftDeckCards?.[nftKey]) || null;
               }
               
+              const cardId = typeof card === 'string' ? undefined : card.id;
               // Проверяем можно ли сыграть эту карту
               const isMyTurn = myPlayer.id === currentPlayerId;
-              const isSelected = selectedHandCard?.id === card.id || selectedHandCard?.image === cardImage;
+              const isSelected = selectedHandCard?.id === cardId || selectedHandCard?.image === cardImage;
               
               // Логика подсветки: карта доступна если это ваш ход и либо стол пустой, либо карта может побить верхнюю
               let canPlay = false;
@@ -3103,7 +3128,9 @@ function GamePageContentComponent({
                   // Проверяем можем ли побить верхнюю карту на столе
                   const topCard = tableStack[tableStack.length - 1];
                   // Простая проверка - используем функцию из gameStore
-                  const cardObj = typeof card === 'string' ? { image: cardImage, open: true } : card;
+                  const cardObj = (typeof card === 'string'
+                    ? { image: cardImage, open: true, id: `card-${index}` }
+                    : { ...card, id: card.id || `card-${index}` }) as StoreCard;
                   const state = useGameStore.getState();
                   if (state.canBeatCard && topCard && trumpSuit) {
                     canPlay = state.canBeatCard(topCard, cardObj, trumpSuit);
@@ -3122,9 +3149,9 @@ function GamePageContentComponent({
                       return;
                     }
                     console.log(`🖱️ [DRAG START] Начало перетаскивания: ${cardImage}`);
-                    const cardObj = typeof card === 'string' 
+                    const cardObj = (typeof card === 'string' 
                       ? { image: cardImage, open: true, id: `card-${index}` }
-                      : { ...card, id: card.id || `card-${index}` };
+                      : { ...card, id: card.id || `card-${index}` }) as StoreCard;
                     e.dataTransfer.setData('card', JSON.stringify(cardObj));
                     e.dataTransfer.effectAllowed = 'move';
                   }}
@@ -3132,17 +3159,18 @@ function GamePageContentComponent({
                     if (!isMyTurn || !canPlay) return;
                     console.log(`📱 [TOUCH START] Начало касания: ${cardImage}`);
                     const touch = e.touches[0];
-                    const cardObj = typeof card === 'string' 
+                    const cardObj = (typeof card === 'string' 
                       ? { image: cardImage, open: true, id: `card-${index}` }
-                      : { ...card, id: card.id || `card-${index}` };
+                      : { ...card, id: card.id || `card-${index}` }) as StoreCard;
                     // Сохраняем данные карты для touchEnd
-                    (e.currentTarget as any).__draggedCard = cardObj;
-                    (e.currentTarget as any).__touchStartY = touch.clientY;
+                    const target = e.currentTarget as TouchCardElement;
+                    target.__draggedCard = cardObj;
+                    target.__touchStartY = touch.clientY;
                   }}
                   onTouchMove={(e) => {
                     if (!isMyTurn || !canPlay) return;
                     const touch = e.touches[0];
-                    const startY = (e.currentTarget as any).__touchStartY;
+                    const startY = (e.currentTarget as TouchCardElement).__touchStartY;
                     if (startY && touch.clientY < startY - 50) {
                       // Карта перетащена вверх на 50px - визуальная обратная связь
                       e.currentTarget.style.transform = 'translateY(-20px)';
@@ -3150,8 +3178,9 @@ function GamePageContentComponent({
                   }}
                   onTouchEnd={(e) => {
                     if (!isMyTurn || !canPlay) return;
-                    const cardObj = (e.currentTarget as any).__draggedCard;
-                    const startY = (e.currentTarget as any).__touchStartY;
+                    const target = e.currentTarget as TouchCardElement;
+                    const cardObj = target.__draggedCard;
+                    const startY = target.__touchStartY;
                     const touch = e.changedTouches[0];
                     
                     // Сбрасываем визуальный эффект
@@ -3179,9 +3208,9 @@ function GamePageContentComponent({
                     }
                     
                     // Клик по карте - выбираем её через gameStore
-                    const cardObj = typeof card === 'string' 
+                    const cardObj = (typeof card === 'string' 
                       ? { image: cardImage, open: true, id: `card-${index}` }
-                      : { ...card, id: card.id || `card-${index}` };
+                      : { ...card, id: card.id || `card-${index}` }) as StoreCard;
                     
                     console.log(`🎴 [Клик по карте] Игрок кликнул на карту:`, cardObj);
                     selectHandCard(cardObj);

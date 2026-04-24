@@ -7,7 +7,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-function noStoreJson(body: any, init?: ResponseInit) {
+function noStoreJson(body: unknown, init?: ResponseInit) {
   const response = NextResponse.json(body, init);
   response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate');
   response.headers.set('Pragma', 'no-cache');
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
       showTutorial: !isAdmin && isNewUser && gamesPlayed < 3 // ✅ НОВОЕ: Показывать туториал только новым пользователям
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ [GAMES] Ошибка:', error);
     return noStoreJson({ 
       success: false, 

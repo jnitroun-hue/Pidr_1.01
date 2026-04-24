@@ -3,10 +3,31 @@ import crypto from 'crypto';
 
 const JWT_SECRET = process.env.JWT_SECRET || process.env.SUPABASE_JWT_SECRET;
 
+interface DeviceInfo {
+  platform?: string;
+  screen?: string;
+  timezone?: string;
+  [key: string]: unknown;
+}
+
+interface SessionUserInfo {
+  username?: string;
+  userAgent?: string;
+  ipAddress?: string;
+}
+
+interface SessionTokenPayload {
+  userId: string;
+  username?: string;
+  type: string;
+  sessionId: string;
+  exp?: number;
+}
+
 export interface SessionInfo {
   sessionId: string;
   userId: string;
-  deviceInfo?: any;
+  deviceInfo?: DeviceInfo;
   ipAddress?: string;
   userAgent?: string;
   expiresAt: Date;
@@ -36,11 +57,11 @@ export class SessionManager {
   static async createSession(
     userId: string, 
     authType: string,
-    userInfo: any,
+    userInfo: SessionUserInfo,
     request?: {
       ip?: string;
       userAgent?: string;
-      deviceInfo?: any;
+      deviceInfo?: DeviceInfo;
     }
   ): Promise<{ token: string; sessionId: string } | null> {
     
@@ -92,7 +113,7 @@ export class SessionManager {
 
     try {
       // Проверяем JWT
-      const payload = jwt.verify(token, JWT_SECRET) as any;
+      const payload = jwt.verify(token, JWT_SECRET) as SessionTokenPayload;
 
       // Проверяем истек ли токен
       const now = Math.floor(Date.now() / 1000);
@@ -106,9 +127,10 @@ export class SessionManager {
         sessionId: payload.sessionId
       };
       
-    } catch (error: any) {
-      console.error('❌ Ошибка валидации токена:', error.message);
-      return { valid: false, error: error.message };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown token validation error';
+      console.error('❌ Ошибка валидации токена:', message);
+      return { valid: false, error: message };
     }
   }
 

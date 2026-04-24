@@ -8,7 +8,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-function noStoreJson(body: any, init?: ResponseInit) {
+function noStoreJson(body: unknown, init?: ResponseInit) {
   const response = NextResponse.json(body, init);
   response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate');
   response.headers.set('Pragma', 'no-cache');
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (shouldUpdateDb) {
-      const updateData: any = {
+      const updateData: Record<string, string> = {
         last_seen: now
       };
       
@@ -205,7 +205,7 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString()
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ [HEARTBEAT] Ошибка:', error);
     return noStoreJson({
       success: false,

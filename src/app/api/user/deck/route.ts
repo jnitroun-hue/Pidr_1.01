@@ -6,6 +6,24 @@ import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+interface DeckCardRow {
+  id: number;
+  user_id: number;
+  nft_card_id: number;
+  suit?: string;
+  rank?: string | number;
+  image_url?: string;
+  created_at: string;
+  nft_card?: {
+    id: number;
+    suit?: string;
+    rank?: string | number;
+    rarity?: string;
+    image_url?: string;
+    metadata?: unknown;
+  } | null;
+}
+
 // 🎴 API: Получение игровой колоды пользователя
 
 export async function GET(request: NextRequest) {
@@ -66,7 +84,7 @@ export async function GET(request: NextRequest) {
 
     // ФОРМИРУЕМ ОТВЕТ
     // ✅ ИСПРАВЛЕНО: Используем данные из nft_card если есть, иначе из deck
-    const deck = deckCards?.map((card: any) => {
+    const deck = (deckCards as DeckCardRow[] | null)?.map((card) => {
       const nftCard = card.nft_card || null;
       return {
         id: card.id,
@@ -95,11 +113,12 @@ export async function GET(request: NextRequest) {
     
     return response;
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ [GET DECK] Ошибка:', error);
+    const message = error instanceof Error ? error.message : String(error);
     return NextResponse.json({ 
       success: false, 
-      error: error.message 
+      error: message 
     }, { status: 500 });
   }
 }

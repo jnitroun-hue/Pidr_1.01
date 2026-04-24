@@ -7,7 +7,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-function noStoreJson(body: any, init?: ResponseInit) {
+function noStoreJson(body: unknown, init?: ResponseInit) {
   const response = NextResponse.json(body, init);
   response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate');
   response.headers.set('Pragma', 'no-cache');
@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
       }
     
     // Формируем объект обновления
-    const updateData: any = { coins: newBalance };
+    const updateData: Record<string, number> = { coins: newBalance };
     
     // ✅ Обновляем статистику если передана
     if (updateStats) {
@@ -206,7 +206,7 @@ export async function POST(req: NextRequest) {
       }
     }
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ [Add Coins] Критическая ошибка:', error);
     return noStoreJson(
       { success: false, error: (error instanceof Error ? error.message : String(error)) || 'Internal server error' },

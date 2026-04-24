@@ -6,7 +6,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-function noStoreJson(body: any, init?: ResponseInit) {
+function noStoreJson(body: unknown, init?: ResponseInit) {
   const response = NextResponse.json(body, init);
   response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate');
   response.headers.set('Pragma', 'no-cache');
@@ -74,8 +74,8 @@ export async function POST(req: NextRequest) {
       rewards: { coins: newCoins, experience: newExperience, rating: newRating }
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ User rewards POST error:', error);
-    return noStoreJson({ success: false, message: error?.message || 'Ошибка сервера' }, { status: 500 });
+    return noStoreJson({ success: false, message: error instanceof Error ? error.message : 'Ошибка сервера' }, { status: 500 });
   }
 }

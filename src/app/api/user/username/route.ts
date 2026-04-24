@@ -9,6 +9,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { verify } from 'jsonwebtoken';
 
+interface UsernameTokenPayload {
+  userId?: string | number;
+}
+
 export async function PATCH(req: NextRequest) {
   try {
     // Проверяем все возможные источники токена
@@ -43,11 +47,12 @@ export async function PATCH(req: NextRequest) {
       }, { status: 500 });
     }
     
-    let decoded: any;
+    let decoded: UsernameTokenPayload;
     
     try {
-      decoded = verify(token, JWT_SECRET);
-    } catch (error: any) {
+      const verified = verify(token, JWT_SECRET);
+      decoded = typeof verified === 'string' ? {} : (verified as UsernameTokenPayload);
+    } catch (error: unknown) {
       console.error('❌ Ошибка проверки токена:', error instanceof Error ? error.message : String(error));
       return NextResponse.json({ 
         success: false, 
@@ -117,7 +122,7 @@ export async function PATCH(req: NextRequest) {
       user: data
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ Ошибка API /user/username:', error);
     return NextResponse.json({ 
       success: false, 

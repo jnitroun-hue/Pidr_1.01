@@ -6,7 +6,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-function noStoreJson(body: any, init?: ResponseInit) {
+function noStoreJson(body: unknown, init?: ResponseInit) {
   const response = NextResponse.json(body, init);
   response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate');
   response.headers.set('Pragma', 'no-cache');
@@ -69,11 +69,12 @@ export async function GET(req: NextRequest) {
       }
     });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ Ошибка получения баланса:', error);
+    const message = error instanceof Error ? error.message : 'Неизвестная ошибка';
     return noStoreJson({ 
       success: false, 
-      message: `Ошибка получения баланса: ${error?.message || 'Неизвестная ошибка'}` 
+      message: `Ошибка получения баланса: ${message}` 
     }, { status: 500 });
   }
 }
@@ -188,11 +189,12 @@ export async function POST(req: NextRequest) {
       }
     });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ Критическая ошибка обновления баланса:', error);
+    const message = error instanceof Error ? error.message : 'Неизвестная ошибка';
     return noStoreJson({ 
       success: false, 
-      message: `Внутренняя ошибка сервера: ${error?.message || 'Неизвестная ошибка'}` 
+      message: `Внутренняя ошибка сервера: ${message}` 
     }, { status: 500 });
   }
 }

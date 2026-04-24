@@ -88,7 +88,7 @@ export class DatabaseAuth {
         console.log('✅ Найден существующий пользователь:', user.username);
 
         // Обновляем данные если изменились
-        const updateData: any = {};
+        const updateData: Record<string, string> = {};
         if (telegramData.first_name && telegramData.first_name !== user.first_name) {
           updateData.first_name = telegramData.first_name;
         }

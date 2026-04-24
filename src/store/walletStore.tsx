@@ -3,6 +3,10 @@ import { tonConnector } from '../lib/wallets/ton-connector';
 import { solanaConnector } from '../lib/wallets/solana-connector';
 import { ethereumConnector } from '../lib/wallets/ethereum-connector';
 import { walletService, CryptoType, DepositTransaction, ExchangeRate } from '../lib/wallets/wallet-service';
+import type { TelegramWebAppUser } from '../types/telegram-webapp';
+
+const getErrorMessage = (error: unknown, fallback: string): string =>
+  error instanceof Error ? error.message : fallback;
 
 interface WalletState {
   // TON
@@ -81,9 +85,9 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         isConnecting: false,
       });
       // TODO: Получить баланс TON
-    } catch (error: any) {
+    } catch (error: unknown) {
       set({
-        error: error.message || 'Failed to connect TON wallet',
+        error: getErrorMessage(error, 'Failed to connect TON wallet'),
         isConnecting: false,
       });
     }
@@ -97,8 +101,8 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         tonBalance: 0,
         isTonConnected: false,
       });
-    } catch (error: any) {
-      set({ error: error.message || 'Failed to disconnect TON wallet' });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to disconnect TON wallet') });
     }
   },
   
@@ -113,16 +117,16 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         isSolanaConnected: true,
         isConnecting: false,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       // ✅ Обрабатываем специальный случай для мобильных устройств
-      if (error.message === 'MOBILE_DEEP_LINK') {
+      if (error instanceof Error && error.message === 'MOBILE_DEEP_LINK') {
         // На мобильных устройствах deep link уже открыт, просто выходим
         console.log('📱 Deep link открыт для Phantom на мобильном устройстве');
         set({ isConnecting: false });
         return;
       }
       set({
-        error: error.message || 'Failed to connect Solana wallet',
+        error: getErrorMessage(error, 'Failed to connect Solana wallet'),
         isConnecting: false,
       });
     }
@@ -136,8 +140,8 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         solanaBalance: 0,
         isSolanaConnected: false,
       });
-    } catch (error: any) {
-      set({ error: error.message || 'Failed to disconnect Solana wallet' });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to disconnect Solana wallet') });
     }
   },
   
@@ -153,9 +157,9 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         isEthereumConnected: true,
         isConnecting: false,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       set({
-        error: error.message || 'Failed to connect Ethereum wallet',
+        error: getErrorMessage(error, 'Failed to connect Ethereum wallet'),
         isConnecting: false,
       });
     }
@@ -170,8 +174,8 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         ethereumNetwork: null,
         isEthereumConnected: false,
       });
-    } catch (error: any) {
-      set({ error: error.message || 'Failed to disconnect Ethereum wallet' });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to disconnect Ethereum wallet') });
     }
   },
   
@@ -206,7 +210,8 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     set({ isExchanging: true, error: null });
     try {
       // ✅ ИСПРАВЛЕНО: Получаем telegramId из Telegram WebApp
-      const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+      const telegramUser: TelegramWebAppUser | undefined =
+        typeof window !== 'undefined' ? window.Telegram?.WebApp?.initDataUnsafe?.user : undefined;
       const telegramId = telegramUser?.id?.toString() || '';
       
       if (!telegramId) {
@@ -220,9 +225,9 @@ export const useWalletStore = create<WalletState>((set, get) => ({
       set({ transactions, isExchanging: false });
       
       return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
       set({ 
-        error: error.message || 'Exchange failed', 
+        error: getErrorMessage(error, 'Exchange failed'), 
         isExchanging: false 
       });
       throw error;

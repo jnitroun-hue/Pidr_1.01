@@ -9,7 +9,7 @@ import { validateSession, getUserById } from './universal-auth';
 export interface AuthContext {
   authenticated: boolean;
   userId?: number;
-  user?: any;
+  user?: Record<string, unknown>;
   sessionToken?: string;
   authMethod?: string;
   error?: string;
@@ -85,7 +85,7 @@ export async function requireAuth(request: NextRequest): Promise<AuthContext> {
       sessionToken,
       authMethod: user.primary_auth_method,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ Ошибка middleware аутентификации:', error);
     return {
       authenticated: false,
@@ -121,7 +121,7 @@ export async function requireRole(
   }
 
   // TODO: Добавить систему ролей в БД
-  const userRole = authContext.user?.role || 'user';
+  const userRole = typeof authContext.user?.role === 'string' ? authContext.user.role : 'user';
 
   if (!allowedRoles.includes(userRole)) {
     return {

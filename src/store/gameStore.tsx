@@ -5,6 +5,7 @@ import { createPlayers, generateAvatar } from '../lib/game/avatars'
 import { getApiHeaders } from '../lib/api-headers'
 import { calculateRatingRewards, calculatePlayerPositions } from '../lib/rating/ratingSystem'
 import { RoomManager } from '../lib/multiplayer/room-manager'
+import type { TelegramWebAppUser } from '../types/telegram-webapp'
 
 export interface Card {
   id: string
@@ -58,6 +59,54 @@ export interface PenaltyCard {
   contributorId: string
   contributorName: string
 }
+
+interface MultiplayerPlayerRef {
+  id: string
+}
+
+interface MultiplayerConfig {
+  roomId: string
+  roomCode: string
+  isHost: boolean
+  players?: MultiplayerPlayerRef[]
+}
+
+interface RemoteGameState {
+  gameStage?: GameState['gameStage']
+  currentPlayerId?: string | null
+  trumpSuit?: GameState['trumpSuit']
+  tableStack?: GameState['tableStack']
+  stage2TurnPhase?: GameState['stage2TurnPhase']
+  roundInProgress?: boolean
+  currentRoundInitiator?: string | null
+  roundFinisher?: string | null
+  deck?: Card[]
+  playedCards?: Card[]
+  players?: Player[]
+}
+
+interface RemoteMoveData {
+  type: string
+  playerId?: string
+  targetPlayerId?: string
+  contributorId?: string
+  cardId?: string
+  targetId?: string | null
+  [key: string]: unknown
+}
+
+interface WindowWithLastFrameTime extends Window {
+  lastFrameTime?: number
+}
+
+interface UserDeckEntry {
+  rank?: string | number
+  suit?: string
+  image_url?: string
+}
+
+const getTelegramUser = (): TelegramWebAppUser | undefined =>
+  typeof window !== 'undefined' ? window.Telegram?.WebApp?.initDataUnsafe?.user : undefined
 
 interface GameState {
   // Игровое состояние
@@ -181,7 +230,7 @@ interface GameState {
   } | null
   
   // Действия игры
-  startGame: (mode: 'single' | 'multiplayer', playersCount?: number, multiplayerConfig?: any, userInfo?: { avatar?: string; username?: string }) => Promise<void>
+  startGame: (mode: 'single' | 'multiplayer', playersCount?: number, multiplayerConfig?: MultiplayerConfig | null, userInfo?: { avatar?: string; username?: string }) => Promise<void>
   endGame: () => void
   playCard: (cardId: string) => void
   drawCard: () => void
@@ -248,9 +297,9 @@ interface GameState {
   removeCardFromDeck: (cardId: string) => void
   
   // Мультиплеер методы
-  syncGameState: (gameState: any) => void
-  sendPlayerMove: (moveData: any) => void
-  applyRemoteMove: (moveData: any) => void
+  syncGameState: (gameState: RemoteGameState) => void
+  sendPlayerMove: (moveData: RemoteMoveData) => void
+  applyRemoteMove: (moveData: RemoteMoveData) => void
   
   // Игроки
   addPlayer: (name: string) => void
@@ -461,7 +510,7 @@ export const useGameStore = create<GameState>()(
         
         try {
           // ✅ Получаем telegram данные для header
-          const tg = typeof window !== 'undefined' && (window as any).Telegram?.WebApp;
+          const tg = typeof window !== 'undefined' ? window.Telegram?.WebApp : undefined;
           const telegramUserAuth = tg?.initDataUnsafe?.user;
           
           const authHeaders: Record<string, string> = {};
@@ -489,7 +538,7 @@ export const useGameStore = create<GameState>()(
         
         // ✅ ЗАГРУЖАЕМ NFT КАРТЫ ИЗ КОЛОДЫ
         try {
-          const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+          const telegramUser = getTelegramUser();
           const telegramId = telegramUser?.id?.toString() || '';
           
           if (telegramId) {
@@ -507,7 +556,7 @@ export const useGameStore = create<GameState>()(
               const deckResult = await deckResponse.json();
               if (deckResult.success && deckResult.deck) {
                 // Формируем мапу: "rank_of_suit" -> image_url
-                deckResult.deck.forEach((deckCard: any) => {
+                deckResult.deck.forEach((deckCard: UserDeckEntry) => {
                   // ✅ ИСПРАВЛЕНО: Нормализуем rank и suit для правильного ключа
                   let rank = String(deckCard.rank || '').toLowerCase().trim();
                   let suit = String(deckCard.suit || '').toLowerCase().trim();
@@ -672,7 +721,7 @@ export const useGameStore = create<GameState>()(
             roomId: multiplayerConfig.roomId,
             roomCode: multiplayerConfig.roomCode,
             isHost: multiplayerConfig.isHost,
-            connectedPlayers: multiplayerConfig.players?.map((p: any) => p.id) || []
+            connectedPlayers: multiplayerConfig.players?.map((p) => p.id) || []
           } : null
         });
         
@@ -2763,7 +2812,7 @@ export const useGameStore = create<GameState>()(
             set({ players: updatedPlayers });
             
             // ✅ ОБНОВЛЯЕМ СТАТИСТИКУ СРАЗУ ПРИ ВЫХОДЕ!
-            const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+            const telegramUser = getTelegramUser();
             const currentUserTelegramId = telegramUser?.id?.toString() || '';
             
             // ✅ КРИТИЧНО: Объединяем ВСЕ победителей и сортируем по времени выхода!
@@ -3017,7 +3066,7 @@ export const useGameStore = create<GameState>()(
           console.log('🏆 [calculateAndShowGameResults] Подсчёт финальных результатов...');
           
           // Получаем telegram_id текущего пользователя
-          const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+          const telegramUser = getTelegramUser();
           const currentUserTelegramId = telegramUser?.id?.toString() || '';
           
           // Сортируем игроков по местам (winner first, loser last)
@@ -3732,7 +3781,7 @@ export const useGameStore = create<GameState>()(
           console.log(`🌐 [syncGameState] Синхронизация состояния игры:`, remoteGameState);
            
            // Осторожно обновляем состояние, проверяя каждое поле
-           const stateUpdates: any = {};
+           const stateUpdates: Partial<GameState> = {};
            
            // Синхронизируем базовые поля игры
            if (remoteGameState.gameStage !== undefined) stateUpdates.gameStage = remoteGameState.gameStage;
@@ -3748,9 +3797,10 @@ export const useGameStore = create<GameState>()(
            
            // Синхронизируем игроков (осторожно, не перезаписывая локального пользователя)
            if (remoteGameState.players && Array.isArray(remoteGameState.players)) {
+            const remotePlayers = remoteGameState.players;
              const { players } = get();
              const updatedPlayers = players.map(localPlayer => {
-               const remotePlayer = remoteGameState.players.find((p: any) => p.id === localPlayer.id);
+               const remotePlayer = remotePlayers.find((p) => p.id === localPlayer.id);
                if (remotePlayer && !localPlayer.isUser) {
                  // Обновляем данные бота/других игроков
                  return {
@@ -3898,8 +3948,9 @@ export const useGameStore = create<GameState>()(
          // ДЛЯ ИГРОКОВ: базовая задержка 2.545с для кнопки "Сколько карт?"
          calculateAdaptiveDelay: () => {
            const now = performance.now();
-           const frameTime = now - (window as any).lastFrameTime || 16.67; // Время последнего кадра
-           (window as any).lastFrameTime = now;
+           const windowWithFrame = window as WindowWithLastFrameTime;
+           const frameTime = now - (windowWithFrame.lastFrameTime ?? 16.67); // Время последнего кадра
+           windowWithFrame.lastFrameTime = now;
            
            // Базовая задержка: 2.545 секунды (ИГРОКИ)
            let delay = 2545;

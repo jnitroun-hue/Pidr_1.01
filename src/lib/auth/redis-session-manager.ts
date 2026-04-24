@@ -57,6 +57,20 @@ export interface SessionValidation {
   error?: string;
 }
 
+interface SessionTokenPayload {
+  sessionId: string;
+  userId: string;
+  username: string;
+  authMethod: SessionData['authMethod'];
+  telegramId?: string;
+  vkId?: string;
+  googleId?: string;
+  email?: string;
+  iat?: number;
+  exp?: number;
+  authSource?: 'web';
+}
+
 // ============================================================
 // REDIS KEYS
 // ============================================================
@@ -108,7 +122,7 @@ export async function createSession(data: {
 
   // Генерируем JWT токен
   // ✅ УНИВЕРСАЛЬНО: Добавляем authSource для правильного определения окружения
-  const tokenPayload: any = {
+  const tokenPayload: SessionTokenPayload = {
     sessionId,
     userId: data.userId,
     username: data.username,
@@ -157,7 +171,7 @@ export async function createSession(data: {
 export async function validateSession(token: string): Promise<SessionValidation> {
   try {
     // Проверяем JWT токен
-    const payload = jwt.verify(token, JWT_SECRET) as any;
+    const payload = jwt.verify(token, JWT_SECRET) as SessionTokenPayload;
     const sessionId = payload.sessionId;
 
     if (!sessionId) {
@@ -198,7 +212,7 @@ export async function validateSession(token: string): Promise<SessionValidation>
       vkId: payload.vkId,
       googleId: payload.googleId,
       email: payload.email,
-      createdAt: payload.iat * 1000,
+      createdAt: (payload.iat ?? Math.floor(Date.now() / 1000)) * 1000,
       lastActivity: Date.now(),
     };
 
@@ -251,7 +265,7 @@ export async function updateSessionActivity(sessionId: string): Promise<boolean>
  */
 export async function revokeSession(token: string): Promise<boolean> {
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as any;
+    const payload = jwt.verify(token, JWT_SECRET) as SessionTokenPayload;
     const sessionId = payload.sessionId;
     const userId = payload.userId;
 

@@ -6,6 +6,14 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+interface OnlineUserRow {
+  id: number;
+  username: string | null;
+  last_seen: string | null;
+  status: string | null;
+  online_status: string | null;
+}
+
 // GET /api/stats/online - Статистика онлайн игроков
 export async function GET(req: NextRequest) {
   try {
@@ -24,30 +32,30 @@ export async function GET(req: NextRequest) {
       throw error;
     }
 
-    const users = allUsers || [];
+    const users: OnlineUserRow[] = allUsers || [];
     const getLastSeenMs = (value: string | null) => {
       if (!value) return null;
       const time = new Date(value).getTime();
       return Number.isNaN(time) ? null : time;
     };
 
-    const recentActiveUsers = users.filter((user: any) => {
+    const recentActiveUsers = users.filter((user) => {
       const lastSeenMs = getLastSeenMs(user.last_seen);
       return lastSeenMs !== null && lastSeenMs >= fiveMinutesAgo;
     });
 
-    const seenInLast30Minutes = users.filter((user: any) => {
+    const seenInLast30Minutes = users.filter((user) => {
       const lastSeenMs = getLastSeenMs(user.last_seen);
       return lastSeenMs !== null && lastSeenMs >= thirtyMinutesAgo;
     });
 
-    const inRoomsUsers = users.filter((user: any) => {
+    const inRoomsUsers = users.filter((user) => {
       const lastSeenMs = getLastSeenMs(user.last_seen);
       const currentStatus = user.online_status || user.status || 'offline';
       return lastSeenMs !== null && lastSeenMs >= fiveMinutesAgo && ['in_room', 'playing'].includes(currentStatus);
     });
 
-    const statusStats = users.reduce((acc: Record<string, number>, user: any) => {
+    const statusStats = users.reduce((acc: Record<string, number>, user) => {
       const lastSeenMs = getLastSeenMs(user.last_seen);
       const rawStatus = user.online_status || user.status || 'offline';
 
@@ -75,7 +83,7 @@ export async function GET(req: NextRequest) {
         minute: '2-digit',
         second: '2-digit'
       }),
-      activeUsers: recentActiveUsers.map((user: any) => ({
+      activeUsers: recentActiveUsers.map((user) => ({
         id: user.id,
         username: user.username,
         lastSeenMoscow: user.last_seen ? new Date(user.last_seen).toLocaleString('ru-RU', {
@@ -112,7 +120,7 @@ export async function GET(req: NextRequest) {
     
     return response;
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ Ошибка API статистики:', error);
     return NextResponse.json({ 
       success: false, 
