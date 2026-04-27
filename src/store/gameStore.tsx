@@ -1791,9 +1791,9 @@ export const useGameStore = create<GameState>()(
                   } catch (error: unknown) {
                     console.error(`🚨 Ошибка хода бота:`, error);
                   }
-                }, 800);
+                }, 450);
               } else {
-                setTimeout(() => get().nextTurn(), 1000);
+                setTimeout(() => get().nextTurn(), 550);
               }
             } else if (!currentPlayer.isBot) {
               get().showNotification(`${currentPlayer.name}: выберите карту для хода`, 'info');
@@ -1809,7 +1809,7 @@ export const useGameStore = create<GameState>()(
             if (currentPlayer.isBot) {
               setTimeout(() => {
                 get().onDeckClick();
-              }, 500);
+              }, 300);
             } else if (!currentPlayer.isBot) {
               get().showNotification(`${currentPlayer.name}: нет ходов из руки, кликните на колоду`, 'warning');
             }
@@ -1830,7 +1830,7 @@ export const useGameStore = create<GameState>()(
         if (currentPlayer.isBot) {
           setTimeout(() => {
             get().onDeckClick();
-          }, 500);
+          }, 300);
         } else if (!currentPlayer.isBot) {
           get().showNotification(`${currentPlayer.name}: кликните на колоду чтобы открыть карту`, 'info');
         }
@@ -1875,7 +1875,7 @@ export const useGameStore = create<GameState>()(
           if (currentPlayer.isBot) {
             setTimeout(() => {
               get().placeCardOnSelfByRules();
-            }, 1200);
+            }, 650);
           } else {
             get().showNotification('Выберите действие: положить на себя или пропустить ход', 'info', 2500);
           }
@@ -1891,7 +1891,7 @@ export const useGameStore = create<GameState>()(
           });
           setTimeout(() => {
             get().takeCardNotByRules();
-          }, currentPlayer.isBot ? 1200 : 800);
+          }, currentPlayer.isBot ? 650 : 800);
           return;
         }
         
@@ -1907,7 +1907,7 @@ export const useGameStore = create<GameState>()(
             const targetIndex = deckTargets[0];
             const targetPlayer = players[targetIndex];
             get().makeMove(targetPlayer?.id || '');
-          }, 1500);
+          }, 700);
         } else if (!currentPlayer.isBot && canMoveToOpponents) {
           // Для игрока - показываем что нужно КЛИКНУТЬ по карте
           get().showNotification('✓ Кликните по открытой карте чтобы сходить', 'info');
@@ -3944,31 +3944,23 @@ export const useGameStore = create<GameState>()(
          
          // ===== НОВЫЕ МЕТОДЫ ДЛЯ БОТОВ =====
          
-         // Вычисляет адаптивную задержку в зависимости от производительности
-         // ДЛЯ ИГРОКОВ: базовая задержка 2.545с для кнопки "Сколько карт?"
+        // Вычисляет адаптивную задержку в зависимости от производительности.
+        // Держим значения короткими, чтобы боты не "подвисали" визуально.
          calculateAdaptiveDelay: () => {
-           const now = performance.now();
-           const windowWithFrame = window as WindowWithLastFrameTime;
-           const frameTime = now - (windowWithFrame.lastFrameTime ?? 16.67); // Время последнего кадра
-           windowWithFrame.lastFrameTime = now;
-           
-           // Базовая задержка: 2.545 секунды (ИГРОКИ)
-           let delay = 2545;
-           
-           console.log(`🎯 [calculateAdaptiveDelay] Время кадра: ${frameTime.toFixed(2)}ms`);
-           
-           // Если FPS хуже 60 (frame time > 16.67ms), добавляем задержку
-           if (frameTime > 16.67) {
-             const lagMs = frameTime - 16.67;
-             const lagIncrements = Math.floor(lagMs / 100); // За каждые 100ms лага
-             const additionalDelay = lagIncrements * 1055; // Добавляем 1.055с
-             delay += additionalDelay;
-             
-             console.log(`⏳ [calculateAdaptiveDelay] Лаг ${lagMs.toFixed(2)}ms, добавляем ${additionalDelay}ms задержки`);
-           }
-           
-           console.log(`⌛ [calculateAdaptiveDelay] Итоговая задержка для ИГРОКОВ: ${delay}ms`);
-           return delay;
+          if (typeof window === 'undefined') return 900;
+
+          const now = performance.now();
+          const windowWithFrame = window as WindowWithLastFrameTime;
+          const frameTime = now - (windowWithFrame.lastFrameTime ?? 16.67);
+          windowWithFrame.lastFrameTime = now;
+
+          // Базовая скорость бота для UX.
+          let delay = 900;
+          if (frameTime > 22) {
+            delay += Math.min(1100, Math.floor((frameTime - 22) * 8));
+          }
+
+          return Math.max(700, Math.min(2000, delay));
          },
          
          // Планирует вопрос бота "сколько карт?" через адаптивную задержку

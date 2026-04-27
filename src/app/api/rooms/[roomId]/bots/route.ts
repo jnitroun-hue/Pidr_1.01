@@ -218,21 +218,15 @@ export async function POST(
         console.warn('⚠️ [ADD BOT] Ошибка обновления avatar_url (не критично):', avatarError);
       }
 
-      // ✅ ОБНОВЛЯЕМ СЧЕТЧИК ИГРОКОВ В КОМНАТЕ (atomicJoinRoom уже обновляет, но на всякий случай)
-      const { error: countError } = await supabase
+      // atomicJoinRoom уже синхронизирует current_players через БД.
+      // Здесь только актуализируем last_activity, без ручного инкремента.
+      await supabase
         .from('_pidr_rooms')
-        .update({ 
-          current_players: room.current_players + 1,
+        .update({
           last_activity: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
         .eq('id', roomId);
-
-      if (countError) {
-        console.warn('⚠️ [ADD BOT] Ошибка обновления счетчика (не критично, atomicJoinRoom уже обновил):', countError);
-      } else {
-        console.log(`✅ [ADD BOT] Счетчик игроков обновлен: ${room.current_players + 1}`);
-      }
 
       console.log(`✅ [ADD BOT] Бот ${botName} успешно добавлен в комнату ${roomId} на позицию ${joinResult.position}`);
 
@@ -301,12 +295,18 @@ export async function POST(
         }, { status: 500 });
       }
 
-      // ✅ ОБНОВЛЯЕМ СЧЕТЧИК ИГРОКОВ И last_activity
+      // После удаления считаем реальное число игроков из таблицы,
+      // чтобы не накапливать ошибки счетчика.
       const now = new Date().toISOString();
+      const { count: actualCount } = await supabase
+        .from('_pidr_room_players')
+        .select('*', { count: 'exact', head: true })
+        .eq('room_id', roomId);
+
       const { error: updateError } = await supabase
         .from('_pidr_rooms')
-        .update({ 
-          current_players: room.current_players - 1,
+        .update({
+          current_players: actualCount ?? Math.max(0, room.current_players - 1),
           last_activity: now,
           updated_at: now
         })

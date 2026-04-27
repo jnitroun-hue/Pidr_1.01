@@ -146,6 +146,9 @@ const getRectanglePosition = (index: number, totalPlayers: number, gameStage: nu
   cardOffset: { x: number; y: number };
   side: 'top' | 'bottom' | 'left' | 'right'; // ✅ НОВОЕ: сторона для правильного расположения карт
 } => {
+  const isMobileViewport =
+    typeof window !== 'undefined' ? window.innerWidth <= 768 : false;
+
   // ПОЗИЦИЯ 0: Главный игрок ВНИЗУ ПО ЦЕНТРУ
   if (index === 0) {
     return { 
@@ -162,42 +165,46 @@ const getRectanglePosition = (index: number, totalPlayers: number, gameStage: nu
   
   if (totalPlayers === 4) {
     const positions = [
-      { left: '50%', top: '13%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
-      { left: '87%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
-      { left: '13%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
+      { left: '50%', top: isMobileViewport ? '11%' : '13%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
+      { left: isMobileViewport ? '90%' : '87%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
+      { left: isMobileViewport ? '10%' : '13%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
     ];
     return positions[adjustedIndex] || positions[0];
   }
   
   if (totalPlayers === 5) {
     const positions = [
-      { left: '28%', top: '13%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
-      { left: '72%', top: '13%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
-      { left: '87%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
-      { left: '13%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
+      { left: isMobileViewport ? '30%' : '28%', top: isMobileViewport ? '11%' : '13%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
+      { left: isMobileViewport ? '70%' : '72%', top: isMobileViewport ? '11%' : '13%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
+      { left: isMobileViewport ? '90%' : '87%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
+      { left: isMobileViewport ? '10%' : '13%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
     ];
     return positions[adjustedIndex] || positions[0];
   }
   
   if (totalPlayers === 6) {
+    const sideTop = isMobileViewport ? '28%' : '32%';
+    const sideBottom = isMobileViewport ? '66%' : '62%';
     const positions = [
-      { left: '50%', top: '13%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
-      { left: '87%', top: '36%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
-      { left: '87%', top: '56%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
-      { left: '13%', top: '36%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
-      { left: '13%', top: '56%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
+      { left: '50%', top: isMobileViewport ? '10%' : '12%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
+      { left: isMobileViewport ? '91%' : '88%', top: sideTop, cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
+      { left: isMobileViewport ? '91%' : '88%', top: sideBottom, cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
+      { left: isMobileViewport ? '9%' : '12%', top: sideTop, cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
+      { left: isMobileViewport ? '9%' : '12%', top: sideBottom, cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
     ];
     return positions[adjustedIndex] || positions[0];
   }
   
   if (totalPlayers === 7) {
+    const sideTop = isMobileViewport ? '30%' : '34%';
+    const sideBottom = isMobileViewport ? '68%' : '64%';
     const positions = [
-      { left: '28%', top: '13%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
-      { left: '72%', top: '13%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
-      { left: '13%', top: '36%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
-      { left: '13%', top: '56%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
-      { left: '87%', top: '36%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
-      { left: '87%', top: '56%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
+      { left: isMobileViewport ? '31%' : '29%', top: isMobileViewport ? '10%' : '12%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
+      { left: isMobileViewport ? '69%' : '71%', top: isMobileViewport ? '10%' : '12%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
+      { left: isMobileViewport ? '9%' : '12%', top: sideTop, cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
+      { left: isMobileViewport ? '9%' : '12%', top: sideBottom, cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
+      { left: isMobileViewport ? '91%' : '88%', top: sideTop, cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
+      { left: isMobileViewport ? '91%' : '88%', top: sideBottom, cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
     ];
     return positions[adjustedIndex] || positions[0];
   }
@@ -1786,8 +1793,88 @@ function GamePageContentComponent({
   const canClickDeck = turnPhase === 'showing_deck_hint' && currentTurnPlayer?.id === currentPlayerId;
   const waitingForTarget = turnPhase === 'waiting_target_selection';
 
+  const adaptiveSeatPositions = useMemo(() => {
+    const totalPlayers = players.length;
+    if (!totalPlayers) return [] as Array<{ x: number; y: number; side: 'top' | 'bottom' | 'left' | 'right'; cardOffset: { x: number; y: number } }>;
+
+    const isMobileViewport = typeof window !== 'undefined' ? window.innerWidth <= 768 : false;
+    const minGap = isMobileViewport ? 20 : 16;
+    const sideClamp = isMobileViewport
+      ? { minY: 20, maxY: 72, minX: 18, maxX: 82 }
+      : { minY: 18, maxY: 74, minX: 16, maxX: 84 };
+
+    const base = Array.from({ length: totalPlayers }, (_, i) => {
+      const rectPos = getRectanglePosition(i, totalPlayers, gameStage);
+      return {
+        x: parseFloat(rectPos.left),
+        y: parseFloat(rectPos.top),
+        side: rectPos.side,
+        cardOffset: rectPos.cardOffset
+      };
+    });
+
+    const adjusted = [...base];
+
+    const spreadAxis = (indexes: number[], axis: 'x' | 'y', min: number, max: number) => {
+      if (indexes.length <= 1) return;
+
+      const sorted = [...indexes].sort((a, b) => adjusted[a][axis] - adjusted[b][axis]);
+      for (let i = 1; i < sorted.length; i++) {
+        const prevIndex = sorted[i - 1];
+        const currentIndex = sorted[i];
+        if (adjusted[currentIndex][axis] - adjusted[prevIndex][axis] < minGap) {
+          adjusted[currentIndex][axis] = adjusted[prevIndex][axis] + minGap;
+        }
+      }
+
+      // Если вышли за пределы — сдвигаем всю группу назад в диапазон
+      const lastIndex = sorted[sorted.length - 1];
+      if (adjusted[lastIndex][axis] > max) {
+        const overflow = adjusted[lastIndex][axis] - max;
+        sorted.forEach((idx) => {
+          adjusted[idx][axis] -= overflow;
+        });
+      }
+
+      const firstIndex = sorted[0];
+      if (adjusted[firstIndex][axis] < min) {
+        const underflow = min - adjusted[firstIndex][axis];
+        sorted.forEach((idx) => {
+          adjusted[idx][axis] += underflow;
+        });
+      }
+
+      sorted.forEach((idx) => {
+        adjusted[idx][axis] = Math.max(min, Math.min(max, adjusted[idx][axis]));
+      });
+    };
+
+    const leftPlayers: number[] = [];
+    const rightPlayers: number[] = [];
+    const topPlayers: number[] = [];
+    const bottomPlayers: number[] = [];
+
+    adjusted.forEach((pos, idx) => {
+      if (pos.side === 'left') leftPlayers.push(idx);
+      if (pos.side === 'right') rightPlayers.push(idx);
+      if (pos.side === 'top') topPlayers.push(idx);
+      if (pos.side === 'bottom' && idx !== 0) bottomPlayers.push(idx);
+    });
+
+    spreadAxis(leftPlayers, 'y', sideClamp.minY, sideClamp.maxY);
+    spreadAxis(rightPlayers, 'y', sideClamp.minY, sideClamp.maxY);
+    spreadAxis(topPlayers, 'x', sideClamp.minX, sideClamp.maxX);
+    spreadAxis(bottomPlayers, 'x', sideClamp.minX, sideClamp.maxX);
+
+    return adjusted;
+  }, [players.length, gameStage]);
+
   // ✅ ИСПРАВЛЕНО: Используем getRectanglePosition с передачей gameStage
   const getPlayerPosition = (index: number, totalPlayers: number) => {
+    const adaptive = adaptiveSeatPositions[index];
+    if (adaptive && totalPlayers === players.length) {
+      return adaptive;
+    }
     const rectPos = getRectanglePosition(index, totalPlayers, gameStage);
     return {
       x: parseFloat(rectPos.left),

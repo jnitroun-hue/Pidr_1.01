@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, Copy, Check, Crown, Play, Clock, Wifi, WifiOff, UserPlus, Settings, Bot } from 'lucide-react';
 import { RoomManager } from '../lib/multiplayer/room-manager';
@@ -59,76 +59,18 @@ export default function MultiplayerLobby({
   const [countdown, setCountdown] = useState(0);
   const [isAddingBot, setIsAddingBot] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const refreshInFlightRef = useRef(false);
+  const lastRefreshAtRef = useRef(0);
 
-  // ✅ ИНИЦИАЛИЗАЦИЯ RoomManager при монтировании
-  useEffect(() => {
-    if (!roomManagerRef.current) {
-      roomManagerRef.current = new RoomManager();
-    }
+  const loadRoomPlayers = useCallback(async (force = false) => {
+    if (!force && refreshInFlightRef.current) return;
 
-    const roomManager = roomManagerRef.current;
+    const now = Date.now();
+    if (!force && now - lastRefreshAtRef.current < 450) return;
 
-    console.log('📡 [MultiplayerLobby] Подписываемся на комнату:', roomId);
-
-    // Подписываемся на обновления комнаты
-    roomManager.subscribeToRoom(roomId, {
-      onPlayerJoin: (player) => {
-        console.log('👥 [MultiplayerLobby] Игрок присоединился:', player);
-        // ✅ ЗАГРУЖАЕМ ИЗ БД (ИСТОЧНИК ИСТИНЫ!) - с задержкой для надежности
-        // ✅ УЛУЧШЕНО: Более агрессивное обновление для хоста
-        const delays = isHost ? [50, 200, 500, 1000] : [100, 500, 1000];
-        delays.forEach(delay => {
-          setTimeout(() => loadRoomPlayers(), delay);
-        });
-      },
-      onPlayerLeave: (userId) => {
-        console.log('👋 [MultiplayerLobby] Игрок покинул:', userId);
-        // ✅ ЗАГРУЖАЕМ ИЗ БД (ИСТОЧНИК ИСТИНЫ!) - с задержкой для надежности
-        setTimeout(() => loadRoomPlayers(), 100);
-        setTimeout(() => loadRoomPlayers(), 500);
-      },
-      onPlayerReady: (userId, isReady) => {
-        console.log('✅ [MultiplayerLobby] Готовность обновлена:', userId, isReady);
-        // ✅ ЗАГРУЖАЕМ ИЗ БД (ИСТОЧНИК ИСТИНЫ!) - с задержкой для надежности
-        setTimeout(() => loadRoomPlayers(), 100);
-        setTimeout(() => loadRoomPlayers(), 500);
-      },
-      onGameStart: () => {
-        console.log('🚀 [MultiplayerLobby] Игра началась!');
-        handleGameStarted({});
-      }
-    });
-
-    setIsConnected(true);
-
-    // ✅ ЗАГРУЖАЕМ ИЗ БД ПРИ МОНТИРОВАНИИ
-    loadRoomPlayers();
-
-    // ✅ АВТООБНОВЛЕНИЕ КАЖДЫЕ 1.5 СЕКУНДЫ (НА СЛУЧАЙ ЕСЛИ REALTIME НЕ СРАБОТАЛ)
-    const interval = setInterval(() => {
-      console.log('🔄 [MultiplayerLobby] Автообновление из БД...');
-      loadRoomPlayers();
-    }, 1500);
-    
-    // ✅ УЛУЧШЕНО: Более частое обновление для хоста (каждые 0.5 секунды)
-    const hostInterval = isHost ? setInterval(() => {
-      console.log('🔄 [MultiplayerLobby] Автообновление для хоста...');
-      loadRoomPlayers();
-    }, 500) : null;
-
-    // Очистка при размонтировании
-    return () => {
-      console.log('🔌 [MultiplayerLobby] Отключаемся от комнаты');
-      clearInterval(interval);
-      if (hostInterval) {
-        clearInterval(hostInterval);
-      }
-      roomManager.unsubscribe();
-    };
-  }, [roomId]);
-
-  // ✅ ЗАГРУЗКА СПИСКА ИГРОКОВ ИЗ БД
-  const loadRoomPlayers = async () => {
+    refreshInFlightRef.current = true;
+    lastRefreshAtRef.current = now;
     try {
       const response = await fetch(`/api/rooms/${roomId}/players`);
       
@@ -160,21 +102,10 @@ export default function MultiplayerLobby({
         // ✅ ОБНОВЛЯЕМ isHost ИЗ БД!
         // ✅ КРИТИЧНО: Сравниваем telegram_id с telegram_id!
         const currentUserId = String(user?.id || '');
-        console.log('🔍 [MultiplayerLobby] Ищем игрока с ID:', currentUserId);
-        
-        const myPlayer = data.players.find((p: LobbyPlayer) => {
-          const playerId = String(p.user_id);
-          console.log(`   Сравниваем: "${playerId}" === "${currentUserId}": ${playerId === currentUserId}, is_host:`, p.is_host);
-          return playerId === currentUserId;
-        });
-        
-        console.log('👤 [MultiplayerLobby] Найден мой игрок:', myPlayer);
+        const myPlayer = data.players.find((p: LobbyPlayer) => String(p.user_id) === currentUserId);
         
         if (myPlayer && myPlayer.is_host !== undefined) {
-          console.log('👑 [MultiplayerLobby] Обновляем isHost:', myPlayer.is_host);
           setIsHost(myPlayer.is_host);
-        } else {
-          console.warn('⚠️ [MultiplayerLobby] НЕ НАШЛИ СЕБЯ В СПИСКЕ ИГРОКОВ! user_id:', currentUserId);
         }
         
         setLobbyState(prev => ({
@@ -188,8 +119,72 @@ export default function MultiplayerLobby({
       }
     } catch (error) {
       console.error('❌ [MultiplayerLobby] Ошибка загрузки игроков:', error);
+    } finally {
+      refreshInFlightRef.current = false;
     }
-  };
+  }, [roomId, user?.id, onLeaveRoom]);
+
+  const scheduleRoomRefresh = useCallback((delayMs = 0) => {
+    if (refreshTimerRef.current) {
+      clearTimeout(refreshTimerRef.current);
+      refreshTimerRef.current = null;
+    }
+    refreshTimerRef.current = setTimeout(() => {
+      loadRoomPlayers();
+    }, delayMs);
+  }, [loadRoomPlayers]);
+
+  // ✅ ИНИЦИАЛИЗАЦИЯ RoomManager при монтировании
+  useEffect(() => {
+    if (!roomManagerRef.current) {
+      roomManagerRef.current = new RoomManager();
+    }
+
+    const roomManager = roomManagerRef.current;
+
+    console.log('📡 [MultiplayerLobby] Подписываемся на комнату:', roomId);
+
+    // Подписываемся на обновления комнаты
+    roomManager.subscribeToRoom(roomId, {
+      onPlayerJoin: (player) => {
+        console.log('👥 [MultiplayerLobby] Игрок присоединился:', player);
+        scheduleRoomRefresh(120);
+      },
+      onPlayerLeave: (userId) => {
+        console.log('👋 [MultiplayerLobby] Игрок покинул:', userId);
+        scheduleRoomRefresh(120);
+      },
+      onPlayerReady: (userId, isReady) => {
+        console.log('✅ [MultiplayerLobby] Готовность обновлена:', userId, isReady);
+        scheduleRoomRefresh(120);
+      },
+      onGameStart: () => {
+        console.log('🚀 [MultiplayerLobby] Игра началась!');
+        handleGameStarted({});
+      }
+    });
+
+    setIsConnected(true);
+
+    // ✅ ЗАГРУЖАЕМ ИЗ БД ПРИ МОНТИРОВАНИИ
+    loadRoomPlayers(true);
+
+    // Фоновое обновление оставляем, но реже и без дублей.
+    const interval = setInterval(() => {
+      scheduleRoomRefresh(0);
+    }, 4000);
+
+    // Очистка при размонтировании
+    return () => {
+      console.log('🔌 [MultiplayerLobby] Отключаемся от комнаты');
+      clearInterval(interval);
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = null;
+      }
+      roomManager.unsubscribe();
+    };
+  }, [roomId, scheduleRoomRefresh, loadRoomPlayers]);
 
   // Обработка начала игры
   const handleGameStarted = (gameData: any) => {

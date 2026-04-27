@@ -110,25 +110,35 @@ export default function MultiplayerMenu({ onCreateRoom, onJoinRoom, onBack }: Mu
     try {
       console.log('🏠 [MultiplayerMenu] Создание комнаты...');
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/rooms/create`, {
+      const response = await fetch('/api/rooms', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-telegram-id': user.id.toString()
         },
+        credentials: 'include',
         body: JSON.stringify({
-          hostUserId: user.id.toString(),
+          action: 'create',
+          name: 'Новая комната',
           maxPlayers: createRoomData.maxPlayers,
           gameMode: createRoomData.gameMode,
-          allowBots: createRoomData.allowBots,
-          isPrivate: createRoomData.isPrivate
+          isPrivate: createRoomData.isPrivate,
+          hasPassword: false,
+          password: null
         }),
       });
 
-      if (!response.ok) {
-        throw new Error('Ошибка создания комнаты');
+      const payload = await response.json();
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.message || 'Ошибка создания комнаты');
       }
 
-      const roomData: RoomData = await response.json();
+      const roomData: RoomData = {
+        roomId: payload.room.id,
+        roomCode: payload.room.roomCode,
+        maxPlayers: createRoomData.maxPlayers,
+        hostUserId: user.id.toString()
+      };
       console.log('✅ [MultiplayerMenu] Комната создана:', roomData);
 
       setSuccess(`Комната создана! Код: ${roomData.roomCode}`);
@@ -165,27 +175,31 @@ export default function MultiplayerMenu({ onCreateRoom, onJoinRoom, onBack }: Mu
     try {
       console.log(`🚪 [MultiplayerMenu] Присоединение к комнате: ${joinRoomCode}`);
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/rooms/join`, {
+      const response = await fetch('/api/rooms', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-telegram-id': user.id.toString()
         },
+        credentials: 'include',
         body: JSON.stringify({
+          action: 'join',
           roomCode: joinRoomCode.toUpperCase(),
-          userId: user.id.toString(),
-          username: user.username,
-          firstName: user.first_name,
-          lastName: user.last_name,
-          photoUrl: (user as any).photo_url
+          password: null
         }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Ошибка присоединения к комнате');
+      const payload = await response.json();
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.message || 'Ошибка присоединения к комнате');
       }
 
-      const roomData: RoomData = await response.json();
+      const roomData: RoomData = {
+        roomId: payload.room.id,
+        roomCode: payload.room.roomCode,
+        maxPlayers: createRoomData.maxPlayers,
+        hostUserId: payload.room.isHost ? user.id.toString() : ''
+      };
       console.log('✅ [MultiplayerMenu] Присоединились к комнате:', roomData);
 
       setSuccess(`Присоединились к комнате ${roomData.roomCode}!`);
