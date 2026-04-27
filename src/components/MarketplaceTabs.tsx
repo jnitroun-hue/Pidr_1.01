@@ -343,6 +343,28 @@ export function MyNFTsTab({ nfts, onSellClick, onDeleteClick, getSuitColor, getS
         <p style={{ color: '#94a3b8', fontSize: '18px' }}>
           У вас пока нет NFT карт
         </p>
+        <motion.button
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.97 }}
+          onClick={() => {
+            if (typeof window !== 'undefined') {
+              window.location.href = '/nft-collection';
+            }
+          }}
+          style={{
+            marginTop: '16px',
+            padding: '12px 20px',
+            borderRadius: '10px',
+            border: 'none',
+            background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
+            color: '#0f172a',
+            fontWeight: 'bold',
+            fontSize: '15px',
+            cursor: 'pointer'
+          }}
+        >
+          🎨 Сгенерировать NFT
+        </motion.button>
       </div>
     );
   }

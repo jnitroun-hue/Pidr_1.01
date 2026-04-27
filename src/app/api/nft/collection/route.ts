@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 
 export const runtime = 'nodejs';
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     console.log(`📦 Получаем NFT коллекцию пользователя id=${userIdBigInt}...`);
 
     // ✅ ПОЛУЧАЕМ ID КАРТ, КОТОРЫЕ ВЫСТАВЛЕНЫ НА ПРОДАЖУ
-    const { data: activeListings } = await supabase
+    const { data: activeListings } = await supabaseAdmin
       .from('_pidr_nft_marketplace')
       .select('nft_card_id')
       .eq('seller_user_id', userIdBigInt)
@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
     const listedCardIds = (activeListings || []).map((listing: any) => listing.nft_card_id);
 
     // ✅ ПОЛУЧАЕМ ID КАРТ, КОТОРЫЕ УЖЕ В КОЛОДЕ
-    const { data: deckCards } = await supabase
+    const { data: deckCards } = await supabaseAdmin
       .from('_pidr_user_nft_deck')
       .select('nft_card_id')
       .eq('user_id', userIdBigInt);
@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
 
     // Возвращаем ПОЛНУЮ коллекцию, чтобы новые карты всегда были видны
     // в "Коллекции" и во вкладке "Мои NFT" сразу после генерации.
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('_pidr_nft_cards')
       .select('*')
       .eq('user_id', userIdBigInt)

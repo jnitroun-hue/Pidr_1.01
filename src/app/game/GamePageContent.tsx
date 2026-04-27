@@ -2569,9 +2569,12 @@ function GamePageContentComponent({
                       <div className={styles.activeCardContainer}>
                         {playerCards.map((card: LegacyCardLike, cardIndex: number) => {
                           // Карта может быть строкой "7_of_spades.png(open)" или объектом {rank, suit, image}
-                          const cardImage = typeof card === 'string' 
-                            ? card.replace('(open)', '').replace('(closed)', '')
-                            : card.image || (card.rank && card.suit ? `${card.rank}_of_${card.suit}.png` : 'back.png');
+                          const rawCardImage = typeof card === 'string'
+                            ? card
+                            : (card.image || (card.rank && card.suit ? `${card.rank}_of_${card.suit}.png` : 'back.png'));
+                          const cardImage = rawCardImage
+                            .replace('(open)', '')
+                            .replace('(closed)', '');
                           
                           // ✅ ИСПРАВЛЕНО: Проверяем является ли cardImage уже URL (NFT карта)
                           const isCardAlreadyNftUrl = cardImage.startsWith('http://') || cardImage.startsWith('https://');
@@ -2621,11 +2624,24 @@ function GamePageContentComponent({
                             isAvailableTarget = deckTargets.includes(index);
                           }
                           
+                          const normalizedCardImage = cardImage.toLowerCase();
+                          const isCardBackImage =
+                            normalizedCardImage === 'back.png' ||
+                            normalizedCardImage === 'card_back.png' ||
+                            normalizedCardImage.endsWith('/back.png') ||
+                            normalizedCardImage.endsWith('/card_back.png');
+
+                          // Иногда сервер может прислать image=back.png даже для открытой карты.
+                          // В этом случае собираем путь по rank/suit, чтобы карта не отображалась рубашкой.
+                          const resolvedOpenCardSrc = nftImageUrl
+                            ? nftImageUrl
+                            : isCardBackImage
+                              ? getCardAssetSrc({ rank: cardRank, suit: cardSuit })
+                              : getCardAssetSrc({ image: cardImage, rank: cardRank, suit: cardSuit });
+
                           // ✅ ИСПРАВЛЕНО: Определяем URL изображения (NFT или обычная карта) для ВСЕХ игроков
                           const cardImageUrl = showOpen
-                            ? (nftImageUrl
-                                ? nftImageUrl
-                                : getCardAssetSrc({ image: cardImage, rank: cardRank, suit: cardSuit }))
+                            ? resolvedOpenCardSrc
                             : getCardAssetSrc({ faceDown: true });
                           
                           // ✅ ИСПРАВЛЕНО: Динамическое перекрытие - УВЕЛИЧЕНО для закрытых карт
