@@ -13,7 +13,8 @@ import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
  *   price_coins?: number,
  *   price_ton?: number,
  *   price_sol?: number,
- *   crypto_currency?: 'TON' | 'SOL'
+ *   price_rub?: number,
+ *   fiat_payment_method?: 'bank_card' | 'sbp' | 'yoo_money' | 'sberbank'
  * }
  * 
  * Headers:
@@ -47,17 +48,18 @@ export async function POST(request: NextRequest) {
     
     // Парсим body
     const body = await request.json();
-    const { nft_card_id, price_coins, price_ton, price_sol, crypto_currency } = body;
+    const { nft_card_id, price_coins, price_ton, price_sol, crypto_currency, price_rub, fiat_payment_method } = body;
     
-    console.log('🏷️ [Marketplace Create] Создание лота:', { 
-      userId: dbUserId, 
-      nft_card_id, 
-      price_coins, 
+    console.log('🏷️ [Marketplace Create] Создание лота:', {
+      userId: dbUserId,
+      nft_card_id,
+      price_coins,
       price_ton,
       price_sol,
-      crypto_currency 
+      price_rub,
+      fiat_payment_method,
     });
-    
+
     // Валидация
     if (!nft_card_id) {
       return NextResponse.json(
@@ -66,12 +68,34 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // ✅ Проверяем price_coins, price_ton или price_sol
-    if (!price_coins && !price_ton && !price_sol) {
+    const priceRubNum =
+      price_rub !== undefined && price_rub !== null && price_rub !== ''
+        ? Number(price_rub)
+        : null;
+    const hasPrice =
+      !!price_coins ||
+      !!price_ton ||
+      !!price_sol ||
+      (priceRubNum !== null && !isNaN(priceRubNum) && priceRubNum > 0);
+
+    if (!hasPrice) {
       return NextResponse.json(
-        { success: false, error: 'Укажите хотя бы одну цену (price_coins, price_ton или price_sol)' },
+        {
+          success: false,
+          error:
+            'Укажите цену (монеты, TON, SOL или ₽). Если колонок ₽ нет в БД — выполните supabase/migrations/0007_marketplace_rub.sql',
+        },
         { status: 400 }
       );
+    }
+
+    if (priceRubNum !== null && !isNaN(priceRubNum) && priceRubNum > 0) {
+      if (price_coins || price_ton || price_sol) {
+        return NextResponse.json(
+          { success: false, error: 'Для одного лота укажите только один тип цены (₽ отдельно от монет/крипты)' },
+          { status: 400 }
+        );
+      }
     }
     
     // Карта должна принадлежать текущему пользователю по внутреннему id.
@@ -113,18 +137,33 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Создаем лот
+    const resolvedFiat =
+      fiat_payment_method && ['bank_card', 'sbp', 'yoo_money', 'sberbank'].includes(fiat_payment_method)
+        ? fiat_payment_method
+        : 'bank_card';
+
+    const insertRow: Record<string, unknown> = {
+      nft_card_id,
+      seller_user_id: dbUserId,
+      price_coins: price_coins || null,
+      price_ton: price_ton || null,
+      price_sol: price_sol || null,
+      crypto_currency: price_ton ? 'TON' : price_sol ? 'SOL' : null,
+      status: 'active',
+    };
+
+    if (priceRubNum !== null && !isNaN(priceRubNum) && priceRubNum > 0) {
+      insertRow.price_rub = priceRubNum;
+      insertRow.fiat_payment_method = resolvedFiat;
+      insertRow.price_coins = null;
+      insertRow.price_ton = null;
+      insertRow.price_sol = null;
+      insertRow.crypto_currency = null;
+    }
+
     const { data: listing, error: insertError } = await db
       .from('_pidr_nft_marketplace')
-      .insert({
-        nft_card_id,
-        seller_user_id: dbUserId,
-        price_coins: price_coins || null,
-        price_ton: price_ton || null,
-        price_sol: price_sol || null,
-        crypto_currency: price_ton ? 'TON' : price_sol ? 'SOL' : null,
-        status: 'active'
-      })
+      .insert(insertRow as any)
       .select()
       .single();
     

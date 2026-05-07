@@ -128,6 +128,63 @@ async function handlePaymentSucceeded(supabase: any, payment: any) {
 
       console.log(`💰 Добавлено ${coinsToAdd} монет пользователю ${userId} (${amount} ₽), новый баланс: ${newBalance}`);
     }
+  } else if (itemType === 'nft_listing') {
+    const listingId = parseInt(metadata.listingId || metadata.itemId, 10);
+    const buyerDbUserId = parseInt(metadata.buyerDbUserId || userId, 10);
+    const paidRub = parseFloat(payment.amount.value);
+
+    if (!listingId || !buyerDbUserId) {
+      console.error('❌ nft_listing: нет listingId или buyerDbUserId', metadata);
+      return;
+    }
+
+    const { data: listing, error: le } = await supabase
+      .from('_pidr_nft_marketplace')
+      .select('id, status, seller_user_id, nft_card_id, price_rub')
+      .eq('id', listingId)
+      .single();
+
+    if (le || !listing || listing.status !== 'active') {
+      console.error('❌ nft_listing: лот не найден или неактивен', le);
+      return;
+    }
+
+    if (listing.seller_user_id === buyerDbUserId) {
+      console.error('❌ nft_listing: покупатель = продавец');
+      return;
+    }
+
+    const expected = Number(listing.price_rub);
+    if (!expected || Math.abs(expected - paidRub) > 0.05) {
+      console.error(`❌ nft_listing: сумма не совпадает (ожид. ${expected}, оплата ${paidRub})`);
+      return;
+    }
+
+    const { error: transferErr } = await supabase
+      .from('_pidr_nft_cards')
+      .update({ user_id: buyerDbUserId, updated_at: new Date().toISOString() })
+      .eq('id', listing.nft_card_id);
+
+    if (transferErr) {
+      console.error('❌ nft_listing: ошибка переноса NFT', transferErr);
+      return;
+    }
+
+    const { error: updErr } = await supabase
+      .from('_pidr_nft_marketplace')
+      .update({
+        status: 'sold',
+        buyer_user_id: buyerDbUserId,
+        sold_at: new Date().toISOString(),
+      })
+      .eq('id', listingId);
+
+    if (updErr) {
+      console.error('❌ nft_listing: ошибка обновления лота', updErr);
+      return;
+    }
+
+    console.log(`✅ nft_listing: лот ${listingId} продан пользователю ${buyerDbUserId}`);
   } else if (itemType === 'premium' || itemType === 'item') {
     // Обработка покупки премиум-функций или предметов
     // TODO: Реализовать логику активации премиум/предметов

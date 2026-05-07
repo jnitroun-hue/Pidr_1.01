@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, TrendingUp, DollarSign, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import NFTMarketplace from '../../components/NFTMarketplace';
+import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
 
 interface User {
   telegram_id: number;
@@ -100,7 +101,7 @@ export default function ShopPage() {
     return (
       <div style={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+        background: `linear-gradient(165deg, ${T.bgDeep} 0%, ${T.bgMain} 100%)`,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -110,29 +111,29 @@ export default function ShopPage() {
           <div style={{
             width: '60px',
             height: '60px',
-            border: '4px solid rgba(251, 191, 36, 0.3)',
-            borderTop: '4px solid #fbbf24',
+            border: `4px solid ${T.borderGold}`,
+            borderTop: `4px solid ${T.accentGold}`,
             borderRadius: '50%',
             animation: 'spin 1s linear infinite',
             margin: '0 auto 20px'
           }} />
-          <p style={{ color: '#94a3b8' }}>Загрузка...</p>
+        <p style={{ color: T.textMuted }}>Загрузка...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-      padding: '20px',
-      paddingBottom: '100px'
-    }}>
       <div style={{
-        maxWidth: '1400px',
-        margin: '0 auto'
+        minHeight: '100vh',
+        background: `linear-gradient(165deg, ${T.bgDeep} 0%, ${T.bgMain} 55%, #0d1219 100%)`,
+        padding: '20px',
+        paddingBottom: '100px'
       }}>
+        <div style={{
+          maxWidth: '1400px',
+          margin: '0 auto'
+        }}>
         {/* Header */}
         <div style={{
           display: 'flex',
@@ -159,12 +160,12 @@ export default function ShopPage() {
               alignItems: 'center',
               gap: '8px',
               padding: '12px 20px',
-              borderRadius: '12px',
-              border: 'none',
-              background: 'rgba(51, 65, 85, 0.6)',
-              color: '#e2e8f0',
-              fontWeight: 'bold',
-              fontSize: '16px',
+              borderRadius: T.radiusMd,
+              border: `1px solid ${T.borderSubtle}`,
+              background: T.bgElevated,
+              color: T.text,
+              fontWeight: 700,
+              fontSize: '15px',
               cursor: 'pointer'
             }}
           >
@@ -178,16 +179,17 @@ export default function ShopPage() {
               display: 'flex',
               alignItems: 'center',
               gap: '16px',
-              background: 'rgba(30, 41, 59, 0.8)',
+              background: T.bgCard,
               padding: '12px 20px',
-              borderRadius: '12px',
-              border: '2px solid rgba(251, 191, 36, 0.3)'
+              borderRadius: T.radiusMd,
+              border: `1px solid ${T.borderGold}`,
+              boxShadow: T.shadowCard,
             }}>
               <div style={{ textAlign: 'right' }}>
-                <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '4px' }}>
+                <p style={{ color: T.textMuted, fontSize: '14px', marginBottom: '4px' }}>
                   @{user.username || user.first_name}
                 </p>
-                <p style={{ color: '#fbbf24', fontWeight: 'bold', fontSize: '18px' }}>
+                <p style={{ color: T.accentGold, fontWeight: 'bold', fontSize: '18px' }}>
                   💰 {user.coins.toLocaleString()} монет
                 </p>
               </div>
@@ -249,26 +251,26 @@ function StatCard({ icon, label, value, color }: {
 }) {
   return (
     <motion.div
-      whileHover={{ scale: 1.03, y: -5 }}
+      whileHover={{ scale: 1.02, y: -3 }}
       style={{
-        background: 'rgba(30, 41, 59, 0.8)',
-        borderRadius: '16px',
-        border: `2px solid ${color}40`,
+        background: T.bgCard,
+        borderRadius: T.radiusLg,
+        border: `1px solid ${color}55`,
         padding: '20px',
         display: 'flex',
         alignItems: 'center',
         gap: '16px',
-        boxShadow: `0 4px 20px ${color}20`
+        boxShadow: `0 8px 28px ${color}18`,
       }}
     >
-      <div style={{ color, opacity: 0.9 }}>
+      <div style={{ color, opacity: 0.95 }}>
         {icon}
       </div>
       <div>
-        <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '4px' }}>
+        <p style={{ color: T.textMuted, fontSize: '13px', marginBottom: '4px', fontWeight: 600 }}>
           {label}
         </p>
-        <p style={{ color: '#e2e8f0', fontSize: '24px', fontWeight: 'bold' }}>
+        <p style={{ color: T.text, fontSize: '22px', fontWeight: 800 }}>
           {value}
         </p>
       </div>

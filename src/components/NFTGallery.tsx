@@ -8,8 +8,10 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
-import { TonConnectButton } from '@tonconnect/ui-react';
+import TonWalletConnect from './TonWalletConnect';
 import SolanaWalletConnect from './SolanaWalletConnect';
+import { getApiHeaders } from '@/lib/api-headers';
+import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
 
 interface NFTCard {
   id: string;
@@ -55,7 +57,8 @@ export default function NFTGallery() {
         method: 'GET',
         credentials: 'include',
         headers: {
-          'Cache-Control': 'no-cache'
+          'Cache-Control': 'no-cache',
+          ...getApiHeaders(),
         },
         cache: 'no-store'
       });
@@ -272,62 +275,70 @@ export default function NFTGallery() {
       {/* Заголовок */}
       <div style={{ marginBottom: '30px', textAlign: 'center' }}>
         <h3 style={{ 
-          color: '#ffffff', 
-          fontSize: '2rem', 
-          fontWeight: 'black', 
+          color: T.accentGold, 
+          fontSize: 'clamp(1.25rem, 4vw, 1.75rem)', 
+          fontWeight: 800, 
           marginBottom: '12px',
-          textShadow: '0 0 20px rgba(59, 130, 246, 0.5)'
+          letterSpacing: '0.08em',
+          textTransform: 'uppercase',
         }}>
-          🎴 МОЯ NFT КОЛЛЕКЦИЯ
+          Моя NFT коллекция
         </h3>
-        <p style={{ color: '#94a3b8', fontSize: '1.1rem', marginBottom: '20px' }}>
-          Всего карт: <span style={{ color: '#3b82f6', fontWeight: 'bold', fontSize: '1.3rem' }}>{collection.length}</span>
+        <p style={{ color: T.textMuted, fontSize: '1rem', marginBottom: '20px' }}>
+          Всего карт:{' '}
+          <span style={{ color: T.accentGold, fontWeight: 'bold', fontSize: '1.2rem' }}>{collection.length}</span>
         </p>
 
         {/* ✅ ПОДКЛЮЧЕНИЕ КОШЕЛЬКОВ */}
-        <div style={{
-          maxWidth: '500px',
-          margin: '0 auto',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '12px'
-        }}>
-          {/* ✅ ПРЕДУПРЕЖДЕНИЕ О БЕЗОПАСНОСТИ */}
-          <div style={{
-            padding: '12px 16px',
-            borderRadius: '8px',
-            background: 'rgba(239, 68, 68, 0.1)',
-            border: '2px solid rgba(239, 68, 68, 0.3)',
-            marginBottom: '8px'
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: '10px'
-            }}>
-              <span style={{ fontSize: '18px', color: '#ef4444' }}>⚠️</span>
+        <div
+          style={{
+            maxWidth: 420,
+            margin: '0 auto',
+            padding: '14px 16px',
+            borderRadius: T.radiusLg,
+            border: `1px solid ${T.borderGold}`,
+            background: T.bgCard,
+            boxShadow: T.shadowCard,
+          }}
+        >
+          <div
+            style={{
+              padding: '12px 14px',
+              borderRadius: T.radiusMd,
+              background: T.warningBg,
+              border: `1px solid ${T.warningBorder}`,
+              marginBottom: 12,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+              <span style={{ fontSize: '16px' }}>⚠️</span>
               <div style={{ flex: 1 }}>
-                <div style={{
-                  color: '#ef4444',
-                  fontSize: '13px',
-                  fontWeight: '700',
-                  marginBottom: '4px'
-                }}>
-                  ВНИМАНИЕ!
+                <div style={{ color: T.warningTitle, fontSize: '12px', fontWeight: 800, marginBottom: 4 }}>
+                  Внимание
                 </div>
-                <div style={{
-                  color: '#fca5a5',
-                  fontSize: '12px',
-                  lineHeight: '1.5'
-                }}>
-                  Убедитесь, что ваши кошельки могут принимать NFT и адреса корректно прописаны! Потерянные средства или NFT мы вернуть не сможем!
+                <div style={{ color: T.warningBody, fontSize: '11px', lineHeight: 1.5 }}>
+                  Проверьте кошельки перед выводом NFT. Ошибки в сети или адресе необратимы.
                 </div>
               </div>
             </div>
           </div>
-          
-          <TonConnectButton />
-          <SolanaWalletConnect />
+
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'stretch',
+              justifyContent: 'center',
+              gap: 10,
+            }}
+          >
+            <div style={{ flex: '1 1 160px', minWidth: 0 }}>
+              <TonWalletConnect />
+            </div>
+            <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center' }}>
+              <SolanaWalletConnect compact />
+            </div>
+          </div>
         </div>
       </div>
 

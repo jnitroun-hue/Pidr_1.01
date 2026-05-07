@@ -5,6 +5,7 @@ import { ShoppingCart, DollarSign, Package, TrendingUp, Filter, Search, X, Check
 import Image from 'next/image';
 import { BuyTab, SellTab, MyNFTsTab, SellModal } from './MarketplaceTabs';
 import { getApiHeaders } from '@/lib/api-headers';
+import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
 
 // Типы
 interface NFTCard {
@@ -23,6 +24,8 @@ interface Listing {
   price_coins: number | null;
   price_ton: number | null;
   price_sol: number | null;
+  price_rub?: number | null;
+  fiat_payment_method?: string | null;
   crypto_currency: string | null;
   status: string;
   created_at: string;
@@ -62,7 +65,9 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
   const [selectedNFT, setSelectedNFT] = useState<NFTCard | null>(null);
   // ✅ НОВАЯ СИСТЕМА: ОДИН ИНПУТ + ВАЛЮТА
   const [sellPrice, setSellPrice] = useState('');
-  const [sellCurrency, setSellCurrency] = useState<'COINS' | 'TON' | 'SOL'>('COINS');
+  const [sellCategory, setSellCategory] = useState<'coins' | 'crypto' | 'fiat'>('coins');
+  const [sellCrypto, setSellCrypto] = useState<'TON' | 'SOL'>('TON');
+  const [sellFiatMethod, setSellFiatMethod] = useState<'bank_card' | 'sbp' | 'yoo_money' | 'sberbank'>('sbp');
 
   // Helper функции
 
@@ -231,9 +236,6 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
 
   // Обработчики
   const handleBuyNFT = async (listing: Listing) => {
-    // ✅ ПРОВЕРЯЕМ СПОСОБ ОПЛАТЫ
-    const isCrypto = (listing.price_ton || listing.price_sol);
-    
     if (listing.price_coins) {
       // ОПЛАТА МОНЕТАМИ
       if (userCoins < listing.price_coins) {
@@ -272,7 +274,7 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
         console.error('Ошибка покупки:', error);
         alert('Ошибка при покупке');
       }
-    } else if (isCrypto) {
+    } else if (listing.price_ton || listing.price_sol) {
       // ✅ ОПЛАТА КРИПТОВАЛЮТОЙ (TON/SOL)
       const currency = listing.price_ton ? 'TON' : 'SOL';
       const amount = listing.price_ton || listing.price_sol;
@@ -328,6 +330,30 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
         console.error('Ошибка покупки крипты:', error);
         alert('Ошибка при покупке');
       }
+    } else if (listing.price_rub) {
+      if (!confirm(`Купить за ${listing.price_rub} ₽ через ЮКассу?\n\nОткроется оплата (способ задан продавцом при выставлении лота).`)) {
+        return;
+      }
+      try {
+        const response = await fetch('/api/marketplace/create-rub-payment', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...getApiHeaders(),
+          },
+          body: JSON.stringify({ listing_id: listing.id }),
+        });
+        const data = await response.json();
+        if (data.success && data.payment?.confirmationUrl) {
+          window.location.href = data.payment.confirmationUrl;
+          loadMarketplace();
+        } else {
+          alert(`❌ ${data.error || data.message || 'Не удалось создать платёж'}`);
+        }
+      } catch (e) {
+        console.error(e);
+        alert('Ошибка при создании платежа');
+      }
     } else {
       alert('Цена не указана!');
     }
@@ -337,37 +363,40 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
     if (!selectedNFT) return;
 
     const price = parseFloat(sellPrice);
-    
+
     if (!price || price <= 0) {
       alert('Укажите корректную цену!');
       return;
     }
 
-    // ✅ ПРОВЕРКА ПОДКЛЮЧЕНИЯ КОШЕЛЬКА ДЛЯ КРИПТО-ПРОДАЖИ
-    if (sellCurrency === 'TON' || sellCurrency === 'SOL') {
-      // ИСПРАВЛЕНО: Проверяем кошелек в _pidr_player_wallets
+    if (sellCategory === 'crypto') {
       try {
-        const walletType = sellCurrency.toLowerCase(); // 'TON' -> 'ton', 'SOL' -> 'sol'
-        
+        const walletType = sellCrypto === 'TON' ? 'ton' : 'sol';
+
         const checkResponse = await fetch('/api/wallet/check', {
           method: 'POST',
           credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
-            ...getApiHeaders()
+            ...getApiHeaders(),
           },
-          body: JSON.stringify({ wallet_type: walletType })
+          body: JSON.stringify({ wallet_type: walletType }),
         });
-        
+
         const checkData = await checkResponse.json();
-        
+
         if (!checkData.success || !checkData.wallet) {
-          alert(`❌ Для продажи за ${sellCurrency} подключите ${sellCurrency} кошелек!\n\nПерейдите в раздел "Кошелёк" и подключите ${sellCurrency === 'TON' ? 'TON' : 'Solana'} кошелек.`);
+          alert(
+            `❌ Для продажи за ${sellCrypto} подключите кошелёк!\n\nРаздел «Кошелёк» или коллекция NFT — подключите ${sellCrypto === 'TON' ? 'TON' : 'Solana'}.`
+          );
           return;
         }
-        
-        // Предупреждаем что оплата пойдет на этот кошелек
-        if (!confirm(`💰 Оплата за NFT придёт на ваш ${sellCurrency} кошелек:\n\n${checkData.wallet.wallet_address}\n\nПродолжить?`)) {
+
+        if (
+          !confirm(
+            `💰 Оплата за NFT придёт на ваш ${sellCrypto} кошелёк:\n\n${checkData.wallet.wallet_address}\n\nПродолжить?`
+          )
+        ) {
           return;
         }
       } catch (error) {
@@ -377,23 +406,29 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
       }
     }
 
-    // ✅ НОВАЯ ЛОГИКА: В зависимости от валюты заполняем нужное поле
-    const requestBody: any = {
+    const requestBody: Record<string, unknown> = {
       nft_card_id: selectedNFT.id,
       price_coins: null,
       price_ton: null,
       price_sol: null,
-      crypto_currency: null
+      price_rub: null,
+      fiat_payment_method: null,
+      crypto_currency: null,
     };
 
-    if (sellCurrency === 'COINS') {
-      requestBody.price_coins = Math.floor(price); // Монеты только целые
-    } else if (sellCurrency === 'TON') {
-      requestBody.price_ton = price;
-      requestBody.crypto_currency = 'TON';
-    } else if (sellCurrency === 'SOL') {
-      requestBody.price_sol = price;
-      requestBody.crypto_currency = 'SOL';
+    if (sellCategory === 'coins') {
+      requestBody.price_coins = Math.floor(price);
+    } else if (sellCategory === 'crypto') {
+      if (sellCrypto === 'TON') {
+        requestBody.price_ton = price;
+        requestBody.crypto_currency = 'TON';
+      } else {
+        requestBody.price_sol = price;
+        requestBody.crypto_currency = 'SOL';
+      }
+    } else {
+      requestBody.price_rub = Math.round(price * 100) / 100;
+      requestBody.fiat_payment_method = sellFiatMethod;
     }
 
     try {
@@ -413,7 +448,9 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
         setShowSellModal(false);
         setSelectedNFT(null);
         setSellPrice('');
-        setSellCurrency('COINS');
+        setSellCategory('coins');
+        setSellCrypto('TON');
+        setSellFiatMethod('sbp');
         
         // ✅ ОБНОВЛЯЕМ ВСЕ КОМПОНЕНТЫ МАГАЗИНА
         loadMarketplace(); // ✅ Обновляем список лотов в магазине
@@ -501,61 +538,54 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
   });
 
   return (
-    <div style={{
-      minHeight: '600px',
-      background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%)',
-      borderRadius: '20px',
-      border: '2px solid rgba(251, 191, 36, 0.3)',
-      padding: '30px',
-      boxShadow: '0 20px 60px rgba(0, 0, 0, 0.4)'
-    }}>
+    <div
+      style={{
+        minHeight: '600px',
+        background: `linear-gradient(160deg, ${T.bgDeep} 0%, ${T.bgMain} 45%, ${T.bgElevated} 100%)`,
+        borderRadius: T.radiusLg,
+        border: `1px solid ${T.borderGold}`,
+        padding: 'clamp(16px, 4vw, 28px)',
+        boxShadow: T.shadowCard,
+      }}
+    >
       {/* Header */}
-      <div style={{ marginBottom: '30px' }}>
-        <h2 style={{
-          fontSize: '32px',
-          fontWeight: 'bold',
-          background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          marginBottom: '10px',
-          textAlign: 'center'
-        }}>
-          🎨 NFT MARKETPLACE
+      <div style={{ marginBottom: '28px' }}>
+        <h2
+          style={{
+            fontSize: 'clamp(1.35rem, 5vw, 2rem)',
+            fontWeight: 800,
+            letterSpacing: '0.06em',
+            color: T.accentGold,
+            marginBottom: '8px',
+            textAlign: 'center',
+            textTransform: 'uppercase',
+            textShadow: `0 0 28px ${T.borderGold}`,
+          }}
+        >
+          NFT Marketplace
         </h2>
-        <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: '16px' }}>
+        <p style={{ textAlign: 'center', color: T.textMuted, fontSize: '15px', maxWidth: 520, margin: '0 auto' }}>
           Торговая площадка игровых NFT карт
         </p>
-        
-        {/* ✅ ПРЕДУПРЕЖДЕНИЕ О БЕЗОПАСНОСТИ КОШЕЛЬКОВ */}
-        <div style={{
-          maxWidth: '600px',
-          margin: '20px auto 0',
-          padding: '12px 16px',
-          borderRadius: '8px',
-          background: 'rgba(239, 68, 68, 0.1)',
-          border: '2px solid rgba(239, 68, 68, 0.3)'
-        }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: '10px'
-          }}>
-            <span style={{ fontSize: '18px', color: '#ef4444' }}>⚠️</span>
+
+        <div
+          style={{
+            maxWidth: 560,
+            margin: '18px auto 0',
+            padding: '14px 16px',
+            borderRadius: T.radiusMd,
+            background: T.warningBg,
+            border: `1px solid ${T.warningBorder}`,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+            <span style={{ fontSize: '18px' }}>⚠️</span>
             <div style={{ flex: 1 }}>
-              <div style={{
-                color: '#ef4444',
-                fontSize: '13px',
-                fontWeight: '700',
-                marginBottom: '4px'
-              }}>
-                ВНИМАНИЕ!
+              <div style={{ color: T.warningTitle, fontSize: '12px', fontWeight: 800, marginBottom: 4 }}>
+                Внимание
               </div>
-              <div style={{
-                color: '#fca5a5',
-                fontSize: '12px',
-                lineHeight: '1.5'
-              }}>
-                Убедитесь, что ваши кошельки могут принимать NFT и адреса корректно прописаны! Потерянные средства или NFT мы вернуть не сможем!
+              <div style={{ color: T.warningBody, fontSize: '12px', lineHeight: 1.55 }}>
+                Проверьте кошельки и адреса перед сделкой. Потерянные средства или NFT восстановить нельзя.
               </div>
             </div>
           </div>
@@ -563,38 +593,44 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
       </div>
 
       {/* Tabs */}
-      <div style={{
-        display: 'flex',
-        gap: '10px',
-        marginBottom: '30px',
-        justifyContent: 'center',
-        flexWrap: 'wrap'
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          gap: '8px',
+          marginBottom: '26px',
+          justifyContent: 'center',
+          flexWrap: 'wrap',
+        }}
+      >
         {[
-          { id: 'buy', label: 'Купить', icon: <ShoppingCart size={20} /> },
-          { id: 'sell', label: 'Продать', icon: <DollarSign size={20} /> },
-          { id: 'my-nfts', label: 'Мои NFT', icon: <Package size={20} /> }
+          { id: 'buy', label: 'Купить', icon: <ShoppingCart size={18} /> },
+          { id: 'sell', label: 'Продать', icon: <DollarSign size={18} /> },
+          { id: 'my-nfts', label: 'Мои NFT', icon: <Package size={18} /> },
         ].map((tab) => (
           <motion.button
             key={tab.id}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setActiveTab(tab.id as any)}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            onClick={() => setActiveTab(tab.id as 'buy' | 'sell' | 'my-nfts')}
             style={{
-              padding: '12px 24px',
-              borderRadius: '12px',
-              border: 'none',
-              background: activeTab === tab.id
-                ? 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)'
-                : 'rgba(51, 65, 85, 0.6)',
-              color: activeTab === tab.id ? '#0f172a' : '#e2e8f0',
-              fontWeight: 'bold',
-              fontSize: '16px',
+              padding: '11px 20px',
+              borderRadius: 999,
+              border:
+                activeTab === tab.id
+                  ? `1px solid ${T.borderGoldStrong}`
+                  : `1px solid ${T.borderSubtle}`,
+              background:
+                activeTab === tab.id
+                  ? `linear-gradient(135deg, ${T.accentGold} 0%, ${T.accentGoldMid} 100%)`
+                  : T.bgElevated,
+              color: activeTab === tab.id ? T.bgDeep : T.text,
+              fontWeight: 700,
+              fontSize: '14px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
-              transition: 'all 0.3s ease'
+              gap: 8,
+              boxShadow: activeTab === tab.id ? `0 8px 24px ${T.borderGold}33` : 'none',
             }}
           >
             {tab.icon}
@@ -606,8 +642,8 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
       {/* Content */}
       {loading ? (
         <div style={{ textAlign: 'center', padding: '60px 0' }}>
-          <Loader2 size={48} className="animate-spin" style={{ color: '#fbbf24', margin: '0 auto' }} />
-          <p style={{ color: '#94a3b8', marginTop: '20px' }}>Загрузка...</p>
+          <Loader2 size={44} className="animate-spin" style={{ color: T.accentGold, margin: '0 auto' }} />
+          <p style={{ color: T.textMuted, marginTop: '20px' }}>Загрузка...</p>
         </div>
       ) : (
         <AnimatePresence mode="wait">
@@ -652,8 +688,12 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
           nft={selectedNFT}
           sellPrice={sellPrice}
           setSellPrice={setSellPrice}
-          sellCurrency={sellCurrency}
-          setSellCurrency={setSellCurrency}
+          sellCategory={sellCategory}
+          setSellCategory={setSellCategory}
+          sellCrypto={sellCrypto}
+          setSellCrypto={setSellCrypto}
+          sellFiatMethod={sellFiatMethod}
+          setSellFiatMethod={setSellFiatMethod}
           onClose={() => {
             setShowSellModal(false);
             setSelectedNFT(null);

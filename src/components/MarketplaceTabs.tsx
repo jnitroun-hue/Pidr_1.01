@@ -1,8 +1,9 @@
 'use client'
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import { ShoppingBag, X, TrendingUp, Calendar, Check } from 'lucide-react';
+import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
 
 // Типы (дублируем из основного компонента)
 interface NFTCard {
@@ -21,6 +22,8 @@ interface Listing {
   price_coins: number | null;
   price_ton: number | null;
   price_sol: number | null;
+  price_rub?: number | null;
+  fiat_payment_method?: string | null;
   crypto_currency: string | null;
   status: string;
   created_at: string;
@@ -222,6 +225,23 @@ export function BuyTab({ listings, onBuy, userCoins, getSuitColor, getSuitSymbol
                 {listing.price_sol} SOL
               </div>
             )}
+            {listing.price_rub != null && Number(listing.price_rub) > 0 && (
+              <div
+                style={{
+                  fontSize: '20px',
+                  fontWeight: 'bold',
+                  color: '#86efac',
+                  textAlign: 'center',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                }}
+              >
+                <span style={{ fontSize: '22px' }}>₽</span>
+                {Number(listing.price_rub).toLocaleString('ru-RU')} RUB
+              </div>
+            )}
           </div>
 
           {/* Buy Button */}
@@ -229,23 +249,29 @@ export function BuyTab({ listings, onBuy, userCoins, getSuitColor, getSuitSymbol
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => onBuy(listing)}
-            disabled={listing.price_coins ? userCoins < listing.price_coins : false}
+            disabled={
+              listing.price_coins ? userCoins < listing.price_coins : false
+            }
             style={{
               width: '100%',
               padding: '12px',
               borderRadius: '10px',
               border: 'none',
-              background: listing.price_coins && userCoins < listing.price_coins
-                ? 'rgba(100, 116, 139, 0.5)'
-                : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+              background:
+                listing.price_coins && userCoins < listing.price_coins
+                  ? 'rgba(100, 116, 139, 0.5)'
+                  : `linear-gradient(135deg, ${T.success} 0%, #16a34a 100%)`,
               color: 'white',
               fontWeight: 'bold',
               fontSize: '16px',
-              cursor: listing.price_coins && userCoins < listing.price_coins ? 'not-allowed' : 'pointer',
+              cursor:
+                listing.price_coins && userCoins < listing.price_coins
+                  ? 'not-allowed'
+                  : 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '8px'
+              gap: '8px',
             }}
           >
             <ShoppingBag size={18} />
@@ -723,8 +749,15 @@ function ListingCard({ listing, onCancel, getSuitColor, getSuitSymbol, getRankDi
           <p style={{ fontSize: '14px', color: '#94a3b8', marginBottom: '8px' }}>
             {listing.nft_card.rarity === 'pokemon' ? '🔥 Pokémon' : '⭐ Simple'}
           </p>
-          <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#fbbf24' }}>
-            💰 {listing.price_coins?.toLocaleString()} монет
+          <div style={{ fontSize: '15px', fontWeight: 'bold', color: '#fbbf24', lineHeight: 1.4 }}>
+            {listing.price_coins != null && listing.price_coins > 0 && (
+              <div>💰 {listing.price_coins?.toLocaleString()} монет</div>
+            )}
+            {listing.price_ton != null && listing.price_ton > 0 && <div>💎 {listing.price_ton} TON</div>}
+            {listing.price_sol != null && listing.price_sol > 0 && <div>☀️ {listing.price_sol} SOL</div>}
+            {listing.price_rub != null && Number(listing.price_rub) > 0 && (
+              <div>₽ {Number(listing.price_rub).toLocaleString('ru-RU')}</div>
+            )}
           </div>
         </div>
       </div>
@@ -794,6 +827,7 @@ function SoldCard({ listing, getSuitColor, getSuitSymbol, getRankDisplay }: any)
             {listing.price_coins && `✅ Продано за ${listing.price_coins.toLocaleString()} 💰 монет`}
             {listing.price_ton && `✅ Продано за ${listing.price_ton} 💎 TON`}
             {listing.price_sol && `✅ Продано за ${listing.price_sol} ☀️ SOL`}
+            {listing.price_rub != null && Number(listing.price_rub) > 0 && `✅ Продано за ${Number(listing.price_rub).toLocaleString('ru-RU')} ₽`}
           </div>
         </div>
       </div>
@@ -802,220 +836,307 @@ function SoldCard({ listing, getSuitColor, getSuitSymbol, getRankDisplay }: any)
 }
 
 // ====================================================================
-// SELL MODAL - Модальное окно продажи
+// SELL MODAL - Продажа: монеты / крипта / рубли + подвыбор способа
 // ====================================================================
-// ✅ НОВЫЙ ИНТЕРФЕЙС: ОДИН ИНПУТ + ВАЛЮТА
 interface SellModalProps extends HelperFunctions {
   nft: NFTCard;
   sellPrice: string;
   setSellPrice: (value: string) => void;
-  sellCurrency: 'COINS' | 'TON' | 'SOL';
-  setSellCurrency: (value: 'COINS' | 'TON' | 'SOL') => void;
+  sellCategory: 'coins' | 'crypto' | 'fiat';
+  setSellCategory: (v: 'coins' | 'crypto' | 'fiat') => void;
+  sellCrypto: 'TON' | 'SOL';
+  setSellCrypto: (v: 'TON' | 'SOL') => void;
+  sellFiatMethod: 'bank_card' | 'sbp' | 'yoo_money' | 'sberbank';
+  setSellFiatMethod: (v: 'bank_card' | 'sbp' | 'yoo_money' | 'sberbank') => void;
   onClose: () => void;
   onConfirm: () => void;
+}
+
+function Chip({
+  active,
+  children,
+  onClick,
+}: {
+  active: boolean;
+  children: ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        flex: 1,
+        minWidth: 0,
+        padding: '10px 8px',
+        borderRadius: 999,
+        border: active ? `1px solid ${T.borderGoldStrong}` : `1px solid ${T.borderSubtle}`,
+        background: active ? `linear-gradient(135deg, ${T.accentGold}22, ${T.accentGold}08)` : T.bgElevated,
+        color: active ? T.accentGold : T.textMuted,
+        fontWeight: 700,
+        fontSize: '12px',
+        cursor: 'pointer',
+        textAlign: 'center',
+      }}
+    >
+      {children}
+    </button>
+  );
 }
 
 export function SellModal({
   nft,
   sellPrice,
   setSellPrice,
-  sellCurrency,
-  setSellCurrency,
+  sellCategory,
+  setSellCategory,
+  sellCrypto,
+  setSellCrypto,
+  sellFiatMethod,
+  setSellFiatMethod,
   onClose,
   onConfirm,
   getSuitColor,
   getSuitSymbol,
-  getRankDisplay
+  getRankDisplay,
 }: SellModalProps) {
+  const step = sellCategory === 'crypto' || sellCategory === 'fiat' ? 2 : 1;
+  const priceStep =
+    sellCategory === 'coins' ? '1' : sellCategory === 'fiat' ? '0.01' : '0.001';
+  const placeholder =
+    sellCategory === 'coins' ? '1000' : sellCategory === 'fiat' ? '500' : sellCrypto === 'TON' ? '0.5' : '0.1';
+
+  const hint =
+    sellCategory === 'coins'
+      ? 'Внутриигровые монеты списываются у покупателя с баланса.'
+      : sellCategory === 'crypto'
+        ? `${sellCrypto}: покупатель отправит крипту на ваш подключённый кошелёк.`
+        : '₽: покупатель оплатит через ЮКассу; перевод NFT после успешной оплаты. Нужны колонки в БД (см. 0007_marketplace_rub.sql).';
+
   return (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      background: 'rgba(0, 0, 0, 0.8)',
-      backdropFilter: 'blur(10px)',
-      zIndex: 99999,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '20px'
-    }}>
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0, 0, 0, 0.82)',
+        backdropFilter: 'blur(12px)',
+        zIndex: 99999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '16px',
+      }}
+    >
       <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
+        initial={{ opacity: 0, scale: 0.94 }}
         animate={{ opacity: 1, scale: 1 }}
         style={{
-          background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.98) 100%)',
-          borderRadius: '20px',
-          border: `2px solid ${getSuitColor(nft.suit)}60`,
-          padding: '30px',
-          maxWidth: '500px',
+          background: `linear-gradient(165deg, ${T.bgCard} 0%, ${T.bgDeep} 100%)`,
+          borderRadius: T.radiusLg,
+          border: `1px solid ${T.borderGold}`,
+          padding: '22px',
+          maxWidth: '440px',
           width: '100%',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)'
+          boxShadow: T.shadowCard,
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h3 style={{ fontSize: '24px', fontWeight: 'bold', color: '#fbbf24' }}>
-            💰 Продать NFT
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: T.accentGold, letterSpacing: '0.04em' }}>
+            Продать NFT
           </h3>
-          <button onClick={onClose} style={{
-            background: 'none',
-            border: 'none',
-            color: '#94a3b8',
-            cursor: 'pointer',
-            padding: '5px'
-          }}>
-            <X size={24} />
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              background: T.bgElevated,
+              border: `1px solid ${T.borderSubtle}`,
+              borderRadius: 999,
+              width: 36,
+              height: 36,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: T.textMuted,
+              cursor: 'pointer',
+            }}
+          >
+            <X size={18} />
           </button>
         </div>
 
-        {/* NFT Preview */}
-        <div style={{
-          display: 'flex',
-          gap: '16px',
-          marginBottom: '24px',
-          padding: '16px',
-          background: 'rgba(30, 41, 59, 0.6)',
-          borderRadius: '12px'
-        }}>
-          <div style={{
-            width: '100px',
-            height: '140px',
-            position: 'relative',
-            borderRadius: '10px',
-            overflow: 'hidden',
-            background: '#ffffff',
-            flexShrink: 0,
-            border: `2px solid ${getSuitColor(nft.suit)}`
-          }}>
+        <div
+          style={{
+            display: 'flex',
+            gap: '12px',
+            marginBottom: '18px',
+            padding: '12px',
+            background: T.bgElevated,
+            borderRadius: T.radiusMd,
+            border: `1px solid ${T.borderSubtle}`,
+          }}
+        >
+          <div
+            style={{
+              width: 72,
+              height: 100,
+              borderRadius: 10,
+              overflow: 'hidden',
+              background: '#fff',
+              flexShrink: 0,
+              border: `2px solid ${getSuitColor(nft.suit)}`,
+            }}
+          >
             {nft.image_url ? (
               <img
                 src={nft.image_url}
-                alt={`${nft.rank} of ${nft.suit}`}
-                style={{ 
-                  width: '100%', 
-                  height: '100%', 
-                  objectFit: 'contain',
-                  display: 'block'
-                }}
+                alt=""
+                style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
                 loading="lazy"
               />
-            ) : (
-              <div style={{
-                width: '100%',
-                height: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#94a3b8',
-                fontSize: '0.9rem'
-              }}>
-                No Image
-              </div>
-            )}
+            ) : null}
           </div>
           <div>
-            <h4 style={{ fontSize: '20px', fontWeight: 'bold', color: getSuitColor(nft.suit), marginBottom: '8px' }}>
+            <div style={{ fontSize: '17px', fontWeight: 800, color: getSuitColor(nft.suit) }}>
               {getRankDisplay(nft.rank)} {getSuitSymbol(nft.suit)}
-            </h4>
-            <p style={{ color: '#94a3b8' }}>
-              {nft.rarity === 'pokemon' ? '🔥 Pokémon' : '⭐ Simple'}
-            </p>
+            </div>
+            <div style={{ color: T.textMuted, fontSize: '13px', marginTop: 4 }}>
+              {nft.rarity === 'pokemon' ? 'Pokémon' : 'Simple'}
+            </div>
+            <div style={{ color: T.textMuted, fontSize: '11px', marginTop: 8 }}>
+              Шаг {step}/2 · тип оплаты
+            </div>
           </div>
         </div>
 
-        {/* ✅ НОВАЯ СИСТЕМА: ОДИН ИНПУТ + ВЫБОР ВАЛЮТЫ */}
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', color: '#cbd5e1', marginBottom: '8px', fontWeight: 'bold' }}>
-            💎 Выберите валюту:
-          </label>
-          <select
-            value={sellCurrency}
-            onChange={(e) => setSellCurrency(e.target.value as 'COINS' | 'TON' | 'SOL')}
-            style={{
-              width: '100%',
-              padding: '12px',
-              borderRadius: '10px',
-              border: '2px solid rgba(251, 191, 36, 0.3)',
-              background: 'rgba(15, 23, 42, 0.6)',
-              color: '#e2e8f0',
-              fontSize: '16px',
-              cursor: 'pointer',
-              marginBottom: '12px'
-            }}
-          >
-            <option value="COINS">💰 Монеты (COINS)</option>
-            <option value="TON">💎 TON</option>
-            <option value="SOL">☀️ SOL</option>
-          </select>
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ color: T.textMuted, fontSize: '11px', fontWeight: 700, marginBottom: 8, textTransform: 'uppercase' }}>
+            Чем платят покупатели
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <Chip active={sellCategory === 'coins'} onClick={() => setSellCategory('coins')}>
+              Монеты
+            </Chip>
+            <Chip active={sellCategory === 'crypto'} onClick={() => setSellCategory('crypto')}>
+              Крипта
+            </Chip>
+            <Chip active={sellCategory === 'fiat'} onClick={() => setSellCategory('fiat')}>
+              Рубли
+            </Chip>
+          </div>
         </div>
 
-        <div style={{ marginBottom: '24px' }}>
-          <label style={{ display: 'block', color: '#cbd5e1', marginBottom: '8px', fontWeight: 'bold' }}>
-            💵 Цена:
+        <AnimatePresence>
+          {sellCategory === 'crypto' && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0 }}
+              style={{ marginBottom: 14, overflow: 'hidden' }}
+            >
+              <div style={{ color: T.textMuted, fontSize: '11px', fontWeight: 700, marginBottom: 8 }}>
+                Криптовалюта
+              </div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <Chip active={sellCrypto === 'TON'} onClick={() => setSellCrypto('TON')}>
+                  TON
+                </Chip>
+                <Chip active={sellCrypto === 'SOL'} onClick={() => setSellCrypto('SOL')}>
+                  SOL
+                </Chip>
+              </div>
+            </motion.div>
+          )}
+          {sellCategory === 'fiat' && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              style={{ marginBottom: 14, overflow: 'hidden' }}
+            >
+              <div style={{ color: T.textMuted, fontSize: '11px', fontWeight: 700, marginBottom: 8 }}>
+                Способ оплаты (ЮКасса)
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                <Chip active={sellFiatMethod === 'sbp'} onClick={() => setSellFiatMethod('sbp')}>
+                  СБП
+                </Chip>
+                <Chip active={sellFiatMethod === 'bank_card'} onClick={() => setSellFiatMethod('bank_card')}>
+                  Карта
+                </Chip>
+                <Chip active={sellFiatMethod === 'yoo_money'} onClick={() => setSellFiatMethod('yoo_money')}>
+                  ЮMoney
+                </Chip>
+                <Chip active={sellFiatMethod === 'sberbank'} onClick={() => setSellFiatMethod('sberbank')}>
+                  СберPay
+                </Chip>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <div style={{ marginBottom: 18 }}>
+          <label style={{ display: 'block', color: T.text, marginBottom: 8, fontWeight: 700, fontSize: 13 }}>
+            Цена
+            {sellCategory === 'fiat' ? ' (₽)' : sellCategory === 'coins' ? ' (монеты)' : sellCrypto === 'TON' ? ' (TON)' : ' (SOL)'}
           </label>
           <input
             type="number"
-            step={sellCurrency === 'COINS' ? '1' : '0.001'}
+            step={priceStep}
             value={sellPrice}
             onChange={(e) => setSellPrice(e.target.value)}
-            placeholder={sellCurrency === 'COINS' ? '1000' : '0.5'}
+            placeholder={placeholder}
             style={{
               width: '100%',
-              padding: '12px',
-              borderRadius: '10px',
-              border: '2px solid rgba(96, 165, 250, 0.3)',
-              background: 'rgba(15, 23, 42, 0.6)',
-              color: '#e2e8f0',
-              fontSize: '16px'
+              padding: '12px 14px',
+              borderRadius: T.radiusMd,
+              border: `1px solid ${T.borderSubtle}`,
+              background: T.bgDeep,
+              color: T.text,
+              fontSize: '16px',
             }}
           />
-          <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '8px' }}>
-            {sellCurrency === 'COINS' && '💰 Монеты - внутриигровая валюта'}
-            {sellCurrency === 'TON' && '💎 TON - криптовалюта Telegram'}
-            {sellCurrency === 'SOL' && '☀️ SOL - Solana криптовалюта'}
-          </p>
+          <p style={{ fontSize: '11px', color: T.textMuted, marginTop: 8, lineHeight: 1.45 }}>{hint}</p>
         </div>
 
-        {/* Buttons */}
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div style={{ display: 'flex', gap: 10 }}>
           <motion.button
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
+            type="button"
+            whileTap={{ scale: 0.98 }}
             onClick={onClose}
             style={{
               flex: 1,
-              padding: '14px',
-              borderRadius: '12px',
-              border: 'none',
-              background: 'rgba(100, 116, 139, 0.5)',
-              color: '#e2e8f0',
-              fontWeight: 'bold',
-              fontSize: '16px',
-              cursor: 'pointer'
+              padding: '13px',
+              borderRadius: T.radiusMd,
+              border: `1px solid ${T.borderSubtle}`,
+              background: T.bgElevated,
+              color: T.text,
+              fontWeight: 700,
+              fontSize: '14px',
+              cursor: 'pointer',
             }}
           >
             Отмена
           </motion.button>
           <motion.button
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
+            type="button"
+            whileTap={{ scale: 0.98 }}
             onClick={onConfirm}
             style={{
               flex: 1,
-              padding: '14px',
-              borderRadius: '12px',
+              padding: '13px',
+              borderRadius: T.radiusMd,
               border: 'none',
-              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+              background: `linear-gradient(135deg, ${T.success} 0%, #16a34a 100%)`,
               color: 'white',
-              fontWeight: 'bold',
-              fontSize: '16px',
+              fontWeight: 800,
+              fontSize: '14px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '8px'
+              gap: 8,
             }}
           >
-            <Check size={20} />
+            <Check size={18} />
             Выставить
           </motion.button>
         </div>
@@ -1023,4 +1144,3 @@ export function SellModal({
     </div>
   );
 }
-

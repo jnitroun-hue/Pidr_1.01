@@ -1,10 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation'
 import NFTGallery from '../../components/NFTGallery'
 import NFTThemeGenerator from '../../components/NFTThemeGenerator'
 import { useTelegram } from '../../hooks/useTelegram'
+import { getApiHeaders } from '@/lib/api-headers'
+import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme'
 
 export default function NFTCollectionPage() {
   const router = useRouter()
@@ -16,22 +18,12 @@ export default function NFTCollectionPage() {
   useEffect(() => {
     const loadUserData = async () => {
       try {
-        const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user
-        const telegramId = telegramUser?.id?.toString() || ''
-        
-        if (!telegramId) {
-          console.warn('⚠️ Telegram ID не найден')
-          setIsLoadingUser(false)
-          return
-        }
-
         const response = await fetch('/api/user/me', {
           method: 'GET',
           credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
-            'x-telegram-id': telegramId,
-            'x-username': telegramUser?.username || 'User'
+            ...getApiHeaders(),
           },
           cache: 'no-store'
         })
@@ -59,7 +51,7 @@ export default function NFTCollectionPage() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)',
+      background: `linear-gradient(160deg, ${T.bgDeep} 0%, ${T.bgMain} 40%, #0e1520 100%)`,
       padding: '20px',
       paddingTop: '80px'
     }}>
@@ -74,24 +66,23 @@ export default function NFTCollectionPage() {
           top: '20px',
           left: '20px',
           zIndex: 100,
-          background: 'rgba(30, 41, 59, 0.95)',
-          border: '2px solid rgba(99, 102, 241, 0.3)',
-          borderRadius: '12px',
-          padding: '10px 20px',
-          color: '#f1f5f9',
+          background: T.bgElevated,
+          border: `1px solid ${T.borderGold}`,
+          borderRadius: T.radiusMd,
+          padding: '10px 18px',
+          color: T.text,
           cursor: 'pointer',
-          fontSize: '16px',
+          fontSize: '15px',
           fontWeight: '600',
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
-          transition: 'all 0.3s ease'
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.background = 'rgba(99, 102, 241, 0.2)'
+          e.currentTarget.style.borderColor = T.borderGoldStrong;
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.background = 'rgba(30, 41, 59, 0.95)'
+          e.currentTarget.style.borderColor = T.borderGold;
         }}
       >
         ← Назад
@@ -104,20 +95,22 @@ export default function NFTCollectionPage() {
         {/* ✅ NFT Генератор - ПЕРЕМЕЩЕН ВВЕРХ (вместо заголовка) */}
         <div style={{
           marginBottom: '30px',
-          background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
-          border: '2px solid rgba(99, 102, 241, 0.3)',
-          borderRadius: '16px',
+          background: `linear-gradient(165deg, ${T.bgCard} 0%, ${T.bgDeep} 100%)`,
+          border: `1px solid ${T.borderGold}`,
+          borderRadius: T.radiusLg,
           padding: '20px',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+          boxShadow: T.shadowCard,
         }}>
           <h2 style={{
-            color: '#f1f5f9',
-            fontSize: '24px',
-            fontWeight: '700',
-            marginBottom: '20px',
-            textAlign: 'center'
+            color: T.accentGold,
+            fontSize: 'clamp(1rem, 4vw, 1.35rem)',
+            fontWeight: 800,
+            marginBottom: '16px',
+            textAlign: 'center',
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
           }}>
-            🎨 Генератор NFT карт
+            Генератор NFT
           </h2>
           <NFTThemeGenerator 
             userCoins={userCoins} 

@@ -9,10 +9,13 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import ManualWalletInput from './ManualWalletInput';
+import { getApiHeaders } from '@/lib/api-headers';
 
 interface SolanaWalletConnectProps {
   onConnect?: (address: string) => void;
   onDisconnect?: () => void;
+  /** Компактная «пилюля» как у TON Connect в коллекции */
+  compact?: boolean;
 }
 
 // ✅ Определяем, является ли устройство мобильным
@@ -21,7 +24,7 @@ const isMobile = () => {
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 };
 
-export default function SolanaWalletConnect({ onConnect, onDisconnect }: SolanaWalletConnectProps) {
+export default function SolanaWalletConnect({ onConnect, onDisconnect, compact = false }: SolanaWalletConnectProps) {
   const [connected, setConnected] = useState(false);
   const [address, setAddress] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -36,7 +39,8 @@ export default function SolanaWalletConnect({ onConnect, onDisconnect }: SolanaW
     try {
       const response = await fetch('/api/nft/connect-wallet', {
         method: 'GET',
-        credentials: 'include'
+        credentials: 'include',
+        headers: getApiHeaders(),
       });
 
       if (response.ok) {
@@ -160,19 +164,21 @@ export default function SolanaWalletConnect({ onConnect, onDisconnect }: SolanaW
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       style={{
-        width: '100%',
-        marginTop: '12px'
+        width: compact ? 'auto' : '100%',
+        maxWidth: compact ? 200 : undefined,
+        marginTop: compact ? 0 : 12,
+        alignSelf: compact ? 'center' : undefined,
       }}
     >
       {connected && address ? (
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '8px',
-          padding: '12px 16px',
-          borderRadius: '12px',
-          background: 'linear-gradient(135deg, rgba(220, 38, 255, 0.1) 0%, rgba(138, 43, 226, 0.1) 100%)',
-          border: '2px solid rgba(220, 38, 255, 0.3)'
+          gap: compact ? 6 : 8,
+          padding: compact ? '8px 12px' : '12px 16px',
+          borderRadius: 999,
+          background: 'linear-gradient(135deg, rgba(0, 136, 204, 0.12) 0%, rgba(153, 69, 255, 0.08) 100%)',
+          border: '1px solid rgba(0, 136, 204, 0.35)'
         }}>
           <div style={{
             width: '8px',
@@ -183,17 +189,18 @@ export default function SolanaWalletConnect({ onConnect, onDisconnect }: SolanaW
           }} />
           <span style={{
             flex: 1,
-            color: '#dc26ff',
-            fontSize: '14px',
-            fontWeight: '600'
+            color: '#e2e8f0',
+            fontSize: compact ? '12px' : '14px',
+            fontWeight: '600',
+            fontFamily: 'ui-monospace, monospace',
           }}>
             {formatAddress(address)}
           </span>
           <button
             onClick={disconnectWallet}
             style={{
-              padding: '6px 12px',
-              borderRadius: '8px',
+              padding: compact ? '4px 10px' : '6px 12px',
+              borderRadius: 999,
               border: 'none',
               background: 'rgba(239, 68, 68, 0.2)',
               color: '#ef4444',
@@ -211,25 +218,26 @@ export default function SolanaWalletConnect({ onConnect, onDisconnect }: SolanaW
           onClick={connectWallet}
           disabled={loading}
           style={{
-            width: '100%',
-            padding: '14px 20px',
-            borderRadius: '12px',
-            border: '2px solid rgba(220, 38, 255, 0.3)',
-            background: 'linear-gradient(135deg, rgba(220, 38, 255, 0.2) 0%, rgba(138, 43, 226, 0.1) 100%)',
-            color: '#dc26ff',
-            fontSize: '15px',
+            width: compact ? 'auto' : '100%',
+            padding: compact ? '9px 16px' : '14px 20px',
+            borderRadius: 999,
+            border: '1px solid rgba(0, 136, 204, 0.45)',
+            background: 'linear-gradient(135deg, #0088cc 0%, #006699 100%)',
+            color: '#fff',
+            fontSize: compact ? '13px' : '15px',
             fontWeight: '700',
             cursor: loading ? 'not-allowed' : 'pointer',
             transition: 'all 0.2s',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '8px',
-            opacity: loading ? 0.6 : 1
+            gap: compact ? 6 : 8,
+            opacity: loading ? 0.6 : 1,
+            boxShadow: compact ? '0 2px 12px rgba(0,136,204,0.25)' : undefined,
           }}
         >
-          <span style={{ fontSize: '20px' }}>◎</span>
-          {loading ? 'Подключение...' : 'Подключить Solana'}
+          <span style={{ fontSize: compact ? '15px' : '18px' }}>◎</span>
+          {loading ? '…' : compact ? 'SOL' : 'Подключить Solana'}
         </button>
       )}
       

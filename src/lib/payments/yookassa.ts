@@ -25,6 +25,9 @@ export interface YooKassaPaymentRequest {
     itemId?: string;
     itemType?: string;
     orderId?: string;
+    listingId?: string;
+    buyerDbUserId?: string;
+    [key: string]: string | undefined;
   };
   payment_method_data?: {
     type: 'bank_card' | 'sberbank' | 'yoo_money' | 'sbp';

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles, Ghost, Swords, Zap } from 'lucide-react';
 import { useTonConnectUI, useTonAddress } from '@tonconnect/ui-react';
 import { toNano } from '@ton/core';
+import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
 
 interface NFTThemeGeneratorProps {
   userCoins: number;
@@ -580,18 +581,20 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
         onClick={() => setShowModal(true)}
         style={{
           width: '100%',
-          padding: '20px',
-          borderRadius: '16px',
-          border: '2px solid rgba(251, 191, 36, 0.3)',
-          background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(245, 158, 11, 0.1) 100%)',
-          color: '#fbbf24',
-          fontWeight: 'bold',
-          fontSize: '18px',
+          padding: '18px',
+          borderRadius: T.radiusLg,
+          border: `1px solid ${T.borderGold}`,
+          background: `linear-gradient(135deg, ${T.accentGold}18 0%, ${T.bgDeep} 100%)`,
+          color: T.accentGold,
+          fontWeight: 800,
+          fontSize: '16px',
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: '12px'
+          gap: '12px',
+          letterSpacing: '0.04em',
+          textTransform: 'uppercase',
         }}
       >
         <Sparkles size={24} />
@@ -625,19 +628,20 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
               exit={{ scale: 0.9, y: 50 }}
               onClick={(e) => e.stopPropagation()}
               style={{
-                background: 'linear-gradient(145deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.98) 100%)',
-                borderRadius: '24px',
-                border: '2px solid rgba(251, 191, 36, 0.3)',
+                background: `linear-gradient(165deg, ${T.bgCard} 0%, ${T.bgDeep} 100%)`,
+                borderRadius: T.radiusLg,
+                border: `1px solid ${T.borderGold}`,
                 padding: isCompactLayout ? '18px' : '30px',
                 maxWidth: isCompactLayout ? '420px' : '760px',
                 width: '100%',
                 maxHeight: '90vh',
-                overflowY: 'auto'
+                overflowY: 'auto',
+                boxShadow: T.shadowCard,
               }}
             >
               {/* ЗАГОЛОВОК */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                <h2 style={{ fontSize: isCompactLayout ? '22px' : '28px', fontWeight: 'bold', color: '#fbbf24', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <h2 style={{ fontSize: isCompactLayout ? '22px' : '28px', fontWeight: 800, color: T.accentGold, display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <Sparkles size={32} />
                   Выберите тему
                 </h2>
