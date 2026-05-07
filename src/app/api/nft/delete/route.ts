@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
+import { NFT_CARDS_TABLE, NFT_MARKETPLACE_TABLE, NFT_STORAGE_BUCKET } from '@/lib/nft/constants';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -40,7 +41,7 @@ export async function DELETE(request: NextRequest) {
 
     // Получаем NFT для проверки владельца и storage_path
     const { data: nft, error: fetchError } = await supabase
-      .from('_pidr_nft_cards')
+      .from(NFT_CARDS_TABLE)
       .select('id, user_id, storage_path')
       .eq('id', cardId)
       .single();
@@ -57,7 +58,7 @@ export async function DELETE(request: NextRequest) {
 
     // Проверяем, не выставлена ли карта на продажу
     const { data: activeListing } = await supabase
-      .from('_pidr_nft_marketplace')
+      .from(NFT_MARKETPLACE_TABLE)
       .select('id')
       .eq('nft_card_id', cardId)
       .eq('status', 'active')
@@ -77,7 +78,7 @@ export async function DELETE(request: NextRequest) {
         : nft.storage_path;
       
       const { error: storageError } = await supabase.storage
-        .from('nft-card')
+        .from(NFT_STORAGE_BUCKET)
         .remove([storagePath]);
 
       if (storageError) {
@@ -87,7 +88,7 @@ export async function DELETE(request: NextRequest) {
 
     // Удаляем из БД
     const { error: deleteError } = await supabase
-      .from('_pidr_nft_cards')
+      .from(NFT_CARDS_TABLE)
       .delete()
       .eq('id', cardId);
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { NFT_CARDS_TABLE, NFT_STORAGE_BUCKET } from '@/lib/nft/constants';
 
 /**
  * POST /api/admin/pregenerate-cards
@@ -51,7 +52,7 @@ export async function POST(request: NextRequest) {
         const storagePath = `base-cards/${card.suit}/${fileName}`;
         
         const { data, error } = await supabase.storage
-          .from('nft-card')
+          .from(NFT_STORAGE_BUCKET)
           .upload(storagePath, Buffer.from(svg), {
             contentType: 'image/svg+xml',
             upsert: true
@@ -69,14 +70,14 @@ export async function POST(request: NextRequest) {
 
         // Получаем публичный URL
         const { data: publicUrlData } = supabase.storage
-          .from('nft-card')
+          .from(NFT_STORAGE_BUCKET)
           .getPublicUrl(storagePath);
 
         console.log(`✅ Карта загружена: ${publicUrlData.publicUrl}`);
 
         // Сохраняем в базу данных
         const { error: dbError } = await supabase
-          .from('_pidr_nft_cards')
+          .from(NFT_CARDS_TABLE)
           .upsert({
             card_id: `${card.rank.toLowerCase()}_of_${card.suit}`,
             rank: card.rank, // ✅ ИСПРАВЛЕНО: rank вместо card_rank

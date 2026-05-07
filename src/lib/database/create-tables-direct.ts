@@ -105,6 +105,20 @@ export async function createTablesDirectly(): Promise<{ success: boolean; messag
           expires_at TIMESTAMP WITH TIME ZONE
         );
       `
+    },
+    {
+      name: '_pidr_user_tables',
+      sql: `
+        CREATE TABLE IF NOT EXISTS _pidr_user_tables (
+          id BIGSERIAL PRIMARY KEY,
+          user_id VARCHAR(255) UNIQUE NOT NULL,
+          owned_tables JSONB DEFAULT '["classic-green"]'::jsonb,
+          equipped_table VARCHAR(100) DEFAULT 'classic-green',
+          favorite_tables JSONB DEFAULT '[]'::jsonb,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+      `
     }
   ];
 
@@ -261,6 +275,17 @@ CREATE TABLE IF NOT EXISTS _pidr_promocodes (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 7.1 Инвентарь столов
+CREATE TABLE IF NOT EXISTS _pidr_user_tables (
+    id BIGSERIAL PRIMARY KEY,
+    user_id VARCHAR(255) UNIQUE NOT NULL,
+    owned_tables JSONB DEFAULT '["classic-green"]'::jsonb,
+    equipped_table VARCHAR(100) DEFAULT 'classic-green',
+    favorite_tables JSONB DEFAULT '[]'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- 8. Игры
 CREATE TABLE IF NOT EXISTS _pidr_games (
     id BIGSERIAL PRIMARY KEY,
@@ -303,6 +328,7 @@ ALTER TABLE _pidr_coin_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE _pidr_user_status ENABLE ROW LEVEL SECURITY;
 ALTER TABLE _pidr_room_invites ENABLE ROW LEVEL SECURITY;
 ALTER TABLE _pidr_promocodes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE _pidr_user_tables ENABLE ROW LEVEL SECURITY;
 ALTER TABLE _pidr_games ENABLE ROW LEVEL SECURITY;
 ALTER TABLE _pidr_game_results ENABLE ROW LEVEL SECURITY;
 
@@ -327,6 +353,9 @@ CREATE POLICY "Enable all for all users" ON _pidr_room_invites FOR ALL USING (tr
 
 DROP POLICY IF EXISTS "Enable all for all users" ON _pidr_promocodes;
 CREATE POLICY "Enable all for all users" ON _pidr_promocodes FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Enable all for all users" ON _pidr_user_tables;
+CREATE POLICY "Enable all for all users" ON _pidr_user_tables FOR ALL USING (true);
 
 DROP POLICY IF EXISTS "Enable all for all users" ON _pidr_games;
 CREATE POLICY "Enable all for all users" ON _pidr_games FOR ALL USING (true);

@@ -2,12 +2,108 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { GAME_TABLES, getTableById, calculateTablePrice } from '@/data/tables';
-import { GameTable, TablePurchaseResult } from '@/types/tables';
+import { TablePurchaseResult } from '@/types/tables';
 
 /**
  * 🛍️ TABLES API
  * API для работы с столами
  */
+
+const INVENTORY_TABLE_PRIMARY = '_pidr_user_tables';
+const INVENTORY_TABLE_FALLBACK = 'user_tables';
+const USERS_TABLE_PRIMARY = '_pidr_users';
+const USERS_TABLE_FALLBACK = 'users';
+
+type InventoryRow = {
+  user_id: string;
+  owned_tables: string[];
+  equipped_table: string;
+  favorite_tables: string[];
+};
+
+function isMissingRelationError(error: any): boolean {
+  if (!error) return false;
+  const message = String(error.message || '').toLowerCase();
+  return error.code === 'PGRST205' || error.code === '42P01' || message.includes('does not exist');
+}
+
+async function pickInventoryTable(supabase: any): Promise<string> {
+  const tables = [INVENTORY_TABLE_PRIMARY, INVENTORY_TABLE_FALLBACK];
+  for (const table of tables) {
+    const { error } = await supabase.from(table).select('user_id').limit(1);
+    if (!error || !isMissingRelationError(error)) return table;
+  }
+  return INVENTORY_TABLE_PRIMARY;
+}
+
+async function pickUsersTable(supabase: any): Promise<string> {
+  const tables = [USERS_TABLE_PRIMARY, USERS_TABLE_FALLBACK];
+  for (const table of tables) {
+    const { error } = await supabase.from(table).select('id').limit(1);
+    if (!error || !isMissingRelationError(error)) return table;
+  }
+  return USERS_TABLE_PRIMARY;
+}
+
+async function getUserInventory(supabase: any, tableName: string, userId: string): Promise<InventoryRow | null> {
+  const { data, error } = await supabase
+    .from(tableName)
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error && error.code !== 'PGRST116') throw error;
+  return (data as InventoryRow | null) || null;
+}
+
+async function getUserWallet(supabase: any, tableName: string, userId: string) {
+  if (tableName === USERS_TABLE_PRIMARY) {
+    let query = supabase
+      .from(tableName)
+      .select('id, coins, gems, rating, telegram_id')
+      .eq('id', userId)
+      .maybeSingle();
+
+    let { data, error } = await query;
+    if (!data) {
+      const fallback = await supabase
+        .from(tableName)
+        .select('id, coins, gems, rating, telegram_id')
+        .eq('telegram_id', userId)
+        .maybeSingle();
+      data = fallback.data;
+      error = fallback.error;
+    }
+
+    if (error || !data) return null;
+    return {
+      id: String(data.id),
+      coins: Number(data.coins || 0),
+      gems: Number(data.gems || 0),
+      level: Number(data.rating || 0),
+      update: async (coins: number, gems: number) => {
+        return supabase.from(tableName).update({ coins, gems }).eq('id', data.id);
+      }
+    };
+  }
+
+  const { data, error } = await supabase
+    .from(tableName)
+    .select('id, balance, gems, level')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return {
+    id: String(data.id),
+    coins: Number(data.balance || 0),
+    gems: Number(data.gems || 0),
+    level: Number(data.level || 0),
+    update: async (coins: number, gems: number) => {
+      return supabase.from(tableName).update({ balance: coins, gems }).eq('id', data.id);
+    }
+  };
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -33,6 +129,8 @@ export async function GET(request: NextRequest) {
       }
     );
 
+    const inventoryTable = await pickInventoryTable(supabase);
+
     switch (action) {
       case 'list':
         // Получить все доступные столы
@@ -50,21 +148,8 @@ export async function GET(request: NextRequest) {
         }
 
         // Получить инвентарь пользователя
-        const { data: userTables, error } = await supabase
-          .from('user_tables')
-          .select('*')
-          .eq('user_id', userId)
-          .single();
+        const userTables = await getUserInventory(supabase, inventoryTable, userId);
 
-        if (error && error.code !== 'PGRST116') {
-          console.error('Error fetching user tables:', error);
-          return NextResponse.json({
-            success: false,
-            message: 'Failed to fetch user tables'
-          }, { status: 500 });
-        }
-
-        // Если записи нет, создаем дефолтный инвентарь
         if (!userTables) {
           const defaultInventory = {
             user_id: userId,
@@ -74,7 +159,7 @@ export async function GET(request: NextRequest) {
           };
 
           const { data: newInventory, error: createError } = await supabase
-            .from('user_tables')
+            .from(inventoryTable)
             .insert(defaultInventory)
             .select()
             .single();
@@ -108,12 +193,12 @@ export async function GET(request: NextRequest) {
 
         // Получить экипированный стол
         const { data: equipped, error: equippedError } = await supabase
-          .from('user_tables')
+          .from(inventoryTable)
           .select('equipped_table')
           .eq('user_id', userId)
-          .single();
+          .maybeSingle();
 
-        if (equippedError) {
+        if (equippedError || !equipped) {
           return NextResponse.json({
             success: false,
             message: 'Failed to fetch equipped table'
@@ -172,6 +257,9 @@ export async function POST(request: NextRequest) {
       }
     );
 
+    const inventoryTable = await pickInventoryTable(supabase);
+    const usersTable = await pickUsersTable(supabase);
+
     switch (action) {
       case 'purchase':
         if (!tableId) {
@@ -191,13 +279,8 @@ export async function POST(request: NextRequest) {
         }
 
         // Получаем пользователя и его баланс
-        const { data: user, error: userError } = await supabase
-          .from('users')
-          .select('balance, level, gems')
-          .eq('id', userId)
-          .single();
-
-        if (userError) {
+        const user = await getUserWallet(supabase, usersTable, userId);
+        if (!user) {
           return NextResponse.json({
             success: false,
             message: 'User not found'
@@ -205,18 +288,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Получаем инвентарь пользователя
-        const { data: userTables, error: tablesError } = await supabase
-          .from('user_tables')
-          .select('*')
-          .eq('user_id', userId)
-          .single();
-
-        if (tablesError && tablesError.code !== 'PGRST116') {
-          return NextResponse.json({
-            success: false,
-            message: 'Failed to fetch user tables'
-          }, { status: 500 });
-        }
+        const userTables = await getUserInventory(supabase, inventoryTable, userId);
 
         // Проверяем, не куплен ли уже стол
         const ownedTables = userTables?.owned_tables || ['classic-green'];
@@ -251,7 +323,7 @@ export async function POST(request: NextRequest) {
         const price = calculateTablePrice(table, categoryId === 'featured');
 
         // Проверяем баланс
-        if (table.currency === 'coins' && user.balance < price) {
+        if (table.currency === 'coins' && user.coins < price) {
           return NextResponse.json({
             success: false,
             message: 'Insufficient coins'
@@ -266,18 +338,12 @@ export async function POST(request: NextRequest) {
         }
 
         // Выполняем покупку
-        const newBalance = table.currency === 'coins' ? user.balance - price : user.balance;
+        const newBalance = table.currency === 'coins' ? user.coins - price : user.coins;
         const newGems = table.currency === 'gems' ? (user.gems || 0) - price : user.gems;
         const newOwnedTables = [...ownedTables, tableId];
 
         // Обновляем баланс пользователя
-        const { error: balanceError } = await supabase
-          .from('users')
-          .update({ 
-            balance: newBalance,
-            gems: newGems
-          })
-          .eq('id', userId);
+        const { error: balanceError } = await user.update(newBalance, newGems);
 
         if (balanceError) {
           return NextResponse.json({
@@ -289,7 +355,7 @@ export async function POST(request: NextRequest) {
         // Обновляем инвентарь столов
         if (userTables) {
           const { error: updateError } = await supabase
-            .from('user_tables')
+            .from(inventoryTable)
             .update({ owned_tables: newOwnedTables })
             .eq('user_id', userId);
 
@@ -301,7 +367,7 @@ export async function POST(request: NextRequest) {
           }
         } else {
           const { error: insertError } = await supabase
-            .from('user_tables')
+            .from(inventoryTable)
             .insert({
               user_id: userId,
               owned_tables: newOwnedTables,
@@ -339,12 +405,12 @@ export async function POST(request: NextRequest) {
 
         // Проверяем, что стол принадлежит пользователю
         const { data: currentTables, error: currentError } = await supabase
-          .from('user_tables')
+          .from(inventoryTable)
           .select('owned_tables')
           .eq('user_id', userId)
-          .single();
+          .maybeSingle();
 
-        if (currentError) {
+        if (currentError || !currentTables) {
           return NextResponse.json({
             success: false,
             message: 'Failed to fetch user tables'
@@ -360,7 +426,7 @@ export async function POST(request: NextRequest) {
 
         // Экипируем стол
         const { error: equipError } = await supabase
-          .from('user_tables')
+          .from(inventoryTable)
           .update({ equipped_table: tableId })
           .eq('user_id', userId);
 

@@ -143,6 +143,17 @@ CREATE TABLE IF NOT EXISTS _pidr_user_settings (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Инвентарь игровых столов пользователя
+CREATE TABLE IF NOT EXISTS _pidr_user_tables (
+    id BIGSERIAL PRIMARY KEY,
+    user_id VARCHAR(255) UNIQUE NOT NULL,
+    owned_tables JSONB DEFAULT '["classic-green"]'::jsonb,
+    equipped_table VARCHAR(100) DEFAULT 'classic-green',
+    favorite_tables JSONB DEFAULT '[]'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
 `;
 
 const INDEXES_SQL = `
@@ -155,6 +166,7 @@ CREATE INDEX IF NOT EXISTS idx_pidr_room_players_user_id ON _pidr_room_players (
 CREATE INDEX IF NOT EXISTS idx_pidr_coin_transactions_user_id ON _pidr_coin_transactions (user_id);
 CREATE INDEX IF NOT EXISTS idx_pidr_room_invites_to_user ON _pidr_room_invites (to_user_id, status);
 CREATE INDEX IF NOT EXISTS idx_pidr_room_invites_room ON _pidr_room_invites (room_id);
+CREATE INDEX IF NOT EXISTS idx_pidr_user_tables_user_id ON _pidr_user_tables (user_id);
 `;
 
 const RLS_POLICIES_SQL = `
@@ -171,6 +183,7 @@ ALTER TABLE _pidr_achievements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE _pidr_user_achievements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE _pidr_user_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE _pidr_room_invites ENABLE ROW LEVEL SECURITY;
+ALTER TABLE _pidr_user_tables ENABLE ROW LEVEL SECURITY;
 
 -- Политики доступа (открытые для разработки)
 DO $$
@@ -222,6 +235,10 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = '_pidr_room_invites' AND policyname = 'Enable all for all users') THEN
         CREATE POLICY "Enable all for all users" ON _pidr_room_invites FOR ALL USING (true);
     END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = '_pidr_user_tables' AND policyname = 'Enable all for all users') THEN
+        CREATE POLICY "Enable all for all users" ON _pidr_user_tables FOR ALL USING (true);
+    END IF;
 END
 $$;
 `;
@@ -256,7 +273,8 @@ export async function createPidrTables(): Promise<{ success: boolean; message: s
           '_pidr_users', '_pidr_rooms', '_pidr_room_players', 
           '_pidr_coin_transactions', '_pidr_user_status',
           '_pidr_games', '_pidr_game_results', '_pidr_friends',
-          '_pidr_achievements', '_pidr_user_achievements', '_pidr_user_settings'
+          '_pidr_achievements', '_pidr_user_achievements', '_pidr_user_settings',
+          '_pidr_user_tables'
         ];
 
         for (const tableName of tables) {
@@ -348,7 +366,7 @@ export async function createPidrTables(): Promise<{ success: boolean; message: s
 export async function checkDatabaseStatus() {
   const tables = [
     '_pidr_users', '_pidr_rooms', '_pidr_room_players', 
-    '_pidr_coin_transactions', '_pidr_user_status'
+    '_pidr_coin_transactions', '_pidr_user_status', '_pidr_user_tables'
   ];
 
   const status: Record<string, boolean> = {};

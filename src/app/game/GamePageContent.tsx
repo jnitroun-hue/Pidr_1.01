@@ -960,21 +960,24 @@ function GamePageContentComponent({
   const myPlayer = useMemo(() => players.find(p => !p.isBot), [players]);
   const isMyTurn = currentPlayerId === myPlayer?.id;
 
-  // ✅ ТАЙМЕР ХОДА: 30 секунд на ход, обратный отсчёт
-  const [turnTimeLeft, setTurnTimeLeft] = useState(30);
+  // ✅ ТАЙМЕР ДЕЙСТВИЯ: 15 секунд на действие, обратный отсчёт
+  const TURN_ACTION_SECONDS = 15;
+  const TURN_OK_THRESHOLD = Math.ceil((TURN_ACTION_SECONDS * 2) / 3);
+  const TURN_WARN_THRESHOLD = Math.ceil(TURN_ACTION_SECONDS / 3);
+  const [turnTimeLeft, setTurnTimeLeft] = useState(TURN_ACTION_SECONDS);
   const turnTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (turnTimerRef.current) clearInterval(turnTimerRef.current);
-    setTurnTimeLeft(30);
+    setTurnTimeLeft(TURN_ACTION_SECONDS);
     if (!currentPlayerId || !isGameActive || isTutorialPaused) return;
     turnTimerRef.current = setInterval(() => {
       setTurnTimeLeft(prev => (prev > 0 ? prev - 1 : 0));
     }, 1000);
     return () => { if (turnTimerRef.current) clearInterval(turnTimerRef.current); };
-  }, [currentPlayerId, isGameActive, isTutorialPaused]);
+  }, [currentPlayerId, turnPhase, stage2TurnPhase, gameStage, isGameActive, isTutorialPaused]);
 
-  const turnTimerPercent = Math.max(0, (turnTimeLeft / 30) * 100);
+  const turnTimerPercent = Math.max(0, (turnTimeLeft / TURN_ACTION_SECONDS) * 100);
   
   // ОТЛАДКА убрана - логи были слишком многословные
   
@@ -2532,7 +2535,7 @@ function GamePageContentComponent({
                   {isCurrentTurn && (
                     <div style={{
                       position: 'absolute', inset: '-3px', borderRadius: 'inherit', zIndex: -1, pointerEvents: 'none',
-                      background: `conic-gradient(${turnTimeLeft > 20 ? '#22c55e' : turnTimeLeft > 10 ? '#eab308' : '#ef4444'} ${turnTimerPercent}%, transparent ${turnTimerPercent}%)`,
+                      background: `conic-gradient(${turnTimeLeft > TURN_OK_THRESHOLD ? '#22c55e' : turnTimeLeft > TURN_WARN_THRESHOLD ? '#eab308' : '#ef4444'} ${turnTimerPercent}%, transparent ${turnTimerPercent}%)`,
                       WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
                       WebkitMaskComposite: 'xor',
                       maskComposite: 'exclude' as React.CSSProperties['maskComposite'],
@@ -2945,8 +2948,8 @@ function GamePageContentComponent({
                     {isCurrentTurn && (
                       <div style={{
                         fontSize: '10px', fontWeight: '800', marginTop: '1px',
-                        color: turnTimeLeft > 20 ? '#22c55e' : turnTimeLeft > 10 ? '#eab308' : '#ef4444',
-                        textShadow: `0 0 6px ${turnTimeLeft > 20 ? 'rgba(34,197,94,0.6)' : turnTimeLeft > 10 ? 'rgba(234,179,8,0.6)' : 'rgba(239,68,68,0.6)'}`,
+                        color: turnTimeLeft > TURN_OK_THRESHOLD ? '#22c55e' : turnTimeLeft > TURN_WARN_THRESHOLD ? '#eab308' : '#ef4444',
+                        textShadow: `0 0 6px ${turnTimeLeft > TURN_OK_THRESHOLD ? 'rgba(34,197,94,0.6)' : turnTimeLeft > TURN_WARN_THRESHOLD ? 'rgba(234,179,8,0.6)' : 'rgba(239,68,68,0.6)'}`,
                       }}>
                         {turnTimeLeft}с
                       </div>

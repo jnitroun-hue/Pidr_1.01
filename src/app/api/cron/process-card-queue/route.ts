@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cardQueue } from '../../../../lib/nft/card-queue';
 import { createClient } from '@supabase/supabase-js';
+import { NFT_CARDS_TABLE, NFT_STORAGE_BUCKET } from '@/lib/nft/constants';
 
 // Проверяем переменные окружения
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -78,7 +79,7 @@ export async function GET(request: NextRequest) {
 
         // Сохраняем в базу данных
         const { data: nftData, error: nftError } = await supabase
-          .from('_pidr_nft_cards')
+          .from(NFT_CARDS_TABLE)
           .insert({
             rank: job.rank,
             suit: job.suit,
@@ -154,7 +155,7 @@ async function generateCardImage(job: any): Promise<string> {
   // Если есть кастомное изображение, загружаем его
   if (job.customImage) {
     const { data, error } = await supabase.storage
-      .from('nft-card')
+      .from(NFT_STORAGE_BUCKET)
       .upload(`generated/${fileName}`, job.customImage, {
         contentType: 'image/png'
       });
@@ -162,7 +163,7 @@ async function generateCardImage(job: any): Promise<string> {
     if (error) throw error;
 
     const { data: publicUrlData } = supabase.storage
-      .from('nft-card')
+      .from(NFT_STORAGE_BUCKET)
       .getPublicUrl(`generated/${fileName}`);
 
     return publicUrlData.publicUrl;
@@ -170,7 +171,7 @@ async function generateCardImage(job: any): Promise<string> {
 
   // Возвращаем URL базовой карты
   const { data: publicUrlData } = supabase.storage
-    .from('nft-card')
+    .from(NFT_STORAGE_BUCKET)
     .getPublicUrl(`base-cards/${job.suit}/${job.rank}.png`);
 
   return publicUrlData.publicUrl;
@@ -191,7 +192,7 @@ async function uploadMetadata(jobId: string, metadata: any): Promise<string> {
   });
 
   const { data, error } = await supabase.storage
-    .from('nft-card')
+    .from(NFT_STORAGE_BUCKET)
     .upload(`metadata/${fileName}`, metadataBlob, {
       contentType: 'application/json'
     });
@@ -199,7 +200,7 @@ async function uploadMetadata(jobId: string, metadata: any): Promise<string> {
   if (error) throw error;
 
   const { data: publicUrlData } = supabase.storage
-    .from('nft-card')
+    .from(NFT_STORAGE_BUCKET)
     .getPublicUrl(`metadata/${fileName}`);
 
   return publicUrlData.publicUrl;

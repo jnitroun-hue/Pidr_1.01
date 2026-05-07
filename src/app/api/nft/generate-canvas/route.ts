@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, supabaseAdmin } from '@/lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
+import { NFT_CARDS_TABLE, NFT_STORAGE_BUCKET } from '@/lib/nft/constants';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -142,17 +143,16 @@ export async function POST(request: NextRequest) {
 
     // Генерируем имя файла
     const fileName = `${userId}/${suit}_${rank}_${rarity}_${Date.now()}.png`;
-    const bucketName = 'nft-card';
 
     console.log('📤 [NFT Canvas] Загружаем в Storage:', {
-      bucketName,
+      bucketName: NFT_STORAGE_BUCKET,
       fileName,
       bufferSize: buffer.length
     });
 
     // Загружаем в Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
-      .from(bucketName)
+      .from(NFT_STORAGE_BUCKET)
       .upload(fileName, buffer, {
         contentType: 'image/png',
         cacheControl: '3600',
@@ -187,7 +187,7 @@ export async function POST(request: NextRequest) {
 
     // Получаем публичный URL
     const { data: { publicUrl } } = supabase.storage
-      .from(bucketName)
+      .from(NFT_STORAGE_BUCKET)
       .getPublicUrl(fileName);
 
     console.log('✅ [NFT Canvas] Карта загружена в Storage:', publicUrl);
@@ -204,7 +204,7 @@ export async function POST(request: NextRequest) {
     
     // Сохраняем в таблицу _pidr_nft_cards
     const { data: savedCard, error: saveError} = await supabase
-      .from('_pidr_nft_cards')
+      .from(NFT_CARDS_TABLE)
       .insert([{
         user_id: userIdBigInt, // ✅ ИСПРАВЛЕНО: Теперь BIGINT!
         suit: suit,
@@ -250,7 +250,7 @@ export async function POST(request: NextRequest) {
       // ✅ КРИТИЧНО: Удаляем файл из Storage!
       console.log('🗑️ [NFT Canvas] Удаляем файл из Storage...');
       await supabase.storage
-        .from(bucketName)
+        .from(NFT_STORAGE_BUCKET)
         .remove([fileName]);
       
       return NextResponse.json(
@@ -278,7 +278,7 @@ export async function POST(request: NextRequest) {
       
       // Удаляем файл
       await supabase.storage
-        .from(bucketName)
+        .from(NFT_STORAGE_BUCKET)
         .remove([fileName]);
       
       return NextResponse.json(
@@ -355,7 +355,7 @@ export async function GET(request: NextRequest) {
 
     // Получаем все карты пользователя
     const { data: cards, error } = await supabase
-      .from('_pidr_nft_cards')
+      .from(NFT_CARDS_TABLE)
       .select('*')
       .eq('user_id', userIdBigInt)
       .order('created_at', { ascending: false });

@@ -2,6 +2,7 @@
  * NFT Metadata Generator
  * Генерирует метаданные для NFT в форматах TON и Metaplex (Solana)
  */
+import { NFT_STORAGE_BUCKET } from '@/lib/nft/constants';
 
 export interface CardMetadata {
   suit: string; // hearts, diamonds, clubs, spades
@@ -142,7 +143,7 @@ export async function uploadMetadata(
     });
 
     const { data, error } = await supabase.storage
-      .from('nft-card')
+      .from(NFT_STORAGE_BUCKET)
       .upload(`metadata/${fileName}.json`, metadataBlob, {
         contentType: 'application/json',
         upsert: true
@@ -155,7 +156,7 @@ export async function uploadMetadata(
 
     // Получаем публичный URL
     const { data: publicUrlData } = supabase.storage
-      .from('nft-card')
+      .from(NFT_STORAGE_BUCKET)
       .getPublicUrl(`metadata/${fileName}.json`);
 
     return publicUrlData.publicUrl;

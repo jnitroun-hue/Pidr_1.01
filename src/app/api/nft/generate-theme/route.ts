@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
+import { NFT_CARDS_TABLE, NFT_STORAGE_BUCKET } from '@/lib/nft/constants';
 import sharp from 'sharp';
 import path from 'path';
 import fs from 'fs';
@@ -82,7 +83,7 @@ export async function POST(request: NextRequest) {
     console.log(`📤 Загружаем файл: ${filePath}`);
     
     const { error: uploadError } = await supabaseAdmin.storage
-      .from('nft-card')
+      .from(NFT_STORAGE_BUCKET)
       .upload(filePath, imageBuffer, {
         contentType: 'image/png',
         upsert: false
@@ -95,7 +96,7 @@ export async function POST(request: NextRequest) {
 
     // Получаем публичный URL
     const { data: urlData } = supabaseAdmin.storage
-      .from('nft-card')
+      .from(NFT_STORAGE_BUCKET)
       .getPublicUrl(filePath);
 
     if (!urlData || !urlData.publicUrl) {
@@ -107,7 +108,7 @@ export async function POST(request: NextRequest) {
 
     // Сохраняем в БД
     const { data: nftData, error: dbError } = await supabaseAdmin
-      .from('_pidr_nft_cards')
+      .from(NFT_CARDS_TABLE)
       .insert({
         user_id: userId,
         suit: suit,
@@ -131,7 +132,7 @@ export async function POST(request: NextRequest) {
       
       // Удаляем файл из Storage
       await supabaseAdmin.storage
-        .from('nft-card')
+        .from(NFT_STORAGE_BUCKET)
         .remove([filePath]);
       
       throw new Error(`Ошибка сохранения: ${dbError.message}`);

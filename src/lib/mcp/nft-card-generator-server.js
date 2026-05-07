@@ -34,6 +34,7 @@ if (supabaseUrl && supabaseKey) {
 const CARD_WIDTH = 500;
 const CARD_HEIGHT = 700;
 const CARD_RADIUS = 30;
+const NFT_STORAGE_BUCKET = 'nft-card';
 
 const SUITS = ['hearts', 'diamonds', 'clubs', 'spades'];
 const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'jack', 'queen', 'king', 'ace'];
@@ -157,11 +158,10 @@ async function uploadCardImage(userId, suit, rank, canvas) {
   
   // Генерируем уникальное имя файла
   const fileName = `${userId}/${suit}_${rank}_${Date.now()}.png`;
-  const bucketName = 'nft-card'; // Имя bucket в Supabase Storage
 
   // Загружаем в Storage
   const { data: uploadData, error: uploadError } = await supabase.storage
-    .from(bucketName)
+    .from(NFT_STORAGE_BUCKET)
     .upload(fileName, buffer, {
       contentType: 'image/png',
       cacheControl: '3600',
@@ -175,7 +175,7 @@ async function uploadCardImage(userId, suit, rank, canvas) {
 
   // Получаем публичный URL
   const { data: { publicUrl } } = supabase.storage
-    .from(bucketName)
+    .from(NFT_STORAGE_BUCKET)
     .getPublicUrl(fileName);
 
   console.log('✅ Карта загружена в Storage:', publicUrl);

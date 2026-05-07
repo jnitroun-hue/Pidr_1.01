@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { NFT_CARDS_TABLE, NFT_STORAGE_BUCKET } from '@/lib/nft/constants';
 
 // GET /api/nft/generate-pokemon - Получить все NFT карты пользователя
 export async function GET(req: NextRequest) {
@@ -137,10 +138,9 @@ export async function POST(req: NextRequest) {
 
     const timestamp = Date.now();
     const fileName = `${userId}/${suit}_${rank}_pokemon${pokemonId}_${timestamp}.png`;
-    const bucketName = 'nft-card';
 
     console.log('📤 [NFT Pokemon] Загружаем в Storage:', {
-      bucketName,
+      bucketName: NFT_STORAGE_BUCKET,
       fileName,
       bufferSize: buffer.length,
       pokemonId
@@ -149,7 +149,7 @@ export async function POST(req: NextRequest) {
     // Загружаем файл в Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase
       .storage
-      .from(bucketName)
+      .from(NFT_STORAGE_BUCKET)
       .upload(fileName, buffer, {
         contentType: 'image/png',
         cacheControl: '3600',
@@ -176,7 +176,7 @@ export async function POST(req: NextRequest) {
     // Получаем публичный URL
     const { data: publicUrlData } = supabase
       .storage
-      .from(bucketName)
+      .from(NFT_STORAGE_BUCKET)
       .getPublicUrl(fileName);
 
     const imageUrl = publicUrlData.publicUrl;
@@ -194,7 +194,7 @@ export async function POST(req: NextRequest) {
 
     // Сохраняем в БД
     const { data: savedCard, error: saveError } = await supabase
-      .from('_pidr_nft_cards')
+      .from(NFT_CARDS_TABLE)
       .insert([{
         user_id: userIdBigInt,
         suit: suit,
@@ -233,7 +233,7 @@ export async function POST(req: NextRequest) {
       console.log('🗑️ [NFT Pokemon] Удаляем файл из Storage...');
       await supabase
         .storage
-        .from(bucketName)
+        .from(NFT_STORAGE_BUCKET)
         .remove([fileName]);
 
       return NextResponse.json(

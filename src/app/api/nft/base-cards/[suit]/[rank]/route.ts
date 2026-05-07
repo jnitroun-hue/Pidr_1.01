@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { NFT_STORAGE_BUCKET } from '@/lib/nft/constants';
 
 // Проверяем переменные окружения
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -38,7 +39,7 @@ export async function GET(
 
     // Получаем публичный URL
     const { data } = supabase.storage
-      .from('nft-card')
+      .from(NFT_STORAGE_BUCKET)
       .getPublicUrl(filePath);
 
     if (!data.publicUrl) {

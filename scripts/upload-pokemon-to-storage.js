@@ -5,15 +5,18 @@
 const https = require('https');
 const { createClient } = require('@supabase/supabase-js');
 
-// ✅ КОНФИГ SUPABASE (ЗАМЕНИ НА СВОИ!)
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://lnuypvdvtpholftpwfsz.supabase.co';
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
+// ✅ КОНФИГ SUPABASE (ТОЛЬКО ИЗ ENV, БЕЗ ХАРДКОДА)
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const SUPABASE_SERVICE_KEY =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.SUPABASE_SERVICE_KEY ||
+  '';
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-  console.error('❌ ОШИБКА: Не указаны SUPABASE_URL или SUPABASE_SERVICE_KEY');
+  console.error('❌ ОШИБКА: Не указаны SUPABASE_URL/NEXT_PUBLIC_SUPABASE_URL или SUPABASE_SERVICE_ROLE_KEY');
   console.error('Добавь их в .env.local:');
-  console.error('SUPABASE_URL=https://your-project.supabase.co');
-  console.error('SUPABASE_SERVICE_KEY=your-service-key');
+  console.error('SUPABASE_URL=https://your-project.supabase.co  (или NEXT_PUBLIC_SUPABASE_URL)');
+  console.error('SUPABASE_SERVICE_ROLE_KEY=your-service-role-key');
   process.exit(1);
 }
 
