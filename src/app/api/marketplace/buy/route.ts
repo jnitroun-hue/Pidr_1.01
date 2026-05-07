@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseAdmin } from '@/lib/supabase';
 
 /**
  * POST /api/marketplace/buy
@@ -39,6 +39,14 @@ export async function POST(request: NextRequest) {
     }
 
     const buyerId = dbUserId;
+
+    const db = getSupabaseAdmin();
+    if (!db) {
+      return NextResponse.json(
+        { success: false, error: 'База данных недоступна (нет service role)' },
+        { status: 503 }
+      );
+    }
     
     const body = await request.json();
     const { listing_id, payment_method } = body;
@@ -54,7 +62,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Получаем лот
-    const { data: listing, error: listingError } = await supabase
+    const { data: listing, error: listingError } = await db
       .from('_pidr_nft_marketplace')
       .select(`
         *,
@@ -113,7 +121,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Получаем баланс покупателя
-    const { data: buyer, error: buyerError } = await supabase
+    const { data: buyer, error: buyerError } = await db
       .from('_pidr_users')
       .select('id, coins')
       .eq('id', buyerId)
@@ -145,7 +153,7 @@ export async function POST(request: NextRequest) {
     if (payment_method === 'coins') {
       // ===== ОПЛАТА МОНЕТАМИ - МОМЕНТАЛЬНАЯ =====
       // 1. Списываем монеты у покупателя
-      const { error: deductError } = await supabase
+      const { error: deductError } = await db
         .from('_pidr_users')
         .update({ coins: buyer.coins - price })
         .eq('id', buyerId);
@@ -160,21 +168,21 @@ export async function POST(request: NextRequest) {
 
       // 2. Начисляем монеты продавцу (минус 5% комиссия)
       
-      const { data: seller } = await supabase
+      const { data: seller } = await db
         .from('_pidr_users')
         .select('coins')
         .eq('id', listing.seller_user_id)
         .single();
       
       if (seller) {
-        await supabase
+        await db
           .from('_pidr_users')
           .update({ coins: seller.coins + sellerAmount })
           .eq('id', listing.seller_user_id);
       }
 
       // 3. Переносим NFT к покупателю
-      const { error: transferError } = await supabase
+      const { error: transferError } = await db
         .from('_pidr_nft_cards')
         .update({ user_id: buyerId })
         .eq('id', listing.nft_card_id);
@@ -182,7 +190,7 @@ export async function POST(request: NextRequest) {
       if (transferError) {
         console.error('❌ [Marketplace Buy] Ошибка переноса NFT:', transferError);
         // Откатываем монеты
-        await supabase
+        await db
           .from('_pidr_users')
           .update({ coins: buyer.coins })
           .eq('id', buyerId);
@@ -193,7 +201,7 @@ export async function POST(request: NextRequest) {
       }
 
       // 4. Обновляем статус лота
-      await supabase
+      await db
         .from('_pidr_nft_marketplace')
         .update({
           status: 'sold',
@@ -203,7 +211,7 @@ export async function POST(request: NextRequest) {
         .eq('id', listing_id);
 
       // 5. Создаем запись транзакции
-      await supabase
+      await db
         .from('_pidr_marketplace_transactions')
         .insert({
           marketplace_listing_id: listing_id,
@@ -225,7 +233,7 @@ export async function POST(request: NextRequest) {
       console.log(`💎 [Marketplace Buy] Резервируем лот ${listing_id} для покупателя ${buyerId}`);
       
       // НЕ переносим карту! Только резервируем лот
-      await supabase
+      await db
         .from('_pidr_nft_marketplace')
         .update({
           status: 'pending', // ✅ НОВЫЙ СТАТУС: ждём оплаты
@@ -235,7 +243,7 @@ export async function POST(request: NextRequest) {
         .eq('id', listing_id);
 
       // Создаем запись транзакции со статусом "pending"
-      await supabase
+      await db
         .from('_pidr_marketplace_transactions')
         .insert({
           marketplace_listing_id: listing_id,
@@ -265,7 +273,7 @@ export async function POST(request: NextRequest) {
       // ИСПРАВЛЕНО: Используем _pidr_player_wallets, а не _pidr_hd_wallets!
       const walletType = cryptoCurrency.toLowerCase(); // 'TON' -> 'ton', 'SOL' -> 'sol'
       
-      const { data: sellerWallet, error: walletError } = await supabase
+      const { data: sellerWallet, error: walletError } = await db
         .from('_pidr_player_wallets')
         .select('wallet_address')
         .eq('user_id', sellerId.toString())

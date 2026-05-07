@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '../../../../lib/supabase';
-import { requireAuth } from '../../../../lib/auth-utils';
+import { getSupabaseAdmin } from '../../../../lib/supabase';
+import { requireAuth, getUserIdFromDatabase } from '../../../../lib/auth-utils';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -13,24 +13,16 @@ function noStoreJson(body: any, init?: ResponseInit) {
   return response;
 }
 
-// Используем единую функцию авторизации из auth-utils
-function getUserIdFromRequest(req: NextRequest): string | null {
-  try {
-    const authResult = requireAuth(req);
-    if (authResult.error || !authResult.userId) {
-      return null;
-    }
-    return authResult.userId;
-  } catch {
-    return null;
-  }
-}
-
 // GET /api/wallet/transactions - Получить транзакции пользователя
 export async function GET(req: NextRequest) {
-  const userId = getUserIdFromRequest(req);
-  if (!userId) {
+  const auth = requireAuth(req);
+  if (auth.error || !auth.userId) {
     return noStoreJson({ success: false, message: 'Unauthorized' }, { status: 401 });
+  }
+
+  const db = getSupabaseAdmin();
+  if (!db) {
+    return noStoreJson({ success: false, message: 'База данных недоступна' }, { status: 503 });
   }
 
   try {
@@ -39,28 +31,19 @@ export async function GET(req: NextRequest) {
     const offset = Math.max(parseInt(searchParams.get('offset') || '0'), 0);
     const type = searchParams.get('type'); // deposit, withdrawal, purchase, game_win, game_loss
 
-    console.log(`📊 [TRANSACTIONS API] Получаем транзакции для userId=${userId} (type: ${typeof userId}), лимит: ${limit}`);
-
-    // ✅ КРИТИЧНО: userId из requireAuth это telegram_id
-    // Нужно получить user.id (UUID/BIGINT) из таблицы _pidr_users
-    const { data: userData, error: userError } = await supabase
-      .from('_pidr_users')
-      .select('id')
-      .eq('telegram_id', userId)
-      .single();
-    
-    if (userError || !userData) {
-      console.error('❌ [TRANSACTIONS API] Пользователь не найден по telegram_id:', userId, userError);
+    const { dbUserId } = await getUserIdFromDatabase(auth.userId, auth.environment);
+    if (!dbUserId) {
+      console.error('❌ [TRANSACTIONS API] Пользователь не найден:', auth.userId, auth.environment);
       return noStoreJson({ 
         success: false, 
         message: 'Пользователь не найден' 
       }, { status: 404 });
     }
     
-    const userIdBigInt = userData.id; // ✅ Это BIGINT из БД
-    console.log(`✅ [TRANSACTIONS API] Найден user.id=${userIdBigInt} для telegram_id=${userId}`);
+    const userIdBigInt = dbUserId;
+    console.log(`✅ [TRANSACTIONS API] Найден user.id=${userIdBigInt}`);
 
-    let query = supabase
+    let query = db
       .from('_pidr_coin_transactions')
       .select('*')
       .eq('user_id', userIdBigInt); // ✅ Используем BIGINT!
@@ -120,12 +103,21 @@ export async function GET(req: NextRequest) {
 
 // POST /api/wallet/transactions - Создать новую транзакцию
 export async function POST(req: NextRequest) {
-  const userId = getUserIdFromRequest(req);
-  if (!userId) {
+  const auth = requireAuth(req);
+  if (auth.error || !auth.userId) {
     return noStoreJson({ success: false, message: 'Unauthorized' }, { status: 401 });
   }
 
+  const db = getSupabaseAdmin();
+  if (!db) {
+    return noStoreJson({ success: false, message: 'База данных недоступна' }, { status: 503 });
+  }
+
   try {
+    const { dbUserId } = await getUserIdFromDatabase(auth.userId, auth.environment);
+    if (!dbUserId) {
+      return noStoreJson({ success: false, message: 'Пользователь не найден' }, { status: 404 });
+    }
     const { 
       type, 
       amount, 
@@ -143,13 +135,13 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    console.log(`💳 Создаем новую транзакцию для пользователя ${userId}: ${type}, ${amount} монет`);
+    console.log(`💳 Создаем новую транзакцию для пользователя ${dbUserId}: ${type}, ${amount} монет`);
 
     // Создаем транзакцию
-    const { data: transaction, error: createError } = await supabase
+    const { data: transaction, error: createError } = await db
       .from('_pidr_coin_transactions')
       .insert({
-        user_id: userId,
+        user_id: dbUserId,
         type,
         amount,
         crypto_amount: cryptoAmount || null,
@@ -173,21 +165,21 @@ export async function POST(req: NextRequest) {
 
     // Если это пополнение или выигрыш - обновляем баланс пользователя
     if (type === 'deposit' || type === 'game_win') {
-      const { data: user, error: userError } = await supabase
+      const { data: user, error: userError } = await db
         .from('_pidr_users')
         .select('coins')
-        .eq('id', userId)
+        .eq('id', dbUserId)
         .single();
 
       if (!userError && user) {
         const newBalance = (user.coins || 0) + amount;
-        await supabase
+        await db
           .from('_pidr_users')
           .update({ 
             coins: newBalance,
             updated_at: new Date().toISOString()
           })
-          .eq('id', userId);
+          .eq('id', dbUserId);
 
         console.log(`✅ Баланс обновлен: +${amount} монет, новый баланс: ${newBalance}`);
       }
@@ -195,21 +187,21 @@ export async function POST(req: NextRequest) {
 
     // Если это вывод или проигрыш - уменьшаем баланс
     if (type === 'withdrawal' || type === 'game_loss' || type === 'purchase') {
-      const { data: user, error: userError } = await supabase
+      const { data: user, error: userError } = await db
         .from('_pidr_users')
         .select('coins')
-        .eq('id', userId)
+        .eq('id', dbUserId)
         .single();
 
       if (!userError && user) {
         const newBalance = Math.max((user.coins || 0) - amount, 0);
-        await supabase
+        await db
           .from('_pidr_users')
           .update({ 
             coins: newBalance,
             updated_at: new Date().toISOString()
           })
-          .eq('id', userId);
+          .eq('id', dbUserId);
 
         console.log(`✅ Баланс обновлен: -${amount} монет, новый баланс: ${newBalance}`);
       }

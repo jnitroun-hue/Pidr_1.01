@@ -75,10 +75,12 @@ export default function WalletPage() {
   // ─── Загрузка данных ─────────────────────────────────────────────────────
   const loadData = useCallback(async () => {
     try {
+      const { getApiHeaders } = await import('@/lib/api-headers');
+      const headers = getApiHeaders() as Record<string, string>;
       const [meRes, txRes, payRes] = await Promise.allSettled([
-        fetch('/api/user/me', { credentials: 'include' }),
-        fetch('/api/wallet/transactions?limit=20', { credentials: 'include' }),
-        fetch('/api/wallet/ton/payment-info', { credentials: 'include' }),
+        fetch('/api/user/me', { credentials: 'include', headers }),
+        fetch('/api/wallet/transactions?limit=20', { credentials: 'include', headers }),
+        fetch('/api/wallet/ton/payment-info', { credentials: 'include', headers }),
       ]);
 
       if (meRes.status === 'fulfilled' && meRes.value.ok) {

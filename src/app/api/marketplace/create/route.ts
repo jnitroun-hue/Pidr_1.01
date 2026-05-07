@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 
 /**
@@ -36,6 +36,14 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       );
     }
+
+    const db = getSupabaseAdmin();
+    if (!db) {
+      return NextResponse.json(
+        { success: false, error: 'База данных недоступна (нет service role)' },
+        { status: 503 }
+      );
+    }
     
     // Парсим body
     const body = await request.json();
@@ -67,7 +75,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Карта должна принадлежать текущему пользователю по внутреннему id.
-    const { data: nftCard, error: nftError } = await supabase
+    const { data: nftCard, error: nftError } = await db
       .from('_pidr_nft_cards')
       .select('id, user_id')
       .eq('id', nft_card_id)
@@ -91,7 +99,7 @@ export async function POST(request: NextRequest) {
     console.log('✅ [Marketplace Create] Карта принадлежит пользователю');
     
     // Проверяем что карта еще не выставлена на продажу
-    const { data: existingListing } = await supabase
+    const { data: existingListing } = await db
       .from('_pidr_nft_marketplace')
       .select('id')
       .eq('nft_card_id', nft_card_id)
@@ -106,7 +114,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Создаем лот
-    const { data: listing, error: insertError } = await supabase
+    const { data: listing, error: insertError } = await db
       .from('_pidr_nft_marketplace')
       .insert({
         nft_card_id,

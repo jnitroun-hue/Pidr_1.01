@@ -433,11 +433,14 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
     if (!user?.id) return;
 
     try {
+      const { getApiHeaders } = await import('@/lib/api-headers');
+      const headers = getApiHeaders() as Record<string, string>;
       const response = await fetch('/api/wallet/transactions?limit=50', {
-        credentials: 'include', // Отправляем cookies вместо токена
+        credentials: 'include',
         headers: {
-          'Content-Type': 'application/json'
-        }
+          ...headers,
+          'Content-Type': 'application/json',
+        },
       });
 
       if (response.ok) {

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 
 /**
@@ -32,6 +32,14 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       );
     }
+
+    const db = getSupabaseAdmin();
+    if (!db) {
+      return NextResponse.json(
+        { success: false, error: 'База данных недоступна (нет service role)' },
+        { status: 503 }
+      );
+    }
     
     const body = await request.json();
     const { listing_id } = body;
@@ -46,7 +54,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Получаем лот
-    const { data: listing, error: listingError } = await supabase
+    const { data: listing, error: listingError } = await db
       .from('_pidr_nft_marketplace')
       .select('*')
       .eq('id', listing_id)
@@ -77,7 +85,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Отменяем лот
-    const { error: updateError } = await supabase
+    const { error: updateError } = await db
       .from('_pidr_nft_marketplace')
       .update({ status: 'cancelled' })
       .eq('id', listing_id);

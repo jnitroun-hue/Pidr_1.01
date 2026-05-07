@@ -71,8 +71,13 @@ export async function POST(request: NextRequest) {
     // Обновляем БД только раз в 30 секунд для каждого пользователя
     let shouldUpdateDb = true;
     if (redis) {
-      const lastDbUpdate = await redis.get(`user:${cacheUserId}:last_db_update`);
-      shouldUpdateDb = !lastDbUpdate || (Date.now() - parseInt(lastDbUpdate as string)) > 30000;
+      try {
+        const lastDbUpdate = await redis.get(`user:${cacheUserId}:last_db_update`);
+        shouldUpdateDb = !lastDbUpdate || (Date.now() - parseInt(lastDbUpdate as string, 10)) > 30000;
+      } catch (redisReadErr) {
+        console.error('⚠️ [HEARTBEAT] Redis get last_db_update (игнорируем):', redisReadErr);
+        shouldUpdateDb = true;
+      }
     }
 
     if (shouldUpdateDb) {
@@ -103,9 +108,12 @@ export async function POST(request: NextRequest) {
           console.warn('⚠️ [HEARTBEAT] Обнаружена рекурсия RLS, используем только Redis кеш');
         }
       } else {
-        // Сохраняем время последнего обновления БД (если Redis доступен)
         if (redis) {
-          await redis.set(`user:${cacheUserId}:last_db_update`, Date.now().toString(), { ex: 60 });
+          try {
+            await redis.set(`user:${cacheUserId}:last_db_update`, Date.now().toString(), { ex: 60 });
+          } catch (redisWriteErr) {
+            console.error('⚠️ [HEARTBEAT] Redis set last_db_update (игнорируем):', redisWriteErr);
+          }
         }
       }
     }
