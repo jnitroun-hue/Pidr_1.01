@@ -33,6 +33,7 @@ interface User {
   firstName: string;
   coins: number;
   rating: number;
+  telegramId?: string;
 }
 
 interface Transaction {
@@ -127,16 +128,42 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
   const reduceMotion = useReducedMotion();
   const shouldOptimizeAnimations = Boolean(reduceMotion) || isMobileViewport;
   const masterWalletService = useMemo(() => new MasterWalletService(), []);
+
+  /** Стабильный ключ пользователя из пропсов (избегаем Infinity loop: новый объект user на каждом рендере родителя). */
+  const propIdentityKey =
+    user?.id != null && String(user.id) !== ''
+      ? String(user.id)
+      : user?.telegramId != null && String(user.telegramId) !== ''
+        ? String(user.telegramId)
+        : '';
+
   const currentUser = useMemo(() => getCurrentUser(), [user]);
   const referralInviteUrl = useMemo(() => {
     const referralCode = currentUser?.id || user?.id || 'player';
     return `https://t.me/NotPidrBot?start=ref_${referralCode}`;
   }, [currentUser?.id, user?.id]);
 
-  // Загружаем данные пользователя и транзакции
+  /** Telegram Mini App может не передавать `user` в пропсы — единый owner id для списков/адресов API. */
+  const ownerForWalletApis = useMemo(() => {
+    if (propIdentityKey) return propIdentityKey;
+    if (typeof window === 'undefined') return '';
+    const tid = (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id;
+    return tid != null ? String(tid) : '';
+  }, [propIdentityKey]);
+
   // ✅ НОВОЕ: Кеш для истории транзакций
   const lastTransactionsUpdate = useRef(0);
   const transactionsUpdateInterval = 10 * 60 * 1000; // 10 минут
+  const activeModalRef = useRef<ModalType>(null);
+  const loadingRef = useRef(false);
+  const onBalanceUpdateRef = useRef(onBalanceUpdate);
+  const lastEmittedBalanceRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    activeModalRef.current = activeModal;
+    loadingRef.current = loading;
+    onBalanceUpdateRef.current = onBalanceUpdate;
+  }, [activeModal, loading, onBalanceUpdate]);
 
   useEffect(() => {
     const updateViewport = () => setIsMobileViewport(window.innerWidth <= 768);
@@ -165,11 +192,11 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
         }
       });
     }
-  }, [user]);
+  }, [ownerForWalletApis]);
 
   // ✅ НОВОЕ: Автообновление истории транзакций каждые 10 минут
   useEffect(() => {
-    if (!user?.id) return;
+    if (!ownerForWalletApis) return;
 
     const intervalId = setInterval(() => {
       console.log('⏰ Автообновление истории транзакций (каждые 10 минут)');
@@ -178,7 +205,7 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
     }, transactionsUpdateInterval);
 
     return () => clearInterval(intervalId);
-  }, [user?.id]);
+  }, [ownerForWalletApis]);
 
   // ✅ НОВОЕ: Слушаем события новых транзакций
   useEffect(() => {
@@ -204,20 +231,17 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
 
   // Автоматический мониторинг платежей (сниженная частота для мобильной производительности)
   useEffect(() => {
-    if (!user?.id) return;
+    if (!ownerForWalletApis) return;
 
     const interval = setInterval(async () => {
-      if (document.hidden || activeModal !== null || loading) {
+      if (document.hidden || activeModalRef.current !== null || loadingRef.current) {
         return;
       }
 
       try {
-        // Используем cookies через API (не localStorage!)
-        // Token передается автоматически через HTTP-only cookies
-
         const response = await fetch('/api/wallet/check-payments', {
           method: 'POST',
-          credentials: 'include', // Автоматически отправляет cookies
+          credentials: 'include',
           headers: {
             'Content-Type': 'application/json'
           }
@@ -227,15 +251,12 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
           const result = await response.json();
           if (result.success && result.newPayments && result.newPayments.length > 0) {
             console.log('🎉 Автоматически найдены новые платежи:', result.newPayments);
-            
-            // Обновляем данные
+
             await loadUserData();
             await loadTransactions();
-            
-            // Уведомляем пользователя
+
             const totalAmount = result.newPayments.reduce((sum: number, payment: any) => sum + payment.amount, 0);
-            
-            // Показываем уведомление в интерфейсе вместо alert
+
             if (window.Notification && Notification.permission === 'granted') {
               new Notification('💰 Новое пополнение!', {
                 body: `Получено ${result.newPayments.length} платежей на сумму ${totalAmount} монет`,
@@ -243,36 +264,35 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
               });
             }
 
-            // Обновляем баланс в родительском компоненте
-            if (onBalanceUpdate && result.newBalance) {
-              onBalanceUpdate(result.newBalance);
+            if (onBalanceUpdateRef.current && result.newBalance != null) {
+              onBalanceUpdateRef.current(result.newBalance);
             }
           }
         }
       } catch (error) {
         console.warn('⚠️ Ошибка автоматической проверки платежей:', error);
       }
-    }, 90000); // Каждые 90 секунд
+    }, 90000);
 
     return () => clearInterval(interval);
-  }, [user?.id, onBalanceUpdate, activeModal, loading]);
+  }, [ownerForWalletApis]);
 
   // Загрузка мастер адресов пользователя
   const loadMasterAddresses = async () => {
-    if (!user?.id) return;
+    if (!ownerForWalletApis) return;
 
     try {
-      console.log('🏦 Загружаем мастер адреса для пользователя:', user.id);
-      
+      console.log('🏦 Загружаем мастер адреса для пользователя:', ownerForWalletApis);
+
       // Создаем адреса для всех поддерживаемых монет
       const coins = ['USDT', 'TON', 'ETH', 'SOL', 'BTC'];
       const addresses = [];
-      
+
       for (const coin of coins) {
         try {
-          const paymentInfo = masterWalletService.getPaymentAddress(user.id, coin);
+          const paymentInfo = masterWalletService.getPaymentAddress(ownerForWalletApis, coin);
           addresses.push({
-            id: `master-${coin}-${user.id}`,
+            id: `master-${coin}-${ownerForWalletApis}`,
             coin: coin,
             address: paymentInfo.address,
             memo: paymentInfo.memo,
@@ -384,19 +404,31 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
         if (data.success && typeof data?.data?.balance === 'number') {
           const actualBalance = data.data.balance;
           setBalance(actualBalance);
-          onBalanceUpdate?.(actualBalance);
+          if (lastEmittedBalanceRef.current !== actualBalance) {
+            lastEmittedBalanceRef.current = actualBalance;
+            onBalanceUpdate?.(actualBalance);
+          }
           console.log('✅ Баланс загружен из /api/user/balance:', actualBalance);
         } else {
-          // Используем баланс из auth API
-          setBalance(parsedUser.coins || 0);
+          const fallback = parsedUser.coins || 0;
+          setBalance(fallback);
+          if (lastEmittedBalanceRef.current !== fallback) {
+            lastEmittedBalanceRef.current = fallback;
+            onBalanceUpdate?.(fallback);
+          }
         }
       } else {
-        // Используем баланс из auth API
-        setBalance(parsedUser.coins || 0);
+        const fallback = parsedUser.coins || 0;
+        setBalance(fallback);
+        if (lastEmittedBalanceRef.current !== fallback) {
+          lastEmittedBalanceRef.current = fallback;
+          onBalanceUpdate?.(fallback);
+        }
       }
     } catch (error) {
       console.error('❌ Ошибка загрузки данных пользователя:', error);
       setBalance(0);
+      lastEmittedBalanceRef.current = null;
     }
   };
 
@@ -430,7 +462,7 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
   };
 
   const loadTransactions = async () => {
-    if (!user?.id) return;
+    if (!ownerForWalletApis) return;
 
     try {
       const { getApiHeaders } = await import('@/lib/api-headers');
@@ -1065,7 +1097,7 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
 
   // Функция для мониторинга и обновления баланса
   const checkPaymentsAndUpdateBalance = async () => {
-    if (!user?.id) return;
+    if (!ownerForWalletApis) return;
 
     try {
       setIsMonitoringPayments(true);
@@ -1185,7 +1217,7 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
         </div>
         
         <div className="wallet-id">
-          <span>ID кошелька: #{user?.id ? String(user.id).slice(-8) : 'XXXXXXXX'}</span>
+          <span>ID кошелька: #{ownerForWalletApis ? String(ownerForWalletApis).slice(-8) : 'XXXXXXXX'}</span>
         </div>
       </motion.div>
 
@@ -1768,7 +1800,7 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
                         </label>
                         <HDAddressDisplay 
                           crypto={selectedCrypto} 
-                          userId={user?.id || ''} 
+                          userId={ownerForWalletApis || ''} 
                           generateAddress={generateDepositAddress}
                           isGenerating={isGeneratingAddress}
                         />

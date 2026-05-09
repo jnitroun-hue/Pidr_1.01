@@ -1,5 +1,5 @@
 'use client'
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import PlayerProfileModal from '../../components/PlayerProfileModal';
 import PenaltyCardSelector from '../../components/PenaltyCardSelector';
@@ -340,6 +340,24 @@ function GamePageContentComponent({
   const isUserTurn = currentPlayerId && players.find(p => p.id === currentPlayerId)?.isUser || false;
   const userPlayer = players.find(p => p.isUser);
   const userPlayerId = userPlayer?.id || null;
+
+  const gameWalletUserMemo = useMemo(
+    () =>
+      userData
+        ? {
+            id: String(userData.telegramId || userPlayerId || ''),
+            username: userData.username || 'Игрок',
+            firstName: userData.username || 'Игрок',
+            coins: userData.coins || 0,
+            rating: 0,
+          }
+        : undefined,
+    [userData?.telegramId, userData?.username, userData?.coins, userPlayerId]
+  );
+
+  const handleGameWalletBalance = useCallback((newBalance: number) => {
+    setUserData(prev => (prev ? { ...prev, coins: newBalance } : prev));
+  }, []);
   
   const { 
     currentStep, 
@@ -3917,16 +3935,8 @@ function GamePageContentComponent({
                   borderRadius: '10px', padding: '6px 10px', cursor: 'pointer', color: '#f87171', fontSize: '14px',
                 }}>✕</button>
                 <GameWallet
-                  user={userData ? {
-                    id: userData.telegramId || userPlayerId || '',
-                    username: userData.username || 'Игрок',
-                    firstName: userData.username || 'Игрок',
-                    coins: userData.coins || 0,
-                    rating: 0,
-                  } : undefined}
-                  onBalanceUpdate={(newBalance) => {
-                    setUserData(prev => prev ? { ...prev, coins: newBalance } : prev);
-                  }}
+                  user={gameWalletUserMemo}
+                  onBalanceUpdate={handleGameWalletBalance}
                 />
               </div>
             </motion.div>
