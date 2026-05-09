@@ -8,8 +8,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
-import TonWalletConnect from './TonWalletConnect';
-import SolanaWalletConnect from './SolanaWalletConnect';
+import WalletQuickConnect from '@/components/WalletQuickConnect';
 import { getApiHeaders } from '@/lib/api-headers';
 import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
 
@@ -292,52 +291,60 @@ export default function NFTGallery() {
         {/* ✅ ПОДКЛЮЧЕНИЕ КОШЕЛЬКОВ */}
         <div
           style={{
-            maxWidth: 420,
+            maxWidth: 520,
             margin: '0 auto',
-            padding: '14px 16px',
+            padding: '18px 18px',
             borderRadius: T.radiusLg,
             border: `1px solid ${T.borderGold}`,
-            background: T.bgCard,
-            boxShadow: T.shadowCard,
+            background: `linear-gradient(160deg, ${T.bgCard} 0%, rgba(12,17,26,0.95) 100%)`,
+            boxShadow: `${T.shadowCard}, inset 0 1px 0 rgba(251,191,36,0.08)`,
           }}
         >
           <div
             style={{
-              padding: '12px 14px',
+              padding: '14px 16px',
               borderRadius: T.radiusMd,
               background: T.warningBg,
               border: `1px solid ${T.warningBorder}`,
-              marginBottom: 12,
+              marginBottom: 16,
             }}
           >
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-              <span style={{ fontSize: '16px' }}>⚠️</span>
+              <span style={{ fontSize: '17px', lineHeight: 1 }}>⚠️</span>
               <div style={{ flex: 1 }}>
                 <div style={{ color: T.warningTitle, fontSize: '12px', fontWeight: 800, marginBottom: 4 }}>
                   Внимание
                 </div>
-                <div style={{ color: T.warningBody, fontSize: '11px', lineHeight: 1.5 }}>
-                  Проверьте кошельки перед выводом NFT. Ошибки в сети или адресе необратимы.
+                <div style={{ color: T.warningBody, fontSize: '11px', lineHeight: 1.55 }}>
+                  Проверьте сеть и адрес перед переводами и выводом NFT — ошибки в блокчейне необратимы.
                 </div>
               </div>
             </div>
           </div>
 
-          <div
+          <p
             style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              alignItems: 'stretch',
-              justifyContent: 'center',
-              gap: 10,
+              color: T.textMuted,
+              fontSize: '12px',
+              textAlign: 'center',
+              margin: '0 0 14px',
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              fontWeight: 700,
             }}
           >
-            <div style={{ flex: '1 1 160px', minWidth: 0 }}>
-              <TonWalletConnect />
-            </div>
-            <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center' }}>
-              <SolanaWalletConnect compact />
-            </div>
+            Кошельки для NFT · TON / EVM / Solana
+          </p>
+
+          <div
+            style={{
+              borderRadius: T.radiusMd,
+              border: `1px solid rgba(251,191,36,0.12)`,
+              overflow: 'hidden',
+              background: 'rgba(2, 6, 23, 0.55)',
+            }}
+          >
+            <WalletQuickConnect className="!mb-0 !rounded-none !border-none !shadow-none bg-transparent [&>div:last-child]:!border-slate-800/70" />
           </div>
         </div>
       </div>

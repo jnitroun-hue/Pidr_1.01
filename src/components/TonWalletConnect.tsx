@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTonConnectUI, useTonAddress } from '@tonconnect/ui-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaWallet, FaCheckCircle, FaTimes, FaExternalLinkAlt } from 'react-icons/fa';
@@ -13,6 +13,10 @@ interface TonWalletConnectProps {
   onDisconnect?: () => void;
 }
 
+function normalizeTonAddr(raw: string) {
+  return raw.trim().replace(/^UQ/i, 'EQ');
+}
+
 export default function TonWalletConnect({ onConnect, onDisconnect }: TonWalletConnectProps) {
   const [tonConnectUI] = useTonConnectUI();
   const userFriendlyAddress = useTonAddress();
@@ -20,20 +24,14 @@ export default function TonWalletConnect({ onConnect, onDisconnect }: TonWalletC
   const [isSaving, setIsSaving] = useState(false);
   const [savedWallets, setSavedWallets] = useState<any[]>([]);
   const [showSuccess, setShowSuccess] = useState(false);
+  const persistStartedFor = useRef<string>('');
+  const onConnectRef = useRef(onConnect);
 
-  // Загружаем сохраненные кошельки
   useEffect(() => {
-    loadSavedWallets();
-  }, []);
+    onConnectRef.current = onConnect;
+  }, [onConnect]);
 
-  // Отслеживаем подключение кошелька
-  useEffect(() => {
-    if (userFriendlyAddress && !isSaving) {
-      handleWalletConnected(userFriendlyAddress);
-    }
-  }, [userFriendlyAddress]);
-
-  const loadSavedWallets = async () => {
+  const refreshSavedWallets = useCallback(async (): Promise<any[]> => {
     try {
       const response = await fetch('/api/nft/connect-wallet', {
         method: 'GET',
@@ -44,58 +42,92 @@ export default function TonWalletConnect({ onConnect, onDisconnect }: TonWalletC
       if (response.ok) {
         const result = await response.json();
         if (result.success) {
-          setSavedWallets(result.wallets || []);
+          const list = result.wallets || [];
+          setSavedWallets(list);
+          return list;
         }
       }
     } catch (error) {
       console.error('Ошибка загрузки кошельков:', error);
     }
-  };
+    setSavedWallets([]);
+    return [];
+  }, []);
 
-  const handleWalletConnected = async (address: string) => {
-    // Проверяем, не сохранен ли уже этот кошелек
-    if (savedWallets.some(w => w.wallet_address === address)) {
-      console.log('Кошелек уже сохранен');
-      onConnect?.(address);
+  useEffect(() => {
+    void refreshSavedWallets();
+  }, [refreshSavedWallets]);
+
+  useEffect(() => {
+    if (!userFriendlyAddress) {
+      persistStartedFor.current = '';
       return;
     }
 
-    setIsSaving(true);
-    try {
-      const response = await fetch('/api/nft/connect-wallet', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          ...getApiHeaders()
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          wallet_address: address,
-          wallet_type: 'ton'
-        })
+    const addrRaw = userFriendlyAddress.trim();
+    if (!addrRaw) return;
+
+    let cancelled = false;
+
+    void (async () => {
+      const wallets = await refreshSavedWallets();
+      if (cancelled) return;
+
+      const needle = normalizeTonAddr(addrRaw);
+      const exists = wallets.some((w: any) => {
+        const a = normalizeTonAddr(String(w.wallet_address || ''));
+        return a === needle || String(w.wallet_address || '').trim() === addrRaw;
       });
 
-      const result = await response.json();
-      if (result.success) {
-        console.log('✅ Кошелек сохранен:', address);
-        await loadSavedWallets();
-        setShowSuccess(true);
-        setTimeout(() => setShowSuccess(false), 3000);
-        onConnect?.(address);
-        
-        // ✅ ОТПРАВЛЯЕМ СОБЫТИЕ ОБНОВЛЕНИЯ КОШЕЛЬКОВ ДЛЯ СИНХРОНИЗАЦИИ
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('wallet-updated'));
-        }
-      } else {
-        console.error('Ошибка сохранения кошелька:', result.message);
+      if (exists) {
+        onConnectRef.current?.(addrRaw);
+        return;
       }
-    } catch (error) {
-      console.error('Ошибка сохранения кошелька:', error);
-    } finally {
-      setIsSaving(false);
-    }
-  };
+
+      if (persistStartedFor.current === needle) return;
+      persistStartedFor.current = needle;
+
+      setIsSaving(true);
+      try {
+        const response = await fetch('/api/nft/connect-wallet', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...getApiHeaders()
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            wallet_address: addrRaw,
+            wallet_type: 'ton'
+          })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          console.log('✅ Кошелек сохранен:', addrRaw);
+          await refreshSavedWallets();
+          setShowSuccess(true);
+          setTimeout(() => setShowSuccess(false), 3000);
+          onConnectRef.current?.(addrRaw);
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('wallet-updated'));
+          }
+        } else {
+          console.error('Ошибка сохранения кошелька:', result.message);
+          persistStartedFor.current = '';
+        }
+      } catch (error) {
+        console.error('Ошибка сохранения кошелька:', error);
+        persistStartedFor.current = '';
+      } finally {
+        setIsSaving(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userFriendlyAddress, refreshSavedWallets]);
 
   const handleConnect = async () => {
     setIsConnecting(true);
@@ -110,6 +142,7 @@ export default function TonWalletConnect({ onConnect, onDisconnect }: TonWalletC
 
   const handleDisconnect = async () => {
     try {
+      persistStartedFor.current = '';
       await tonConnectUI.disconnect();
       onDisconnect?.();
     } catch (error) {
@@ -139,6 +172,7 @@ export default function TonWalletConnect({ onConnect, onDisconnect }: TonWalletC
 
       {!userFriendlyAddress ? (
         <motion.button
+          type="button"
           className={styles.connectButton}
           onClick={handleConnect}
           disabled={isConnecting}
@@ -157,6 +191,7 @@ export default function TonWalletConnect({ onConnect, onDisconnect }: TonWalletC
               <span className={styles.walletAddress}>{formatAddress(userFriendlyAddress)}</span>
             </div>
             <button
+              type="button"
               className={styles.viewButton}
               onClick={() => window.open(`https://tonscan.org/address/${userFriendlyAddress}`, '_blank')}
               title="Посмотреть в TON Scan"
@@ -164,10 +199,7 @@ export default function TonWalletConnect({ onConnect, onDisconnect }: TonWalletC
               <FaExternalLinkAlt />
             </button>
           </div>
-          <button
-            className={styles.disconnectButton}
-            onClick={handleDisconnect}
-          >
+          <button type="button" className={styles.disconnectButton} onClick={handleDisconnect}>
             <FaTimes /> Отключить
           </button>
         </div>
@@ -185,14 +217,12 @@ export default function TonWalletConnect({ onConnect, onDisconnect }: TonWalletC
           ))}
         </div>
       )}
-      
-      {/* ✅ РУЧНОЙ ВВОД КОШЕЛЬКА */}
-      <ManualWalletInput 
-        walletType="ton" 
-        onWalletAdded={loadSavedWallets}
+
+      <ManualWalletInput
+        walletType="ton"
+        onWalletAdded={() => refreshSavedWallets()}
         savedWallets={savedWallets}
       />
     </div>
   );
 }
-

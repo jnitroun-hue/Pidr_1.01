@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FaArrowLeft, FaCoins, FaPlus, FaGift, FaShoppingCart, FaStar,
@@ -61,6 +62,7 @@ function timeAgo(dateStr: string): string {
 
 // ─── Главная страница ────────────────────────────────────────────────────────
 export default function WalletPage() {
+  const router = useRouter();
   const { language } = useLanguage();
   const t = useTranslations(language);
   const [coins, setCoins] = useState<number | null>(null);
@@ -145,7 +147,8 @@ export default function WalletPage() {
         >
           <div className="flex items-center justify-between gap-3">
             <button
-              onClick={() => history.back()}
+              type="button"
+              onClick={() => router.back()}
               className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-slate-300 transition hover:border-yellow-400/30 hover:text-yellow-300"
             >
               <FaArrowLeft />
@@ -174,7 +177,7 @@ export default function WalletPage() {
           animate={{ opacity: 1, y: 0 }}
           className="rounded-[28px] border border-white/10 bg-white/[0.03] p-2 shadow-[0_20px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl"
         >
-          <GameWallet />
+          <GameWallet hideInlineQuickConnect />
         </motion.div>
       </div>
     </div>

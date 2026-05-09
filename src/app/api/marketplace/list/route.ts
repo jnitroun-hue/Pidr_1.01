@@ -87,6 +87,24 @@ export async function GET(request: NextRequest) {
     
     if (error) {
       console.error('❌ [Marketplace List] Ошибка загрузки:', error);
+      const msg = String(error.message || '');
+      if (
+        msg.includes('fiat_payment_method') ||
+        msg.includes('price_rub') ||
+        msg.includes('views_count') ||
+        msg.includes('schema cache')
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            code: 'MARKETPLACE_DB_MIGRATION_REQUIRED',
+            error: msg,
+            hint:
+              'Выполните SQL из supabase/migrations/20250509120000_marketplace_rub_columns.sql для таблицы _pidr_nft_marketplace.',
+          },
+          { status: 503 }
+        );
+      }
       return NextResponse.json(
         { success: false, error: error.message },
         { status: 500 }

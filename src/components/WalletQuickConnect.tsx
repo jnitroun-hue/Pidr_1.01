@@ -24,7 +24,11 @@ const walletOptions = [
   { id: 'phantom', label: 'Phantom', type: 'sol' as WalletType, accent: '#8b5cf6' },
 ] as const;
 
-export default function WalletQuickConnect() {
+type WalletQuickConnectProps = {
+  className?: string;
+};
+
+export default function WalletQuickConnect({ className = '' }: WalletQuickConnectProps) {
   const [tonConnectUI] = useTonConnectUI();
   const tonAddress = useTonAddress();
   const [loadingWalletId, setLoadingWalletId] = useState<string | null>(null);
@@ -183,7 +187,7 @@ export default function WalletQuickConnect() {
     <motion.div
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
-      className="mb-4 rounded-[28px] border border-cyan-400/15 bg-white/[0.04] p-4 shadow-[0_20px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl"
+      className={`mb-4 rounded-[28px] border border-cyan-400/15 bg-white/[0.04] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl ${className}`.trim()}
     >
       <div className="mb-3 flex items-start justify-between gap-3">
         <div>
@@ -220,7 +224,7 @@ export default function WalletQuickConnect() {
 
                 void handleEthereumWallet(wallet.id, wallet.label);
               }}
-              className="group rounded-2xl border px-4 py-4 text-left transition-all duration-200 hover:-translate-y-0.5"
+              className="group flex min-h-[92px] w-full items-center rounded-2xl border px-4 py-4 text-left ring-1 ring-transparent transition-all duration-200 hover:-translate-y-0.5 hover:ring-cyan-400/25 active:translate-y-0"
               style={{
                 borderColor: isConnected ? `${wallet.accent}80` : 'rgba(148, 163, 184, 0.18)',
                 background: isConnected

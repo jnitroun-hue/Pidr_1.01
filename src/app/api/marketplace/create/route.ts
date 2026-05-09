@@ -169,6 +169,24 @@ export async function POST(request: NextRequest) {
     
     if (insertError) {
       console.error('❌ [Marketplace Create] Ошибка создания лота:', insertError);
+      const msg = String(insertError.message || '');
+      if (
+        msg.includes('fiat_payment_method') ||
+        msg.includes('price_rub') ||
+        msg.includes('views_count') ||
+        msg.includes('schema cache')
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            code: 'MARKETPLACE_DB_MIGRATION_REQUIRED',
+            error: msg,
+            hint:
+              'В Supabase нет нужных колонок в таблице _pidr_nft_marketplace. Выполните SQL из файла supabase/migrations/20250509120000_marketplace_rub_columns.sql (переменные price_rub, fiat_payment_method, views_count) и повторите.',
+          },
+          { status: 503 }
+        );
+      }
       return NextResponse.json(
         { success: false, error: insertError.message },
         { status: 500 }

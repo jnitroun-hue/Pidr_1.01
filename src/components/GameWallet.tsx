@@ -48,6 +48,8 @@ interface Transaction {
 interface GameWalletProps {
   user?: User;
   onBalanceUpdate?: (newBalance: number) => void;
+  /** Не показывать второй блок Quick Connect внутри модалки пополнения (если уже сверху на /wallet). */
+  hideInlineQuickConnect?: boolean;
 }
 
 type ModalType = 'deposit' | 'withdraw' | 'buy' | null;
@@ -71,7 +73,7 @@ const PAYMENT_METHODS = [
   { id: 'sbp' as const, name: 'СБП', accent: '#f59e0b' },
 ] as const;
 
-export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
+export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConnect = false }: GameWalletProps) {
   // ✅ УНИВЕРСАЛЬНО: Получаем данные пользователя из всех платформ
   const getCurrentUser = () => {
     if (user) return user;
@@ -1881,8 +1883,14 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
                           fontSize: '12px',
                           textAlign: 'center',
                         }}>
-                          <div style={{ marginBottom: '10px' }}>Сначала подключите один из ваших кошельков прямо здесь.</div>
-                          <WalletQuickConnect />
+                          <div style={{ marginBottom: '10px' }}>Сначала подключите один из ваших кошельков.</div>
+                          {!hideInlineQuickConnect ? (
+                            <WalletQuickConnect />
+                          ) : (
+                            <p style={{ fontSize: '11px', color: '#64748b', margin: 0 }}>
+                              Используйте блок «Quick Connect» выше или подключите кошелёк в профиле / NFT-коллекции.
+                            </p>
+                          )}
                         </div>
                       )}
 
