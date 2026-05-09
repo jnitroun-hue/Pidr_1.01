@@ -812,13 +812,11 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
       
       console.log('🎁 Получение ежедневного бонуса через новый API...');
       
-      // Используем новый API для получения бонусов
+      const { getApiHeaders } = await import('@/lib/api-headers');
       const response = await fetch('/api/bonus', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json' 
-        },
-        credentials: 'include', // Включаем cookies для авторизации
+        headers: getApiHeaders() as Record<string, string>,
+        credentials: 'include',
         body: JSON.stringify({
           bonusType: 'daily'
         })
@@ -909,9 +907,12 @@ export default function GameWallet({ user, onBalanceUpdate }: GameWalletProps) {
   // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Проверяем статус бонуса через API
   const checkBonusStatus = async () => {
     try {
+      const { getApiHeaders } = await import('@/lib/api-headers');
       const response = await fetch('/api/bonus', {
         method: 'GET',
-        credentials: 'include'
+        credentials: 'include',
+        cache: 'no-store',
+        headers: getApiHeaders() as Record<string, string>,
       });
       
       if (response.ok) {

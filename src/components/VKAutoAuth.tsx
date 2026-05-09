@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { isVKMiniApp, loginWithVKMiniApp } from '@/lib/auth/vk-bridge';
 import { Box, Text, Spinner, VStack } from '@chakra-ui/react';
+import { getApiHeaders } from '@/lib/api-headers';
 
 /**
  * Компонент для автоматической авторизации через VK Mini App
@@ -25,7 +26,9 @@ export default function VKAutoAuth() {
       try {
         const response = await fetch('/api/auth', {
           method: 'GET',
-          credentials: 'include'
+          credentials: 'include',
+          cache: 'no-store',
+          headers: getApiHeaders(),
         });
         if (response.ok) {
           const data = await response.json();

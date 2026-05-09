@@ -3,9 +3,10 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Gamepad2, Users, Info, BookOpen, Coins, Settings, Wallet, Trophy, Store, User, Shield } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useLanguage } from './LanguageSwitcher'
 import { useTranslations } from '@/lib/i18n/translations'
+import { getApiHeaders } from '@/lib/api-headers'
 
 interface BurgerMenuProps {
   isOpen: boolean
@@ -14,65 +15,100 @@ interface BurgerMenuProps {
   user?: any
 }
 
+function hasUserIdentity(u: any): boolean {
+  if (!u) return false
+  const id = u.id
+  if (id !== undefined && id !== null && String(id) !== '') return true
+  if (u.telegramId !== undefined && u.telegramId !== null && String(u.telegramId) !== '') return true
+  return false
+}
+
 export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuProps) {
   const router = useRouter()
   const { language } = useLanguage()
   const t = useTranslations(language)
   const [isAdmin, setIsAdmin] = useState(false)
-  const [loadedUser, setLoadedUser] = useState<any>(user)
+  const [profileExtras, setProfileExtras] = useState<{
+    id?: number | string
+    username?: string
+    coins?: number
+    photoUrl?: string
+  }>({})
 
-  // ✅ ИСПРАВЛЕНО: Загружаем данные пользователя из API если user не передан
   useEffect(() => {
-    const loadUserData = async () => {
-      if (user?.id) {
-        setLoadedUser(user)
-        return
-      }
+    if (!user) setProfileExtras({})
+  }, [user])
+
+  const effectiveUser = useMemo(() => {
+    const u = user || {}
+    return {
+      ...u,
+      id: profileExtras.id ?? u.id,
+      username: profileExtras.username ?? u.username,
+      coins: profileExtras.coins ?? u.coins ?? 0,
+      photoUrl: profileExtras.photoUrl ?? u.photoUrl,
+      telegramId: u.telegramId
+    }
+  }, [user, profileExtras])
+
+  // Если родитель не передал id (редкий кейс), подтягиваем профиль через API
+  useEffect(() => {
+    let cancelled = false
+
+    async function enrich() {
+      if (hasUserIdentity(user)) return
 
       try {
-        console.log('👤 [BurgerMenu] Загружаем данные пользователя из API...')
+        const headers = getApiHeaders()
         const response = await fetch('/api/user/me', {
           method: 'GET',
-          credentials: 'include'
+          credentials: 'include',
+          cache: 'no-store',
+          headers
         })
 
-        if (response.ok) {
-          const result = await response.json()
-          if (result.success && result.user) {
-            console.log('✅ [BurgerMenu] Данные пользователя загружены:', result.user.username)
-            setLoadedUser({
-              id: result.user.id,
-              username: result.user.username,
-              coins: result.user.coins || 0,
-              photoUrl: result.user.avatar_url || ''
-            })
-          }
+        if (cancelled || !response.ok) return
+
+        const result = await response.json()
+        if (result.success && result.user) {
+          setProfileExtras({
+            id: result.user.id,
+            username: result.user.username,
+            coins: result.user.coins ?? 0,
+            photoUrl: result.user.avatar_url || ''
+          })
         }
       } catch (error) {
         console.warn('⚠️ [BurgerMenu] Не удалось загрузить данные пользователя:', error)
       }
     }
 
-    loadUserData()
+    void enrich()
+    return () => {
+      cancelled = true
+    }
   }, [user])
 
   // Проверка прав администратора
   useEffect(() => {
-    if (loadedUser?.id) {
-      fetch('/api/admin/check', {
-        credentials: 'include'
+    if (!hasUserIdentity(effectiveUser)) return
+
+    const headers = getApiHeaders()
+    fetch('/api/admin/check', {
+      credentials: 'include',
+      cache: 'no-store',
+      headers
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.isAdmin) {
+          setIsAdmin(true)
+        }
       })
-        .then(res => res.json())
-        .then(data => {
-          if (data.success && data.isAdmin) {
-            setIsAdmin(true)
-          }
-        })
-        .catch(() => {
-          setIsAdmin(false)
-        })
-    }
-  }, [loadedUser?.id])
+      .catch(() => {
+        setIsAdmin(false)
+      })
+  }, [user?.id, user?.telegramId, profileExtras.id])
 
   // Левое меню - навигация
   const leftMenuItems = [
@@ -88,7 +124,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
     },
     {
       icon: <Users size={24} />,
-      label: language === 'en' ? 'Community' : 'Сообщество',
+      label: t.mainMenu.community,
       emoji: '👥',
       onClick: () => {
         router.push('/multiplayer')
@@ -98,7 +134,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
     },
     {
       icon: <Info size={24} />,
-      label: language === 'en' ? 'About Game' : 'О игре',
+      label: t.mainMenu.aboutGame,
       emoji: 'ℹ️',
       onClick: () => {
         router.push('/welcome')
@@ -118,7 +154,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
     },
     {
       icon: <Coins size={24} />,
-      label: language === 'en' ? 'Earn with NFT' : 'Зарабатывай на NFT',
+      label: t.mainMenu.earnNft,
       emoji: '💰',
       onClick: () => {
         router.push('/nft-collection')
@@ -128,8 +164,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
     }
   ]
 
-  // Правое меню - профиль и настройки
-  const rightMenuItems = loadedUser ? [
+  const rightMenuItems = [
     {
       icon: <User size={24} />,
       label: t.mainMenu.profile,
@@ -180,10 +215,9 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
       },
       gradient: 'linear-gradient(135deg, #64748b 0%, #475569 100%)'
     },
-    // Админ-панель (только для админов)
     ...(isAdmin ? [{
       icon: <Shield size={24} />,
-      label: language === 'en' ? 'Admin Panel' : 'Админ Панель',
+      label: t.mainMenu.adminPanel,
       emoji: '🔐',
       onClick: () => {
         router.push('/admin')
@@ -191,9 +225,10 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
       },
       gradient: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
     }] : [])
-  ] : []
+  ]
 
   const menuItems = side === 'left' ? leftMenuItems : rightMenuItems
+  const showAccountFooter = side === 'right' && hasUserIdentity(effectiveUser)
 
   return (
     <AnimatePresence>
@@ -257,7 +292,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text'
               }}>
-                {side === 'left' ? (language === 'en' ? 'Menu' : 'Меню') : t.mainMenu.profile}
+                {side === 'left' ? t.mainMenu.burgerMenuTitle : t.mainMenu.burgerAccountTitle}
               </h2>
               <motion.button
                 whileHover={{ scale: 1.1, rotate: 90 }}
@@ -374,13 +409,13 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
                   textAlign: 'center',
                   color: '#94a3b8'
                 }}>
-                  <p>{language === 'en' ? 'Sign in to see the menu' : 'Войдите, чтобы увидеть меню'}</p>
+                  <p>{t.mainMenu.signInMenuHint}</p>
                 </div>
               )}
             </div>
 
             {/* Footer */}
-            {loadedUser && side === 'right' && (
+            {showAccountFooter && (
               <div style={{
                 padding: '20px',
                 borderTop: '1px solid rgba(99, 102, 241, 0.2)',
@@ -402,18 +437,18 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
                     justifyContent: 'center',
                     fontSize: '24px'
                   }}>
-                    {loadedUser.photoUrl ? (
-                      <img src={loadedUser.photoUrl} alt={loadedUser.username} style={{ width: '100%', height: '100%', borderRadius: '50%' }} />
+                    {effectiveUser.photoUrl ? (
+                      <img src={effectiveUser.photoUrl} alt={effectiveUser.username || ''} style={{ width: '100%', height: '100%', borderRadius: '50%' }} />
                     ) : (
                       '👤'
                     )}
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ color: '#ffffff', fontWeight: '600', fontSize: '14px' }}>
-                      {loadedUser.username || (language === 'en' ? 'Player' : 'Игрок')}
+                      {effectiveUser.username || t.mainMenu.player}
                     </div>
                     <div style={{ color: '#94a3b8', fontSize: '12px' }}>
-                      {(loadedUser.coins || 0).toLocaleString()} {language === 'en' ? 'coins' : 'монет'}
+                      {(effectiveUser.coins || 0).toLocaleString(language === 'en' ? 'en-US' : 'ru-RU')} {t.profile.coins}
                     </div>
                   </div>
                 </div>

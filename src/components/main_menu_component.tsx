@@ -10,7 +10,6 @@ import { useState } from 'react'
 import LanguageSwitcher, { useLanguage } from './LanguageSwitcher'
 import { useTranslations } from '../lib/i18n/translations'
 import OnlineIndicator from './OnlineIndicator'
-import OnlineHeartbeat from './OnlineHeartbeat'
 
 const tokens = [
   { name: 'TON', symbol: 'TON', color: '#0088ff' },
@@ -110,7 +109,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
     {
       icon: <Image size={32} />,
       emoji: '🎴',
-      label: language === 'en' ? 'NFT Collection' : 'NFT Коллекция',
+      label: t.mainMenu.nftCollection,
       onClick: () => {
         hapticFeedback('medium');
         router.push('/nft-collection');
@@ -138,7 +137,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
     {
       icon: <LogIn size={32} />,
       emoji: '🔐',
-      label: language === 'en' ? 'Login' : 'Вход',
+      label: t.mainMenu.login,
       onClick: () => {
         hapticFeedback('medium');
         router.push('/auth/login');
@@ -147,7 +146,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
     {
       icon: <UserPlus size={32} />,
       emoji: '✨',
-      label: language === 'en' ? 'Register' : 'Регистрация',
+      label: t.mainMenu.register,
       onClick: () => {
         hapticFeedback('medium');
         router.push('/auth/register');
@@ -171,8 +170,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
       padding: '20px',
       paddingTop: '80px'
     }}>
-      {/* Автоматическое обновление онлайн статуса */}
-      <OnlineHeartbeat />
+      {/* Автоматическое обновление онлайн статуса — глобально в Providers */}
       
       {/* Выбор языка */}
       <motion.div

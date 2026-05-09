@@ -97,18 +97,25 @@ export function getApiHeaders(): HeadersInit {
 }
 
 /**
+ * Базовые клиентские auth-заголовки + переопределения (работает и с Record, и с Headers).
+ */
+export function mergeApiHeaders(extra?: HeadersInit): Headers {
+  const merged = new Headers(getApiHeaders() as HeadersInit);
+  if (!extra) return merged;
+  const over = new Headers(extra);
+  over.forEach((value, key) => merged.set(key, value));
+  return merged;
+}
+
+/**
  * Создать fetch запрос с автоматическими headers
  */
 export async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
-  const headers = {
-    ...getApiHeaders(),
-    ...(options.headers || {})
-  };
-
+  const { headers: optHeaders, ...rest } = options;
   return fetch(url, {
-    ...options,
-    headers,
-    credentials: 'include' // Всегда включаем credentials
+    ...rest,
+    headers: mergeApiHeaders(optHeaders),
+    credentials: 'include',
   });
 }
 

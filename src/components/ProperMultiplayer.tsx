@@ -6,6 +6,7 @@ import ReplaceRoomModal from './ReplaceRoomModal';
 import MultiplayerAccessModal from './MultiplayerAccessModal';
 import styles from './ProperMultiplayer.module.css';
 import { supabase } from '../lib/supabase';
+import { getApiHeaders } from '@/lib/api-headers';
 
 interface Room {
   id: number;
@@ -167,20 +168,11 @@ export const ProperMultiplayer: React.FC = () => {
 
   const fetchUser = async () => {
     try {
-      // ✅ Получаем telegram данные для header
-      const tg = (window as any).Telegram?.WebApp;
-      const telegramUser = tg?.initDataUnsafe?.user;
-      
-      const headers: Record<string, string> = {};
-      if (telegramUser?.id) {
-        headers['x-telegram-id'] = String(telegramUser.id);
-        headers['x-username'] = telegramUser.username || telegramUser.first_name || 'User';
-      }
-      
       const response = await fetch('/api/auth', {
         method: 'GET',
         credentials: 'include',
-        headers
+        cache: 'no-store',
+        headers: getApiHeaders(),
       });
 
       if (response.ok) {
@@ -213,10 +205,8 @@ export const ProperMultiplayer: React.FC = () => {
       const response = await fetch('/api/rooms?type=public', {
         method: 'GET',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        cache: 'no-store' // ✅ ОТКЛЮЧАЕМ КЭШИРОВАНИЕ
+        headers: getApiHeaders(),
+        cache: 'no-store', // ✅ ОТКЛЮЧАЕМ КЭШИРОВАНИЕ
       });
 
       if (response.ok) {

@@ -240,7 +240,7 @@ export default function LanguageSwitcher({
                       fontWeight: 700,
                       padding: '4px 8px'
                     }}>
-                      Active
+                      {currentLanguage === 'en' ? 'Active' : 'Активно'}
                     </span>
                   )}
                 </button>
@@ -264,7 +264,7 @@ export default function LanguageSwitcher({
               textTransform: 'uppercase'
             }}>
               <Sparkles size={12} color="#fcd34d" />
-              Перевести страницу
+              {currentLanguage === 'en' ? 'Translate page' : 'Перевести страницу'}
             </div>
             <div style={{
               display: 'grid',

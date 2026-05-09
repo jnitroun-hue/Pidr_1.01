@@ -29,6 +29,7 @@ import { useWebSocket } from '@/hooks/useWebSocket';
 import { useTelegram } from '@/hooks/useTelegram';
 import { getCardAssetSrc } from '@/lib/game/cardAssets';
 import { translateGameText } from '@/lib/i18n/gameRuntimeTranslations';
+import { getApiHeaders } from '@/lib/api-headers';
 import type { TelegramWebAppUser } from '@/types/telegram-webapp';
 
 interface PlayerProfile {
@@ -1509,19 +1510,11 @@ function GamePageContentComponent({
     let actualAvatar = userData?.avatar;
     
     try {
-      // ✅ Получаем telegram данные для header
-      const tg = window.Telegram?.WebApp;
-      const telegramUser = tg?.initDataUnsafe?.user;
-      
-      const authHeaders: Record<string, string> = {};
-      if (telegramUser?.id) {
-        authHeaders['x-telegram-id'] = String(telegramUser.id);
-        authHeaders['x-username'] = telegramUser.username || telegramUser.first_name || 'User';
-      }
-      
       const response = await fetch('/api/auth', {
+        method: 'GET',
         credentials: 'include',
-        headers: authHeaders
+        cache: 'no-store',
+        headers: getApiHeaders(),
       });
       
       if (response.ok) {
@@ -2059,7 +2052,7 @@ function GamePageContentComponent({
                   )}
                 </div>
                 <div className={styles.menuUserInfo}>
-                  <div className={styles.menuUserName}>{userData?.username || 'Игрок'}</div>
+                  <div className={styles.menuUserName}>{userData?.username || t.mainMenu.player}</div>
                   <div className={styles.menuUserCoins}>
                     <div className={styles.coinAnimated}></div>
                     <span className={styles.menuCoinsValue}>{userData?.coins || 0}</span>
@@ -2069,25 +2062,25 @@ function GamePageContentComponent({
               
               <div className={styles.menuDivider}></div>
 
-              <button className={styles.menuItem} onClick={() => setShowProfileModal(true)}>
-                👤 Профиль
+              <button type="button" className={styles.menuItem} onClick={() => setShowProfileModal(true)}>
+                👤 {t.mainMenu.gameBurgerProfile}
               </button>
-              <button className={styles.menuItem} onClick={() => setShowWalletModal(true)}>
-                💰 Кошелёк
+              <button type="button" className={styles.menuItem} onClick={() => setShowWalletModal(true)}>
+                💰 {t.mainMenu.gameBurgerWallet}
               </button>
               
               <div className={styles.menuDivider}></div>
               
-              <button className={styles.menuItem} onClick={() => typeof window !== 'undefined' && window.history.back()}>
-                🏠 Главная
+              <button type="button" className={styles.menuItem} onClick={() => typeof window !== 'undefined' && window.history.back()}>
+                🏠 {t.game.home}
               </button>
-              <button className={styles.menuItem} onClick={() => {
-                if (confirm('Вы уверены что хотите завершить игру?')) {
+              <button type="button" className={styles.menuItem} onClick={() => {
+                if (confirm(t.game.confirmQuitGame)) {
                   endGame();
                   typeof window !== 'undefined' && window.history.back();
                 }
               }}>
-                🚪 Выйти
+                🚪 {t.game.leaveGame}
               </button>
             </div>
           </div>

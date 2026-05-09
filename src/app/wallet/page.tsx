@@ -10,6 +10,8 @@ import {
 import { SiTon } from 'react-icons/si';
 import GameWallet from '@/components/GameWallet';
 import WalletQuickConnect from '@/components/WalletQuickConnect';
+import { useLanguage } from '@/components/LanguageSwitcher';
+import { useTranslations } from '@/lib/i18n/translations';
 
 // ─── Типы ───────────────────────────────────────────────────────────────────
 interface Transaction {
@@ -59,6 +61,8 @@ function timeAgo(dateStr: string): string {
 
 // ─── Главная страница ────────────────────────────────────────────────────────
 export default function WalletPage() {
+  const { language } = useLanguage();
+  const t = useTranslations(language);
   const [coins, setCoins] = useState<number | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -125,7 +129,7 @@ export default function WalletPage() {
       <div className="min-h-screen bg-gradient-to-br from-[#0a0f1e] via-[#111827] to-[#0d1b2a] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin" />
-          <p className="text-gray-400 text-sm">Загрузка кошелька...</p>
+          <p className="text-gray-400 text-sm">{t.wallet.pageLoading}</p>
         </div>
       </div>
     );
@@ -145,11 +149,11 @@ export default function WalletPage() {
               className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-slate-300 transition hover:border-yellow-400/30 hover:text-yellow-300"
             >
               <FaArrowLeft />
-              <span>Назад</span>
+              <span>{t.common.back}</span>
             </button>
             <div className="text-center">
-              <p className="text-[11px] uppercase tracking-[0.28em] text-cyan-300/70">Wallet Center</p>
-              <h1 className="text-lg font-black text-white">Кошелёк</h1>
+              <p className="text-[11px] uppercase tracking-[0.28em] text-cyan-300/70">{t.wallet.pageEyebrow}</p>
+              <h1 className="text-lg font-black text-white">{t.wallet.pageTitle}</h1>
             </div>
             <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-400/10 text-cyan-300">
               <FaWallet />

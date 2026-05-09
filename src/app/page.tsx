@@ -23,6 +23,7 @@ import RoomInviteModal from '../components/RoomInviteModal';
 import BurgerMenu from '../components/BurgerMenu';
 import { motion } from 'framer-motion';
 import { Menu, X } from 'lucide-react';
+import { getApiHeaders } from '@/lib/api-headers';
 
 /**
  * P.I.D.R. Game - Автоматическая авторизация через Telegram WebApp
@@ -88,7 +89,9 @@ function HomeWithParams() {
           
           const sessionResponse = await fetch('/api/auth', {
             method: 'GET',
-            credentials: 'include'
+            credentials: 'include',
+            cache: 'no-store',
+            headers: getApiHeaders(),
           });
 
           console.log('📥 [Браузер] Ответ от /api/auth:', {
@@ -149,7 +152,9 @@ function HomeWithParams() {
                 try {
                   const retryResponse = await fetch('/api/auth', {
                     method: 'GET',
-                    credentials: 'include'
+                    credentials: 'include',
+                    cache: 'no-store',
+                    headers: getApiHeaders(),
                   });
                   
                   if (retryResponse.ok) {
@@ -547,7 +552,8 @@ function HomeWithParams() {
     try {
       await fetch('/api/auth', {
         method: 'DELETE',
-        credentials: 'include'
+        credentials: 'include',
+        headers: getApiHeaders(),
       });
       setUser(null);
       console.log('👋 Выход выполнен');

@@ -19,6 +19,20 @@ export interface Translations {
     online: string;
     quickActions: string;
     rules: string;
+    community: string;
+    aboutGame: string;
+    earnNft: string;
+    nftCollection: string;
+    burgerMenuTitle: string;
+    burgerAccountTitle: string;
+    signInMenuHint: string;
+    adminPanel: string;
+    login: string;
+    register: string;
+    gameBurgerProfile: string;
+    gameBurgerWallet: string;
+    player: string;
+    translatePageHint: string;
   };
   
   // Игра
@@ -35,6 +49,9 @@ export interface Translations {
     back: string;
     refresh: string;
     endGame: string;
+    home: string;
+    leaveGame: string;
+    confirmQuitGame: string;
   };
   
   // Правила игры
@@ -120,6 +137,9 @@ export interface Translations {
     pending: string;
     confirmed: string;
     failed: string;
+    pageEyebrow: string;
+    pageTitle: string;
+    pageLoading: string;
   };
   
   // Профиль
@@ -275,7 +295,21 @@ export const translations: Record<Language, Translations> = {
       profile: 'ПРОФИЛЬ',
       online: 'ОНЛАЙН',
       quickActions: 'БЫСТРЫЕ ДЕЙСТВИЯ',
-      rules: 'ПРАВИЛА ИГРЫ'
+      rules: 'ПРАВИЛА ИГРЫ',
+      community: 'Сообщество',
+      aboutGame: 'О игре',
+      earnNft: 'Зарабатывай на NFT',
+      nftCollection: 'NFT Коллекция',
+      burgerMenuTitle: 'Меню',
+      burgerAccountTitle: 'Аккаунт',
+      signInMenuHint: 'Войдите, чтобы увидеть меню',
+      adminPanel: 'Админ-панель',
+      login: 'Вход',
+      register: 'Регистрация',
+      gameBurgerProfile: 'Профиль',
+      gameBurgerWallet: 'Кошелёк',
+      player: 'Игрок',
+      translatePageHint: 'Перевести страницу'
     },
     game: {
       findRoom: 'Найти комнату',
@@ -289,7 +323,10 @@ export const translations: Record<Language, Translations> = {
       players: 'Игроки',
       back: 'Назад',
       refresh: 'Обновить',
-      endGame: 'Закончить игру'
+      endGame: 'Закончить игру',
+      home: 'Главная',
+      leaveGame: 'Выйти',
+      confirmQuitGame: 'Вы уверены что хотите завершить игру?'
     },
     profile: {
       title: 'ПРОФИЛЬ',
@@ -420,7 +457,10 @@ export const translations: Record<Language, Translations> = {
       transaction: 'Транзакция',
       pending: 'Ожидает',
       confirmed: 'Подтверждена',
-      failed: 'Ошибка'
+      failed: 'Ошибка',
+      pageEyebrow: 'Центр кошелька',
+      pageTitle: 'Кошелёк',
+      pageLoading: 'Загрузка кошелька...'
     },
     shop: {
       title: 'Магазин монет',
@@ -516,7 +556,21 @@ export const translations: Record<Language, Translations> = {
       profile: 'PROFILE',
       online: 'ONLINE',
       quickActions: 'QUICK ACTIONS',
-      rules: 'GAME RULES'
+      rules: 'GAME RULES',
+      community: 'Community',
+      aboutGame: 'About',
+      earnNft: 'Earn with NFT',
+      nftCollection: 'NFT Collection',
+      burgerMenuTitle: 'Menu',
+      burgerAccountTitle: 'Account',
+      signInMenuHint: 'Sign in to see this menu',
+      adminPanel: 'Admin panel',
+      login: 'Login',
+      register: 'Register',
+      gameBurgerProfile: 'Profile',
+      gameBurgerWallet: 'Wallet',
+      player: 'Player',
+      translatePageHint: 'Translate page'
     },
     game: {
       findRoom: 'Find Room',
@@ -530,7 +584,10 @@ export const translations: Record<Language, Translations> = {
       players: 'Players',
       back: 'Back',
       refresh: 'Refresh',
-      endGame: 'End Game'
+      endGame: 'End Game',
+      home: 'Home',
+      leaveGame: 'Leave',
+      confirmQuitGame: 'Are you sure you want to quit the game?'
     },
     profile: {
       title: 'PROFILE',
@@ -661,7 +718,10 @@ export const translations: Record<Language, Translations> = {
       transaction: 'Transaction',
       pending: 'Pending',
       confirmed: 'Confirmed',
-      failed: 'Failed'
+      failed: 'Failed',
+      pageEyebrow: 'Wallet center',
+      pageTitle: 'Wallet',
+      pageLoading: 'Loading wallet...'
     },
     shop: {
       title: 'Coin Shop',

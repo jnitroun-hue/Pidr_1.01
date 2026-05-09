@@ -509,19 +509,11 @@ export const useGameStore = create<GameState>()(
         let nftDeckCards: Record<string, string> = {}; // ✅ NFT карты из колоды
         
         try {
-          // ✅ Получаем telegram данные для header
-          const tg = typeof window !== 'undefined' ? window.Telegram?.WebApp : undefined;
-          const telegramUserAuth = tg?.initDataUnsafe?.user;
-          
-          const authHeaders: Record<string, string> = {};
-          if (telegramUserAuth?.id) {
-            authHeaders['x-telegram-id'] = String(telegramUserAuth.id);
-            authHeaders['x-username'] = telegramUserAuth.username || telegramUserAuth.first_name || 'User';
-          }
-          
-          const response = await fetch('/api/auth', { 
+          const response = await fetch('/api/auth', {
+            method: 'GET',
             credentials: 'include',
-            headers: authHeaders
+            cache: 'no-store',
+            headers: getApiHeaders(),
           });
           if (response.ok) {
             const result = await response.json();
@@ -979,7 +971,7 @@ export const useGameStore = create<GameState>()(
         try {
           const response = await fetch('/api/user/rewards', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getApiHeaders(),
             credentials: 'include',
             body: JSON.stringify({ 
               experience, 

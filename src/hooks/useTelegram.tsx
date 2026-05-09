@@ -40,7 +40,11 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
         if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
           const tg = window.Telegram.WebApp
           tg.ready()
-          tg.expand()
+          try {
+            tg.expand()
+          } catch (expandErr) {
+            console.warn('Telegram WebApp expand skipped:', expandErr)
+          }
           
           setWebApp(tg)
           setIsReady(true)

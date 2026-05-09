@@ -7,6 +7,7 @@ import { UserPlus, Eye, EyeOff, Mail, Lock, User, Phone, CheckCircle } from 'luc
 import { isVKMiniApp, loginWithVKMiniApp } from '@/lib/auth/vk-bridge';
 import { buildVkOAuthUrl, detectMiniAppContext } from '@/lib/auth/social-auth';
 import Link from 'next/link';
+import { getApiHeaders } from '@/lib/api-headers';
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -42,7 +43,9 @@ export default function RegisterPage() {
       try {
         const response = await fetch('/api/auth', {
           method: 'GET',
-          credentials: 'include'
+          credentials: 'include',
+          cache: 'no-store',
+          headers: getApiHeaders(),
         });
         if (response.ok) {
           const data = await response.json();

@@ -7,6 +7,7 @@ import { LogIn, Eye, EyeOff, Lock, User } from 'lucide-react';
 import { isVKMiniApp, loginWithVKMiniApp } from '@/lib/auth/vk-bridge';
 import { buildVkOAuthUrl, detectMiniAppContext } from '@/lib/auth/social-auth';
 import Link from 'next/link';
+import { getApiHeaders } from '@/lib/api-headers';
 
 export default function LoginPage() {
   const [credentials, setCredentials] = useState({ 
@@ -29,7 +30,9 @@ export default function LoginPage() {
       try {
         const response = await fetch('/api/auth', {
           method: 'GET',
-          credentials: 'include'
+          credentials: 'include',
+          cache: 'no-store',
+          headers: getApiHeaders(),
         });
         if (response.ok) {
           const data = await response.json();
