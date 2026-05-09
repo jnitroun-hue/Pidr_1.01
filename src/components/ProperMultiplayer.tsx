@@ -6,7 +6,9 @@ import ReplaceRoomModal from './ReplaceRoomModal';
 import MultiplayerAccessModal from './MultiplayerAccessModal';
 import styles from './ProperMultiplayer.module.css';
 import { supabase } from '../lib/supabase';
-import { getApiHeaders } from '@/lib/api-headers';
+import { getApiHeaders, mergeApiHeaders } from '@/lib/api-headers';
+import { useLanguage } from './LanguageSwitcher';
+import { useTranslations } from '@/lib/i18n/translations';
 
 interface Room {
   id: number;
@@ -59,6 +61,8 @@ interface User {
 type ViewType = 'lobby' | 'create' | 'join' | 'waiting';
 
 export const ProperMultiplayer: React.FC = () => {
+  const { language } = useLanguage();
+  const t = useTranslations(language);
   const [view, setView] = useState<ViewType>('lobby');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
@@ -149,10 +153,10 @@ export const ProperMultiplayer: React.FC = () => {
       const telegramId = getTelegramId();
       const response = await fetch('/api/rooms/cleanup', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(telegramId ? { 'x-telegram-id': telegramId } : {})
-        }
+        credentials: 'include',
+        headers: mergeApiHeaders(
+          telegramId ? { 'x-telegram-id': telegramId } : undefined
+        ),
       });
 
       if (response.ok) {
@@ -219,7 +223,7 @@ export const ProperMultiplayer: React.FC = () => {
       }
     } catch (error: any) {
       console.error('❌ Ошибка загрузки комнат:', error);
-      setError(error.message || 'Не удалось загрузить комнаты');
+      setError(error.message || t.multiplayer.errLoadRooms);
     } finally {
       setLoading(false);
     }
@@ -278,12 +282,12 @@ export const ProperMultiplayer: React.FC = () => {
 
   const handleCreateRoom = async (forceReplace: boolean = false) => {
     if (!roomName.trim()) {
-      setError('Введите название комнаты');
+      setError(t.multiplayer.errNameRequired);
       return;
     }
 
     if (!user?.id) {
-      setError('Пользователь не авторизован');
+      setError(t.multiplayer.errAuth);
       return;
     }
 
@@ -310,10 +314,9 @@ export const ProperMultiplayer: React.FC = () => {
       const response = await fetch('/api/rooms', {
         method: 'POST',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(telegramId ? { 'x-telegram-id': telegramId } : {})
-        },
+        headers: mergeApiHeaders(
+          telegramId ? { 'x-telegram-id': telegramId } : undefined
+        ),
         body: JSON.stringify({
           action: 'create',
           name: roomName,
@@ -338,7 +341,9 @@ export const ProperMultiplayer: React.FC = () => {
         // Загружаем полные данные комнаты из БД
         const playersResponse = await fetch(`/api/rooms/${roomId}/players`, {
           method: 'GET',
-          credentials: 'include'
+          credentials: 'include',
+          headers: mergeApiHeaders(),
+          cache: 'no-store',
         });
 
         if (playersResponse.ok) {
@@ -348,7 +353,9 @@ export const ProperMultiplayer: React.FC = () => {
           // Загружаем информацию о комнате из БД
           const roomInfoResponse = await fetch(`/api/rooms/${roomId}`, {
             method: 'GET',
-            credentials: 'include'
+            credentials: 'include',
+            headers: mergeApiHeaders(),
+            cache: 'no-store',
           });
 
           let roomInfo: any = null;
@@ -391,7 +398,7 @@ export const ProperMultiplayer: React.FC = () => {
           // ✅ ОБНОВЛЯЕМ СПИСОК КОМНАТ ПОСЛЕ СОЗДАНИЯ
           fetchRooms();
         } else {
-          throw new Error('Не удалось загрузить данные комнаты из БД');
+          throw new Error(t.multiplayer.errRoomDb);
         }
       } else {
         const errorData = await response.json();
@@ -417,17 +424,16 @@ export const ProperMultiplayer: React.FC = () => {
           return;
         }
         
-        throw new Error(errorData.message || 'Не удалось создать комнату');
+        throw new Error(errorData.message || t.multiplayer.errCreateFallback);
       }
     } catch (error: any) {
       console.error('❌ Ошибка создания комнаты:', error);
       
       // Специальная обработка ошибки "уже в комнате"
       if (error.message && error.message.includes('уже есть активная комната')) {
-        // Если это не из response.json, значит ошибка сети - показываем общую ошибку
-        setError(error.message || 'Не удалось создать комнату');
+        setError(error.message || t.multiplayer.errCreateFallback);
       } else {
-        setError(error.message || 'Не удалось создать комнату');
+        setError(error.message || t.multiplayer.errCreateFallback);
       }
     } finally {
       setLoading(false);
@@ -443,7 +449,7 @@ export const ProperMultiplayer: React.FC = () => {
         try {
           await fetch('/api/rooms', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: mergeApiHeaders(),
             credentials: 'include',
             body: JSON.stringify({
               action: 'leave',
@@ -465,7 +471,7 @@ export const ProperMultiplayer: React.FC = () => {
     const codeToUse = roomCode || joinCode;
     
     if (!codeToUse.trim()) {
-      setError('Введите код комнаты');
+      setError(t.multiplayer.errJoinCode);
       return;
     }
 
@@ -483,10 +489,9 @@ export const ProperMultiplayer: React.FC = () => {
       const response = await fetch('/api/rooms', {
         method: 'POST',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(telegramId ? { 'x-telegram-id': telegramId } : {})
-        },
+        headers: mergeApiHeaders(
+          telegramId ? { 'x-telegram-id': telegramId } : undefined
+        ),
         body: JSON.stringify({
           action: 'join',
           roomCode: codeToUse.toUpperCase(),
@@ -507,11 +512,13 @@ export const ProperMultiplayer: React.FC = () => {
         // Загружаем всех игроков из БД
         const playersResponse = await fetch(`/api/rooms/${roomId}/players`, {
           method: 'GET',
-          credentials: 'include'
+          credentials: 'include',
+          headers: mergeApiHeaders(),
+          cache: 'no-store',
         });
 
         if (!playersResponse.ok) {
-          throw new Error('Не удалось загрузить игроков комнаты из БД');
+          throw new Error(t.multiplayer.errRoomDb);
         }
 
         const playersData = await playersResponse.json();
@@ -520,7 +527,9 @@ export const ProperMultiplayer: React.FC = () => {
         // Загружаем информацию о комнате из БД
         const roomInfoResponse = await fetch(`/api/rooms/${roomId}`, {
           method: 'GET',
-          credentials: 'include'
+          credentials: 'include',
+          headers: mergeApiHeaders(),
+          cache: 'no-store',
         });
 
         let roomInfo: any = null;
@@ -566,19 +575,18 @@ export const ProperMultiplayer: React.FC = () => {
         setView('waiting');
       } else {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Не удалось присоединиться к комнате');
+        throw new Error(errorData.message || t.multiplayer.errJoinFallback);
       }
     } catch (error: any) {
       console.error('❌ Ошибка присоединения к комнате:', error);
       
       // Специальная обработка ошибок
       if (error.message && error.message.includes('уже находитесь в другой комнате')) {
-        setError(error.message + ' Нажмите "Выйти из текущей комнаты" ниже.');
-        // Можно показать кнопку выхода из текущей комнаты
+        setError(`${error.message} ${t.multiplayer.inOtherRoomTail}`);
       } else if (error.message && error.message.includes('нет свободных мест')) {
-        setError('❌ Комната заполнена. Попробуйте другую комнату.');
+        setError(t.multiplayer.errRoomFullMsg);
       } else {
-        setError(error.message || 'Не удалось присоединиться к комнате');
+        setError(error.message || t.multiplayer.errJoinFallback);
       }
     } finally {
       setLoading(false);
@@ -595,7 +603,7 @@ export const ProperMultiplayer: React.FC = () => {
       // ОТПРАВЛЯЕМ ЗАПРОС НА ВЫХОД ИЗ КОМНАТЫ
       const response = await fetch('/api/rooms', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: mergeApiHeaders(),
         credentials: 'include',
         body: JSON.stringify({
           action: 'leave',
@@ -630,7 +638,7 @@ export const ProperMultiplayer: React.FC = () => {
     try {
       await fetch('/api/rooms', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: mergeApiHeaders(),
         credentials: 'include',
         body: JSON.stringify({
           action: 'leave',
@@ -665,7 +673,7 @@ export const ProperMultiplayer: React.FC = () => {
     return (
       <div className={styles.container}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', color: '#94a3b8', fontSize: '16px' }}>
-          ⏳ Проверка доступа...
+          ⏳ {t.multiplayer.accessChecking}
         </div>
       </div>
     );
@@ -710,10 +718,10 @@ export const ProperMultiplayer: React.FC = () => {
           className={styles.backButton}
           onClick={() => typeof window !== 'undefined' && window.history.back()}
         >
-          ← Назад
+          {t.multiplayer.back}
         </button>
-        <h1 className={styles.title}>🎮 Мультиплеер The Must!</h1>
-        <p className={styles.subtitle}>Играйте с друзьями онлайн</p>
+        <h1 className={styles.title}>{t.multiplayer.pageTitle}</h1>
+        <p className={styles.subtitle}>{t.multiplayer.pageSubtitle}</p>
       </div>
 
       {error && (
@@ -726,7 +734,7 @@ export const ProperMultiplayer: React.FC = () => {
               disabled={loading}
               style={{ marginTop: '10px', width: '100%' }}
             >
-              🚪 Выйти из текущей комнаты
+              {t.multiplayer.forceLeave}
             </button>
           )}
         </div>
@@ -741,8 +749,8 @@ export const ProperMultiplayer: React.FC = () => {
           textAlign: 'center',
           color: '#4CAF50'
         }}>
-          🎯 Ваша позиция: <strong>{playerPosition}</strong>
-          {playerPosition === 1 && ' 👑 (Хост)'}
+          {t.multiplayer.yourPositionLabel} <strong>{playerPosition}</strong>
+          {playerPosition === 1 && ` ${t.multiplayer.badgeHost}`}
         </div>
       )}
 
@@ -761,7 +769,7 @@ export const ProperMultiplayer: React.FC = () => {
               }}
               disabled={loading}
             >
-              🏠 Создать комнату
+              {t.multiplayer.lobbyCreateRoom}
             </button>
             
             <button 
@@ -775,31 +783,32 @@ export const ProperMultiplayer: React.FC = () => {
               }}
               disabled={loading}
             >
-              🚪 Присоединиться
+              {t.multiplayer.lobbyJoinRoom}
             </button>
           </div>
 
           <div className={styles.roomsList}>
             <div className={styles.roomsHeader}>
-              <h3 className={styles.sectionTitle}>Открытые комнаты</h3>
+              <h3 className={styles.sectionTitle}>{t.multiplayer.openRooms}</h3>
               <button 
+                type="button"
                 className={`${styles.button} ${styles.refresh}`}
                 onClick={async () => {
                   await fetchRooms();
                 }}
                 disabled={loading}
-                title="Обновить список активных комнат"
+                title={t.multiplayer.refreshTitle}
               >
-                {loading ? '⏳' : '🔄'} Обновить
+                {loading ? `⏳ ${t.game.refresh}` : t.multiplayer.refresh}
               </button>
             </div>
             
             {loading ? (
-              <div className={styles.loading}>⏳ Загрузка комнат...</div>
+              <div className={styles.loading}>{t.multiplayer.loadingRooms}</div>
             ) : rooms.length === 0 ? (
               <div className={styles.empty}>
-                <p>🏚️ Нет открытых комнат</p>
-                <p>Создайте первую комнату!</p>
+                <p>{t.multiplayer.emptyTitle}</p>
+                <p>{t.multiplayer.emptyHint}</p>
               </div>
             ) : (
               <div className={styles.rooms}>
@@ -808,20 +817,21 @@ export const ProperMultiplayer: React.FC = () => {
                     <div className={styles.roomInfo}>
                       <h4 className={styles.roomName}>{room.name}</h4>
                       <p className={styles.roomHost}>
-                        👑 Хост: {room.users?.username || 'Неизвестно'}
+                        {t.multiplayer.hostPrefix} {room.users?.username || t.multiplayer.unknownHost}
                       </p>
                       <p className={styles.roomDetails}>
-                        👥 {room.current_players}/{room.max_players} игроков
+                        👥 {room.current_players}/{room.max_players} {t.multiplayer.playersSuffix}
                       </p>
-                      <p className={styles.roomCode}>Код: {room.room_code}</p>
+                      <p className={styles.roomCode}>{t.multiplayer.codeLabel} {room.room_code}</p>
                     </div>
                     
                     <button 
+                      type="button"
                       className={`${styles.button} ${styles.join}`}
                       onClick={() => handleJoinRoom(room.room_code)}
                       disabled={loading || room.current_players >= room.max_players}
                     >
-                      {room.current_players >= room.max_players ? '🔒 Заполнена' : '🚪 Войти'}
+                      {room.current_players >= room.max_players ? t.multiplayer.roomFull : t.multiplayer.join}
                     </button>
                   </div>
                 ))}
@@ -834,24 +844,24 @@ export const ProperMultiplayer: React.FC = () => {
       {/* Создание комнаты */}
       {view === 'create' && (
         <div className={styles.form}>
-          <h3 className={styles.formTitle}>🏠 Создание комнаты</h3>
+          <h3 className={styles.formTitle}>{t.multiplayer.createTitle}</h3>
           
           <div className={styles.field}>
-            <label className={styles.label}>Название комнаты</label>
+            <label className={styles.label}>{t.multiplayer.roomNameLabel}</label>
             <input
               type="text"
               className={styles.input}
               value={roomName}
               onChange={(e) => setRoomName(e.target.value)}
-              placeholder="Моя крутая комната"
+              placeholder={t.multiplayer.roomNamePlaceholder}
               maxLength={50}
             />
           </div>
 
            <div className={styles.field}>
-             <label className={styles.label}>Максимум игроков</label>
+             <label className={styles.label}>{t.multiplayer.maxPlayersLabel}</label>
              <div className={styles.playerCards}>
-               {[4, 5, 6, 7].map((num) => ( // ✅ ОТ 4 ДО 7!
+               {[4, 5, 6, 7].map((num) => (
                  <button
                    key={num}
                    type="button"
@@ -859,22 +869,22 @@ export const ProperMultiplayer: React.FC = () => {
                    onClick={() => setMaxPlayers(num)}
                  >
                    <div className={styles.cardNumber}>{num}</div>
-                   <div className={styles.cardLabel}>игроков</div>
+                   <div className={styles.cardLabel}>{t.multiplayer.playersCardSuffix}</div>
                  </button>
                ))}
              </div>
            </div>
 
           <div className={styles.field}>
-            <label className={styles.label}>Режим игры</label>
+            <label className={styles.label}>{t.multiplayer.gameModeLabel}</label>
             <select
               className={styles.select}
               value={gameMode}
               onChange={(e) => setGameMode(e.target.value)}
             >
-              <option value="casual">Обычная игра</option>
-              <option value="ranked">Рейтинговая</option>
-              <option value="tournament">Турнир</option>
+              <option value="casual">{t.multiplayer.casual}</option>
+              <option value="ranked">{t.multiplayer.ranked}</option>
+              <option value="tournament">{t.multiplayer.tournament}</option>
             </select>
           </div>
 
@@ -885,7 +895,7 @@ export const ProperMultiplayer: React.FC = () => {
                 checked={hasPassword}
                 onChange={(e) => setHasPassword(e.target.checked)}
               />
-              <span>🔒 Установить пароль</span>
+              <span>{t.multiplayer.setPassword}</span>
             </label>
 
             {hasPassword && (
@@ -894,7 +904,7 @@ export const ProperMultiplayer: React.FC = () => {
                 className={styles.input}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Введите пароль"
+                placeholder={t.multiplayer.passwordPlaceholder}
                 maxLength={20}
               />
             )}
@@ -905,25 +915,27 @@ export const ProperMultiplayer: React.FC = () => {
                 checked={isPrivate}
                 onChange={(e) => setIsPrivate(e.target.checked)}
               />
-              <span>👁️ Приватная комната</span>
+              <span>{t.multiplayer.privateRoom}</span>
             </label>
           </div>
 
           <div className={styles.formActions}>
             <button 
+              type="button"
               className={`${styles.button} ${styles.secondary}`}
               onClick={() => setView('lobby')}
               disabled={loading}
             >
-              ← Назад
+              ← {t.common.back}
             </button>
             
             <button 
+              type="button"
               className={`${styles.button} ${styles.primary}`}
               onClick={() => handleCreateRoom(false)}
               disabled={loading || !roomName.trim()}
             >
-              {loading ? '⏳ Создание...' : '🏠 Создать'}
+              {loading ? t.multiplayer.creating : t.multiplayer.createSubmit}
             </button>
           </div>
         </div>
@@ -932,47 +944,49 @@ export const ProperMultiplayer: React.FC = () => {
       {/* Присоединение к комнате */}
       {view === 'join' && (
         <div className={styles.form}>
-          <h3 className={styles.formTitle}>🚪 Присоединение к комнате</h3>
+          <h3 className={styles.formTitle}>{t.multiplayer.joinTitle}</h3>
           
           <div className={styles.field}>
-            <label className={styles.label}>Код комнаты</label>
+            <label className={styles.label}>{t.multiplayer.joinCodeLabel}</label>
             <input
               type="text"
               className={styles.input}
               value={joinCode}
               onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-              placeholder="Введите код комнаты"
+              placeholder={t.multiplayer.joinCodePlaceholder}
               maxLength={6}
             />
           </div>
 
           <div className={styles.field}>
-            <label className={styles.label}>Пароль (если есть)</label>
+            <label className={styles.label}>{t.multiplayer.joinPassLabel}</label>
             <input
               type="password"
               className={styles.input}
               value={joinPassword}
               onChange={(e) => setJoinPassword(e.target.value)}
-              placeholder="Введите пароль комнаты"
+              placeholder={t.multiplayer.joinPassPlaceholder}
               maxLength={20}
             />
           </div>
 
           <div className={styles.formActions}>
             <button 
+              type="button"
               className={`${styles.button} ${styles.secondary}`}
               onClick={() => setView('lobby')}
               disabled={loading}
             >
-              ← Назад
+              ← {t.common.back}
             </button>
             
             <button 
+              type="button"
               className={`${styles.button} ${styles.primary}`}
               onClick={() => handleJoinRoom()}
               disabled={loading || !joinCode.trim()}
             >
-              {loading ? '⏳ Подключение...' : '🚪 Присоединиться'}
+              {loading ? t.multiplayer.joining : t.multiplayer.joinSubmit}
             </button>
           </div>
         </div>

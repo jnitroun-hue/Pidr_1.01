@@ -22,6 +22,9 @@ import type { Redis } from '@upstash/redis';
 // Получаем Redis клиент через универсальную инициализацию
 const redis: Redis | null = getRedis();
 
+/** Sentinel: Redis выключен — блокировки считаем успешными (режим DB-only на serverless). */
+export const NO_REDIS_LOCK_SENTINEL = '__no_redis_lock__';
+
 // ============================================================
 // TYPES
 // ============================================================
@@ -121,8 +124,10 @@ export async function acquirePlayerLock(
   timeoutMs: number = 5000
 ): Promise<string | null> {
   if (!redis) {
-    console.warn('⚠️ [acquirePlayerLock] Redis недоступен, блокировка не получена');
-    return null;
+    console.warn(
+      '⚠️ [acquirePlayerLock] Redis недоступен — пропускаем distributed lock (режим PostgreSQL)'
+    );
+    return NO_REDIS_LOCK_SENTINEL;
   }
   
   // TypeScript type narrowing: после проверки redis точно не null
@@ -146,6 +151,7 @@ export async function releasePlayerLock(
   userId: string,
   lockId: string
 ): Promise<boolean> {
+  if (lockId === NO_REDIS_LOCK_SENTINEL) return true;
   if (!redis) {
     console.warn('⚠️ [releasePlayerLock] Redis недоступен');
     return false;
@@ -174,8 +180,10 @@ export async function acquireRoomLock(
   timeoutMs: number = 5000
 ): Promise<string | null> {
   if (!redis) {
-    console.warn('⚠️ [acquireRoomLock] Redis недоступен, блокировка не получена');
-    return null;
+    console.warn(
+      '⚠️ [acquireRoomLock] Redis недоступен — пропускаем distributed lock (режим PostgreSQL)'
+    );
+    return NO_REDIS_LOCK_SENTINEL;
   }
   
   // TypeScript type narrowing: после проверки redis точно не null
@@ -198,6 +206,7 @@ export async function releaseRoomLock(
   roomId: string,
   lockId: string
 ): Promise<boolean> {
+  if (lockId === NO_REDIS_LOCK_SENTINEL) return true;
   if (!redis) {
     console.warn('⚠️ [releaseRoomLock] Redis недоступен');
     return false;

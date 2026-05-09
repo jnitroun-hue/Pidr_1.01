@@ -256,7 +256,61 @@ export interface Translations {
     limitedTime: string;
     discount: string;
   };
-  
+
+  multiplayer: {
+    accessChecking: string;
+    pageTitle: string;
+    pageSubtitle: string;
+    back: string;
+    openRooms: string;
+    refreshTitle: string;
+    refresh: string;
+    loadingRooms: string;
+    emptyTitle: string;
+    emptyHint: string;
+    hostPrefix: string;
+    unknownHost: string;
+    playersSuffix: string;
+    codeLabel: string;
+    join: string;
+    roomFull: string;
+    createTitle: string;
+    roomNameLabel: string;
+    roomNamePlaceholder: string;
+    maxPlayersLabel: string;
+    playersCardSuffix: string;
+    gameModeLabel: string;
+    casual: string;
+    ranked: string;
+    tournament: string;
+    setPassword: string;
+    passwordPlaceholder: string;
+    privateRoom: string;
+    creating: string;
+    createSubmit: string;
+    joinTitle: string;
+    joinCodeLabel: string;
+    joinCodePlaceholder: string;
+    joinPassLabel: string;
+    joinPassPlaceholder: string;
+    joining: string;
+    joinSubmit: string;
+    errNameRequired: string;
+    errAuth: string;
+    errJoinCode: string;
+    errRoomDb: string;
+    errCreateFallback: string;
+    errJoinFallback: string;
+    errRoomFullMsg: string;
+    inOtherRoomTail: string;
+    forceLeave: string;
+    yourPositionLabel: string;
+    badgeHost: string;
+    lobbyCreateRoom: string;
+    lobbyJoinRoom: string;
+    errLoadRooms: string;
+  };
+
   // Общие
   common: {
     loading: string;
@@ -542,6 +596,59 @@ export const translations: Record<Language, Translations> = {
       loadingGame: 'Раздаем карты игрокам...',
       preparingCards: 'Размещаем фишки...',
       almostReady: 'Добро пожаловать за стол!'
+    },
+    multiplayer: {
+      accessChecking: 'Проверка доступа...',
+      pageTitle: '🎮 Мультиплеер The Must!',
+      pageSubtitle: 'Играйте с друзьями онлайн',
+      back: '← Назад',
+      openRooms: 'Открытые комнаты',
+      refreshTitle: 'Обновить список активных комнат',
+      refresh: '🔄 Обновить',
+      loadingRooms: '⏳ Загрузка комнат...',
+      emptyTitle: '🏚️ Нет открытых комнат',
+      emptyHint: 'Создайте первую комнату!',
+      hostPrefix: '👑 Хост:',
+      unknownHost: 'Неизвестно',
+      playersSuffix: 'игроков',
+      codeLabel: 'Код:',
+      join: '🚪 Войти',
+      roomFull: '🔒 Заполнена',
+      createTitle: '🏠 Создание комнаты',
+      roomNameLabel: 'Название комнаты',
+      roomNamePlaceholder: 'Моя крутая комната',
+      maxPlayersLabel: 'Максимум игроков',
+      playersCardSuffix: 'игроков',
+      gameModeLabel: 'Режим игры',
+      casual: 'Обычная игра',
+      ranked: 'Рейтинговая',
+      tournament: 'Турнир',
+      setPassword: '🔒 Установить пароль',
+      passwordPlaceholder: 'Введите пароль',
+      privateRoom: '👁️ Приватная комната',
+      creating: '⏳ Создание...',
+      createSubmit: '🏠 Создать',
+      joinTitle: '🚪 Присоединение к комнате',
+      joinCodeLabel: 'Код комнаты',
+      joinCodePlaceholder: 'Введите код комнаты',
+      joinPassLabel: 'Пароль (если есть)',
+      joinPassPlaceholder: 'Введите пароль комнаты',
+      joining: '⏳ Подключение...',
+      joinSubmit: '🚪 Присоединиться',
+      errNameRequired: 'Введите название комнаты',
+      errAuth: 'Пользователь не авторизован',
+      errJoinCode: 'Введите код комнаты',
+      errRoomDb: 'Не удалось загрузить данные комнаты из БД',
+      errCreateFallback: 'Не удалось создать комнату',
+      errJoinFallback: 'Не удалось присоединиться к комнате',
+      errRoomFullMsg: '❌ Комната заполнена. Попробуйте другую комнату.',
+      inOtherRoomTail: 'Нажмите «Выйти из текущей комнаты» ниже.',
+      forceLeave: '🚪 Выйти из текущей комнаты',
+      yourPositionLabel: '🎯 Ваша позиция:',
+      badgeHost: '👑 (Хост)',
+      lobbyCreateRoom: '🏠 Создать комнату',
+      lobbyJoinRoom: '🚪 Присоединиться по коду',
+      errLoadRooms: 'Не удалось загрузить комнаты'
     }
   },
   en: {
@@ -803,6 +910,59 @@ export const translations: Record<Language, Translations> = {
       loadingGame: 'Dealing cards to players...',
       preparingCards: 'Placing chips...',
       almostReady: 'Welcome to the table!'
+    },
+    multiplayer: {
+      accessChecking: 'Checking access…',
+      pageTitle: '🎮 The Must! multiplayer',
+      pageSubtitle: 'Play online with friends',
+      back: '← Back',
+      openRooms: 'Open rooms',
+      refreshTitle: 'Refresh the active room list',
+      refresh: '🔄 Refresh',
+      loadingRooms: '⏳ Loading rooms…',
+      emptyTitle: '🏚️ No open rooms',
+      emptyHint: 'Create the first room!',
+      hostPrefix: '👑 Host:',
+      unknownHost: 'Unknown',
+      playersSuffix: 'players',
+      codeLabel: 'Code:',
+      join: '🚪 Join',
+      roomFull: '🔒 Full',
+      createTitle: '🏠 Create room',
+      roomNameLabel: 'Room name',
+      roomNamePlaceholder: 'My awesome room',
+      maxPlayersLabel: 'Max players',
+      playersCardSuffix: 'players',
+      gameModeLabel: 'Game mode',
+      casual: 'Casual',
+      ranked: 'Ranked',
+      tournament: 'Tournament',
+      setPassword: '🔒 Set password',
+      passwordPlaceholder: 'Enter password',
+      privateRoom: '👁️ Private room',
+      creating: '⏳ Creating…',
+      createSubmit: '🏠 Create',
+      joinTitle: '🚪 Join a room',
+      joinCodeLabel: 'Room code',
+      joinCodePlaceholder: 'Enter room code',
+      joinPassLabel: 'Password (if any)',
+      joinPassPlaceholder: 'Enter room password',
+      joining: '⏳ Connecting…',
+      joinSubmit: '🚪 Join room',
+      errNameRequired: 'Enter a room name',
+      errAuth: 'User is not authenticated',
+      errJoinCode: 'Enter room code',
+      errRoomDb: 'Could not load room data',
+      errCreateFallback: 'Could not create room',
+      errJoinFallback: 'Could not join room',
+      errRoomFullMsg: '❌ Room is full. Try another one.',
+      inOtherRoomTail: 'Tap “Leave current room” below.',
+      forceLeave: '🚪 Leave current room',
+      yourPositionLabel: '🎯 Your seat:',
+      badgeHost: '👑 (Host)',
+      lobbyCreateRoom: '🏠 Create room',
+      lobbyJoinRoom: '🚪 Join with code',
+      errLoadRooms: 'Could not load rooms'
     }
   }
 };

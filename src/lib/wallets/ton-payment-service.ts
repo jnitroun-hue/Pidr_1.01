@@ -315,12 +315,19 @@ export class TonPaymentService {
       // ✅ УПРОЩЕНО: Memo = "deposit_TELEGRAM_ID" - парсится при получении транзакции
       const memo = `deposit_${userId}`;
 
+      const addr = (this.masterAddress || '').trim();
+      if (!addr) {
+        const err = new Error('MASTER_TON_ADDRESS_NOT_SET');
+        (err as Error & { code?: string }).code = 'MASTER_TON_ADDRESS_NOT_SET';
+        throw err;
+      }
+
       return {
-        address: this.masterAddress,
+        address: addr,
         memo: memo,
         amount_ton: 1.0, // Рекомендуемая сумма
         amount_coins: 1000, // Сколько монет получит за 1 TON
-        qr_url: this.generateTonQrUrl(this.masterAddress, memo, 1.0)
+        qr_url: this.generateTonQrUrl(addr, memo, 1.0)
       };
       
     } catch (error: any) {

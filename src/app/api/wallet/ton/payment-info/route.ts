@@ -61,6 +61,18 @@ export async function GET(req: NextRequest) {
 
   } catch (error: any) {
     console.error('❌ Ошибка получения TON payment info:', error);
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg === 'MASTER_TON_ADDRESS_NOT_SET' || msg.includes('MASTER_TON_ADDRESS_NOT_SET')) {
+      return noStoreJson(
+        {
+          success: false,
+          code: 'TON_NOT_CONFIGURED',
+          message:
+            'На сервере не задан MASTER_TON_ADDRESS — пополнение TON через этот метод недоступно. Добавьте переменную окружения в Vercel.'
+        },
+        { status: 503 }
+      );
+    }
     return noStoreJson({
       success: false,
       message: 'Ошибка получения информации для платежа: ' + (error instanceof Error ? error.message : String(error))

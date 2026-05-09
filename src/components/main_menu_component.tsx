@@ -27,7 +27,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
   const { hapticFeedback } = useTelegram()
   const router = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)
-  const { language, changeLanguage } = useLanguage()
+  const { language } = useLanguage()
   const t = useTranslations(language)
   const { 
     tonAddress, tonBalance, isTonConnected,
@@ -184,10 +184,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
           maxWidth: 'calc(100vw - 40px)'
         }}
       >
-        <LanguageSwitcher 
-          currentLanguage={language}
-          onLanguageChange={changeLanguage}
-        />
+        <LanguageSwitcher />
       </motion.div>
 
       {/* Индикатор онлайн игроков - перемещен ниже бургер-меню */}
