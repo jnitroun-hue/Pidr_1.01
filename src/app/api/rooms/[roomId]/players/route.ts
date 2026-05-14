@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 // 📋 API ДЛЯ ПОЛУЧЕНИЯ СПИСКА ИГРОКОВ В КОМНАТЕ
 export async function GET(
   request: NextRequest,
@@ -8,7 +12,14 @@ export async function GET(
 ) {
   try {
     const params = await context.params;
-    const roomId = params.roomId;
+    const roomId = parseInt(params.roomId, 10);
+
+    if (Number.isNaN(roomId)) {
+      return NextResponse.json(
+        { success: false, message: 'Некорректный roomId' },
+        { status: 400 }
+      );
+    }
 
     console.log(`📋 [GET /api/rooms/${roomId}/players] Получение списка игроков`);
 
@@ -90,13 +101,18 @@ export async function GET(
 
     console.log(`✅ [GET /api/rooms/players] Найдено игроков: ${players?.length || 0}, max: ${room.max_players}`);
 
-    return NextResponse.json({ 
+    const response = NextResponse.json({ 
       success: true, 
       players: playersWithHost || [], // ✅ ИСПОЛЬЗУЕМ playersWithHost
       maxPlayers: room.max_players, // ✅ ДОБАВЛЕНО!
       currentPlayers: players?.length || 0,
       roomStatus: room.status
     });
+
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+    return response;
 
   } catch (error: unknown) {
     console.error('❌ [GET /api/rooms/players] Ошибка:', error);

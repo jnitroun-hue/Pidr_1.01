@@ -26,6 +26,10 @@ import {
 } from '../../../lib/multiplayer/player-state-manager';
 import { lightCleanup, cleanupOfflinePlayers } from '../../../lib/auto-cleanup';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 // ============================================================
 // UTILITY FUNCTIONS
 // ============================================================
@@ -221,10 +225,14 @@ export async function GET(req: NextRequest) {
     
     console.log(`✅ Загружено комнат: ${roomsWithHosts.length}`);
     
-    return NextResponse.json({ 
+    const response = NextResponse.json({ 
       success: true, 
       rooms: roomsWithHosts
     });
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+    return response;
     
   } catch (error: any) {
     console.error('❌ Rooms GET error:', error);

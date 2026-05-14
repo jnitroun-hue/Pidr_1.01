@@ -5,6 +5,7 @@ import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 // ✅ Явная конфигурация runtime для Next.js 15
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 // 🔴 API ДЛЯ УПРАВЛЕНИЯ ГОТОВНОСТЬЮ ИГРОКОВ
 export async function POST(
@@ -20,7 +21,10 @@ export async function POST(
     }
 
     const { userId, environment } = auth;
-    const roomId = params.roomId;
+    const roomId = parseInt(params.roomId, 10);
+    if (Number.isNaN(roomId)) {
+      return NextResponse.json({ success: false, message: 'Некорректный roomId' }, { status: 400 });
+    }
     
     // ✅ УНИВЕРСАЛЬНО: Получаем пользователя из БД
     const { dbUserId } = await getUserIdFromDatabase(userId, environment);
@@ -42,7 +46,7 @@ export async function POST(
       const { data: currentPlayer } = await supabase
         .from('_pidr_room_players')
         .select('is_ready')
-        .eq('room_id', parseInt(roomId))
+        .eq('room_id', roomId)
         .eq('user_id', dbUserId)
         .maybeSingle();
       
@@ -59,7 +63,7 @@ export async function POST(
     const { error, data } = await supabase
       .from('_pidr_room_players')
       .update({ is_ready: isReady })
-      .eq('room_id', parseInt(roomId))
+      .eq('room_id', roomId)
       .eq('user_id', dbUserId)
       .select();
     
@@ -97,13 +101,17 @@ export async function POST(
         last_activity: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
-      .eq('id', parseInt(roomId));
+      .eq('id', roomId);
 
-    return NextResponse.json({ 
+    const response = NextResponse.json({ 
       success: true, 
       players: players || [],
       isReady // ✅ ВОЗВРАЩАЕМ НОВОЕ СОСТОЯНИЕ
     });
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+    return response;
 
   } catch (error: unknown) {
     console.error('❌ Ошибка API готовности:', error);
@@ -121,7 +129,10 @@ export async function GET(
 ) {
   try {
     const params = await context.params;
-    const roomId = params.roomId;
+    const roomId = parseInt(params.roomId, 10);
+    if (Number.isNaN(roomId)) {
+      return NextResponse.json({ success: false, message: 'Некорректный roomId' }, { status: 400 });
+    }
 
     // ПОЛУЧАЕМ ВСЕХ ИГРОКОВ С ИХ ГОТОВНОСТЬЮ
     const { data: players, error } = await supabase
@@ -144,13 +155,17 @@ export async function GET(
 
     console.log(`🔍 Готовность: ${readyCount}/${totalCount}, allReady=${allReady}`);
 
-    return NextResponse.json({ 
+    const response = NextResponse.json({ 
       success: true, 
       players: players || [],
       readyCount,
       totalCount,
       allReady
     });
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+    return response;
 
   } catch (error: unknown) {
     console.error('❌ Ошибка API готовности:', error);

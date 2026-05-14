@@ -72,7 +72,17 @@ export default function MultiplayerLobby({
     refreshInFlightRef.current = true;
     lastRefreshAtRef.current = now;
     try {
-      const response = await fetch(`/api/rooms/${roomId}/players`);
+      const requestHeaders: Record<string, string> = {};
+      if (user?.id) {
+        requestHeaders['x-telegram-id'] = user.id.toString();
+      }
+
+      const response = await fetch(`/api/rooms/${roomId}/players`, {
+        method: 'GET',
+        headers: requestHeaders,
+        credentials: 'include',
+        cache: 'no-store',
+      });
       
       // ✅ ПРОВЕРЯЕМ СТАТУС ОТВЕТА!
       if (!response.ok) {
