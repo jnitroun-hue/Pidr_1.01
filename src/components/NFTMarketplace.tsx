@@ -68,6 +68,7 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
   const [sellCategory, setSellCategory] = useState<'coins' | 'crypto' | 'fiat'>('coins');
   const [sellCrypto, setSellCrypto] = useState<'TON' | 'SOL'>('TON');
   const [sellFiatMethod, setSellFiatMethod] = useState<'bank_card' | 'sbp' | 'yoo_money' | 'sberbank'>('sbp');
+  const [isSubmittingSell, setIsSubmittingSell] = useState(false);
 
   // Helper функции
 
@@ -113,7 +114,7 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
       const data = await response.json();
       if (data.success) {
         setListings(data.listings || []);
-      } else if (retryCount < 2) {
+      } else if (data.code !== 'MARKETPLACE_DB_MIGRATION_REQUIRED' && retryCount < 2) {
         // ✅ RETRY: Повторяем запрос если не получили данные
         setTimeout(() => loadMarketplace(retryCount + 1), 1000 * (retryCount + 1));
       }
@@ -360,7 +361,7 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
   };
 
   const handleSellNFT = async () => {
-    if (!selectedNFT) return;
+    if (!selectedNFT || isSubmittingSell) return;
 
     const price = parseFloat(sellPrice);
 
@@ -369,8 +370,9 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
       return;
     }
 
-    if (sellCategory === 'crypto') {
-      try {
+    setIsSubmittingSell(true);
+    try {
+      if (sellCategory === 'crypto') {
         const walletType = sellCrypto === 'TON' ? 'ton' : 'sol';
 
         const checkResponse = await fetch('/api/wallet/check', {
@@ -399,39 +401,33 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
         ) {
           return;
         }
-      } catch (error) {
-        console.error('Ошибка проверки кошелька:', error);
-        alert('Ошибка проверки кошелька');
-        return;
       }
-    }
 
-    const requestBody: Record<string, unknown> = {
-      nft_card_id: selectedNFT.id,
-      price_coins: null,
-      price_ton: null,
-      price_sol: null,
-      price_rub: null,
-      fiat_payment_method: null,
-      crypto_currency: null,
-    };
+      const requestBody: Record<string, unknown> = {
+        nft_card_id: selectedNFT.id,
+        price_coins: null,
+        price_ton: null,
+        price_sol: null,
+        price_rub: null,
+        fiat_payment_method: null,
+        crypto_currency: null,
+      };
 
-    if (sellCategory === 'coins') {
-      requestBody.price_coins = Math.floor(price);
-    } else if (sellCategory === 'crypto') {
-      if (sellCrypto === 'TON') {
-        requestBody.price_ton = price;
-        requestBody.crypto_currency = 'TON';
+      if (sellCategory === 'coins') {
+        requestBody.price_coins = Math.floor(price);
+      } else if (sellCategory === 'crypto') {
+        if (sellCrypto === 'TON') {
+          requestBody.price_ton = price;
+          requestBody.crypto_currency = 'TON';
+        } else {
+          requestBody.price_sol = price;
+          requestBody.crypto_currency = 'SOL';
+        }
       } else {
-        requestBody.price_sol = price;
-        requestBody.crypto_currency = 'SOL';
+        requestBody.price_rub = Math.round(price * 100) / 100;
+        requestBody.fiat_payment_method = sellFiatMethod;
       }
-    } else {
-      requestBody.price_rub = Math.round(price * 100) / 100;
-      requestBody.fiat_payment_method = sellFiatMethod;
-    }
 
-    try {
       const response = await fetch('/api/marketplace/create', {
         method: 'POST',
         headers: {
@@ -466,6 +462,8 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
     } catch (error) {
       console.error('Ошибка продажи:', error);
       alert('Ошибка при выставлении на продажу');
+    } finally {
+      setIsSubmittingSell(false);
     }
   };
 
@@ -694,7 +692,9 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
           setSellCrypto={setSellCrypto}
           sellFiatMethod={sellFiatMethod}
           setSellFiatMethod={setSellFiatMethod}
+          isSubmitting={isSubmittingSell}
           onClose={() => {
+            if (isSubmittingSell) return;
             setShowSellModal(false);
             setSelectedNFT(null);
           }}

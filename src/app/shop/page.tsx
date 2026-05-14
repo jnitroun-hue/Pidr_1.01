@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, TrendingUp, DollarSign, Users } from 'lucide-react';
+import { ArrowLeft, TrendingUp, DollarSign, Users, Sparkles, ShieldCheck, TimerReset, Percent } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import NFTMarketplace from '../../components/NFTMarketplace';
 import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
@@ -16,10 +16,39 @@ interface User {
   losses: number;
 }
 
+interface Listing {
+  id: number;
+  seller_user_id: number;
+  price_coins?: number | null;
+  price_ton?: number | null;
+  price_sol?: number | null;
+  price_rub?: number | null;
+  nft_card?: {
+    rank?: string;
+    suit?: string;
+    rarity?: string;
+  };
+}
+
+interface PromoCard {
+  listingId: number;
+  cardTitle: string;
+  originalRub: number;
+  discountedRub: number;
+  tonPrice: number;
+  solPrice: number;
+  discountPercent: number;
+}
+
 export default function ShopPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [dailyPromo, setDailyPromo] = useState<PromoCard | null>(null);
+  const [canClaimPromo, setCanClaimPromo] = useState(true);
+  const [claimRemainingMs, setClaimRemainingMs] = useState(0);
+  const [promoCooldownLabel, setPromoCooldownLabel] = useState('00:00:00');
   const [stats, setStats] = useState({
     totalListings: 0,
     totalSales: 0,
@@ -33,6 +62,35 @@ export default function ShopPage() {
     const { getApiHeaders: getUniversalHeaders } = require('../../lib/api-headers');
     const headers = getUniversalHeaders();
     return headers as Record<string, string>;
+  };
+
+  const formatCountdown = (ms: number) => {
+    const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+    const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+    const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+    const seconds = String(totalSeconds % 60).padStart(2, '0');
+    return `${hours}:${minutes}:${seconds}`;
+  };
+
+  const loadDailyPromo = async () => {
+    try {
+      const response = await fetch('/api/marketplace/daily-offer', {
+        method: 'GET',
+        headers: getApiHeaders(),
+        cache: 'no-store',
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        setDailyPromo(data.offer || null);
+        const remaining = Number(data.claim?.remainingMs || 0);
+        setClaimRemainingMs(remaining);
+        setCanClaimPromo(Boolean(data.claim?.canClaim));
+        setPromoCooldownLabel(data.claim?.canClaim ? '00:00:00' : formatCountdown(remaining));
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки акции дня:', error);
+    }
   };
 
   // Загрузка пользователя
@@ -61,26 +119,28 @@ export default function ShopPage() {
   useEffect(() => {
     const loadStats = async () => {
       try {
-        const response = await fetch('/api/marketplace/list?limit=1000', {
-          headers: getApiHeaders()
+        const response = await fetch('/api/marketplace/list?limit=200', {
+          headers: getApiHeaders(),
+          cache: 'no-store',
         });
         const data = await response.json();
         
         if (data.success) {
-          const listings = data.listings || [];
-          const avgPrice = listings.length > 0
+          const nextListings = (data.listings || []) as Listing[];
+          setListings(nextListings);
+          const avgPrice = nextListings.length > 0
             ? Math.floor(
-                listings
+                nextListings
                   .filter((l: any) => l.price_coins)
-                  .reduce((sum: number, l: any) => sum + l.price_coins, 0) / listings.length
+                  .reduce((sum: number, l: any) => sum + l.price_coins, 0) / nextListings.length
               )
             : 0;
 
           setStats({
-            totalListings: listings.length,
+            totalListings: nextListings.length,
             totalSales: 0, // TODO: добавить подсчёт продаж
             avgPrice,
-            activeUsers: new Set(listings.map((l: any) => l.seller_user_id)).size
+            activeUsers: new Set(nextListings.map((l: any) => l.seller_user_id)).size
           });
         }
       } catch (error) {
@@ -91,9 +151,67 @@ export default function ShopPage() {
     loadStats();
   }, []);
 
+  useEffect(() => {
+    loadDailyPromo();
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setClaimRemainingMs((prev) => {
+        const next = Math.max(0, prev - 1000);
+        if (next <= 0) {
+          setCanClaimPromo(true);
+          setPromoCooldownLabel('00:00:00');
+        } else {
+          setCanClaimPromo(false);
+          setPromoCooldownLabel(formatCountdown(next));
+        }
+        return next;
+      });
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const handleBalanceUpdate = (newBalance: number) => {
     if (user) {
       setUser({ ...user, coins: newBalance });
+    }
+  };
+
+  const handleClaimPromo = async () => {
+    if (!dailyPromo) return;
+    if (!canClaimPromo) {
+      alert(`⏳ Акция уже забрана. Новый шанс через ${promoCooldownLabel}`);
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/marketplace/daily-offer', {
+        method: 'POST',
+        headers: getApiHeaders(),
+      });
+      const data = await response.json();
+
+      if (!data.success) {
+        const remaining = Number(data.claim?.remainingMs || 0);
+        if (remaining > 0) {
+          setClaimRemainingMs(remaining);
+          setCanClaimPromo(false);
+          setPromoCooldownLabel(formatCountdown(remaining));
+        }
+        alert(`❌ ${data.error || 'Не удалось активировать акцию'}`);
+        return;
+      }
+
+      const remaining = Number(data.claim?.remainingMs || 0);
+      setClaimRemainingMs(remaining);
+      setCanClaimPromo(false);
+      setPromoCooldownLabel(formatCountdown(remaining));
+      window.location.hash = 'marketplace-section';
+      alert('🔥 Акция активирована! Перейдите к лотам и выберите карту со скидкой дня.');
+    } catch (error) {
+      console.error('Ошибка активации акции:', error);
+      alert('Ошибка активации акции дня');
     }
   };
 
@@ -126,7 +244,11 @@ export default function ShopPage() {
   return (
       <div style={{
         minHeight: '100vh',
-        background: `linear-gradient(165deg, ${T.bgDeep} 0%, ${T.bgMain} 55%, #0d1219 100%)`,
+        background: `
+          radial-gradient(circle at 10% 20%, rgba(56,189,248,0.14) 0%, transparent 38%),
+          radial-gradient(circle at 90% 10%, rgba(245,197,24,0.16) 0%, transparent 36%),
+          linear-gradient(165deg, ${T.bgDeep} 0%, ${T.bgMain} 55%, #0d1219 100%)
+        `,
         padding: '20px',
         paddingBottom: '100px'
       }}>
@@ -181,9 +303,9 @@ export default function ShopPage() {
               gap: '16px',
               background: T.bgCard,
               padding: '12px 20px',
-              borderRadius: T.radiusMd,
+              borderRadius: '999px',
               border: `1px solid ${T.borderGold}`,
-              boxShadow: T.shadowCard,
+              boxShadow: '0 14px 34px rgba(0,0,0,0.38)',
             }}>
               <div style={{ textAlign: 'right' }}>
                 <p style={{ color: T.textMuted, fontSize: '14px', marginBottom: '4px' }}>
@@ -196,6 +318,113 @@ export default function ShopPage() {
             </div>
           )}
         </div>
+
+        {/* Hero */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          style={{
+            borderRadius: '24px',
+            padding: '24px',
+            marginBottom: '18px',
+            background: `
+              linear-gradient(135deg, rgba(245,197,24,0.12) 0%, rgba(56,189,248,0.1) 40%, rgba(15,23,42,0.75) 100%),
+              ${T.bgCard}
+            `,
+            border: `1px solid ${T.borderGold}`,
+            boxShadow: T.shadowCard,
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '18px', flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: '280px' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 10, color: '#fde68a', fontWeight: 700, fontSize: 12 }}>
+                <Sparkles size={16} /> Премиум маркетплейс NFT
+              </div>
+              <h1 style={{ margin: 0, color: T.text, fontSize: 'clamp(1.6rem, 5vw, 2.3rem)', fontWeight: 900, lineHeight: 1.1 }}>
+                Карты, которые хочется
+                <span style={{ color: T.accentGold }}> покупать</span>
+              </h1>
+              <p style={{ color: T.textMuted, fontSize: 14, margin: '12px 0 0', maxWidth: 640, lineHeight: 1.55 }}>
+                Лоты за монеты, рубли, TON и SOL. Витрина обновляется в реальном времени, а акция дня теперь контролируется сервером и честно ограничена до 1 раза в 24 часа.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+              <Badge icon={<ShieldCheck size={15} />} label="Безопасные сделки" />
+              <Badge icon={<TimerReset size={15} />} label="Обновление 24/7" />
+              <Badge icon={<Percent size={15} />} label="Акция дня -29%" />
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Daily promo */}
+        {dailyPromo && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            style={{
+              borderRadius: '20px',
+              padding: '18px',
+              marginBottom: '24px',
+              background: 'linear-gradient(130deg, rgba(244,63,94,0.14) 0%, rgba(249,115,22,0.12) 45%, rgba(15,23,42,0.92) 100%)',
+              border: '1px solid rgba(251,146,60,0.55)',
+              boxShadow: '0 16px 42px rgba(249,115,22,0.16)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+              <div>
+                <div style={{ color: '#fed7aa', fontSize: 12, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                  Акция дня · серверный лимит 1/24ч
+                </div>
+                <h3 style={{ color: '#fff7ed', margin: '8px 0 6px', fontSize: 22 }}>
+                  {dailyPromo.cardTitle}
+                </h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <span style={{ color: '#fdba74', fontSize: 13, textDecoration: 'line-through' }}>
+                    {dailyPromo.originalRub} ₽
+                  </span>
+                  <span style={{ color: '#fff', fontSize: 25, fontWeight: 900 }}>
+                    {dailyPromo.discountedRub} ₽
+                  </span>
+                  <span style={{ color: '#fef08a', fontSize: 12, fontWeight: 800 }}>
+                    -{dailyPromo.discountPercent}%
+                  </span>
+                  <span style={{ color: '#bbf7d0', fontSize: 12, fontWeight: 700 }}>
+                    или {dailyPromo.tonPrice} TON / {dailyPromo.solPrice} SOL
+                  </span>
+                </div>
+                <p style={{ color: '#fed7aa', margin: '8px 0 0', fontSize: 12 }}>
+                  Цена приведена к ~200 ₽ после скидки, с ориентиром в крипте по серверному курсу.
+                </p>
+              </div>
+
+              <div style={{ minWidth: 230, textAlign: 'right' }}>
+                <div style={{ color: '#ffedd5', fontSize: 12, marginBottom: 8 }}>
+                  {canClaimPromo ? 'Можно активировать сейчас' : `Новый доступ через ${promoCooldownLabel}`}
+                </div>
+                <motion.button
+                  whileHover={{ scale: canClaimPromo ? 1.03 : 1 }}
+                  whileTap={{ scale: canClaimPromo ? 0.97 : 1 }}
+                  onClick={handleClaimPromo}
+                  style={{
+                    width: '100%',
+                    border: 'none',
+                    borderRadius: '12px',
+                    padding: '12px 14px',
+                    background: canClaimPromo
+                      ? 'linear-gradient(135deg, #f97316 0%, #ef4444 100%)'
+                      : 'linear-gradient(135deg, rgba(100,116,139,0.7) 0%, rgba(71,85,105,0.7) 100%)',
+                    color: '#fff',
+                    fontWeight: 800,
+                    cursor: canClaimPromo ? 'pointer' : 'not-allowed',
+                  }}
+                >
+                  {canClaimPromo ? 'Забрать акцию дня' : 'Акция уже забрана'}
+                </motion.button>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {/* Stats Cards */}
         <div style={{
@@ -225,10 +454,12 @@ export default function ShopPage() {
         </div>
 
         {/* Marketplace Component */}
-        <NFTMarketplace
-          userCoins={user?.coins || 0}
-          onBalanceUpdate={handleBalanceUpdate}
-        />
+        <div id="marketplace-section">
+          <NFTMarketplace
+            userCoins={user?.coins || 0}
+            onBalanceUpdate={handleBalanceUpdate}
+          />
+        </div>
       </div>
 
       {/* Animated Background */}
@@ -238,6 +469,28 @@ export default function ShopPage() {
           100% { transform: rotate(360deg); }
         }
       `}</style>
+    </div>
+  );
+}
+
+function Badge({ icon, label }: { icon: React.ReactNode; label: string }) {
+  return (
+    <div
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 7,
+        padding: '9px 12px',
+        borderRadius: '999px',
+        background: 'rgba(15,23,42,0.75)',
+        border: `1px solid ${T.borderSubtle}`,
+        color: '#e2e8f0',
+        fontSize: 12,
+        fontWeight: 700,
+      }}
+    >
+      {icon}
+      {label}
     </div>
   );
 }

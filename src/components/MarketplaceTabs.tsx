@@ -848,6 +848,7 @@ interface SellModalProps extends HelperFunctions {
   setSellCrypto: (v: 'TON' | 'SOL') => void;
   sellFiatMethod: 'bank_card' | 'sbp' | 'yoo_money' | 'sberbank';
   setSellFiatMethod: (v: 'bank_card' | 'sbp' | 'yoo_money' | 'sberbank') => void;
+  isSubmitting: boolean;
   onClose: () => void;
   onConfirm: () => void;
 }
@@ -894,6 +895,7 @@ export function SellModal({
   setSellCrypto,
   sellFiatMethod,
   setSellFiatMethod,
+  isSubmitting,
   onClose,
   onConfirm,
   getSuitColor,
@@ -947,6 +949,7 @@ export function SellModal({
           <button
             type="button"
             onClick={onClose}
+            disabled={isSubmitting}
             style={{
               background: T.bgElevated,
               border: `1px solid ${T.borderSubtle}`,
@@ -957,7 +960,8 @@ export function SellModal({
               alignItems: 'center',
               justifyContent: 'center',
               color: T.textMuted,
-              cursor: 'pointer',
+              cursor: isSubmitting ? 'not-allowed' : 'pointer',
+              opacity: isSubmitting ? 0.6 : 1,
             }}
           >
             <X size={18} />
@@ -1102,6 +1106,7 @@ export function SellModal({
             type="button"
             whileTap={{ scale: 0.98 }}
             onClick={onClose}
+            disabled={isSubmitting}
             style={{
               flex: 1,
               padding: '13px',
@@ -1111,7 +1116,8 @@ export function SellModal({
               color: T.text,
               fontWeight: 700,
               fontSize: '14px',
-              cursor: 'pointer',
+              cursor: isSubmitting ? 'not-allowed' : 'pointer',
+              opacity: isSubmitting ? 0.6 : 1,
             }}
           >
             Отмена
@@ -1120,6 +1126,7 @@ export function SellModal({
             type="button"
             whileTap={{ scale: 0.98 }}
             onClick={onConfirm}
+            disabled={isSubmitting}
             style={{
               flex: 1,
               padding: '13px',
@@ -1129,7 +1136,8 @@ export function SellModal({
               color: 'white',
               fontWeight: 800,
               fontSize: '14px',
-              cursor: 'pointer',
+              cursor: isSubmitting ? 'not-allowed' : 'pointer',
+              opacity: isSubmitting ? 0.7 : 1,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -1137,7 +1145,7 @@ export function SellModal({
             }}
           >
             <Check size={18} />
-            Выставить
+            {isSubmitting ? 'Выставляем...' : 'Выставить'}
           </motion.button>
         </div>
       </motion.div>

@@ -28,7 +28,42 @@ export async function GET(request: NextRequest) {
     
     console.log('📋 [Marketplace List] Параметры:', { sort, filter, suit, rarity, limit, offset });
     
-    // ✅ Базовый запрос С ПРОДАВЦОМ
+    const applyFilterSortAndRange = (query: any, useLegacyPopularFallback = false) => {
+      if (filter === 'coins') {
+        query = query.not('price_coins', 'is', null);
+      } else if (filter === 'crypto') {
+        query = query.or('price_ton.not.is.null,price_sol.not.is.null');
+      }
+
+      switch (sort) {
+        case 'newest':
+          query = query.order('created_at', { ascending: false });
+          break;
+        case 'oldest':
+          query = query.order('created_at', { ascending: true });
+          break;
+        case 'price_asc':
+          query = query.order('price_coins', { ascending: true, nullsFirst: false });
+          break;
+        case 'price_desc':
+          query = query.order('price_coins', { ascending: false, nullsFirst: false });
+          break;
+        case 'popular':
+          query = useLegacyPopularFallback
+            ? query.order('created_at', { ascending: false })
+            : query.order('views_count', { ascending: false });
+          break;
+      }
+
+      return query.range(offset, offset + limit - 1);
+    };
+
+    const isSchemaCompatError = (msg: string) =>
+      msg.includes('fiat_payment_method') ||
+      msg.includes('price_rub') ||
+      msg.includes('views_count') ||
+      msg.includes('schema cache');
+
     let query = supabase
       .from('_pidr_nft_marketplace')
       .select(`
@@ -49,66 +84,79 @@ export async function GET(request: NextRequest) {
         )
       `)
       .eq('status', 'active');
-    
-    // Фильтр по типу оплаты
-    if (filter === 'coins') {
-      query = query.not('price_coins', 'is', null);
-    } else if (filter === 'crypto') {
-      // ✅ ИСПРАВЛЕНО: Правильный синтаксис для .or()
-      query = query.or('price_ton.not.is.null,price_sol.not.is.null');
-    }
-    
-    // ✅ ОТЛАДКА: Убираем лимит на foreign key (может быть NULL)
-    // Если foreign key не настроен, просто загружаем все поля
-    
-    // Сортировка
-    switch (sort) {
-      case 'newest':
-        query = query.order('created_at', { ascending: false });
-        break;
-      case 'oldest':
-        query = query.order('created_at', { ascending: true });
-        break;
-      case 'price_asc':
-        query = query.order('price_coins', { ascending: true, nullsFirst: false });
-        break;
-      case 'price_desc':
-        query = query.order('price_coins', { ascending: false, nullsFirst: false });
-        break;
-      case 'popular':
-        query = query.order('views_count', { ascending: false });
-        break;
-    }
-    
-    // Пагинация
-    query = query.range(offset, offset + limit - 1);
-    
-    const { data, error, count } = await query;
+
+    query = applyFilterSortAndRange(query, false);
+
+    let { data, error } = await query;
     
     if (error) {
       console.error('❌ [Marketplace List] Ошибка загрузки:', error);
       const msg = String(error.message || '');
-      if (
-        msg.includes('fiat_payment_method') ||
-        msg.includes('price_rub') ||
-        msg.includes('views_count') ||
-        msg.includes('schema cache')
-      ) {
+
+      if (isSchemaCompatError(msg)) {
+        // Fallback для старой схемы БД: возвращаем лоты без новых колонок и без зависимостей на schema cache.
+        console.warn('⚠️ [Marketplace List] Переходим в legacy fallback из-за схемы:', msg);
+
+        let fallbackQuery = supabase
+          .from('_pidr_nft_marketplace')
+          .select('id,nft_card_id,seller_user_id,price_coins,price_ton,price_sol,crypto_currency,status,created_at')
+          .eq('status', 'active');
+
+        fallbackQuery = applyFilterSortAndRange(fallbackQuery, true);
+        const fallbackResult = await fallbackQuery;
+
+        if (fallbackResult.error) {
+          console.error('❌ [Marketplace List] Fallback тоже упал:', fallbackResult.error);
+          return NextResponse.json(
+            { success: false, error: fallbackResult.error.message },
+            { status: 500 }
+          );
+        }
+
+        const fallbackRows = fallbackResult.data || [];
+        const nftIds = Array.from(new Set(fallbackRows.map((row: any) => row.nft_card_id).filter(Boolean)));
+        const sellerIds = Array.from(new Set(fallbackRows.map((row: any) => row.seller_user_id).filter(Boolean)));
+
+        let cardsById = new Map<number, any>();
+        let sellersById = new Map<number, any>();
+
+        if (nftIds.length > 0) {
+          const { data: cards } = await supabase
+            .from('_pidr_nft_cards')
+            .select('id,suit,rank,rarity,image_url,metadata')
+            .in('id', nftIds);
+          cardsById = new Map((cards || []).map((card: any) => [card.id, card]));
+        }
+
+        if (sellerIds.length > 0) {
+          const { data: sellers } = await supabase
+            .from('_pidr_users')
+            .select('id,telegram_id,username,first_name,last_name')
+            .in('id', sellerIds);
+          sellersById = new Map((sellers || []).map((seller: any) => [seller.id, seller]));
+        }
+
+        data = fallbackRows.map((row: any) => ({
+          ...row,
+          views_count: 0,
+          price_rub: null,
+          fiat_payment_method: null,
+          nft_card: cardsById.get(row.nft_card_id) || null,
+          seller: sellersById.get(row.seller_user_id)
+            ? {
+                telegram_id: sellersById.get(row.seller_user_id).telegram_id,
+                username: sellersById.get(row.seller_user_id).username,
+                first_name: sellersById.get(row.seller_user_id).first_name,
+                last_name: sellersById.get(row.seller_user_id).last_name,
+              }
+            : null,
+        }));
+      } else {
         return NextResponse.json(
-          {
-            success: false,
-            code: 'MARKETPLACE_DB_MIGRATION_REQUIRED',
-            error: msg,
-            hint:
-              'Выполните SQL из supabase/migrations/20250509120000_marketplace_rub_columns.sql для таблицы _pidr_nft_marketplace.',
-          },
-          { status: 503 }
+          { success: false, error: error.message },
+          { status: 500 }
         );
       }
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 500 }
-      );
     }
     
     // Фильтрация по масти и редкости (на уровне приложения)
