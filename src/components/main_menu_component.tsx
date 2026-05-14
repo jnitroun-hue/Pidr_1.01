@@ -37,6 +37,26 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
     disconnectTonWallet, disconnectSolanaWallet, disconnectEthereumWallet
   } = useWalletStore()
 
+  const navigateSafely = (path: string) => {
+    if (typeof window === 'undefined') return
+
+    const currentPath = window.location.pathname
+
+    try {
+      router.push(path)
+    } catch (error) {
+      console.error('Navigation error, using hard redirect:', error)
+      window.location.assign(path)
+      return
+    }
+
+    window.setTimeout(() => {
+      if (window.location.pathname === currentPath) {
+        window.location.assign(path)
+      }
+    }, 450)
+  }
+
   const handleWalletAction = async (type: 'ton' | 'solana' | 'ethereum', fromBurger = false) => {
     hapticFeedback('medium')
     
@@ -85,7 +105,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
       onClick: () => {
         hapticFeedback('medium');
         startGame('single', 7);
-        setTimeout(() => router.push('/game'), 100);
+        setTimeout(() => navigateSafely('/game'), 100);
       }
     },
     {
@@ -94,7 +114,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
       label: t.mainMenu.online,
       onClick: () => {
         hapticFeedback('medium');
-        router.push('/multiplayer');
+        navigateSafely('/multiplayer');
       }
     },
     {
@@ -103,7 +123,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
       label: t.mainMenu.shop,
       onClick: () => {
         hapticFeedback('medium');
-        router.push('/shop');
+        navigateSafely('/shop');
       }
     },
     {
@@ -112,7 +132,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
       label: t.mainMenu.nftCollection,
       onClick: () => {
         hapticFeedback('medium');
-        router.push('/nft-collection');
+        navigateSafely('/nft-collection');
       }
     },
     {
@@ -121,7 +141,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
       label: t.mainMenu.profile,
       onClick: () => {
         hapticFeedback('medium');
-        router.push('/profile');
+        navigateSafely('/profile');
       }
     },
     {
@@ -130,7 +150,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
       label: t.mainMenu.rules,
       onClick: () => {
         hapticFeedback('medium');
-        router.push('/rules');
+        navigateSafely('/rules');
       }
     }
   ] : [
@@ -140,7 +160,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
       label: t.mainMenu.login,
       onClick: () => {
         hapticFeedback('medium');
-        router.push('/auth/login');
+        navigateSafely('/auth/login');
       }
     },
     {
@@ -149,7 +169,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
       label: t.mainMenu.register,
       onClick: () => {
         hapticFeedback('medium');
-        router.push('/auth/register');
+        navigateSafely('/auth/register');
       }
     },
     {
@@ -158,7 +178,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
       label: t.mainMenu.rules,
       onClick: () => {
         hapticFeedback('medium');
-        router.push('/rules');
+        navigateSafely('/rules');
       }
     }
   ];

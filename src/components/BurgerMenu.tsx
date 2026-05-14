@@ -35,6 +35,26 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
     photoUrl?: string
   }>({})
 
+  const navigateSafely = (path: string) => {
+    if (typeof window === 'undefined') return
+
+    const currentPath = window.location.pathname
+
+    try {
+      router.push(path)
+    } catch (error) {
+      console.error('Navigation error, using hard redirect:', error)
+      window.location.assign(path)
+      return
+    }
+
+    window.setTimeout(() => {
+      if (window.location.pathname === currentPath) {
+        window.location.assign(path)
+      }
+    }, 450)
+  }
+
   useEffect(() => {
     if (!user) setProfileExtras({})
   }, [user])
@@ -117,7 +137,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
       label: t.mainMenu.play,
       emoji: '🎮',
       onClick: () => {
-        router.push('/game')
+        navigateSafely('/game')
         onClose()
       },
       gradient: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
@@ -127,7 +147,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
       label: t.mainMenu.community,
       emoji: '👥',
       onClick: () => {
-        router.push('/multiplayer')
+        navigateSafely('/multiplayer')
         onClose()
       },
       gradient: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)'
@@ -137,7 +157,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
       label: t.mainMenu.aboutGame,
       emoji: 'ℹ️',
       onClick: () => {
-        router.push('/welcome')
+        navigateSafely('/welcome')
         onClose()
       },
       gradient: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)'
@@ -147,7 +167,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
       label: t.mainMenu.rules,
       emoji: '📖',
       onClick: () => {
-        router.push('/rules')
+        navigateSafely('/rules')
         onClose()
       },
       gradient: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)'
@@ -157,7 +177,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
       label: t.mainMenu.earnNft,
       emoji: '💰',
       onClick: () => {
-        router.push('/nft-collection')
+        navigateSafely('/nft-collection')
         onClose()
       },
       gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
@@ -170,7 +190,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
       label: t.mainMenu.profile,
       emoji: '👤',
       onClick: () => {
-        router.push('/profile')
+        navigateSafely('/profile')
         onClose()
       },
       gradient: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
@@ -180,7 +200,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
       label: t.mainMenu.shop,
       emoji: '🛒',
       onClick: () => {
-        router.push('/shop')
+        navigateSafely('/shop')
         onClose()
       },
       gradient: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)'
@@ -190,7 +210,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
       label: t.mainMenu.rating,
       emoji: '🏆',
       onClick: () => {
-        router.push('/rating')
+        navigateSafely('/rating')
         onClose()
       },
       gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
@@ -200,7 +220,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
       label: t.mainMenu.wallet,
       emoji: '💳',
       onClick: () => {
-        router.push('/wallet')
+        navigateSafely('/wallet')
         onClose()
       },
       gradient: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)'
@@ -210,7 +230,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
       label: t.mainMenu.settings,
       emoji: '⚙️',
       onClick: () => {
-        router.push('/settings')
+        navigateSafely('/settings')
         onClose()
       },
       gradient: 'linear-gradient(135deg, #64748b 0%, #475569 100%)'
@@ -220,7 +240,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
       label: t.mainMenu.adminPanel,
       emoji: '🔐',
       onClick: () => {
-        router.push('/admin')
+        navigateSafely('/admin')
         onClose()
       },
       gradient: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'

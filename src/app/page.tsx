@@ -850,8 +850,30 @@ function HomeWithParams() {
 
   // ✅ БРАУЗЕРНАЯ ВЕРСИЯ - РЕДИРЕКТ НА ВХОД (если нет пользователя)
   if (isBrowser && !user && !checkingAuth) {
-    // Редирект уже выполнен в useEffect, показываем загрузку
-    return null;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 flex items-center justify-center p-5">
+        <div className="w-full max-w-md rounded-2xl border border-indigo-400/30 bg-slate-900/75 p-6 text-center text-slate-100 shadow-2xl">
+          <h2 className="text-2xl font-bold mb-2">Требуется вход</h2>
+          <p className="text-slate-300 text-sm mb-6">
+            Если автоматический переход не сработал, откройте страницу входа вручную.
+          </p>
+          <div className="space-y-3">
+            <button
+              onClick={() => window.location.assign('/auth/login')}
+              className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-500 px-4 py-3 font-semibold transition-colors"
+            >
+              Перейти на /auth/login
+            </button>
+            <button
+              onClick={() => window.location.assign('/auth/register')}
+              className="w-full rounded-xl bg-slate-700 hover:bg-slate-600 px-4 py-3 font-semibold transition-colors"
+            >
+              Перейти на /auth/register
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   // Fallback - не должно появляться
