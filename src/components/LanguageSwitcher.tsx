@@ -12,9 +12,25 @@ import React, {
 import { ChevronDown, Globe2, Languages, Sparkles } from 'lucide-react';
 import { Language } from '../lib/i18n/translations';
 
+const LANGUAGE_COOKIE_KEY = 'pidr_language';
+
+function readCookie(name: string): string | null {
+  if (typeof document === 'undefined') return null;
+  const entry = document.cookie
+    .split('; ')
+    .find((part) => part.startsWith(`${name}=`));
+  return entry ? decodeURIComponent(entry.split('=').slice(1).join('=')) : null;
+}
+
+function writeCookie(name: string, value: string, days = 365): void {
+  if (typeof document === 'undefined') return;
+  const maxAge = days * 24 * 60 * 60;
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}; samesite=lax`;
+}
+
 function readInitialLanguage(): Language {
   if (typeof window === 'undefined') return 'ru';
-  const saved = localStorage.getItem('pidr_language') as Language | null;
+  const saved = readCookie(LANGUAGE_COOKIE_KEY) as Language | null;
   if (saved === 'ru' || saved === 'en') return saved;
   const browserLanguage = navigator.language.toLowerCase();
   return browserLanguage.startsWith('ru') ? 'ru' : 'en';
@@ -40,7 +56,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   const changeLanguage = useCallback((newLanguage: Language) => {
     setLanguage(newLanguage);
-    localStorage.setItem('pidr_language', newLanguage);
+    writeCookie(LANGUAGE_COOKIE_KEY, newLanguage);
     if (typeof document !== 'undefined') {
       document.documentElement.lang = newLanguage;
       document.documentElement.setAttribute('data-ui-language', newLanguage);

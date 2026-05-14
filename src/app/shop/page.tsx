@@ -38,6 +38,8 @@ interface PromoCard {
   tonPrice: number;
   solPrice: number;
   discountPercent: number;
+  promoImageUrl?: string | null;
+  isClonedImage?: boolean;
 }
 
 export default function ShopPage() {
@@ -396,9 +398,34 @@ export default function ShopPage() {
                 <p style={{ color: '#fed7aa', margin: '8px 0 0', fontSize: 12 }}>
                   Цена приведена к ~200 ₽ после скидки, с ориентиром в крипте по серверному курсу.
                 </p>
+                {dailyPromo.isClonedImage && (
+                  <p style={{ color: '#fde68a', margin: '6px 0 0', fontSize: 11, fontWeight: 700 }}>
+                    Картинка акции клонирована в storage: `promo-clones/*`
+                  </p>
+                )}
               </div>
 
               <div style={{ minWidth: 230, textAlign: 'right' }}>
+                {dailyPromo.promoImageUrl && (
+                  <div
+                    style={{
+                      width: 94,
+                      height: 132,
+                      marginLeft: 'auto',
+                      marginBottom: 10,
+                      borderRadius: 10,
+                      overflow: 'hidden',
+                      border: '1px solid rgba(251,146,60,0.55)',
+                      background: '#fff',
+                    }}
+                  >
+                    <img
+                      src={dailyPromo.promoImageUrl}
+                      alt="promo-card"
+                      style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+                    />
+                  </div>
+                )}
                 <div style={{ color: '#ffedd5', fontSize: 12, marginBottom: 8 }}>
                   {canClaimPromo ? 'Можно активировать сейчас' : `Новый доступ через ${promoCooldownLabel}`}
                 </div>

@@ -1,5 +1,21 @@
 import React, { useState, useEffect } from 'react';
 
+const SETTINGS_COOKIE_KEY = 'pidr-settings';
+
+const readCookie = (name: string): string | null => {
+  if (typeof document === 'undefined') return null;
+  const entry = document.cookie
+    .split('; ')
+    .find((part) => part.startsWith(`${name}=`));
+  return entry ? decodeURIComponent(entry.split('=').slice(1).join('=')) : null;
+};
+
+const writeCookie = (name: string, value: string, days = 365): void => {
+  if (typeof document === 'undefined') return;
+  const maxAge = days * 24 * 60 * 60;
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}; samesite=lax`;
+};
+
 const Settings = () => {
   const [settings, setSettings] = useState({
     theme: 'light',
@@ -44,10 +60,15 @@ const Settings = () => {
   ];
 
   useEffect(() => {
-    const savedSettings = localStorage.getItem('pidr-settings');
+    const savedSettings = readCookie(SETTINGS_COOKIE_KEY);
     if (savedSettings) {
-      setSettings(JSON.parse(savedSettings));
-      applyTheme(JSON.parse(savedSettings));
+      try {
+        const parsed = JSON.parse(savedSettings);
+        setSettings(parsed);
+        applyTheme(parsed);
+      } catch (error) {
+        console.warn('⚠️ Некорректные настройки в cookie, используем значения по умолчанию');
+      }
     }
   }, []);
 
@@ -71,7 +92,7 @@ const Settings = () => {
   const updateSetting = (key: string, value: any) => {
     const newSettings = { ...settings, [key]: value };
     setSettings(newSettings);
-    localStorage.setItem('pidr-settings', JSON.stringify(newSettings));
+    writeCookie(SETTINGS_COOKIE_KEY, JSON.stringify(newSettings));
     applyTheme(newSettings);
   };
 
@@ -90,7 +111,7 @@ const Settings = () => {
       backgroundEffects: true
     };
     setSettings(defaultSettings);
-    localStorage.setItem('pidr-settings', JSON.stringify(defaultSettings));
+    writeCookie(SETTINGS_COOKIE_KEY, JSON.stringify(defaultSettings));
     applyTheme(defaultSettings);
     showNotification('Настройки сброшены!', 'info');
   };

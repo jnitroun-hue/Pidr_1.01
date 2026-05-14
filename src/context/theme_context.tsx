@@ -16,6 +16,22 @@ interface ThemeContextType {
 }
 
 const ThemeContext = createContext<ThemeContextType | null>(null)
+const THEME_COOKIE_KEY = 'pidr-theme'
+const COLOR_SCHEME_COOKIE_KEY = 'pidr-color-scheme'
+
+function readCookie(name: string): string | null {
+  if (typeof document === 'undefined') return null
+  const entry = document.cookie
+    .split('; ')
+    .find((part) => part.startsWith(`${name}=`))
+  return entry ? decodeURIComponent(entry.split('=').slice(1).join('=')) : null
+}
+
+function writeCookie(name: string, value: string, days = 365): void {
+  if (typeof document === 'undefined') return
+  const maxAge = days * 24 * 60 * 60
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}; samesite=lax`
+}
 
 const COLOR_SCHEMES = {
   blue: {
@@ -51,10 +67,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [isDark, setIsDark] = useState(false)
 
   useEffect(() => {
-    // Загружаем сохраненные настройки
+    // Загружаем сохраненные настройки из cookie
     if (typeof window !== 'undefined') {
-      const savedTheme = localStorage.getItem('pidr-theme') as Theme
-      const savedColorScheme = localStorage.getItem('pidr-color-scheme') as ColorScheme
+      const savedTheme = readCookie(THEME_COOKIE_KEY) as Theme | null
+      const savedColorScheme = readCookie(COLOR_SCHEME_COOKIE_KEY) as ColorScheme | null
       
       if (savedTheme) setThemeState(savedTheme)
       if (savedColorScheme) setColorSchemeState(savedColorScheme)
@@ -100,16 +116,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme)
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('pidr-theme', newTheme)
-    }
+    writeCookie(THEME_COOKIE_KEY, newTheme)
   }
 
   const setColorScheme = (newScheme: ColorScheme) => {
     setColorSchemeState(newScheme)
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('pidr-color-scheme', newScheme)
-    }
+    writeCookie(COLOR_SCHEME_COOKIE_KEY, newScheme)
   }
 
   const toggleTheme = () => {

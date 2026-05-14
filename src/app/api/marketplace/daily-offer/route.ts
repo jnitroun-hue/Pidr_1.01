@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { getRedis } from '@/lib/redis/client';
+import { NFT_STORAGE_BUCKET } from '@/lib/nft/constants';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -23,6 +24,7 @@ type MarketplaceListing = {
     rank?: string;
     suit?: string;
     rarity?: string;
+    image_url?: string;
   } | null;
 };
 
@@ -96,6 +98,7 @@ function buildOffer(listings: MarketplaceListing[]) {
     tonPrice,
     solPrice,
     discountPercent: Math.round(DAILY_DISCOUNT * 100),
+    sourceImageUrl: selected.item.nft_card?.image_url || null,
   };
 }
 
@@ -106,7 +109,77 @@ async function getAuthDbUserId(request: NextRequest): Promise<number | null> {
   return dbUserId || null;
 }
 
-async function getOfferFromDb() {
+function getImageExtension(contentType: string | null, sourceUrl: string): string {
+  if (contentType?.includes('png')) return 'png';
+  if (contentType?.includes('jpeg') || contentType?.includes('jpg')) return 'jpg';
+  if (contentType?.includes('webp')) return 'webp';
+  if (contentType?.includes('gif')) return 'gif';
+  const fromUrl = sourceUrl.split('?')[0].split('.').pop()?.toLowerCase();
+  if (fromUrl && ['png', 'jpg', 'jpeg', 'webp', 'gif'].includes(fromUrl)) {
+    return fromUrl === 'jpeg' ? 'jpg' : fromUrl;
+  }
+  return 'png';
+}
+
+async function ensurePromoCloneImage(
+  db: any,
+  redis: any,
+  listingId: number,
+  sourceImageUrl: string | null
+): Promise<{ promoImageUrl: string | null; isClonedImage: boolean }> {
+  if (!sourceImageUrl) {
+    return { promoImageUrl: null, isClonedImage: false };
+  }
+
+  const dayTag = new Date().toISOString().slice(0, 10);
+  const cloneKey = `marketplace:daily-offer:clone:${dayTag}:${listingId}`;
+
+  if (redis) {
+    const cached = await redis.get(cloneKey);
+    if (cached) {
+      return { promoImageUrl: cached, isClonedImage: true };
+    }
+  }
+
+  try {
+    const imageResponse = await fetch(sourceImageUrl, { cache: 'no-store' });
+    if (!imageResponse.ok) {
+      throw new Error(`fetch image failed: ${imageResponse.status}`);
+    }
+
+    const contentType = imageResponse.headers.get('content-type');
+    const extension = getImageExtension(contentType, sourceImageUrl);
+    const arrayBuffer = await imageResponse.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const filePath = `promo-clones/${dayTag}/listing-${listingId}.${extension}`;
+
+    const uploadRes = await db.storage
+      .from(NFT_STORAGE_BUCKET)
+      .upload(filePath, buffer, {
+        contentType: contentType || `image/${extension}`,
+        cacheControl: '86400',
+        upsert: true,
+      });
+
+    if (uploadRes.error) {
+      throw uploadRes.error;
+    }
+
+    const { data: urlData } = db.storage.from(NFT_STORAGE_BUCKET).getPublicUrl(filePath);
+    const promoImageUrl = urlData?.publicUrl || sourceImageUrl;
+
+    if (redis && promoImageUrl) {
+      await redis.set(cloneKey, promoImageUrl, { ex: 3 * 24 * 60 * 60 });
+    }
+
+    return { promoImageUrl, isClonedImage: true };
+  } catch (error) {
+    console.warn('⚠️ [daily-offer] Не удалось создать клон изображения, используем оригинал:', error);
+    return { promoImageUrl: sourceImageUrl, isClonedImage: false };
+  }
+}
+
+async function getOfferFromDb(redis?: any) {
   const db = getSupabaseAdmin();
   if (!db) return { offer: null, error: 'База данных недоступна' };
 
@@ -122,7 +195,8 @@ async function getOfferFromDb() {
       nft_card:_pidr_nft_cards(
         rank,
         suit,
-        rarity
+        rarity,
+        image_url
       )
       `
     )
@@ -133,7 +207,25 @@ async function getOfferFromDb() {
     return { offer: null, error: error.message || 'Ошибка загрузки лотов' };
   }
 
-  const offer = buildOffer((data || []) as MarketplaceListing[]);
+  const rawOffer = buildOffer((data || []) as MarketplaceListing[]);
+  if (!rawOffer) {
+    return { offer: null, error: null };
+  }
+
+  const { promoImageUrl, isClonedImage } = await ensurePromoCloneImage(
+    db,
+    redis,
+    rawOffer.listingId,
+    rawOffer.sourceImageUrl
+  );
+
+  const { sourceImageUrl, ...offerWithoutSource } = rawOffer;
+  const offer = {
+    ...offerWithoutSource,
+    promoImageUrl,
+    isClonedImage,
+  };
+
   return { offer, error: null };
 }
 
@@ -144,14 +236,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Не авторизован' }, { status: 401 });
     }
 
-    const { offer, error } = await getOfferFromDb();
+    const redis = getRedis();
+    const { offer, error } = await getOfferFromDb(redis);
     if (error || !offer) {
       return NextResponse.json({ success: false, error: error || 'Нет подходящих лотов для акции' }, { status: 404 });
     }
 
-    const redis = getRedis();
     const claimKey = `marketplace:daily-offer:claim:${dbUserId}`;
-    const claimedAtRaw = redis ? await redis.get<string>(claimKey) : null;
+    const claimedAtRaw = redis ? await redis.get(claimKey) : null;
     const claimedAt = claimedAtRaw ? Number(claimedAtRaw) : null;
     const now = Date.now();
     const remainingMs = claimedAt ? Math.max(0, claimedAt + COOLDOWN_SECONDS * 1000 - now) : 0;
@@ -196,7 +288,7 @@ export async function POST(request: NextRequest) {
     }
 
     const claimKey = `marketplace:daily-offer:claim:${dbUserId}`;
-    const existing = await redis.get<string>(claimKey);
+    const existing = await redis.get(claimKey);
     if (existing) {
       const claimedAt = Number(existing);
       const remainingMs = Math.max(0, claimedAt + COOLDOWN_SECONDS * 1000 - Date.now());
@@ -212,7 +304,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const { offer, error } = await getOfferFromDb();
+    const { offer, error } = await getOfferFromDb(redis);
     if (error || !offer) {
       return NextResponse.json({ success: false, error: error || 'Нет подходящих лотов для акции' }, { status: 404 });
     }
