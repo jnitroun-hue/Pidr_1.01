@@ -211,7 +211,7 @@ export default function NFTGallery() {
   };
 
   const handleSell = (card: NFTCard) => {
-    // Передаём id карты через URL-параметр — без sessionStorage
+    // Передаём id карты через URL-параметр — без сессии в браузерном хранилище
     window.location.href = `/shop?sell=${encodeURIComponent(card.id)}`;
   };
 

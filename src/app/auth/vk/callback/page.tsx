@@ -44,7 +44,7 @@ function VKCallbackContent() {
         const data = await response.json();
 
         if (data.success) {
-          // Токен сохраняется в cookies сервером, не используем localStorage
+          // Токен сохраняется в cookies сервером, без клиентского хранилища
           setStatus('success');
           setMessage(data.message || 'Успешная авторизация!');
           

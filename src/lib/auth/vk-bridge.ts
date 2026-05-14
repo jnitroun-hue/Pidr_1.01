@@ -206,7 +206,7 @@ export async function loginWithVKMiniApp(): Promise<{
     const data = await response.json();
 
     if (data.success) {
-      // Токен сохраняется в cookies сервером, не используем localStorage
+      // Токен сохраняется в cookies сервером, без клиентского хранилища
       return {
         success: true,
         user: data.user,

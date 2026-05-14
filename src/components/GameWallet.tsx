@@ -373,7 +373,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
       const { getApiHeaders } = await import('@/lib/api-headers');
       const headers = getApiHeaders() as Record<string, string>;
       
-      // Получаем данные пользователя из API (не из localStorage!)
+      // Получаем данные пользователя из API (не из браузерного хранилища!)
       const authResponse = await fetch('/api/auth', {
         method: 'GET',
         credentials: 'include',
@@ -573,7 +573,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
         setBalance(newBalance);
         setDepositAmount('');
         
-        // ✅ ИСПРАВЛЕНО: НЕ сохраняем в localStorage, баланс уже в БД
+        // ✅ ИСПРАВЛЕНО: НЕ сохраняем в браузере, баланс уже в БД
         
         onBalanceUpdate?.(newBalance);
         
@@ -782,7 +782,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
         setWithdrawRecipient('');
         setActiveModal(null);
         
-        // ✅ ИСПРАВЛЕНО: НЕ сохраняем в localStorage, баланс уже в БД
+        // ✅ ИСПРАВЛЕНО: НЕ сохраняем в браузере, баланс уже в БД
         
         onBalanceUpdate?.(newBalance);
         
@@ -874,7 +874,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
         setBalance(newBalance);
         setBonusAvailable(false); // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Отключаем бонус после получения
         
-        // ✅ ИСПРАВЛЕНО: НЕ сохраняем в localStorage, баланс уже в БД
+        // ✅ ИСПРАВЛЕНО: НЕ сохраняем в браузере, баланс уже в БД
         
         onBalanceUpdate?.(newBalance);
         
@@ -961,7 +961,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
   };
 
   const checkBonusAvailability = () => {
-    // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Не полагаемся только на localStorage
+    // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Не полагаемся на клиентский кэш
     // Проверяем состояние бонуса через API при каждой проверке
     return bonusAvailable;
   };

@@ -38,7 +38,7 @@ export default function RegisterPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Проверяем сессию через API (без localStorage)
+    // Проверяем сессию через API (без клиентского хранилища)
     const checkSession = async () => {
       try {
         const response = await fetch('/api/auth', {
@@ -120,7 +120,7 @@ export default function RegisterPage() {
       const data = await response.json();
 
       if (data.success) {
-        // Токен сохраняется в cookies сервером, не используем localStorage
+        // Токен сохраняется в cookies сервером, без клиентского хранилища
         window.dispatchEvent(new CustomEvent('coinsUpdated', { 
           detail: { coins: data.user.coins } 
         }));
@@ -176,7 +176,7 @@ export default function RegisterPage() {
         const data = await response.json();
 
         if (data.success) {
-          // Токен сохраняется в cookies сервером, не используем localStorage
+          // Токен сохраняется в cookies сервером, без клиентского хранилища
           setTimeout(() => {
             router.push('/');
           }, 500);

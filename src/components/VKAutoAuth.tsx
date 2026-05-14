@@ -21,7 +21,7 @@ export default function VKAutoAuth() {
       return;
     }
 
-    // Проверяем сессию через API (без localStorage)
+    // Проверяем сессию через API (без клиентского хранилища)
     const checkSession = async () => {
       try {
         const response = await fetch('/api/auth', {

@@ -276,7 +276,7 @@ function hashToken(token: string): string {
  */
 export async function invalidateSession(sessionToken: string): Promise<boolean> {
   // ✅ УПРОЩЕНО: Сессии больше не хранятся в БД (таблица _pidr_user_sessions удалена)
-  // Logout происходит на клиенте путём удаления токена из localStorage/cookies
+  // Logout происходит на клиенте путём удаления токена из cookies
   console.log('✅ Сессия инвалидирована (клиентская сторона)');
   return true;
 }

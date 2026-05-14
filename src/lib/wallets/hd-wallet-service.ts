@@ -278,7 +278,7 @@ export class HDWalletService {
     }
   }
 
-  // Токен авторизации теперь в cookies, не используем localStorage
+  // Токен авторизации теперь в cookies, не используем браузерное хранилище
 
   // Получение адреса пользователя для монеты
   async getUserAddress(userId: string, coin: string): Promise<HDWalletAddress | null> {

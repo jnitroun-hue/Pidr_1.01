@@ -3,7 +3,7 @@ import { SessionManager } from './session-manager';
 
 /**
  * Сервис авторизации ТОЛЬКО через базу данных
- * Никакого localStorage - только HTTP-only cookies и БД сессии
+ * Никакого клиентского хранилища - только HTTP-only cookies и БД сессии
  */
 
 export interface DatabaseUser {

@@ -230,12 +230,12 @@ export class WalletService {
   }
 
   private saveTransaction(transaction: DepositTransaction): void {
-    // Транзакции хранятся только в БД через API — localStorage не используется
+    // Транзакции хранятся только в БД через API — браузерное хранилище не используется
     console.log('💾 [WalletService] Транзакция сохраняется в БД:', transaction.id);
   }
 
   private loadTransactions(): DepositTransaction[] {
-    // Транзакции загружаются только из БД через API — localStorage не используется
+    // Транзакции загружаются только из БД через API — браузерное хранилище не используется
     return [];
   }
 
