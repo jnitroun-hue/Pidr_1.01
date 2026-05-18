@@ -276,10 +276,10 @@ export async function POST(request: NextRequest) {
       const { data: sellerWallet, error: walletError } = await db
         .from('_pidr_player_wallets')
         .select('wallet_address')
-        .eq('user_id', sellerId.toString())
-        .eq('wallet_type', walletType)
+        .eq('user_id', sellerId)
+        .or(`wallet_type.eq.${walletType},coin_type.eq.${walletType}`)
         .eq('is_active', true)
-        .single();
+        .maybeSingle();
       
       if (walletError || !sellerWallet) {
         console.error('❌ [Marketplace Buy] Кошелек продавца не найден:', walletError);
@@ -299,7 +299,8 @@ export async function POST(request: NextRequest) {
       if (cryptoCurrency === 'TON') {
         // TON Payment URL (Tonkeeper) - ДЕНЬГИ ИДУТ ПРОДАВЦУ!
         const amountNano = Math.floor(price * 1000000000); // TON в нанотоны
-        paymentUrl = `https://app.tonkeeper.com/transfer/${sellerWalletAddress}?amount=${amountNano}&text=NFT_${listing_id}_from_${buyerId}`;
+        const payMemo = encodeURIComponent(`NFT_${listing_id}_from_${buyerId}`);
+        paymentUrl = `https://app.tonkeeper.com/transfer/${sellerWalletAddress}?amount=${amountNano}&text=${payMemo}`;
         
         // TODO: Комиссия платформы 5% - реализовать отдельным платежом или смарт-контрактом
         const platformFeeNano = Math.floor(price * 0.05 * 1000000000);
@@ -314,17 +315,28 @@ export async function POST(request: NextRequest) {
       }
     }
     
+    const payment_memo =
+      payment_method === 'crypto'
+        ? `NFT_${listing_id}_from_${buyerId}`
+        : undefined;
+
     return NextResponse.json({
       success: true,
-      message: 'NFT успешно куплена!',
+      message:
+        payment_method === 'crypto'
+          ? 'Лот зарезервирован. Оплатите в кошельке и подтвердите покупку.'
+          : 'NFT успешно куплена!',
       nft_card: listing.nft_card,
       paid: price,
       platform_fee: platformFee,
       payment_method,
       crypto_currency: cryptoCurrency,
       payment_url: paymentUrl,
-      seller_wallet: sellerWalletAddress, // Адрес продавца для информации
-      seller_id: sellerId
+      payment_memo,
+      listing_id,
+      seller_wallet: sellerWalletAddress,
+      seller_id: sellerId,
+      buyer_id: buyerId,
     });
     
   } catch (error: any) {

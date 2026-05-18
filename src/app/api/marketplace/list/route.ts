@@ -173,6 +173,11 @@ export async function GET(request: NextRequest) {
         item.nft_card?.rarity === rarity
       );
     }
+
+    // Только лоты с карточкой и картинкой (иначе в магазине пустой слот)
+    filteredData = filteredData.filter(
+      (item: any) => item.nft_card?.id && item.nft_card?.image_url
+    );
     
     console.log(`✅ [Marketplace List] Найдено ${filteredData.length} лотов`);
     

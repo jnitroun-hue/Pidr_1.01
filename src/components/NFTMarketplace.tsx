@@ -300,30 +300,62 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
         const data = await response.json();
 
         if (data.success && data.payment_url) {
-          // ✅ ОТКРЫВАЕМ КОШЕЛЁК С ТОЧНОЙ СУММОЙ!
           console.log(`💎 [Marketplace] Открываем кошелёк ${data.crypto_currency}: ${data.payment_url}`);
-          
-          // ✅ ИСПРАВЛЕНО: Telegram WebApp не поддерживает внешние домены в openTelegramLink
-          // Используем window.open для всех крипто-кошельков
+
           if (typeof window !== 'undefined') {
-            // Для TON - используем Telegram deep link если в Telegram WebApp
             if (currency === 'TON' && window.Telegram?.WebApp?.openLink) {
-              // Используем openLink вместо openTelegramLink для внешних URL
               window.Telegram.WebApp.openLink(data.payment_url);
             } else {
-              // Для других валют или если не в Telegram - обычный window.open
               const opened = window.open(data.payment_url, '_blank');
               if (!opened) {
-                // Если popup заблокирован, копируем ссылку
-                navigator.clipboard.writeText(data.payment_url);
-                alert(`🔗 Скопировано в буфер!\n\nОткройте ${currency === 'TON' ? 'Tonkeeper' : 'Phantom'} и вставьте ссылку для оплаты ${amount} ${currency}\n\n${data.payment_url}`);
-              } else {
-                alert(`🔗 Откройте ${currency === 'TON' ? 'Tonkeeper' : 'Phantom'} для завершения оплаты ${amount} ${currency}`);
+                await navigator.clipboard.writeText(data.payment_url);
+                alert(`🔗 Ссылка скопирована. Оплатите ${amount} ${currency} в кошельке.`);
               }
             }
           }
-          
-          loadMarketplace(); // ✅ ОБНОВЛЯЕМ МАРКЕТПЛЕЙС
+
+          const paymentId = data.payment_memo || `NFT_${listing.id}_from_${data.buyer_id || ''}`;
+          const sinceUnix = Math.floor(Date.now() / 1000) - 120;
+
+          if (
+            confirm(
+              `После оплаты ${amount} ${currency} в кошельке нажмите OK — проверим перевод и передадим карту.`
+            )
+          ) {
+            setLoading(true);
+            let confirmed = false;
+            for (let i = 0; i < 12; i++) {
+              const confirmRes = await fetch('/api/marketplace/confirm-crypto', {
+                method: 'POST',
+                headers: getApiHeaders(),
+                credentials: 'include',
+                body: JSON.stringify({
+                  listing_id: listing.id,
+                  paymentId,
+                  sinceUnix,
+                }),
+              });
+              const confirmData = await confirmRes.json();
+              if (confirmRes.ok && confirmData.success) {
+                confirmed = true;
+                alert('✅ NFT куплена! Карта в вашей коллекции.');
+                window.dispatchEvent(new CustomEvent('nft-collection-updated'));
+                window.dispatchEvent(new CustomEvent('marketplace-updated'));
+                break;
+              }
+              if (confirmData.code !== 'PAYMENT_PENDING') {
+                alert(`❌ ${confirmData.error || 'Ошибка подтверждения'}`);
+                break;
+              }
+              await new Promise((r) => setTimeout(r, 5000));
+            }
+            if (!confirmed) {
+              alert('⏳ Платёж ещё не виден в сети. Повторите «Я оплатил» через минуту из коллекции.');
+            }
+            setLoading(false);
+          }
+
+          loadMarketplace();
         } else {
           alert(`❌ Ошибка: ${data.error}`);
         }

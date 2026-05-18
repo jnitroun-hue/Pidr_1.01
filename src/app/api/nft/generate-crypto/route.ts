@@ -1,107 +1,192 @@
 /**
- * 🪙 API: Генерация NFT карт за криптовалюту
- * 
  * POST /api/nft/generate-crypto
- * 
- * Body: {
- *   theme: string,
- *   quantity: number,
- *   crypto: 'TON' | 'SOL' | 'ETH',
- *   transactionHash: string,
- *   walletAddress: string
- * }
+ * Generate NFT card after verified TON payment (TonConnect or memo on master wallet).
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin } from '@/lib/supabase';
+import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
+import {
+  verifyTonIncomingPayment,
+  getMasterAddress,
+} from '@/lib/nft/ton-payment-verify';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+const CRYPTO_COSTS: Record<string, number> = {
+  pokemon: 0.5,
+  halloween: 0.3,
+  starwars: 0.3,
+  legendary: 2,
+};
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const auth = requireAuth(request);
+    if (auth.error || !auth.userId) {
+      return NextResponse.json({ success: false, error: 'Требуется авторизация' }, { status: 401 });
+    }
+
+    const { dbUserId: userId } = await getUserIdFromDatabase(auth.userId, auth.environment);
+    if (!userId) {
+      return NextResponse.json({ success: false, error: 'Пользователь не найден' }, { status: 404 });
+    }
 
     const body = await request.json();
-    const { theme, quantity, crypto, transactionHash, walletAddress } = body;
+    const {
+      theme,
+      suit,
+      rank,
+      imageData,
+      themeId,
+      action,
+      crypto = 'TON',
+      paymentId,
+      transactionHash,
+      expectedAmountTon,
+      sinceUnix,
+    } = body;
 
-    const telegramIdHeader = request.headers.get('x-telegram-id');
-    
-    if (!telegramIdHeader) {
+    if (crypto !== 'TON') {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
+        { success: false, error: 'Сейчас поддерживается только оплата TON' },
+        { status: 400 }
       );
     }
 
-    const userId = parseInt(telegramIdHeader, 10);
+    if (!theme || !suit || !rank || !imageData || !paymentId) {
+      return NextResponse.json(
+        { success: false, error: 'theme, suit, rank, imageData и paymentId обязательны' },
+        { status: 400 }
+      );
+    }
 
-    console.log(`🪙 [generate-crypto] Генерация за ${crypto}:`, {
-      userId,
-      theme,
-      quantity,
-      transactionHash,
-      walletAddress
+    const minTon =
+      typeof expectedAmountTon === 'number'
+        ? expectedAmountTon
+        : CRYPTO_COSTS[theme] ?? 0.3;
+
+    const masterAddress = getMasterAddress();
+    if (!masterAddress) {
+      return NextResponse.json(
+        {
+          success: false,
+          code: 'TON_NOT_CONFIGURED',
+          error: 'На сервере не задан MASTER_TON_ADDRESS',
+        },
+        { status: 503 }
+      );
+    }
+
+    // Idempotency: already processed this payment_id
+    const { data: existingPay } = await supabaseAdmin
+      .from('_pidr_crypto_transactions')
+      .select('id, metadata')
+      .eq('payment_id', paymentId)
+      .maybeSingle();
+
+    if (existingPay?.metadata && (existingPay.metadata as { nft_card_id?: number }).nft_card_id) {
+      const cardId = (existingPay.metadata as { nft_card_id: number }).nft_card_id;
+      const { data: card } = await supabaseAdmin
+        .from('_pidr_nft_cards')
+        .select('*')
+        .eq('id', cardId)
+        .single();
+      return NextResponse.json({
+        success: true,
+        message: 'Карта уже создана по этому платежу',
+        nft: card,
+        alreadyProcessed: true,
+      });
+    }
+
+    const verify = await verifyTonIncomingPayment({
+      toAddress: masterAddress,
+      minAmountTon: minTon * 0.99,
+      commentContains: paymentId,
+      txHash: transactionHash,
+      sinceUnix: sinceUnix || Math.floor(Date.now() / 1000) - 1200,
     });
 
-    // ✅ ПРОВЕРЯЕМ ТРАНЗАКЦИЮ (в реальности надо проверять через blockchain API)
-    // Для MVP просто логируем
-    console.log(`✅ Транзакция ${transactionHash} подтверждена (mock)`);
+    if (!verify.ok) {
+      return NextResponse.json(
+        {
+          success: false,
+          code: 'PAYMENT_PENDING',
+          error: verify.error || 'Платёж ещё не подтверждён в сети TON',
+        },
+        { status: 402 }
+      );
+    }
 
-    // ✅ ГЕНЕРИРУЕМ КАРТЫ (используем существующий API)
-    const generateResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/nft/generate-theme`, {
+    if (verify.txHash) {
+      const { data: dup } = await supabaseAdmin
+        .from('_pidr_crypto_transactions')
+        .select('id')
+        .eq('transaction_hash', verify.txHash)
+        .maybeSingle();
+      if (dup) {
+        return NextResponse.json(
+          { success: false, error: 'Транзакция уже использована' },
+          { status: 409 }
+        );
+      }
+    }
+
+    const origin = request.nextUrl.origin;
+    const generateResponse = await fetch(`${origin}/api/nft/generate-theme`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-telegram-id': userId.toString()
+        cookie: request.headers.get('cookie') || '',
+        authorization: request.headers.get('authorization') || '',
+        'x-telegram-id': request.headers.get('x-telegram-id') || '',
+        'x-vk-id': request.headers.get('x-vk-id') || '',
+        'x-auth-source': request.headers.get('x-auth-source') || '',
       },
       body: JSON.stringify({
+        suit,
+        rank,
+        imageData,
         theme,
-        quantity
-      })
+        themeId,
+        action: action || `random_${theme}`,
+        skipCoinDeduction: true,
+      }),
     });
 
-    if (!generateResponse.ok) {
-      const errorData = await generateResponse.json();
+    const generateData = await generateResponse.json();
+    if (!generateResponse.ok || !generateData.success) {
       return NextResponse.json(
-        { success: false, error: errorData.error || 'Ошибка генерации' },
+        { success: false, error: generateData.error || 'Ошибка сохранения карты' },
         { status: 500 }
       );
     }
 
-    const generateData = await generateResponse.json();
-
-    // ✅ ЗАПИСЫВАЕМ ТРАНЗАКЦИЮ В БД
-    const { error: txError } = await supabase
-      .from('_pidr_crypto_transactions')
-      .insert({
-        user_id: userId,
-        crypto_type: crypto,
-        transaction_hash: transactionHash,
-        wallet_address: walletAddress,
-        amount: quantity === 1 ? 0.1 : 1.0, // Примерная цена
-        purpose: `NFT Generation: ${theme} x${quantity}`,
-        status: 'completed',
-        created_at: new Date().toISOString()
-      });
-
-    if (txError) {
-      console.error('❌ Ошибка записи транзакции:', txError);
-    }
+    await supabaseAdmin.from('_pidr_crypto_transactions').insert({
+      user_id: userId,
+      crypto_type: 'TON',
+      transaction_hash: verify.txHash || transactionHash || null,
+      payment_id: paymentId,
+      wallet_address: verify.from || null,
+      amount: verify.amountTon ?? minTon,
+      purpose: `NFT Generation: ${theme} ${rank}${suit}`,
+      status: 'completed',
+      metadata: { nft_card_id: generateData.nft?.id, theme, paymentId },
+      created_at: new Date().toISOString(),
+    });
 
     return NextResponse.json({
       success: true,
-      message: `Сгенерировано ${quantity} карт за ${crypto}`,
-      cards: generateData.cards || generateData.nft ? [generateData.nft] : [],
-      newBalance: generateData.newBalance // ✅ ПЕРЕДАЕМ newBalance (если есть)
+      message: 'Карта создана после оплаты TON',
+      nft: generateData.nft,
     });
-
-  } catch (error: any) {
-    console.error('❌ [generate-crypto] Ошибка:', error);
+  } catch (error: unknown) {
+    console.error('❌ [generate-crypto]', error);
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: error instanceof Error ? error.message : 'Ошибка сервера' },
       { status: 500 }
     );
   }
 }
-

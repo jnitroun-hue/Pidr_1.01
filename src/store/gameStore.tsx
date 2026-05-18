@@ -528,17 +528,14 @@ export const useGameStore = create<GameState>()(
           console.error('❌ Ошибка загрузки игрока:', error);
         }
         
-        // ✅ ЗАГРУЖАЕМ NFT КАРТЫ ИЗ КОЛОДЫ
+        // ✅ ЗАГРУЖАЕМ NFT КАРТЫ ИЗ КОЛОДЫ (Telegram + web через cookies)
         try {
-          const telegramUser = getTelegramUser();
-          const telegramId = telegramUser?.id?.toString() || '';
-          
-          if (telegramId) {
+            const { getApiHeaders } = await import('@/lib/api-headers');
             const deckResponse = await fetch('/api/user/deck', {
               method: 'GET',
               headers: {
-                'Content-Type': 'application/json',
-                'x-telegram-id': telegramId
+                ...getApiHeaders(),
+                'Cache-Control': 'no-cache',
               },
               credentials: 'include',
               cache: 'no-store'
@@ -574,7 +571,6 @@ export const useGameStore = create<GameState>()(
                 console.log(`✅ [startGame] Загружено ${Object.keys(nftDeckCards).length} NFT карт из колоды`);
               }
             }
-          }
         } catch (error: unknown) {
           console.error('❌ Ошибка загрузки NFT колоды:', error);
         }
