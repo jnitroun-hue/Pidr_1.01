@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 
-const JWT_SECRET = process.env.JWT_SECRET || process.env.SUPABASE_JWT_SECRET;
+import { hasJwtSecret, requireJwtSecret } from './jwt-secret';
 
 interface DeviceInfo {
   platform?: string;
@@ -65,8 +65,8 @@ export class SessionManager {
     }
   ): Promise<{ token: string; sessionId: string } | null> {
     
-    if (!JWT_SECRET) {
-      console.error('❌ JWT_SECRET не настроен');
+    if (!hasJwtSecret()) {
+      console.error('❌ SUPABASE_JWT_SECRET не настроен');
       return null;
     }
 
@@ -82,7 +82,7 @@ export class SessionManager {
         sessionId
       };
 
-      const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '30d' });
+      const token = jwt.sign(tokenPayload, requireJwtSecret(), { expiresIn: '30d' });
 
       console.log(`✅ Сессия создана: ${sessionId} для пользователя ${userId}`);
 
@@ -107,13 +107,13 @@ export class SessionManager {
     sessionId?: string;
     error?: string;
   }> {
-    if (!JWT_SECRET) {
-      return { valid: false, error: 'JWT_SECRET не настроен' };
+    if (!hasJwtSecret()) {
+      return { valid: false, error: 'SUPABASE_JWT_SECRET не настроен' };
     }
 
     try {
       // Проверяем JWT
-      const payload = jwt.verify(token, JWT_SECRET) as SessionTokenPayload;
+      const payload = jwt.verify(token, requireJwtSecret()) as SessionTokenPayload;
 
       // Проверяем истек ли токен
       const now = Math.floor(Date.now() / 1000);

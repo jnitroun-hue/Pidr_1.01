@@ -6,7 +6,8 @@ export async function GET(req: NextRequest) {
   
   try {
     // Проверяем переменные окружения
-    const hasJwtSecret = !!process.env.JWT_SECRET;
+    const { hasJwtSecret: checkJwt } = await import('@/lib/auth/jwt-secret');
+    const hasJwtSecret = checkJwt();
     const hasSupabaseUrl = !!(process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL);
     const hasSupabaseKey = !!(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY);
     

@@ -12,18 +12,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { masterWallet, SupportedNetwork, SUPPORTED_NETWORKS } from '../../../../lib/wallets/unified-master-wallet';
 import { supabase } from '../../../../lib/supabase';
+import jwt from 'jsonwebtoken';
+import { getJwtSecret } from '@/lib/auth/jwt-secret';
 
 // 🔐 Получение userId из запроса (исправлено)
 function getUserIdFromRequest(req: NextRequest): string | null {
-  const JWT_SECRET = process.env.JWT_SECRET || process.env.SUPABASE_JWT_SECRET;
+  const JWT_SECRET = getJwtSecret();
   if (!JWT_SECRET) return null;
   
   const token = req.cookies.get('auth_token')?.value;
   if (!token) return null;
   
   try {
-    const jwt = require('jsonwebtoken');
-    const payload = jwt.verify(token, JWT_SECRET) as any;
+    const payload = jwt.verify(token, JWT_SECRET) as { userId?: string };
     return payload.userId;
   } catch {
     return null;

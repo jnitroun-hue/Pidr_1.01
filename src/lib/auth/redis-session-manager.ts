@@ -16,8 +16,7 @@
 import { getRedis } from '../redis/init';
 import * as jwt from 'jsonwebtoken';
 import * as crypto from 'crypto';
-
-const JWT_SECRET = process.env.JWT_SECRET || process.env.SUPABASE_JWT_SECRET || process.env.SESSION_SECRET || 'fallback-secret';
+import { hasJwtSecret, requireJwtSecret } from './jwt-secret';
 const SESSION_TTL = 30 * 24 * 60 * 60; // 30 дней в секундах
 
 // Получаем Redis клиент через универсальную инициализацию
@@ -138,7 +137,7 @@ export async function createSession(data: {
     tokenPayload.vkId = data.vkId;
   }
   
-  const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '30d' });
+  const token = jwt.sign(tokenPayload, requireJwtSecret(), { expiresIn: '30d' });
 
   if (redis) {
     try {
@@ -171,7 +170,7 @@ export async function createSession(data: {
 export async function validateSession(token: string): Promise<SessionValidation> {
   try {
     // Проверяем JWT токен
-    const payload = jwt.verify(token, JWT_SECRET) as SessionTokenPayload;
+    const payload = jwt.verify(token, requireJwtSecret()) as SessionTokenPayload;
     const sessionId = payload.sessionId;
 
     if (!sessionId) {
@@ -265,7 +264,7 @@ export async function updateSessionActivity(sessionId: string): Promise<boolean>
  */
 export async function revokeSession(token: string): Promise<boolean> {
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as SessionTokenPayload;
+    const payload = jwt.verify(token, requireJwtSecret()) as SessionTokenPayload;
     const sessionId = payload.sessionId;
     const userId = payload.userId;
 

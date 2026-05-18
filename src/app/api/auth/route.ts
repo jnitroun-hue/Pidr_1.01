@@ -4,17 +4,13 @@ import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
 import { lightCleanup } from '../../../lib/auto-cleanup';
 import crypto from 'crypto';
+import { hasJwtSecret, requireJwtSecret } from '../../../lib/auth/jwt-secret';
 
 // ✅ Явная конфигурация runtime для Next.js 15
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-const JWT_SECRET =
-  process.env.JWT_SECRET ||
-  process.env.SUPABASE_JWT_SECRET ||
-  process.env.SESSION_SECRET ||
-  'fallback-secret';
 const SESSION_SECRET = process.env.SESSION_SECRET || process.env.SUPABASE_JWT_SECRET;
 const NEXTAUTH_URL = process.env.NEXTAUTH_URL || process.env.VERCEL_URL;
 
@@ -69,8 +65,8 @@ export async function GET(req: NextRequest) {
       'user-agent': req.headers.get('user-agent')?.substring(0, 50)
     });
 
-    if (!JWT_SECRET) {
-      console.error('❌ JWT_SECRET не настроен');
+    if (!hasJwtSecret()) {
+      console.error('❌ SUPABASE_JWT_SECRET не настроен');
       return NextResponse.json({ 
         success: false, 
         message: 'Сервер не настроен' 
@@ -101,7 +97,7 @@ export async function GET(req: NextRequest) {
     let deviceFingerprintFromToken: string | null = null;
     let payload: AuthJwtPayload;
     try {
-      payload = jwt.verify(token, JWT_SECRET) as AuthJwtPayload;
+      payload = jwt.verify(token, requireJwtSecret()) as AuthJwtPayload;
       userId = payload.userId;
       telegramIdFromToken = payload.telegramId || null;
       deviceFingerprintFromToken = payload.deviceFingerprint || null;
@@ -422,16 +418,16 @@ export async function POST(req: NextRequest) {
     
     // Проверяем переменные окружения
     console.log('🔍 Проверка переменных окружения:');
-    console.log('- JWT_SECRET:', !!JWT_SECRET ? 'ЕСТЬ' : '❌ НЕТ');
+    console.log('- SUPABASE_JWT_SECRET:', hasJwtSecret() ? 'ЕСТЬ' : '❌ НЕТ');
     console.log('- SESSION_SECRET:', !!SESSION_SECRET ? 'ЕСТЬ' : '❌ НЕТ');
     console.log('- SUPABASE_URL:', (process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL) ? 'ЕСТЬ' : '❌ НЕТ');
     console.log('- SUPABASE_ANON_KEY:', (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY) ? 'ЕСТЬ' : '❌ НЕТ');
 
-    if (!JWT_SECRET) {
-      console.error('❌ JWT_SECRET не настроен');
+    if (!hasJwtSecret()) {
+      console.error('❌ SUPABASE_JWT_SECRET не настроен');
       return NextResponse.json({ 
         success: false, 
-        message: 'JWT_SECRET не настроен на сервере' 
+        message: 'SUPABASE_JWT_SECRET не настроен на сервере' 
       }, { status: 500 });
     }
 
@@ -762,7 +758,7 @@ export async function POST(req: NextRequest) {
         authSource: 'telegram',   // ← дублируем для совместимости
         deviceFingerprint
       },
-      JWT_SECRET,
+      requireJwtSecret(),
       { expiresIn: '30d' }
     );
 

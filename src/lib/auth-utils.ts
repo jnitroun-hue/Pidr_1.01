@@ -6,14 +6,7 @@
 import { NextRequest } from 'next/server';
 import * as jwt from 'jsonwebtoken';
 import { supabase, supabaseAdmin } from './supabase';
-
-// Важно: этот набор должен совпадать с redis-session-manager/createSession,
-// иначе часть API не сможет валидировать токен после веб-логина.
-const JWT_SECRET =
-  process.env.JWT_SECRET ||
-  process.env.SUPABASE_JWT_SECRET ||
-  process.env.SESSION_SECRET ||
-  'fallback-secret';
+import { hasJwtSecret, requireJwtSecret } from './auth/jwt-secret';
 
 /**
  * Определение типа окружения
@@ -44,7 +37,7 @@ export function detectAuthEnvironment(req: NextRequest): AuthEnvironment {
   const cookieToken = req.cookies.get('auth_token')?.value;
   if (cookieToken) {
     try {
-      const payload = jwt.verify(cookieToken, JWT_SECRET || '') as any;
+      const payload = jwt.verify(cookieToken, requireJwtSecret()) as any;
       if (payload.authSource) {
         return payload.authSource as AuthEnvironment;
       }
@@ -120,13 +113,13 @@ export function getUserIdFromRequest(req: NextRequest): { userId: string | null;
   console.log('🔍 [getUserIdFromRequest] Итоговый токен:', {
     hasToken: !!token,
     tokenLength: token?.length || 0,
-    hasJwtSecret: !!JWT_SECRET
+    hasJwtSecret: hasJwtSecret()
   });
   
   // Верифицируем токен
-  if (token && JWT_SECRET) {
+  if (token && hasJwtSecret()) {
     try {
-      const payload = jwt.verify(token, JWT_SECRET) as any;
+      const payload = jwt.verify(token, requireJwtSecret()) as any;
       console.log('✅ [getUserIdFromRequest] Токен верифицирован:', {
         hasTelegramId: !!payload.telegramId,
         hasVkId: !!payload.vkId,
@@ -276,10 +269,8 @@ export function createAuthToken(
   environment: AuthEnvironment = 'web',
   additionalData?: Record<string, any>
 ): string {
-  if (!JWT_SECRET) {
-    throw new Error('JWT_SECRET не настроен');
-  }
-  
+  const secret = requireJwtSecret();
+
   const payload: any = {
     userId,
     authSource: environment,
@@ -295,17 +286,17 @@ export function createAuthToken(
     payload.vkId = userId;
   }
   
-  return jwt.sign(payload, JWT_SECRET);
+  return jwt.sign(payload, secret);
 }
 
 /**
  * 🧪 Валидация токена без извлечения данных
  */
 export function validateToken(token: string): boolean {
-  if (!JWT_SECRET) return false;
-  
+  if (!hasJwtSecret()) return false;
+
   try {
-    jwt.verify(token, JWT_SECRET);
+    jwt.verify(token, requireJwtSecret());
     return true;
   } catch {
     return false;

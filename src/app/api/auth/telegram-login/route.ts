@@ -182,15 +182,16 @@ export async function POST(request: NextRequest) {
     });
 
     // ТАКЖЕ устанавливаем auth_token (JWT) для совместимости с /api/auth
-    const JWT_SECRET = process.env.JWT_SECRET || process.env.SUPABASE_JWT_SECRET || process.env.SESSION_SECRET;
-    if (JWT_SECRET) {
+    const { getJwtSecret } = await import('@/lib/auth/jwt-secret');
+    const jwtSecret = getJwtSecret();
+    if (jwtSecret) {
       const token = jwt.sign(
         { 
           userId: user.id,
           telegramId: user.telegram_id,
           username: user.username
         },
-        JWT_SECRET,
+        jwtSecret,
         { expiresIn: '30d' }
       );
 

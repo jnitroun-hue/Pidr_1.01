@@ -139,7 +139,7 @@ export default function TestingGuide() {
   ];
 
   const envVariables = [
-    { name: 'JWT_SECRET', required: true, description: 'Секретный ключ для JWT токенов' },
+    { name: 'SUPABASE_JWT_SECRET', required: true, description: 'JWT secret из Supabase (Vercel integration)' },
     { name: 'SUPABASE_URL', required: true, description: 'URL базы данных Supabase' },
     { name: 'SUPABASE_ANON_KEY', required: true, description: 'Публичный ключ Supabase' },
     { name: 'BOT_TOKEN', required: true, description: 'Telegram Bot Token' },

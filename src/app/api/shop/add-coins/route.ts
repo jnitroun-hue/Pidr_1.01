@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '../../../../lib/supabase';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || process.env.SUPABASE_JWT_SECRET;
+import { getJwtSecret } from '@/lib/auth/jwt-secret';
 
 function getUserIdFromRequest(req: NextRequest): string | null {
+  const JWT_SECRET = getJwtSecret();
   if (!JWT_SECRET) return null;
   
   const token = req.cookies.get('auth_token')?.value;

@@ -16,7 +16,7 @@ const fakeUUID = () => crypto.randomUUID();
 // Генерация всех секретов
 const secrets = {
   // === ВНУТРЕННИЕ СЕКРЕТЫ (реальные криптостойкие) ===
-  JWT_SECRET: b64url(48),
+  SUPABASE_JWT_SECRET: b64url(48),
   SESSION_SECRET: b64url(48),
   CRON_SECRET: b64url(48),
   ADMIN_SECRET: b64url(48),
