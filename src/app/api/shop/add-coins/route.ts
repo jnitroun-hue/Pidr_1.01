@@ -13,7 +13,7 @@ function getUserIdFromRequest(req: NextRequest): string | null {
   
   try {
     const payload = jwt.verify(token, JWT_SECRET) as any;
-    return payload.userId;
+    return payload.userId ?? null;
   } catch {
     return null;
   }
