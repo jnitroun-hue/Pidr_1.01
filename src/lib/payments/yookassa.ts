@@ -34,6 +34,10 @@ export interface YooKassaPaymentRequest {
   };
 }
 
+export interface YooKassaCreateOptions {
+  idempotenceKey?: string;
+}
+
 export interface YooKassaPaymentResponse {
   id: string;
   status: 'pending' | 'waiting_for_capture' | 'succeeded' | 'canceled';
@@ -55,7 +59,8 @@ export interface YooKassaPaymentResponse {
  * Создать платеж в YooKassa
  */
 export async function createYooKassaPayment(
-  request: YooKassaPaymentRequest
+  request: YooKassaPaymentRequest,
+  options: YooKassaCreateOptions = {}
 ): Promise<YooKassaPaymentResponse | null> {
   try {
     if (!YOOKASSA_SHOP_ID || !YOOKASSA_SECRET_KEY) {
@@ -65,12 +70,14 @@ export async function createYooKassaPayment(
 
     const auth = Buffer.from(`${YOOKASSA_SHOP_ID}:${YOOKASSA_SECRET_KEY}`).toString('base64');
 
+    const idempotenceKey = options.idempotenceKey || request.metadata?.orderId || crypto.randomUUID();
+
     const response = await fetch(`${YOOKASSA_API_URL}/payments`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Basic ${auth}`,
-        'Idempotence-Key': `${Date.now()}-${Math.random()}`
+        'Idempotence-Key': idempotenceKey
       },
       body: JSON.stringify(request)
     });

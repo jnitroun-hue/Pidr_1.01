@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getYooKassaPaymentStatus, captureYooKassaPayment, verifyYooKassaWebhook } from '@/lib/payments/yookassa';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+import { getYooKassaPaymentStatus, captureYooKassaPayment } from '@/lib/payments/yookassa';
+import { supabaseAdmin } from '@/lib/supabase';
 
 /**
  * POST /api/payments/yookassa/webhook
@@ -12,36 +9,41 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const signature = request.headers.get('x-yookassa-signature') || '';
-
-    // Проверяем подпись (в продакшене обязательно!)
-    // const isValid = verifyYooKassaWebhook(JSON.stringify(body), signature);
-    // if (!isValid) {
-    //   return NextResponse.json({ success: false, message: 'Invalid signature' }, { status: 401 });
-    // }
+    const configuredSecret = process.env.YOOKASSA_WEBHOOK_SECRET || '';
+    const providedSecret = request.headers.get('x-webhook-secret') || request.nextUrl.searchParams.get('secret') || '';
+    if (configuredSecret && providedSecret !== configuredSecret) {
+      return NextResponse.json({ success: false, message: 'Invalid webhook secret' }, { status: 401 });
+    }
 
     const event = body.event;
     const payment = body.object;
 
     console.log(`🔔 YooKassa webhook: ${event} for payment ${payment.id}`);
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const freshPayment = await getYooKassaPaymentStatus(payment.id);
+    if (!freshPayment || freshPayment.status !== payment.status) {
+      console.warn('⚠️ YooKassa webhook не подтвержден актуальным статусом API', {
+        webhookStatus: payment.status,
+        apiStatus: freshPayment?.status
+      });
+      return NextResponse.json({ success: false, message: 'Payment status verification failed' }, { status: 409 });
+    }
 
     // Обрабатываем разные события
     switch (event) {
       case 'payment.succeeded':
         // Платеж успешно завершен
-        await handlePaymentSucceeded(supabase, payment);
+        await handlePaymentSucceeded(supabaseAdmin, freshPayment);
         break;
 
       case 'payment.waiting_for_capture':
         // Платеж ожидает подтверждения
-        await handlePaymentWaitingForCapture(supabase, payment);
+        await handlePaymentWaitingForCapture(freshPayment);
         break;
 
       case 'payment.canceled':
         // Платеж отменен
-        await handlePaymentCanceled(supabase, payment);
+        await handlePaymentCanceled(supabaseAdmin, freshPayment);
         break;
 
       default:
@@ -76,33 +78,55 @@ async function handlePaymentSucceeded(supabase: any, payment: any) {
 
   console.log(`✅ Payment succeeded: ${payment.id} for user ${userId}, amount: ${amount} RUB`);
 
-  // Сохраняем информацию о платеже в БД
+  const { data: existingPayment, error: existingError } = await supabase
+    .from('_pidr_payments')
+    .select('payment_id, status')
+    .eq('payment_id', payment.id)
+    .maybeSingle();
+
+  if (!existingError && existingPayment?.status === 'succeeded') {
+    console.log(`↩️ YooKassa payment ${payment.id} уже обработан, пропускаем повтор webhook`);
+    return;
+  }
+
+  // Сохраняем/обновляем информацию о платеже в БД до начисления.
   const { error: paymentError } = await supabase
     .from('_pidr_payments')
-    .insert({
+    .upsert({
       payment_id: payment.id,
-      user_id: userId,
+      order_id: metadata.orderId || null,
+      user_id: parseInt(userId, 10) || null,
       amount: amount,
       currency: payment.amount.currency,
-      status: 'succeeded',
+      status: 'processing',
       item_id: itemId,
       item_type: itemType,
       metadata: metadata,
-      created_at: new Date().toISOString()
-    });
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'payment_id' });
 
   if (paymentError) {
-    console.error('❌ Error saving payment:', paymentError);
+    console.error('❌ Error saving payment before processing:', paymentError);
   }
 
   // Обрабатываем покупку в зависимости от типа
   if (itemType === 'coins') {
     // Добавляем монеты пользователю
-    const { data: user } = await supabase
+    let userQuery = supabase
       .from('_pidr_users')
-      .select('coins')
-      .eq('id', userId)
-      .single();
+      .select('id, coins')
+      .limit(1);
+
+    const numericUserId = parseInt(userId, 10);
+    if (!Number.isNaN(numericUserId)) {
+      userQuery = userQuery.eq('id', numericUserId);
+    } else if (metadata.authEnvironment === 'vk') {
+      userQuery = userQuery.eq('vk_id', userId);
+    } else {
+      userQuery = userQuery.eq('telegram_id', userId);
+    }
+
+    const { data: user } = await userQuery.maybeSingle();
 
     if (user) {
       const coinsToAdd = Math.floor(amount * 50); // 50 монет за 1 рубль (100 руб = 5000 монет)
@@ -111,13 +135,13 @@ async function handlePaymentSucceeded(supabase: any, payment: any) {
       await supabase
         .from('_pidr_users')
         .update({ coins: newBalance })
-        .eq('id', userId);
+        .eq('id', user.id);
 
       // Записываем транзакцию монет
       await supabase
         .from('_pidr_coin_transactions')
         .insert({
-          user_id: parseInt(userId) || 0,
+          user_id: user.id,
           amount: coinsToAdd,
           transaction_type: 'deposit_rub',
           description: `Пополнение через ЮКассу: ${amount} ₽ → ${coinsToAdd} монет`,
@@ -127,6 +151,8 @@ async function handlePaymentSucceeded(supabase: any, payment: any) {
         });
 
       console.log(`💰 Добавлено ${coinsToAdd} монет пользователю ${userId} (${amount} ₽), новый баланс: ${newBalance}`);
+    } else {
+      console.error('❌ YooKassa coins: пользователь не найден для начисления', metadata);
     }
   } else if (itemType === 'nft_listing') {
     const listingId = parseInt(metadata.listingId || metadata.itemId, 10);
@@ -190,12 +216,20 @@ async function handlePaymentSucceeded(supabase: any, payment: any) {
     // TODO: Реализовать логику активации премиум/предметов
     console.log(`🎁 Processing ${itemType} purchase for user ${userId}`);
   }
+
+  await supabase
+    .from('_pidr_payments')
+    .update({
+      status: 'succeeded',
+      updated_at: new Date().toISOString()
+    })
+    .eq('payment_id', payment.id);
 }
 
 /**
  * Обработка платежа, ожидающего подтверждения
  */
-async function handlePaymentWaitingForCapture(supabase: any, payment: any) {
+async function handlePaymentWaitingForCapture(payment: any) {
   console.log(`⏳ Payment waiting for capture: ${payment.id}`);
   
   // Автоматически подтверждаем платеж
@@ -217,15 +251,16 @@ async function handlePaymentCanceled(supabase: any, payment: any) {
   // Сохраняем информацию об отмене
   const { error } = await supabase
     .from('_pidr_payments')
-    .insert({
+    .upsert({
       payment_id: payment.id,
-      user_id: userId,
+      order_id: metadata.orderId || null,
+      user_id: parseInt(userId, 10) || null,
       amount: parseFloat(payment.amount.value),
       currency: payment.amount.currency,
       status: 'canceled',
       metadata: metadata,
-      created_at: new Date().toISOString()
-    });
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'payment_id' });
 
   if (error) {
     console.error('❌ Error saving canceled payment:', error);

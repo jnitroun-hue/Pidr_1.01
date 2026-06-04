@@ -976,9 +976,10 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
     setYookassaLoading(true);
     try {
       const coins = Math.round(amount * 50); // 100 руб = 5000 монет => 1 руб = 50 монет
+      const { getApiHeaders } = await import('@/lib/api-headers');
       const response = await fetch('/api/payments/yookassa/create', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getApiHeaders() as Record<string, string>,
         credentials: 'include',
         body: JSON.stringify({
           amount,
@@ -992,6 +993,17 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
         throw new Error(data.message || 'Ошибка создания платежа');
       }
       if (data.payment?.confirmationUrl) {
+        try {
+          sessionStorage.setItem('pidr:lastYooKassaPayment', JSON.stringify({
+            paymentId: data.payment.id,
+            orderId: data.payment.orderId,
+            amount: data.payment.amount,
+            coins,
+            createdAt: new Date().toISOString()
+          }));
+        } catch {
+          // sessionStorage может быть недоступен в некоторых WebView.
+        }
         window.location.href = data.payment.confirmationUrl;
       } else {
         throw new Error('URL оплаты не получен');

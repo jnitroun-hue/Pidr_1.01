@@ -372,9 +372,9 @@ function GamePageContentComponent({
 
   // ✅ Загружаем количество игр ПЕРЕД началом игры
   useEffect(() => {
-    if (!user?.id || isMultiplayer) {
+    if (isMultiplayer) {
       // Если мультиплеер - отключаем обучение
-      console.log('⚠️ [GamePageContent] Туториал отключен:', { hasUser: !!user?.id, isMultiplayer });
+      console.log('⚠️ [GamePageContent] Туториал отключен:', { isMultiplayer });
       setIsTutorialGame(false);
       setTutorialGameNumber(null);
       return;
@@ -382,13 +382,15 @@ function GamePageContentComponent({
 
     const loadGamesCount = async () => {
       try {
-        console.log('📊 [GamePageContent] Загружаем количество игр для обучения...', { userId: user.id });
+        console.log('📊 [GamePageContent] Загружаем количество игр для обучения...', { userId: user?.id || 'cookie-auth' });
+        const headers = new Headers(getApiHeaders());
+        if (user?.id) {
+          headers.set('x-telegram-id', user.id.toString());
+        }
+
         const response = await fetch('/api/user/bot-games', {
           method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-telegram-id': user.id.toString()
-          },
+          headers,
           credentials: 'include'
         });
         
@@ -400,10 +402,10 @@ function GamePageContentComponent({
             const gamesCount = data.gamesPlayed || 0;
             setGamesPlayed(gamesCount);
             
-            // ✅ ИСПРАВЛЕНО: Обучение только для новых пользователей (после 10.02.2026) в первых 3 играх
-            const isNewUser = data.isNewUser !== false; // По умолчанию true если не указано
-            const showTutorial = data.showTutorial !== false; // Используем флаг из API
-            const isTutorial = showTutorial && gamesCount < 3;
+            // Для fresh web/VK cookie-сессии не гасим обучение только из-за отсутствия Telegram user.
+            const isNewUser = data.isNewUser !== false;
+            const showTutorial = data.showTutorial !== false;
+            const isTutorial = (showTutorial || gamesCount === 0) && gamesCount < 3;
             
             setIsTutorialGame(isTutorial);
             setTutorialGameNumber(isTutorial ? gamesCount + 1 : null);
@@ -1767,7 +1769,7 @@ function GamePageContentComponent({
       // Генерация аватаров перенесена в отдельный проект pidr_generators
       // Используем стандартные аватары
       for (const player of players) {
-        avatars[player.id] = '/images/default-avatar.png'; // Заглушка
+        avatars[player.id] = '/img/player-avatar.svg'; // Заглушка
         await new Promise(resolve => setTimeout(resolve, 50));
       }
       
@@ -2638,7 +2640,7 @@ function GamePageContentComponent({
                           </>
                         )}
                         <img 
-                        src={playerAvatars[player.id] || player.avatar || '/images/default-avatar.png'}
+                        src={playerAvatars[player.id] || player.avatar || '/img/player-avatar.svg'}
                         alt={player.name}
                             className={styles.avatar}
                           style={{
@@ -2978,10 +2980,7 @@ function GamePageContentComponent({
       {/* ПАНЕЛЬ КНОПОК ДЕЙСТВИЙ - УБРАНА, КНОПКА ПЕРЕНЕСЕНА В РУКУ ИГРОКА */}
 
       {/* Рука игрока внизу экрана - ТОЛЬКО СО 2-Й СТАДИИ! */}
-      {(() => {
-        console.log('🔍 [RENDER CHECK] players:', players.length, 'gameStage:', gameStage, 'myPlayer:', myPlayer?.id, 'cards:', myPlayer?.cards?.length);
-        return players.length > 0 && gameStage >= 2 && myPlayer && myPlayer.cards && myPlayer.cards.length > 0;
-      })() && (
+      {players.length > 0 && gameStage >= 2 && myPlayer && (myPlayer.cards.length > 0 || myPlayer.penki.length > 0) && (
         <div className={styles.playerHand}>
           {/* Кнопки компактно над картами игрока */}
           <div style={{
@@ -3195,7 +3194,22 @@ function GamePageContentComponent({
           </div>
           
           <div className={styles.handCards}>
-            {myPlayer && myPlayer.cards.map((card: LegacyCardLike, index: number) => {
+            {myPlayer.cards.length === 0 && myPlayer.penki.length > 0 && (
+              <div style={{
+                padding: '10px 14px',
+                borderRadius: '12px',
+                background: 'rgba(15, 23, 42, 0.85)',
+                border: '1px solid rgba(251, 191, 36, 0.35)',
+                color: '#fde68a',
+                fontSize: '13px',
+                fontWeight: 700,
+                textAlign: 'center',
+                boxShadow: '0 0 18px rgba(251, 191, 36, 0.18)'
+              }}>
+                Открываем пеньки...
+              </div>
+            )}
+            {myPlayer.cards.map((card: LegacyCardLike, index: number) => {
               // Карта может быть строкой "7_of_spades.png(open)" или объектом {rank, suit, image}
               const cardImage = typeof card === 'string' 
                 ? card.replace('(open)', '').replace('(closed)', '')

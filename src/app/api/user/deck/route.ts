@@ -74,9 +74,32 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('❌ [GET DECK] Ошибка получения колоды:', error);
+      const message = error instanceof Error ? error.message : String((error as any)?.message || error);
+      const code = String((error as any)?.code || '');
+      const isSchemaMissing =
+        code === '42P01' ||
+        code === 'PGRST200' ||
+        message.includes('_pidr_user_nft_deck') ||
+        message.includes('_pidr_nft_cards') ||
+        message.toLowerCase().includes('relationship');
+
+      if (isSchemaMissing) {
+        console.warn('⚠️ [GET DECK] NFT deck schema не готова, возвращаем пустую колоду');
+        const response = NextResponse.json({
+          success: true,
+          deck: [],
+          total: 0,
+          warning: 'NFT deck schema is not available'
+        });
+        response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+        response.headers.set('Pragma', 'no-cache');
+        response.headers.set('Expires', '0');
+        return response;
+      }
+
       return NextResponse.json({ 
         success: false, 
-        error: error instanceof Error ? error.message : String(error) 
+        error: message
       }, { status: 500 });
     }
 

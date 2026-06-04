@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getYooKassaPaymentStatus } from '@/lib/payments/yookassa';
-import { requireAuth } from '@/lib/auth-utils';
+import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
+import { supabaseAdmin } from '@/lib/supabase';
 
 // ✅ Явная конфигурация runtime для Next.js 15
 export const runtime = 'nodejs';
@@ -22,11 +23,23 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const paymentId = searchParams.get('payment_id');
+    let paymentId = searchParams.get('payment_id');
+    const orderId = searchParams.get('order_id');
+
+    if (!paymentId && orderId) {
+      const { dbUserId } = await getUserIdFromDatabase(auth.userId, auth.environment);
+      const { data } = await supabaseAdmin
+        .from('_pidr_payments')
+        .select('payment_id')
+        .eq('order_id', orderId)
+        .eq('user_id', dbUserId || 0)
+        .maybeSingle();
+      paymentId = data?.payment_id || null;
+    }
 
     if (!paymentId) {
       return NextResponse.json(
-        { success: false, message: 'payment_id обязателен' },
+        { success: false, message: 'payment_id или order_id обязателен' },
         { status: 400 }
       );
     }

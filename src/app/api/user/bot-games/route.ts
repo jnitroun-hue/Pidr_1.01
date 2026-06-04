@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     // ✅ ПРОВЕРКА ДАТЫ РЕГИСТРАЦИИ: Только для пользователей после 10.02.2026
     const tutorialCutoffDate = new Date('2026-02-10T00:00:00.000Z');
     const userCreatedAt = user?.created_at ? new Date(user.created_at) : null;
-    const isNewUser = userCreatedAt && userCreatedAt >= tutorialCutoffDate;
+    const isNewUser = !userCreatedAt || userCreatedAt >= tutorialCutoffDate;
     
     console.log(`📊 [GAMES] Пользователь ${userId} (${environment}): игр=${gamesPlayed}, дата регистрации=${userCreatedAt?.toISOString()}, новый=${isNewUser}`);
 
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
       gamesPlayed: gamesPlayed,
       canPlayMultiplayer: isAdmin || gamesPlayed >= 3,
       isAdmin,
-      isNewUser: isNewUser, // ✅ НОВОЕ: Флаг нового пользователя
+      isNewUser, // ✅ НОВОЕ: Флаг нового пользователя
       showTutorial: !isAdmin && isNewUser && gamesPlayed < 3 // ✅ НОВОЕ: Показывать туториал только новым пользователям
     });
 

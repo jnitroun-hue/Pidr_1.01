@@ -1399,6 +1399,31 @@ export const useGameStore = create<GameState>()(
         const targetPlayer = players.find(p => p.id === targetPlayerId);
         
         if (!currentPlayer || !targetPlayer) return;
+
+        if (targetPlayerId === currentPlayerId) {
+          console.warn(`🚫 [makeMove] Нельзя положить карту на самого себя: ${currentPlayer.name}`);
+          if (!currentPlayer.isBot) {
+            get().showNotification('Выберите карту соперника, а не свою', 'warning', 2500);
+          }
+          return;
+        }
+
+        const targetIndex = players.findIndex(p => p.id === targetPlayerId);
+        const validTargets = revealedDeckCard && (turnPhase === 'waiting_target_selection' || turnPhase === 'waiting_deck_action')
+          ? get().findAvailableTargetsForDeckCard(revealedDeckCard)
+          : get().findAvailableTargets(currentPlayerId);
+
+        if (targetIndex < 0 || !validTargets.includes(targetIndex)) {
+          console.warn(`🚫 [makeMove] Недопустимая цель ${targetPlayerId} для ${currentPlayer.name}`, {
+            validTargets,
+            turnPhase,
+            revealedDeckCard: !!revealedDeckCard
+          });
+          if (!currentPlayer.isBot) {
+            get().showNotification('На эту карту сейчас ходить нельзя', 'warning', 2500);
+          }
+          return;
+        }
         
         let cardToMove: Card | undefined;
         let newDeck = deck;
@@ -1697,10 +1722,17 @@ export const useGameStore = create<GameState>()(
           if (currentPlayer.cards.length === 0 && currentPlayer.penki.length > 0) {
             console.log(`🃏 [processPlayerTurn] У ${currentPlayer.name} нет карт, но есть пеньки - активируем!`);
             get().checkStage3Transition(playerId);
-            // Перезапускаем ход после активации пеньков
-            setTimeout(() => {
-              get().processPlayerTurn(playerId);
-            }, 300);
+
+            const refreshedPlayer = get().players.find(p => p.id === playerId);
+            if (refreshedPlayer && refreshedPlayer.cards.length > 0) {
+              set({
+                currentPlayerId: refreshedPlayer.id,
+                stage2TurnPhase: 'selecting_card'
+              });
+              if (!refreshedPlayer.isBot) {
+                get().showNotification(`${refreshedPlayer.name}: пеньки активированы, выберите карту`, 'info', 5000);
+              }
+            }
             return;
           }
           
@@ -2275,6 +2307,11 @@ export const useGameStore = create<GameState>()(
             return;
           }
           if (!selectedHandCard || !currentPlayerId) return;
+
+          if (stage2TurnPhase === 'playing_card') {
+            console.log('⏳ [playSelectedCard] Карта уже разыгрывается, повторный вызов игнорируем');
+            return;
+          }
           
           const currentPlayer = players.find(p => p.id === currentPlayerId);
           if (!currentPlayer) return;
@@ -2306,27 +2343,35 @@ export const useGameStore = create<GameState>()(
            // УБРАНА СТАРАЯ НЕПРАВИЛЬНАЯ ЛОГИКА ЛИМИТА КАРТ
            // Теперь круг завершается только когда финишер (-1 от инициатора) побьет карту
            
-          // Убираем карту из руки игрока
+          // Убираем карту из руки игрока без мутации массива players.
           const cardIndex = currentPlayer.cards.findIndex(c => c.id === selectedHandCard.id);
           if (cardIndex === -1) return;
-          
-          currentPlayer.cards.splice(cardIndex, 1);
+
+          const updatedCurrentPlayer: Player = {
+            ...currentPlayer,
+            cards: currentPlayer.cards.filter((_, index) => index !== cardIndex)
+          };
+          const playersAfterCardPlay = players.map(player =>
+            player.id === currentPlayerId ? updatedCurrentPlayer : player
+          );
+
+          set({ stage2TurnPhase: 'playing_card' });
           
           // 🔍 ДЛЯ ОТЛАДКИ: Логируем если у игрока осталось 0 карт
-          if (currentPlayer.cards.length === 0) {
-            console.log(`🔥 [playSelectedCard] У ${currentPlayer.name} закончились карты! Пеньки: ${currentPlayer.penki.length}, playerStage: ${currentPlayer.playerStage}`);
+          if (updatedCurrentPlayer.cards.length === 0) {
+            console.log(`🔥 [playSelectedCard] У ${updatedCurrentPlayer.name} закончились карты! Пеньки: ${updatedCurrentPlayer.penki.length}, playerStage: ${updatedCurrentPlayer.playerStage}`);
           }
           
           // 🏆 ПРОВЕРЯЕМ ПОБЕДУ ТОЛЬКО ВО 2-Й СТАДИИ КОГДА И КАРТЫ И ПЕНЬКИ ЗАКОНЧИЛИСЬ!
            const { gameStage } = get();
-           const cardsLeft = currentPlayer.cards.length;
-           const penkiLeft = currentPlayer.penki.length;
+           const cardsLeft = updatedCurrentPlayer.cards.length;
+           const penkiLeft = updatedCurrentPlayer.penki.length;
            const totalCardsLeft = cardsLeft + penkiLeft;
            
            console.log(`🏆 [playSelectedCard] Проверка победы для ${currentPlayer.name}: карт=${cardsLeft}, пеньков=${penkiLeft}, всего=${totalCardsLeft}, стадия=${gameStage}`);
            
            if (gameStage >= 2 && totalCardsLeft === 0 && cardsLeft === 0 && penkiLeft === 0) {
-             console.log(`🎉 [playSelectedCard] 🏆 ИГРОК ${currentPlayer.name} ИЗБАВИЛСЯ ОТ ВСЕХ КАРТ И ПЕНЬКОВ ВО 2-Й СТАДИИ!`);
+             console.log(`🎉 [playSelectedCard] 🏆 ИГРОК ${updatedCurrentPlayer.name} ИЗБАВИЛСЯ ОТ ВСЕХ КАРТ И ПЕНЬКОВ ВО 2-Й СТАДИИ!`);
              
             // ✅ НЕ ОПРЕДЕЛЯЕМ МЕСТО ЗДЕСЬ! Место определится в checkVictoryCondition по finishTime!
             // КРИТИЧНО: Вызываем проверку победы немедленно
@@ -2360,7 +2405,7 @@ export const useGameStore = create<GameState>()(
            }
            
            set({
-             players: [...players],
+             players: playersAfterCardPlay,
              tableStack: newTableStack,
              selectedHandCard: null,
              roundInProgress: true,
@@ -2423,14 +2468,10 @@ export const useGameStore = create<GameState>()(
             
             get().showNotification(`🏁 ${reasonText}! ${newTableStack.length} карт в бито`, 'success', 3000);
             
-            // ИСПРАВЛЕНО: Проверяем активацию пеньков для ВСЕХ игроков
-            // ✅ ВАЖНО: Проверяем с задержкой, чтобы состояние успело обновиться!
-            setTimeout(() => {
-              const currentPlayers = get().players; // Получаем СВЕЖИЕ данные из стора!
-              currentPlayers.forEach(player => {
-                get().checkStage3Transition(player.id);
-              });
-            }, 50);
+            // Проверяем активацию пеньков сразу после атомарного обновления players.
+            get().players.forEach(player => {
+              get().checkStage3Transition(player.id);
+            });
             
             // Проверяем условия победы
             get().checkVictoryCondition();
@@ -2454,14 +2495,10 @@ export const useGameStore = create<GameState>()(
           }
            
            // ОБЫЧНОЕ ПРОДОЛЖЕНИЕ КРУГА
-          // ИСПРАВЛЕНО: Проверяем активацию пеньков для ВСЕХ игроков
-          // ✅ ВАЖНО: Проверяем с задержкой, чтобы состояние успело обновиться!
-          setTimeout(() => {
-            const currentPlayers = get().players; // Получаем СВЕЖИЕ данные из стора!
-            currentPlayers.forEach(player => {
-              get().checkStage3Transition(player.id);
-            });
-          }, 50);
+          // Проверяем активацию пеньков сразу после атомарного обновления players.
+          get().players.forEach(player => {
+            get().checkStage3Transition(player.id);
+          });
           
           // Проверяем условия победы
           get().checkVictoryCondition();
