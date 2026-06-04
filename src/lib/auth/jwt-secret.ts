@@ -19,5 +19,10 @@ export function hasJwtSecret(): boolean {
   return !!getJwtSecret();
 }
 
+/** userId из JWT payload (strict-safe: undefined → null) */
+export function getUserIdFromAuthPayload(payload: { userId?: string }): string | null {
+  return payload.userId ?? null;
+}
+
 /** Секрет для jwt.sign / jwt.verify (пустая строка если не задан — проверяйте hasJwtSecret) */
 export const JWT_SECRET = getJwtSecret() || '';

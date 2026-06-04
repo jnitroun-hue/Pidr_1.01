@@ -13,7 +13,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { masterWallet, SupportedNetwork, SUPPORTED_NETWORKS } from '../../../../lib/wallets/unified-master-wallet';
 import { supabase } from '../../../../lib/supabase';
 import jwt from 'jsonwebtoken';
-import { getJwtSecret } from '@/lib/auth/jwt-secret';
+import { getJwtSecret, getUserIdFromAuthPayload } from '@/lib/auth/jwt-secret';
 
 // 🔐 Получение userId из запроса (исправлено)
 function getUserIdFromRequest(req: NextRequest): string | null {
@@ -25,7 +25,7 @@ function getUserIdFromRequest(req: NextRequest): string | null {
   
   try {
     const payload = jwt.verify(token, JWT_SECRET) as { userId?: string };
-    return payload.userId ?? null;
+    return getUserIdFromAuthPayload(payload);
   } catch {
     return null;
   }

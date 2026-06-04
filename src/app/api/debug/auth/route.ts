@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     const authHeader = req.headers.get('authorization');
     
     // Пробуем получить userId
-    const userId = getUserIdFromRequest(req);
+    const { userId, environment, source } = getUserIdFromRequest(req);
     
     const debug = {
       environment: {
@@ -37,6 +37,8 @@ export async function GET(req: NextRequest) {
       },
       auth: {
         userId,
+        environment,
+        source,
         isAuthenticated: !!userId
       }
     };

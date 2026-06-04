@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '../../../../lib/supabase';
 import jwt from 'jsonwebtoken';
 
-import { getJwtSecret } from '@/lib/auth/jwt-secret';
+import { getJwtSecret, getUserIdFromAuthPayload } from '@/lib/auth/jwt-secret';
 
 function getUserIdFromRequest(req: NextRequest): string | null {
   const JWT_SECRET = getJwtSecret();
@@ -12,8 +12,8 @@ function getUserIdFromRequest(req: NextRequest): string | null {
   if (!token) return null;
   
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as any;
-    return payload.userId ?? null;
+    const payload = jwt.verify(token, JWT_SECRET) as { userId?: string };
+    return getUserIdFromAuthPayload(payload);
   } catch {
     return null;
   }

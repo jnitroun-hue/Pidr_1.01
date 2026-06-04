@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "check": "tsc --noEmit",
+    "build:verify": "npm run check && npm run build",
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
