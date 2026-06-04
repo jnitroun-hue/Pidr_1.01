@@ -3,75 +3,77 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { Send, ArrowLeft } from 'lucide-react';
 import { getTelegramBotUsername } from '@/lib/auth/social-auth';
 import type { TelegramWebAppUser } from '@/types/telegram-webapp';
+import styles from './page.module.css';
 
-// Декларация типов для Telegram Login Widget
 declare global {
   interface Window {
     onTelegramAuth?: (user: TelegramWebAppUser & { auth_date: number; hash: string }) => void;
   }
 }
 
+const VK_ICON = (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+    <path d="M15.07 2H8.93C3.33 2 2 3.33 2 8.93v6.14C2 20.67 3.33 22 8.93 22h6.14c5.6 0 6.93-1.33 6.93-6.93V8.93C22 3.33 20.67 2 15.07 2zm3.08 14.58h-1.4c-.54 0-.71-.43-1.69-1.41-.86-.82-1.24-.93-1.45-.93-.3 0-.38.09-.38.52v1.29c0 .37-.12.59-1.08.59-1.58 0-3.35-.96-4.59-2.75-1.87-2.66-2.38-4.66-2.38-5.07 0-.23.09-.45.52-.45h1.4c.39 0 .54.18.69.6.75 2.36 2.01 4.4 2.52 4.4.19 0 .28-.09.28-.58V9.48c-.06-1.03-.6-1.12-.6-1.56 0-.2.16-.39.43-.39h2.2c.37 0 .5.2.5.64v3.45c0 .37.17.5.27.5.19 0 .35-.12.7-.47 1.07-1.19 1.84-3.03 1.84-3.03.1-.22.28-.43.67-.43h1.4c.42 0 .51.22.42.52-.18.84-1.93 3.31-1.93 3.31-.15.25-.21.36 0 .64.15.2.65.64 1 1.03.64.74 1.14 1.36 1.27 1.79.14.43-.08.65-.5.65z" />
+  </svg>
+);
+
+const GOOGLE_ICON = (
+  <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden>
+    <path fill="#EA4335" d="M12 10.2v3.6h5.1c-.22 1.2-1.5 3.5-5.1 3.5-3.07 0-5.6-2.54-5.6-5.67S8.93 5.93 12 5.93c1.75 0 2.93.75 3.6 1.4l2.46-2.38C16.56 3.64 14.44 2.8 12 2.8 6.97 2.8 2.8 6.97 2.8 12S6.97 21.2 12 21.2c6.9 0 8.58-4.84 8.58-7.36 0-.5-.06-.87-.13-1.13H12z" />
+  </svg>
+);
+
 export default function AuthPage() {
   const router = useRouter();
-  const [authMethod, setAuthMethod] = useState<'phone' | 'vk' | 'google' | null>(null);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [code, setCode] = useState('');
   const [step, setStep] = useState<'method' | 'phone' | 'code'>('method');
   const [isLoading, setIsLoading] = useState(false);
   const [redirectPath, setRedirectPath] = useState<string>('/');
+  const botUsername = getTelegramBotUsername();
 
   useEffect(() => {
-    // Получаем параметр redirect из URL
     const params = new URLSearchParams(window.location.search);
     const redirect = params.get('redirect');
-    if (redirect) {
-      setRedirectPath(redirect);
-      console.log('📍 Redirect after auth:', redirect);
-    }
+    if (redirect) setRedirectPath(redirect);
   }, []);
 
   useEffect(() => {
-    // Загружаем Telegram Login Widget скрипт
     const script = document.createElement('script');
     script.src = 'https://telegram.org/js/telegram-widget.js?22';
     script.async = true;
-    script.setAttribute('data-telegram-login', getTelegramBotUsername());
+    script.setAttribute('data-telegram-login', botUsername);
     script.setAttribute('data-size', 'large');
-    script.setAttribute('data-radius', '12');
+    script.setAttribute('data-radius', '14');
     script.setAttribute('data-request-access', 'write');
     script.setAttribute('data-onauth', 'onTelegramAuth(user)');
-    
+
     const widgetContainer = document.getElementById('telegram-login-widget');
     if (widgetContainer) {
+      widgetContainer.innerHTML = '';
       widgetContainer.appendChild(script);
     }
 
-    // Обработчик успешной авторизации Telegram
     window.onTelegramAuth = async (user: TelegramWebAppUser & { auth_date: number; hash: string }) => {
-      console.log('✅ Telegram Auth Success:', user);
       setIsLoading(true);
-
       try {
-        // Отправляем данные на сервер для создания сессии
         const response = await fetch('/api/auth/telegram-login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify(user)
+          body: JSON.stringify(user),
         });
-
         const data = await response.json();
-
         if (data.success) {
-          console.log('✅ Сессия создана, перенаправление на:', redirectPath);
           router.push(redirectPath);
         } else {
-          alert(`Ошибка: ${data.error}`);
+          alert(data.error || 'Ошибка авторизации');
         }
-      } catch (error) {
-        console.error('❌ Ошибка авторизации:', error);
+      } catch {
         alert('Ошибка авторизации');
       } finally {
         setIsLoading(false);
@@ -79,300 +81,130 @@ export default function AuthPage() {
     };
 
     return () => {
-      // Очистка при размонтировании
       window.onTelegramAuth = undefined;
     };
-  }, [router, redirectPath]);
+  }, [router, redirectPath, botUsername]);
 
   const handlePhoneAuth = async () => {
-    if (!phoneNumber) {
-      alert('Введите номер телефона');
-      return;
-    }
-
+    if (!phoneNumber) return;
     setIsLoading(true);
-
     try {
-      // TODO: Отправка SMS кода
-      console.log('📱 Отправка SMS на:', phoneNumber);
-      
-      // Симуляция отправки
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      await new Promise((r) => setTimeout(r, 1000));
       setStep('code');
-    } catch (error) {
-      console.error('Ошибка отправки SMS:', error);
-      alert('Ошибка отправки SMS');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleCodeVerify = async () => {
-    if (!code) {
-      alert('Введите код');
-      return;
-    }
-
+    if (!code) return;
     setIsLoading(true);
-
     try {
-      // TODO: Проверка кода
-      console.log('🔐 Проверка кода:', code);
-      
-      // Симуляция проверки
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Перенаправление в игру
+      await new Promise((r) => setTimeout(r, 1000));
       router.push('/');
-    } catch (error) {
-      console.error('Ошибка проверки кода:', error);
-      alert('Неверный код');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleVKAuth = () => {
-    alert('VK авторизация временно недоступна');
-  };
-
-  const handleGoogleAuth = () => {
-    alert('Google авторизация временно недоступна');
-  };
-
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '20px'
-    }}>
+    <div className={styles.page}>
       <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        style={{
-          width: '100%',
-          maxWidth: '420px',
-          background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95))',
-          borderRadius: '24px',
-          padding: '40px',
-          border: '1px solid rgba(251, 191, 36, 0.2)',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
-          backdropFilter: 'blur(20px)'
-        }}
+        className={styles.card}
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
       >
-        {/* Логотип */}
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <h1 style={{
-            fontSize: '32px',
-            fontWeight: 'bold',
-            background: 'linear-gradient(135deg, #fbbf24, #f59e0b)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            marginBottom: '8px'
-          }}>
-            P.I.D.R.
-          </h1>
-          <p style={{ color: '#94a3b8', fontSize: '14px' }}>
-            ВХОД В ИГРУ
-          </p>
-        </div>
+        <header className={styles.header}>
+          <div className={styles.logoMark} aria-hidden>
+            ♠
+          </div>
+          <h1 className={styles.title}>P.I.D.R.</h1>
+          <p className={styles.subtitle}>Войдите, чтобы играть и сохранять прогресс</p>
+        </header>
 
         <AnimatePresence mode="wait">
           {step === 'method' && (
             <motion.div
               key="method"
-              initial={{ opacity: 0, x: 20 }}
+              initial={{ opacity: 0, x: 16 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
+              exit={{ opacity: 0, x: -16 }}
+              transition={{ duration: 0.25 }}
             >
-              {/* Telegram Login Widget */}
-              <div style={{
-                marginBottom: '16px',
-                padding: '16px',
-                borderRadius: '12px',
-                background: 'linear-gradient(135deg, rgba(0, 136, 204, 0.1), rgba(0, 102, 170, 0.1))',
-                border: '2px solid rgba(0, 136, 204, 0.3)',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '12px'
-              }}>
-                <div style={{
-                  color: '#cbd5e1',
-                  fontSize: '14px',
-                  fontWeight: 'bold',
-                  textAlign: 'center'
-                }}>
-                  ✈️ ВХОД ЧЕРЕЗ TELEGRAM
+              <div className={styles.telegramBlock}>
+                <div className={styles.telegramLabel}>
+                  <span className={styles.telegramIcon}>
+                    <Send size={18} strokeWidth={2.5} />
+                  </span>
+                  Вход через Telegram
                 </div>
-                <div id="telegram-login-widget" style={{
-                  display: 'flex',
-                  justifyContent: 'center',
-                  width: '100%'
-                }}>
+                <div className={styles.widgetHost} id="telegram-login-widget">
                   {isLoading && (
-                    <div style={{ 
-                      color: '#0088cc', 
-                      fontSize: '14px',
-                      textAlign: 'center'
-                    }}>
-                      ⏳ Авторизация...
-                    </div>
+                    <span className={styles.widgetLoading}>Авторизация…</span>
                   )}
                 </div>
+                <p className={styles.widgetHint}>
+                  Если кнопка не работает — проверьте, что бот @{botUsername} существует и
+                  домен добавлен в BotFather → Domain.
+                </p>
               </div>
 
-              {/* VK (Заглушка) */}
+              <div className={styles.divider}>или</div>
+
               <button
-                onClick={handleVKAuth}
-                style={{
-                  width: '100%',
-                  padding: '16px 24px',
-                  marginBottom: '12px',
-                  borderRadius: '12px',
-                  background: 'linear-gradient(135deg, #4a76a8, #3b5998)',
-                  border: '2px solid rgba(74, 118, 168, 0.5)',
-                  color: '#fff',
-                  fontSize: '16px',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '12px',
-                  transition: 'all 0.3s',
-                  boxShadow: '0 8px 24px rgba(74, 118, 168, 0.3)',
-                  opacity: 0.6
-                }}
+                type="button"
+                className={`${styles.socialBtn} ${styles.vkBtn}`}
+                disabled
+                onClick={() => alert('VK авторизация скоро')}
               >
-                <span style={{ fontSize: '24px' }}>🔵</span>
-                <span>ВКОНТАКТЕ</span>
-                <span style={{ 
-                  fontSize: '10px', 
-                  background: 'rgba(255,255,255,0.2)', 
-                  padding: '2px 6px', 
-                  borderRadius: '4px' 
-                }}>
-                  СКОРО
-                </span>
+                {VK_ICON}
+                <span>ВКонтакте</span>
+                <span className={styles.badge}>скоро</span>
               </button>
 
-              {/* Google (Заглушка) */}
               <button
-                onClick={handleGoogleAuth}
-                style={{
-                  width: '100%',
-                  padding: '16px 24px',
-                  borderRadius: '12px',
-                  background: 'linear-gradient(145deg, #fff, #f1f5f9)',
-                  border: '2px solid rgba(203, 213, 225, 0.5)',
-                  color: '#1e293b',
-                  fontSize: '16px',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '12px',
-                  transition: 'all 0.3s',
-                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.1)',
-                  opacity: 0.6
-                }}
+                type="button"
+                className={`${styles.socialBtn} ${styles.googleBtn}`}
+                disabled
+                onClick={() => alert('Google авторизация скоро')}
               >
-                <span style={{ fontSize: '24px' }}>🔴</span>
-                <span>GOOGLE</span>
-                <span style={{ 
-                  fontSize: '10px', 
-                  background: 'rgba(0,0,0,0.1)', 
-                  padding: '2px 6px', 
-                  borderRadius: '4px' 
-                }}>
-                  СКОРО
-                </span>
+                {GOOGLE_ICON}
+                <span>Google</span>
+                <span className={styles.badge}>скоро</span>
               </button>
+
+              <Link href="/auth/login" className={styles.altLink}>
+                Войти по логину и паролю →
+              </Link>
             </motion.div>
           )}
 
           {step === 'phone' && (
             <motion.div
               key="phone"
-              initial={{ opacity: 0, x: 20 }}
+              initial={{ opacity: 0, x: 16 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
+              exit={{ opacity: 0, x: -16 }}
             >
-              <button
-                onClick={() => setStep('method')}
-                style={{
-                  marginBottom: '24px',
-                  color: '#94a3b8',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}
-              >
-                <span>←</span> Назад
+              <button type="button" className={styles.backBtn} onClick={() => setStep('method')}>
+                <ArrowLeft size={16} /> Назад
               </button>
-
-              <label style={{
-                display: 'block',
-                marginBottom: '8px',
-                color: '#cbd5e1',
-                fontSize: '14px',
-                fontWeight: 'bold'
-              }}>
-                Номер телефона
-              </label>
-
+              <label className={styles.fieldLabel}>Номер телефона</label>
               <input
                 type="tel"
+                className={styles.input}
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
                 placeholder="+7 999 123 45 67"
-                style={{
-                  width: '100%',
-                  padding: '16px 20px',
-                  marginBottom: '20px',
-                  borderRadius: '12px',
-                  background: 'rgba(15, 23, 42, 0.8)',
-                  border: '2px solid rgba(71, 85, 105, 0.4)',
-                  color: '#fff',
-                  fontSize: '16px',
-                  outline: 'none',
-                  transition: 'all 0.3s'
-                }}
-                onFocus={(e) => e.currentTarget.style.borderColor = '#fbbf24'}
-                onBlur={(e) => e.currentTarget.style.borderColor = 'rgba(71, 85, 105, 0.4)'}
               />
-
               <button
+                type="button"
+                className={styles.primaryBtn}
                 onClick={handlePhoneAuth}
                 disabled={isLoading || !phoneNumber}
-                style={{
-                  width: '100%',
-                  padding: '16px',
-                  borderRadius: '12px',
-                  background: isLoading || !phoneNumber
-                    ? 'rgba(75, 85, 99, 0.6)'
-                    : 'linear-gradient(135deg, #fbbf24, #f59e0b)',
-                  border: '2px solid rgba(251, 191, 36, 0.5)',
-                  color: '#fff',
-                  fontSize: '16px',
-                  fontWeight: 'bold',
-                  cursor: isLoading || !phoneNumber ? 'not-allowed' : 'pointer',
-                  opacity: isLoading || !phoneNumber ? 0.6 : 1,
-                  transition: 'all 0.3s',
-                  boxShadow: '0 8px 24px rgba(251, 191, 36, 0.3)'
-                }}
               >
-                {isLoading ? '⏳ ОТПРАВКА...' : '📱 ПОЛУЧИТЬ КОД'}
+                {isLoading ? 'Отправка…' : 'Получить код'}
               </button>
             </motion.div>
           )}
@@ -380,129 +212,45 @@ export default function AuthPage() {
           {step === 'code' && (
             <motion.div
               key="code"
-              initial={{ opacity: 0, x: 20 }}
+              initial={{ opacity: 0, x: 16 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
+              exit={{ opacity: 0, x: -16 }}
             >
-              <button
-                onClick={() => setStep('phone')}
-                style={{
-                  marginBottom: '24px',
-                  color: '#94a3b8',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}
-              >
-                <span>←</span> Назад
+              <button type="button" className={styles.backBtn} onClick={() => setStep('phone')}>
+                <ArrowLeft size={16} /> Назад
               </button>
-
-              <p style={{
-                marginBottom: '20px',
-                color: '#cbd5e1',
-                fontSize: '14px',
-                textAlign: 'center'
-              }}>
+              <p className={styles.codeHint}>
                 Код отправлен на <br />
-                <strong style={{ color: '#fbbf24' }}>{phoneNumber}</strong>
+                <strong>{phoneNumber}</strong>
               </p>
-
-              <label style={{
-                display: 'block',
-                marginBottom: '8px',
-                color: '#cbd5e1',
-                fontSize: '14px',
-                fontWeight: 'bold'
-              }}>
-                Код из SMS
-              </label>
-
+              <label className={styles.fieldLabel}>Код из SMS</label>
               <input
                 type="text"
+                className={`${styles.input} ${styles.inputCode}`}
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 placeholder="••••••"
                 maxLength={6}
-                style={{
-                  width: '100%',
-                  padding: '16px 20px',
-                  marginBottom: '20px',
-                  borderRadius: '12px',
-                  background: 'rgba(15, 23, 42, 0.8)',
-                  border: '2px solid rgba(71, 85, 105, 0.4)',
-                  color: '#fff',
-                  fontSize: '24px',
-                  textAlign: 'center',
-                  letterSpacing: '8px',
-                  outline: 'none',
-                  transition: 'all 0.3s',
-                  fontWeight: 'bold'
-                }}
-                onFocus={(e) => e.currentTarget.style.borderColor = '#fbbf24'}
-                onBlur={(e) => e.currentTarget.style.borderColor = 'rgba(71, 85, 105, 0.4)'}
               />
-
               <button
+                type="button"
+                className={`${styles.primaryBtn} ${styles.successBtn}`}
                 onClick={handleCodeVerify}
                 disabled={isLoading || !code}
-                style={{
-                  width: '100%',
-                  padding: '16px',
-                  borderRadius: '12px',
-                  background: isLoading || !code
-                    ? 'rgba(75, 85, 99, 0.6)'
-                    : 'linear-gradient(135deg, #10b981, #059669)',
-                  border: '2px solid rgba(16, 185, 129, 0.5)',
-                  color: '#fff',
-                  fontSize: '16px',
-                  fontWeight: 'bold',
-                  cursor: isLoading || !code ? 'not-allowed' : 'pointer',
-                  opacity: isLoading || !code ? 0.6 : 1,
-                  transition: 'all 0.3s',
-                  boxShadow: '0 8px 24px rgba(16, 185, 129, 0.3)'
-                }}
               >
-                {isLoading ? '⏳ ПРОВЕРКА...' : '✅ ВОЙТИ'}
+                {isLoading ? 'Проверка…' : 'Войти'}
               </button>
-
-              <button
-                onClick={handlePhoneAuth}
-                disabled={isLoading}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  marginTop: '12px',
-                  background: 'none',
-                  border: 'none',
-                  color: '#94a3b8',
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                  textDecoration: 'underline'
-                }}
-              >
+              <button type="button" className={styles.resendBtn} onClick={handlePhoneAuth} disabled={isLoading}>
                 Отправить код повторно
               </button>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Footer */}
-        <div style={{
-          marginTop: '32px',
-          paddingTop: '20px',
-          borderTop: '1px solid rgba(71, 85, 105, 0.3)',
-          textAlign: 'center',
-          color: '#64748b',
-          fontSize: '12px'
-        }}>
-          © 2025 P.I.D.R. • Все права защищены
-        </div>
+        <footer className={styles.footer}>
+          © {new Date().getFullYear()} P.I.D.R.
+        </footer>
       </motion.div>
     </div>
   );
 }
-
