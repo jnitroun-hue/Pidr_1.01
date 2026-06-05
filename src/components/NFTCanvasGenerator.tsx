@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
+import { appConfirm } from '@/lib/app-notice';
 
 const SUITS = [
   { value: 'hearts', label: 'Червы', symbol: '♥', color: '#ef4444', gradient: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)' },
@@ -259,7 +260,7 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
       return;
     }
 
-    if (!confirm(`Сгенерировать полную колоду (52 карты) за ${FULL_DECK_COST} монет?\n\nЭто займет несколько минут...`)) {
+    if (!(await appConfirm(`Сгенерировать полную колоду (52 карты) за ${FULL_DECK_COST} монет?\n\nЭто займет несколько минут...`, { confirmText: 'Сгенерировать' }))) {
       return;
     }
 

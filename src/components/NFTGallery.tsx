@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import WalletQuickConnect from '@/components/WalletQuickConnect';
 import { getApiHeaders } from '@/lib/api-headers';
+import { appConfirm } from '@/lib/app-notice';
 import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
 
 interface NFTCard {
@@ -216,7 +217,7 @@ export default function NFTGallery() {
   };
 
   const handleDelete = async (card: NFTCard) => {
-    if (!confirm(`⚠️ Вы уверены, что хотите УДАЛИТЬ эту карту?\n\n${card.rank.toUpperCase()} ${getSuitSymbol(card.suit)}\nТема: ${getRarityLabel(card.rarity)}\n\nЭто действие НЕОБРАТИМО!`)) {
+    if (!(await appConfirm(`⚠️ Вы уверены, что хотите УДАЛИТЬ эту карту?\n\n${card.rank.toUpperCase()} ${getSuitSymbol(card.suit)}\nТема: ${getRarityLabel(card.rarity)}\n\nЭто действие НЕОБРАТИМО!`, { destructive: true, confirmText: 'Удалить', type: 'warning' }))) {
       return;
     }
 

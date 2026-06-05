@@ -22,7 +22,8 @@ export function detectMiniAppContext(): MiniAppContext {
 }
 
 export function getTelegramBotUsername(): string {
-  return process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || 'NotPdr_1_01_bot';
+  const raw = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || 'NotPidrBot';
+  return raw.replace(/^@/, '');
 }
 
 export function buildVkOAuthUrl(redirectUri: string): string | null {

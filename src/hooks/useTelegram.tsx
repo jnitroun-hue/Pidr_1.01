@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import type { TelegramWebApp } from '../types/telegram-webapp'
+import { appAlert, appConfirm } from '@/lib/app-notice'
 
 interface TelegramUser {
   id: number
@@ -125,7 +126,7 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
     if (webApp?.showAlert) {
       webApp.showAlert(message)
     } else {
-      alert(message)
+      void appAlert(message)
     }
   }
 
@@ -133,7 +134,7 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
     if (webApp?.showConfirm) {
       webApp.showConfirm(message, callback)
     } else {
-      callback(confirm(message))
+      void appConfirm(message).then(callback)
     }
   }
 

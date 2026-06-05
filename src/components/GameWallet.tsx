@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { 
   FaCoins, 
@@ -26,6 +26,7 @@ import { MasterWalletService } from '@/lib/wallets/master-wallet-service';
 import styles from './GameWallet.module.css';
 import ConnectedWalletsList from './ConnectedWalletsList';
 import WalletQuickConnect from './WalletQuickConnect';
+import DailyBonusWheelModal from './DailyBonusWheelModal';
 
 interface User {
   id: string;
@@ -110,9 +111,16 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
   const [selectedPayMethod, setSelectedPayMethod] = useState<'bank_card' | 'sberbank' | 'yoo_money' | 'sbp'>('bank_card');
   const [yookassaLoading, setYookassaLoading] = useState(false);
   const [masterAddresses, setMasterAddresses] = useState<any[]>([]);
+  const masterAddressesRef = useRef<any[]>([]);
+  masterAddressesRef.current = masterAddresses;
   const [isGeneratingAddress, setIsGeneratingAddress] = useState(false);
   const [isMonitoringPayments, setIsMonitoringPayments] = useState(false);
   const [bonusAvailable, setBonusAvailable] = useState(true); // Состояние доступности бонуса
+  const [dailyBonusModal, setDailyBonusModal] = useState<{
+    open: boolean;
+    wonAmount: number;
+    newBalance: number;
+  } | null>(null);
   const [isCryptoMenuOpen, setIsCryptoMenuOpen] = useState(false); // Состояние бургер-меню криптовалют
   const [cryptoBalances, setCryptoBalances] = useState<Record<string, number>>({
     TON: 0,
@@ -881,7 +889,11 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
         // Перезагружаем транзакции
         loadTransactions();
         
-        alert(`🎉 ${result.message || `Получен ежедневный бонус +${bonusAmount} монет!`}\n\n💡 Если вас пригласил друг, он получит бонус +500 монет!`);
+        setDailyBonusModal({
+          open: true,
+          wonAmount: bonusAmount,
+          newBalance: newBalance,
+        });
       } else {
         throw new Error(result.message || 'Ошибка получения бонуса');
       }
@@ -1017,7 +1029,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
   };
 
   // 🔥 ИСПРАВЛЕННАЯ генерация адреса через Unified Master Wallet API
-  const generateDepositAddress = async (crypto: string, userId: string): Promise<string> => {
+  const generateDepositAddress = useCallback(async (crypto: string, userId: string): Promise<string> => {
     console.log(`🎯 generateDepositAddress вызвана для ${crypto}, userId: ${userId}`);
     
     if (!userId) {
@@ -1026,14 +1038,12 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
     }
 
     try {
-      setIsGeneratingAddress(true);
       console.log(`🔄 generateDepositAddress: начинаем генерацию для ${crypto}`);
       
-      // Сначала проверяем, есть ли уже адрес для этой монеты
-      let existingAddress = masterAddresses.find(addr => addr.coin === crypto.toUpperCase());
+      const existingAddress = masterAddressesRef.current.find(addr => addr.coin === crypto.toUpperCase());
       console.log(`🔍 generateDepositAddress: проверяем существующие адреса`, { 
         crypto: crypto.toUpperCase(), 
-        masterAddresses: masterAddresses.length,
+        masterAddresses: masterAddressesRef.current.length,
         existingAddress: !!existingAddress 
       });
       
@@ -1042,7 +1052,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
         return existingAddress.address;
       }
 
-      // 🔥 ИСПОЛЬЗУЕМ MASTER АДРЕС НАПРЯМУЮ (без HD деривации)
+      setIsGeneratingAddress(true);
       console.log(`🔄 Получаем Master адрес для ${crypto}...`);
       
       const response = await fetch(`/api/wallet/unified?action=get_master_address&network=${crypto.toUpperCase()}`, {
@@ -1067,7 +1077,6 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
           createdAt: new Date().toISOString()
         };
         
-        // Добавляем в локальный массив
         setMasterAddresses(prev => [...prev, newAddress]);
         console.log(`✅ Master адрес получен для ${crypto}:`, result.address);
         if (result.memo) {
@@ -1075,13 +1084,12 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
         }
         
         return result.address;
-      } else {
-        throw new Error(result.message || 'Не удалось получить адрес');
       }
+
+      throw new Error(result.message || 'Не удалось получить адрес');
     } catch (error) {
       console.error(`❌ Ошибка генерации адреса для ${crypto}:`, error);
       
-      // FALLBACK: Используем старый MasterWalletService
       try {
         console.log(`🔄 Fallback: используем MasterWalletService для ${crypto}...`);
         const paymentInfo = masterWalletService.getPaymentAddress(userId, crypto.toUpperCase());
@@ -1107,7 +1115,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
     } finally {
       setIsGeneratingAddress(false);
     }
-  };
+  }, [masterWalletService]);
 
   // Функция для мониторинга и обновления баланса
   const checkPaymentsAndUpdateBalance = async () => {
@@ -3202,6 +3210,13 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
           }
         }
       `}</style>
+
+      <DailyBonusWheelModal
+        isOpen={Boolean(dailyBonusModal?.open)}
+        wonAmount={dailyBonusModal?.wonAmount || 0}
+        newBalance={dailyBonusModal?.newBalance || 0}
+        onClose={() => setDailyBonusModal(null)}
+      />
     </div>
   );
 }
@@ -3217,32 +3232,39 @@ interface HDAddressDisplayProps {
 function HDAddressDisplay({ crypto = 'TON', userId = '', generateAddress, isGenerating = false }: HDAddressDisplayProps) {
   const [address, setAddress] = useState('Генерируется HD адрес...');
   const [isLoading, setIsLoading] = useState(false);
+  const generateAddressRef = useRef(generateAddress);
+  generateAddressRef.current = generateAddress;
 
   useEffect(() => {
-    if (generateAddress && userId && crypto) {
-      loadAddress();
-    }
-  }, [crypto, userId, generateAddress]);
+    if (!userId || !crypto || !generateAddressRef.current) return;
 
-  const loadAddress = async () => {
-    if (!generateAddress || !userId) {
-      console.log('❌ HDAddressDisplay: отсутствуют параметры', { generateAddress: !!generateAddress, userId });
-      return;
-    }
-    
-    console.log(`🔄 HDAddressDisplay: загружаем адрес для ${crypto}, userId: ${userId}`);
-    setIsLoading(true);
-    try {
-      const addr = await generateAddress(crypto, userId);
-      console.log(`✅ HDAddressDisplay: получен адрес для ${crypto}:`, addr);
-      setAddress(addr);
-    } catch (error) {
-      console.error('❌ HDAddressDisplay: ошибка загрузки адреса:', error);
-      setAddress('Ошибка генерации адреса');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    let cancelled = false;
+
+    const loadAddress = async () => {
+      console.log(`🔄 HDAddressDisplay: загружаем адрес для ${crypto}, userId: ${userId}`);
+      setIsLoading(true);
+      try {
+        const addr = await generateAddressRef.current!(crypto, userId);
+        if (cancelled) return;
+        console.log(`✅ HDAddressDisplay: получен адрес для ${crypto}:`, addr);
+        setAddress(addr);
+      } catch (error) {
+        if (cancelled) return;
+        console.error('❌ HDAddressDisplay: ошибка загрузки адреса:', error);
+        setAddress('Ошибка генерации адреса');
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void loadAddress();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [crypto, userId]);
 
   const copyToClipboard = () => {
     if (address && address !== 'Генерируется HD адрес...' && !address.startsWith('Ошибка')) {

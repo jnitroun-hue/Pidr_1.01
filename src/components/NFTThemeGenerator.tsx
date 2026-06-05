@@ -7,6 +7,7 @@ import { useTonConnectUI, useTonAddress } from '@tonconnect/ui-react';
 import { beginCell, toNano } from '@ton/core';
 import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
 import { getApiHeaders } from '@/lib/api-headers';
+import { appConfirm } from '@/lib/app-notice';
 
 interface NFTThemeGeneratorProps {
   userCoins: number;
@@ -290,7 +291,7 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
       return;
     }
 
-    if (!confirm(`Сгенерировать случайную карту ${themeConfig.name}?\n\nСтоимость: ${themeConfig.singleCost.toLocaleString()} монет`)) {
+    if (!(await appConfirm(`Сгенерировать случайную карту ${themeConfig.name}?\n\nСтоимость: ${themeConfig.singleCost.toLocaleString()} монет`, { confirmText: 'Сгенерировать' }))) {
       return;
     }
 
@@ -409,7 +410,7 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
       return;
     }
 
-    if (!confirm(`Сгенерировать полную колоду ${themeConfig.name}?\n\n52 уникальные карты\nСтоимость: ${themeConfig.deckCost.toLocaleString()} монет`)) {
+    if (!(await appConfirm(`Сгенерировать полную колоду ${themeConfig.name}?\n\n52 уникальные карты\nСтоимость: ${themeConfig.deckCost.toLocaleString()} монет`, { confirmText: 'Сгенерировать колоду' }))) {
       return;
     }
 

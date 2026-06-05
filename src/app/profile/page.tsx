@@ -4,11 +4,13 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Trophy, Medal, Users, User, Star, Award, Target, Camera, Upload, Wallet, Palette, Sparkles, Gift, Frame, LogOut, Shield } from 'lucide-react';
 import GameWallet from '../../components/GameWallet';
+import DailyBonusWheelModal from '../../components/DailyBonusWheelModal';
 import { useLanguage } from '../../components/LanguageSwitcher';
 import { useTranslations } from '../../lib/i18n/translations';
 import { avatarFrames, getRarityColor, getRarityName } from '../../data/avatar-frames';
 import TonWalletConnect from '../../components/TonWalletConnect';
 import { getApiHeaders } from '@/lib/api-headers';
+import { appConfirm } from '@/lib/app-notice';
 
 // Компонент таймера для бонусов
 function BonusCooldownTimer({ bonus, onCooldownEnd }: { bonus: any; onCooldownEnd: () => void }) {
@@ -341,6 +343,11 @@ export default function ProfilePage() {
   }, []);
   const [activeSection, setActiveSection] = useState('stats'); // 'stats', 'achievements', 'wallet'
   const [showModal, setShowModal] = useState<'skins' | 'effects' | 'bonuses' | 'frames' | 'deck' | 'wallet' | null>(null);
+  const [dailyBonusModal, setDailyBonusModal] = useState<{
+    open: boolean;
+    wonAmount: number;
+    newBalance: number;
+  } | null>(null);
   const [selectedSkin, setSelectedSkin] = useState('classic');
   const [selectedEffect, setSelectedEffect] = useState('none');
   const [selectedFrame, setSelectedFrame] = useState('default');
@@ -568,9 +575,9 @@ export default function ProfilePage() {
         window.open(bonus.link, '_blank');
       }
 
-      const shouldContinue = confirm(
-        `Открыл ссылку на ${bonusId === 'telegram_subscribe' ? 'Telegram канал' : 'сообщество ВК'}.\n\n` +
-        'Если подписка уже выполнена, нажмите OK для начисления бонуса сейчас.'
+      const shouldContinue = await appConfirm(
+        `Открыл ссылку на ${bonusId === 'telegram_subscribe' ? 'Telegram канал' : 'сообщество ВК'}.\n\nЕсли подписка уже выполнена, нажмите «Подтвердить» для начисления бонуса сейчас.`,
+        { confirmText: 'Подтвердить', cancelText: 'Позже' }
       );
       if (!shouldContinue) return;
     }
@@ -635,8 +642,16 @@ export default function ProfilePage() {
           detail: { coins: newBalance } 
         }));
         
-        // Показываем уведомление
-        alert(`🎉 ${description}!\nПолучено: ${bonusAmount} монет\nНовый баланс: ${newBalance.toLocaleString()}`);
+        // Показываем модалку с колесом фортуны для ежедневного бонуса
+        if (bonusId === 'daily') {
+          setDailyBonusModal({
+            open: true,
+            wonAmount: bonusAmount,
+            newBalance: newBalance,
+          });
+        } else {
+          alert(`🎉 ${description}!\nПолучено: ${bonusAmount} монет\nНовый баланс: ${newBalance.toLocaleString()}`);
+        }
         
         console.log(`✅ Бонус "${bonusId}" успешно получен через API`);
         
@@ -775,7 +790,7 @@ export default function ProfilePage() {
 
   // ✅ УДАЛЕНИЕ КАРТЫ ИЗ КОЛОДЫ
   const handleRemoveFromDeck = async (deckCardId: number) => {
-    if (!confirm('Удалить эту карту из колоды?')) {
+    if (!(await appConfirm('Удалить эту карту из колоды?', { destructive: true, confirmText: 'Удалить' }))) {
       return;
     }
 
@@ -860,7 +875,10 @@ export default function ProfilePage() {
         return;
       }
       
-      if (!confirm('🔥 Сгенерировать уникальную горящую NFT карту за 20 000 монет?\n\nКарта будет создана и привязана к вашему кошельку (опционально).')) {
+      if (!(await appConfirm(
+        '🔥 Сгенерировать уникальную горящую NFT карту за 20 000 монет?\n\nКарта будет создана и привязана к вашему кошельку (опционально).',
+        { confirmText: 'Сгенерировать', type: 'warning' }
+      ))) {
         return;
       }
 
@@ -2184,6 +2202,13 @@ export default function ProfilePage() {
           </motion.div>
         </div>
       )}
+
+      <DailyBonusWheelModal
+        isOpen={Boolean(dailyBonusModal?.open)}
+        wonAmount={dailyBonusModal?.wonAmount || 0}
+        newBalance={dailyBonusModal?.newBalance || 0}
+        onClose={() => setDailyBonusModal(null)}
+      />
 
     </div>
   );

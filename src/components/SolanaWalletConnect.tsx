@@ -10,6 +10,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import ManualWalletInput from './ManualWalletInput';
 import { getApiHeaders } from '@/lib/api-headers';
+import { appConfirm } from '@/lib/app-notice';
 
 interface SolanaWalletConnectProps {
   onConnect?: (address: string) => void;
@@ -102,9 +103,11 @@ export default function SolanaWalletConnect({ onConnect, onDisconnect, compact =
           
           // Если Phantom не установлен, через 2 секунды предложим скачать
           setTimeout(() => {
-            if (confirm('Phantom кошелек не установлен.\n\nСкачать Phantom?')) {
-              window.open('https://phantom.app/download', '_blank');
-            }
+            void appConfirm('Phantom кошелек не установлен.\n\nСкачать Phantom?', { confirmText: 'Скачать' }).then((ok) => {
+              if (ok) {
+                window.open('https://phantom.app/download', '_blank');
+              }
+            });
           }, 2000);
         }
         

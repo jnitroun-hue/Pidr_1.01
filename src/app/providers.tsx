@@ -9,6 +9,7 @@ import { ChakraProvider } from '@chakra-ui/react'
 import { defaultSystem } from '@chakra-ui/react/preset'
 import OnlineHeartbeat from '../components/OnlineHeartbeat'
 import { LanguageProvider } from '../components/LanguageSwitcher'
+import AppNoticeHost from '../components/AppNoticeHost'
 
 // Add global augmentation for Window to include Telegram
 declare global {
@@ -66,6 +67,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <ThemeProvider>
             <TonConnectProvider>
               <OnlineHeartbeat />
+              <AppNoticeHost />
               {children}
             </TonConnectProvider>
           </ThemeProvider>

@@ -1,4 +1,5 @@
 import { Connection, PublicKey, clusterApiUrl } from '@solana/web3.js';
+import { appConfirm } from '@/lib/app-notice';
 
 // ✅ Определяем, является ли устройство мобильным
 const isMobile = () => {
@@ -44,13 +45,15 @@ export class SolanaWalletConnector {
         
         // Если Phantom не установлен, через 2 секунды предложим скачать
         setTimeout(() => {
-          if (confirm('Phantom кошелек не установлен.\n\nСкачать Phantom?')) {
-            if ((window as any).Telegram?.WebApp?.openLink) {
-              (window as any).Telegram.WebApp.openLink('https://phantom.app/download');
-            } else {
-              window.open('https://phantom.app/download', '_blank');
+          void appConfirm('Phantom кошелек не установлен.\n\nСкачать Phantom?', { confirmText: 'Скачать' }).then((ok) => {
+            if (ok) {
+              if ((window as any).Telegram?.WebApp?.openLink) {
+                (window as any).Telegram.WebApp.openLink('https://phantom.app/download');
+              } else {
+                window.open('https://phantom.app/download', '_blank');
+              }
             }
-          }
+          });
         }, 2000);
       }
       

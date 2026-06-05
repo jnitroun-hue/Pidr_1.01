@@ -1,10 +1,10 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Send, ArrowLeft } from 'lucide-react';
+import { Send, LogIn, ExternalLink } from 'lucide-react';
 import { getTelegramBotUsername } from '@/lib/auth/social-auth';
 import type { TelegramWebAppUser } from '@/types/telegram-webapp';
 import styles from './page.module.css';
@@ -15,25 +15,15 @@ declare global {
   }
 }
 
-const VK_ICON = (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-    <path d="M15.07 2H8.93C3.33 2 2 3.33 2 8.93v6.14C2 20.67 3.33 22 8.93 22h6.14c5.6 0 6.93-1.33 6.93-6.93V8.93C22 3.33 20.67 2 15.07 2zm3.08 14.58h-1.4c-.54 0-.71-.43-1.69-1.41-.86-.82-1.24-.93-1.45-.93-.3 0-.38.09-.38.52v1.29c0 .37-.12.59-1.08.59-1.58 0-3.35-.96-4.59-2.75-1.87-2.66-2.38-4.66-2.38-5.07 0-.23.09-.45.52-.45h1.4c.39 0 .54.18.69.6.75 2.36 2.01 4.4 2.52 4.4.19 0 .28-.09.28-.58V9.48c-.06-1.03-.6-1.12-.6-1.56 0-.2.16-.39.43-.39h2.2c.37 0 .5.2.5.64v3.45c0 .37.17.5.27.5.19 0 .35-.12.7-.47 1.07-1.19 1.84-3.03 1.84-3.03.1-.22.28-.43.67-.43h1.4c.42 0 .51.22.42.52-.18.84-1.93 3.31-1.93 3.31-.15.25-.21.36 0 .64.15.2.65.64 1 1.03.64.74 1.14 1.36 1.27 1.79.14.43-.08.65-.5.65z" />
-  </svg>
-);
-
-const GOOGLE_ICON = (
-  <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden>
-    <path fill="#EA4335" d="M12 10.2v3.6h5.1c-.22 1.2-1.5 3.5-5.1 3.5-3.07 0-5.6-2.54-5.6-5.67S8.93 5.93 12 5.93c1.75 0 2.93.75 3.6 1.4l2.46-2.38C16.56 3.64 14.44 2.8 12 2.8 6.97 2.8 2.8 6.97 2.8 12S6.97 21.2 12 21.2c6.9 0 8.58-4.84 8.58-7.36 0-.5-.06-.87-.13-1.13H12z" />
-  </svg>
-);
+type WidgetStatus = 'loading' | 'ready' | 'error';
 
 export default function AuthPage() {
   const router = useRouter();
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [code, setCode] = useState('');
-  const [step, setStep] = useState<'method' | 'phone' | 'code'>('method');
   const [isLoading, setIsLoading] = useState(false);
   const [redirectPath, setRedirectPath] = useState<string>('/');
+  const [widgetStatus, setWidgetStatus] = useState<WidgetStatus>('loading');
+  const [authError, setAuthError] = useState('');
+  const widgetHostRef = useRef<HTMLDivElement>(null);
   const botUsername = getTelegramBotUsername();
 
   useEffect(() => {
@@ -43,6 +33,11 @@ export default function AuthPage() {
   }, []);
 
   useEffect(() => {
+    const host = widgetHostRef.current;
+    if (!host) return;
+
+    host.innerHTML = '';
+
     const script = document.createElement('script');
     script.src = 'https://telegram.org/js/telegram-widget.js?22';
     script.async = true;
@@ -51,15 +46,27 @@ export default function AuthPage() {
     script.setAttribute('data-radius', '14');
     script.setAttribute('data-request-access', 'write');
     script.setAttribute('data-onauth', 'onTelegramAuth(user)');
+    host.appendChild(script);
 
-    const widgetContainer = document.getElementById('telegram-login-widget');
-    if (widgetContainer) {
-      widgetContainer.innerHTML = '';
-      widgetContainer.appendChild(script);
-    }
+    const checkWidget = () => {
+      const iframe = host.querySelector('iframe');
+      const rawText = host.textContent?.trim().toLowerCase() || '';
+      if (iframe) {
+        setWidgetStatus('ready');
+        return;
+      }
+      if (rawText.includes('invalid') || rawText.includes('bot domain')) {
+        setWidgetStatus('error');
+      }
+    };
+
+    const observer = new MutationObserver(checkWidget);
+    observer.observe(host, { childList: true, subtree: true, characterData: true });
+    const timeout = window.setTimeout(checkWidget, 2500);
 
     window.onTelegramAuth = async (user: TelegramWebAppUser & { auth_date: number; hash: string }) => {
       setIsLoading(true);
+      setAuthError('');
       try {
         const response = await fetch('/api/auth/telegram-login', {
           method: 'POST',
@@ -71,41 +78,21 @@ export default function AuthPage() {
         if (data.success) {
           router.push(redirectPath);
         } else {
-          alert(data.error || 'Ошибка авторизации');
+          setAuthError(data.error || 'Не удалось войти через Telegram');
         }
       } catch {
-        alert('Ошибка авторизации');
+        setAuthError('Ошибка сети при авторизации через Telegram');
       } finally {
         setIsLoading(false);
       }
     };
 
     return () => {
+      observer.disconnect();
+      window.clearTimeout(timeout);
       window.onTelegramAuth = undefined;
     };
   }, [router, redirectPath, botUsername]);
-
-  const handlePhoneAuth = async () => {
-    if (!phoneNumber) return;
-    setIsLoading(true);
-    try {
-      await new Promise((r) => setTimeout(r, 1000));
-      setStep('code');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleCodeVerify = async () => {
-    if (!code) return;
-    setIsLoading(true);
-    try {
-      await new Promise((r) => setTimeout(r, 1000));
-      router.push('/');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   return (
     <div className={styles.page}>
@@ -123,129 +110,70 @@ export default function AuthPage() {
           <p className={styles.subtitle}>Войдите, чтобы играть и сохранять прогресс</p>
         </header>
 
-        <AnimatePresence mode="wait">
-          {step === 'method' && (
-            <motion.div
-              key="method"
-              initial={{ opacity: 0, x: 16 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -16 }}
-              transition={{ duration: 0.25 }}
-            >
-              <div className={styles.telegramBlock}>
-                <div className={styles.telegramLabel}>
-                  <span className={styles.telegramIcon}>
-                    <Send size={18} strokeWidth={2.5} />
-                  </span>
-                  Вход через Telegram
-                </div>
-                <div className={styles.widgetHost} id="telegram-login-widget">
-                  {isLoading && (
-                    <span className={styles.widgetLoading}>Авторизация…</span>
-                  )}
-                </div>
-                <p className={styles.widgetHint}>
-                  Если кнопка не работает — проверьте, что бот @{botUsername} существует и
-                  домен добавлен в BotFather → Domain.
-                </p>
-              </div>
+        <Link href={`/auth/login?redirect=${encodeURIComponent(redirectPath)}`} className={styles.primaryLinkBtn}>
+          <LogIn size={20} />
+          Войти по логину и паролю
+        </Link>
 
-              <div className={styles.divider}>или</div>
+        <div className={styles.divider}>или через Telegram</div>
 
-              <button
-                type="button"
-                className={`${styles.socialBtn} ${styles.vkBtn}`}
-                disabled
-                onClick={() => alert('VK авторизация скоро')}
+        <section className={styles.telegramBlock}>
+          <div className={styles.telegramLabel}>
+            <span className={styles.telegramIcon}>
+              <Send size={18} strokeWidth={2.5} />
+            </span>
+            Быстрый вход через Telegram
+          </div>
+
+          <div
+            ref={widgetHostRef}
+            className={`${styles.widgetHost} ${widgetStatus === 'error' ? styles.widgetHostError : ''}`}
+            aria-live="polite"
+          >
+            {widgetStatus === 'loading' && (
+              <span className={styles.widgetLoading}>Загружаем кнопку Telegram…</span>
+            )}
+            {isLoading && <span className={styles.widgetLoading}>Авторизация…</span>}
+          </div>
+
+          <AnimatePresence>
+            {authError && (
+              <motion.p
+                className={styles.inlineError}
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
               >
-                {VK_ICON}
-                <span>ВКонтакте</span>
-                <span className={styles.badge}>скоро</span>
-              </button>
+                {authError}
+              </motion.p>
+            )}
+          </AnimatePresence>
 
-              <button
-                type="button"
-                className={`${styles.socialBtn} ${styles.googleBtn}`}
-                disabled
-                onClick={() => alert('Google авторизация скоро')}
-              >
-                {GOOGLE_ICON}
-                <span>Google</span>
-                <span className={styles.badge}>скоро</span>
-              </button>
-
-              <Link href="/auth/login" className={styles.altLink}>
-                Войти по логину и паролю →
-              </Link>
-            </motion.div>
-          )}
-
-          {step === 'phone' && (
-            <motion.div
-              key="phone"
-              initial={{ opacity: 0, x: 16 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -16 }}
-            >
-              <button type="button" className={styles.backBtn} onClick={() => setStep('method')}>
-                <ArrowLeft size={16} /> Назад
-              </button>
-              <label className={styles.fieldLabel}>Номер телефона</label>
-              <input
-                type="tel"
-                className={styles.input}
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                placeholder="+7 999 123 45 67"
-              />
-              <button
-                type="button"
-                className={styles.primaryBtn}
-                onClick={handlePhoneAuth}
-                disabled={isLoading || !phoneNumber}
-              >
-                {isLoading ? 'Отправка…' : 'Получить код'}
-              </button>
-            </motion.div>
-          )}
-
-          {step === 'code' && (
-            <motion.div
-              key="code"
-              initial={{ opacity: 0, x: 16 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -16 }}
-            >
-              <button type="button" className={styles.backBtn} onClick={() => setStep('phone')}>
-                <ArrowLeft size={16} /> Назад
-              </button>
-              <p className={styles.codeHint}>
-                Код отправлен на <br />
-                <strong>{phoneNumber}</strong>
+          {widgetStatus === 'error' && (
+            <div className={styles.widgetFallback}>
+              <p className={styles.widgetFallbackText}>
+                Web-виджет Telegram сейчас недоступен для этого домена.
+                Откройте бота в приложении или войдите по логину.
               </p>
-              <label className={styles.fieldLabel}>Код из SMS</label>
-              <input
-                type="text"
-                className={`${styles.input} ${styles.inputCode}`}
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                placeholder="••••••"
-                maxLength={6}
-              />
-              <button
-                type="button"
-                className={`${styles.primaryBtn} ${styles.successBtn}`}
-                onClick={handleCodeVerify}
-                disabled={isLoading || !code}
+              <a
+                href={`https://t.me/${botUsername}?start=web_auth`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.telegramOpenBtn}
               >
-                {isLoading ? 'Проверка…' : 'Войти'}
-              </button>
-              <button type="button" className={styles.resendBtn} onClick={handlePhoneAuth} disabled={isLoading}>
-                Отправить код повторно
-              </button>
-            </motion.div>
+                <ExternalLink size={16} />
+                Открыть @{botUsername}
+              </a>
+            </div>
           )}
-        </AnimatePresence>
+        </section>
+
+        <p className={styles.registerHint}>
+          Нет аккаунта?{' '}
+          <Link href="/auth/register" className={styles.registerLink}>
+            Зарегистрироваться
+          </Link>
+        </p>
 
         <footer className={styles.footer}>
           © {new Date().getFullYear()} P.I.D.R.

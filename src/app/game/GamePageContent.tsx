@@ -30,6 +30,7 @@ import { useTelegram } from '@/hooks/useTelegram';
 import { getCardAssetSrc } from '@/lib/game/cardAssets';
 import { translateGameText } from '@/lib/i18n/gameRuntimeTranslations';
 import { getApiHeaders } from '@/lib/api-headers';
+import { appConfirm } from '@/lib/app-notice';
 import type { TelegramWebAppUser } from '@/types/telegram-webapp';
 
 interface PlayerProfile {
@@ -2095,10 +2096,12 @@ function GamePageContentComponent({
                 🏠 {t.game.home}
               </button>
               <button type="button" className={styles.menuItem} onClick={() => {
-                if (confirm(t.game.confirmQuitGame)) {
-                  endGame();
-                  typeof window !== 'undefined' && window.history.back();
-                }
+                void appConfirm(t.game.confirmQuitGame, { destructive: true, confirmText: t.game.leaveGame || 'Выйти' }).then((confirmed) => {
+                  if (confirmed) {
+                    endGame();
+                    typeof window !== 'undefined' && window.history.back();
+                  }
+                });
               }}>
                 🚪 {t.game.leaveGame}
               </button>

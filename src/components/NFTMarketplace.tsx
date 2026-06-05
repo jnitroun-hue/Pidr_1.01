@@ -5,6 +5,7 @@ import { ShoppingCart, DollarSign, Package, TrendingUp, Filter, Search, X, Check
 import Image from 'next/image';
 import { BuyTab, SellTab, MyNFTsTab, SellModal } from './MarketplaceTabs';
 import { getApiHeaders } from '@/lib/api-headers';
+import { appConfirm } from '@/lib/app-notice';
 import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
 
 // Типы
@@ -244,7 +245,7 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
         return;
       }
 
-      if (!confirm(`Купить эту карту за ${listing.price_coins} монет?`)) {
+      if (!(await appConfirm(`Купить эту карту за ${listing.price_coins} монет?`, { confirmText: 'Купить' }))) {
         return;
       }
 
@@ -280,7 +281,7 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
       const currency = listing.price_ton ? 'TON' : 'SOL';
       const amount = listing.price_ton || listing.price_sol;
 
-      if (!confirm(`Купить эту карту за ${amount} ${currency}?\n\nВы будете перенаправлены в ${currency === 'TON' ? 'Tonkeeper' : 'Phantom'} кошелёк для оплаты.`)) {
+      if (!(await appConfirm(`Купить эту карту за ${amount} ${currency}?\n\nВы будете перенаправлены в ${currency === 'TON' ? 'Tonkeeper' : 'Phantom'} кошелёк для оплаты.`, { confirmText: 'Перейти к оплате' }))) {
         return;
       }
 
@@ -318,8 +319,9 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
           const sinceUnix = Math.floor(Date.now() / 1000) - 120;
 
           if (
-            confirm(
-              `После оплаты ${amount} ${currency} в кошельке нажмите OK — проверим перевод и передадим карту.`
+            await appConfirm(
+              `После оплаты ${amount} ${currency} в кошельке нажмите «Подтвердить» — проверим перевод и передадим карту.`,
+              { confirmText: 'Я оплатил' }
             )
           ) {
             setLoading(true);
@@ -364,7 +366,7 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
         alert('Ошибка при покупке');
       }
     } else if (listing.price_rub) {
-      if (!confirm(`Купить за ${listing.price_rub} ₽ через ЮКассу?\n\nОткроется оплата (способ задан продавцом при выставлении лота).`)) {
+      if (!(await appConfirm(`Купить за ${listing.price_rub} ₽ через ЮКассу?\n\nОткроется оплата (способ задан продавцом при выставлении лота).`, { confirmText: 'Оплатить' }))) {
         return;
       }
       try {
@@ -427,9 +429,10 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
         }
 
         if (
-          !confirm(
-            `💰 Оплата за NFT придёт на ваш ${sellCrypto} кошелёк:\n\n${checkData.wallet.wallet_address}\n\nПродолжить?`
-          )
+          !(await appConfirm(
+            `💰 Оплата за NFT придёт на ваш ${sellCrypto} кошелёк:\n\n${checkData.wallet.wallet_address}\n\nПродолжить?`,
+            { confirmText: 'Продолжить' }
+          ))
         ) {
           return;
         }
@@ -500,7 +503,7 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
   };
 
   const handleDeleteNFT = async (nft: NFTCard) => {
-    if (!confirm(`⚠️ Вы уверены, что хотите УДАЛИТЬ эту карту?\n\n${nft.rank.toUpperCase()} ${getSuitSymbol(nft.suit)}\n\nЭто действие НЕОБРАТИМО!`)) {
+    if (!(await appConfirm(`⚠️ Вы уверены, что хотите УДАЛИТЬ эту карту?\n\n${nft.rank.toUpperCase()} ${getSuitSymbol(nft.suit)}\n\nЭто действие НЕОБРАТИМО!`, { destructive: true, confirmText: 'Удалить', type: 'warning' }))) {
       return;
     }
 
@@ -532,7 +535,7 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
   };
 
   const handleCancelListing = async (listingId: number) => {
-    if (!confirm('Снять карту с продажи?')) {
+    if (!(await appConfirm('Снять карту с продажи?', { confirmText: 'Снять' }))) {
       return;
     }
 

@@ -148,11 +148,22 @@
   border-radius: 14px;
   background: rgba(0, 136, 204, 0.08);
   border: 1px solid rgba(0, 136, 204, 0.25);
+  overflow: hidden;
+}
+
+.widgetHostError {
+  display: none;
 }
 
 .widgetHost :global(iframe) {
   border-radius: 10px !important;
   max-width: 100%;
+}
+
+/* Скрываем сырой текст ошибки Telegram widget ("Username invalid") */
+.widgetHost:not(:has(:global(iframe))) {
+  color: transparent;
+  font-size: 0;
 }
 
 .widgetLoading {
@@ -161,15 +172,88 @@
   font-weight: 500;
 }
 
-.widgetHint {
-  margin-top: 10px;
+.widgetFallback {
+  margin-top: 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(100, 116, 139, 0.35);
+}
+
+.widgetFallbackText {
+  margin: 0 0 12px;
+  color: #94a3b8;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.telegramOpenBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #229ed9, #0088cc);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.telegramOpenBtn:hover {
+  opacity: 0.92;
+}
+
+.primaryLinkBtn {
+  width: 100%;
+  min-height: 52px;
+  padding: 14px 20px;
+  border-radius: 14px;
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: #0f172a;
+  font-size: 16px;
+  font-weight: 700;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 8px 28px rgba(251, 191, 36, 0.28);
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.primaryLinkBtn:hover {
+  opacity: 0.95;
+}
+
+.inlineError {
+  margin: 10px 0 0;
   padding: 10px 12px;
   border-radius: 10px;
-  background: rgba(239, 68, 68, 0.08);
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
   color: #fca5a5;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.45;
+}
+
+.registerHint {
+  margin-top: 22px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.registerLink {
+  color: #fbbf24;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.registerLink:hover {
+  text-decoration: underline;
 }
 
 .socialBtn {
@@ -226,17 +310,7 @@
 }
 
 .altLink {
-  display: block;
-  margin-top: 20px;
-  text-align: center;
-  color: #94a3b8;
-  font-size: 14px;
-  text-decoration: none;
-  transition: color 0.2s;
-}
-
-.altLink:hover {
-  color: #fbbf24;
+  display: none;
 }
 
 .footer {
