@@ -8,6 +8,7 @@ import LoserModal from '../../components/LoserModal';
 import GameResultsModal from '../../components/GameResultsModal';
 import PenaltyDeckModal from '../../components/PenaltyDeckModal';
 import TutorialModal from '../../components/TutorialModal';
+import PremiumAvatarFire from '../../components/PremiumAvatarFire';
 import { useTutorial } from '../../hooks/useTutorial';
 import styles from './GameTable.module.css';
 // Генераторы перенесены в отдельный проект pidr_generators
@@ -311,6 +312,7 @@ function GamePageContentComponent({
     avatar?: string;
     username?: string;
     telegramId?: string;
+    isPremium?: boolean;
   } | null>(null);
   const [isLoadingUserData, setIsLoadingUserData] = useState(true);
 
@@ -659,12 +661,21 @@ function GamePageContentComponent({
         const result = await response.json();
         
         if (result.success && result.user) {
-          console.log('✅ Данные пользователя загружены из БД:', result.user);
+          console.log('✅ Данные пользователя загрузлены из БД:', result.user);
+          let isPremium = result.user.is_premium || false;
+          try {
+            const premRes = await fetch('/api/premium/status', { credentials: 'include' });
+            if (premRes.ok) {
+              const premData = await premRes.json();
+              if (premData.success) isPremium = premData.premium?.isPremium || isPremium;
+            }
+          } catch { /* ignore */ }
           setUserData({
             coins: result.user.coins || 0,
             avatar: result.user.avatar_url || '',
             username: result.user.username || result.user.firstName || username || 'Игрок',
-            telegramId: result.user.telegramId || telegramId
+            telegramId: result.user.telegramId || telegramId,
+            isPremium,
           });
         } else {
           console.warn('⚠️ Пользователь не найден в БД, используем дефолтные данные');
@@ -1792,13 +1803,14 @@ function GamePageContentComponent({
         // Для мультиплеера
         startGame('multiplayer', playerCount, null, {
           avatar: userData.avatar,
-          username: userData.username
+          username: userData.username,
+          isPremium: userData.isPremium,
         });
       } else {
-        // Для одиночной игры
         startGame('single', playerCount, null, {
           avatar: userData.avatar,
-          username: userData.username
+          username: userData.username,
+          isPremium: userData.isPremium,
         });
       }
       setGameInitialized(true);
@@ -2642,6 +2654,7 @@ function GamePageContentComponent({
                             }} />
                           </>
                         )}
+                        <PremiumAvatarFire size={28} active={!!player.isPremium}>
                         <img 
                         src={playerAvatars[player.id] || player.avatar || '/img/player-avatar.svg'}
                         alt={player.name}
@@ -2652,14 +2665,17 @@ function GamePageContentComponent({
                             borderRadius: '50%',
                             boxShadow: isCurrentTurn 
                               ? '0 0 15px rgba(34, 197, 94, 1), 0 0 30px rgba(34, 197, 94, 0.6), 0 0 45px rgba(34, 197, 94, 0.3)'
-                              : '0 1px 4px rgba(0, 0, 0, 0.3)',
-                            border: `${isCurrentTurn ? '3px' : '1px'} solid ${isCurrentTurn ? '#22c55e' : 'rgba(255, 255, 255, 0.2)'}`,
+                              : player.isPremium
+                                ? '0 0 10px rgba(56, 189, 248, 0.8)'
+                                : '0 1px 4px rgba(0, 0, 0, 0.3)',
+                            border: `${isCurrentTurn ? '3px' : '1px'} solid ${isCurrentTurn ? '#22c55e' : player.isPremium ? '#38bdf8' : 'rgba(255, 255, 255, 0.2)'}`,
                             transition: 'all 0.3s ease',
                             objectFit: 'cover',
                             position: 'relative',
                             zIndex: 5
                           }}
                           />
+                        </PremiumAvatarFire>
                       {player.isBot && (
                         <div className={styles.botBadge}>🤖</div>
                         )}

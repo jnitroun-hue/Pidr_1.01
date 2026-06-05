@@ -86,7 +86,9 @@ export async function GET(req: NextRequest) {
         best_win_streak: user.best_win_streak || 0,
         status: user.status,
         created_at: user.created_at,
-        is_admin: user.is_admin || false // ✅ ДОБАВЛЕНО: is_admin
+        is_admin: user.is_admin || false,
+        is_premium: user.is_premium || false,
+        premium_expires_at: user.premium_expires_at || null,
       }
     });
   } catch (error: unknown) {

@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase, supabaseAdmin } from '@/lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 import { NFT_CARDS_TABLE, NFT_STORAGE_BUCKET } from '@/lib/nft/constants';
+import {
+  applyPremiumDiscount,
+  getPremiumDiscountPercent,
+  getPremiumStatus,
+} from '@/lib/premium/premium-service';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -56,15 +61,22 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { action, suit, rank, rankCost, suitCost, totalCost, imageData } = body;
 
+    const premiumStatus = await getPremiumStatus(userIdBigInt);
+    const baseCost = totalCost || 0;
+    const discountPercent = premiumStatus.isPremium
+      ? getPremiumDiscountPercent(rank?.toLowerCase() || 'common')
+      : 0;
+    const finalCost = premiumStatus.isPremium ? applyPremiumDiscount(baseCost, discountPercent) : baseCost;
+
     // Проверяем баланс пользователя
-    if (dbUser.coins < totalCost) {
+    if (dbUser.coins < finalCost) {
       return NextResponse.json({ success: false, error: 'Недостаточно монет' }, { status: 400 });
     }
 
     // Списываем монеты
     const { error: deductError } = await supabaseAdmin
       .from('_pidr_users')
-      .update({ coins: dbUser.coins - totalCost })
+      .update({ coins: dbUser.coins - finalCost })
       .eq('id', userIdBigInt);
 
     if (deductError) {
@@ -116,7 +128,7 @@ export async function POST(req: NextRequest) {
         rank,
         image_url: imageUrl,
         storage_path: fileName,
-        cost: totalCost,
+        cost: finalCost,
         payment_method: 'coins',
         created_at: new Date().toISOString()
       }])
@@ -138,7 +150,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const newBalance = dbUser.coins - totalCost;
+    const newBalance = dbUser.coins - finalCost;
 
     return NextResponse.json({
       success: true,

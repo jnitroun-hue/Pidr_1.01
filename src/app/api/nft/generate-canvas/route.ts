@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase, supabaseAdmin } from '@/lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 import { NFT_CARDS_TABLE, NFT_STORAGE_BUCKET } from '@/lib/nft/constants';
+import {
+  applyPremiumDiscount,
+  getPremiumDiscountPercent,
+  getPremiumStatus,
+} from '@/lib/premium/premium-service';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -67,7 +72,14 @@ export async function POST(request: NextRequest) {
     const suitCost = SUIT_COSTS[suit?.toLowerCase()] || 500;
     const cardCost = rankCost + suitCost;
     
-    const cost = action === 'full_deck' ? FULL_DECK_COST : (action === 'deck_card' ? 0 : cardCost);
+    const premiumStatus = await getPremiumStatus(userIdBigInt);
+    const discountPercent = premiumStatus.isPremium
+      ? getPremiumDiscountPercent(rank?.toLowerCase() || rarity || 'common')
+      : 0;
+    
+    const cost = action === 'full_deck'
+      ? (premiumStatus.isPremium ? applyPremiumDiscount(FULL_DECK_COST, 25) : FULL_DECK_COST)
+      : (action === 'deck_card' ? 0 : applyPremiumDiscount(cardCost, discountPercent));
 
     console.log('🎴 [NFT Canvas] Данные:', { 
       userId, 

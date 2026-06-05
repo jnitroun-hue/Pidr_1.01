@@ -4,6 +4,9 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, TrendingUp, DollarSign, Users, Sparkles, ShieldCheck, TimerReset, Percent } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import NFTMarketplace from '../../components/NFTMarketplace';
+import PremiumPromoBanner from '../../components/PremiumPromoBanner';
+import PremiumPurchaseModal from '../../components/PremiumPurchaseModal';
+import type { PremiumStatus } from '@/lib/premium/premium-service';
 import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
 
 interface User {
@@ -51,6 +54,8 @@ export default function ShopPage() {
   const [canClaimPromo, setCanClaimPromo] = useState(true);
   const [claimRemainingMs, setClaimRemainingMs] = useState(0);
   const [promoCooldownLabel, setPromoCooldownLabel] = useState('00:00:00');
+  const [premium, setPremium] = useState<PremiumStatus | null>(null);
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [stats, setStats] = useState({
     totalListings: 0,
     totalSales: 0,
@@ -106,6 +111,11 @@ export default function ShopPage() {
         
         if (data.success && data.user) {
           setUser(data.user);
+        }
+        const premRes = await fetch('/api/premium/status', { credentials: 'include', headers: getApiHeaders() });
+        if (premRes.ok) {
+          const premData = await premRes.json();
+          if (premData.success) setPremium(premData.premium);
         }
       } catch (error) {
         console.error('Ошибка загрузки пользователя:', error);
@@ -359,6 +369,12 @@ export default function ShopPage() {
           </div>
         </motion.div>
 
+        <PremiumPromoBanner
+          premium={premium}
+          compact
+          onOpenPurchase={() => setShowPremiumModal(true)}
+        />
+
         {/* Daily promo */}
         {dailyPromo && (
           <motion.div
@@ -488,6 +504,25 @@ export default function ShopPage() {
           />
         </div>
       </div>
+
+      <PremiumPurchaseModal
+        open={showPremiumModal}
+        onClose={() => setShowPremiumModal(false)}
+        userCoins={user?.coins || 0}
+        premium={premium}
+        onSuccess={async () => {
+          const premRes = await fetch('/api/premium/status', { credentials: 'include' });
+          if (premRes.ok) {
+            const d = await premRes.json();
+            if (d.success) setPremium(d.premium);
+          }
+          const meRes = await fetch('/api/user/me', { credentials: 'include' });
+          if (meRes.ok) {
+            const me = await meRes.json();
+            if (me.success) setUser(me.user);
+          }
+        }}
+      />
 
       {/* Animated Background */}
       <style jsx>{`

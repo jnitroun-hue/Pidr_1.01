@@ -5,6 +5,9 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Trophy, Medal, Users, User, Star, Award, Target, Camera, Upload, Wallet, Palette, Sparkles, Gift, Frame, LogOut, Shield } from 'lucide-react';
 import GameWallet from '../../components/GameWallet';
 import DailyBonusWheelModal from '../../components/DailyBonusWheelModal';
+import PremiumPromoBanner from '../../components/PremiumPromoBanner';
+import PremiumPurchaseModal from '../../components/PremiumPurchaseModal';
+import type { PremiumStatus } from '@/lib/premium/premium-service';
 import { useLanguage } from '../../components/LanguageSwitcher';
 import { useTranslations } from '../../lib/i18n/translations';
 import { avatarFrames, getRarityColor, getRarityName } from '../../data/avatar-frames';
@@ -110,6 +113,8 @@ export default function ProfilePage() {
 
   const [user, setUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [premium, setPremium] = useState<PremiumStatus | null>(null);
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
 
   const [avatarUrl, setAvatarUrl] = useState('😎');
 
@@ -202,6 +207,14 @@ export default function ProfilePage() {
             gamesPlayed: userData.gamesPlayed,
             wins: userData.wins
           });
+
+          try {
+            const premRes = await fetch('/api/premium/status', { credentials: 'include', headers: apiHeaders });
+            if (premRes.ok) {
+              const premData = await premRes.json();
+              if (premData.success) setPremium(premData.premium);
+            }
+          } catch { /* ignore */ }
         } else {
           console.error('❌ Пользователь не авторизован');
         }
@@ -1384,6 +1397,11 @@ export default function ProfilePage() {
           </motion.button>
         </div>
 
+        <PremiumPromoBanner
+          premium={premium}
+          onOpenPurchase={() => setShowPremiumModal(true)}
+        />
+
         {/* СТАТИСТИКА — всегда видна inline */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
@@ -2207,6 +2225,25 @@ export default function ProfilePage() {
         wonAmount={dailyBonusModal?.wonAmount || 0}
         newBalance={dailyBonusModal?.newBalance || 0}
         onClose={() => setDailyBonusModal(null)}
+      />
+
+      <PremiumPurchaseModal
+        open={showPremiumModal}
+        onClose={() => setShowPremiumModal(false)}
+        userCoins={user?.coins || 0}
+        premium={premium}
+        onSuccess={async () => {
+          const premRes = await fetch('/api/premium/status', { credentials: 'include' });
+          if (premRes.ok) {
+            const d = await premRes.json();
+            if (d.success) setPremium(d.premium);
+          }
+          const meRes = await fetch('/api/user/me', { credentials: 'include' });
+          if (meRes.ok) {
+            const me = await meRes.json();
+            if (me.success) setUser((p: any) => p ? { ...p, coins: me.user.coins } : p);
+          }
+        }}
       />
 
     </div>

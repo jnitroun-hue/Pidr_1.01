@@ -31,6 +31,7 @@ export interface Player {
   isCurrentPlayer: boolean
   isUser?: boolean // Является ли игрок пользователем
   isBot?: boolean // Является ли игрок ботом
+  isPremium?: boolean // Premium — голубое пламя вокруг аватара
   difficulty?: 'easy' | 'medium' | 'hard' // Сложность бота
   isWinner?: boolean // Является ли игрок победителем (для зрителей)
   finishTime?: number // ✅ Время выхода игрока (timestamp) для правильного определения мест
@@ -230,7 +231,7 @@ interface GameState {
   } | null
   
   // Действия игры
-  startGame: (mode: 'single' | 'multiplayer', playersCount?: number, multiplayerConfig?: MultiplayerConfig | null, userInfo?: { avatar?: string; username?: string }) => Promise<void>
+  startGame: (mode: 'single' | 'multiplayer', playersCount?: number, multiplayerConfig?: MultiplayerConfig | null, userInfo?: { avatar?: string; username?: string; isPremium?: boolean }) => Promise<void>
   endGame: () => void
   playCard: (cardId: string) => void
   drawCard: () => void
@@ -399,7 +400,7 @@ export const useGameStore = create<GameState>()(
       
       // Система рейтинга и результатов
       eliminationOrder: [],
-      isRankedGame: false,
+      isRankedGame: true,
       statsUpdatedThisGame: false, // ✅ Изначально не обновлена
       showVictoryModal: false,
       victoryData: null,
@@ -527,6 +528,10 @@ export const useGameStore = create<GameState>()(
         } catch (error: unknown) {
           console.error('❌ Ошибка загрузки игрока:', error);
         }
+
+        if (userInfo?.avatar) userAvatar = userInfo.avatar;
+        if (userInfo?.username) userName = userInfo.username;
+        const userIsPremium = userInfo?.isPremium === true;
         
         // ✅ ЗАГРУЖАЕМ NFT КАРТЫ ИЗ КОЛОДЫ (Telegram + web через cookies)
         try {
@@ -629,6 +634,7 @@ export const useGameStore = create<GameState>()(
             isCurrentPlayer: i === 0,
             isUser: !playerInfo.isBot,
             isBot: playerInfo.isBot,
+            isPremium: !playerInfo.isBot && userIsPremium,
             difficulty: playerInfo.difficulty
           };
           

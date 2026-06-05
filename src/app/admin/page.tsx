@@ -26,7 +26,8 @@ import {
   Swords,
   Bot,
   Play,
-  UserPlus
+  UserPlus,
+  Gift
 } from 'lucide-react';
 
 interface User {
@@ -47,7 +48,7 @@ interface User {
   updated_at: string;
 }
 
-type TabType = 'users' | 'promocodes' | 'transactions' | 'card-generator' | 'rooms' | 'rating' | 'online-game';
+type TabType = 'users' | 'promocodes' | 'transactions' | 'card-generator' | 'rooms' | 'rating' | 'rating-prizes' | 'online-game';
 
 export default function AdminPanel() {
   const router = useRouter();
@@ -122,6 +123,10 @@ export default function AdminPanel() {
   const [ratingPage, setRatingPage] = useState(1);
   const [ratingTotalPages, setRatingTotalPages] = useState(1);
   const [ratingLoading, setRatingLoading] = useState(false);
+
+  const [ratingPrizes, setRatingPrizes] = useState<any[]>([]);
+  const [ratingPrizesLoading, setRatingPrizesLoading] = useState(false);
+  const [markingPrizeId, setMarkingPrizeId] = useState<number | null>(null);
 
   // Проверка прав администратора
   useEffect(() => {
@@ -346,6 +351,42 @@ export default function AdminPanel() {
     }
   };
 
+  const loadRatingPrizes = async () => {
+    setRatingPrizesLoading(true);
+    try {
+      const response = await fetch('/api/admin/rating-prizes?status=pending', { credentials: 'include' });
+      const data = await response.json();
+      if (data.success) setRatingPrizes(data.prizes || []);
+    } catch (error) {
+      console.error('❌ Ошибка загрузки призов:', error);
+    } finally {
+      setRatingPrizesLoading(false);
+    }
+  };
+
+  const markPrizePaid = async (id: number) => {
+    const txHash = prompt('Хеш TON-транзакции (опционально):') || '';
+    setMarkingPrizeId(id);
+    try {
+      const response = await fetch('/api/admin/rating-prizes', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ id, payoutTxHash: txHash || undefined }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        await loadRatingPrizes();
+      } else {
+        alert('❌ ' + (data.error || 'Ошибка'));
+      }
+    } catch {
+      alert('❌ Ошибка сети');
+    } finally {
+      setMarkingPrizeId(null);
+    }
+  };
+
   // Загрузка данных при смене таба
   useEffect(() => {
     if (isAdmin) {
@@ -353,6 +394,7 @@ export default function AdminPanel() {
       if (activeTab === 'transactions') loadTransactions();
       if (activeTab === 'rooms') loadRooms();
       if (activeTab === 'rating') loadRating();
+      if (activeTab === 'rating-prizes') loadRatingPrizes();
     }
   }, [activeTab, isAdmin]);
 
@@ -503,6 +545,7 @@ export default function AdminPanel() {
             { key: 'card-generator' as TabType, label: 'Карты', icon: Sparkles },
             { key: 'rooms' as TabType, label: 'Комнаты', icon: Home },
             { key: 'rating' as TabType, label: 'Рейтинг', icon: Trophy },
+            { key: 'rating-prizes' as TabType, label: 'Призы TON', icon: Gift },
             { key: 'online-game' as TabType, label: 'Онлайн', icon: Swords },
           ]).map(({ key, label, icon: Icon }) => {
             const isActive = activeTab === key;
@@ -1473,6 +1516,86 @@ export default function AdminPanel() {
                   </div>
                 )}
               </>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'rating-prizes' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+              <h2 style={{ color: '#e2e8f0', fontSize: '24px', fontWeight: '700', margin: 0 }}>
+                🏆 TON-призы рейтинга (ручная выплата)
+              </h2>
+              <motion.button
+                onClick={loadRatingPrizes}
+                whileTap={{ scale: 0.96 }}
+                style={{
+                  padding: '8px 14px', borderRadius: '8px', cursor: 'pointer',
+                  background: 'rgba(56, 189, 248, 0.15)', border: '1px solid rgba(56, 189, 248, 0.4)',
+                  color: '#7dd3fc', display: 'flex', alignItems: 'center', gap: '6px',
+                }}
+              >
+                <RefreshCw size={16} /> Обновить
+              </motion.button>
+            </div>
+
+            {ratingPrizesLoading ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>Загрузка…</div>
+            ) : ratingPrizes.length === 0 ? (
+              <div style={{
+                padding: '32px', textAlign: 'center', color: '#64748b',
+                background: 'rgba(15,23,42,0.6)', borderRadius: '16px',
+                border: '1px solid rgba(100,116,139,0.2)',
+              }}>
+                Нет ожидающих TON-призов
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {ratingPrizes.map((prize: any) => (
+                  <div
+                    key={prize.id}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: isTablet ? '1fr' : '1fr 1fr 1fr auto',
+                      gap: '12px', alignItems: 'center',
+                      padding: '16px', borderRadius: '12px',
+                      background: 'rgba(15, 23, 42, 0.7)',
+                      border: '1px solid rgba(56, 189, 248, 0.25)',
+                    }}
+                  >
+                    <div>
+                      <div style={{ color: '#e2e8f0', fontWeight: 700 }}>{prize.username}</div>
+                      <div style={{ color: '#64748b', fontSize: '12px' }}>
+                        #{prize.place} место · {prize.weekKey}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ color: '#38bdf8', fontWeight: 800, fontSize: '18px' }}>{prize.amount} TON</div>
+                      <div style={{ color: '#94a3b8', fontSize: '11px', wordBreak: 'break-all' }}>
+                        {prize.wallet_address === 'pending' ? '⚠️ Кошелёк не подключён' : prize.wallet_address}
+                      </div>
+                    </div>
+                    <div style={{ color: '#94a3b8', fontSize: '12px' }}>
+                      {prize.status === 'awaiting_wallet' ? 'Ждёт кошелёк' : 'К выплате'}
+                      <br />
+                      {new Date(prize.created_at).toLocaleString('ru-RU')}
+                    </div>
+                    <motion.button
+                      onClick={() => markPrizePaid(prize.id)}
+                      disabled={markingPrizeId === prize.id}
+                      whileTap={{ scale: 0.96 }}
+                      style={{
+                        padding: '10px 16px', borderRadius: '10px', border: 'none', cursor: 'pointer',
+                        background: 'linear-gradient(135deg, #0284c7, #6366f1)',
+                        color: '#fff', fontWeight: 700, fontSize: '13px', whiteSpace: 'nowrap',
+                        opacity: markingPrizeId === prize.id ? 0.6 : 1,
+                      }}
+                    >
+                      {markingPrizeId === prize.id ? '…' : '✓ Выплачено'}
+                    </motion.button>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         )}

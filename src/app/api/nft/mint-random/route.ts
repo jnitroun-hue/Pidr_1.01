@@ -1,25 +1,25 @@
 /**
  * POST /api/nft/mint-random
- * Рандомная генерация NFT карты (0.5 TON или 0.1 SOL комиссия)
- * Вероятности: Common (60%), Rare (25%), Epic (15%)
+ * Рандомная генерация NFT карты (0.5 TON или 0.1 SOL; Premium: 1 free/week)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '../../../../lib/auth/auth-middleware';
 import { createClient } from '@supabase/supabase-js';
+import {
+  consumeFreeRandomGeneration,
+  getPremiumStatus,
+} from '@/lib/premium/premium-service';
 
-// ✅ Явная конфигурация runtime для Next.js 15
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
-    // Ленивая инициализация Supabase
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!supabaseUrl || !supabaseKey) {
-      console.error('❌ [mint-random] Supabase не настроен');
       return NextResponse.json(
         { success: false, error: 'Supabase не настроен. Обратитесь к администратору.' },
         { status: 500 }
@@ -37,41 +37,40 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { wallet_address, network } = body; // network: 'TON' или 'SOL'
+    const { wallet_address, network, useFreePremium } = body;
 
-    if (!wallet_address) {
+    const dbUserId = parseInt(String(authContext.userId), 10);
+    const premiumStatus = !Number.isNaN(dbUserId)
+      ? await getPremiumStatus(dbUserId)
+      : null;
+
+    const wantsFree = useFreePremium === true && premiumStatus?.freeRandomAvailable;
+
+    if (!wantsFree && !wallet_address) {
       return NextResponse.json(
-        { success: false, message: 'wallet_address обязателен' },
+        { success: false, message: 'wallet_address обязателен (или используйте бесплатную Premium генерацию)' },
         { status: 400 }
       );
     }
 
-    // Генерируем случайную карту
     const suits = ['hearts', 'diamonds', 'clubs', 'spades'] as const;
     const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
-    
+
     const randomSuit = suits[Math.floor(Math.random() * suits.length)];
     const randomRank = ranks[Math.floor(Math.random() * ranks.length)];
-    
-    // Определяем редкость: Common (60%), Rare (25%), Epic (15%)
+
     const rarityRoll = Math.random() * 100;
     let rarity: string;
-    if (rarityRoll < 60) {
-      rarity = 'common';
-    } else if (rarityRoll < 85) {
-      rarity = 'rare';
-    } else {
-      rarity = 'epic';
-    }
+    if (rarityRoll < 60) rarity = 'common';
+    else if (rarityRoll < 85) rarity = 'rare';
+    else rarity = 'epic';
 
-    // Цены в зависимости от сети
-    const mintPrice = network === 'SOL' ? 0.1 : 0.5; // SOL дешевле
+    const mintPrice = wantsFree ? 0 : (network === 'SOL' ? 0.1 : 0.5);
     const commission = mintPrice;
-    const masterWalletAddress = network === 'SOL' 
-      ? process.env.MASTER_SOLANA_ADDRESS 
+    const masterWalletAddress = network === 'SOL'
+      ? process.env.MASTER_SOLANA_ADDRESS
       : process.env.MASTER_TON_ADDRESS;
 
-    // Создаем запись NFT в БД
     const { data: nftData, error: nftError } = await supabase
       .from('_pidr_nft_ownership')
       .insert({
@@ -79,8 +78,8 @@ export async function POST(request: NextRequest) {
         rank: randomRank,
         suit: randomSuit,
         rarity,
-        mint_type: 'random',
-        wallet_address,
+        mint_type: wantsFree ? 'random_premium_free' : 'random',
+        wallet_address: wallet_address || null,
         network: network || 'TON',
         minted_at: new Date().toISOString(),
       })
@@ -89,52 +88,44 @@ export async function POST(request: NextRequest) {
 
     if (nftError || !nftData) {
       console.error('❌ Ошибка создания NFT:', nftError);
-      return NextResponse.json(
-        { success: false, error: 'Ошибка создания NFT' },
-        { status: 500 }
-      );
+      return NextResponse.json({ success: false, error: 'Ошибка создания NFT' }, { status: 500 });
     }
 
-    // Записываем историю минта
-    await supabase
-      .from('_pidr_nft_mint_history')
-      .insert({
-        user_id: authContext.userId,
-        nft_id: nftData.id,
-        wallet_address,
-        mint_type: 'random',
-        mint_price_ton: network === 'TON' ? mintPrice : 0,
-        mint_price_sol: network === 'SOL' ? mintPrice : 0,
-        commission_paid_ton: network === 'TON' ? commission : 0,
-        commission_paid_sol: network === 'SOL' ? commission : 0,
-        master_wallet_address: masterWalletAddress,
-        network: network || 'TON',
-        status: 'completed',
-        minted_at: new Date().toISOString(),
-      });
+    if (wantsFree && !Number.isNaN(dbUserId)) {
+      await consumeFreeRandomGeneration(dbUserId, nftData.id);
+    }
 
-    console.log(`✅ Случайная NFT карта создана: ${randomRank} of ${randomSuit} (${rarity})`);
-    
-    return NextResponse.json({
-      success: true,
-      nft: {
-        id: nftData.id,
-        rank: randomRank,
-        suit: randomSuit,
-        rarity,
-      },
-      mint_price: mintPrice,
-      network: network || 'TON',
+    await supabase.from('_pidr_nft_mint_history').insert({
+      user_id: authContext.userId,
+      nft_id: nftData.id,
+      wallet_address: wallet_address || 'premium_free',
+      mint_type: wantsFree ? 'random_premium_free' : 'random',
+      mint_price_ton: network === 'TON' ? mintPrice : 0,
+      mint_price_sol: network === 'SOL' ? mintPrice : 0,
+      commission_paid_ton: network === 'TON' ? commission : 0,
+      commission_paid_sol: network === 'SOL' ? commission : 0,
       master_wallet_address: masterWalletAddress,
-      message: `Выпала карта ${randomRank} of ${randomSuit} (${rarity})!`
+      network: network || 'TON',
+      status: wantsFree ? 'premium_free' : 'completed',
+      minted_at: new Date().toISOString(),
     });
 
-  } catch (error: any) {
+    return NextResponse.json({
+      success: true,
+      nft: { id: nftData.id, rank: randomRank, suit: randomSuit, rarity },
+      mint_price: mintPrice,
+      isPremiumFree: wantsFree,
+      network: network || 'TON',
+      master_wallet_address: wantsFree ? null : masterWalletAddress,
+      message: wantsFree
+        ? `Premium free roll: ${randomRank} of ${randomSuit} (${rarity})!`
+        : `Выпала карта ${randomRank} of ${randomSuit} (${rarity})!`,
+    });
+  } catch (error: unknown) {
     console.error('❌ Ошибка генерации случайной NFT:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Внутренняя ошибка сервера' },
+      { success: false, error: error instanceof Error ? error.message : 'Внутренняя ошибка сервера' },
       { status: 500 }
     );
   }
 }
-

@@ -211,10 +211,29 @@ async function handlePaymentSucceeded(supabase: any, payment: any) {
     }
 
     console.log(`✅ nft_listing: лот ${listingId} продан пользователю ${buyerDbUserId}`);
-  } else if (itemType === 'premium' || itemType === 'item') {
-    // Обработка покупки премиум-функций или предметов
-    // TODO: Реализовать логику активации премиум/предметов
-    console.log(`🎁 Processing ${itemType} purchase for user ${userId}`);
+  } else if (itemType === 'premium') {
+    const numericUserId = parseInt(String(userId), 10);
+    let userQuery = supabase.from('_pidr_users').select('id');
+    if (!Number.isNaN(numericUserId)) {
+      userQuery = userQuery.eq('id', numericUserId);
+    } else if (metadata.authEnvironment === 'vk') {
+      userQuery = userQuery.eq('vk_id', userId);
+    } else {
+      userQuery = userQuery.eq('telegram_id', userId);
+    }
+    const { data: user } = await userQuery.maybeSingle();
+    if (user?.id) {
+      const { activatePremium } = await import('@/lib/premium/premium-service');
+      await activatePremium({
+        userId: user.id,
+        source: 'yookassa',
+        paymentId: payment.id,
+        amountPaidRub: amount,
+      });
+      console.log(`👑 Premium activated for user ${user.id} via YooKassa`);
+    }
+  } else if (itemType === 'item') {
+    console.log(`🎁 Processing item purchase for user ${userId}`);
   }
 
   await supabase

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 import { getRedis } from '@/lib/redis/init';
+import { isPremiumActiveFromUser } from '@/lib/premium/premium-service';
+import { PREMIUM_RATING_MULTIPLIER } from '@/lib/premium/constants';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -150,9 +152,15 @@ export async function POST(req: NextRequest) {
     }
     
     if (ratingChange && typeof ratingChange === 'number') {
+      let effectiveRatingChange = ratingChange;
+      const premiumActive = isPremiumActiveFromUser(userData);
+      if (premiumActive && ratingChange > 0) {
+        effectiveRatingChange = ratingChange * PREMIUM_RATING_MULTIPLIER;
+        console.log(`👑 [${traceId || 'NO_TRACE'}] Premium ×2 рейтинг: ${ratingChange} → ${effectiveRatingChange}`);
+      }
       const currentRating = userData.rating || 1000;
-      updateData.rating = Math.max(0, currentRating + ratingChange);
-      console.log(`📈 [${traceId || 'NO_TRACE'}] Рейтинг: ${currentRating} → ${updateData.rating} (${ratingChange > 0 ? '+' : ''}${ratingChange})`);
+      updateData.rating = Math.max(0, currentRating + effectiveRatingChange);
+      console.log(`📈 [${traceId || 'NO_TRACE'}] Рейтинг: ${currentRating} → ${updateData.rating} (${effectiveRatingChange > 0 ? '+' : ''}${effectiveRatingChange})`);
     }
     
       // Обновляем баланс и статистику в БД
