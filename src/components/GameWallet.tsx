@@ -375,6 +375,16 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
     return (cryptoBalances[crypto] || 0).toFixed(6);
   };
 
+  const selectedDepositAddress = useMemo(
+    () => masterAddresses.find((addr) => addr.coin === selectedCrypto.toUpperCase())?.address ?? '',
+    [masterAddresses, selectedCrypto]
+  );
+
+  const handleWalletSelectForDeposit = useCallback((wallet: { id: number; wallet_type: string }) => {
+    setSelectedWalletForDeposit(wallet);
+    setSelectedCrypto(wallet.wallet_type.toUpperCase());
+  }, []);
+
   const loadUserData = async () => {
     try {
       // ✅ УНИВЕРСАЛЬНО: Используем универсальные headers для всех платформ
@@ -1790,10 +1800,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
                           Оплата через кошелёк:
                         </div>
                         <ConnectedWalletsList
-                          onWalletSelect={(wallet) => {
-                            setSelectedWalletForDeposit(wallet);
-                            setSelectedCrypto(wallet.wallet_type.toUpperCase());
-                          }}
+                          onWalletSelect={handleWalletSelectForDeposit}
                           selectedWalletId={selectedWalletForDeposit?.id || null}
                           showAddButton={true}
                         />
@@ -1820,12 +1827,50 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
                         <label style={{ display: 'block', fontSize: '11px', color: '#94a3b8', marginBottom: '6px', fontWeight: '600' }}>
                           Адрес для пополнения ({selectedCrypto})
                         </label>
-                        <HDAddressDisplay 
-                          crypto={selectedCrypto} 
-                          userId={ownerForWalletApis || ''} 
-                          generateAddress={generateDepositAddress}
-                          isGenerating={isGeneratingAddress}
-                        />
+                        <div className={`address-container hd-address-container ${isGeneratingAddress ? 'hd-generating' : ''}`}>
+                          <input
+                            type="text"
+                            value={selectedDepositAddress || (isGeneratingAddress ? 'Генерируется адрес...' : 'Адрес загружается...')}
+                            readOnly
+                            placeholder="Адрес для пополнения"
+                          />
+                          {isGeneratingAddress && <div className="hd-spinner"></div>}
+                          <button
+                            type="button"
+                            className="copy-btn"
+                            onClick={() => {
+                              if (selectedDepositAddress) {
+                                void navigator.clipboard?.writeText(selectedDepositAddress);
+                              }
+                            }}
+                            disabled={!selectedDepositAddress || isGeneratingAddress}
+                          >
+                            {isGeneratingAddress ? <FaDatabase /> : '📋'}
+                          </button>
+                        </div>
+                        {!selectedDepositAddress && ownerForWalletApis && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              void generateDepositAddress(selectedCrypto, ownerForWalletApis);
+                            }}
+                            disabled={isGeneratingAddress}
+                            style={{
+                              marginTop: '8px',
+                              width: '100%',
+                              padding: '10px 12px',
+                              borderRadius: '10px',
+                              border: '1px solid rgba(255,215,0,0.25)',
+                              background: 'rgba(255,215,0,0.08)',
+                              color: '#fde68a',
+                              fontSize: '12px',
+                              fontWeight: 700,
+                              cursor: isGeneratingAddress ? 'wait' : 'pointer',
+                            }}
+                          >
+                            {isGeneratingAddress ? 'Получаем адрес...' : 'Получить адрес для пополнения'}
+                          </button>
+                        )}
                       </div>
                   
                       {/* Сумма */}
@@ -3217,77 +3262,6 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
         newBalance={dailyBonusModal?.newBalance || 0}
         onClose={() => setDailyBonusModal(null)}
       />
-    </div>
-  );
-}
-
-// HD Address Display Component
-interface HDAddressDisplayProps {
-  crypto?: string;
-  userId?: string;
-  generateAddress?: (crypto: string, userId: string) => Promise<string>;
-  isGenerating?: boolean;
-}
-
-function HDAddressDisplay({ crypto = 'TON', userId = '', generateAddress, isGenerating = false }: HDAddressDisplayProps) {
-  const [address, setAddress] = useState('Генерируется HD адрес...');
-  const [isLoading, setIsLoading] = useState(false);
-  const generateAddressRef = useRef(generateAddress);
-  generateAddressRef.current = generateAddress;
-
-  useEffect(() => {
-    if (!userId || !crypto || !generateAddressRef.current) return;
-
-    let cancelled = false;
-
-    const loadAddress = async () => {
-      console.log(`🔄 HDAddressDisplay: загружаем адрес для ${crypto}, userId: ${userId}`);
-      setIsLoading(true);
-      try {
-        const addr = await generateAddressRef.current!(crypto, userId);
-        if (cancelled) return;
-        console.log(`✅ HDAddressDisplay: получен адрес для ${crypto}:`, addr);
-        setAddress(addr);
-      } catch (error) {
-        if (cancelled) return;
-        console.error('❌ HDAddressDisplay: ошибка загрузки адреса:', error);
-        setAddress('Ошибка генерации адреса');
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    void loadAddress();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [crypto, userId]);
-
-  const copyToClipboard = () => {
-    if (address && address !== 'Генерируется HD адрес...' && !address.startsWith('Ошибка')) {
-      navigator.clipboard?.writeText(address);
-    }
-  };
-
-  return (
-    <div className={`address-container hd-address-container ${isLoading || isGenerating ? 'hd-generating' : ''}`}>
-      <input 
-        type="text" 
-        value={address}
-        readOnly 
-        placeholder="Генерируется уникальный HD адрес..."
-      />
-      {(isLoading || isGenerating) && <div className="hd-spinner"></div>}
-      <button 
-        className="copy-btn" 
-        onClick={copyToClipboard}
-        disabled={isLoading || isGenerating || address.startsWith('Ошибка')}
-      >
-        {isLoading || isGenerating ? <FaDatabase /> : '📋'}
-      </button>
     </div>
   );
 }

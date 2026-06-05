@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Trophy, Medal, Users, User, Star, Award, Target, Camera, Upload, Wallet, Palette, Sparkles, Gift, Frame, LogOut, Shield } from 'lucide-react';
@@ -1007,13 +1007,12 @@ export default function ProfilePage() {
     }
   };
 
-  const handleBalanceUpdate = (newBalance: number) => {
-    // Обновляем баланс в состоянии пользователя (БД обновляется через API)
-    if (user) {
-      const updatedUser = { ...user, coins: newBalance };
-      setUser(updatedUser);
-    }
-  };
+  const handleBalanceUpdate = useCallback((newBalance: number) => {
+    setUser((prev: any) => {
+      if (!prev || prev.coins === newBalance) return prev;
+      return { ...prev, coins: newBalance };
+    });
+  }, []);
 
   return (
     <div style={{

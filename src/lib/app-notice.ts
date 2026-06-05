@@ -41,7 +41,22 @@ let currentConfirm: ConfirmRequest | null = null;
 const alertQueue: AlertRequest[] = [];
 const listeners = new Set<() => void>();
 
+type AppNoticeSnapshot = {
+  currentAlert: AlertRequest | null;
+  currentConfirm: ConfirmRequest | null;
+};
+
+let noticeSnapshot: AppNoticeSnapshot = {
+  currentAlert: null,
+  currentConfirm: null,
+};
+
+function syncNoticeSnapshot() {
+  noticeSnapshot = { currentAlert, currentConfirm };
+}
+
 function emit() {
+  syncNoticeSnapshot();
   listeners.forEach((listener) => listener());
 }
 
@@ -85,7 +100,7 @@ export function subscribeAppNotice(listener: () => void) {
 }
 
 export function getAppNoticeState() {
-  return { currentAlert, currentConfirm };
+  return noticeSnapshot;
 }
 
 export function appAlert(message: string, options: AppAlertOptions = {}): Promise<void> {
@@ -123,6 +138,7 @@ export function resolveAppAlert() {
   if (!currentAlert) return;
   currentAlert.resolve();
   currentAlert = null;
+  syncNoticeSnapshot();
   dequeueNextAlert();
 }
 
@@ -130,6 +146,7 @@ export function resolveAppConfirm(result: boolean) {
   if (!currentConfirm) return;
   currentConfirm.resolve(result);
   currentConfirm = null;
+  syncNoticeSnapshot();
   dequeueNextAlert();
 }
 

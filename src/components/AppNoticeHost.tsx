@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   AppNoticeType,
@@ -72,18 +72,16 @@ function DetailsBlock({ details }: { details?: string }) {
 }
 
 export default function AppNoticeHost() {
-  const [, forceUpdate] = useState(0);
+  const { currentAlert, currentConfirm } = useSyncExternalStore(
+    subscribeAppNotice,
+    getAppNoticeState,
+    getAppNoticeState
+  );
 
   useEffect(() => {
-    const unsubscribeNotice = subscribeAppNotice(() => forceUpdate((value) => value + 1));
-    const uninstallAlert = installGlobalAppAlert();
-    return () => {
-      unsubscribeNotice();
-      uninstallAlert();
-    };
+    return installGlobalAppAlert();
   }, []);
 
-  const { currentAlert, currentConfirm } = getAppNoticeState();
   const isOpen = Boolean(currentAlert || currentConfirm);
 
   return (

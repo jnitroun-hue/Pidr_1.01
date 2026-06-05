@@ -8,6 +8,7 @@ import { useWalletStore } from '@/store/walletStore';
 import { solanaConnector } from '@/lib/wallets/solana-connector';
 import { ethereumConnector } from '@/lib/wallets/ethereum-connector';
 import { getApiHeaders } from '@/lib/api-headers';
+import { useShallow } from 'zustand/react/shallow';
 
 type WalletType = 'ton' | 'sol' | 'eth';
 
@@ -35,14 +36,16 @@ export default function WalletQuickConnect({ className = '' }: WalletQuickConnec
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [pendingTonWallet, setPendingTonWallet] = useState<PendingTonWallet>(null);
 
-  const walletState = useWalletStore((state) => ({
-    tonAddress: state.tonAddress,
-    isTonConnected: state.isTonConnected,
-    solanaAddress: state.solanaAddress,
-    isSolanaConnected: state.isSolanaConnected,
-    ethereumAddress: state.ethereumAddress,
-    isEthereumConnected: state.isEthereumConnected,
-  }));
+  const walletState = useWalletStore(
+    useShallow((state) => ({
+      tonAddress: state.tonAddress,
+      isTonConnected: state.isTonConnected,
+      solanaAddress: state.solanaAddress,
+      isSolanaConnected: state.isSolanaConnected,
+      ethereumAddress: state.ethereumAddress,
+      isEthereumConnected: state.isEthereumConnected,
+    }))
+  );
 
   const connectedMap = useMemo(() => ({
     ton: Boolean(tonAddress || walletState.tonAddress || walletState.isTonConnected),

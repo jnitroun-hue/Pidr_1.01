@@ -1,7 +1,13 @@
 'use client'
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import {
+  getWeeklyPlacePrize,
+  getNextWeeklyPayoutDate,
+  formatWeeklyPayoutDate,
+  WEEKLY_TOP_PRIZES,
+} from '@/lib/rating/weekly-prizes';
 
 interface UserData {
   id: number;
@@ -38,6 +44,10 @@ export default function RatingPage() {
   const [topPlayers, setTopPlayers] = useState<RatingEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'my' | 'top'>('my');
+  const nextPayoutLabel = useMemo(
+    () => formatWeeklyPayoutDate(getNextWeeklyPayoutDate()),
+    []
+  );
 
   useEffect(() => {
     const loadData = async () => {
@@ -52,7 +62,7 @@ export default function RatingPage() {
         }
 
         // Загружаем топ игроков (публичный API)
-        const ratingRes = await fetch('/api/rating/top?limit=20', { credentials: 'include' });
+        const ratingRes = await fetch('/api/rating/top?limit=10', { credentials: 'include' });
         if (ratingRes.ok) {
           const ratingData = await ratingRes.json();
           if (ratingData.success && ratingData.players) {
@@ -236,6 +246,39 @@ export default function RatingPage() {
                 initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.2 }}
               >
+                {/* Призы топ-10 */}
+                <div style={{
+                  marginBottom: '14px',
+                  padding: '14px 16px',
+                  borderRadius: '14px',
+                  background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.12) 0%, rgba(15, 23, 42, 0.85) 100%)',
+                  border: '1px solid rgba(234, 179, 8, 0.25)',
+                }}>
+                  <div style={{ fontSize: '13px', fontWeight: '800', color: '#fde68a', marginBottom: '4px' }}>
+                    🏆 Еженедельные призы топ-10
+                  </div>
+                  <div style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '10px' }}>
+                    Итоги каждый понедельник · следующая раздача: {nextPayoutLabel}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 12px', fontSize: '11px' }}>
+                    {WEEKLY_TOP_PRIZES.slice(0, 3).map((p) => (
+                      <span key={p.place} style={{ color: '#94a3b8' }}>
+                        {p.place === 1 ? '🥇' : p.place === 2 ? '🥈' : '🥉'} {p.place} место
+                      </span>
+                    ))}
+                    {WEEKLY_TOP_PRIZES.slice(0, 3).map((p) => (
+                      <span key={`prize-${p.place}`} style={{ color: '#38bdf8', fontWeight: 700 }}>
+                        {p.label}
+                      </span>
+                    ))}
+                    <span style={{ color: '#94a3b8' }}>4–10 места</span>
+                    <span style={{ color: '#eab308', fontWeight: 700 }}>15 000 → 1 000 монет</span>
+                  </div>
+                  <div style={{ fontSize: '10px', color: '#64748b', marginTop: '8px' }}>
+                    Монеты начисляются автоматически. TON — на подключённый кошелёк (топ-3).
+                  </div>
+                </div>
+
                 {/* Топ игроков */}
                 {topPlayers.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '40px', color: '#64748b', fontSize: '14px' }}>
@@ -247,6 +290,8 @@ export default function RatingPage() {
                       const pRank = getRankInfo(player.rating);
                       const isTop3 = index < 3;
                       const medals = ['#eab308', '#94a3b8', '#cd7f32'];
+                      const place = index + 1;
+                      const prize = getWeeklyPlacePrize(place);
                       return (
                         <motion.div
                           key={player.id}
@@ -304,6 +349,16 @@ export default function RatingPage() {
                             <div style={{ fontSize: '10px', color: pRank.color }}>
                               {pRank.title}
                             </div>
+                            {prize && (
+                              <div style={{
+                                marginTop: '3px',
+                                fontSize: '10px',
+                                fontWeight: 700,
+                                color: prize.type === 'ton' ? '#38bdf8' : '#eab308',
+                              }}>
+                                🎁 {prize.label}
+                              </div>
+                            )}
                           </div>
 
                           {/* Рейтинг */}
