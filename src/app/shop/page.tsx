@@ -9,6 +9,7 @@ import PremiumPurchaseModal from '../../components/PremiumPurchaseModal';
 import PremiumSuccessModal from '../../components/PremiumSuccessModal';
 import type { PremiumStatus } from '@/lib/premium/premium-service';
 import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
+import PageLoadingScreen from '@/components/PageLoadingScreen';
 
 interface User {
   telegram_id: number;
@@ -241,27 +242,10 @@ export default function ShopPage() {
 
   if (loading) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        background: `linear-gradient(165deg, ${T.bgDeep} 0%, ${T.bgMain} 100%)`,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'white'
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{
-            width: '60px',
-            height: '60px',
-            border: `4px solid ${T.borderGold}`,
-            borderTop: `4px solid ${T.accentGold}`,
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
-            margin: '0 auto 20px'
-          }} />
-        <p style={{ color: T.textMuted }}>Загрузка...</p>
-        </div>
-      </div>
+      <PageLoadingScreen
+        title="Магазин"
+        subtitle="Загрузка..."
+      />
     );
   }
 

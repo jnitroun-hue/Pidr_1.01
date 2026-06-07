@@ -8,6 +8,7 @@ import {
   formatWeeklyPayoutDate,
   WEEKLY_TOP_PRIZES,
 } from '@/lib/rating/weekly-prizes';
+import PageLoadingScreen from '@/components/PageLoadingScreen';
 
 interface UserData {
   id: number;
@@ -137,9 +138,13 @@ export default function RatingPage() {
 
       <div style={{ padding: '16px', maxWidth: '480px', margin: '0 auto' }}>
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
-            Загрузка...
-          </div>
+          <PageLoadingScreen
+            fullScreen={false}
+            compact
+            showProgress={false}
+            title="Рейтинг"
+            subtitle="Загрузка..."
+          />
         ) : (
           <AnimatePresence mode="wait">
             {activeTab === 'my' ? (

@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabase';
 import { getApiHeaders, mergeApiHeaders } from '@/lib/api-headers';
 import { useLanguage } from './LanguageSwitcher';
 import { useTranslations } from '@/lib/i18n/translations';
+import PageLoadingScreen from '@/components/PageLoadingScreen';
 
 interface Room {
   id: number;
@@ -804,7 +805,13 @@ export const ProperMultiplayer: React.FC = () => {
             </div>
             
             {loading ? (
-              <div className={styles.loading}>{t.multiplayer.loadingRooms}</div>
+              <PageLoadingScreen
+                fullScreen={false}
+                compact
+                showProgress={false}
+                title={t.multiplayer.pageTitle}
+                subtitle={t.multiplayer.loadingRooms}
+              />
             ) : rooms.length === 0 ? (
               <div className={styles.empty}>
                 <p>{t.multiplayer.emptyTitle}</p>

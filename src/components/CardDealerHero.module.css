@@ -9,6 +9,12 @@
   justify-content: center;
 }
 
+.wrapperCompact {
+  max-width: 200px;
+  height: 140px;
+  margin-bottom: 8px;
+}
+
 .glow {
   position: absolute;
   inset: 10% 5% 0;

@@ -1,12 +1,13 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingCart, DollarSign, Package, TrendingUp, Filter, Search, X, Check, Loader2, Heart } from 'lucide-react';
+import { ShoppingCart, DollarSign, Package, TrendingUp, Filter, Search, X, Check, Heart } from 'lucide-react';
 import Image from 'next/image';
 import { BuyTab, SellTab, MyNFTsTab, SellModal } from './MarketplaceTabs';
 import { getApiHeaders } from '@/lib/api-headers';
 import { appConfirm } from '@/lib/app-notice';
 import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
+import PageLoadingScreen from '@/components/PageLoadingScreen';
 
 // Типы
 interface NFTCard {
@@ -680,10 +681,13 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
 
       {/* Content */}
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '60px 0' }}>
-          <Loader2 size={44} className="animate-spin" style={{ color: T.accentGold, margin: '0 auto' }} />
-          <p style={{ color: T.textMuted, marginTop: '20px' }}>Загрузка...</p>
-        </div>
+        <PageLoadingScreen
+          fullScreen={false}
+          compact
+          showProgress={false}
+          title="Маркетплейс"
+          subtitle="Загрузка..."
+        />
       ) : (
         <AnimatePresence mode="wait">
           {activeTab === 'buy' && (

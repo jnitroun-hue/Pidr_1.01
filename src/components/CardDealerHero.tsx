@@ -11,10 +11,14 @@ const CARD_FAN = [
   { rotate: 28, x: 38, y: 8, delay: 0.2 },
 ];
 
-export default function CardDealerHero() {
+interface CardDealerHeroProps {
+  size?: 'default' | 'compact';
+}
+
+export default function CardDealerHero({ size = 'default' }: CardDealerHeroProps) {
   return (
     <motion.div
-      className={styles.wrapper}
+      className={`${styles.wrapper} ${size === 'compact' ? styles.wrapperCompact : ''}`}
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: 'easeOut' }}

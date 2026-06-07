@@ -13,6 +13,7 @@ import GameWallet from '@/components/GameWallet';
 import WalletQuickConnect from '@/components/WalletQuickConnect';
 import { useLanguage } from '@/components/LanguageSwitcher';
 import { useTranslations } from '@/lib/i18n/translations';
+import PageLoadingScreen from '@/components/PageLoadingScreen';
 
 // ─── Типы ───────────────────────────────────────────────────────────────────
 interface Transaction {
@@ -128,12 +129,10 @@ export default function WalletPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#0a0f1e] via-[#111827] to-[#0d1b2a] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin" />
-          <p className="text-gray-400 text-sm">{t.wallet.pageLoading}</p>
-        </div>
-      </div>
+      <PageLoadingScreen
+        title={t.wallet.pageTitle}
+        subtitle={t.wallet.pageLoading}
+      />
     );
   }
 

@@ -12,6 +12,7 @@ import WalletQuickConnect from '@/components/WalletQuickConnect';
 import { getApiHeaders } from '@/lib/api-headers';
 import { appConfirm } from '@/lib/app-notice';
 import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
+import PageLoadingScreen from '@/components/PageLoadingScreen';
 
 interface NFTCard {
   id: string;
@@ -251,10 +252,13 @@ export default function NFTGallery() {
 
   if (isLoading) {
     return (
-      <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
-        <div style={{ fontSize: '2rem', marginBottom: '10px' }}>🎴</div>
-        <p>Загрузка коллекции...</p>
-      </div>
+      <PageLoadingScreen
+        fullScreen={false}
+        compact
+        showProgress={false}
+        title="NFT коллекция"
+        subtitle="Загрузка коллекции..."
+      />
     );
   }
 

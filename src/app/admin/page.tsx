@@ -29,6 +29,7 @@ import {
   UserPlus,
   Gift
 } from 'lucide-react';
+import PageLoadingScreen from '@/components/PageLoadingScreen';
 
 interface User {
   id: number;
@@ -441,20 +442,10 @@ export default function AdminPanel() {
 
   if (loading) {
     return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-      }}>
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-        >
-          <RefreshCw size={48} color="white" />
-        </motion.div>
-      </div>
+      <PageLoadingScreen
+        title="Админ-панель"
+        subtitle="Загрузка..."
+      />
     );
   }
 

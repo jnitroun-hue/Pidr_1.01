@@ -18,6 +18,7 @@ interface User {
 import { useTelegram } from '../hooks/useTelegram';
 import NeonMainMenu from '../components/main_menu_component';
 import CardLoadingScreen from '../components/CardLoadingScreen';
+import PageLoadingScreen from '../components/PageLoadingScreen';
 import { useLanguage } from '../components/LanguageSwitcher';
 import RoomInviteModal from '../components/RoomInviteModal';
 import BurgerMenu from '../components/BurgerMenu';
@@ -878,31 +879,7 @@ function HomeWithParams() {
 
   // Fallback - не должно появляться
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        width: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '24px',
-        background: 'linear-gradient(145deg, #0f172a 0%, #111827 60%, #1e1b4b 100%)'
-      }}
-    >
-      <div
-        style={{
-          textAlign: 'center',
-          borderRadius: '18px',
-          padding: '22px 24px',
-          border: '1px solid rgba(148,163,184,0.25)',
-          background: 'rgba(15, 23, 42, 0.75)',
-          color: '#f8fafc'
-        }}
-      >
-        <h2 style={{ fontSize: '26px', fontWeight: 800, marginBottom: '8px' }}>P.I.D.R. Game</h2>
-        <p style={{ color: '#cbd5e1' }}>Загрузка...</p>
-      </div>
-    </div>
+    <PageLoadingScreen title="P.I.D.R. Game" subtitle="Загрузка..." />
   );
 }
 

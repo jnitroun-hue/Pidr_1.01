@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ArrowLeft, UserPlus, Search, User, Users, Share2, Trophy } from 'lucide-react';
+import PageLoadingScreen from '@/components/PageLoadingScreen';
 
 interface Friend {
   telegram_id: number;
@@ -474,9 +475,13 @@ export default function FriendsPage() {
           ВСЕ ДРУЗЬЯ ({friends.length})
         </h2>
         {loading ? (
-          <div style={{ textAlign: 'center', color: '#64748b', padding: '40px' }}>
-            Загрузка...
-          </div>
+          <PageLoadingScreen
+            fullScreen={false}
+            compact
+            showProgress={false}
+            title="Друзья"
+            subtitle="Загрузка..."
+          />
         ) : friends.length === 0 ? (
           <div style={{ textAlign: 'center', color: '#64748b', padding: '40px' }}>
             <User size={48} style={{ margin: '0 auto 16px' }} />

@@ -7,6 +7,7 @@ import NFTThemeGenerator from '../../components/NFTThemeGenerator'
 import { useTelegram } from '../../hooks/useTelegram'
 import { getApiHeaders } from '@/lib/api-headers'
 import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme'
+import PageLoadingScreen from '@/components/PageLoadingScreen'
 
 export default function NFTCollectionPage() {
   const router = useRouter()
@@ -46,6 +47,15 @@ export default function NFTCollectionPage() {
 
   const handleBalanceUpdate = (newBalance: number) => {
     setUserCoins(newBalance)
+  }
+
+  if (isLoadingUser) {
+    return (
+      <PageLoadingScreen
+        title="NFT коллекция"
+        subtitle="Загрузка..."
+      />
+    )
   }
 
   return (
