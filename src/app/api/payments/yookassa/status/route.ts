@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getYooKassaPaymentStatus } from '@/lib/payments/yookassa';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 import { supabaseAdmin } from '@/lib/supabase';
+import { activatePremium, getPremiumStatus } from '@/lib/premium/premium-service';
 
 // ✅ Явная конфигурация runtime для Next.js 15
 export const runtime = 'nodejs';
@@ -61,6 +62,26 @@ export async function GET(request: NextRequest) {
       .eq('user_id', dbUserId || 0)
       .maybeSingle();
 
+    const itemType = localPayment?.item_type || payment.metadata?.itemType || 'coins';
+
+    let premium = null;
+    if (payment.status === 'succeeded' && itemType === 'premium' && dbUserId) {
+      premium = await getPremiumStatus(dbUserId);
+      if (!premium.isPremium) {
+        try {
+          await activatePremium({
+            userId: dbUserId,
+            source: 'yookassa',
+            paymentId: payment.id,
+            amountPaidRub: parseFloat(payment.amount.value),
+          });
+          premium = await getPremiumStatus(dbUserId);
+        } catch (err) {
+          console.error('❌ Premium fallback activation failed:', err);
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
       payment: {
@@ -70,8 +91,9 @@ export async function GET(request: NextRequest) {
         currency: payment.amount.currency,
         description: payment.description,
         createdAt: payment.created_at,
-        itemType: localPayment?.item_type || payment.metadata?.itemType || 'coins',
-      }
+        itemType,
+      },
+      premium,
     });
 
   } catch (error: any) {

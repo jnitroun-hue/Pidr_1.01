@@ -15,6 +15,7 @@ import { avatarFrames, getRarityColor, getRarityName } from '../../data/avatar-f
 import TonWalletConnect from '../../components/TonWalletConnect';
 import { getApiHeaders } from '@/lib/api-headers';
 import { appConfirm } from '@/lib/app-notice';
+import { fetchPremiumStatus, isPremiumUsable } from '@/lib/premium/refresh-premium';
 
 // Компонент таймера для бонусов
 function BonusCooldownTimer({ bonus, onCooldownEnd }: { bonus: any; onCooldownEnd: () => void }) {
@@ -212,11 +213,8 @@ export default function ProfilePage() {
           });
 
           try {
-            const premRes = await fetch('/api/premium/status', { credentials: 'include', headers: apiHeaders });
-            if (premRes.ok) {
-              const premData = await premRes.json();
-              if (premData.success) setPremium(premData.premium);
-            }
+            const prem = await fetchPremiumStatus();
+            if (prem) setPremium(prem);
           } catch { /* ignore */ }
         } else {
           console.error('❌ Пользователь не авторизован');
@@ -359,13 +357,43 @@ export default function ProfilePage() {
   }, []);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !premium?.isPremium) return;
-    if (sessionStorage.getItem('show_premium_success') === '1') {
+    if (typeof window === 'undefined') return;
+    if (sessionStorage.getItem('show_premium_success') !== '1') return;
+
+    const raw = sessionStorage.getItem('premium_success_data');
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw) as PremiumStatus;
+        if (isPremiumUsable(parsed)) {
+          sessionStorage.removeItem('show_premium_success');
+          sessionStorage.removeItem('premium_success_data');
+          setPremium(parsed);
+          setPremiumSuccessData(parsed);
+          setShowPremiumSuccess(true);
+          return;
+        }
+      } catch { /* ignore */ }
+    }
+
+    if (isPremiumUsable(premium)) {
       sessionStorage.removeItem('show_premium_success');
       setPremiumSuccessData(premium);
       setShowPremiumSuccess(true);
     }
   }, [premium]);
+
+  useEffect(() => {
+    const refresh = () => { void fetchPremiumStatus().then((p) => { if (p) setPremium(p); }); };
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') refresh();
+    };
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, []);
 
   const [activeSection, setActiveSection] = useState('stats'); // 'stats', 'achievements', 'wallet'
   const [showModal, setShowModal] = useState<'skins' | 'effects' | 'bonuses' | 'frames' | 'deck' | 'wallet' | null>(null);
@@ -2246,10 +2274,17 @@ export default function ProfilePage() {
         userCoins={user?.coins || 0}
         premium={premium}
         onSuccess={async (newPremium) => {
-          setPremium(newPremium);
-          setPremiumSuccessData(newPremium);
+          if (!isPremiumUsable(newPremium)) {
+            const fresh = await fetchPremiumStatus();
+            if (!isPremiumUsable(fresh)) return;
+            setPremium(fresh);
+            setPremiumSuccessData(fresh);
+          } else {
+            setPremium(newPremium);
+            setPremiumSuccessData(newPremium);
+          }
           setShowPremiumSuccess(true);
-          const meRes = await fetch('/api/user/me', { credentials: 'include' });
+          const meRes = await fetch('/api/user/me', { credentials: 'include', headers: getApiHeaders() });
           if (meRes.ok) {
             const me = await meRes.json();
             if (me.success) setUser((p: any) => p ? { ...p, coins: me.user.coins } : p);

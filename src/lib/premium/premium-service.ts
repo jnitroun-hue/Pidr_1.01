@@ -125,18 +125,35 @@ export async function activatePremium(params: {
   amountPaidRub?: number;
   amountPaidCoins?: number;
   allowExtend?: boolean;
-}): Promise<{ expiresAt: string }> {
+}): Promise<{ expiresAt: string; startedAt: string }> {
   const { userId, source, paymentId, amountPaidRub, amountPaidCoins, allowExtend = false } = params;
+
+  if (paymentId) {
+    const { data: existing } = await supabaseAdmin
+      .from('_pidr_premium_subscriptions')
+      .select('expires_at, started_at')
+      .eq('payment_id', paymentId)
+      .maybeSingle();
+    if (existing?.expires_at) {
+      return { expiresAt: existing.expires_at, startedAt: existing.started_at ?? existing.expires_at };
+    }
+  }
 
   if (!allowExtend) {
     await assertCanPurchasePremium(userId);
   }
 
-  const { data: user } = await supabaseAdmin
+  const { data: user, error: userError } = await supabaseAdmin
     .from('_pidr_users')
     .select('premium_expires_at')
     .eq('id', userId)
     .single();
+
+  if (userError) {
+    throw new Error(
+      `Premium: не удалось прочитать пользователя (${userError.message}). Примените supabase/migrations/0008_premium.sql`
+    );
+  }
 
   const now = Date.now();
   const startedAt = new Date().toISOString();
@@ -148,10 +165,16 @@ export async function activatePremium(params: {
     expiresAt = new Date(now + PREMIUM_DURATION_DAYS * 86400000).toISOString();
   }
 
-  await supabaseAdmin
+  const { error: updateError } = await supabaseAdmin
     .from('_pidr_users')
     .update({ is_premium: true, premium_expires_at: expiresAt })
     .eq('id', userId);
+
+  if (updateError) {
+    throw new Error(
+      `Premium: не удалось сохранить срок (${updateError.message}). Примените supabase/migrations/0008_premium.sql`
+    );
+  }
 
   await supabaseAdmin
     .from('_pidr_premium_subscriptions')
@@ -159,7 +182,7 @@ export async function activatePremium(params: {
     .eq('user_id', userId)
     .eq('is_active', true);
 
-  await supabaseAdmin.from('_pidr_premium_subscriptions').insert({
+  const { error: insertError } = await supabaseAdmin.from('_pidr_premium_subscriptions').insert({
     user_id: userId,
     started_at: startedAt,
     expires_at: expiresAt,
@@ -170,7 +193,13 @@ export async function activatePremium(params: {
     is_active: true,
   });
 
-  return { expiresAt };
+  if (insertError) {
+    throw new Error(
+      `Premium: не удалось создать подписку (${insertError.message}). Примените supabase/migrations/0008_premium.sql`
+    );
+  }
+
+  return { expiresAt, startedAt };
 }
 
 export async function consumeFreeRandomGeneration(userId: number, nftId?: number): Promise<boolean> {

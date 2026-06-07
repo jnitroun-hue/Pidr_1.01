@@ -223,14 +223,18 @@ async function handlePaymentSucceeded(supabase: any, payment: any) {
     }
     const { data: user } = await userQuery.maybeSingle();
     if (user?.id) {
-      const { activatePremium } = await import('@/lib/premium/premium-service');
-      await activatePremium({
-        userId: user.id,
-        source: 'yookassa',
-        paymentId: payment.id,
-        amountPaidRub: amount,
-      });
-      console.log(`👑 Premium activated for user ${user.id} via YooKassa`);
+      try {
+        const { activatePremium } = await import('@/lib/premium/premium-service');
+        await activatePremium({
+          userId: user.id,
+          source: 'yookassa',
+          paymentId: payment.id,
+          amountPaidRub: amount,
+        });
+        console.log(`👑 Premium activated for user ${user.id} via YooKassa`);
+      } catch (err) {
+        console.error(`❌ Premium activation failed for user ${user.id}:`, err);
+      }
     }
   } else if (itemType === 'item') {
     console.log(`🎁 Processing item purchase for user ${userId}`);

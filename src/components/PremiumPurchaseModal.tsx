@@ -39,7 +39,12 @@ export default function PremiumPurchaseModal({
       });
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || 'Ошибка покупки');
-      if (data.premium) onSuccess(data.premium);
+      if (!data.premium?.isPremium || !data.premium?.expiresAt) {
+        throw new Error(
+          data.error || 'Premium не активировался. Проверьте миграцию БД (0008_premium.sql) или обратитесь в поддержку.'
+        );
+      }
+      onSuccess(data.premium);
       onClose();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Ошибка');

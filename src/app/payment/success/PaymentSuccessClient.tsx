@@ -43,7 +43,10 @@ export default function PaymentSuccessClient({ orderId, paymentId }: { orderId?:
         const isPremium = itemType === 'premium';
 
         if (status === 'succeeded') {
-          if (isPremium) {
+          if (isPremium && data.premium?.isPremium && data.premium?.expiresAt) {
+            sessionStorage.setItem('show_premium_success', '1');
+            sessionStorage.setItem('premium_success_data', JSON.stringify(data.premium));
+          } else if (isPremium) {
             sessionStorage.setItem('show_premium_success', '1');
           }
           setState({

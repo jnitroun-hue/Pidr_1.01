@@ -60,19 +60,37 @@ export async function POST(req: NextRequest) {
     balance_after: newBalance,
   });
 
-  const { expiresAt } = await activatePremium({
-    userId: dbUserId,
-    source: 'coins',
-    amountPaidCoins: PREMIUM_PRICE_COINS,
-  });
+  try {
+    const { expiresAt } = await activatePremium({
+      userId: dbUserId,
+      source: 'coins',
+      amountPaidCoins: PREMIUM_PRICE_COINS,
+    });
 
-  const premium = await getPremiumStatus(dbUserId);
+    const premium = await getPremiumStatus(dbUserId);
+    if (!premium.isPremium || !premium.expiresAt) {
+      await supabaseAdmin.from('_pidr_users').update({ coins: currentCoins }).eq('id', dbUserId);
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Premium не сохранился в базе. Выполните SQL из supabase/migrations/0008_premium.sql в Supabase.',
+        },
+        { status: 500 }
+      );
+    }
 
-  return NextResponse.json({
-    success: true,
-    newBalance,
-    expiresAt,
-    premium,
-    message: 'Premium активирован на 30 дней!',
-  });
+    return NextResponse.json({
+      success: true,
+      newBalance,
+      expiresAt,
+      premium,
+      message: 'Premium активирован на 30 дней!',
+    });
+  } catch (e: unknown) {
+    await supabaseAdmin.from('_pidr_users').update({ coins: currentCoins }).eq('id', dbUserId);
+    return NextResponse.json(
+      { success: false, error: e instanceof Error ? e.message : 'Ошибка активации Premium' },
+      { status: 500 }
+    );
+  }
 }

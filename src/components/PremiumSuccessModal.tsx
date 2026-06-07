@@ -16,7 +16,7 @@ interface PremiumSuccessModalProps {
 export default function PremiumSuccessModal({ open, onClose, premium }: PremiumSuccessModalProps) {
   const countdown = usePremiumCountdown(premium?.expiresAt, premium?.startedAt);
 
-  if (!open || !premium) return null;
+  if (!open || !premium?.expiresAt) return null;
 
   const expiresLabel = premium.expiresAt
     ? new Date(premium.expiresAt).toLocaleString('ru-RU', {
