@@ -7,6 +7,7 @@ import GameWallet from '../../components/GameWallet';
 import DailyBonusWheelModal from '../../components/DailyBonusWheelModal';
 import PremiumPromoBanner from '../../components/PremiumPromoBanner';
 import PremiumPurchaseModal from '../../components/PremiumPurchaseModal';
+import PremiumSuccessModal from '../../components/PremiumSuccessModal';
 import type { PremiumStatus } from '@/lib/premium/premium-service';
 import { useLanguage } from '../../components/LanguageSwitcher';
 import { useTranslations } from '../../lib/i18n/translations';
@@ -115,6 +116,8 @@ export default function ProfilePage() {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [premium, setPremium] = useState<PremiumStatus | null>(null);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [showPremiumSuccess, setShowPremiumSuccess] = useState(false);
+  const [premiumSuccessData, setPremiumSuccessData] = useState<PremiumStatus | null>(null);
 
   const [avatarUrl, setAvatarUrl] = useState('😎');
 
@@ -354,6 +357,16 @@ export default function ProfilePage() {
       window.removeEventListener('balance-updated', handleBalanceUpdate);
     };
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !premium?.isPremium) return;
+    if (sessionStorage.getItem('show_premium_success') === '1') {
+      sessionStorage.removeItem('show_premium_success');
+      setPremiumSuccessData(premium);
+      setShowPremiumSuccess(true);
+    }
+  }, [premium]);
+
   const [activeSection, setActiveSection] = useState('stats'); // 'stats', 'achievements', 'wallet'
   const [showModal, setShowModal] = useState<'skins' | 'effects' | 'bonuses' | 'frames' | 'deck' | 'wallet' | null>(null);
   const [dailyBonusModal, setDailyBonusModal] = useState<{
@@ -2232,18 +2245,22 @@ export default function ProfilePage() {
         onClose={() => setShowPremiumModal(false)}
         userCoins={user?.coins || 0}
         premium={premium}
-        onSuccess={async () => {
-          const premRes = await fetch('/api/premium/status', { credentials: 'include' });
-          if (premRes.ok) {
-            const d = await premRes.json();
-            if (d.success) setPremium(d.premium);
-          }
+        onSuccess={async (newPremium) => {
+          setPremium(newPremium);
+          setPremiumSuccessData(newPremium);
+          setShowPremiumSuccess(true);
           const meRes = await fetch('/api/user/me', { credentials: 'include' });
           if (meRes.ok) {
             const me = await meRes.json();
             if (me.success) setUser((p: any) => p ? { ...p, coins: me.user.coins } : p);
           }
         }}
+      />
+
+      <PremiumSuccessModal
+        open={showPremiumSuccess}
+        onClose={() => setShowPremiumSuccess(false)}
+        premium={premiumSuccessData}
       />
 
     </div>

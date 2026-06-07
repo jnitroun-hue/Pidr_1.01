@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import NFTMarketplace from '../../components/NFTMarketplace';
 import PremiumPromoBanner from '../../components/PremiumPromoBanner';
 import PremiumPurchaseModal from '../../components/PremiumPurchaseModal';
+import PremiumSuccessModal from '../../components/PremiumSuccessModal';
 import type { PremiumStatus } from '@/lib/premium/premium-service';
 import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
 
@@ -56,6 +57,8 @@ export default function ShopPage() {
   const [promoCooldownLabel, setPromoCooldownLabel] = useState('00:00:00');
   const [premium, setPremium] = useState<PremiumStatus | null>(null);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [showPremiumSuccess, setShowPremiumSuccess] = useState(false);
+  const [premiumSuccessData, setPremiumSuccessData] = useState<PremiumStatus | null>(null);
   const [stats, setStats] = useState({
     totalListings: 0,
     totalSales: 0,
@@ -126,6 +129,15 @@ export default function ShopPage() {
 
     loadUser();
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !premium?.isPremium) return;
+    if (sessionStorage.getItem('show_premium_success') === '1') {
+      sessionStorage.removeItem('show_premium_success');
+      setPremiumSuccessData(premium);
+      setShowPremiumSuccess(true);
+    }
+  }, [premium]);
 
   // Загрузка статистики маркетплейса
   useEffect(() => {
@@ -510,18 +522,22 @@ export default function ShopPage() {
         onClose={() => setShowPremiumModal(false)}
         userCoins={user?.coins || 0}
         premium={premium}
-        onSuccess={async () => {
-          const premRes = await fetch('/api/premium/status', { credentials: 'include' });
-          if (premRes.ok) {
-            const d = await premRes.json();
-            if (d.success) setPremium(d.premium);
-          }
+        onSuccess={async (newPremium) => {
+          setPremium(newPremium);
+          setPremiumSuccessData(newPremium);
+          setShowPremiumSuccess(true);
           const meRes = await fetch('/api/user/me', { credentials: 'include' });
           if (meRes.ok) {
             const me = await meRes.json();
             if (me.success) setUser(me.user);
           }
         }}
+      />
+
+      <PremiumSuccessModal
+        open={showPremiumSuccess}
+        onClose={() => setShowPremiumSuccess(false)}
+        premium={premiumSuccessData}
       />
 
       {/* Animated Background */}

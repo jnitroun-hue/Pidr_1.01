@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createYooKassaPayment } from '@/lib/payments/yookassa';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 import { supabaseAdmin } from '@/lib/supabase';
+import { assertCanPurchasePremium } from '@/lib/premium/premium-service';
 
 // ✅ Явная конфигурация runtime для Next.js 15
 export const runtime = 'nodejs';
@@ -56,6 +57,17 @@ export async function POST(request: NextRequest) {
         { success: false, message: 'Пользователь не найден в БД' },
         { status: 404 }
       );
+    }
+
+    if (itemType === 'premium') {
+      try {
+        await assertCanPurchasePremium(dbUserId);
+      } catch (e: unknown) {
+        return NextResponse.json(
+          { success: false, message: e instanceof Error ? e.message : 'Premium уже активен' },
+          { status: 400 }
+        );
+      }
     }
 
     const coins = itemType === 'coins' ? Math.round(normalizedAmount * 50) : 0;

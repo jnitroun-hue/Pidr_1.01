@@ -12,7 +12,7 @@ interface PremiumPurchaseModalProps {
   onClose: () => void;
   userCoins: number;
   premium: PremiumStatus | null;
-  onSuccess: () => void;
+  onSuccess: (premium: PremiumStatus) => void;
 }
 
 export default function PremiumPurchaseModal({
@@ -38,7 +38,7 @@ export default function PremiumPurchaseModal({
       });
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || 'Ошибка покупки');
-      onSuccess();
+      if (data.premium) onSuccess(data.premium);
       onClose();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Ошибка');
@@ -99,6 +99,16 @@ export default function PremiumPurchaseModal({
             </div>
           )}
 
+          {premium && !premium.canPurchase && (
+            <div style={{
+              marginBottom: '14px', padding: '12px', borderRadius: '10px',
+              background: 'rgba(251, 191, 36, 0.12)', border: '1px solid rgba(251, 191, 36, 0.35)',
+              color: '#fde68a', fontSize: '13px', lineHeight: 1.5,
+            }}>
+              Premium уже активен. Повторная покупка будет доступна после окончания текущего месяца.
+            </div>
+          )}
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '18px' }}>
             {[
               { icon: Zap, text: PREMIUM_BENEFITS[0] },
@@ -113,6 +123,8 @@ export default function PremiumPurchaseModal({
             ))}
           </div>
 
+          {premium?.canPurchase !== false ? (
+            <>
           <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
             {(['rub', 'coins'] as const).map((t) => (
               <button
@@ -159,6 +171,8 @@ export default function PremiumPurchaseModal({
               {loading ? 'Обработка…' : `Купить за ${PREMIUM_PRICE_COINS.toLocaleString('ru-RU')} монет`}
             </motion.button>
           )}
+            </>
+          ) : null}
         </motion.div>
       </motion.div>
     </AnimatePresence>

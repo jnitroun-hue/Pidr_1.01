@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaDice, FaPaintBrush, FaTimes, FaUpload } from 'react-icons/fa';
+import { FaDice, FaPaintBrush, FaTimes, FaUpload, FaGift } from 'react-icons/fa';
 import { useTonAddress, useTonConnectUI } from '@tonconnect/ui-react';
 import { toNano } from 'ton-core';
 import styles from './NFTMintModal.module.css';
+import type { PremiumStatus } from '@/lib/premium/premium-service';
 
 interface NFTMintModalProps {
   onClose: () => void;
@@ -27,6 +28,14 @@ export default function NFTMintModal({ onClose, onSuccess }: NFTMintModalProps) 
   
   // Результат рандомной генерации
   const [randomCard, setRandomCard] = useState<any>(null);
+  const [premium, setPremium] = useState<PremiumStatus | null>(null);
+
+  useEffect(() => {
+    fetch('/api/premium/status', { credentials: 'include' })
+      .then((r) => r.json())
+      .then((d) => { if (d.success) setPremium(d.premium); })
+      .catch(() => {});
+  }, []);
 
   const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
   const suits = [
@@ -36,6 +45,32 @@ export default function NFTMintModal({ onClose, onSuccess }: NFTMintModalProps) 
     { value: 'clubs', label: '♣ Трефы', emoji: '♣️' }
   ];
   const styles_list = ['classic', 'modern', 'neon', 'vintage', 'gold'];
+
+  const handleFreeRandomMint = async () => {
+    setIsProcessing(true);
+    try {
+      const response = await fetch('/api/nft/mint-random', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ useFreePremium: true }),
+      });
+      const result = await response.json();
+      if (!result.success) {
+        alert(result.error || result.message || 'Ошибка');
+        return;
+      }
+      const card = result.nft || result.card;
+      alert(`🎁 Premium free roll!\n\n${card.rank} ${card.suit} (${card.rarity})`);
+      window.dispatchEvent(new CustomEvent('nft-collection-updated'));
+      onSuccess();
+      onClose();
+    } catch (error: unknown) {
+      alert('Ошибка: ' + (error instanceof Error ? error.message : 'Неизвестная ошибка'));
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   const handleRandomMint = async () => {
     if (!userAddress) {
@@ -55,16 +90,31 @@ export default function NFTMintModal({ onClose, onSuccess }: NFTMintModalProps) 
 
       const result = await response.json();
       if (!result.success) {
-        alert(result.message);
+        alert(result.error || result.message || 'Ошибка');
         setIsProcessing(false);
         return;
       }
 
-      setRandomCard(result.card);
+      if (result.isPremiumFree) {
+        const card = result.nft || result.card;
+        alert(`🎉 ${card.rank} ${card.suit} (${card.rarity})!`);
+        onSuccess();
+        onClose();
+        return;
+      }
+
+      setRandomCard(result.nft || result.card);
+      
+      if (!result.master_wallet_address || !result.mint_price) {
+        alert(result.message || 'Карта создана!');
+        onSuccess();
+        onClose();
+        return;
+      }
       
       // 2. Отправляем транзакцию через TON Connect
       const masterWallet = result.master_wallet_address;
-      const amount = result.mint_price_ton;
+      const amount = result.mint_price;
 
       const transaction = {
         validUntil: Math.floor(Date.now() / 1000) + 600,
@@ -269,7 +319,23 @@ export default function NFTMintModal({ onClose, onSuccess }: NFTMintModalProps) 
           </button>
 
           <h2 className={styles.title}>🎲 Рандомная генерация</h2>
-          <p className={styles.subtitle}>Комиссия: 0.5 TON</p>
+          <p className={styles.subtitle}>
+            {premium?.freeRandomAvailable
+              ? '🎁 Premium: 1 бесплатная генерация на этой неделе!'
+              : 'Комиссия: 0.5 TON'}
+          </p>
+
+          {premium?.freeRandomAvailable && (
+            <button
+              className={styles.mintBtn}
+              style={{ marginBottom: '12px', background: 'linear-gradient(135deg, #0284c7, #6366f1)' }}
+              onClick={handleFreeRandomMint}
+              disabled={isProcessing}
+            >
+              <FaGift style={{ marginRight: 8 }} />
+              {isProcessing ? '⏳ Генерация…' : '🎁 Бесплатная Premium генерация'}
+            </button>
+          )}
 
           {randomCard && (
             <div className={styles.cardPreview}>

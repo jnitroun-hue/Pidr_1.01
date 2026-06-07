@@ -53,6 +53,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const { dbUserId } = await getUserIdFromDatabase(auth.userId, auth.environment);
+    const { data: localPayment } = await supabaseAdmin
+      .from('_pidr_payments')
+      .select('item_type')
+      .eq('payment_id', paymentId)
+      .eq('user_id', dbUserId || 0)
+      .maybeSingle();
+
     return NextResponse.json({
       success: true,
       payment: {
@@ -61,7 +69,8 @@ export async function GET(request: NextRequest) {
         amount: payment.amount.value,
         currency: payment.amount.currency,
         description: payment.description,
-        createdAt: payment.created_at
+        createdAt: payment.created_at,
+        itemType: localPayment?.item_type || payment.metadata?.itemType || 'coins',
       }
     });
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 import { supabaseAdmin } from '@/lib/supabase';
-import { activatePremium, getPremiumStatus } from '@/lib/premium/premium-service';
+import { activatePremium, assertCanPurchasePremium, getPremiumStatus } from '@/lib/premium/premium-service';
 import { PREMIUM_PRICE_COINS } from '@/lib/premium/constants';
 
 export const runtime = 'nodejs';
@@ -22,6 +22,15 @@ export async function POST(req: NextRequest) {
   const method = body.method === 'coins' ? 'coins' : null;
   if (method !== 'coins') {
     return NextResponse.json({ success: false, error: 'Поддерживается только method: coins' }, { status: 400 });
+  }
+
+  try {
+    await assertCanPurchasePremium(dbUserId);
+  } catch (e: unknown) {
+    return NextResponse.json(
+      { success: false, error: e instanceof Error ? e.message : 'Premium уже активен' },
+      { status: 400 }
+    );
   }
 
   const currentCoins = dbUser.coins || 0;

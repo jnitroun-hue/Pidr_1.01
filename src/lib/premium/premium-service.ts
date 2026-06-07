@@ -9,6 +9,7 @@ export interface PremiumStatus {
   daysLeft: number;
   freeRandomAvailable: boolean;
   weekKey: string;
+  canPurchase: boolean;
 }
 
 export function getPremiumDiscountPercent(rarityOrRank: string): number {
@@ -102,7 +103,19 @@ export async function getPremiumStatus(userId: number): Promise<PremiumStatus> {
     daysLeft,
     freeRandomAvailable: isPremium && !freeGen,
     weekKey,
+    canPurchase: !isPremium,
   };
+}
+
+/** Покупка разрешена только если Premium не активен (1 раз в месяц, без продления) */
+export async function assertCanPurchasePremium(userId: number): Promise<void> {
+  const status = await getPremiumStatus(userId);
+  if (status.isPremium) {
+    const until = status.expiresAt
+      ? new Date(status.expiresAt).toLocaleString('ru-RU')
+      : '—';
+    throw new Error(`Premium уже активен до ${until}. Повторная покупка возможна после окончания срока.`);
+  }
 }
 
 export async function activatePremium(params: {
@@ -111,8 +124,13 @@ export async function activatePremium(params: {
   paymentId?: string;
   amountPaidRub?: number;
   amountPaidCoins?: number;
+  allowExtend?: boolean;
 }): Promise<{ expiresAt: string }> {
-  const { userId, source, paymentId, amountPaidRub, amountPaidCoins } = params;
+  const { userId, source, paymentId, amountPaidRub, amountPaidCoins, allowExtend = false } = params;
+
+  if (!allowExtend) {
+    await assertCanPurchasePremium(userId);
+  }
 
   const { data: user } = await supabaseAdmin
     .from('_pidr_users')
@@ -121,17 +139,25 @@ export async function activatePremium(params: {
     .single();
 
   const now = Date.now();
-  const currentExpiry = user?.premium_expires_at
-    ? new Date(user.premium_expires_at).getTime()
-    : 0;
-  const base = currentExpiry > now ? currentExpiry : now;
-  const expiresAt = new Date(base + PREMIUM_DURATION_DAYS * 86400000).toISOString();
   const startedAt = new Date().toISOString();
+  let expiresAt: string;
+
+  if (allowExtend && user?.premium_expires_at && new Date(user.premium_expires_at).getTime() > now) {
+    expiresAt = new Date(new Date(user.premium_expires_at).getTime() + PREMIUM_DURATION_DAYS * 86400000).toISOString();
+  } else {
+    expiresAt = new Date(now + PREMIUM_DURATION_DAYS * 86400000).toISOString();
+  }
 
   await supabaseAdmin
     .from('_pidr_users')
     .update({ is_premium: true, premium_expires_at: expiresAt })
     .eq('id', userId);
+
+  await supabaseAdmin
+    .from('_pidr_premium_subscriptions')
+    .update({ is_active: false })
+    .eq('user_id', userId)
+    .eq('is_active', true);
 
   await supabaseAdmin.from('_pidr_premium_subscriptions').insert({
     user_id: userId,

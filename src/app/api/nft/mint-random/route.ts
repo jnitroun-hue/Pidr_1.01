@@ -1,11 +1,11 @@
 /**
  * POST /api/nft/mint-random
- * Рандомная генерация NFT карты (0.5 TON или 0.1 SOL; Premium: 1 free/week)
+ * Рандомная NFT (0.5 TON / Premium: 1 free/week → запись в _pidr_nft_cards)
  */
-
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '../../../../lib/auth/auth-middleware';
-import { createClient } from '@supabase/supabase-js';
+import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
+import { supabaseAdmin } from '@/lib/supabase';
+import { NFT_CARDS_TABLE } from '@/lib/nft/constants';
 import {
   consumeFreeRandomGeneration,
   getPremiumStatus,
@@ -14,117 +14,113 @@ import {
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+function normalizeRank(rank: string): string {
+  const r = rank.toUpperCase();
+  if (r === 'J') return 'jack';
+  if (r === 'Q') return 'queen';
+  if (r === 'K') return 'king';
+  if (r === 'A') return 'ace';
+  return rank.toLowerCase();
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!supabaseUrl || !supabaseKey) {
-      return NextResponse.json(
-        { success: false, error: 'Supabase не настроен. Обратитесь к администратору.' },
-        { status: 500 }
-      );
+    const auth = requireAuth(request);
+    if (auth.error || !auth.userId) {
+      return NextResponse.json({ success: false, error: auth.error || 'Не авторизован' }, { status: 401 });
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    const authContext = await requireAuth(request);
-    if (!authContext.authenticated || !authContext.userId) {
-      return NextResponse.json(
-        { success: false, error: authContext.error || 'Не авторизован' },
-        { status: 401 }
-      );
+    const { dbUserId } = await getUserIdFromDatabase(auth.userId, auth.environment);
+    if (!dbUserId) {
+      return NextResponse.json({ success: false, error: 'Пользователь не найден' }, { status: 404 });
     }
 
-    const body = await request.json();
+    const body = await request.json().catch(() => ({}));
     const { wallet_address, network, useFreePremium } = body;
+    const wantsFree = useFreePremium === true;
 
-    const dbUserId = parseInt(String(authContext.userId), 10);
-    const premiumStatus = !Number.isNaN(dbUserId)
-      ? await getPremiumStatus(dbUserId)
-      : null;
-
-    const wantsFree = useFreePremium === true && premiumStatus?.freeRandomAvailable;
-
-    if (!wantsFree && !wallet_address) {
+    if (wantsFree) {
+      const premiumStatus = await getPremiumStatus(dbUserId);
+      if (!premiumStatus.freeRandomAvailable) {
+        return NextResponse.json(
+          { success: false, error: 'Бесплатная генерация недоступна (нужен Premium и лимит 1/неделю)' },
+          { status: 400 }
+        );
+      }
+    } else if (!wallet_address) {
       return NextResponse.json(
-        { success: false, message: 'wallet_address обязателен (или используйте бесплатную Premium генерацию)' },
+        { success: false, message: 'wallet_address обязателен' },
         { status: 400 }
       );
     }
 
     const suits = ['hearts', 'diamonds', 'clubs', 'spades'] as const;
     const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
-
     const randomSuit = suits[Math.floor(Math.random() * suits.length)];
-    const randomRank = ranks[Math.floor(Math.random() * ranks.length)];
+    const randomRankRaw = ranks[Math.floor(Math.random() * ranks.length)];
+    const randomRank = normalizeRank(randomRankRaw);
 
     const rarityRoll = Math.random() * 100;
-    let rarity: string;
-    if (rarityRoll < 60) rarity = 'common';
-    else if (rarityRoll < 85) rarity = 'rare';
-    else rarity = 'epic';
+    const rarity = rarityRoll < 60 ? 'common' : rarityRoll < 85 ? 'rare' : 'epic';
 
-    const mintPrice = wantsFree ? 0 : (network === 'SOL' ? 0.1 : 0.5);
-    const commission = mintPrice;
-    const masterWalletAddress = network === 'SOL'
-      ? process.env.MASTER_SOLANA_ADDRESS
-      : process.env.MASTER_TON_ADDRESS;
+    const rankFile = randomRankRaw === '10' ? '10' : randomRankRaw.toLowerCase();
+    const imageUrl = `/cards/${rankFile}_of_${randomSuit}.png`;
 
-    const { data: nftData, error: nftError } = await supabase
-      .from('_pidr_nft_ownership')
+    const { data: savedCard, error: saveError } = await supabaseAdmin
+      .from(NFT_CARDS_TABLE)
       .insert({
-        user_id: authContext.userId,
-        rank: randomRank,
+        user_id: dbUserId,
         suit: randomSuit,
+        rank: randomRank,
         rarity,
-        mint_type: wantsFree ? 'random_premium_free' : 'random',
-        wallet_address: wallet_address || null,
-        network: network || 'TON',
-        minted_at: new Date().toISOString(),
+        image_url: imageUrl,
+        metadata: {
+          mint_type: wantsFree ? 'random_premium_free' : 'random',
+          wallet_address: wallet_address || null,
+          network: network || 'TON',
+          generated_at: new Date().toISOString(),
+        },
       })
-      .select()
+      .select('id, rank, suit, rarity, image_url')
       .single();
 
-    if (nftError || !nftData) {
-      console.error('❌ Ошибка создания NFT:', nftError);
-      return NextResponse.json({ success: false, error: 'Ошибка создания NFT' }, { status: 500 });
+    if (saveError || !savedCard) {
+      console.error('❌ mint-random save:', saveError);
+      return NextResponse.json({ success: false, error: 'Ошибка сохранения NFT' }, { status: 500 });
     }
 
-    if (wantsFree && !Number.isNaN(dbUserId)) {
-      await consumeFreeRandomGeneration(dbUserId, nftData.id);
+    if (wantsFree) {
+      const consumed = await consumeFreeRandomGeneration(dbUserId, savedCard.id);
+      if (!consumed) {
+        await supabaseAdmin.from(NFT_CARDS_TABLE).delete().eq('id', savedCard.id);
+        return NextResponse.json(
+          { success: false, error: 'Бесплатная генерация уже использована на этой неделе' },
+          { status: 400 }
+        );
+      }
     }
 
-    await supabase.from('_pidr_nft_mint_history').insert({
-      user_id: authContext.userId,
-      nft_id: nftData.id,
-      wallet_address: wallet_address || 'premium_free',
-      mint_type: wantsFree ? 'random_premium_free' : 'random',
-      mint_price_ton: network === 'TON' ? mintPrice : 0,
-      mint_price_sol: network === 'SOL' ? mintPrice : 0,
-      commission_paid_ton: network === 'TON' ? commission : 0,
-      commission_paid_sol: network === 'SOL' ? commission : 0,
-      master_wallet_address: masterWalletAddress,
-      network: network || 'TON',
-      status: wantsFree ? 'premium_free' : 'completed',
-      minted_at: new Date().toISOString(),
-    });
+    const mintPrice = wantsFree ? 0 : network === 'SOL' ? 0.1 : 0.5;
+    const masterWalletAddress = !wantsFree
+      ? (network === 'SOL' ? process.env.MASTER_SOLANA_ADDRESS : process.env.MASTER_TON_ADDRESS)
+      : null;
 
     return NextResponse.json({
       success: true,
-      nft: { id: nftData.id, rank: randomRank, suit: randomSuit, rarity },
+      nft: savedCard,
+      card: savedCard,
       mint_price: mintPrice,
       isPremiumFree: wantsFree,
       network: network || 'TON',
-      master_wallet_address: wantsFree ? null : masterWalletAddress,
+      master_wallet_address: masterWalletAddress,
       message: wantsFree
-        ? `Premium free roll: ${randomRank} of ${randomSuit} (${rarity})!`
-        : `Выпала карта ${randomRank} of ${randomSuit} (${rarity})!`,
+        ? `Premium: ${randomRankRaw} ${randomSuit} (${rarity})!`
+        : `Выпала карта ${randomRankRaw} of ${randomSuit} (${rarity})!`,
     });
   } catch (error: unknown) {
-    console.error('❌ Ошибка генерации случайной NFT:', error);
+    console.error('❌ mint-random:', error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Внутренняя ошибка сервера' },
+      { success: false, error: error instanceof Error ? error.message : 'Внутренняя ошибка' },
       { status: 500 }
     );
   }

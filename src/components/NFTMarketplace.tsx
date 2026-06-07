@@ -158,6 +158,7 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
   const loadMySales = useCallback(async (retryCount = 0) => {
     try {
       const response = await fetch('/api/marketplace/my-sales', {
+        credentials: 'include',
         headers: {
           ...getApiHeaders(),
           'Cache-Control': 'no-cache' // ✅ ОТКЛЮЧАЕМ КЭШИРОВАНИЕ
@@ -252,6 +253,7 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
       try {
         const response = await fetch('/api/marketplace/buy', {
           method: 'POST',
+          credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
             ...getApiHeaders()
@@ -288,6 +290,7 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
       try {
         const response = await fetch('/api/marketplace/buy', {
           method: 'POST',
+          credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
             ...getApiHeaders()
@@ -372,6 +375,7 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
       try {
         const response = await fetch('/api/marketplace/create-rub-payment', {
           method: 'POST',
+          credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
             ...getApiHeaders(),
@@ -465,6 +469,7 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
 
       const response = await fetch('/api/marketplace/create', {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           ...getApiHeaders()
@@ -492,7 +497,7 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
         window.dispatchEvent(new CustomEvent('nft-collection-updated'));
         window.dispatchEvent(new CustomEvent('marketplace-updated'));
       } else {
-        alert(`❌ Ошибка: ${data.error}`);
+        alert(`❌ Ошибка продажи: ${data.error}${data.hint ? `\n\n${data.hint}` : ''}`);
       }
     } catch (error) {
       console.error('Ошибка продажи:', error);
@@ -542,6 +547,7 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
     try {
       const response = await fetch('/api/marketplace/cancel', {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           ...getApiHeaders()
