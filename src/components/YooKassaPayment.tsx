@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { CreditCard, Loader2 } from 'lucide-react';
+import { getApiHeaders } from '@/lib/api-headers';
 
 interface YooKassaPaymentProps {
   amount: number; // Сумма в рублях
@@ -42,7 +43,7 @@ export default function YooKassaPayment({
     try {
       const response = await fetch('/api/payments/yookassa/create', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getApiHeaders(),
         credentials: 'include',
         body: JSON.stringify({
           amount,

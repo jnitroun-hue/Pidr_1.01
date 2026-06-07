@@ -1,8 +1,8 @@
 .wrapper {
   position: relative;
   width: 100%;
-  max-width: 280px;
-  height: 200px;
+  max-width: 300px;
+  height: 220px;
   margin: 0 auto 12px;
   display: flex;
   align-items: center;
@@ -10,8 +10,8 @@
 }
 
 .wrapperCompact {
-  max-width: 200px;
-  height: 140px;
+  max-width: 210px;
+  height: 155px;
   margin-bottom: 8px;
 }
 

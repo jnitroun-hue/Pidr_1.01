@@ -10,6 +10,7 @@ import PremiumSuccessModal from '../../components/PremiumSuccessModal';
 import type { PremiumStatus } from '@/lib/premium/premium-service';
 import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
 import PageLoadingScreen from '@/components/PageLoadingScreen';
+import { appConfirm } from '@/lib/app-notice';
 
 interface User {
   telegram_id: number;
@@ -40,6 +41,8 @@ interface PromoCard {
   cardTitle: string;
   originalRub: number;
   discountedRub: number;
+  originalCoins?: number;
+  discountedCoins?: number;
   tonPrice: number;
   solPrice: number;
   discountPercent: number;
@@ -88,6 +91,7 @@ export default function ShopPage() {
       const response = await fetch('/api/marketplace/daily-offer', {
         method: 'GET',
         headers: getApiHeaders(),
+        credentials: 'include',
         cache: 'no-store',
       });
       const data = await response.json();
@@ -109,7 +113,8 @@ export default function ShopPage() {
     const loadUser = async () => {
       try {
         const response = await fetch('/api/user/me', {
-          headers: getApiHeaders()
+          headers: getApiHeaders(),
+          credentials: 'include',
         });
         const data = await response.json();
         
@@ -146,6 +151,7 @@ export default function ShopPage() {
       try {
         const response = await fetch('/api/marketplace/list?limit=200', {
           headers: getApiHeaders(),
+          credentials: 'include',
           cache: 'no-store',
         });
         const data = await response.json();
@@ -206,7 +212,20 @@ export default function ShopPage() {
   const handleClaimPromo = async () => {
     if (!dailyPromo) return;
     if (!canClaimPromo) {
-      alert(`⏳ Акция уже забрана. Новый шанс через ${promoCooldownLabel}`);
+      alert(`⏳ Акция уже использована. Новый шанс через ${promoCooldownLabel}`);
+      return;
+    }
+
+    const coinPrice = dailyPromo.discountedCoins ?? Math.ceil(dailyPromo.discountedRub / 0.2);
+    if ((user?.coins || 0) < coinPrice) {
+      alert(`❌ Недостаточно монет. Нужно ${coinPrice.toLocaleString('ru-RU')} 🪙`);
+      return;
+    }
+
+    if (!(await appConfirm(
+      `Купить карту акции дня за ${coinPrice.toLocaleString('ru-RU')} монет?\n\n${dailyPromo.cardTitle}\nСкидка -${dailyPromo.discountPercent}%`,
+      { confirmText: 'Купить', type: 'info' }
+    ))) {
       return;
     }
 
@@ -214,6 +233,8 @@ export default function ShopPage() {
       const response = await fetch('/api/marketplace/daily-offer', {
         method: 'POST',
         headers: getApiHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({ action: 'buy_coins' }),
       });
       const data = await response.json();
 
@@ -224,7 +245,7 @@ export default function ShopPage() {
           setCanClaimPromo(false);
           setPromoCooldownLabel(formatCountdown(remaining));
         }
-        alert(`❌ ${data.error || 'Не удалось активировать акцию'}`);
+        alert(`❌ ${data.error || 'Не удалось купить акцию'}`);
         return;
       }
 
@@ -232,11 +253,16 @@ export default function ShopPage() {
       setClaimRemainingMs(remaining);
       setCanClaimPromo(false);
       setPromoCooldownLabel(formatCountdown(remaining));
-      window.location.hash = 'marketplace-section';
-      alert('🔥 Акция активирована! Перейдите к лотам и выберите карту со скидкой дня.');
+
+      if (typeof data.purchase?.newBalance === 'number') {
+        handleBalanceUpdate(data.purchase.newBalance);
+      }
+
+      await loadDailyPromo();
+      alert('🎉 Карта акции дня куплена! Она уже в вашей NFT коллекции.');
     } catch (error) {
-      console.error('Ошибка активации акции:', error);
-      alert('Ошибка активации акции дня');
+      console.error('Ошибка покупки акции:', error);
+      alert('Ошибка покупки акции дня');
     }
   };
 
@@ -394,27 +420,21 @@ export default function ShopPage() {
                   {dailyPromo.cardTitle}
                 </h3>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                  <span style={{ color: '#fdba74', fontSize: 13, textDecoration: 'line-through' }}>
-                    {dailyPromo.originalRub} ₽
-                  </span>
-                  <span style={{ color: '#fff', fontSize: 25, fontWeight: 900 }}>
-                    {dailyPromo.discountedRub} ₽
+                  {(dailyPromo.originalCoins ?? 0) > 0 && (
+                    <span style={{ color: '#fdba74', fontSize: 14, textDecoration: 'line-through' }}>
+                      {(dailyPromo.originalCoins ?? 0).toLocaleString('ru-RU')} 🪙
+                    </span>
+                  )}
+                  <span style={{ color: '#fde047', fontSize: 26, fontWeight: 900 }}>
+                    {(dailyPromo.discountedCoins ?? Math.ceil(dailyPromo.discountedRub / 0.2)).toLocaleString('ru-RU')} 🪙
                   </span>
                   <span style={{ color: '#fef08a', fontSize: 12, fontWeight: 800 }}>
                     -{dailyPromo.discountPercent}%
                   </span>
-                  <span style={{ color: '#bbf7d0', fontSize: 12, fontWeight: 700 }}>
-                    или {dailyPromo.tonPrice} TON / {dailyPromo.solPrice} SOL
-                  </span>
                 </div>
                 <p style={{ color: '#fed7aa', margin: '8px 0 0', fontSize: 12 }}>
-                  Цена приведена к ~200 ₽ после скидки, с ориентиром в крипте по серверному курсу.
+                  Покупка за монеты · 1 раз в 24 часа · карта сразу в коллекцию
                 </p>
-                {dailyPromo.isClonedImage && (
-                  <p style={{ color: '#fde68a', margin: '6px 0 0', fontSize: 11, fontWeight: 700 }}>
-                    Картинка акции клонирована в storage: `promo-clones/*`
-                  </p>
-                )}
               </div>
 
               <div style={{ minWidth: 230, textAlign: 'right' }}>
@@ -439,12 +459,13 @@ export default function ShopPage() {
                   </div>
                 )}
                 <div style={{ color: '#ffedd5', fontSize: 12, marginBottom: 8 }}>
-                  {canClaimPromo ? 'Можно активировать сейчас' : `Новый доступ через ${promoCooldownLabel}`}
+                  {canClaimPromo ? 'Доступна покупка за монеты' : `Новый шанс через ${promoCooldownLabel}`}
                 </div>
                 <motion.button
                   whileHover={{ scale: canClaimPromo ? 1.03 : 1 }}
                   whileTap={{ scale: canClaimPromo ? 0.97 : 1 }}
                   onClick={handleClaimPromo}
+                  disabled={!canClaimPromo}
                   style={{
                     width: '100%',
                     border: 'none',
@@ -458,7 +479,9 @@ export default function ShopPage() {
                     cursor: canClaimPromo ? 'pointer' : 'not-allowed',
                   }}
                 >
-                  {canClaimPromo ? 'Забрать акцию дня' : 'Акция уже забрана'}
+                  {canClaimPromo
+                    ? `Купить за ${(dailyPromo.discountedCoins ?? Math.ceil(dailyPromo.discountedRub / 0.2)).toLocaleString('ru-RU')} 🪙`
+                    : 'Уже куплено сегодня'}
                 </motion.button>
               </div>
             </div>

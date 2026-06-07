@@ -3,189 +3,154 @@
 import { motion } from 'framer-motion';
 import styles from './CardDealerHero.module.css';
 
-const CARD_FAN = [
-  { rotate: -28, x: -38, y: 8, delay: 0 },
-  { rotate: -12, x: -18, y: 2, delay: 0.05 },
-  { rotate: 0, x: 0, y: -2, delay: 0.1 },
-  { rotate: 12, x: 18, y: 2, delay: 0.15 },
-  { rotate: 28, x: 38, y: 8, delay: 0.2 },
+const CARDS = [
+  { rot: -34, x: -52, y: 18, suit: '♠', color: '#0f172a', face: '#f8fafc', delay: 0 },
+  { rot: -16, x: -26, y: 8, suit: '♥', color: '#dc2626', face: '#fff1f2', delay: 0.08 },
+  { rot: 0, x: 0, y: 0, suit: '♦', color: '#dc2626', face: '#fff7ed', delay: 0.16 },
+  { rot: 16, x: 26, y: 8, suit: '♣', color: '#0f172a', face: '#f0fdf4', delay: 0.24 },
+  { rot: 34, x: 52, y: 18, suit: '★', color: '#b45309', face: '#fffbeb', delay: 0.32 },
 ];
+
+function PlayingCard({
+  rot,
+  x,
+  y,
+  suit,
+  color,
+  face,
+  delay,
+}: (typeof CARDS)[0]) {
+  return (
+    <motion.g
+      animate={{
+        rotate: [rot - 6, rot + 8, rot - 6],
+        x: [x - 3, x + 5, x - 3],
+        y: [y + 6, y - 10, y + 6],
+      }}
+      transition={{ duration: 1.5, repeat: Infinity, delay, ease: 'easeInOut' }}
+    >
+      <g transform={`translate(${x}, ${y}) rotate(${rot})`}>
+        <rect x="-18" y="-28" width="36" height="50" rx="4" fill="#1e293b" />
+        <rect x="-16" y="-26" width="32" height="46" rx="3" fill="url(#cardBack)" stroke="#fbbf24" strokeWidth="1.2" />
+        <rect x="-14" y="-24" width="28" height="42" rx="2.5" fill={face} stroke="#cbd5e1" strokeWidth="0.8" />
+        <text x="-8" y="-12" fontSize="11" fontWeight="800" fill={color}>{suit}</text>
+        <text x="8" y="20" fontSize="11" fontWeight="800" fill={color} transform="rotate(180)">{suit}</text>
+        <circle cx="0" cy="2" r="7" fill="none" stroke={color} strokeWidth="0.8" opacity="0.35" />
+      </g>
+    </motion.g>
+  );
+}
 
 interface CardDealerHeroProps {
   size?: 'default' | 'compact';
 }
 
 export default function CardDealerHero({ size = 'default' }: CardDealerHeroProps) {
+  const uid = size === 'compact' ? 'c' : 'd';
+
   return (
     <motion.div
       className={`${styles.wrapper} ${size === 'compact' ? styles.wrapperCompact : ''}`}
-      initial={{ opacity: 0, y: 16 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, ease: 'easeOut' }}
+      transition={{ duration: 0.5 }}
       aria-hidden
     >
       <div className={styles.glow} />
 
-      {[
-        { top: '8%', left: '12%', d: 0 },
-        { top: '18%', right: '8%', d: 0.4 },
-        { bottom: '28%', left: '6%', d: 0.8 },
-        { bottom: '22%', right: '14%', d: 1.2 },
-      ].map((s, i) => (
-        <motion.span
-          key={i}
-          className={styles.sparkle}
-          style={{ top: s.top, left: s.left, right: s.right, bottom: s.bottom }}
-          animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1.15, 0.8], rotate: [0, 180, 360] }}
-          transition={{ duration: 2.8, repeat: Infinity, delay: s.d, ease: 'easeInOut' }}
-        >
-          ✦
-        </motion.span>
-      ))}
-
       <motion.svg
         className={styles.svg}
-        viewBox="0 0 280 200"
+        viewBox="0 0 300 220"
         fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        animate={{ y: [0, -4, 0] }}
-        transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
+        animate={{ y: [0, -3, 0] }}
+        transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
       >
-        {/* Плащ / плечи */}
-        <ellipse cx="140" cy="178" rx="72" ry="14" fill="rgba(0,0,0,0.35)" />
+        <defs>
+          <linearGradient id={`${uid}vest`} x1="0" y1="0" x2="0" y2="1">
+            <stop stopColor="#1e293b" />
+            <stop offset="1" stopColor="#020617" />
+          </linearGradient>
+          <linearGradient id={`${uid}hat`} x1="0" y1="0" x2="0" y2="1">
+            <stop stopColor="#44403c" />
+            <stop offset="1" stopColor="#1c1917" />
+          </linearGradient>
+          <linearGradient id={`${uid}skin`} x1="0" y1="0" x2="0" y2="1">
+            <stop stopColor="#c4a882" />
+            <stop offset="1" stopColor="#8b6914" />
+          </linearGradient>
+          <linearGradient id="cardBack" x1="0" y1="0" x2="1" y2="1">
+            <stop stopColor="#1e3a8a" />
+            <stop offset="1" stopColor="#312e81" />
+          </linearGradient>
+          <linearGradient id={`${uid}lens`} x1="0" y1="0" x2="1" y2="1">
+            <stop stopColor="#0a0a0a" />
+            <stop offset="0.5" stopColor="#111827" />
+            <stop offset="1" stopColor="#000" />
+          </linearGradient>
+          <filter id={`${uid}cardShadow`} x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="#000" floodOpacity="0.45" />
+          </filter>
+        </defs>
 
-        {/* Тело — жилет картёжника */}
-        <path
-          d="M88 118 Q140 108 192 118 L200 188 Q140 198 80 188 Z"
-          fill="url(#vestGrad)"
-        />
-        <path d="M140 118 L140 188" stroke="rgba(0,0,0,0.25)" strokeWidth="1.5" />
-        {/* Рубашка */}
-        <path d="M118 118 L140 132 L162 118 L158 188 L122 188 Z" fill="#e2e8f0" />
-        {/* Бабочка */}
-        <path d="M128 128 Q140 138 152 128 Q140 134 128 128" fill="#dc2626" />
-        <circle cx="140" cy="131" r="3" fill="#991b1b" />
+        <ellipse cx="150" cy="198" rx="78" ry="12" fill="rgba(0,0,0,0.4)" />
 
-        {/* Левая рука */}
-        <motion.g
-          animate={{ rotate: [-6, 4, -6] }}
-          transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
-          style={{ originX: '78px', originY: '130px' }}
-        >
-          <ellipse cx="72" cy="138" rx="16" ry="20" fill="#d4a574" />
-          <path d="M58 128 Q48 120 52 108" stroke="#d4a574" strokeWidth="10" strokeLinecap="round" fill="none" />
-        </motion.g>
+        {/* Плечи / жилет */}
+        <path d="M95 128 Q150 118 205 128 L212 196 Q150 208 88 196 Z" fill={`url(#${uid}vest)`} />
+        <path d="M130 128 L150 142 L170 128 L166 196 L134 196 Z" fill="#334155" opacity="0.9" />
+        <path d="M138 136 L150 148 L162 136" stroke="#64748b" strokeWidth="1" fill="none" />
 
-        {/* Правая рука */}
-        <motion.g
-          animate={{ rotate: [6, -4, 6] }}
-          transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut', delay: 0.15 }}
-          style={{ originX: '202px', originY: '130px' }}
-        >
-          <ellipse cx="208" cy="138" rx="16" ry="20" fill="#d4a574" />
-          <path d="M222 128 Q232 120 228 108" stroke="#d4a574" strokeWidth="10" strokeLinecap="round" fill="none" />
-        </motion.g>
+        {/* Рукава (за картами) */}
+        <ellipse cx="78" cy="148" rx="14" ry="22" fill={`url(#${uid}skin)`} opacity="0.85" />
+        <ellipse cx="222" cy="148" rx="14" ry="22" fill={`url(#${uid}skin)`} opacity="0.85" />
 
-        {/* Колода в руках — анимированный веер */}
-        <g transform="translate(140, 118)">
-          {CARD_FAN.map((c, i) => (
-            <motion.g
-              key={i}
-              animate={{
-                rotate: [c.rotate - 8, c.rotate + 12, c.rotate - 8],
-                x: [c.x - 4, c.x + 6, c.x - 4],
-                y: [c.y + 4, c.y - 8, c.y + 4],
-              }}
-              transition={{
-                duration: 1.4,
-                repeat: Infinity,
-                delay: c.delay,
-                ease: 'easeInOut',
-              }}
-            >
-              <rect
-                x={-14}
-                y={-22}
-                width="28"
-                height="38"
-                rx="3"
-                fill={i % 2 === 0 ? '#fef3c7' : '#fff'}
-                stroke="#1e293b"
-                strokeWidth="1.5"
-                transform={`rotate(${c.rotate})`}
-              />
-              <text
-                x="0"
-                y="-4"
-                textAnchor="middle"
-                fontSize="11"
-                fill={i % 2 === 0 ? '#dc2626' : '#1e293b'}
-                transform={`rotate(${c.rotate})`}
-              >
-                {['♠', '♥', '♦', '♣', '★'][i]}
-              </text>
-            </motion.g>
+        {/* Карты — ПЕРЕД телом */}
+        <g transform="translate(150, 138)" filter={`url(#${uid}cardShadow)`}>
+          {CARDS.map((c) => (
+            <PlayingCard key={c.suit + c.rot} {...c} />
           ))}
         </g>
 
-        {/* Голова */}
-        <ellipse cx="140" cy="88" rx="38" ry="42" fill="#e8b88a" />
+        {/* Кисти поверх карт */}
+        <motion.g
+          animate={{ rotate: [-4, 3, -4] }}
+          transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+          style={{ originX: '72px', originY: '148px' }}
+        >
+          <ellipse cx="68" cy="152" rx="12" ry="16" fill={`url(#${uid}skin)`} />
+        </motion.g>
+        <motion.g
+          animate={{ rotate: [4, -3, 4] }}
+          transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut', delay: 0.12 }}
+          style={{ originX: '228px', originY: '148px' }}
+        >
+          <ellipse cx="232" cy="152" rx="12" ry="16" fill={`url(#${uid}skin)`} />
+        </motion.g>
 
-        {/* Усы */}
-        <path
-          d="M118 98 Q128 104 140 100 Q152 104 162 98 Q152 108 140 106 Q128 108 118 98"
-          fill="#3f2e1e"
-        />
+        {/* Шея */}
+        <rect x="138" y="108" width="24" height="22" rx="6" fill={`url(#${uid}skin)`} />
 
-        {/* Улыбка */}
-        <path d="M128 108 Q140 116 152 108" stroke="#7c4a2a" strokeWidth="2" fill="none" strokeLinecap="round" />
+        {/* Голова — опущена вниз */}
+        <g transform="translate(150, 98) rotate(14)">
+          <ellipse cx="0" cy="0" rx="36" ry="40" fill={`url(#${uid}skin)`} />
+          {/* Ковбойская шляпа */}
+          <ellipse cx="0" cy="-34" rx="48" ry="9" fill="#292524" />
+          <path d="M-38 -34 Q0 -68 38 -34 Q28 -38 0 -40 Q-28 -38 -38 -34" fill={`url(#${uid}hat)`} />
+          <ellipse cx="0" cy="-36" rx="26" ry="5" fill="#0c0a09" />
+          {/* Тёмные очки */}
+          <path d="M-32 -6 Q-18 -14 -4 -6 L-4 4 Q-18 8 -32 2 Z" fill={`url(#${uid}lens)`} stroke="#000" strokeWidth="1.5" />
+          <path d="M4 -6 Q18 -14 32 -6 L32 2 Q18 8 4 4 Z" fill={`url(#${uid}lens)`} stroke="#000" strokeWidth="1.5" />
+          <path d="M-4 0 H4" stroke="#171717" strokeWidth="2" />
+          <path d="M-38 -4 Q-44 -2 -48 2" stroke="#171717" strokeWidth="2" fill="none" />
+          <path d="M38 -4 Q44 -2 48 2" stroke="#171717" strokeWidth="2" fill="none" />
+          <ellipse cx="-18" cy="-8" rx="5" ry="2" fill="rgba(255,255,255,0.12)" />
+          <ellipse cx="18" cy="-8" rx="5" ry="2" fill="rgba(255,255,255,0.12)" />
+          {/* Рот — спокойный */}
+          <path d="M-10 14 Q0 18 10 14" stroke="#57534e" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+        </g>
 
-        {/* Очки */}
-        <circle cx="122" cy="82" r="14" fill="none" stroke="#1e293b" strokeWidth="3" />
-        <circle cx="158" cy="82" r="14" fill="none" stroke="#1e293b" strokeWidth="3" />
-        <path d="M136 82 H144" stroke="#1e293b" strokeWidth="2.5" />
-        <path d="M108 80 Q100 78 94 82" stroke="#1e293b" strokeWidth="2" fill="none" />
-        <path d="M172 80 Q180 78 186 82" stroke="#1e293b" strokeWidth="2" fill="none" />
-        {/* Блики на стёклах */}
-        <ellipse cx="118" cy="78" rx="4" ry="2.5" fill="rgba(255,255,255,0.45)" />
-        <ellipse cx="154" cy="78" rx="4" ry="2.5" fill="rgba(255,255,255,0.45)" />
-
-        {/* Ковбойская шляпа */}
-        <ellipse cx="140" cy="58" rx="52" ry="10" fill="#3d2914" />
-        <path
-          d="M108 58 Q140 18 172 58 Q160 52 140 50 Q120 52 108 58"
-          fill="url(#hatGrad)"
-        />
-        <path d="M118 58 Q140 42 162 58" stroke="#5c3d1e" strokeWidth="2" fill="none" />
-        <ellipse cx="140" cy="56" rx="28" ry="6" fill="#2a1a0a" />
-
-        {/* Магический след от карт */}
-        <motion.path
-          d="M90 100 Q140 70 190 100"
-          stroke="url(#magicLine)"
-          strokeWidth="2"
-          fill="none"
-          strokeLinecap="round"
-          strokeDasharray="6 8"
-          animate={{ strokeDashoffset: [0, -28] }}
-          transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}
-        />
-
-        <defs>
-          <linearGradient id="vestGrad" x1="88" y1="118" x2="192" y2="188" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#1e3a5f" />
-            <stop offset="1" stopColor="#0f172a" />
-          </linearGradient>
-          <linearGradient id="hatGrad" x1="108" y1="18" x2="172" y2="58" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#6b4423" />
-            <stop offset="1" stopColor="#3d2914" />
-          </linearGradient>
-          <linearGradient id="magicLine" x1="90" y1="100" x2="190" y2="100" gradientUnits="userSpaceOnUse">
-            <stop stopColor="transparent" />
-            <stop offset="0.5" stopColor="#fbbf24" />
-            <stop offset="1" stopColor="transparent" />
-          </linearGradient>
-        </defs>
+        {/* Искры */}
+        <motion.circle cx="60" cy="90" r="2" fill="#fbbf24" animate={{ opacity: [0.2, 1, 0.2] }} transition={{ duration: 2, repeat: Infinity }} />
+        <motion.circle cx="240" cy="100" r="2" fill="#38bdf8" animate={{ opacity: [0.2, 1, 0.2] }} transition={{ duration: 2.2, repeat: Infinity, delay: 0.5 }} />
       </motion.svg>
     </motion.div>
   );

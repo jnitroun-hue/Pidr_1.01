@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseAdmin } from '@/lib/supabase';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/marketplace/list
@@ -16,6 +19,11 @@ import { supabase } from '@/lib/supabase';
  */
 export async function GET(request: NextRequest) {
   try {
+    const db = getSupabaseAdmin();
+    if (!db) {
+      return NextResponse.json({ success: false, error: 'База данных недоступна' }, { status: 503 });
+    }
+
     const { searchParams } = new URL(request.url);
     
     // Параметры запроса
@@ -64,7 +72,7 @@ export async function GET(request: NextRequest) {
       msg.includes('views_count') ||
       msg.includes('schema cache');
 
-    let query = supabase
+    let query = db
       .from('_pidr_nft_marketplace')
       .select(`
         *,
@@ -97,7 +105,7 @@ export async function GET(request: NextRequest) {
         // Fallback для старой схемы БД: возвращаем лоты без новых колонок и без зависимостей на schema cache.
         console.warn('⚠️ [Marketplace List] Переходим в legacy fallback из-за схемы:', msg);
 
-        let fallbackQuery = supabase
+        let fallbackQuery = db
           .from('_pidr_nft_marketplace')
           .select('id,nft_card_id,seller_user_id,price_coins,price_ton,price_sol,crypto_currency,status,created_at')
           .eq('status', 'active');
@@ -121,7 +129,7 @@ export async function GET(request: NextRequest) {
         let sellersById = new Map<number, any>();
 
         if (nftIds.length > 0) {
-          const { data: cards } = await supabase
+          const { data: cards } = await db
             .from('_pidr_nft_cards')
             .select('id,suit,rank,rarity,image_url,metadata')
             .in('id', nftIds);
@@ -129,7 +137,7 @@ export async function GET(request: NextRequest) {
         }
 
         if (sellerIds.length > 0) {
-          const { data: sellers } = await supabase
+          const { data: sellers } = await db
             .from('_pidr_users')
             .select('id,telegram_id,username,first_name,last_name')
             .in('id', sellerIds);

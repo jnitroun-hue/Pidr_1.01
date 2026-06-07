@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Crown, Sparkles, Zap, Flame, Gift, Percent } from 'lucide-react';
 import YooKassaPayment from './YooKassaPayment';
+import { getApiHeaders } from '@/lib/api-headers';
 import { PREMIUM_BENEFITS, PREMIUM_PRICE_COINS, PREMIUM_PRICE_RUB } from '@/lib/premium/constants';
 import type { PremiumStatus } from '@/lib/premium/premium-service';
 
@@ -32,7 +33,7 @@ export default function PremiumPurchaseModal({
     try {
       const res = await fetch('/api/premium/purchase', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getApiHeaders(),
         credentials: 'include',
         body: JSON.stringify({ method: 'coins' }),
       });
