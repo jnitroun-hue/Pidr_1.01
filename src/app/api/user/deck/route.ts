@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
+import { normalizeRankToken, normalizeSuitToken } from '@/lib/game/cardAssets';
 
 // ✅ Явная конфигурация runtime для Next.js 15
 export const runtime = 'nodejs';
@@ -56,7 +57,7 @@ export async function GET(request: NextRequest) {
 
     // ПОЛУЧАЕМ ВСЕ КАРТЫ ИЗ КОЛОДЫ
     // ✅ ИСПРАВЛЕНО: Используем явное указание foreign key через !nft_card_id
-    const { data: deckCards, error } = await supabase
+    const { data: deckCards, error } = await supabaseAdmin
       .from('_pidr_user_nft_deck')
       .select(`
         *,
@@ -109,17 +110,19 @@ export async function GET(request: NextRequest) {
     // ✅ ИСПРАВЛЕНО: Используем данные из nft_card если есть, иначе из deck
     const deck = (deckCards as DeckCardRow[] | null)?.map((card) => {
       const nftCard = card.nft_card || null;
+      const rawSuit = nftCard?.suit ?? card.suit;
+      const rawRank = nftCard?.rank ?? card.rank;
       return {
         id: card.id,
         user_id: card.user_id,
         nft_card_id: card.nft_card_id,
-        suit: nftCard?.suit || card.suit,
-        rank: nftCard?.rank || card.rank,
+        suit: normalizeSuitToken(String(rawSuit ?? '')),
+        rank: normalizeRankToken(rawRank as string | number),
         rarity: nftCard?.rarity || 'common',
         image_url: nftCard?.image_url || card.image_url,
         metadata: nftCard?.metadata || null,
         created_at: card.created_at,
-        nft_card: nftCard
+        nft_card: nftCard,
       };
     }) || [];
 
@@ -177,7 +180,7 @@ export async function DELETE(request: NextRequest) {
     console.log(`🗑️ [DELETE FROM DECK] Удаление карты ${deckCardId} из колоды пользователя ${userId}`);
 
     // УДАЛЯЕМ КАРТУ ИЗ КОЛОДЫ
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('_pidr_user_nft_deck')
       .delete()
       .eq('id', deckCardId)

@@ -28,7 +28,7 @@ import { useLanguage } from '../../components/LanguageSwitcher';
 import { useTranslations } from '../../lib/i18n/translations';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useTelegram } from '@/hooks/useTelegram';
-import { getCardAssetSrc } from '@/lib/game/cardAssets';
+import { getCardAssetSrc, deckEntriesToNftMap, buildNftDeckKey } from '@/lib/game/cardAssets';
 import { translateGameText } from '@/lib/i18n/gameRuntimeTranslations';
 import { getApiHeaders } from '@/lib/api-headers';
 import { appConfirm } from '@/lib/app-notice';
@@ -851,62 +851,28 @@ function GamePageContentComponent({
     }
   }, [showGameResultsModal, gameResults]);
 
-  // ✅ ЗАГРУЗКА NFT КАРТ ИЗ КОЛОДЫ (только для игрока)
+  // ✅ ЗАГРУЗКА NFT КАРТ ИЗ КОЛОДЫ (Telegram + web через cookies)
   useEffect(() => {
     const loadNFTDeck = async () => {
       try {
-        const telegramUser = getTelegramUser();
-        const telegramId = telegramUser?.id?.toString() || '';
-        
-        if (!telegramId) {
-          console.warn('⚠️ Telegram ID не найден, NFT карты не загружены');
-          return;
-        }
-
         console.log('🎴 [GamePageContent] Загружаем NFT карты из колоды...');
-        
+
         const response = await fetch('/api/user/deck', {
           method: 'GET',
           headers: {
-            'Content-Type': 'application/json',
-            'x-telegram-id': telegramId
+            ...getApiHeaders(),
+            'Cache-Control': 'no-cache',
           },
           credentials: 'include',
-          cache: 'no-store' // ✅ ОТКЛЮЧАЕМ КЭШИРОВАНИЕ
+          cache: 'no-store',
         });
 
         if (response.ok) {
           const result = await response.json();
           if (result.success && result.deck) {
-            // Формируем мапу: "rank_of_suit" -> image_url
-            const nftMap: Record<string, string> = {};
-            result.deck.forEach((deckCard: UserDeckEntry) => {
-              // ✅ ИСПРАВЛЕНО: Нормализуем rank и suit для правильного ключа
-              let rank = String(deckCard.rank || '').toLowerCase().trim();
-              let suit = String(deckCard.suit || '').toLowerCase().trim();
-              
-              // ✅ Нормализация рангов (A -> ace, K -> king, Q -> queen, J -> jack, числа остаются)
-              if (rank === 'a' || rank === 'ace') rank = 'ace';
-              else if (rank === 'k' || rank === 'king') rank = 'king';
-              else if (rank === 'q' || rank === 'queen') rank = 'queen';
-              else if (rank === 'j' || rank === 'jack') rank = 'jack';
-              
-              // ✅ Нормализация мастей (H -> hearts, D -> diamonds, C -> clubs, S -> spades)
-              if (suit === 'h' || suit === 'heart') suit = 'hearts';
-              else if (suit === 'd' || suit === 'diamond') suit = 'diamonds';
-              else if (suit === 'c' || suit === 'club') suit = 'clubs';
-              else if (suit === 's' || suit === 'spade') suit = 'spades';
-              
-              const key = `${rank}_of_${suit}`;
-              if (deckCard.image_url && rank && suit) {
-                nftMap[key] = deckCard.image_url;
-                console.log(`🎴 [GamePageContent] Добавлена NFT карта: ${key} -> ${deckCard.image_url}`);
-              }
-            });
-            console.log(`✅ [GamePageContent] Загружено ${Object.keys(nftMap).length} NFT карт из колоды:`, nftMap);
+            const nftMap = deckEntriesToNftMap(result.deck);
+            console.log(`✅ [GamePageContent] Загружено ${Object.keys(nftMap).length} NFT карт из колоды`);
             setNftDeckCards(nftMap);
-            // ✅ ТАКЖЕ ОБНОВЛЯЕМ STORE (если есть метод для этого)
-            // Store уже загружает NFT карты в startGame, но для синхронизации обновляем локальный state
           }
         }
       } catch (error: unknown) {
@@ -2725,7 +2691,7 @@ function GamePageContentComponent({
                             nftImageUrl = cardImage; // ✅ cardImage уже является NFT URL!
                           } else if (cardRank && cardSuit) {
                             // ✅ ИСПРАВЛЕНО: Ищем NFT для всех игроков по ключу
-                            const nftKey = getNFTKey ? getNFTKey(cardImage) : `${cardRank}_of_${cardSuit}`;
+                            const nftKey = getNFTKey?.(cardImage) || buildNftDeckKey(cardRank, cardSuit);
                             nftImageUrl = (nftDeckCards[nftKey] || storeNftDeckCards?.[nftKey]) || null;
                           }
                           
@@ -3260,7 +3226,7 @@ function GamePageContentComponent({
               if (isCardImageUrl) {
                 nftImageUrl = cardImage; // ✅ cardImage уже является NFT URL!
               } else {
-                const nftKey = getNFTKey ? getNFTKey(cardImage) : `${cardRank}_of_${cardSuit}`;
+                const nftKey = getNFTKey?.(cardImage) || buildNftDeckKey(cardRank, cardSuit);
                 nftImageUrl = (nftDeckCards[nftKey] || storeNftDeckCards?.[nftKey]) || null;
               }
               

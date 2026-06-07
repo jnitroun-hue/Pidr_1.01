@@ -8,9 +8,9 @@ type CardAssetOptions = {
 const DEFAULT_CARD_BACK = '/img/cards/back.png';
 const FALLBACK_CARD_BACK = '/img/card-back.svg';
 
-function normalizeRankToken(rank?: string | number) {
+export function normalizeRankToken(rank?: string | number) {
   if (rank === undefined || rank === null) return '';
-  const rankStr = String(rank).toLowerCase();
+  const rankStr = String(rank).toLowerCase().trim();
   const rankNum = Number(rankStr);
 
   if (rankNum === 11 || rankStr === 'j' || rankStr === 'jack') return 'jack';
@@ -22,8 +22,33 @@ function normalizeRankToken(rank?: string | number) {
   return rankStr;
 }
 
-function normalizeSuitToken(suit?: string) {
-  return String(suit || '').toLowerCase();
+export function normalizeSuitToken(suit?: string) {
+  const s = String(suit || '').toLowerCase().trim();
+  if (s === 'h' || s === 'heart') return 'hearts';
+  if (s === 'd' || s === 'diamond') return 'diamonds';
+  if (s === 'c' || s === 'club') return 'clubs';
+  if (s === 's' || s === 'spade') return 'spades';
+  return s;
+}
+
+/** Ключ NFT-карты в колоде: `jack_of_hearts` */
+export function buildNftDeckKey(rank?: string | number, suit?: string): string {
+  const r = normalizeRankToken(rank);
+  const s = normalizeSuitToken(suit);
+  return r && s ? `${r}_of_${s}` : '';
+}
+
+export function deckEntriesToNftMap(
+  deck: Array<{ rank?: string | number; suit?: string; image_url?: string }>
+): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const entry of deck) {
+    const key = buildNftDeckKey(entry.rank, entry.suit);
+    if (key && entry.image_url) {
+      map[key] = entry.image_url;
+    }
+  }
+  return map;
 }
 
 function extractIdentityFromImage(image?: string): { rank: string; suit: string; rawName: string } {

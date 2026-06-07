@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { buildNftDeckKey } from '../../lib/game/cardAssets';
 import styles from './PlayerHand.module.css';
 import { Card } from '../../types/game';
 
@@ -91,10 +92,22 @@ const PlayerHand: React.FC<PlayerHandProps> = ({
                 <div className={styles.cardImageContainer}>
                   {/* ✅ НОВОЕ: Используем NFT карту если она есть в колоде */}
                   {(() => {
-                    // ✅ ПРОВЕРКА НА UNDEFINED
                     const cardRank = card.rank;
                     const cardSuit = card.suit;
-                    
+                    const cardImage = card.image;
+
+                    if (cardImage && (cardImage.startsWith('http://') || cardImage.startsWith('https://'))) {
+                      return (
+                        <img
+                          src={cardImage}
+                          alt="NFT Card"
+                          className={styles.cardImage}
+                          draggable={false}
+                          style={{ objectFit: 'cover' }}
+                        />
+                      );
+                    }
+
                     if (!cardRank || !cardSuit) {
                       return (
                         <img
@@ -105,9 +118,9 @@ const PlayerHand: React.FC<PlayerHandProps> = ({
                         />
                       );
                     }
-                    
-                    const nftKey = `${String(cardRank).toLowerCase()}_of_${cardSuit.toLowerCase()}`;
-                    const nftImageUrl = nftDeckCards[nftKey];
+
+                    const nftKey = buildNftDeckKey(cardRank, cardSuit);
+                    const nftImageUrl = nftKey ? nftDeckCards[nftKey] : undefined;
                     
                     return nftImageUrl ? (
                       <img
