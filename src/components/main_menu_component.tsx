@@ -10,6 +10,7 @@ import { useState } from 'react'
 import LanguageSwitcher, { useLanguage } from './LanguageSwitcher'
 import { useTranslations } from '../lib/i18n/translations'
 import OnlineIndicator from './OnlineIndicator'
+import CardDealerHero from './CardDealerHero'
 
 const tokens = [
   { name: 'TON', symbol: 'TON', color: '#0088ff' },
@@ -234,22 +235,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
             marginBottom: '40px'
           }}
         >
-          <motion.div
-            animate={{ 
-              rotate: [0, 10, -10, 0]
-            }}
-            transition={{ 
-              duration: 2, 
-              repeat: Infinity,
-              ease: 'easeInOut'
-            }}
-            style={{
-              fontSize: '64px',
-              marginBottom: '15px'
-            }}
-          >
-            🎴
-          </motion.div>
+          <CardDealerHero />
           <h1 style={{
             fontSize: '42px',
             fontWeight: '900',
