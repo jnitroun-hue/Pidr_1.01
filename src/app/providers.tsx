@@ -67,8 +67,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <ThemeProvider>
             <TonConnectProvider>
               <OnlineHeartbeat />
-              <AppNoticeHost />
               {children}
+              <AppNoticeHost />
             </TonConnectProvider>
           </ThemeProvider>
         </TelegramProvider>

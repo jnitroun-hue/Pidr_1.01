@@ -10,6 +10,7 @@ import { useFreeRollCountdown } from '@/hooks/useFreeRollCountdown';
 import { PREMIUM_FREE_ROLL_COOLDOWN_DAYS } from '@/lib/premium/constants';
 import { appAlert } from '@/lib/app-notice';
 import { getApiHeaders } from '@/lib/api-headers';
+import { openNftCardModal } from '@/lib/nft/open-card-modal';
 
 interface PremiumFreeRollBannerProps {
   onGenerated?: () => void;
@@ -111,22 +112,23 @@ export default function PremiumFreeRollBanner({ onGenerated }: PremiumFreeRollBa
       }
 
       const card = result.nft || result.card;
-      const rankLabel = card.rank?.toString().toUpperCase() ?? '?';
-      const suitLabel = card.suit ?? '';
-      const rarity = card.rarity ?? 'common';
 
       window.dispatchEvent(new CustomEvent('nft-collection-updated'));
       onGenerated?.();
       await refreshPremium();
 
-      await appAlert(
-        `${rankLabel} · ${suitLabel}\nРедкость: ${rarity}\n\nКарта сохранена в коллекции и в папке premium-free.`,
-        {
-          title: '🎁 Premium: бесплатная карта!',
-          type: 'success',
-          confirmText: 'Отлично',
-        }
-      );
+      openNftCardModal({
+        id: card.id,
+        rank: card.rank,
+        suit: card.suit,
+        rarity: card.rarity ?? result.theme ?? 'common',
+        image_url: card.image_url,
+        metadata: {
+          theme: result.theme,
+          theme_id: result.theme_id,
+          mint_type: 'random_premium_free',
+        },
+      });
     } catch (error) {
       await appAlert(error instanceof Error ? error.message : 'Неизвестная ошибка', {
         title: 'Ошибка',

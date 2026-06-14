@@ -1,5 +1,6 @@
 'use client'
 import { useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import { ShoppingBag, X, TrendingUp, Calendar, Check } from 'lucide-react';
@@ -915,14 +916,20 @@ export function SellModal({
         ? `${sellCrypto}: покупатель отправит крипту на ваш подключённый кошелёк.`
         : '₽: покупатель оплатит через ЮКассу; перевод NFT после успешной оплаты. Нужны колонки в БД (см. 0007_marketplace_rub.sql).';
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Продать NFT"
+      onClick={() => onClose()}
       style={{
         position: 'fixed',
         inset: 0,
         background: 'rgba(0, 0, 0, 0.82)',
         backdropFilter: 'blur(12px)',
-        zIndex: 99999,
+        zIndex: 2147482600,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -932,6 +939,7 @@ export function SellModal({
       <motion.div
         initial={{ opacity: 0, scale: 0.94 }}
         animate={{ opacity: 1, scale: 1 }}
+        onClick={(e) => e.stopPropagation()}
         style={{
           background: `linear-gradient(165deg, ${T.bgCard} 0%, ${T.bgDeep} 100%)`,
           borderRadius: T.radiusLg,
@@ -949,7 +957,6 @@ export function SellModal({
           <button
             type="button"
             onClick={onClose}
-            disabled={isSubmitting}
             style={{
               background: T.bgElevated,
               border: `1px solid ${T.borderSubtle}`,
@@ -960,8 +967,7 @@ export function SellModal({
               alignItems: 'center',
               justifyContent: 'center',
               color: T.textMuted,
-              cursor: isSubmitting ? 'not-allowed' : 'pointer',
-              opacity: isSubmitting ? 0.6 : 1,
+              cursor: 'pointer',
             }}
           >
             <X size={18} />
@@ -1004,7 +1010,15 @@ export function SellModal({
               {getRankDisplay(nft.rank)} {getSuitSymbol(nft.suit)}
             </div>
             <div style={{ color: T.textMuted, fontSize: '13px', marginTop: 4 }}>
-              {nft.rarity === 'pokemon' ? 'Pokémon' : 'Simple'}
+              {nft.rarity === 'pokemon'
+                ? 'Pokémon'
+                : nft.rarity === 'halloween'
+                  ? 'Halloween'
+                  : nft.rarity === 'starwars'
+                    ? 'Star Wars'
+                    : nft.rarity === 'legendary'
+                      ? 'Legendary'
+                      : nft.rarity}
             </div>
             <div style={{ color: T.textMuted, fontSize: '11px', marginTop: 8 }}>
               Шаг {step}/2 · тип оплаты
@@ -1149,6 +1163,7 @@ export function SellModal({
           </motion.button>
         </div>
       </motion.div>
-    </div>
+    </div>,
+    document.body
   );
 }

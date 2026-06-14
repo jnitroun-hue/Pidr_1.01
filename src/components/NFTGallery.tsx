@@ -6,13 +6,23 @@
  */
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import WalletQuickConnect from '@/components/WalletQuickConnect';
+import { SellModal } from '@/components/MarketplaceTabs';
 import { getApiHeaders } from '@/lib/api-headers';
-import { appConfirm } from '@/lib/app-notice';
+import { appAlert, appConfirm } from '@/lib/app-notice';
 import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
-import PageLoadingScreen from '@/components/PageLoadingScreen';
+import {
+  getNftRankDisplay,
+  getNftRarityLabel,
+  getNftSuitColor,
+  getNftSuitSymbol,
+} from '@/lib/nft/card-display';
+import { useNftSellModal } from '@/hooks/useNftSellModal';
+import { NFT_OPEN_CARD_MODAL_EVENT, type NftCardModalPayload } from '@/lib/nft/open-card-modal';
+import styles from './NFTGallery.module.css';
 
 interface NFTCard {
   id: string;
@@ -21,8 +31,10 @@ interface NFTCard {
   suit: string;
   rarity: string;
   image_url: string;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
   created_at: string;
+  is_listed?: boolean;
+  is_in_deck?: boolean;
 }
 
 export default function NFTGallery() {
@@ -31,23 +43,51 @@ export default function NFTGallery() {
   const [selectedCard, setSelectedCard] = useState<NFTCard | null>(null);
   const [showReplaceModal, setShowReplaceModal] = useState(false);
   const [duplicateInfo, setDuplicateInfo] = useState<{
-    existingCard: any;
+    existingCard: { id: string | number; image_url?: string; rarity?: string };
     newCard: NFTCard;
   } | null>(null);
+
+  const sellModal = useNftSellModal(() => {
+    loadCollection();
+  });
+
+  const getSuitColor = getNftSuitColor;
+  const getSuitSymbol = getNftSuitSymbol;
+  const getRarityLabel = getNftRarityLabel;
+  const getRankDisplay = getNftRankDisplay;
 
   useEffect(() => {
     loadCollection();
     
-    // ✅ СЛУШАЕМ СОБЫТИЯ ОБНОВЛЕНИЯ КОЛЛЕКЦИИ
     const handleCollectionUpdate = () => {
       console.log('🔄 [NFTGallery] Обновляем коллекцию...');
       loadCollection();
     };
+
+    const handleOpenCardModal = (event: Event) => {
+      const detail = (event as CustomEvent<NftCardModalPayload>).detail;
+      if (!detail?.id) return;
+      setSelectedCard({
+        id: String(detail.id),
+        user_id: String(detail.user_id ?? ''),
+        rank: detail.rank,
+        suit: detail.suit,
+        rarity: detail.rarity,
+        image_url: detail.image_url,
+        metadata: detail.metadata,
+        created_at: detail.created_at ?? new Date().toISOString(),
+        is_listed: detail.is_listed ?? false,
+        is_in_deck: detail.is_in_deck ?? false,
+      });
+      loadCollection();
+    };
     
     window.addEventListener('nft-collection-updated', handleCollectionUpdate);
+    window.addEventListener(NFT_OPEN_CARD_MODAL_EVENT, handleOpenCardModal);
     
     return () => {
       window.removeEventListener('nft-collection-updated', handleCollectionUpdate);
+      window.removeEventListener(NFT_OPEN_CARD_MODAL_EVENT, handleOpenCardModal);
     };
   }, []);
 
@@ -89,41 +129,6 @@ export default function NFTGallery() {
     }
   };
 
-  const getSuitColor = (suit: string) => {
-    const colors: Record<string, string> = {
-      'hearts': '#ef4444',
-      'diamonds': '#f59e0b',
-      'clubs': '#22c55e',
-      'spades': '#3b82f6'
-    };
-    return colors[suit?.toLowerCase()] || '#94a3b8';
-  };
-
-  const getSuitSymbol = (suit: string) => {
-    const symbols: Record<string, string> = {
-      'hearts': '♥',
-      'diamonds': '♦',
-      'clubs': '♣',
-      'spades': '♠'
-    };
-    return symbols[suit?.toLowerCase()] || '?';
-  };
-
-  const getRarityLabel = (rarity: string) => {
-    const labels: Record<string, string> = {
-      'pokemon': '⚡ Покемон',
-      'halloween': '🎃 Хеллоуин',
-      'starwars': '⚔️ Star Wars',
-      'simple': '🎴 Простая',
-      'common': 'Обычная',
-      'uncommon': 'Необычная',
-      'rare': 'Редкая',
-      'epic': 'Эпическая',
-      'legendary': 'Легендарная'
-    };
-    return labels[rarity?.toLowerCase()] || rarity;
-  };
-
   const handleAddToDeck = async (card: NFTCard, forceReplace: boolean = false) => {
     try {
       // Если это принудительная замена
@@ -132,7 +137,8 @@ export default function NFTGallery() {
           method: 'POST',
           credentials: 'include',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            ...getApiHeaders(),
           },
           body: JSON.stringify({
             existingCardId: duplicateInfo.existingCard.id,
@@ -153,15 +159,9 @@ export default function NFTGallery() {
           setShowReplaceModal(false);
           setDuplicateInfo(null);
           setSelectedCard(null);
-          
-          // Показываем уведомление через Telegram WebApp
-          if ((window as any).Telegram?.WebApp?.showAlert) {
-            (window as any).Telegram.WebApp.showAlert('✅ Карта заменена в колоде!');
-          } else {
-            alert('✅ Карта заменена в колоде!');
-          }
+          await appAlert('Карта заменена в игровой колоде.', { title: 'Готово', type: 'success' });
         } else {
-          alert(`❌ ${result.error}`);
+          await appAlert(result.error || 'Не удалось заменить', { title: 'Ошибка', type: 'error' });
         }
         return;
       }
@@ -170,7 +170,8 @@ export default function NFTGallery() {
         method: 'POST',
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...getApiHeaders(),
         },
         body: JSON.stringify({
           nft_card_id: card.id,
@@ -189,13 +190,7 @@ export default function NFTGallery() {
         window.dispatchEvent(new CustomEvent('deck-updated')); // ✅ Обновляем колоду в профиле (старое событие для совместимости)
         
         setSelectedCard(null);
-        
-        // Показываем уведомление через Telegram WebApp
-        if ((window as any).Telegram?.WebApp?.showAlert) {
-          (window as any).Telegram.WebApp.showAlert('✅ Карта добавлена в колоду!');
-        } else {
-          alert('✅ Карта добавлена в колоду!');
-        }
+        await appAlert('Карта добавлена в игровую колоду.', { title: 'Готово', type: 'success' });
       } else if (result.error === 'DUPLICATE_CARD') {
         // ✅ ПОКАЗЫВАЕМ МОДАЛЬНОЕ ОКНО С ПОДТВЕРЖДЕНИЕМ ЗАМЕНЫ
         setDuplicateInfo({
@@ -204,61 +199,70 @@ export default function NFTGallery() {
         });
         setShowReplaceModal(true);
       } else {
-        alert(`❌ ${result.error || result.message}`);
+        await appAlert(result.error || result.message || 'Не удалось добавить', {
+          title: 'Ошибка',
+          type: 'error',
+        });
       }
     } catch (error) {
       console.error('❌ Ошибка добавления в колоду:', error);
-      alert('❌ Ошибка добавления в колоду');
+      await appAlert('Ошибка добавления в колоду', { title: 'Ошибка', type: 'error' });
     }
   };
 
   const handleSell = (card: NFTCard) => {
-    // Передаём id карты через URL-параметр — без сессии в браузерном хранилище
-    window.location.href = `/shop?sell=${encodeURIComponent(card.id)}`;
+    setSelectedCard(null);
+    sellModal.openSellModal({
+      id: card.id,
+      suit: card.suit,
+      rank: card.rank,
+      rarity: card.rarity,
+      image_url: card.image_url,
+    });
   };
 
   const handleDelete = async (card: NFTCard) => {
-    if (!(await appConfirm(`⚠️ Вы уверены, что хотите УДАЛИТЬ эту карту?\n\n${card.rank.toUpperCase()} ${getSuitSymbol(card.suit)}\nТема: ${getRarityLabel(card.rarity)}\n\nЭто действие НЕОБРАТИМО!`, { destructive: true, confirmText: 'Удалить', type: 'warning' }))) {
-      return;
-    }
+    const confirmed = await appConfirm(
+      `Удалить карту навсегда?\n\n${getRankDisplay(card.rank)} ${getSuitSymbol(card.suit)}\n${getRarityLabel(card.rarity)}\n\nЭто действие необратимо.`,
+      { destructive: true, confirmText: 'Удалить', cancelText: 'Отмена', type: 'warning' }
+    );
+    if (!confirmed) return;
 
     try {
       const response = await fetch('/api/nft/delete', {
-        method: 'DELETE',
+        method: 'POST',
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...getApiHeaders(),
         },
         body: JSON.stringify({
-          nftId: card.id
-        })
+          nft_card_id: card.id,
+          nftId: card.id,
+        }),
       });
 
       const result = await response.json();
 
       if (result.success) {
-        alert('✅ Карта успешно удалена!');
         setSelectedCard(null);
-        // Перезагружаем коллекцию
         loadCollection();
+        window.dispatchEvent(new CustomEvent('nft-collection-updated'));
+        await appAlert('Карта удалена из коллекции.', { title: 'Удалено', type: 'success' });
       } else {
-        alert(`❌ ${result.error}`);
+        await appAlert(result.error || 'Не удалось удалить', { title: 'Ошибка', type: 'error' });
       }
     } catch (error) {
       console.error('❌ Ошибка удаления карты:', error);
-      alert('❌ Ошибка удаления карты');
+      await appAlert('Ошибка удаления карты', { title: 'Ошибка', type: 'error' });
     }
   };
 
   if (isLoading) {
     return (
-      <PageLoadingScreen
-        fullScreen={false}
-        compact
-        showProgress={false}
-        title="NFT коллекция"
-        subtitle="Загрузка коллекции..."
-      />
+      <div style={{ textAlign: 'center', padding: '48px 20px', color: T.textMuted, fontSize: '14px' }}>
+        Загрузка коллекции…
+      </div>
     );
   }
 
@@ -483,408 +487,204 @@ export default function NFTGallery() {
         })}
       </div>
 
-      {/* МОДАЛКА С ИНФОРМАЦИЕЙ */}
-      <AnimatePresence>
-        {selectedCard && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setSelectedCard(null)}
-            style={{
-              position: 'fixed',
-              inset: 0,
-              background: 'rgba(0, 0, 0, 0.9)',
-              backdropFilter: 'blur(10px)',
-              zIndex: 999999,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '20px'
-            }}
-          >
-            <motion.div
-              initial={{ scale: 0.8, y: 50 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.8, y: 50 }}
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)',
-                border: `3px solid ${getSuitColor(selectedCard.suit)}`,
-                borderRadius: '20px',
-                padding: '20px',
-                maxWidth: '340px',
-                width: '100%',
-                maxHeight: '90vh',
-                overflowY: 'auto',
-                position: 'relative'
-              }}
-            >
-              {/* Кнопка закрытия */}
-              <button
+      {/* Модалка карты */}
+      {typeof document !== 'undefined' &&
+        createPortal(
+          <AnimatePresence>
+            {selectedCard && (
+              <motion.div
+                key="nft-card-detail"
+                className={styles.cardOverlay}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
                 onClick={() => setSelectedCard(null)}
-                style={{
-                  position: 'absolute',
-                  top: '15px',
-                  right: '15px',
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: 'none',
-                  borderRadius: '50%',
-                  width: '40px',
-                  height: '40px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  color: '#ffffff',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
-                  e.currentTarget.style.transform = 'scale(1.1)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                  e.currentTarget.style.transform = 'scale(1)';
-                }}
               >
-                <X size={24} />
-              </button>
-
-              {/* Изображение карты */}
-              <div style={{
-                background: '#ffffff',
-                borderRadius: '12px',
-                padding: '10px',
-                marginBottom: '15px',
-                aspectRatio: '2/3',
-                maxWidth: '200px',
-                margin: '0 auto 15px'
-              }}>
-                <img
-                  src={selectedCard.image_url}
-                  alt={`${selectedCard.rank} ${getSuitSymbol(selectedCard.suit)}`}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'contain'
-                  }}
-                />
-              </div>
-
-              {/* Информация о карте */}
-              <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-                <h2 style={{
-                  color: '#ffffff',
-                  fontSize: '2.5rem',
-                  fontWeight: 'black',
-                  marginBottom: '15px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '15px'
-                }}>
-                  <span style={{ 
-                    color: getSuitColor(selectedCard.suit),
-                    fontSize: '3rem',
-                    textShadow: `0 0 20px ${getSuitColor(selectedCard.suit)}aa`
-                  }}>
-                    {getSuitSymbol(selectedCard.suit)}
-                  </span>
-                  <span>{selectedCard.rank?.toUpperCase()}</span>
-                </h2>
-                <p style={{
-                  color: getSuitColor(selectedCard.suit),
-                  fontSize: '1.3rem',
-                  fontWeight: '700',
-                  textTransform: 'uppercase',
-                  letterSpacing: '2px'
-                }}>
-                  {getRarityLabel(selectedCard.rarity)}
-                </p>
-                {selectedCard.metadata?.themeId && (
-                  <p style={{
-                    color: '#94a3b8',
-                    fontSize: '1rem',
-                    marginTop: '10px'
-                  }}>
-                    ID персонажа: <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>#{selectedCard.metadata.themeId}</span>
-                  </p>
-                )}
-              </div>
-
-              {/* Кнопки действий */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {/* Первый ряд кнопок */}
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <button
-                    onClick={() => handleAddToDeck(selectedCard)}
-                    style={{
-                      flex: 1,
-                      background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                      border: 'none',
-                      borderRadius: '10px',
-                      padding: '12px',
-                      color: '#ffffff',
-                      fontSize: '1rem',
-                      fontWeight: 'bold',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'scale(1.05)';
-                      e.currentTarget.style.boxShadow = '0 4px 20px rgba(59, 130, 246, 0.5)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'scale(1)';
-                      e.currentTarget.style.boxShadow = 'none';
-                    }}
-                  >
-                    🎴 Добавить в колоду
-                  </button>
-                  <button
-                    onClick={() => handleSell(selectedCard)}
-                    style={{
-                      flex: 1,
-                      background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                      border: 'none',
-                      borderRadius: '10px',
-                      padding: '12px',
-                      color: '#ffffff',
-                      fontSize: '1rem',
-                      fontWeight: 'bold',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'scale(1.05)';
-                      e.currentTarget.style.boxShadow = '0 4px 20px rgba(245, 158, 11, 0.5)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'scale(1)';
-                      e.currentTarget.style.boxShadow = 'none';
-                    }}
-                  >
-                    💰 Продать
-                  </button>
-                </div>
-                
-                {/* Второй ряд - кнопка удаления */}
-                <button
-                  onClick={() => handleDelete(selectedCard)}
-                  style={{
-                    width: '100%',
-                    background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                    border: 'none',
-                    borderRadius: '10px',
-                    padding: '12px',
-                    color: '#ffffff',
-                    fontSize: '1rem',
-                    fontWeight: 'bold',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'scale(1.05)';
-                    e.currentTarget.style.boxShadow = '0 4px 20px rgba(239, 68, 68, 0.5)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'scale(1)';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }}
+                <motion.div
+                  className={styles.cardModal}
+                  style={{ borderColor: getSuitColor(selectedCard.suit) }}
+                  initial={{ scale: 0.92, y: 24 }}
+                  animate={{ scale: 1, y: 0 }}
+                  exit={{ scale: 0.92, y: 24 }}
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  🗑️ Удалить карту
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
+                  <button
+                    type="button"
+                    className={styles.closeBtn}
+                    onClick={() => setSelectedCard(null)}
+                    aria-label="Закрыть"
+                  >
+                    <X size={22} />
+                  </button>
+
+                  {selectedCard.is_listed && (
+                    <div className={styles.badgeListed}>На продаже в магазине</div>
+                  )}
+                  {selectedCard.is_in_deck && (
+                    <div className={styles.badgeListed} style={{ color: '#93c5fd', borderColor: 'rgba(56,189,248,0.3)', background: 'rgba(56,189,248,0.1)' }}>
+                      В игровой колоде
+                    </div>
+                  )}
+
+                  <div className={styles.cardFrame}>
+                    <img
+                      src={selectedCard.image_url}
+                      alt={`${selectedCard.rank} ${getSuitSymbol(selectedCard.suit)}`}
+                    />
+                  </div>
+
+                  <div className={styles.cardTitle}>
+                    <div className={styles.rankRow}>
+                      <span className={styles.suitGlyph} style={{ color: getSuitColor(selectedCard.suit) }}>
+                        {getSuitSymbol(selectedCard.suit)}
+                      </span>
+                      <span className={styles.rankText}>{getRankDisplay(selectedCard.rank)}</span>
+                    </div>
+                    <span className={styles.rarityPill} style={{ color: getSuitColor(selectedCard.suit) }}>
+                      {getRarityLabel(selectedCard.rarity)}
+                    </span>
+                    {(selectedCard.metadata?.themeId ?? selectedCard.metadata?.theme_id) != null && (
+                      <p className={styles.metaLine}>
+                        ID арта:{' '}
+                        <span style={{ color: T.accentGold }}>
+                          #{String(selectedCard.metadata?.themeId ?? selectedCard.metadata?.theme_id)}
+                        </span>
+                      </p>
+                    )}
+                  </div>
+
+                  <div className={styles.actions}>
+                    <div className={styles.actionRow}>
+                      <button
+                        type="button"
+                        className={`${styles.btn} ${styles.btnDeck}`}
+                        onClick={() => void handleAddToDeck(selectedCard)}
+                      >
+                        🎴 В колоду
+                      </button>
+                      <button
+                        type="button"
+                        className={`${styles.btn} ${styles.btnSell}`}
+                        onClick={() => handleSell(selectedCard)}
+                        disabled={selectedCard.is_listed}
+                      >
+                        💰 Продать
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      className={`${styles.btn} ${styles.btnDelete}`}
+                      onClick={() => void handleDelete(selectedCard)}
+                      disabled={selectedCard.is_listed}
+                    >
+                      🗑️ Удалить
+                    </button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body
         )}
 
-        {/* ✅ МОДАЛЬНОЕ ОКНО ПОДТВЕРЖДЕНИЯ ЗАМЕНЫ КАРТЫ */}
-        <AnimatePresence>
-          {showReplaceModal && duplicateInfo && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                background: 'rgba(0, 0, 0, 0.8)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 999999,
-                padding: '20px'
-              }}
-              onClick={() => {
-                setShowReplaceModal(false);
-                setDuplicateInfo(null);
-              }}
-            >
+      <AnimatePresence>
+          {showReplaceModal && duplicateInfo &&
+            typeof document !== 'undefined' &&
+            createPortal(
               <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                onClick={(e) => e.stopPropagation()}
-                style={{
-                  background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.98) 100%)',
-                  border: '2px solid rgba(139, 92, 246, 0.5)',
-                  borderRadius: '20px',
-                  padding: '30px',
-                  maxWidth: '500px',
-                  width: '100%',
-                  boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)'
+                key="nft-replace-deck"
+                className={styles.replaceOverlay}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => {
+                  setShowReplaceModal(false);
+                  setDuplicateInfo(null);
                 }}
               >
-                <h3 style={{
-                  color: '#ffffff',
-                  fontSize: '1.5rem',
-                  fontWeight: 'bold',
-                  marginBottom: '20px',
-                  textAlign: 'center'
-                }}>
-                  ⚠️ Замена карты
-                </h3>
+                <motion.div
+                  className={styles.replaceModal}
+                  initial={{ scale: 0.92, y: 20 }}
+                  animate={{ scale: 1, y: 0 }}
+                  exit={{ scale: 0.92, y: 20 }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <h3 className={styles.replaceTitle}>Замена карты в колоде</h3>
+                  <p className={styles.replaceText}>
+                    У вас уже есть{' '}
+                    <strong>
+                      {duplicateInfo.newCard.rank}
+                      {getSuitSymbol(duplicateInfo.newCard.suit)}
+                    </strong>{' '}
+                    в колоде. Заменить на новую?
+                  </p>
 
-                <p style={{
-                  color: '#94a3b8',
-                  fontSize: '1rem',
-                  marginBottom: '25px',
-                  textAlign: 'center',
-                  lineHeight: '1.6'
-                }}>
-                  У вас уже есть карта <strong style={{ color: '#fbbf24' }}>{duplicateInfo.newCard.rank}{getSuitSymbol(duplicateInfo.newCard.suit)}</strong> в колоде.
-                  <br />
-                  Заменить на новую?
-                </p>
-
-                {/* Сравнение карт */}
-                <div style={{
-                  display: 'flex',
-                  gap: '15px',
-                  marginBottom: '25px',
-                  justifyContent: 'center'
-                }}>
-                  {/* Текущая карта в колоде */}
-                  <div style={{
-                    flex: 1,
-                    textAlign: 'center'
-                  }}>
-                    <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '8px' }}>Текущая</p>
-                    {duplicateInfo.existingCard.image_url && (
-                      <img
-                        src={duplicateInfo.existingCard.image_url}
-                        alt="Current card"
-                        style={{
-                          width: '100%',
-                          maxWidth: '120px',
-                          borderRadius: '12px',
-                          background: '#ffffff',
-                          padding: '8px',
-                          margin: '0 auto'
-                        }}
-                      />
-                    )}
+                  <div className={styles.replaceCompare}>
+                    <div className={styles.replaceSide}>
+                      <p className={styles.replaceLabel}>Текущая</p>
+                      {duplicateInfo.existingCard.image_url && (
+                        <img src={duplicateInfo.existingCard.image_url} alt="Текущая карта" />
+                      )}
+                    </div>
+                    <div className={styles.replaceArrow}>→</div>
+                    <div className={styles.replaceSide}>
+                      <p className={styles.replaceLabel}>Новая</p>
+                      {duplicateInfo.newCard.image_url && (
+                        <img src={duplicateInfo.newCard.image_url} alt="Новая карта" />
+                      )}
+                    </div>
                   </div>
 
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    fontSize: '2rem',
-                    color: '#fbbf24'
-                  }}>
-                    →
+                  <div className={styles.replaceActions}>
+                    <button
+                      type="button"
+                      className={`${styles.btn} ${styles.btnReplaceCancel}`}
+                      onClick={() => {
+                        setShowReplaceModal(false);
+                        setDuplicateInfo(null);
+                      }}
+                    >
+                      Отмена
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.btn} ${styles.btnReplaceConfirm}`}
+                      onClick={() => void handleAddToDeck(duplicateInfo.newCard, true)}
+                    >
+                      Заменить
+                    </button>
                   </div>
-
-                  {/* Новая карта */}
-                  <div style={{
-                    flex: 1,
-                    textAlign: 'center'
-                  }}>
-                    <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '8px' }}>Новая</p>
-                    {duplicateInfo.newCard.image_url && (
-                      <img
-                        src={duplicateInfo.newCard.image_url}
-                        alt="New card"
-                        style={{
-                          width: '100%',
-                          maxWidth: '120px',
-                          borderRadius: '12px',
-                          background: '#ffffff',
-                          padding: '8px',
-                          margin: '0 auto'
-                        }}
-                      />
-                    )}
-                  </div>
-                </div>
-
-                {/* Кнопки */}
-                <div style={{
-                  display: 'flex',
-                  gap: '12px'
-                }}>
-                  <button
-                    onClick={() => {
-                      setShowReplaceModal(false);
-                      setDuplicateInfo(null);
-                    }}
-                    style={{
-                      flex: 1,
-                      background: 'rgba(100, 116, 139, 0.3)',
-                      border: '1px solid rgba(100, 116, 139, 0.5)',
-                      borderRadius: '12px',
-                      padding: '14px',
-                      color: '#e2e8f0',
-                      fontSize: '1rem',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'rgba(100, 116, 139, 0.5)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'rgba(100, 116, 139, 0.3)';
-                    }}
-                  >
-                    Отмена
-                  </button>
-                  <button
-                    onClick={() => handleAddToDeck(duplicateInfo.newCard, true)}
-                    style={{
-                      flex: 1,
-                      background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                      border: 'none',
-                      borderRadius: '12px',
-                      padding: '14px',
-                      color: '#ffffff',
-                      fontSize: '1rem',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'scale(1.02)';
-                      e.currentTarget.style.boxShadow = '0 4px 20px rgba(59, 130, 246, 0.5)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'scale(1)';
-                      e.currentTarget.style.boxShadow = 'none';
-                    }}
-                  >
-                    ✅ Заменить
-                  </button>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                </motion.div>
+              </motion.div>,
+              document.body
+            )}
       </AnimatePresence>
+
+      {sellModal.showSellModal && sellModal.sellCard && (
+        <SellModal
+          nft={{
+            id: Number(sellModal.sellCard.id),
+            suit: sellModal.sellCard.suit,
+            rank: sellModal.sellCard.rank,
+            rarity: sellModal.sellCard.rarity,
+            image_url: sellModal.sellCard.image_url,
+          }}
+          sellPrice={sellModal.sellPrice}
+          setSellPrice={sellModal.setSellPrice}
+          sellCategory={sellModal.sellCategory}
+          setSellCategory={sellModal.setSellCategory}
+          sellCrypto={sellModal.sellCrypto}
+          setSellCrypto={sellModal.setSellCrypto}
+          sellFiatMethod={sellModal.sellFiatMethod}
+          setSellFiatMethod={sellModal.setSellFiatMethod}
+          isSubmitting={sellModal.isSubmittingSell}
+          onClose={sellModal.closeSellModal}
+          onConfirm={() => void sellModal.submitSell()}
+          getSuitColor={getSuitColor}
+          getSuitSymbol={getSuitSymbol}
+          getRankDisplay={getRankDisplay}
+        />
+      )}
     </div>
   );
 }

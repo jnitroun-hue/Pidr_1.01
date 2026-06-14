@@ -12,9 +12,10 @@ import {
 } from '@/lib/premium/premium-service';
 import {
   removePremiumFreeCardFromBucket,
-  uploadPremiumFreeCardToBucket,
+  uploadPremiumFreeThemedCardToBucket,
 } from '@/lib/premium/premium-free-storage';
 import { normalizeRankToken, normalizeSuitToken } from '@/lib/game/cardAssets';
+import { NFT_THEME_CONFIG, type NftThemeKey } from '@/lib/nft/theme-config';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -65,8 +66,16 @@ export async function POST(request: NextRequest) {
     const randomRankRaw = ranks[Math.floor(Math.random() * ranks.length)];
     const randomRank = normalizeRank(randomRankRaw);
 
-    const rarityRoll = Math.random() * 100;
-    const rarity = rarityRoll < 60 ? 'common' : rarityRoll < 85 ? 'rare' : 'epic';
+    let rarity: string;
+    let themeMeta: { theme?: string; theme_id?: number } = {};
+
+    if (wantsFree) {
+      // rarity = тема картинки (pokemon, halloween, …) — определится после выбора ассета
+      rarity = 'common';
+    } else {
+      const rarityRoll = Math.random() * 100;
+      rarity = rarityRoll < 60 ? 'common' : rarityRoll < 85 ? 'rare' : 'epic';
+    }
 
     const fallbackImageUrl = `/img/cards/${normalizeRankToken(randomRank)}_of_${normalizeSuitToken(randomSuit)}.png`;
 
@@ -75,15 +84,22 @@ export async function POST(request: NextRequest) {
 
     if (wantsFree) {
       try {
-        const uploaded = await uploadPremiumFreeCardToBucket({
+        const uploaded = await uploadPremiumFreeThemedCardToBucket({
           userId: dbUserId,
           suit: randomSuit,
           rankRaw: randomRankRaw,
           rankNormalized: randomRank,
-          rarity,
         });
         imageUrl = uploaded.publicUrl;
         storagePath = uploaded.storagePath;
+        rarity = uploaded.themePick.theme;
+        themeMeta = {
+          theme: uploaded.themePick.theme,
+          theme_id: uploaded.themePick.themeId,
+        };
+        console.log(
+          `🎁 [premium-free] ${randomRankRaw} ${randomSuit} → ${uploaded.themePick.theme} #${uploaded.themePick.themeId}`
+        );
       } catch (uploadErr) {
         console.error('❌ mint-random premium-free storage:', uploadErr);
         return NextResponse.json(
@@ -113,6 +129,7 @@ export async function POST(request: NextRequest) {
           network: network || 'TON',
           generated_at: new Date().toISOString(),
           ...(storagePath ? { premium_free_storage_path: storagePath } : {}),
+          ...themeMeta,
         },
       })
       .select('id, rank, suit, rarity, image_url, storage_path')
@@ -141,6 +158,11 @@ export async function POST(request: NextRequest) {
       ? (network === 'SOL' ? process.env.MASTER_SOLANA_ADDRESS : process.env.MASTER_TON_ADDRESS)
       : null;
 
+    const freeThemeLabel =
+      themeMeta.theme && themeMeta.theme in NFT_THEME_CONFIG
+        ? NFT_THEME_CONFIG[themeMeta.theme as NftThemeKey].name
+        : rarity;
+
     return NextResponse.json({
       success: true,
       nft: savedCard,
@@ -150,9 +172,10 @@ export async function POST(request: NextRequest) {
       network: network || 'TON',
       master_wallet_address: masterWalletAddress,
       message: wantsFree
-        ? `Premium: ${randomRankRaw} ${randomSuit} (${rarity})! Сохранено в Storage.`
+        ? `Premium: ${randomRankRaw} ${randomSuit} (${freeThemeLabel})!`
         : `Выпала карта ${randomRankRaw} of ${randomSuit} (${rarity})!`,
       storage_path: storagePath,
+      ...(wantsFree ? { theme: themeMeta.theme, theme_id: themeMeta.theme_id } : {}),
     });
   } catch (error: unknown) {
     console.error('❌ mint-random:', error);

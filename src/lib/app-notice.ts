@@ -60,6 +60,10 @@ function emit() {
   listeners.forEach((listener) => listener());
 }
 
+function stripLeadingEmoji(text: string): string {
+  return text.replace(/^(✅|❌|⚠️|ℹ️|🎉|🔥|💰|🎁|⏰|📊|💡|⏳|🔗)\s*/u, '').trim();
+}
+
 function parseNoticeMessage(message: string): {
   type: AppNoticeType;
   title: string;
@@ -70,10 +74,11 @@ function parseNoticeMessage(message: string): {
 
   if (/^(✅|🎉|🔥|💰|🎁)/.test(trimmed)) type = 'success';
   else if (/^(❌|Ошибка)/i.test(trimmed)) type = 'error';
-  else if (/^(⏰|⚠️|📊|ℹ️|💡)/.test(trimmed)) type = 'warning';
+  else if (/^(⏰|⚠️|📊|ℹ️|💡|⏳)/.test(trimmed)) type = 'warning';
 
   const parts = trimmed.split('\n\n');
-  const title = (parts[0] || trimmed).trim();
+  const rawTitle = (parts[0] || trimmed).trim();
+  const title = stripLeadingEmoji(rawTitle) || rawTitle;
   const details = parts.length > 1 ? parts.slice(1).join('\n\n').trim() : undefined;
 
   return { type, title, details };
@@ -91,7 +96,6 @@ function enqueueAlert(request: AlertRequest) {
 function dequeueNextAlert() {
   if (currentAlert || currentConfirm || alertQueue.length === 0) return;
   currentAlert = alertQueue.shift() || null;
-  emit();
 }
 
 export function subscribeAppNotice(listener: () => void) {
@@ -106,10 +110,12 @@ export function getAppNoticeState() {
 export function appAlert(message: string, options: AppAlertOptions = {}): Promise<void> {
   return new Promise((resolve) => {
     const parsed = parseNoticeMessage(message);
+    const trimmed = message.trim();
+    const hasCustomTitle = Boolean(options.title);
     enqueueAlert({
       id: crypto.randomUUID(),
       title: options.title || parsed.title,
-      details: options.details ?? parsed.details,
+      details: options.details ?? (hasCustomTitle ? trimmed : parsed.details),
       type: options.type || parsed.type,
       confirmText: options.confirmText || 'OK',
       resolve,
@@ -120,10 +126,12 @@ export function appAlert(message: string, options: AppAlertOptions = {}): Promis
 export function appConfirm(message: string, options: AppConfirmOptions = {}): Promise<boolean> {
   return new Promise((resolve) => {
     const parsed = parseNoticeMessage(message);
+    const trimmed = message.trim();
+    const hasCustomTitle = Boolean(options.title);
     currentConfirm = {
       id: crypto.randomUUID(),
       title: options.title || parsed.title || 'Подтвердите действие',
-      details: options.details ?? parsed.details,
+      details: options.details ?? (hasCustomTitle ? trimmed : parsed.details),
       type: options.type || parsed.type,
       confirmText: options.confirmText || 'Подтвердить',
       cancelText: options.cancelText || 'Отмена',
@@ -140,6 +148,8 @@ export function resolveAppAlert() {
   currentAlert = null;
   syncNoticeSnapshot();
   dequeueNextAlert();
+  syncNoticeSnapshot();
+  emit();
 }
 
 export function resolveAppConfirm(result: boolean) {
@@ -148,6 +158,8 @@ export function resolveAppConfirm(result: boolean) {
   currentConfirm = null;
   syncNoticeSnapshot();
   dequeueNextAlert();
+  syncNoticeSnapshot();
+  emit();
 }
 
 export function installGlobalAppAlert() {
@@ -155,7 +167,12 @@ export function installGlobalAppAlert() {
 
   const nativeAlert = window.alert.bind(window);
   window.alert = (message?: unknown) => {
-    void appAlert(String(message ?? ''));
+    const text = String(message ?? '').trim();
+    if (!text) {
+      void appAlert(' ', { title: 'Уведомление', type: 'info' });
+      return;
+    }
+    void appAlert(text);
   };
 
   return () => {

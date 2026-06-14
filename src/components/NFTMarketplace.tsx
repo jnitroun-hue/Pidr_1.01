@@ -5,7 +5,7 @@ import { ShoppingCart, DollarSign, Package, TrendingUp, Filter, Search, X, Check
 import Image from 'next/image';
 import { BuyTab, SellTab, MyNFTsTab, SellModal } from './MarketplaceTabs';
 import { getApiHeaders } from '@/lib/api-headers';
-import { appConfirm } from '@/lib/app-notice';
+import { appAlert, appConfirm } from '@/lib/app-notice';
 import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
 import PageLoadingScreen from '@/components/PageLoadingScreen';
 
@@ -243,7 +243,10 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
     if (listing.price_coins) {
       // ОПЛАТА МОНЕТАМИ
       if (userCoins < listing.price_coins) {
-        alert(`Недостаточно монет! Требуется: ${listing.price_coins}, есть: ${userCoins}`);
+        await appAlert(`Недостаточно монет! Требуется: ${listing.price_coins}, есть: ${userCoins}`, {
+          title: 'Недостаточно монет',
+          type: 'warning',
+        });
         return;
       }
 
@@ -268,16 +271,16 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
         const data = await response.json();
 
         if (data.success) {
-          alert('✅ NFT успешно куплена!');
+          await appAlert('NFT успешно куплена!', { title: 'Готово', type: 'success' });
           const newBalance = userCoins - listing.price_coins;
           onBalanceUpdate?.(newBalance);
           loadMarketplace();
         } else {
-          alert(`❌ Ошибка: ${data.error}`);
+          await appAlert(data.error || 'Ошибка покупки', { title: 'Ошибка', type: 'error' });
         }
       } catch (error) {
         console.error('Ошибка покупки:', error);
-        alert('Ошибка при покупке');
+        await appAlert('Ошибка при покупке', { title: 'Ошибка', type: 'error' });
       }
     } else if (listing.price_ton || listing.price_sol) {
       // ✅ ОПЛАТА КРИПТОВАЛЮТОЙ (TON/SOL)
@@ -314,7 +317,10 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
               const opened = window.open(data.payment_url, '_blank');
               if (!opened) {
                 await navigator.clipboard.writeText(data.payment_url);
-                alert(`🔗 Ссылка скопирована. Оплатите ${amount} ${currency} в кошельке.`);
+                await appAlert(`Ссылка скопирована. Оплатите ${amount} ${currency} в кошельке.`, {
+                  title: 'Оплата в кошельке',
+                  type: 'info',
+                });
               }
             }
           }
@@ -344,30 +350,33 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
               const confirmData = await confirmRes.json();
               if (confirmRes.ok && confirmData.success) {
                 confirmed = true;
-                alert('✅ NFT куплена! Карта в вашей коллекции.');
+                await appAlert('NFT куплена! Карта в вашей коллекции.', { title: 'Готово', type: 'success' });
                 window.dispatchEvent(new CustomEvent('nft-collection-updated'));
                 window.dispatchEvent(new CustomEvent('marketplace-updated'));
                 break;
               }
               if (confirmData.code !== 'PAYMENT_PENDING') {
-                alert(`❌ ${confirmData.error || 'Ошибка подтверждения'}`);
+                await appAlert(confirmData.error || 'Ошибка подтверждения', { title: 'Ошибка', type: 'error' });
                 break;
               }
               await new Promise((r) => setTimeout(r, 5000));
             }
             if (!confirmed) {
-              alert('⏳ Платёж ещё не виден в сети. Повторите «Я оплатил» через минуту из коллекции.');
+              await appAlert('Платёж ещё не виден в сети. Повторите «Я оплатил» через минуту из коллекции.', {
+                title: 'Ожидание оплаты',
+                type: 'warning',
+              });
             }
             setLoading(false);
           }
 
           loadMarketplace();
         } else {
-          alert(`❌ Ошибка: ${data.error}`);
+          await appAlert(data.error || 'Ошибка покупки', { title: 'Ошибка', type: 'error' });
         }
       } catch (error) {
         console.error('Ошибка покупки крипты:', error);
-        alert('Ошибка при покупке');
+        await appAlert('Ошибка при покупке', { title: 'Ошибка', type: 'error' });
       }
     } else if (listing.price_rub) {
       if (!(await appConfirm(`Купить за ${listing.price_rub} ₽ через ЮКассу?\n\nОткроется оплата (способ задан продавцом при выставлении лота).`, { confirmText: 'Оплатить' }))) {
@@ -388,14 +397,14 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
           window.location.href = data.payment.confirmationUrl;
           loadMarketplace();
         } else {
-          alert(`❌ ${data.error || data.message || 'Не удалось создать платёж'}`);
+          await appAlert(data.error || 'Не удалось создать платёж', { title: 'Ошибка', type: 'error' });
         }
       } catch (e) {
         console.error(e);
-        alert('Ошибка при создании платежа');
+        await appAlert('Ошибка при создании платежа', { title: 'Ошибка', type: 'error' });
       }
     } else {
-      alert('Цена не указана!');
+      await appAlert('Цена не указана!', { title: 'Ошибка', type: 'warning' });
     }
   };
 
@@ -405,7 +414,7 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
     const price = parseFloat(sellPrice);
 
     if (!price || price <= 0) {
-      alert('Укажите корректную цену!');
+      await appAlert('Укажите корректную цену!', { title: 'Цена', type: 'warning' });
       return;
     }
 
@@ -427,8 +436,13 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
         const checkData = await checkResponse.json();
 
         if (!checkData.success || !checkData.wallet) {
-          alert(
-            `❌ Для продажи за ${sellCrypto} подключите кошелёк!\n\nРаздел «Кошелёк» или коллекция NFT — подключите ${sellCrypto === 'TON' ? 'TON' : 'Solana'}.`
+          setIsSubmittingSell(false);
+          await appAlert(
+            `Раздел «Кошелёк» или коллекция NFT — подключите ${sellCrypto === 'TON' ? 'TON' : 'Solana'}.`,
+            {
+              title: `Для продажи за ${sellCrypto} подключите кошелёк`,
+              type: 'warning',
+            }
           );
           return;
         }
@@ -481,7 +495,7 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
       const data = await response.json();
 
       if (data.success) {
-        alert('✅ NFT выставлена на продажу!');
+        await appAlert('NFT выставлена на продажу!', { title: 'Готово', type: 'success' });
         setShowSellModal(false);
         setSelectedNFT(null);
         setSellPrice('');
@@ -498,45 +512,52 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
         window.dispatchEvent(new CustomEvent('nft-collection-updated'));
         window.dispatchEvent(new CustomEvent('marketplace-updated'));
       } else {
-        alert(`❌ Ошибка продажи: ${data.error}${data.hint ? `\n\n${data.hint}` : ''}`);
+        await appAlert(data.error || 'Не удалось выставить на продажу', {
+          title: 'Ошибка продажи',
+          type: 'error',
+          details: data.hint,
+        });
       }
     } catch (error) {
       console.error('Ошибка продажи:', error);
-      alert('Ошибка при выставлении на продажу');
+      await appAlert('Ошибка при выставлении на продажу', { title: 'Ошибка', type: 'error' });
     } finally {
       setIsSubmittingSell(false);
     }
   };
 
   const handleDeleteNFT = async (nft: NFTCard) => {
-    if (!(await appConfirm(`⚠️ Вы уверены, что хотите УДАЛИТЬ эту карту?\n\n${nft.rank.toUpperCase()} ${getSuitSymbol(nft.suit)}\n\nЭто действие НЕОБРАТИМО!`, { destructive: true, confirmText: 'Удалить', type: 'warning' }))) {
+    if (!(await appConfirm(`Удалить карту навсегда?\n\n${nft.rank.toUpperCase()} ${getSuitSymbol(nft.suit)}\n\nЭто действие необратимо.`, { destructive: true, confirmText: 'Удалить', cancelText: 'Отмена', type: 'warning' }))) {
       return;
     }
 
     try {
       const response = await fetch('/api/nft/delete', {
-        method: 'DELETE',
+        method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           ...getApiHeaders()
         },
         body: JSON.stringify({
-          nftId: nft.id
+          nft_card_id: nft.id,
+          nftId: nft.id,
         })
       });
 
       const data = await response.json();
 
       if (data.success) {
-        alert('✅ Карта успешно удалена!');
         loadMyNFTs();
         loadMySales();
+        window.dispatchEvent(new CustomEvent('nft-collection-updated'));
+        await appAlert('Карта удалена из коллекции.', { title: 'Удалено', type: 'success' });
       } else {
-        alert(`❌ Ошибка: ${data.error}`);
+        await appAlert(data.error || 'Не удалось удалить', { title: 'Ошибка', type: 'error' });
       }
     } catch (error) {
       console.error('Ошибка удаления:', error);
-      alert('Ошибка при удалении карты');
+      await appAlert('Ошибка при удалении карты', { title: 'Ошибка', type: 'error' });
     }
   };
 
@@ -559,14 +580,14 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
       const data = await response.json();
 
       if (data.success) {
-        alert('✅ Лот снят с продажи');
+        await appAlert('Лот снят с продажи', { title: 'Готово', type: 'success' });
         loadMySales();
       } else {
-        alert(`❌ Ошибка: ${data.error}`);
+        await appAlert(data.error || 'Не удалось снять лот', { title: 'Ошибка', type: 'error' });
       }
     } catch (error) {
       console.error('Ошибка отмены:', error);
-      alert('Ошибка при отмене');
+      await appAlert('Ошибка при отмене', { title: 'Ошибка', type: 'error' });
     }
   };
 
@@ -739,9 +760,10 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
           setSellFiatMethod={setSellFiatMethod}
           isSubmitting={isSubmittingSell}
           onClose={() => {
-            if (isSubmittingSell) return;
+            setIsSubmittingSell(false);
             setShowSellModal(false);
             setSelectedNFT(null);
+            setSellPrice('');
           }}
           onConfirm={handleSellNFT}
           getSuitColor={getSuitColor}

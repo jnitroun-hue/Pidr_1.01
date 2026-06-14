@@ -8,6 +8,7 @@ import { beginCell, toNano } from '@ton/core';
 import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
 import { getApiHeaders } from '@/lib/api-headers';
 import { appConfirm } from '@/lib/app-notice';
+import { openNftCardModal } from '@/lib/nft/open-card-modal';
 
 interface NFTThemeGeneratorProps {
   userCoins: number;
@@ -253,9 +254,16 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
         if (genRes.ok && genData.success) {
           window.dispatchEvent(new CustomEvent('nft-collection-updated'));
           window.dispatchEvent(new CustomEvent('nft-deck-updated'));
-          alert(
-            `✅ Карта ${themeConfig.name} создана!\n\n${randomRank.toUpperCase()} ${getSuitSymbol(randomSuit)}`
-          );
+          if (genData.nft) {
+            openNftCardModal({
+              id: genData.nft.id,
+              rank: genData.nft.rank,
+              suit: genData.nft.suit,
+              rarity: genData.nft.rarity ?? theme,
+              image_url: genData.nft.image_url,
+              metadata: { theme, theme_id: randomId },
+            });
+          }
           setCryptoTheme(null);
           setShowModal(false);
           return;
@@ -380,9 +388,21 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
         
         setGenProgress(1);
         setGenStatus('Готово!');
-        
-        alert(`✅ Карта ${themeConfig.name} создана!\n\n${randomRank.toUpperCase()} ${getSuitSymbol(randomSuit)}\n\nСохранено в коллекцию!`);
-        
+
+        if (result.nft) {
+          openNftCardModal({
+            id: result.nft.id,
+            rank: result.nft.rank ?? randomRank,
+            suit: result.nft.suit ?? randomSuit,
+            rarity: result.nft.rarity ?? theme,
+            image_url: result.nft.image_url,
+            metadata: {
+              theme: result.nft.theme ?? theme,
+              theme_id: result.nft.theme_id ?? randomId,
+            },
+          });
+        }
+
         setShowModal(false);
       } else {
         throw new Error(result.error || 'Ошибка генерации');

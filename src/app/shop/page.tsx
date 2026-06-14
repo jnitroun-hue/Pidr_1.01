@@ -240,13 +240,19 @@ export default function ShopPage() {
   const handleClaimPromo = async () => {
     if (!dailyPromo) return;
     if (!canClaimPromo) {
-      alert(`⏳ Акция уже использована. Новый шанс через ${promoCooldownLabel}`);
+      await appAlert(`Акция уже использована. Новый шанс через ${promoCooldownLabel}`, {
+        title: 'Подождите',
+        type: 'warning',
+      });
       return;
     }
 
     const coinPrice = dailyPromo.discountedCoins ?? Math.ceil(dailyPromo.discountedRub / 0.2);
     if ((user?.coins || 0) < coinPrice) {
-      alert(`❌ Недостаточно монет. Нужно ${coinPrice.toLocaleString('ru-RU')} 🪙`);
+      await appAlert(`Недостаточно монет. Нужно ${coinPrice.toLocaleString('ru-RU')} 🪙`, {
+        title: 'Недостаточно монет',
+        type: 'warning',
+      });
       return;
     }
 
@@ -273,7 +279,7 @@ export default function ShopPage() {
           setCanClaimPromo(false);
           setPromoCooldownLabel(formatCountdown(remaining));
         }
-        alert(`❌ ${data.error || 'Не удалось купить акцию'}`);
+        await appAlert(data.error || 'Не удалось купить акцию', { title: 'Ошибка', type: 'error' });
         return;
       }
 
@@ -294,7 +300,7 @@ export default function ShopPage() {
       });
     } catch (error) {
       console.error('Ошибка покупки акции:', error);
-      alert('Ошибка покупки акции дня');
+      await appAlert('Ошибка покупки акции дня', { title: 'Ошибка', type: 'error' });
     }
   };
 

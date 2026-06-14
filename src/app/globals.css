@@ -70,6 +70,10 @@ body {
   padding-bottom: 70px;
 }
 
+body.app-notice-open {
+  overflow: hidden;
+}
+
 /* Скрытие скроллбара */
 ::-webkit-scrollbar {
   display: none;
