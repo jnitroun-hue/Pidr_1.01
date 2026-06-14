@@ -14,6 +14,7 @@ import {
   removePremiumFreeCardFromBucket,
   uploadPremiumFreeCardToBucket,
 } from '@/lib/premium/premium-free-storage';
+import { normalizeRankToken, normalizeSuitToken } from '@/lib/game/cardAssets';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -67,8 +68,7 @@ export async function POST(request: NextRequest) {
     const rarityRoll = Math.random() * 100;
     const rarity = rarityRoll < 60 ? 'common' : rarityRoll < 85 ? 'rare' : 'epic';
 
-    const rankFile = randomRankRaw === '10' ? '10' : randomRankRaw.toLowerCase();
-    const fallbackImageUrl = `/cards/${rankFile}_of_${randomSuit}.png`;
+    const fallbackImageUrl = `/img/cards/${normalizeRankToken(randomRank)}_of_${normalizeSuitToken(randomSuit)}.png`;
 
     let imageUrl = fallbackImageUrl;
     let storagePath: string | null = null;
@@ -80,6 +80,7 @@ export async function POST(request: NextRequest) {
           suit: randomSuit,
           rankRaw: randomRankRaw,
           rankNormalized: randomRank,
+          rarity,
         });
         imageUrl = uploaded.publicUrl;
         storagePath = uploaded.storagePath;

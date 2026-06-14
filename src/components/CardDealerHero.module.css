@@ -1,62 +1,499 @@
-.wrapper {
+/* ── Premium casino dealer hero ── */
+
+.hero {
   position: relative;
   width: 100%;
-  max-width: 340px;
-  height: 260px;
-  margin: 0 auto 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  max-width: 380px;
+  height: 280px;
+  margin: 0 auto 12px;
+  border-radius: 24px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #0a0f18 0%, #06080e 55%, #030508 100%);
+  box-shadow:
+    0 0 0 1px rgba(251, 191, 36, 0.12),
+    0 0 48px rgba(251, 191, 36, 0.08),
+    0 24px 64px rgba(0, 0, 0, 0.65);
 }
 
-.wrapperCompact {
-  max-width: 240px;
-  height: 182px;
-  margin-bottom: 6px;
+.heroCompact {
+  max-width: 260px;
+  height: 196px;
+  margin-bottom: 8px;
+  border-radius: 18px;
 }
 
-.scene3d {
-  width: 100%;
-  height: 100%;
-  perspective: 720px;
-  perspective-origin: 50% 42%;
+.heroCompact .dealerWrap {
+  transform: translateX(-50%) scale(0.72);
+  transform-origin: 50% 100%;
 }
 
-.figureTilt {
-  width: 100%;
-  height: 100%;
-  transform-style: preserve-3d;
-  will-change: transform;
+.heroCompact .dealer {
+  width: 220px;
+  height: 200px;
 }
 
+.heroCompact .cardScene {
+  transform: translateX(-50%) scale(0.78);
+  bottom: 18%;
+}
+
+.heroCompact .hands {
+  transform: translateX(-50%) scale(0.78);
+  bottom: 10%;
+}
+
+.heroCompact .card {
+  width: 48px;
+  height: 70px;
+  margin-left: -24px;
+}
+
+/* Warm spotlight from above */
 .spotlight {
   position: absolute;
-  inset: 0 8% 12%;
+  inset: 0;
   background:
-    radial-gradient(ellipse at 48% 28%, rgba(255, 220, 160, 0.2) 0%, transparent 52%),
-    radial-gradient(ellipse at 50% 38%, rgba(251, 191, 36, 0.1) 0%, transparent 65%);
+    radial-gradient(ellipse 70% 55% at 50% 8%, rgba(255, 214, 140, 0.28) 0%, transparent 62%),
+    radial-gradient(ellipse 90% 40% at 50% 0%, rgba(251, 191, 36, 0.12) 0%, transparent 55%);
   pointer-events: none;
-  z-index: 1;
+  z-index: 4;
 }
 
 .vignette {
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at 50% 45%, transparent 35%, rgba(0, 0, 0, 0.42) 100%);
+  background: radial-gradient(ellipse at 50% 42%, transparent 30%, rgba(0, 0, 0, 0.55) 100%);
   pointer-events: none;
+  z-index: 5;
+}
+
+.felt {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 38%;
+  background: linear-gradient(180deg, transparent 0%, rgba(16, 42, 32, 0.35) 40%, rgba(8, 28, 22, 0.75) 100%);
+  z-index: 1;
+}
+
+.feltEdge {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: 28%;
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(251, 191, 36, 0.25), transparent);
   z-index: 2;
 }
 
-.svg {
+.stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  perspective: 900px;
+  perspective-origin: 50% 35%;
+}
+
+/* ── Dealer silhouette (CSS layers) ── */
+
+.dealerWrap {
+  position: absolute;
+  top: 6%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+}
+
+.dealer {
+  position: relative;
+  width: 220px;
+  height: 200px;
+}
+
+.coat {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  width: 200px;
+  height: 118px;
+  transform: translateX(-50%);
+  background: linear-gradient(165deg, #1c1917 0%, #0c0a09 45%, #030303 100%);
+  clip-path: polygon(8% 0%, 92% 0%, 100% 100%, 0% 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 12px 32px rgba(0, 0, 0, 0.6);
+}
+
+.lapelLeft,
+.lapelRight {
+  position: absolute;
+  bottom: 52px;
+  width: 52px;
+  height: 72px;
+  background: linear-gradient(160deg, #292524 0%, #0a0a0a 100%);
+}
+
+.lapelLeft {
+  left: 62px;
+  transform: skewY(6deg);
+  clip-path: polygon(0 0, 100% 0, 70% 100%, 0 100%);
+  box-shadow: inset 2px 0 8px rgba(255, 255, 255, 0.03);
+}
+
+.lapelRight {
+  right: 62px;
+  transform: skewY(-6deg);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 30% 100%);
+  box-shadow: inset -2px 0 8px rgba(0, 0, 0, 0.4);
+}
+
+.shirtV {
+  position: absolute;
+  bottom: 68px;
+  left: 50%;
+  width: 28px;
+  height: 48px;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, #fafafa 0%, #d4d4d8 100%);
+  clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+  opacity: 0.92;
+}
+
+.bowTie {
+  position: absolute;
+  bottom: 108px;
+  left: 50%;
+  width: 22px;
+  height: 10px;
+  transform: translateX(-50%);
+  background: #0a0a0a;
+  border-radius: 2px;
+  box-shadow: -14px 0 0 -2px #0a0a0a, 14px 0 0 -2px #0a0a0a;
+}
+
+.neck {
+  position: absolute;
+  bottom: 112px;
+  left: 50%;
+  width: 36px;
+  height: 22px;
+  transform: translateX(-50%);
+  background: #050505;
+  border-radius: 0 0 8px 8px;
+}
+
+.headShadow {
+  position: absolute;
+  bottom: 128px;
+  left: 50%;
+  width: 72px;
+  height: 52px;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at 50% 60%, #080808 0%, #000 100%);
+  border-radius: 50% 50% 42% 42%;
+}
+
+.hatCrown {
+  position: absolute;
+  bottom: 158px;
+  left: 50%;
+  width: 68px;
+  height: 44px;
+  transform: translateX(-50%);
+  background: linear-gradient(145deg, #52525b 0%, #27272a 40%, #09090b 100%);
+  border-radius: 50% 50% 8% 8% / 60% 60% 12% 12%;
+  box-shadow:
+    inset 0 4px 12px rgba(255, 255, 255, 0.08),
+    inset 0 -8px 16px rgba(0, 0, 0, 0.5),
+    0 6px 20px rgba(0, 0, 0, 0.5);
+}
+
+.hatBand {
+  position: absolute;
+  bottom: 158px;
+  left: 50%;
+  width: 72px;
+  height: 8px;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, #1a1a1a, #3f3f46, #1a1a1a);
+  border-radius: 2px;
+}
+
+.hatBrim {
+  position: absolute;
+  bottom: 150px;
+  left: 50%;
+  width: 130px;
+  height: 22px;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, #3f3f46 0%, #18181b 55%, #030303 100%);
+  border-radius: 50%;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.65),
+    inset 0 2px 4px rgba(255, 255, 255, 0.06);
+}
+
+.hatBrim::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 15%;
+  width: 35%;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+/* Glasses — only visible face detail */
+.glasses {
+  position: absolute;
+  bottom: 142px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  z-index: 3;
+}
+
+.lens {
+  position: relative;
+  width: 30px;
+  height: 18px;
+  border-radius: 4px;
+  background: linear-gradient(145deg, #1a1a1a 0%, #000 50%, #111 100%);
+  border: 1.5px solid;
+  border-color: #a1a1aa #52525b #3f3f46;
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.9),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.08),
+    0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.lens::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 4px;
+  width: 10px;
+  height: 5px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.bridge {
+  flex-shrink: 0;
+  width: 6px;
+  height: 2px;
+  background: #71717a;
+  border-radius: 1px;
+}
+
+/* ── 3D card fan ── */
+
+.cardScene {
+  position: absolute;
+  bottom: 22%;
+  left: 50%;
+  width: 240px;
+  height: 120px;
+  transform: translateX(-50%);
+  transform-style: preserve-3d;
+  z-index: 6;
+}
+
+.card {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 54px;
+  height: 78px;
+  margin-left: -27px;
+  transform-style: preserve-3d;
+  transform-origin: 50% 100%;
+  will-change: transform;
+}
+
+.cardInner {
+  position: relative;
   width: 100%;
   height: 100%;
-  overflow: visible;
-  display: block;
-  filter: contrast(1.06) saturate(1.08);
+  border-radius: 7px;
+  transform-style: preserve-3d;
+  background: linear-gradient(155deg, #fffef9 0%, #f5efe3 42%, #e5dcc8 100%);
+  box-shadow:
+    0 0 0 1px rgba(184, 134, 11, 0.35),
+    0 1px 0 rgba(255, 255, 255, 0.9) inset,
+    0 18px 36px rgba(0, 0, 0, 0.45);
+}
+
+.cardInner::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-radius: 5px;
+  border: 1px solid rgba(184, 134, 11, 0.22);
+  pointer-events: none;
+}
+
+.cardInner::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  width: 40%;
+  height: 35%;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.55), transparent);
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+.cardEdge {
+  position: absolute;
+  top: 1px;
+  right: -4px;
+  width: 4px;
+  height: calc(100% - 2px);
+  border-radius: 0 2px 2px 0;
+  background: linear-gradient(180deg, #f0e6d0 0%, #b8a488 50%, #8b7355 100%);
+  transform: rotateY(90deg) translateZ(2px);
+  transform-origin: left center;
+}
+
+.suitTop {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+.suitCenter {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 22px;
+  line-height: 1;
+  font-family: Georgia, 'Times New Roman', serif;
+  opacity: 0.85;
+}
+
+.suitBottom {
+  position: absolute;
+  bottom: 8px;
+  right: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  transform: rotate(180deg);
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+.red {
+  color: #be123c;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.black {
+  color: #0f172a;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.cardShadow {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  width: 44px;
+  height: 10px;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse, rgba(0, 0, 0, 0.55) 0%, transparent 72%);
+  filter: blur(2px);
+  z-index: -1;
+}
+
+/* ── White dealer gloves ── */
+
+.hands {
+  position: absolute;
+  bottom: 14%;
+  left: 50%;
+  width: 260px;
+  height: 70px;
+  transform: translateX(-50%);
+  z-index: 7;
+  pointer-events: none;
+}
+
+.glove {
+  position: absolute;
+  bottom: 0;
+  width: 72px;
+  height: 48px;
+  border-radius: 55% 55% 45% 45% / 60% 60% 40% 40%;
+  background: linear-gradient(160deg, #ffffff 0%, #f1f5f9 35%, #cbd5e1 85%, #94a3b8 100%);
+  box-shadow:
+    0 6px 18px rgba(0, 0, 0, 0.35),
+    inset 0 2px 6px rgba(255, 255, 255, 0.85),
+    inset 0 -4px 8px rgba(148, 163, 184, 0.35);
+}
+
+.glove::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  width: 28px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.45);
+  filter: blur(2px);
+}
+
+.gloveLeft {
+  left: 18px;
+  transform: rotate(-18deg) translateY(4px);
+}
+
+.gloveRight {
+  right: 18px;
+  transform: rotate(18deg) translateY(4px) scaleX(-1);
+}
+
+.gloveCuff {
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  width: 56px;
+  height: 14px;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, #1e293b, #0f172a);
+  border-radius: 0 0 6px 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+/* Particles */
+.particle {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #fcd34d;
+  box-shadow: 0 0 6px #fbbf24;
+  z-index: 8;
+  pointer-events: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .figureTilt {
-    transform: rotateX(8deg) rotateY(-3deg);
+  .card,
+  .dealer,
+  .glove {
+    animation: none !important;
   }
 }
