@@ -1,7 +1,12 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
+import {
+  generateThemeCardImageDataUrl,
+  pickRandomHeroCardSpec,
+} from '@/lib/nft/generate-theme-card-client';
 import styles from './CardDealerHero.module.css';
 
 const FLOATING_CARDS = [
@@ -18,6 +23,34 @@ interface CardDealerHeroProps {
 
 export default function CardDealerHero({ size = 'default' }: CardDealerHeroProps) {
   const compact = size === 'compact';
+  const [cardFaces, setCardFaces] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadFaces = async () => {
+      const entries = await Promise.all(
+        FLOATING_CARDS.map(async (card) => {
+          const spec = pickRandomHeroCardSpec();
+          const dataUrl = await generateThemeCardImageDataUrl(
+            spec.suit,
+            spec.rank,
+            spec.theme,
+            spec.themeId
+          );
+          return [card.id, dataUrl] as const;
+        })
+      );
+
+      if (cancelled) return;
+      setCardFaces(Object.fromEntries(entries.filter(([, src]) => Boolean(src))));
+    };
+
+    void loadFaces();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <motion.div
@@ -59,13 +92,19 @@ export default function CardDealerHero({ size = 'default' }: CardDealerHeroProps
             ease: 'easeInOut',
           }}
         >
-          <Image
-            src="/img/card-back.svg"
-            alt=""
-            width={56}
-            height={84}
-            className={styles.cardBackImg}
-          />
+          {cardFaces[card.id] ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={cardFaces[card.id]}
+              alt=""
+              width={56}
+              height={84}
+              className={styles.cardFaceImg}
+              draggable={false}
+            />
+          ) : (
+            <div className={styles.cardFacePlaceholder} aria-hidden />
+          )}
         </motion.div>
       ))}
 

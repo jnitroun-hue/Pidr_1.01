@@ -9,6 +9,8 @@ import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
 import { getApiHeaders } from '@/lib/api-headers';
 import { appConfirm } from '@/lib/app-notice';
 import { openNftCardModal } from '@/lib/nft/open-card-modal';
+import { generateThemeCardImageDataUrl } from '@/lib/nft/generate-theme-card-client';
+import type { NftThemeKey } from '@/lib/nft/theme-config';
 
 interface NFTThemeGeneratorProps {
   userCoins: number;
@@ -533,111 +535,14 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
     }
   };
 
-  // ✅ КЛИЕНТСКАЯ ГЕНЕРАЦИЯ С ПРАВИЛЬНОЙ ЗАГРУЗКОЙ ИЗОБРАЖЕНИЙ!
-  const generateThemeCardImage = (suit: string, rank: string, themeId: number, theme: keyof typeof THEMES): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const canvas = document.createElement('canvas');
-      canvas.width = 300;
-      canvas.height = 420;
-      const ctx = canvas.getContext('2d')!;
+  const generateThemeCardImage = (
+    suit: string,
+    rank: string,
+    themeId: number,
+    theme: keyof typeof THEMES
+  ): Promise<string> => generateThemeCardImageDataUrl(suit, rank, theme as NftThemeKey, themeId);
 
-      const themeConfig = THEMES[theme];
-      const fileName = `${themeConfig.prefix}${themeId}.png`;
-      const imagePath = `/${themeConfig.folder}/${fileName}`;
-
-      console.log(`🖼️ [Client] Загружаем изображение: ${imagePath}`);
-
-      // Загружаем изображение темы
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.src = imagePath;
-
-      img.onload = () => {
-        try {
-          // 👑 ЛЕГЕНДАРНАЯ: PNG на ВСЮ КАРТУ!
-          const isLegendary = theme === 'legendary';
-
-          if (isLegendary) {
-            // ✅ РИСУЕМ PNG НА ВСЮ КАРТУ (300x420)
-            ctx.drawImage(img, 0, 0, 300, 420);
-
-            // Черная рамка ПОВЕРХ
-            ctx.strokeStyle = '#000000';
-            ctx.lineWidth = 8;
-            ctx.strokeRect(4, 4, 292, 412);
-          } else {
-            // Обычные темы: белый фон
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, 300, 420);
-
-            // Черная рамка
-            ctx.strokeStyle = '#000000';
-            ctx.lineWidth = 8;
-            ctx.strokeRect(4, 4, 292, 412);
-
-            // Изображение в центре (200x200)
-            const imgWidth = 200;
-            const imgHeight = 200;
-            const imgX = (300 - imgWidth) / 2;
-            const imgY = 110;
-            ctx.drawImage(img, imgX, imgY, imgWidth, imgHeight);
-          }
-
-          // Цвет масти
-          const suitColor = (suit === 'hearts' || suit === 'diamonds') ? '#ef4444' : '#000000';
-          const suitSymbol = { hearts: '♥', diamonds: '♦', clubs: '♣', spades: '♠' }[suit] || suit;
-
-          // ✅ РАНГ И МАСТЬ ПОВЕРХ ИЗОБРАЖЕНИЯ!
-          // Добавляем белый контур для лучшей видимости на легендарной
-          if (isLegendary) {
-            ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 3;
-            ctx.font = 'bold 40px Arial';
-            ctx.strokeText(rank.toUpperCase(), 20, 50);
-            ctx.strokeText(rank.toUpperCase(), 260, 400);
-            
-            ctx.font = 'bold 36px Arial';
-            ctx.strokeText(suitSymbol, 20, 90);
-            ctx.strokeText(suitSymbol, 260, 360);
-          }
-
-          // Ранг и масть в углах (основной цвет)
-          ctx.fillStyle = suitColor;
-          ctx.font = 'bold 40px Arial';
-          ctx.fillText(rank.toUpperCase(), 20, 50);
-          ctx.fillText(rank.toUpperCase(), 260, 400);
-
-          ctx.font = 'bold 36px Arial';
-          ctx.fillText(suitSymbol, 20, 90);
-          ctx.fillText(suitSymbol, 260, 360);
-
-          console.log(`✅ [Client] Изображение нарисовано: ${imagePath} (legendary: ${isLegendary})`);
-          resolve(canvas.toDataURL('image/png'));
-        } catch (error) {
-          console.error(`❌ [Client] Ошибка рисования:`, error);
-          reject(error);
-        }
-      };
-
-      img.onerror = (error) => {
-        console.error(`❌ [Client] Не удалось загрузить: ${imagePath}`, error);
-        // Возвращаем canvas без изображения
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, 300, 420);
-        ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 8;
-        ctx.strokeRect(4, 4, 292, 412);
-        
-        ctx.fillStyle = '#ff0000';
-        ctx.font = 'bold 16px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('Image not found', 150, 210);
-        ctx.fillText(imagePath, 150, 230);
-        
-        resolve(canvas.toDataURL('image/png'));
-      };
-    });
-  };
+  // ✅ КЛИЕНТСКАЯ ГЕНЕРАЦИЯ — общая утилита generateThemeCardImageDataUrl
 
   const getSuitSymbol = (suit: string) => {
     const symbols: Record<string, string> = {

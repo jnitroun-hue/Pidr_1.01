@@ -1,4 +1,4 @@
-/* Premium hero — raster art + floating card backs */
+/* Premium hero — raster art + floating generated card faces */
 
 .hero {
   position: relative;
@@ -80,14 +80,28 @@
   pointer-events: none;
 }
 
-.cardBackImg {
-  width: auto !important;
-  height: clamp(52px, 14vw, 72px) !important;
+.cardFaceImg {
+  display: block;
+  width: auto;
+  height: clamp(52px, 14vw, 72px);
   border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
-.heroCompact .cardBackImg {
-  height: clamp(40px, 12vw, 52px) !important;
+.heroCompact .cardFaceImg {
+  height: clamp(40px, 12vw, 52px);
+}
+
+.cardFacePlaceholder {
+  width: clamp(36px, 10vw, 48px);
+  height: clamp(52px, 14vw, 72px);
+  border-radius: 6px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.heroCompact .cardFacePlaceholder {
+  height: clamp(40px, 12vw, 52px);
 }
 
 .chipAccent {
