@@ -1,15 +1,17 @@
 'use client'
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Copy, Check, Crown, Play, Clock, Wifi, WifiOff, UserPlus, Settings, Bot } from 'lucide-react';
+import { Users, Copy, Check, Crown, Play, Clock, Wifi, WifiOff, UserPlus, Bot } from 'lucide-react';
 import { RoomManager } from '../lib/multiplayer/room-manager';
-import { useTelegram } from '../hooks/useTelegram';
 import InviteFriendsModal from './InviteFriendsModal';
+import { getApiHeaders } from '@/lib/api-headers';
+import lobbyStyles from './MultiplayerLobby.module.css';
 
 interface MultiplayerLobbyProps {
   roomId: string;
   roomCode: string;
   isHost: boolean;
+  currentUserId: string;
   onGameStart: (gameSettings: any) => void;
   onLeaveRoom: () => void;
 }
@@ -19,38 +21,49 @@ interface LobbyPlayer {
   username: string;
   position: number;
   is_ready: boolean;
-  is_host?: boolean; // ✅ ДОБАВЛЕНО!
+  is_host?: boolean;
+  is_bot?: boolean;
   avatar_url?: string;
 }
 
-interface LobbyState {
-  players: LobbyPlayer[];
-  maxPlayers: number;
-  gameInProgress: boolean;
-  canStart: boolean;
+function isBotPlayer(player: LobbyPlayer): boolean {
+  const id = String(player.user_id ?? '');
+  return player.is_bot === true || id.startsWith('-') || Number(id) < 0;
+}
+
+function computeCanStart(players: LobbyPlayer[]): boolean {
+  if (players.length < 2) return false;
+  const humans = players.filter((p) => !isBotPlayer(p));
+  if (humans.length === 0) return false;
+  return humans.every((p) => p.is_ready);
 }
 
 export default function MultiplayerLobby({ 
   roomId, 
   roomCode, 
-  isHost: initialIsHost, // ✅ ПЕРЕИМЕНОВАЛИ В initialIsHost
+  isHost: initialIsHost,
+  currentUserId,
   onGameStart, 
   onLeaveRoom 
 }: MultiplayerLobbyProps) {
-  const { user } = useTelegram();
   const roomManagerRef = useRef<RoomManager | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [isHost, setIsHost] = useState(initialIsHost); // ✅ ЛОКАЛЬНЫЙ STATE ДЛЯ isHost
-  const [lobbyState, setLobbyState] = useState<LobbyState>({
+  const [lobbyState, setLobbyState] = useState<{
+    players: LobbyPlayer[];
+    maxPlayers: number;
+    gameInProgress: boolean;
+    canStart: boolean;
+  }>({
     players: [],
-    maxPlayers: 9, // ✅ В МУЛЬТИПЛЕЕРЕ ОСТАВЛЯЕМ 9!
+    maxPlayers: 6,
     gameInProgress: false,
-    canStart: false
+    canStart: false,
   });
   
   const [gameSettings, setGameSettings] = useState({
     gameMode: 'classic',
-    maxPlayers: 9, // ✅ В МУЛЬТИПЛЕЕРЕ ОСТАВЛЯЕМ 9!
+    maxPlayers: 6,
     timeLimit: 0,
     allowBots: true
   });
@@ -59,40 +72,51 @@ export default function MultiplayerLobby({
   const [countdown, setCountdown] = useState(0);
   const [isAddingBot, setIsAddingBot] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [newlyJoinedIds, setNewlyJoinedIds] = useState<Set<string>>(new Set());
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const refreshInFlightRef = useRef(false);
   const lastRefreshAtRef = useRef(0);
+  const prevPlayerIdsRef = useRef<Set<string>>(new Set());
+  const gameStartedRef = useRef(false);
+  const onGameStartRef = useRef(onGameStart);
+  onGameStartRef.current = onGameStart;
+
+  const triggerGameStart = useCallback(() => {
+    if (gameStartedRef.current) return;
+    gameStartedRef.current = true;
+    setCountdown(3);
+    const countdownInterval = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(countdownInterval);
+          onGameStartRef.current({});
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, []);
 
   const loadRoomPlayers = useCallback(async (force = false) => {
     if (!force && refreshInFlightRef.current) return;
 
     const now = Date.now();
-    if (!force && now - lastRefreshAtRef.current < 450) return;
+    if (!force && now - lastRefreshAtRef.current < 350) return;
 
     refreshInFlightRef.current = true;
     lastRefreshAtRef.current = now;
     try {
-      const requestHeaders: Record<string, string> = {};
-      if (user?.id) {
-        requestHeaders['x-telegram-id'] = user.id.toString();
-      }
-
       const response = await fetch(`/api/rooms/${roomId}/players`, {
         method: 'GET',
-        headers: requestHeaders,
+        headers: getApiHeaders(),
         credentials: 'include',
         cache: 'no-store',
       });
       
-      // ✅ ПРОВЕРЯЕМ СТАТУС ОТВЕТА!
       if (!response.ok) {
         console.error('❌ [MultiplayerLobby] API вернул ошибку:', response.status, response.statusText);
         
-        // ЕСЛИ 404 - КОМНАТА НЕ НАЙДЕНА, ВЫХОДИМ!
         if (response.status === 404) {
-          console.error('🚪 [MultiplayerLobby] Комната не найдена! Выходим без вызова API...');
-          // ✅ ИСПРАВЛЕНО: Не вызываем onLeaveRoom напрямую, а используем handleLeaveRoom
-          // НО БЕЗ API запроса (так как комната уже удалена)
           if (roomManagerRef.current) {
             roomManagerRef.current.unsubscribe();
           }
@@ -105,25 +129,31 @@ export default function MultiplayerLobby({
       const data = await response.json();
 
       if (data.success && data.players) {
-        console.log('📋 [MultiplayerLobby] Игроки загружены:', data.players);
-        console.log('📋 [MultiplayerLobby] max_players:', data.maxPlayers);
-        console.log('👤 [MultiplayerLobby] user?.id из Telegram:', user?.id, typeof user?.id);
-        
-        // ✅ ОБНОВЛЯЕМ isHost ИЗ БД!
-        // ✅ КРИТИЧНО: Сравниваем telegram_id с telegram_id!
-        const currentUserId = String(user?.id || '');
-        const myPlayer = data.players.find((p: LobbyPlayer) => String(p.user_id) === currentUserId);
-        
-        if (myPlayer && myPlayer.is_host !== undefined) {
+        const players = data.players as LobbyPlayer[];
+        const currentIds = new Set(players.map((p) => String(p.user_id)));
+        const joinedNow = [...currentIds].filter((id) => !prevPlayerIdsRef.current.has(id));
+        if (joinedNow.length > 0 && prevPlayerIdsRef.current.size > 0) {
+          setNewlyJoinedIds(new Set(joinedNow));
+          setTimeout(() => setNewlyJoinedIds(new Set()), 2200);
+        }
+        prevPlayerIdsRef.current = currentIds;
+
+        const myPlayer = players.find((p) => String(p.user_id) === String(currentUserId));
+        if (myPlayer?.is_host !== undefined) {
           setIsHost(myPlayer.is_host);
         }
         
-        setLobbyState(prev => ({
+        setLobbyState((prev) => ({
           ...prev,
-          players: data.players,
-          maxPlayers: data.maxPlayers || 9, // ✅ ОБНОВЛЯЕМ max_players ИЗ БД!
-          canStart: data.players.length >= 2 && data.players.every((p: LobbyPlayer) => p.is_ready)
+          players,
+          maxPlayers: data.maxPlayers || prev.maxPlayers || 6,
+          canStart: computeCanStart(players),
+          gameInProgress: data.roomStatus === 'playing',
         }));
+
+        if (data.roomStatus === 'playing') {
+          triggerGameStart();
+        }
       } else {
         console.error('❌ [MultiplayerLobby] API вернул ошибку:', data.message);
       }
@@ -132,19 +162,8 @@ export default function MultiplayerLobby({
     } finally {
       refreshInFlightRef.current = false;
     }
-  }, [roomId, user?.id, onLeaveRoom]);
+  }, [roomId, currentUserId, onLeaveRoom, triggerGameStart]);
 
-  const scheduleRoomRefresh = useCallback((delayMs = 0) => {
-    if (refreshTimerRef.current) {
-      clearTimeout(refreshTimerRef.current);
-      refreshTimerRef.current = null;
-    }
-    refreshTimerRef.current = setTimeout(() => {
-      loadRoomPlayers();
-    }, delayMs);
-  }, [loadRoomPlayers]);
-
-  // ✅ ИНИЦИАЛИЗАЦИЯ RoomManager при монтировании
   useEffect(() => {
     if (!roomManagerRef.current) {
       roomManagerRef.current = new RoomManager();
@@ -152,41 +171,29 @@ export default function MultiplayerLobby({
 
     const roomManager = roomManagerRef.current;
 
-    console.log('📡 [MultiplayerLobby] Подписываемся на комнату:', roomId);
-
-    // Подписываемся на обновления комнаты
     roomManager.subscribeToRoom(roomId, {
-      onPlayerJoin: (player) => {
-        console.log('👥 [MultiplayerLobby] Игрок присоединился:', player);
-        scheduleRoomRefresh(120);
+      onPlayerJoin: () => {
+        loadRoomPlayers(true);
       },
-      onPlayerLeave: (userId) => {
-        console.log('👋 [MultiplayerLobby] Игрок покинул:', userId);
-        scheduleRoomRefresh(120);
+      onPlayerLeave: () => {
+        loadRoomPlayers(true);
       },
-      onPlayerReady: (userId, isReady) => {
-        console.log('✅ [MultiplayerLobby] Готовность обновлена:', userId, isReady);
-        scheduleRoomRefresh(120);
+      onPlayerReady: () => {
+        loadRoomPlayers(true);
       },
       onGameStart: () => {
-        console.log('🚀 [MultiplayerLobby] Игра началась!');
-        handleGameStarted({});
-      }
+        triggerGameStart();
+      },
     });
 
     setIsConnected(true);
-
-    // ✅ ЗАГРУЖАЕМ ИЗ БД ПРИ МОНТИРОВАНИИ
     loadRoomPlayers(true);
 
-    // Фоновое обновление оставляем, но реже и без дублей.
     const interval = setInterval(() => {
-      scheduleRoomRefresh(0);
-    }, 4000);
+      loadRoomPlayers(true);
+    }, 2000);
 
-    // Очистка при размонтировании
     return () => {
-      console.log('🔌 [MultiplayerLobby] Отключаемся от комнаты');
       clearInterval(interval);
       if (refreshTimerRef.current) {
         clearTimeout(refreshTimerRef.current);
@@ -194,26 +201,8 @@ export default function MultiplayerLobby({
       }
       roomManager.unsubscribe();
     };
-  }, [roomId, scheduleRoomRefresh, loadRoomPlayers]);
+  }, [roomId, loadRoomPlayers, triggerGameStart]);
 
-  // Обработка начала игры
-  const handleGameStarted = (gameData: any) => {
-    console.log(`🚀 [MultiplayerLobby] Игра началась:`, gameData);
-    
-    setCountdown(3);
-    const countdownInterval = setInterval(() => {
-      setCountdown(prev => {
-        if (prev <= 1) {
-          clearInterval(countdownInterval);
-          onGameStart(gameData);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  };
-
-  // Скопировать код комнаты
   const copyRoomCode = async () => {
     try {
       await navigator.clipboard.writeText(roomCode);
@@ -226,29 +215,23 @@ export default function MultiplayerLobby({
 
   // ✅ УПРОЩЕННАЯ ГОТОВНОСТЬ - РАБОТАЕТ ВСЕГДА
   const toggleReady = async () => {
-    if (!user?.id) {
+    if (!currentUserId) {
       alert('Ошибка: не удалось определить ваш ID');
       return;
     }
     
-    // ✅ ОПРЕДЕЛЯЕМ ТЕКУЩЕЕ СОСТОЯНИЕ И ПЕРЕКЛЮЧАЕМ
     const currentReadyState = currentPlayer?.is_ready || false;
     const newReadyState = !currentReadyState;
     
-    console.log('🔄 [MultiplayerLobby] toggleReady вызван, текущее состояние:', currentReadyState, 'новое:', newReadyState);
-    
     try {
-      // ✅ ИСПРАВЛЕНО: Отправляем body с isReady!
       const response = await fetch(`/api/rooms/${roomId}/ready`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-telegram-id': user.id.toString()
+          ...getApiHeaders(),
         },
         credentials: 'include',
-        body: JSON.stringify({
-          isReady: newReadyState
-        })
+        body: JSON.stringify({ isReady: newReadyState }),
       });
       
       // ✅ ПРОВЕРЯЕМ ОТВЕТ ПЕРЕД ПАРСИНГОМ JSON
@@ -263,15 +246,12 @@ export default function MultiplayerLobby({
       if (data.success) {
         console.log('✅ [MultiplayerLobby] Готовность изменена:', newReadyState);
         // Обновляем список игроков
-        await loadRoomPlayers();
-        // ✅ ОБНОВЛЯЕМ last_activity КОМНАТЫ
-        await fetch(`/api/user/heartbeat`, {
+        await loadRoomPlayers(true);
+        await fetch('/api/user/heartbeat', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-telegram-id': user.id.toString()
-          }
-        }).catch(() => {}); // Игнорируем ошибки heartbeat
+          headers: { 'Content-Type': 'application/json', ...getApiHeaders() },
+          credentials: 'include',
+        }).catch(() => {});
       } else {
         console.error('❌ [MultiplayerLobby] Ошибка:', data.message);
         alert(`Ошибка: ${data.message || 'Не удалось изменить готовность'}`);
@@ -288,7 +268,7 @@ export default function MultiplayerLobby({
       alert('Добавлять ботов может только хост комнаты');
       return;
     }
-    if (!user?.id) {
+    if (!currentUserId) {
       alert('Ошибка: не удалось определить ваш ID');
       return;
     }
@@ -301,7 +281,7 @@ export default function MultiplayerLobby({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-telegram-id': user.id.toString()
+          ...getApiHeaders(),
         },
         credentials: 'include',
         body: JSON.stringify({ action: 'add' })
@@ -324,10 +304,8 @@ export default function MultiplayerLobby({
         // Обновим активность комнаты
         await fetch('/api/user/heartbeat', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-telegram-id': user.id.toString()
-          }
+          headers: { 'Content-Type': 'application/json', ...getApiHeaders() },
+          credentials: 'include',
         });
       } else {
         console.error('❌ [MultiplayerLobby] API вернул ошибку при добавлении бота:', data.message);
@@ -344,123 +322,32 @@ export default function MultiplayerLobby({
   // ✅ ЗАПУСК ИГРЫ ЧЕРЕЗ API
   const handleStartGame = async () => {
     if (!isHost || !lobbyState.canStart) return;
-    
-    console.log(`🚀 [MultiplayerLobby] Хост запускает игру`);
 
     try {
       const roomManager = roomManagerRef.current;
-      if (!roomManager || !user?.id) return;
+      if (!roomManager) return;
 
-      await roomManager.startGame(roomId, user.id.toString());
-      
-      console.log('✅ [MultiplayerLobby] Игра запущена');
+      await roomManager.startGame(roomId, currentUserId);
+      triggerGameStart();
     } catch (error) {
       console.error('❌ [MultiplayerLobby] Ошибка запуска игры:', error);
+      alert(error instanceof Error ? error.message : 'Не удалось начать игру');
     }
   };
 
-  // ✅ ПОКИНУТЬ ЛОББИ ЧЕРЕЗ API
   const handleLeaveRoom = async () => {
-    console.log(`🚪 [MultiplayerLobby] Покидаем лобби`);
-
-    try {
-      if (!user?.id) {
-        console.error('❌ [MultiplayerLobby] Нет user.id');
-        onLeaveRoom();
-        return;
-      }
-
-      console.log(`📤 [MultiplayerLobby] Отправляем запрос на выход из комнаты ${roomId}...`);
-      
-      const response = await fetch(`/api/rooms/${roomId}/leave`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-telegram-id': user.id.toString()
-        }
-      });
-
-      if (!response.ok) {
-        console.error('❌ [MultiplayerLobby] API вернул ошибку:', response.status);
-        // Всё равно выходим, даже если API вернул ошибку
-      } else {
-        const result = await response.json();
-        console.log('✅ [MultiplayerLobby] Успешно покинули комнату:', result);
-      }
-    } catch (error) {
-      console.error('❌ [MultiplayerLobby] Ошибка покидания комнаты:', error);
-      // Всё равно выходим, даже если была ошибка
-    } finally {
-      // ✅ ВАЖНО: Отписываемся от Realtime ПЕРЕД выходом
-      if (roomManagerRef.current) {
-        roomManagerRef.current.unsubscribe();
-      }
-      
-      // ✅ Вызываем callback родителя
-      onLeaveRoom();
+    if (roomManagerRef.current) {
+      roomManagerRef.current.unsubscribe();
     }
-  };
-
-  // ✅ ДОБАВИТЬ БОТА ЧЕРЕЗ API
-  const addBot = async () => {
-    if (isAddingBot) return;
-    
-    if (lobbyState.players.length >= lobbyState.maxPlayers) {
-      alert('Комната заполнена!');
-      return;
-    }
-    
-    setIsAddingBot(true);
-    console.log(`🤖 [MultiplayerLobby] Добавляем бота...`);
-
-    try {
-      const response = await fetch(`/api/rooms/${roomId}/bots`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-telegram-id': user?.id?.toString() || ''
-        },
-        credentials: 'include',
-        body: JSON.stringify({ action: 'add' })
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || `HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (data.success) {
-        console.log('✅ [MultiplayerLobby] Бот добавлен:', data.bot);
-        // ✅ ОБНОВЛЯЕМ СПИСОК ИГРОКОВ
-        await loadRoomPlayers();
-        // ✅ ОБНОВЛЯЕМ last_activity КОМНАТЫ
-        await fetch(`/api/user/heartbeat`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-telegram-id': user?.id?.toString() || ''
-          }
-        }).catch(() => {}); // Игнорируем ошибки heartbeat
-      } else {
-        console.error('❌ Ошибка:', data.message);
-        alert(`Ошибка: ${data.message}`);
-      }
-    } catch (error) {
-      console.error('❌ Ошибка добавления бота:', error);
-      alert('Не удалось добавить бота');
-    } finally {
-      setIsAddingBot(false);
-    }
+    onLeaveRoom();
   };
 
   // ✅ ИСПРАВЛЕНО: Нормализуем сравнение - приводим оба к строке
-  const currentPlayer = lobbyState.players.find(p => String(p.user_id) === String(user?.id || ''));
+  const currentPlayer = lobbyState.players.find((p) => String(p.user_id) === String(currentUserId));
   const readyPlayersCount = lobbyState.players.filter(p => p.is_ready).length;
 
   return (
-    <div className="multiplayer-lobby">
+    <div className={`multiplayer-lobby ${lobbyStyles.lobbyRoot}`}>
       {/* ✅ ПРОФЕССИОНАЛЬНЫЙ ЗАГОЛОВОК С ОПИСАНИЕМ */}
       <motion.div 
         className="lobby-header"
@@ -542,224 +429,92 @@ export default function MultiplayerLobby({
           </div>
         </div>
         
-        {/* ✅ НОВОЕ: ВИЗУАЛИЗАЦИЯ СТОЛА С ПОЗИЦИЯМИ ИГРОКОВ */}
-        <div style={{
-          position: 'relative',
-          width: '100%',
-          minHeight: '300px',
-          background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%)',
-          borderRadius: '20px',
-          border: '3px solid rgba(34, 197, 94, 0.3)',
-          padding: '20px',
-          marginBottom: '20px'
-        }}>
-          {/* Стол в центре */}
-          <div style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: '120px',
-            height: '120px',
-            background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.3) 0%, rgba(16, 185, 129, 0.3) 100%)',
-            borderRadius: '50%',
-            border: '3px solid rgba(34, 197, 94, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '16px',
-            fontWeight: 'bold',
-            color: 'rgba(34, 197, 94, 0.8)',
-            boxShadow: '0 0 20px rgba(34, 197, 94, 0.3)'
-          }}>
-            🎮 СТОЛ
+        <div className={lobbyStyles.tableArena}>
+          <div className={lobbyStyles.tableFelt} />
+          <div className={lobbyStyles.tableCenter}>
+            <div className={lobbyStyles.tableLabel}>🎮 СТОЛ</div>
+            <div className={lobbyStyles.tableCode}>{roomCode}</div>
           </div>
 
-          {/* Игроки вокруг стола по позициям */}
           {Array.from({ length: lobbyState.maxPlayers }, (_, index) => {
             const position = index + 1;
-            const player = lobbyState.players.find(p => p.position === position);
+            const player = lobbyState.players.find((p) => p.position === position);
             const isEmpty = !player;
-            
-            // Вычисляем позицию вокруг стола (круг)
-            const angle = (360 / lobbyState.maxPlayers) * (position - 1) - 90; // Начинаем сверху
-            const radius = 140;
+            const angle = (360 / lobbyState.maxPlayers) * (position - 1) - 90;
+            const radius = typeof window !== 'undefined' && window.innerWidth < 480 ? 118 : 148;
             const x = Math.cos((angle * Math.PI) / 180) * radius;
             const y = Math.sin((angle * Math.PI) / 180) * radius;
-            
-            const userIdStr = player ? String(player.user_id || '') : '';
-            const isBot = player && (userIdStr.startsWith('-') || parseInt(userIdStr) < 0);
-            const isCurrentUser = player && userIdStr === String(user?.id || '');
-            const isHostPlayer = player && player.is_host === true;
-            
+            const userIdStr = player ? String(player.user_id) : '';
+            const isBot = player ? isBotPlayer(player) : false;
+            const isCurrentUser = player && userIdStr === String(currentUserId);
+            const isHostPlayer = Boolean(player?.is_host);
+            const justJoined = player && newlyJoinedIds.has(userIdStr);
+
             return (
-              <motion.div
-                key={`position-${position}`}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.3, delay: index * 0.1 }}
+              <div
+                key={`seat-${position}-${player?.user_id ?? 'empty'}`}
+                className={lobbyStyles.seatWrap}
                 style={{
-                  position: 'absolute',
                   top: `calc(50% + ${y}px)`,
                   left: `calc(50% + ${x}px)`,
-                  transform: 'translate(-50%, -50%)',
-                  width: '90px',
-                  zIndex: isEmpty ? 1 : 2
                 }}
               >
                 {isEmpty ? (
-                  <div style={{
-                    background: 'rgba(100, 116, 139, 0.2)',
-                    border: '2px dashed rgba(100, 116, 139, 0.5)',
-                    borderRadius: '10px',
-                    padding: '8px',
-                    textAlign: 'center',
-                    color: 'rgba(148, 163, 184, 0.8)',
-                    fontSize: '10px'
-                  }}>
-                    <UserPlus size={18} style={{ marginBottom: '2px', opacity: 0.5 }} />
-                    <div>Поз. {position}</div>
-                    <div style={{ fontSize: '9px', marginTop: '2px' }}>Свободно</div>
+                  <div className={lobbyStyles.seatEmpty}>
+                    <UserPlus size={16} style={{ opacity: 0.45 }} />
+                    <span>Место {position}</span>
+                    <span style={{ opacity: 0.7 }}>Ждём игрока</span>
                   </div>
                 ) : (
                   <motion.div
-                    whileHover={{ scale: 1.05, y: -3 }}
-                    style={{
-                      background: player.is_ready 
-                        ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.3) 0%, rgba(5, 150, 105, 0.3) 100%)'
-                        : 'linear-gradient(135deg, rgba(239, 68, 68, 0.3) 0%, rgba(220, 38, 38, 0.3) 100%)',
-                      border: `2px solid ${player.is_ready ? 'rgba(16, 185, 129, 0.6)' : 'rgba(239, 68, 68, 0.6)'}`,
-                      borderRadius: '12px',
-                      padding: '8px',
-                      textAlign: 'center',
-                      boxShadow: isCurrentUser 
-                        ? '0 0 15px rgba(59, 130, 246, 0.6)' 
-                        : '0 3px 8px rgba(0, 0, 0, 0.3)',
-                      position: 'relative'
-                    }}
+                    initial={justJoined ? { opacity: 0, scale: 0.5, y: 12 } : false}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    transition={{ type: 'spring', stiffness: 320, damping: 22 }}
+                    className={`${lobbyStyles.seatPlayer} ${
+                      player.is_ready ? lobbyStyles.seatPlayerReady : lobbyStyles.seatPlayerWaiting
+                    } ${isCurrentUser ? lobbyStyles.seatPlayerSelf : ''}`}
                   >
+                    {justJoined && <span className={lobbyStyles.waitingPulse} />}
                     {isHostPlayer && (
-                      <div style={{
-                        position: 'absolute',
-                        top: '-6px',
-                        right: '-6px',
-                        background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
-                        borderRadius: '50%',
-                        width: '24px',
-                        height: '24px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 3px 8px rgba(251, 191, 36, 0.5)',
-                        zIndex: 10
-                      }}>
-                        <Crown size={14} style={{ color: 'white' }} />
-                      </div>
+                      <span className={lobbyStyles.seatBadgeHost}>
+                        <Crown size={13} color="#fff" />
+                      </span>
                     )}
                     {isBot && (
-                      <div style={{
-                        position: 'absolute',
-                        top: '-6px',
-                        left: '-6px',
-                        background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-                        borderRadius: '50%',
-                        width: '22px',
-                        height: '22px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 3px 8px rgba(139, 92, 246, 0.5)',
-                        zIndex: 10
-                      }}>
-                        <Bot size={12} style={{ color: 'white' }} />
-                      </div>
+                      <span className={lobbyStyles.seatBadgeBot}>
+                        <Bot size={11} color="#fff" />
+                      </span>
                     )}
-                    {isCurrentUser && (
-                      <div style={{
-                        position: 'absolute',
-                        bottom: '-6px',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                        borderRadius: '8px',
-                        padding: '2px 6px',
-                        fontSize: '8px',
-                        fontWeight: 'bold',
-                        color: 'white',
-                        whiteSpace: 'nowrap',
-                        boxShadow: '0 2px 6px rgba(59, 130, 246, 0.5)'
-                      }}>
-                        ВЫ
-                      </div>
-                    )}
+                    {isCurrentUser && <span className={lobbyStyles.seatBadgeYou}>ВЫ</span>}
                     {player.avatar_url ? (
-                      <img 
-                        src={player.avatar_url} 
-                        alt={player.username}
-                        style={{
-                          width: '36px',
-                          height: '36px',
-                          borderRadius: '50%',
-                          marginBottom: '4px',
-                          border: `2px solid ${player.is_ready ? '#10b981' : '#ef4444'}`,
-                          objectFit: 'cover'
-                        }}
-                      />
+                      <img src={player.avatar_url} alt={player.username} className={lobbyStyles.seatAvatar} />
                     ) : (
-                      <div style={{
-                        width: '36px',
-                        height: '36px',
-                        borderRadius: '50%',
-                        background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                        margin: '0 auto 4px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '16px',
-                        color: 'white'
-                      }}>
+                      <div className={lobbyStyles.seatAvatarFallback}>
                         {player.username?.[0]?.toUpperCase() || '?'}
                       </div>
                     )}
-                    <div style={{
-                      fontSize: '10px',
-                      fontWeight: 'bold',
-                      color: 'white',
-                      marginBottom: '2px',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
-                    }}>
-                      {player.username || `Игрок ${position}`}
-                    </div>
-                    <div style={{
-                      fontSize: '8px',
-                      color: player.is_ready ? '#10b981' : '#ef4444',
-                      fontWeight: '600'
-                    }}>
-                      {player.is_ready ? '✅ Готов' : '⏳ Не готов'}
-                    </div>
-                    <div style={{
-                      fontSize: '7px',
-                      color: 'rgba(255, 255, 255, 0.7)',
-                      marginTop: '1px'
-                    }}>
-                      Поз. {position}
+                    <div className={lobbyStyles.seatName}>{player.username || `Игрок ${position}`}</div>
+                    <div
+                      className={`${lobbyStyles.seatStatus} ${
+                        player.is_ready ? lobbyStyles.seatStatusReady : lobbyStyles.seatStatusWait
+                      }`}
+                    >
+                      {player.is_ready ? '✅ Готов' : '⏳ Ждём'}
                     </div>
                   </motion.div>
                 )}
-              </motion.div>
+              </div>
             );
           })}
         </div>
         
-        {/* ✅ ДОПОЛНИТЕЛЬНЫЙ СПИСОК ИГРОКОВ (для мобильных) */}
-        <div className="players-list" style={{ display: 'none' }}>
+        {/* Список игроков под столом на узких экранах */}
+        <div className="players-list">
           <AnimatePresence>
             {lobbyState.players.map((player, index) => {
               const userIdStr = String(player.user_id || '');
               const isBot = userIdStr.startsWith('-') || parseInt(userIdStr) < 0;
-              const isCurrentUser = userIdStr === String(user?.id || '');
+              const isCurrentUser = userIdStr === String(currentUserId);
               const isHostPlayer = player.is_host === true;
 
               return (

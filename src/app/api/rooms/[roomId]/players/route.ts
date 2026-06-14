@@ -74,8 +74,8 @@ export async function GET(
       const userData = isBot ? null : usersMap.get(player.user_id);
       const isHost = !isBot && room?.host_id && String(room.host_id) === String(player.user_id);
       const publicUserId = isBot
-        ? player.user_id
-        : (userData?.telegram_id ?? player.user_id);
+        ? String(player.user_id)
+        : String(userData?.telegram_id ?? player.user_id);
 
       return {
         ...player,

@@ -7,6 +7,7 @@ import MultiplayerAccessModal from './MultiplayerAccessModal';
 import styles from './ProperMultiplayer.module.css';
 import { supabase } from '../lib/supabase';
 import { getApiHeaders, mergeApiHeaders } from '@/lib/api-headers';
+import { resolveLobbyUserId } from '@/lib/multiplayer/public-user-id';
 import { useLanguage } from './LanguageSwitcher';
 import { useTranslations } from '@/lib/i18n/translations';
 import PageLoadingScreen from '@/components/PageLoadingScreen';
@@ -372,7 +373,7 @@ export const ProperMultiplayer: React.FC = () => {
             code: data.room.roomCode,
             name: roomInfo?.name || data.room.name || 'Новая комната',
             host: allPlayers.find((p: any) => p.isHost)?.name || user?.first_name || user?.username || 'Хост',
-            hostId: allPlayers.find((p: any) => p.isHost)?.id || user?.id?.toString() || 'host',
+            hostId: allPlayers.find((p: any) => p.isHost)?.id || resolveLobbyUserId(user) || 'host',
             maxPlayers: roomInfo?.max_players || maxPlayers,
             gameMode: roomInfo?.settings?.gameMode === 'ranked' ? 'competitive' : 'casual',
             hasPassword: roomInfo?.password ? true : false,
@@ -651,8 +652,16 @@ export const ProperMultiplayer: React.FC = () => {
   };
 
   const handleStartGame = () => {
-    console.log('🎮 Starting game with room:', currentRoom);
-    alert('Игра начинается! (В разработке)');
+    if (!currentRoom) return;
+    const publicId = resolveLobbyUserId(user);
+    const hostFlag = currentRoom.hostId === publicId ? '1' : '0';
+    const params = new URLSearchParams({
+      mode: 'multiplayer',
+      roomId: String(currentRoom.id),
+      roomCode: currentRoom.code,
+      isHost: hostFlag,
+    });
+    window.location.href = `/game?${params.toString()}`;
   };
 
   const handleUpdateRoom = (updates: any) => {
@@ -697,7 +706,8 @@ export const ProperMultiplayer: React.FC = () => {
       <MultiplayerLobby
         roomId={currentRoom.id.toString()}
         roomCode={currentRoom.code}
-        isHost={currentRoom.hostId === user?.id?.toString()} // Начальное значение, будет обновлено из БД
+        isHost={currentRoom.hostId === resolveLobbyUserId(user)}
+        currentUserId={resolveLobbyUserId(user)}
         onGameStart={handleStartGame}
         onLeaveRoom={handleLeaveRoom}
       />

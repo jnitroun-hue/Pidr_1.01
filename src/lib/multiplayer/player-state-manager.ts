@@ -739,23 +739,30 @@ export async function atomicJoinRoom(params: {
       // 10. ОБНОВЛЯЕМ СЧЕТЧИК В БД
       await updateRoomPlayerCount(roomId);
       
-      // 11. ✅ ОТПРАВЛЯЕМ BROADCAST ДЛЯ СИНХРОНИЗАЦИИ ВСЕХ КЛИЕНТОВ
+      // 11. ✅ Realtime: postgres_changes достаточно; broadcast опционален
       try {
         const channel = supabase.channel(`room:${roomId}`);
-        await channel.send({
-          type: 'broadcast',
-          event: 'player-joined',
-          payload: {
-            userId,
-            username,
-            position,
-            isHost,
-            timestamp: Date.now()
-          }
+        await new Promise<void>((resolve) => {
+          const timeout = setTimeout(() => resolve(), 1500);
+          channel.subscribe((status: string) => {
+            if (status === 'SUBSCRIBED') {
+              clearTimeout(timeout);
+              channel
+                .send({
+                  type: 'broadcast',
+                  event: 'player-joined',
+                  payload: { userId, username, position, isHost, timestamp: Date.now() },
+                })
+                .finally(() => {
+                  supabase.removeChannel(channel);
+                  resolve();
+                });
+            }
+          });
         });
-        console.log(`📡 [ATOMIC JOIN] Broadcast отправлен для синхронизации клиентов`);
+        console.log(`📡 [ATOMIC JOIN] Broadcast player-joined отправлен`);
       } catch (broadcastError) {
-        console.warn(`⚠️ [ATOMIC JOIN] Ошибка отправки broadcast (не критично):`, broadcastError);
+        console.warn(`⚠️ [ATOMIC JOIN] Broadcast пропущен:`, broadcastError);
       }
       
       console.log(`✅ [ATOMIC JOIN] Игрок ${userId} успешно присоединился к комнате ${roomId} на позиции ${position}`);

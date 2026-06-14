@@ -1,5 +1,6 @@
 import { supabaseAdmin as supabase } from '../supabase';
 import { RealtimeChannel } from '@supabase/supabase-js';
+import { getApiHeaders } from '@/lib/api-headers';
 
 interface Room {
   id: string;
@@ -509,10 +510,11 @@ export class RoomManager {
       // ✅ ВЫЗЫВАЕМ API /start (ПРОВЕРЯЕТ ВСЁ!)
       const response = await fetch(`/api/rooms/${roomId}/start`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          'x-telegram-id': hostId
-        }
+          ...getApiHeaders(),
+        },
       });
 
       if (!response.ok) {
