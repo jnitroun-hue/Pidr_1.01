@@ -51,7 +51,7 @@ function GoogleCallbackContent() {
           const pendingReferralCookie = cookies.find(c => c.trim().startsWith('pending_referral_code='));
           const pendingReferral = pendingReferralCookie ? pendingReferralCookie.split('=')[1] : null;
           if (pendingReferral) {
-            await handlePendingReferral(pendingReferral, data.token);
+            await handlePendingReferral(pendingReferral);
           }
 
           setTimeout(() => router.push('/'), 2000);
@@ -71,23 +71,20 @@ function GoogleCallbackContent() {
     handleGoogleCallback();
   }, [searchParams, router]);
 
-  const handlePendingReferral = async (code: string, token: string) => {
+  const handlePendingReferral = async (code: string) => {
     try {
-      const response = await fetch('/api/referral', {
+      const response = await fetch('/api/referral/apply', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'use_referral',
-          referralCode: code
-        })
+          referralCode: decodeURIComponent(code),
+          authMethod: 'google',
+        }),
       });
 
       if (response.ok) {
-        // Удаляем реферальный код из cookies
-        document.cookie = 'pending_referral_code=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+        document.cookie = 'pending_referral_code=; path=/; max-age=0';
       }
     } catch (error) {
       console.error('Error processing pending referral:', error);

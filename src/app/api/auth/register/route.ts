@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import * as bcrypt from 'bcryptjs';
 import { createSession } from '@/lib/auth/redis-session-manager';
+import { applyReferralForNewUser } from '@/lib/referral/apply-referral';
+import { PENDING_REFERRAL_COOKIE } from '@/lib/referral/constants';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -174,6 +176,20 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Пользователь успешно зарегистрирован:', username);
 
+    const pendingReferral =
+      request.cookies.get(PENDING_REFERRAL_COOKIE)?.value ||
+      (typeof body.referralCode === 'string' ? body.referralCode : null);
+
+    if (pendingReferral) {
+      const refResult = await applyReferralForNewUser(supabase, {
+        referredUserId: newUser.id,
+        referralCode: pendingReferral,
+        authMethod: 'web',
+        grantBonuses: false,
+      });
+      console.log('🎁 [Register] Referral apply:', refResult);
+    }
+
     const response = NextResponse.json({
       success: true,
       message: 'Регистрация успешна',
@@ -192,6 +208,10 @@ export async function POST(request: NextRequest) {
     };
     
     response.cookies.set('auth_token', token, cookieSettings);
+
+    if (pendingReferral) {
+      response.cookies.set(PENDING_REFERRAL_COOKIE, '', { path: '/', maxAge: 0 });
+    }
     
     console.log('🍪 [Register] Cookie установлен:', {
       hasToken: !!token,

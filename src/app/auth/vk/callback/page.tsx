@@ -82,8 +82,9 @@ function VKCallbackContent() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          referralCode: code
-        })
+          referralCode: decodeURIComponent(code),
+          authMethod: 'vk',
+        }),
       });
 
       if (response.ok) {

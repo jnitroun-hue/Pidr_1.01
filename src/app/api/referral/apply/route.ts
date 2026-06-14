@@ -1,23 +1,23 @@
 /**
  * 🎁 API: Применение реферального кода
- * 
  * POST /api/referral/apply
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
+import {
+  applyReferralForNewUser,
+  authEnvironmentToReferralMethod,
+} from '@/lib/referral/apply-referral';
+import { PENDING_REFERRAL_COOKIE } from '@/lib/referral/constants';
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🎁 [referral/apply] Применение реферального кода');
-
     const body = await request.json();
-    const { referralCode } = body;
+    const { referralCode, authMethod: bodyAuthMethod } = body;
 
-    // ✅ УНИВЕРСАЛЬНО: Используем универсальную авторизацию
     const auth = requireAuth(request);
-
     if (auth.error || !auth.userId) {
       return NextResponse.json(
         { success: false, error: auth.error || 'Unauthorized' },
@@ -25,61 +25,55 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { userId, environment } = auth;
-    const { dbUserId } = await getUserIdFromDatabase(userId, environment);
-
+    const { dbUserId } = await getUserIdFromDatabase(auth.userId, auth.environment);
     if (!dbUserId) {
-      return NextResponse.json(
-        { success: false, error: 'User not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
     }
 
-    if (!referralCode) {
+    const code =
+      referralCode ||
+      request.cookies.get(PENDING_REFERRAL_COOKIE)?.value;
+
+    if (!code) {
       return NextResponse.json(
         { success: false, error: 'Referral code is required' },
         { status: 400 }
       );
     }
 
-    console.log(`👤 Пользователь ${dbUserId} применяет код: ${referralCode}`);
+    const authMethod =
+      (bodyAuthMethod as string | undefined) ||
+      authEnvironmentToReferralMethod(auth.environment);
 
-    // Вызываем функцию обработки реферала
-    const { data, error } = await supabase.rpc('process_referral', {
-      p_referred_id: dbUserId,
-      p_referral_code: referralCode
+    const result = await applyReferralForNewUser(supabaseAdmin, {
+      referredUserId: dbUserId,
+      referralCode: String(code),
+      authMethod: authMethod as 'web' | 'telegram' | 'vk' | 'google' | 'email' | 'apple' | 'unknown',
+      grantBonuses: false,
     });
 
-    if (error) {
-      console.error('❌ Ошибка обработки реферала:', error);
+    if (!result.success && !result.alreadyLinked) {
       return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 500 }
-      );
-    }
-
-    if (!data.success) {
-      return NextResponse.json(
-        { success: false, error: data.error },
+        { success: false, error: result.error || 'Referral failed' },
         { status: 400 }
       );
     }
 
-    console.log('✅ Реферальный код применен:', data);
-
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
-      referrerBonus: data.referrer_bonus,
-      referredBonus: data.referred_bonus,
-      message: `Вы получили ${data.referred_bonus} монет! Ваш друг получил ${data.referrer_bonus} монет!`
+      alreadyLinked: result.alreadyLinked,
+      referrerId: result.referrerId,
+      message: result.alreadyLinked
+        ? 'Referral already applied'
+        : 'Referral linked successfully',
     });
-
-  } catch (error: any) {
+    response.cookies.set(PENDING_REFERRAL_COOKIE, '', { path: '/', maxAge: 0 });
+    return response;
+  } catch (error: unknown) {
     console.error('❌ [referral/apply] Критическая ошибка:', error);
-    return NextResponse.json({
-      success: false,
-      error: error.message || 'Internal server error'
-    }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
-

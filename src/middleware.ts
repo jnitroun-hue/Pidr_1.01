@@ -1,4 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import {
+  PENDING_REFERRAL_COOKIE,
+  PENDING_REFERRAL_MAX_AGE_SEC,
+  REFERRAL_QUERY_PARAM,
+} from '@/lib/referral/constants';
+import { normalizeReferralCode } from '@/lib/referral/referral-links';
 
 // Публичные пути (НЕ требуют авторизации)
 const publicPaths: string[] = [
@@ -14,10 +20,23 @@ const publicPaths: string[] = [
 ];
 
 export function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl;
-  
-  // ВСЁ ДОСТУПНО БЕЗ АВТОРИЗАЦИИ!
-  // Авторизация нужна только для некоторых API и действий внутри страниц
+  const refRaw = req.nextUrl.searchParams.get(REFERRAL_QUERY_PARAM)
+    || req.nextUrl.searchParams.get('invite');
+  const refCode = normalizeReferralCode(refRaw);
+
+  if (refCode) {
+    const res = NextResponse.next();
+    const isProduction = process.env.NODE_ENV === 'production' || !!process.env.VERCEL;
+    res.cookies.set(PENDING_REFERRAL_COOKIE, refCode, {
+      path: '/',
+      maxAge: PENDING_REFERRAL_MAX_AGE_SEC,
+      sameSite: 'lax',
+      secure: isProduction,
+      httpOnly: false,
+    });
+    return res;
+  }
+
   return NextResponse.next();
 }
 

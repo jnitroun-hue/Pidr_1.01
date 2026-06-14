@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Hash, Users, Crown, Play, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import { useTelegram } from '../hooks/useTelegram';
+import { getApiHeaders } from '@/lib/api-headers';
 import MultiplayerAccessModal from './MultiplayerAccessModal';
 
 interface MultiplayerMenuProps {
@@ -33,18 +34,13 @@ export default function MultiplayerMenu({ onCreateRoom, onJoinRoom, onBack }: Mu
   const [showAccessModal, setShowAccessModal] = useState(false);
   const [checkingAccess, setCheckingAccess] = useState(true);
 
-  // ✅ Загружаем количество игр
+  // ✅ Загружаем количество игр из БД (Telegram, VK или web cookie)
   useEffect(() => {
-    if (!user?.id) return;
-
     const loadGamesCount = async () => {
       try {
         const response = await fetch('/api/user/bot-games', {
           method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-telegram-id': user.id.toString()
-          },
+          headers: getApiHeaders(),
           credentials: 'include'
         });
 

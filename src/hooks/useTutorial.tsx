@@ -294,8 +294,8 @@ export function useTutorial(
       stepsCount: tutorialConfig.steps.length
     });
     
-    // ✅ ИСПРАВЛЕНО: Инициализируем туториал если это обучающая игра
-    if (isTutorialGame && tutorialGameNumber) {
+    // Модальные подсказки только в 1-й обучающей игре; 2–3 считаются без модалок
+    if (isTutorialGame && tutorialGameNumber === 1) {
       // Если туториал еще не инициализирован или шаги пустые
       if (!tutorialConfig.enabled || tutorialConfig.steps.length === 0) {
         console.log(`✅ [useTutorial] Инициализируем обучение для игры #${tutorialGameNumber}`);
@@ -324,6 +324,13 @@ export function useTutorial(
         }
       } else {
         console.log('ℹ️ [useTutorial] Туториал уже инициализирован');
+      }
+    } else if (isTutorialGame && tutorialGameNumber && tutorialGameNumber > 1) {
+      // Игры 2–3: без модальных подсказок, только счётчик в БД
+      if (tutorialConfig.enabled) {
+        setTutorialConfig({ enabled: false, shownSteps: new Set(), steps: [] });
+        setCurrentStep(null);
+        setIsTutorialPaused(false);
       }
     } else if (!isTutorialGame && tutorialConfig.enabled) {
       console.log('❌ [useTutorial] Отключаем обучение - это не обучающая игра');

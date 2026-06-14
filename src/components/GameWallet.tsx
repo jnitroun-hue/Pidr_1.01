@@ -23,6 +23,7 @@ import {
 } from 'react-icons/fa';
 import { SiVisa, SiMastercard } from 'react-icons/si';
 import { MasterWalletService } from '@/lib/wallets/master-wallet-service';
+import { buildReferralLink, buildReferralShareText } from '@/lib/referral/referral-links';
 import styles from './GameWallet.module.css';
 import ConnectedWalletsList from './ConnectedWalletsList';
 import WalletQuickConnect from './WalletQuickConnect';
@@ -149,8 +150,9 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
 
   const currentUser = useMemo(() => getCurrentUser(), [user]);
   const referralInviteUrl = useMemo(() => {
-    const referralCode = currentUser?.id || user?.id || 'player';
-    return `https://t.me/NotPidrBot?start=ref_${referralCode}`;
+    const referralCode = currentUser?.id || user?.id;
+    if (!referralCode) return buildReferralLink('player');
+    return buildReferralLink(referralCode);
   }, [currentUser?.id, user?.id]);
 
   /** Telegram Mini App может не передавать `user` в пропсы — единый owner id для списков/адресов API. */
@@ -925,17 +927,12 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
         return;
       }
       
-      // ✅ ИСПРАВЛЕНО: Генерируем реферальную ссылку на Telegram бота
-      const referralCode = currentUser.id || 'player_' + Date.now();
-      const botUsername = 'NotPidrBot';
-      const inviteUrl = `https://t.me/${botUsername}?start=ref_${referralCode}`;
+      const inviteUrl = buildReferralLink(currentUser.id);
       
       // Если мы в Telegram WebApp, используем Telegram Share API
       if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
         const tg = window.Telegram.WebApp;
-        const inviteText = `🎮 Присоединяйся к игре The Must!\n\n` +
-                          `Получи +500 монет за регистрацию по моей ссылке!\n\n` +
-                          `${inviteUrl}`;
+        const inviteText = buildReferralShareText(inviteUrl);
         
         if (typeof tg.openTelegramLink === 'function') {
           tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(inviteUrl)}&text=${encodeURIComponent(inviteText)}`);

@@ -143,6 +143,21 @@ const getClockwiseOrder = (totalPlayers: number): number[] => {
 };
 
 // 🎯 РАССАДКА ИГРОКОВ ПО ЧАСОВОЙ СТРЕЛКЕ ДЛЯ ВЕРТИКАЛЬНОГО СТОЛА
+type PlayerBubbleSource = 'chat' | 'action' | 'system';
+
+const isEmojiOnlyChatText = (text: string) => {
+  const trimmed = text.trim();
+  if (!trimmed || trimmed.length > 8) return false;
+  return !/[a-zA-Zа-яА-Я0-9]/.test(trimmed);
+};
+
+const getBubbleToneClass = (type: 'info' | 'warning' | 'success' | 'error') => {
+  if (type === 'success') return styles.avatarBubbleSuccess;
+  if (type === 'error') return styles.avatarBubbleError;
+  if (type === 'warning') return styles.avatarBubbleWarning;
+  return styles.avatarBubbleInfo;
+};
+
 const getRectanglePosition = (index: number, totalPlayers: number, gameStage: number = 1): { 
   top: string; 
   left: string; 
@@ -152,12 +167,13 @@ const getRectanglePosition = (index: number, totalPlayers: number, gameStage: nu
 } => {
   const isMobileViewport =
     typeof window !== 'undefined' ? window.innerWidth <= 768 : false;
+  const isStage2Plus = gameStage >= 2;
 
-  // ПОЗИЦИЯ 0: Главный игрок ВНИЗУ ПО ЦЕНТРУ
+  // ПОЗИЦИЯ 0: Главный игрок ВНИЗУ ПО ЦЕНТРУ (компактнее на 2+ стадии — рука внизу)
   if (index === 0) {
     return { 
       left: '50%', 
-      top: '83%',
+      top: isStage2Plus ? (isMobileViewport ? '74%' : '76%') : '83%',
       cardDirection: 'horizontal',
       cardOffset: { x: 0, y: -40 },
       side: 'bottom'
@@ -166,49 +182,72 @@ const getRectanglePosition = (index: number, totalPlayers: number, gameStage: nu
   
   // ✅ НОВАЯ РАССАДКА В ЗАВИСИМОСТИ ОТ КОЛИЧЕСТВА ИГРОКОВ
   const adjustedIndex = index - 1; // Индекс без главного игрока (0-based)
+  const topY = isStage2Plus
+    ? (isMobileViewport ? '8%' : '9%')
+    : (isMobileViewport ? '11%' : '13%');
+  const leftX = isStage2Plus
+    ? (isMobileViewport ? '7%' : '9%')
+    : (isMobileViewport ? '10%' : '13%');
+  const rightX = isStage2Plus
+    ? (isMobileViewport ? '93%' : '91%')
+    : (isMobileViewport ? '90%' : '87%');
+  const topSplitLeft = isStage2Plus
+    ? (isMobileViewport ? '26%' : '24%')
+    : (isMobileViewport ? '30%' : '28%');
+  const topSplitRight = isStage2Plus
+    ? (isMobileViewport ? '74%' : '76%')
+    : (isMobileViewport ? '70%' : '72%');
+  const sideTopY = isStage2Plus
+    ? (isMobileViewport ? '26%' : '30%')
+    : (isMobileViewport ? '28%' : '32%');
+  const sideBottomY = isStage2Plus
+    ? (isMobileViewport ? '62%' : '58%')
+    : (isMobileViewport ? '66%' : '62%');
+  const sideTop7 = isStage2Plus
+    ? (isMobileViewport ? '28%' : '32%')
+    : (isMobileViewport ? '30%' : '34%');
+  const sideBottom7 = isStage2Plus
+    ? (isMobileViewport ? '64%' : '60%')
+    : (isMobileViewport ? '68%' : '64%');
   
   if (totalPlayers === 4) {
     const positions = [
-      { left: '50%', top: isMobileViewport ? '11%' : '13%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
-      { left: isMobileViewport ? '90%' : '87%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
-      { left: isMobileViewport ? '10%' : '13%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
+      { left: '50%', top: topY, cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
+      { left: rightX, top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
+      { left: leftX, top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
     ];
     return positions[adjustedIndex] || positions[0];
   }
   
   if (totalPlayers === 5) {
     const positions = [
-      { left: isMobileViewport ? '30%' : '28%', top: isMobileViewport ? '11%' : '13%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
-      { left: isMobileViewport ? '70%' : '72%', top: isMobileViewport ? '11%' : '13%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
-      { left: isMobileViewport ? '90%' : '87%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
-      { left: isMobileViewport ? '10%' : '13%', top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
+      { left: topSplitLeft, top: topY, cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
+      { left: topSplitRight, top: topY, cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
+      { left: rightX, top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
+      { left: leftX, top: '50%', cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
     ];
     return positions[adjustedIndex] || positions[0];
   }
   
   if (totalPlayers === 6) {
-    const sideTop = isMobileViewport ? '28%' : '32%';
-    const sideBottom = isMobileViewport ? '66%' : '62%';
     const positions = [
-      { left: '50%', top: isMobileViewport ? '10%' : '12%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
-      { left: isMobileViewport ? '91%' : '88%', top: sideTop, cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
-      { left: isMobileViewport ? '91%' : '88%', top: sideBottom, cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
-      { left: isMobileViewport ? '9%' : '12%', top: sideTop, cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
-      { left: isMobileViewport ? '9%' : '12%', top: sideBottom, cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
+      { left: '50%', top: isStage2Plus ? (isMobileViewport ? '7%' : '8%') : (isMobileViewport ? '10%' : '12%'), cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
+      { left: rightX, top: sideTopY, cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
+      { left: rightX, top: sideBottomY, cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
+      { left: leftX, top: sideTopY, cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
+      { left: leftX, top: sideBottomY, cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
     ];
     return positions[adjustedIndex] || positions[0];
   }
   
   if (totalPlayers === 7) {
-    const sideTop = isMobileViewport ? '30%' : '34%';
-    const sideBottom = isMobileViewport ? '68%' : '64%';
     const positions = [
-      { left: isMobileViewport ? '31%' : '29%', top: isMobileViewport ? '10%' : '12%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
-      { left: isMobileViewport ? '69%' : '71%', top: isMobileViewport ? '10%' : '12%', cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
-      { left: isMobileViewport ? '9%' : '12%', top: sideTop, cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
-      { left: isMobileViewport ? '9%' : '12%', top: sideBottom, cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
-      { left: isMobileViewport ? '91%' : '88%', top: sideTop, cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
-      { left: isMobileViewport ? '91%' : '88%', top: sideBottom, cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
+      { left: topSplitLeft, top: isStage2Plus ? (isMobileViewport ? '7%' : '8%') : (isMobileViewport ? '10%' : '12%'), cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
+      { left: topSplitRight, top: isStage2Plus ? (isMobileViewport ? '7%' : '8%') : (isMobileViewport ? '10%' : '12%'), cardDirection: 'horizontal' as const, cardOffset: { x: 0, y: 0 }, side: 'top' as const },
+      { left: leftX, top: sideTop7, cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
+      { left: leftX, top: sideBottom7, cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'left' as const },
+      { left: rightX, top: sideTop7, cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
+      { left: rightX, top: sideBottom7, cardDirection: 'vertical' as const, cardOffset: { x: 0, y: 0 }, side: 'right' as const },
     ];
     return positions[adjustedIndex] || positions[0];
   }
@@ -1477,7 +1516,7 @@ function GamePageContentComponent({
   // НОВЫЕ ФУНКЦИИ для кнопок подсчета карт
   
   // НОВЫЙ STATE для сообщений над игроками
-  const [playerMessages, setPlayerMessages] = useState<{[playerId: string]: {text: string; type: 'info' | 'warning' | 'success' | 'error'; timestamp: number}}>({});
+  const [playerMessages, setPlayerMessages] = useState<{[playerId: string]: {text: string; type: 'info' | 'warning' | 'success' | 'error'; source: PlayerBubbleSource; timestamp: number}}>({});
   
   // STATE для задержки показа кнопки "Сколько карт?"
   const [showAskCardsButton, setShowAskCardsButton] = useState(false);
@@ -1487,26 +1526,32 @@ function GamePageContentComponent({
   const [chatActionMessages, setChatActionMessages] = useState<Array<{id: string; playerId: string; playerName: string; text: string; timestamp: number; type: 'message'}>>([]);
 
   // Показать сообщение над конкретным игроком
-  const showPlayerMessage = (playerId: string, text: string, type: 'info' | 'warning' | 'success' | 'error' = 'info', duration: number = 3000) => {
+  const showPlayerMessage = (
+    playerId: string,
+    text: string,
+    type: 'info' | 'warning' | 'success' | 'error' = 'info',
+    duration: number = 3000,
+    source: PlayerBubbleSource = 'system'
+  ) => {
     setPlayerMessages(prev => ({
       ...prev,
-      [playerId]: { text, type, timestamp: Date.now() }
+      [playerId]: { text, type, source, timestamp: Date.now() }
     }));
     
-    // Убираем сообщение через указанное время
+    const hideAfter = source === 'chat' ? Math.max(duration, 5000) : duration;
     setTimeout(() => {
       setPlayerMessages(prev => {
         const newMessages = { ...prev };
         delete newMessages[playerId];
         return newMessages;
       });
-    }, duration);
+    }, hideAfter);
   };
 
-  // Callback: действия игроков/ботов (Одна карта, Сколько карт) — показываем над игроком и в чате
+  // Callback: действия игроков/ботов (Одна карта, Сколько карт) — компактный пузырь
   useEffect(() => {
     const handler = (playerId: string, playerName: string, text: string, type: 'info' | 'warning' | 'success' | 'error') => {
-      showPlayerMessage(playerId, text, type, 4000);
+      showPlayerMessage(playerId, text, type, 4000, 'action');
       setChatActionMessages(prev => [...prev, {
         id: `act-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         playerId,
@@ -1685,10 +1730,11 @@ function GamePageContentComponent({
     if (!totalPlayers) return [] as Array<{ x: number; y: number; side: 'top' | 'bottom' | 'left' | 'right'; cardOffset: { x: number; y: number } }>;
 
     const isMobileViewport = typeof window !== 'undefined' ? window.innerWidth <= 768 : false;
-    const minGap = isMobileViewport ? 20 : 16;
+    const isStage2Plus = gameStage >= 2;
+    const minGap = isMobileViewport ? (isStage2Plus ? 18 : 20) : (isStage2Plus ? 14 : 16);
     const sideClamp = isMobileViewport
-      ? { minY: 20, maxY: 72, minX: 18, maxX: 82 }
-      : { minY: 18, maxY: 74, minX: 16, maxX: 84 };
+      ? (isStage2Plus ? { minY: 14, maxY: 68, minX: 8, maxX: 92 } : { minY: 20, maxY: 72, minX: 18, maxX: 82 })
+      : (isStage2Plus ? { minY: 12, maxY: 66, minX: 6, maxX: 94 } : { minY: 18, maxY: 74, minX: 16, maxX: 84 });
 
     const base = Array.from({ length: totalPlayers }, (_, i) => {
       const rectPos = getRectanglePosition(i, totalPlayers, gameStage);
@@ -1986,7 +2032,7 @@ function GamePageContentComponent({
       {players.length > 0 && (
         <div className={styles.tableWrapper}>
           {/* Прямоугольный стол */}
-          <div className={styles.rectangularTable}>
+          <div className={`${styles.rectangularTable} ${gameStage >= 2 ? styles.stage2TableLayout : ''}`}>
             {/* СТОПКА КАРТ НА СТОЛЕ (2-я стадия) - ЗАМЕНЯЕТ КОЛОДУ */}
             {gameStage >= 2 && tableStack && tableStack.length > 0 && (
               <div 
@@ -2411,7 +2457,7 @@ function GamePageContentComponent({
                 return (
                   <div
                   key={player.id}
-                  className={`${styles.playerSeat} ${isCurrentTurn ? styles.activePlayer : ''}`}
+                  className={`${styles.playerSeat} ${isCurrentTurn ? styles.activePlayer : ''} ${isHumanPlayer && gameStage >= 2 ? styles.userSeatCompact : ''}`}
                     style={{
                     left: `${position.x}%`,
                     top: `${position.y}%`,
@@ -2434,51 +2480,22 @@ function GamePageContentComponent({
                   {/* ✅ АВАТАР СВЕРХУ, КАРТЫ СНИЗУ ДЛЯ ВСЕХ ИГРОКОВ */}
                     <div className={styles.avatarWrap} style={{ order: 1, overflow: player.isPremium ? 'visible' : undefined }}>
                       {/* Сообщение над игроком (как в чате) */}
-                      {playerMessages[player.id] && (
-                        <div style={{
-                          position: 'absolute',
-                          bottom: '100%',
-                          left: '50%',
-                          transform: 'translateX(-50%)',
-                          marginBottom: '8px',
-                          background: playerMessages[player.id].type === 'success' 
-                            ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-                            : playerMessages[player.id].type === 'error'
-                            ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
-                            : playerMessages[player.id].type === 'warning'
-                            ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
-                            : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                          color: 'white',
-                          padding: '6px 12px',
-                          borderRadius: '12px',
-                          fontSize: '11px',
-                          fontWeight: '700',
-                          whiteSpace: 'nowrap',
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                          zIndex: 1000,
-                          animation: 'fadeInDown 0.3s ease-out',
-                          border: '2px solid rgba(255,255,255,0.3)'
-                        }}>
-                          {playerMessages[player.id].text}
-                          {/* Стрелка вниз */}
-                          <div style={{
-                            position: 'absolute',
-                            bottom: '-6px',
-                            left: '50%',
-                            transform: 'translateX(-50%)',
-                            width: '0',
-                            height: '0',
-                            borderLeft: '6px solid transparent',
-                            borderRight: '6px solid transparent',
-                            borderTop: `6px solid ${
-                              playerMessages[player.id].type === 'success' ? '#059669'
-                              : playerMessages[player.id].type === 'error' ? '#dc2626'
-                              : playerMessages[player.id].type === 'warning' ? '#d97706'
-                              : '#2563eb'
-                            }`
-                          }}></div>
+                      {playerMessages[player.id] && (() => {
+                        const msg = playerMessages[player.id];
+                        const isChatBubble = msg.source === 'chat';
+                        const isEmojiBubble = isChatBubble && isEmojiOnlyChatText(msg.text);
+                        return (
+                        <div className={[
+                          styles.avatarBubble,
+                          getBubbleToneClass(msg.type),
+                          isChatBubble ? styles.avatarBubbleChat : styles.avatarBubbleAction,
+                          isEmojiBubble ? styles.avatarBubbleChatEmoji : '',
+                        ].filter(Boolean).join(' ')}>
+                          {msg.text}
+                          <div className={styles.avatarBubbleArrow} />
                         </div>
-                      )}
+                        );
+                      })()}
                       
                       {/* ✅ ТОЛЬКО АВАТАР ВО ВЕСЬ КОНТЕЙНЕР - ПРИ КЛИКЕ МОДАЛКА */}
                       <div 
@@ -2542,8 +2559,8 @@ function GamePageContentComponent({
                           </div>
                     </div>
                     
-                  {/* ✅ КАРТЫ СНИЗУ АВАТАРА ДЛЯ ВСЕХ ИГРОКОВ */}
-                  {playerCards.length > 0 && (
+                  {/* ✅ КАРТЫ СНИЗУ АВАТАРА (у себя на 2+ стадии — только рука внизу) */}
+                  {playerCards.length > 0 && !(isHumanPlayer && gameStage >= 2) && (
                     <div className={styles.cardsContainer} style={{ 
                       order: 2,
                       flexDirection: 'row',
@@ -3692,7 +3709,7 @@ function GamePageContentComponent({
           externalMessages={chatActionMessages}
           onSendMessage={(text) => {
             const pid = myPlayer?.id || userPlayerId || 'user';
-            if (pid) showPlayerMessage(pid, text, 'info', 4000);
+            if (pid) showPlayerMessage(pid, text, 'info', 6000, 'chat');
           }}
         />
       )}

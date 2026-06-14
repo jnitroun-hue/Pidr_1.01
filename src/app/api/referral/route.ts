@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { getUserIdFromDatabase, requireAuth } from '@/lib/auth-utils';
+import { buildReferralLink } from '@/lib/referral/referral-links';
+import {
+  applyReferralForNewUser,
+  authEnvironmentToReferralMethod,
+} from '@/lib/referral/apply-referral';
+import { PENDING_REFERRAL_COOKIE } from '@/lib/referral/constants';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -32,7 +38,16 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ success: false, error: 'Failed to fetch referral code' }, { status: 500 });
       }
 
-      return NextResponse.json({ success: true, referralCode: data?.referral_code || '' });
+      return NextResponse.json({ success: true, referralCode: data?.referral_code || String(dbUserId) });
+    }
+
+    if (action === 'get_link') {
+      const link = buildReferralLink(dbUserId);
+      return NextResponse.json({
+        success: true,
+        referralLink: link,
+        referralCode: String(dbUserId),
+      });
     }
 
     if (action === 'stats') {
@@ -75,20 +90,28 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: false, error: 'Referral code is required' }, { status: 400 });
       }
 
-      const { data, error } = await supabaseAdmin.rpc('process_referral', {
-        p_referred_id: dbUserId,
-        p_referral_code: referralCode,
+      const authMethod =
+        (body.authMethod as string | undefined) ||
+        authEnvironmentToReferralMethod(auth.environment);
+
+      const result = await applyReferralForNewUser(supabaseAdmin, {
+        referredUserId: dbUserId,
+        referralCode,
+        authMethod: authMethod as 'web' | 'telegram' | 'vk' | 'google' | 'email' | 'apple' | 'unknown',
+        grantBonuses: false,
       });
 
-      if (error) {
-        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      if (!result.success && !result.alreadyLinked) {
+        return NextResponse.json({ success: false, error: result.error || 'Referral apply failed' }, { status: 400 });
       }
 
-      if (!data?.success) {
-        return NextResponse.json({ success: false, error: data?.error || 'Referral apply failed' }, { status: 400 });
-      }
-
-      return NextResponse.json({ success: true, data });
+      const response = NextResponse.json({
+        success: true,
+        alreadyLinked: result.alreadyLinked,
+        referrerId: result.referrerId,
+      });
+      response.cookies.set(PENDING_REFERRAL_COOKIE, '', { path: '/', maxAge: 0 });
+      return response;
     }
 
     if (action === 'create_referral_link') {

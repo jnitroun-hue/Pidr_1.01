@@ -2897,8 +2897,8 @@ export const useGameStore = create<GameState>()(
               const position = allWinnersSorted.findIndex(w => w.id === winner.id) + 1;
               const isUser = winner.isUser || winner.id === currentUserTelegramId;
               
-              // ✅ ЕСЛИ ЭТО ПОЛЬЗОВАТЕЛЬ - ОБНОВЛЯЕМ СТАТИСТИКУ СРАЗУ!
-              if (isUser && currentUserTelegramId) {
+              // ✅ ЕСЛИ ЭТО ПОЛЬЗОВАТЕЛЬ - ОБНОВЛЯЕМ СТАТИСТИКУ СРАЗУ! (web/VK через cookies, не только Telegram)
+              if (isUser) {
                 // ✅ ЗАЩИТА ОТ ДУБЛИРОВАНИЯ: Проверяем что статистика ЕЩЁ НЕ ОБНОВЛЕНА!
                 const { statsUpdatedThisGame } = get();
                 if (statsUpdatedThisGame) {
@@ -3305,8 +3305,43 @@ export const useGameStore = create<GameState>()(
                 });
               } // ✅ Закрываем else блок для statsUpdatedThisGame
             } else {
-              console.log(`✅ [calculateAndShowGameResults] Игрок на месте ${userResult.place} УЖЕ обновил статистику при выходе!`);
-               }
+              const { statsUpdatedThisGame } = get();
+              if (!statsUpdatedThisGame) {
+                const traceId = `FINISH_${userResult.place}_${Date.now()}`;
+                console.warn(`⚠️ [${traceId}] Статистика не обновлена при выходе (место ${userResult.place}) — догоняем в финале`);
+                set({ statsUpdatedThisGame: true });
+                fetch('/api/user/add-coins', {
+                  method: 'POST',
+                  credentials: 'include',
+                  headers: {
+                    ...getApiHeaders(),
+                    ...(currentUserTelegramId ? { 'x-telegram-id': currentUserTelegramId } : {}),
+                    ...(telegramUser?.username ? { 'x-username': telegramUser.username } : telegramUser?.first_name ? { 'x-username': telegramUser.first_name } : {})
+                  },
+                  body: JSON.stringify({
+                    amount: userResult.coinsEarned,
+                    source: `game_finish_place_${userResult.place}`,
+                    ratingChange: get().isRankedGame ? (userResult.ratingChange || 0) : 0,
+                    updateStats: {
+                      gamesPlayed: true,
+                      wins: userResult.place >= 1 && userResult.place <= 3,
+                      losses: false
+                    },
+                    traceId,
+                  })
+                }).then(res => res.json())
+                  .then(data => {
+                    if (data.success) {
+                      console.log(`✅ [${traceId}] Статистика догнана для места ${userResult.place}`);
+                    } else {
+                      console.error(`❌ [${traceId}] Ошибка догона статистики:`, data.error);
+                    }
+                  })
+                  .catch((err: unknown) => console.error(`❌ [${traceId}] Ошибка fetch:`, err));
+              } else {
+                console.log(`✅ [calculateAndShowGameResults] Игрок на месте ${userResult.place} уже обновил статистику при выходе`);
+              }
+            }
             } else {
             console.warn(`⚠️ [calculateAndShowGameResults] Пользователь не найден в результатах!`);
           }

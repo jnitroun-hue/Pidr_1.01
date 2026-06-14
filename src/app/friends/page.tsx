@@ -1,4 +1,6 @@
 'use client'
+
+import { buildReferralLink, buildReferralShareText, getPublicAppUrl } from '@/lib/referral/referral-links';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -157,16 +159,19 @@ export default function FriendsPage() {
 
   // Поделиться приглашением
   const handleShareInvite = () => {
-    const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
-    // ✅ ИСПРАВЛЕНО: Добавляем ref параметр в дополнение к invite
-    const referralCode = telegramUser?.id || '';
-    const inviteLink = referralCode 
-      ? `https://t.me/NotPidrBot?start=invite_${referralCode}_ref_${referralCode}`
-      : `https://t.me/NotPidrBot?start=invite_${telegramUser?.id}`;
-    const shareText = `🎮 Присоединяйся ко мне в The Must! - карточной игре!\n\n${inviteLink}`;
+    const currentUserId =
+      (typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id) ||
+      null;
+    const inviteLink = currentUserId
+      ? buildReferralLink(currentUserId)
+      : `${getPublicAppUrl()}/`;
+    const shareText = buildReferralShareText(inviteLink);
     
     if ((window as any).Telegram?.WebApp) {
       (window as any).Telegram.WebApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(shareText)}`);
+    } else if (navigator.clipboard) {
+      navigator.clipboard.writeText(`${shareText}\n${inviteLink}`);
+      alert('Реферальная ссылка скопирована!');
     }
   };
 
@@ -370,13 +375,15 @@ export default function FriendsPage() {
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       onClick={() => {
-                        // ✅ ИСПРАВЛЕНО: Добавляем ref параметр в дополнение к invite
                         const telegramUser = (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
                         const referralCode = telegramUser?.id || '';
-                        // Формат: join_roomId_roomCode_ref_referralCode
-                        const inviteLink = referralCode 
-                          ? `https://t.me/NotPidrBot?start=join_${inviteRoomId}_${inviteRoomCode}_ref_${referralCode}`
-                          : `https://t.me/NotPidrBot?start=join_${inviteRoomId}_${inviteRoomCode}`;
+                        const base = getPublicAppUrl();
+                        const params = new URLSearchParams({
+                          roomId: String(inviteRoomId),
+                          roomCode: String(inviteRoomCode),
+                        });
+                        if (referralCode) params.set('ref', String(referralCode));
+                        const inviteLink = `${base}/multiplayer?${params.toString()}`;
                         const message = `🎮 ${user.username || user.first_name}, присоединяйся к игре The Must!\n\nКод комнаты: ${inviteRoomCode}\n${inviteLink}`;
                         
                         if ((window as any).Telegram?.WebApp) {

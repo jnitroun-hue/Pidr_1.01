@@ -5,6 +5,8 @@ import { cookies } from 'next/headers';
 import { lightCleanup } from '../../../lib/auto-cleanup';
 import crypto from 'crypto';
 import { hasJwtSecret, requireJwtSecret } from '../../../lib/auth/jwt-secret';
+import { applyReferralForNewUser } from '@/lib/referral/apply-referral';
+import { PENDING_REFERRAL_COOKIE } from '@/lib/referral/constants';
 
 // ✅ Явная конфигурация runtime для Next.js 15
 export const runtime = 'nodejs';
@@ -482,6 +484,7 @@ export async function POST(req: NextRequest) {
     });
 
     let user = existingUser;
+    let isNewUser = false;
 
     if (!existingUser || findError) {
       // ✅ ИСПРАВЛЕНО: Если пользователь не найден ИЛИ есть ошибка - создаем нового
@@ -605,6 +608,7 @@ export async function POST(req: NextRequest) {
         }
       } else {
         user = newUser;
+        isNewUser = true;
         console.log('✅ Новый пользователь создан:', user.username);
       }
       
@@ -616,74 +620,20 @@ export async function POST(req: NextRequest) {
         }, { status: 500 });
       }
       
-      // ✅ ОБРАБОТКА РЕФЕРАЛЬНОЙ ССЫЛКИ
-      if (referrerId && referrerId !== String(telegramId)) {
-        console.log('🎁 Обрабатываем реферальную ссылку от:', referrerId);
+      // ✅ РЕФЕРАЛ (только для новых пользователей): веб ?ref= или Telegram start_param
+      const cookieReferrer = req.cookies.get(PENDING_REFERRAL_COOKIE)?.value;
+      const effectiveReferrer = referrerId || cookieReferrer;
+
+      if (isNewUser && effectiveReferrer && user?.id) {
+        console.log('🎁 [auth] Применяем реферал для нового пользователя:', effectiveReferrer);
         try {
-          // ✅ ИСПРАВЛЕНО: Используем supabaseAdmin для обхода RLS
-          // Проверяем, существует ли пригласивший пользователь
-          const { data: referrerUser, error: referrerError } = await supabaseAdmin
-            .from('_pidr_users')
-            .select('telegram_id')
-            .eq('telegram_id', referrerId)
-            .single();
-          
-          if (referrerUser) {
-            // Создаем связь дружбы (автоматически принятую) - ДВУХСТОРОННЮЮ!
-            const { error: friendshipError1 } = await supabase
-              .from('_pidr_friends')
-              .insert([
-                {
-                  user_id: String(telegramId),
-                  friend_id: String(referrerId),
-                  status: 'accepted', // ✅ Сразу принимаем дружбу
-                  created_at: new Date().toISOString()
-                }
-              ]);
-            
-            // ✅ Создаём обратную связь
-            const { error: friendshipError2 } = await supabase
-              .from('_pidr_friends')
-              .insert([
-                {
-                  user_id: String(referrerId),
-                  friend_id: String(telegramId),
-                  status: 'accepted',
-                  created_at: new Date().toISOString()
-                }
-              ]);
-            
-            const friendshipError = friendshipError1 || friendshipError2;
-            
-            if (!friendshipError) {
-              console.log('✅ Дружба с приглашающим создана!');
-              
-              // ✅ НАЧИСЛЯЕМ РЕФЕРАЛЬНЫЕ БОНУСЫ!
-              try {
-                const bonusResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/referral/bonus`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    referrer_id: referrerId,
-                    new_user_id: telegramId
-                  })
-                });
-                
-                if (bonusResponse.ok) {
-                  const bonusData = await bonusResponse.json();
-                  console.log('✅ Реферальные бонусы начислены:', bonusData);
-                } else {
-                  console.error('❌ Ошибка начисления бонусов:', await bonusResponse.text());
-                }
-              } catch (bonusError) {
-                console.error('❌ Ошибка вызова API бонусов:', bonusError);
-              }
-            } else {
-              console.error('❌ Ошибка создания дружбы:', friendshipError);
-            }
-          } else {
-            console.warn('⚠️ Пригласивший пользователь не найден:', referrerId);
-          }
+          const refResult = await applyReferralForNewUser(supabaseAdmin, {
+            referredUserId: user.id,
+            referralCode: String(effectiveReferrer),
+            authMethod: 'telegram',
+            grantBonuses: false,
+          });
+          console.log('🎁 [auth] Referral result:', refResult);
         } catch (error: unknown) {
           console.error('❌ Ошибка обработки реферальной ссылки:', error);
         }

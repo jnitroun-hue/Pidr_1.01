@@ -234,17 +234,9 @@ export const ProperMultiplayer: React.FC = () => {
   useEffect(() => {
     const loadGamesCount = async () => {
       try {
-        const tg = (typeof window !== 'undefined') ? (window as any).Telegram?.WebApp : null;
-        const telegramUser = tg?.initDataUnsafe?.user;
-        
-        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-        if (telegramUser?.id) {
-          headers['x-telegram-id'] = String(telegramUser.id);
-        }
-        
         const response = await fetch('/api/user/bot-games', {
           method: 'GET',
-          headers,
+          headers: getApiHeaders(),
           credentials: 'include'
         });
 

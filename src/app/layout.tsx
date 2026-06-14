@@ -5,6 +5,7 @@ import './globals.css'
 import { Providers } from './providers'
 import ChunkErrorHandler from '../components/ChunkErrorHandler'
 import GlobalRoomInviteListener from '../components/GlobalRoomInviteListener'
+import ReferralCapture from '../components/ReferralCapture'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -51,6 +52,7 @@ export default function RootLayout({
           </div>
           {/* Глобальный слушатель приглашений в комнаты (отображается поверх ЛЮБОЙ страницы) */}
           <GlobalRoomInviteListener />
+          <ReferralCapture />
         </Providers>
       </body>
     </html>

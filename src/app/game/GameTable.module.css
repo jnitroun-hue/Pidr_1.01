@@ -3692,3 +3692,151 @@
     --hand-card-height: 84px;
   }
 }
+
+/* ======================================================
+   💬 ВСПЛЫВАЮЩИЕ СООБЩЕНИЯ НАД АВАТАРАМИ
+   ====================================================== */
+
+.avatarBubble {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 8px;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  animation: fadeInDown 0.3s ease-out;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  pointer-events: none;
+}
+
+.avatarBubbleAction {
+  /* Команды «Одна карта», «Сколько карт» — компактные */
+}
+
+.avatarBubbleInfo {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
+
+.avatarBubbleSuccess {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.avatarBubbleError {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+.avatarBubbleWarning {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.avatarBubbleInfo .avatarBubbleArrow { border-top-color: #2563eb; }
+.avatarBubbleSuccess .avatarBubbleArrow { border-top-color: #059669; }
+.avatarBubbleError .avatarBubbleArrow { border-top-color: #dc2626; }
+.avatarBubbleWarning .avatarBubbleArrow { border-top-color: #d97706; }
+
+.avatarBubbleChat {
+  padding: 14px 22px;
+  border-radius: 20px;
+  font-size: 33px;
+  font-weight: 800;
+  white-space: normal;
+  word-break: break-word;
+  text-align: center;
+  max-width: min(280px, 72vw);
+  line-height: 1.25;
+  margin-bottom: 14px;
+  z-index: 2500;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45), 0 0 20px rgba(59, 130, 246, 0.25);
+  border-width: 3px;
+}
+
+.avatarBubbleChatEmoji {
+  padding: 12px 18px;
+  font-size: 54px;
+  line-height: 1;
+  max-width: none;
+  white-space: nowrap;
+}
+
+.avatarBubbleArrow {
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+}
+
+.avatarBubbleAction .avatarBubbleArrow {
+  bottom: -6px;
+  border-left-width: 6px;
+  border-right-width: 6px;
+  border-top-width: 6px;
+}
+
+.avatarBubbleChat .avatarBubbleArrow {
+  border-top-width: 10px;
+}
+
+/* 2-я стадия: больше места для всех мест за столом */
+.stage2TableLayout {
+  --stage2-seat-scale: 0.92;
+  height: 88vh !important;
+  max-height: none !important;
+}
+
+.stage2TableLayout .playerSeat {
+  z-index: 55;
+}
+
+.playerSeat .avatarWrap {
+  overflow: visible !important;
+}
+
+.stage2TableLayout .playerSeat:not(.userSeatCompact) {
+  max-width: var(--seat-width);
+}
+
+.userSeatCompact {
+  opacity: 0.85;
+  transform: translate(-50%, -50%) scale(0.82) !important;
+  z-index: 40 !important;
+}
+
+.userSeatCompact:hover {
+  transform: translate(-50%, -50%) scale(0.86) !important;
+}
+
+@media (max-width: 768px) {
+  .avatarBubbleChat {
+    font-size: 28px;
+    padding: 12px 18px;
+    max-width: min(220px, 80vw);
+  }
+
+  .avatarBubbleChatEmoji {
+    font-size: 48px;
+    padding: 10px 14px;
+  }
+}
+
+@media (min-width: 769px) {
+  .avatarBubbleChat {
+    font-size: 33px;
+    padding: 16px 26px;
+    max-width: min(320px, 42vw);
+  }
+
+  .avatarBubbleChatEmoji {
+    font-size: 60px;
+  }
+}
