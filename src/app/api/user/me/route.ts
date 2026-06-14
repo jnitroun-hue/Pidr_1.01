@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { supabaseAdmin } from '../../../../lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '../../../../lib/auth-utils';
+import { syncPremiumFlag } from '../../../../lib/premium/premium-service';
 
 // ✅ Явная конфигурация runtime для Next.js 15
 export const runtime = 'nodejs';
@@ -41,6 +42,19 @@ export async function GET(req: NextRequest) {
     }
     
     const user = dbUser;
+
+    await syncPremiumFlag(Number(dbUserId));
+
+    const { data: freshUser } = await supabaseAdmin
+      .from('_pidr_users')
+      .select('is_premium, premium_expires_at')
+      .eq('id', dbUserId)
+      .single();
+
+    const premiumExpiresAt = freshUser?.premium_expires_at ?? user.premium_expires_at ?? null;
+    const isPremiumFlag =
+      freshUser?.is_premium ??
+      (premiumExpiresAt ? new Date(premiumExpiresAt).getTime() > Date.now() : false);
 
     // Обновляем last_seen
     // ✅ ИСПРАВЛЕНО: Используем supabaseAdmin для обхода RLS
@@ -87,8 +101,8 @@ export async function GET(req: NextRequest) {
         status: user.status,
         created_at: user.created_at,
         is_admin: user.is_admin || false,
-        is_premium: user.is_premium || false,
-        premium_expires_at: user.premium_expires_at || null,
+        is_premium: isPremiumFlag,
+        premium_expires_at: premiumExpiresAt,
       }
     });
   } catch (error: unknown) {

@@ -308,6 +308,11 @@ interface GameState {
   removePlayer: (playerId: string) => void
   updatePlayerScore: (playerId: string, score: number) => void
   syncLocalUserPremium: (isPremium: boolean) => void
+  syncLocalUserProfile: (profile: {
+    username?: string
+    avatar?: string
+    isPremium?: boolean
+  }) => void
   
   // Настройки
   updateSettings: (settings: Partial<GameSettings>) => void
@@ -1193,6 +1198,22 @@ export const useGameStore = create<GameState>()(
           players: players.map((p) =>
             p.isUser ? { ...p, isPremium } : p
           ),
+        })
+      },
+
+      syncLocalUserProfile: (profile) => {
+        const { players } = get()
+        if (!players.length) return
+        set({
+          players: players.map((p) => {
+            if (!p.isUser) return p
+            return {
+              ...p,
+              name: profile.username?.trim() || p.name,
+              avatar: profile.avatar?.trim() || p.avatar,
+              isPremium: profile.isPremium ?? p.isPremium,
+            }
+          }),
         })
       },
       
@@ -4056,59 +4077,23 @@ export const useGameStore = create<GameState>()(
     }),
     {
       name: 'pidr-game-storage',
-      // ИСПРАВЛЕНО: Сохраняем ВСЁ ИГРОВОЕ СОСТОЯНИЕ для восстановления после refresh
+      version: 2,
+      migrate: (persisted) => {
+        if (persisted && typeof persisted === 'object' && 'state' in persisted) {
+          const s = persisted as { state?: Record<string, unknown> };
+          if (s.state) {
+            s.state.players = [];
+            s.state.isGameActive = false;
+          }
+        }
+        return persisted as typeof persisted;
+      },
       partialize: (state) => ({
-        // Основное игровое состояние
-        // ✅ КРИТИЧНО: При перезагрузке страницы НЕ восстанавливаем активную игру!
-        // Это предотвращает показ модалок победителей и другие артефакты
-        isGameActive: false, // ✅ Всегда false после перезагрузки!
         gameMode: state.gameMode,
-        players: state.players,
-        currentPlayerId: state.currentPlayerId,
-        deck: state.deck,
-        playedCards: state.playedCards,
-        lastPlayedCard: state.lastPlayedCard,
-        
-        // Состояние стадий P.I.D.R
-        gameStage: state.gameStage,
-        availableTargets: state.availableTargets,
-        mustDrawFromDeck: state.mustDrawFromDeck,
-        canPlaceOnSelf: state.canPlaceOnSelf,
-        
-        // Состояния хода
-        turnPhase: state.turnPhase,
-        revealedDeckCard: state.revealedDeckCard,
-        canPlaceOnSelfByRules: state.canPlaceOnSelfByRules,
-        skipHandAnalysis: state.skipHandAnalysis,
-        
-        // Вторая стадия
-        lastDrawnCard: state.lastDrawnCard,
-        lastPlayerToDrawCard: state.lastPlayerToDrawCard,
-        trumpSuit: state.trumpSuit,
-        drawnHistory: state.drawnHistory,
-        
-        // Система "Одна карта!" и штрафов
-        oneCardDeclarations: state.oneCardDeclarations,
-        playersWithOneCard: state.playersWithOneCard,
-        pendingPenalty: state.pendingPenalty,
-        isGamePaused: state.isGamePaused, // ✅ НОВОЕ: Флаг паузы игры
-        
-        // Состояние 2-й стадии (дурак)
-        tableStack: state.tableStack,
-        selectedHandCard: state.selectedHandCard,
-        stage2TurnPhase: state.stage2TurnPhase,
-        roundInProgress: state.roundInProgress,
-        currentRoundInitiator: state.currentRoundInitiator,
-        roundFinisher: state.roundFinisher,
-        
-        // Мультиплеер (опционально)
-        multiplayerData: state.multiplayerData,
-        
-        // Статистика и настройки
         stats: state.stats,
         settings: state.settings,
-        gameCoins: state.gameCoins
-      })
+        gameCoins: state.gameCoins,
+      }),
     }
   )
 )

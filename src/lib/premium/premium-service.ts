@@ -44,27 +44,74 @@ export function isPremiumActiveFromUser(user: {
   return new Date(user.premium_expires_at).getTime() > Date.now();
 }
 
-export async function syncPremiumFlag(userId: number): Promise<boolean> {
+/** Активный Premium: подписка в БД → синхронизация в _pidr_users → дата окончания */
+async function resolveActivePremiumExpiry(userId: number): Promise<string | null> {
+  const nowIso = new Date().toISOString();
+
+  const { data: sub } = await supabaseAdmin
+    .from('_pidr_premium_subscriptions')
+    .select('expires_at')
+    .eq('user_id', userId)
+    .eq('is_active', true)
+    .gt('expires_at', nowIso)
+    .order('expires_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (sub?.expires_at) {
+    const { data: user } = await supabaseAdmin
+      .from('_pidr_users')
+      .select('premium_expires_at, is_premium')
+      .eq('id', userId)
+      .maybeSingle();
+
+    const subMs = new Date(sub.expires_at).getTime();
+    const userMs = user?.premium_expires_at ? new Date(user.premium_expires_at).getTime() : 0;
+    const userStillValid = userMs > Date.now();
+
+    if (!userStillValid || Math.abs(userMs - subMs) > 1000) {
+      await supabaseAdmin
+        .from('_pidr_users')
+        .update({ is_premium: true, premium_expires_at: sub.expires_at })
+        .eq('id', userId);
+    } else if (!user?.is_premium) {
+      await supabaseAdmin.from('_pidr_users').update({ is_premium: true }).eq('id', userId);
+    }
+
+    return sub.expires_at;
+  }
+
   const { data: user } = await supabaseAdmin
     .from('_pidr_users')
     .select('premium_expires_at')
     .eq('id', userId)
-    .single();
+    .maybeSingle();
 
-  const active = user?.premium_expires_at
-    ? new Date(user.premium_expires_at).getTime() > Date.now()
-    : false;
+  if (user?.premium_expires_at && new Date(user.premium_expires_at).getTime() > Date.now()) {
+    return user.premium_expires_at;
+  }
 
   await supabaseAdmin
-    .from('_pidr_users')
-    .update({ is_premium: active })
-    .eq('id', userId);
+    .from('_pidr_premium_subscriptions')
+    .update({ is_active: false })
+    .eq('user_id', userId)
+    .eq('is_active', true)
+    .lte('expires_at', nowIso);
+
+  return null;
+}
+
+export async function syncPremiumFlag(userId: number): Promise<boolean> {
+  const expiresAt = await resolveActivePremiumExpiry(userId);
+  const active = expiresAt !== null;
+
+  await supabaseAdmin.from('_pidr_users').update({ is_premium: active }).eq('id', userId);
 
   return active;
 }
 
 export async function getPremiumStatus(userId: number): Promise<PremiumStatus> {
-  await syncPremiumFlag(userId);
+  const resolvedExpiry = await resolveActivePremiumExpiry(userId);
 
   const { data: user } = await supabaseAdmin
     .from('_pidr_users')
@@ -86,8 +133,12 @@ export async function getPremiumStatus(userId: number): Promise<PremiumStatus> {
   const lastUsedMs = lastUsedAt ? new Date(lastUsedAt).getTime() : 0;
   const nextAvailableMs = lastUsedMs ? lastUsedMs + PREMIUM_FREE_ROLL_COOLDOWN_MS : 0;
 
-  const expiresAt = user?.premium_expires_at ?? null;
-  const isPremium = isPremiumActiveFromUser({ premium_expires_at: expiresAt });
+  const expiresAt = resolvedExpiry ?? user?.premium_expires_at ?? null;
+  const isPremium = expiresAt ? new Date(expiresAt).getTime() > Date.now() : false;
+
+  if (user && user.is_premium !== isPremium) {
+    await supabaseAdmin.from('_pidr_users').update({ is_premium: isPremium }).eq('id', userId);
+  }
   const freeRandomAvailable =
     isPremium && (!lastUsedAt || Date.now() >= nextAvailableMs);
   const freeRandomNextAt =

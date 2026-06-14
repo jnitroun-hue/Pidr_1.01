@@ -31,7 +31,7 @@ import { useTelegram } from '@/hooks/useTelegram';
 import { getCardAssetSrc, deckEntriesToNftMap, buildNftDeckKey } from '@/lib/game/cardAssets';
 import { translateGameText } from '@/lib/i18n/gameRuntimeTranslations';
 import { getApiHeaders } from '@/lib/api-headers';
-import { fetchPremiumStatus, isPremiumUsable } from '@/lib/premium/refresh-premium';
+import { loadGameUserProfile } from '@/lib/game/load-game-profile';
 import { appConfirm } from '@/lib/app-notice';
 import type { TelegramWebAppUser } from '@/types/telegram-webapp';
 
@@ -302,6 +302,7 @@ function GamePageContentComponent({
     nftDeckCards: storeNftDeckCards, // ✅ ИСПОЛЬЗУЕМ NFT КАРТЫ ИЗ STORE
     startGame, endGame, resetGame,
     syncLocalUserPremium,
+    syncLocalUserProfile,
     drawCard, makeMove, onDeckClick, placeCardOnSelfByRules,
     selectHandCard, playSelectedCard, takeTableCards, showNotification,
     declareOneCard, askHowManyCards, contributePenaltyCard, cancelPenalty,
@@ -317,6 +318,25 @@ function GamePageContentComponent({
     isPremium?: boolean;
   } | null>(null);
   const [isLoadingUserData, setIsLoadingUserData] = useState(true);
+
+  const applyGameProfile = useCallback(
+    (profile: NonNullable<Awaited<ReturnType<typeof loadGameUserProfile>>>) => {
+      setUserData({
+        coins: profile.coins,
+        avatar: profile.avatar,
+        username: profile.username,
+        telegramId: profile.telegramId,
+        isPremium: profile.isPremium,
+      });
+      syncLocalUserProfile({
+        username: profile.username,
+        avatar: profile.avatar,
+        isPremium: profile.isPremium,
+      });
+      if (profile.isPremium) syncLocalUserPremium(true);
+    },
+    [syncLocalUserProfile, syncLocalUserPremium]
+  );
 
   // Текущая открытая карта из колоды (для отображения рядом с колодой)
   const [currentCard, setCurrentCard] = useState<string | null>(null);
@@ -453,60 +473,30 @@ function GamePageContentComponent({
   // Функция генерации профиля игрока
   const generatePlayerProfile = async (player: StorePlayer): Promise<PlayerProfile> => {
     if (player.isUser) {
-      // ✅ ИСПРАВЛЕНО: Реальный игрок - данные ИЗ БД через /api/user/me
       try {
-        const telegramUser = getTelegramUser();
-        const telegramId = telegramUser?.id?.toString() || '';
-        const username = telegramUser?.username || telegramUser?.first_name || '';
-        
-        console.log('📋 [generatePlayerProfile] Загружаем профиль из БД:', { telegramId, username });
-        
-        const response = await fetch('/api/user/me', {
-          method: 'GET',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-telegram-id': telegramId,
-            'x-username': username
-          }
-        });
-        
-        if (response.ok) {
-          const result = await response.json();
-          console.log('✅ [generatePlayerProfile] Данные из БД:', result);
-          
-          if (result.success && result.user) {
-            // ✅ ИСПРАВЛЕНО: Используем fallback для username
-            const displayName = result.user.username || result.user.firstName || result.user.first_name || username || 'Игрок';
-            console.log(`🎮 [generatePlayerProfile] Username для игры: "${displayName}" (из: username="${result.user.username}", firstName="${result.user.firstName}")`);
-            
-            return {
-              id: player.id,
-              name: displayName,
-              avatar: result.user.avatar_url || userData?.avatar || '',
-              isBot: false,
-              isUser: true,
-              level: Math.floor((result.user.experience || 0) / 1000) + 1,
-              rating: result.user.rating || 0,
-              gamesPlayed: result.user.games_played || result.user.gamesPlayed || 0,
-              wins: result.user.games_won || result.user.gamesWon || result.user.wins || 0,
-              winRate: (result.user.games_played || result.user.gamesPlayed || 0) > 0 
-                ? Math.round(((result.user.games_won || result.user.gamesWon || result.user.wins || 0) / (result.user.games_played || result.user.gamesPlayed || 1)) * 100) 
-                : 0,
-              bestStreak: result.user.best_win_streak || 0,
-              status: '🟢 Online',
-              joinedDate: result.user.created_at 
-                ? new Date(result.user.created_at).toLocaleDateString('ru-RU')
-                : 'Недавно',
-            };
-          }
+        const profile = await loadGameUserProfile();
+        if (profile) {
+          applyGameProfile(profile);
+          return {
+            id: player.id,
+            name: profile.username,
+            avatar: profile.avatar || player.avatar || '',
+            isBot: false,
+            isUser: true,
+            level: 1,
+            rating: 0,
+            gamesPlayed: 0,
+            wins: 0,
+            winRate: 0,
+            bestStreak: 0,
+            status: profile.isPremium ? '💎 Premium' : '🟢 Online',
+            joinedDate: 'Недавно',
+          };
         }
       } catch (error: unknown) {
         console.error('❌ [generatePlayerProfile] Ошибка загрузки профиля:', error);
       }
-      
-      // Fallback для реального игрока
-      console.warn('⚠️ [generatePlayerProfile] Используем fallback данные');
+
       return {
         id: player.id,
         name: userData?.username || 'Игрок',
@@ -610,82 +600,68 @@ function GamePageContentComponent({
   // АВАТАРКИ ИГРОКОВ
   const [playerAvatars, setPlayerAvatars] = useState<Record<string, string>>({});
 
-  // Заполняем аватарки игроков после создания
+  // Аватарки из store + профиль (без заглушки player-avatar.svg)
   useEffect(() => {
-    if (players.length > 0) {
-      const avatars: Record<string, string> = {};
-      players.forEach(player => {
-        if (player.avatar) {
-          avatars[player.id] = player.avatar;
-        }
-      });
-      setPlayerAvatars(avatars);
-    }
-  }, [players]);
+    if (players.length === 0) return;
+    const avatars: Record<string, string> = {};
+    players.forEach((player) => {
+      if (player.isUser && userData?.avatar) {
+        avatars[player.id] = userData.avatar;
+      } else if (player.avatar) {
+        avatars[player.id] = player.avatar;
+      }
+    });
+    setPlayerAvatars(avatars);
+  }, [players, userData?.avatar]);
 
-  // Загружаем данные пользователя из Supabase БД через API
   useEffect(() => {
+    let cancelled = false;
     const fetchUserData = async () => {
       try {
         setIsLoadingUserData(true);
-        
-        // ✅ ИСПРАВЛЕНО: Получаем telegramId из Telegram WebApp
-        const telegramUser = getTelegramUser();
-        const telegramId = telegramUser?.id?.toString() || '';
-        const username = telegramUser?.username || telegramUser?.first_name || '';
-
-        const response = await fetch('/api/user/me', {
-          method: 'GET',
-          credentials: 'include',
-          headers: getApiHeaders(),
-        });
-        
-        if (!response.ok) {
-          console.error('❌ Ошибка получения данных пользователя:', response.status);
-          setUserData({ coins: 0, username: username || 'Игрок', telegramId, isPremium: false });
-          return;
-        }
-        
-        const result = await response.json();
-        
-        if (result.success && result.user) {
-          console.log('✅ Данные пользователя загрузлены из БД:', result.user);
-          const premiumStatus = await fetchPremiumStatus();
-          const isPremium =
-            isPremiumUsable(premiumStatus) ||
-            (result.user.premium_expires_at &&
-              new Date(result.user.premium_expires_at).getTime() > Date.now()) ||
-            !!result.user.is_premium;
-          setUserData({
-            coins: result.user.coins || 0,
-            avatar: result.user.avatar_url || '',
-            username: result.user.username || result.user.firstName || username || 'Игрок',
-            telegramId: result.user.telegramId || telegramId,
-            isPremium,
-          });
+        const profile = await loadGameUserProfile();
+        if (cancelled) return;
+        if (profile) {
+          applyGameProfile(profile);
         } else {
-          console.warn('⚠️ Пользователь не найден в БД, используем дефолтные данные');
-          setUserData({ coins: 0, username: username || 'Игрок', telegramId, isPremium: false });
+          const telegramUser = getTelegramUser();
+          setUserData({
+            coins: 0,
+            username: telegramUser?.username || telegramUser?.first_name || 'Игрок',
+            telegramId: telegramUser?.id?.toString() || '',
+            isPremium: false,
+          });
         }
-      } catch (error: unknown) {
-        console.error('❌ Ошибка загрузки данных пользователя:', error);
-        const telegramUser = getTelegramUser();
-        const username = telegramUser?.username || telegramUser?.first_name || '';
-        const telegramId = telegramUser?.id?.toString() || '';
-        setUserData({ coins: 0, username: username || 'Игрок', telegramId, isPremium: false });
+      } catch (error) {
+        console.error('❌ Ошибка загрузки профиля:', error);
+        if (!cancelled) {
+          const telegramUser = getTelegramUser();
+          setUserData({
+            coins: 0,
+            username: telegramUser?.username || telegramUser?.first_name || 'Игрок',
+            telegramId: telegramUser?.id?.toString() || '',
+            isPremium: false,
+          });
+        }
       } finally {
-        setIsLoadingUserData(false);
+        if (!cancelled) setIsLoadingUserData(false);
       }
     };
-
-    fetchUserData();
-  }, []);
+    void fetchUserData();
+    return () => {
+      cancelled = true;
+    };
+  }, [applyGameProfile]);
 
   useEffect(() => {
-    if (userData?.isPremium) {
-      syncLocalUserPremium(true);
-    }
-  }, [userData?.isPremium, syncLocalUserPremium]);
+    if (!userData) return;
+    syncLocalUserProfile({
+      username: userData.username,
+      avatar: userData.avatar,
+      isPremium: userData.isPremium,
+    });
+    if (userData.isPremium) syncLocalUserPremium(true);
+  }, [userData, syncLocalUserProfile, syncLocalUserPremium]);
 
   // ✅ СИНХРОНИЗАЦИЯ ДАННЫХ ПОЛЬЗОВАТЕЛЯ: Слушаем события обновления монет
   useEffect(() => {
@@ -708,34 +684,10 @@ function GamePageContentComponent({
   useEffect(() => {
     const syncUserData = async () => {
       try {
-        const response = await fetch('/api/user/me', {
-          method: 'GET',
-          credentials: 'include',
-          headers: getApiHeaders(),
-        });
-
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success && result.user) {
-            const premiumStatus = await fetchPremiumStatus();
-            const isPremium =
-              isPremiumUsable(premiumStatus) ||
-              (result.user.premium_expires_at &&
-                new Date(result.user.premium_expires_at).getTime() > Date.now()) ||
-              !!result.user.is_premium;
-
-            setUserData((prev) => ({
-              coins: result.user.coins || prev?.coins || 0,
-              avatar: result.user.avatar_url || prev?.avatar || '',
-              username: result.user.username || result.user.firstName || prev?.username || 'Игрок',
-              telegramId: result.user.telegramId || prev?.telegramId || '',
-              isPremium,
-            }));
-            if (isPremium) syncLocalUserPremium(true);
-          }
-        }
+        const profile = await loadGameUserProfile();
+        if (profile) applyGameProfile(profile);
       } catch (error) {
-        console.warn('⚠️ Ошибка синхронизации данных пользователя:', error);
+        console.warn('⚠️ Ошибка синхронизации профиля:', error);
       }
     };
 
@@ -743,7 +695,7 @@ function GamePageContentComponent({
     const interval = setInterval(syncUserData, 30000);
 
     return () => clearInterval(interval);
-  }, [syncLocalUserPremium]);
+  }, [applyGameProfile]);
 
   // ✅ СИНХРОНИЗАЦИЯ ПРОФИЛЯ: Обновляем данные профиля при открытии модального окна
   useEffect(() => {
@@ -893,8 +845,6 @@ function GamePageContentComponent({
   const [generatedTableImage, setGeneratedTableImage] = useState<string | null>(null);
   const [isGeneratingTable, setIsGeneratingTable] = useState(false);
   // playerAvatars уже объявлен выше на строке 220
-  const [isGeneratingAvatars, setIsGeneratingAvatars] = useState(false);
-
   // Выбор стола удален - используем только роскошный SVG стол
   
   // Обновляем состояние мультиплеера при изменении пропсов
@@ -929,6 +879,13 @@ function GamePageContentComponent({
   }, [selectHandCard, playSelectedCard, takeTableCards, makeMove, onDeckClick]);
   const [dealt, setDealt] = useState(false);
   const [gameInitialized, setGameInitialized] = useState(false);
+
+  useEffect(() => {
+    if (players.length > 0 && !isGameActive) {
+      resetGame();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [previousGameStage, setPreviousGameStage] = useState(gameStage);
 
   // Масштабирование элементов игроков в зависимости от количества
@@ -1473,13 +1430,6 @@ function GamePageContentComponent({
     }
   }, [generatedTableImage, isGeneratingTable]);
 
-  // Автоматическая генерация аватаров при появлении игроков
-  useEffect(() => {
-    if (players.length > 0 && Object.keys(playerAvatars).length === 0 && !isGeneratingAvatars) {
-      generatePlayersAvatars();
-    }
-  }, [players.length, playerAvatars, isGeneratingAvatars]);
-
   // Эффект для автоматической раздачи карт при старте игры
   useEffect(() => {
     if (isGameActive && !dealt) {
@@ -1490,33 +1440,12 @@ function GamePageContentComponent({
   // Запуск игры
   const handleStartGame = async () => {
     console.log('🎮 [handleStartGame] Запуск новой игры с ботами');
-    
-    // ВАЖНО: Загружаем актуальные данные из БД
-    let actualUsername = userData?.username;
-    let actualAvatar = userData?.avatar;
-    
-    try {
-      const response = await fetch('/api/auth', {
-        method: 'GET',
-        credentials: 'include',
-        cache: 'no-store',
-        headers: getApiHeaders(),
-      });
-      
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success && result.user) {
-          actualUsername = result.user.username || actualUsername;
-          actualAvatar = result.user.avatar_url || actualAvatar;
-          console.log('✅ [handleStartGame] Данные из БД:', {
-            username: actualUsername,
-            avatar: actualAvatar ? 'есть' : 'нет'
-          });
-        }
-      }
-    } catch (error: unknown) {
-      console.error('❌ [handleStartGame] Ошибка загрузки данных:', error);
-    }
+
+    const profile = await loadGameUserProfile();
+    const actualUsername = profile?.username || userData?.username;
+    const actualAvatar = profile?.avatar || userData?.avatar;
+    const actualPremium = profile?.isPremium ?? userData?.isPremium;
+    if (profile) applyGameProfile(profile);
     
     console.log('👤 [handleStartGame] Передаем в startGame:', {
       avatar: actualAvatar,
@@ -1534,7 +1463,8 @@ function GamePageContentComponent({
     // Запускаем новую игру с РЕАЛЬНЫМИ данными из БД
     startGame('multiplayer', playerCount, null, {
       avatar: actualAvatar,
-      username: actualUsername || 'Игрок' // Fallback на "Игрок" вместо "Вы"
+      username: actualUsername || 'Игрок',
+      isPremium: actualPremium,
     });
     
     // Помечаем, что игра инициализирована
@@ -1722,32 +1652,6 @@ function GamePageContentComponent({
   };
 
   // Функция смены стола удалена - используем только роскошный SVG стол
-
-  // 👥 Генерация аватаров для всех игроков
-  const generatePlayersAvatars = async () => {
-    if (typeof window === 'undefined' || players.length === 0) return;
-    
-    setIsGeneratingAvatars(true);
-    try {
-      console.log('🎨 Используем стандартные аватары...');
-      const avatars: {[playerId: string]: string} = {};
-      
-      // Генерация аватаров перенесена в отдельный проект pidr_generators
-      // Используем стандартные аватары
-      for (const player of players) {
-        avatars[player.id] = '/img/player-avatar.svg'; // Заглушка
-        await new Promise(resolve => setTimeout(resolve, 50));
-      }
-      
-      setPlayerAvatars(avatars);
-      console.log('✅ Стандартные аватары загружены!');
-      
-    } catch (error: unknown) {
-      console.error('❌ Ошибка генерации аватаров:', error);
-    } finally {
-      setIsGeneratingAvatars(false);
-    }
-  };
 
   // Автоматически запускаем игру если она не активна
   useEffect(() => {
@@ -2027,16 +1931,18 @@ function GamePageContentComponent({
             <div className={styles.burgerDropdown}>
               {/* Профиль пользователя */}
               <div className={styles.menuUserProfile}>
-                <div className={styles.menuUserAvatar}>
-                  {userData?.avatar ? (
-                    <img 
-                      src={userData.avatar} 
-                      alt="Avatar" 
-                      className={styles.menuAvatarImage}
-                    />
-                  ) : (
-                    <span className={styles.menuAvatarPlaceholder}>👤</span>
-                  )}
+                <div className={styles.menuUserAvatar} style={{ overflow: userData?.isPremium ? 'visible' : 'hidden' }}>
+                  <PremiumAvatarFire size={40} active={!!userData?.isPremium}>
+                    {userData?.avatar ? (
+                      <img
+                        src={userData.avatar}
+                        alt="Avatar"
+                        className={styles.menuAvatarImage}
+                      />
+                    ) : (
+                      <span className={styles.menuAvatarPlaceholder}>👤</span>
+                    )}
+                  </PremiumAvatarFire>
                 </div>
                 <div className={styles.menuUserInfo}>
                   <div className={styles.menuUserName}>{userData?.username || t.mainMenu.player}</div>
