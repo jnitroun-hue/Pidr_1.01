@@ -144,22 +144,24 @@ export function appConfirm(message: string, options: AppConfirmOptions = {}): Pr
 
 export function resolveAppAlert() {
   if (!currentAlert) return;
-  currentAlert.resolve();
+  const resolve = currentAlert.resolve;
   currentAlert = null;
   syncNoticeSnapshot();
   dequeueNextAlert();
   syncNoticeSnapshot();
   emit();
+  resolve();
 }
 
 export function resolveAppConfirm(result: boolean) {
   if (!currentConfirm) return;
-  currentConfirm.resolve(result);
+  const resolve = currentConfirm.resolve;
   currentConfirm = null;
   syncNoticeSnapshot();
   dequeueNextAlert();
   syncNoticeSnapshot();
   emit();
+  resolve(result);
 }
 
 export function installGlobalAppAlert() {

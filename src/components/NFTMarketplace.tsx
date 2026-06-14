@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingCart, DollarSign, Package, TrendingUp, Filter, Search, X, Check, Heart } from 'lucide-react';
 import Image from 'next/image';
 import { BuyTab, SellTab, MyNFTsTab, SellModal } from './MarketplaceTabs';
+import { BuyPaymentModal } from '@/components/BuyPaymentModal';
+import { useNftSellModal } from '@/hooks/useNftSellModal';
 import { getApiHeaders } from '@/lib/api-headers';
 import { appAlert, appConfirm } from '@/lib/app-notice';
 import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
@@ -28,6 +30,10 @@ interface Listing {
   price_sol: number | null;
   price_rub?: number | null;
   fiat_payment_method?: string | null;
+  seller_wallet_address?: string | null;
+  seller_wallet_network?: string | null;
+  seller_fiat_phone?: string | null;
+  seller_fiat_qr_url?: string | null;
   crypto_currency: string | null;
   status: string;
   created_at: string;
@@ -61,16 +67,16 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
   const [filterRarity, setFilterRarity] = useState<string>('all');
   const [filterSuit, setFilterSuit] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('newest');
-  
-  // Модальные окна
-  const [showSellModal, setShowSellModal] = useState(false);
-  const [selectedNFT, setSelectedNFT] = useState<NFTCard | null>(null);
-  // ✅ НОВАЯ СИСТЕМА: ОДИН ИНПУТ + ВАЛЮТА
-  const [sellPrice, setSellPrice] = useState('');
-  const [sellCategory, setSellCategory] = useState<'coins' | 'crypto' | 'fiat'>('coins');
-  const [sellCrypto, setSellCrypto] = useState<'TON' | 'SOL'>('TON');
-  const [sellFiatMethod, setSellFiatMethod] = useState<'bank_card' | 'sbp' | 'yoo_money' | 'sberbank'>('sbp');
-  const [isSubmittingSell, setIsSubmittingSell] = useState(false);
+  const [paymentModal, setPaymentModal] = useState<{
+    listing: Listing;
+    mode: 'crypto' | 'fiat_p2p';
+  } | null>(null);
+
+  const sellModal = useNftSellModal(() => {
+    loadMarketplace();
+    loadMySales();
+    loadMyNFTs();
+  });
 
   // Helper функции
 
@@ -226,8 +232,7 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
         // Ищем карту по id в списке NFT пользователя
         const nft = myNFTs.find((n: any) => String(n.id) === sellId);
         if (nft) {
-          setSelectedNFT(nft);
-          setShowSellModal(true);
+          sellModal.openSellModal(nft);
           setActiveTab('my-nfts');
           // Убираем параметр из URL без перезагрузки
           const url = new URL(window.location.href);
@@ -236,10 +241,120 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
         }
       }
     }
-  }, [myNFTs]);
+  }, [myNFTs, sellModal.openSellModal]);
 
-  // Обработчики
+  const listingHasPrice = (listing: Listing) =>
+    !!(
+      (listing.price_coins && listing.price_coins > 0) ||
+      (listing.price_ton && listing.price_ton > 0) ||
+      (listing.price_sol && listing.price_sol > 0) ||
+      (listing.price_rub != null && Number(listing.price_rub) > 0)
+    );
+
+  const isFiatP2P = (listing: Listing) =>
+    (listing.fiat_payment_method === 'sbp' || listing.fiat_payment_method === 'sberbank') &&
+    !!(listing.seller_fiat_phone || listing.seller_fiat_qr_url);
+
+  const executeCryptoPurchase = async (listing: Listing) => {
+    const currency = listing.price_ton ? 'TON' : 'SOL';
+    const amount = listing.price_ton || listing.price_sol;
+
+    try {
+      const response = await fetch('/api/marketplace/buy', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getApiHeaders(),
+        },
+        body: JSON.stringify({
+          listing_id: listing.id,
+          payment_method: 'crypto',
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.payment_url) {
+        if (typeof window !== 'undefined') {
+          if (currency === 'TON' && window.Telegram?.WebApp?.openLink) {
+            window.Telegram.WebApp.openLink(data.payment_url);
+          } else {
+            const opened = window.open(data.payment_url, '_blank');
+            if (!opened) {
+              await navigator.clipboard.writeText(data.payment_url);
+              await appAlert(`Ссылка скопирована. Оплатите ${amount} ${currency} в кошельке.`, {
+                title: 'Оплата в кошельке',
+                type: 'info',
+              });
+            }
+          }
+        }
+
+        const paymentId = data.payment_memo || `NFT_${listing.id}_from_${data.buyer_id || ''}`;
+        const sinceUnix = Math.floor(Date.now() / 1000) - 120;
+
+        if (
+          await appConfirm(
+            `После оплаты ${amount} ${currency} нажмите «Подтвердить» — проверим перевод и передадим карту.`,
+            { confirmText: 'Я оплатил' }
+          )
+        ) {
+          setLoading(true);
+          let confirmed = false;
+          for (let i = 0; i < 12; i++) {
+            const confirmRes = await fetch('/api/marketplace/confirm-crypto', {
+              method: 'POST',
+              headers: getApiHeaders(),
+              credentials: 'include',
+              body: JSON.stringify({
+                listing_id: listing.id,
+                paymentId,
+                sinceUnix,
+              }),
+            });
+            const confirmData = await confirmRes.json();
+            if (confirmRes.ok && confirmData.success) {
+              confirmed = true;
+              await appAlert('NFT куплена! Карта в вашей коллекции.', { title: 'Готово', type: 'success' });
+              window.dispatchEvent(new CustomEvent('nft-collection-updated'));
+              window.dispatchEvent(new CustomEvent('marketplace-updated'));
+              break;
+            }
+            if (confirmData.code !== 'PAYMENT_PENDING') {
+              await appAlert(confirmData.error || 'Ошибка подтверждения', { title: 'Ошибка', type: 'error' });
+              break;
+            }
+            await new Promise((r) => setTimeout(r, 5000));
+          }
+          if (!confirmed) {
+            await appAlert('Платёж ещё не виден в сети. Повторите через минуту.', {
+              title: 'Ожидание оплаты',
+              type: 'warning',
+            });
+          }
+          setLoading(false);
+        }
+
+        loadMarketplace();
+      } else {
+        await appAlert(data.error || 'Ошибка покупки', { title: 'Ошибка', type: 'error' });
+      }
+    } catch (error) {
+      console.error('Ошибка покупки крипты:', error);
+      await appAlert('Ошибка при покупке', { title: 'Ошибка', type: 'error' });
+    }
+  };
+
   const handleBuyNFT = async (listing: Listing) => {
+    if (!listingHasPrice(listing)) {
+      await appAlert('У продавца не указана цена — лот некорректен. Попросите выставить заново.', {
+        title: 'Цена не указана',
+        type: 'warning',
+      });
+      return;
+    }
+
     if (listing.price_coins) {
       // ОПЛАТА МОНЕТАМИ
       if (userCoins < listing.price_coins) {
@@ -283,103 +398,32 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
         await appAlert('Ошибка при покупке', { title: 'Ошибка', type: 'error' });
       }
     } else if (listing.price_ton || listing.price_sol) {
-      // ✅ ОПЛАТА КРИПТОВАЛЮТОЙ (TON/SOL)
-      const currency = listing.price_ton ? 'TON' : 'SOL';
-      const amount = listing.price_ton || listing.price_sol;
-
-      if (!(await appConfirm(`Купить эту карту за ${amount} ${currency}?\n\nВы будете перенаправлены в ${currency === 'TON' ? 'Tonkeeper' : 'Phantom'} кошелёк для оплаты.`, { confirmText: 'Перейти к оплате' }))) {
+      if (listing.seller_wallet_address?.trim()) {
+        setPaymentModal({ listing, mode: 'crypto' });
         return;
       }
-
-      try {
-        const response = await fetch('/api/marketplace/buy', {
-          method: 'POST',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-            ...getApiHeaders()
-          },
-          body: JSON.stringify({
-            listing_id: listing.id,
-            payment_method: 'crypto'
-          })
-        });
-
-        const data = await response.json();
-
-        if (data.success && data.payment_url) {
-          console.log(`💎 [Marketplace] Открываем кошелёк ${data.crypto_currency}: ${data.payment_url}`);
-
-          if (typeof window !== 'undefined') {
-            if (currency === 'TON' && window.Telegram?.WebApp?.openLink) {
-              window.Telegram.WebApp.openLink(data.payment_url);
-            } else {
-              const opened = window.open(data.payment_url, '_blank');
-              if (!opened) {
-                await navigator.clipboard.writeText(data.payment_url);
-                await appAlert(`Ссылка скопирована. Оплатите ${amount} ${currency} в кошельке.`, {
-                  title: 'Оплата в кошельке',
-                  type: 'info',
-                });
-              }
-            }
-          }
-
-          const paymentId = data.payment_memo || `NFT_${listing.id}_from_${data.buyer_id || ''}`;
-          const sinceUnix = Math.floor(Date.now() / 1000) - 120;
-
-          if (
-            await appConfirm(
-              `После оплаты ${amount} ${currency} в кошельке нажмите «Подтвердить» — проверим перевод и передадим карту.`,
-              { confirmText: 'Я оплатил' }
-            )
-          ) {
-            setLoading(true);
-            let confirmed = false;
-            for (let i = 0; i < 12; i++) {
-              const confirmRes = await fetch('/api/marketplace/confirm-crypto', {
-                method: 'POST',
-                headers: getApiHeaders(),
-                credentials: 'include',
-                body: JSON.stringify({
-                  listing_id: listing.id,
-                  paymentId,
-                  sinceUnix,
-                }),
-              });
-              const confirmData = await confirmRes.json();
-              if (confirmRes.ok && confirmData.success) {
-                confirmed = true;
-                await appAlert('NFT куплена! Карта в вашей коллекции.', { title: 'Готово', type: 'success' });
-                window.dispatchEvent(new CustomEvent('nft-collection-updated'));
-                window.dispatchEvent(new CustomEvent('marketplace-updated'));
-                break;
-              }
-              if (confirmData.code !== 'PAYMENT_PENDING') {
-                await appAlert(confirmData.error || 'Ошибка подтверждения', { title: 'Ошибка', type: 'error' });
-                break;
-              }
-              await new Promise((r) => setTimeout(r, 5000));
-            }
-            if (!confirmed) {
-              await appAlert('Платёж ещё не виден в сети. Повторите «Я оплатил» через минуту из коллекции.', {
-                title: 'Ожидание оплаты',
-                type: 'warning',
-              });
-            }
-            setLoading(false);
-          }
-
-          loadMarketplace();
-        } else {
-          await appAlert(data.error || 'Ошибка покупки', { title: 'Ошибка', type: 'error' });
-        }
-      } catch (error) {
-        console.error('Ошибка покупки крипты:', error);
-        await appAlert('Ошибка при покупке', { title: 'Ошибка', type: 'error' });
+      const currency = listing.price_ton ? 'TON' : 'SOL';
+      const amount = listing.price_ton || listing.price_sol;
+      if (
+        !(await appConfirm(
+          `Купить за ${amount} ${currency}?\n\nОткроется кошелёк для оплаты.`,
+          { confirmText: 'Перейти к оплате' }
+        ))
+      ) {
+        return;
       }
-    } else if (listing.price_rub) {
-      if (!(await appConfirm(`Купить за ${listing.price_rub} ₽ через ЮКассу?\n\nОткроется оплата (способ задан продавцом при выставлении лота).`, { confirmText: 'Оплатить' }))) {
+      await executeCryptoPurchase(listing);
+    } else if (listing.price_rub && Number(listing.price_rub) > 0) {
+      if (isFiatP2P(listing)) {
+        setPaymentModal({ listing, mode: 'fiat_p2p' });
+        return;
+      }
+      if (
+        !(await appConfirm(
+          `Купить за ${listing.price_rub} ₽ через ЮКассу?\n\nОткроется оплата картой или ЮMoney.`,
+          { confirmText: 'Оплатить' }
+        ))
+      ) {
         return;
       }
       try {
@@ -403,127 +447,24 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
         console.error(e);
         await appAlert('Ошибка при создании платежа', { title: 'Ошибка', type: 'error' });
       }
-    } else {
-      await appAlert('Цена не указана!', { title: 'Ошибка', type: 'warning' });
     }
   };
 
-  const handleSellNFT = async () => {
-    if (!selectedNFT || isSubmittingSell) return;
+  const handlePaymentProceed = async () => {
+    if (!paymentModal) return;
+    const { listing, mode } = paymentModal;
+    setPaymentModal(null);
 
-    const price = parseFloat(sellPrice);
-
-    if (!price || price <= 0) {
-      await appAlert('Укажите корректную цену!', { title: 'Цена', type: 'warning' });
+    if (mode === 'crypto') {
+      await executeCryptoPurchase(listing);
       return;
     }
 
-    setIsSubmittingSell(true);
-    try {
-      if (sellCategory === 'crypto') {
-        const walletType = sellCrypto === 'TON' ? 'ton' : 'sol';
-
-        const checkResponse = await fetch('/api/wallet/check', {
-          method: 'POST',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-            ...getApiHeaders(),
-          },
-          body: JSON.stringify({ wallet_type: walletType }),
-        });
-
-        const checkData = await checkResponse.json();
-
-        if (!checkData.success || !checkData.wallet) {
-          setIsSubmittingSell(false);
-          await appAlert(
-            `Раздел «Кошелёк» или коллекция NFT — подключите ${sellCrypto === 'TON' ? 'TON' : 'Solana'}.`,
-            {
-              title: `Для продажи за ${sellCrypto} подключите кошелёк`,
-              type: 'warning',
-            }
-          );
-          return;
-        }
-
-        if (
-          !(await appConfirm(
-            `💰 Оплата за NFT придёт на ваш ${sellCrypto} кошелёк:\n\n${checkData.wallet.wallet_address}\n\nПродолжить?`,
-            { confirmText: 'Продолжить' }
-          ))
-        ) {
-          return;
-        }
-      }
-
-      const requestBody: Record<string, unknown> = {
-        nft_card_id: selectedNFT.id,
-        price_coins: null,
-        price_ton: null,
-        price_sol: null,
-        price_rub: null,
-        fiat_payment_method: null,
-        crypto_currency: null,
-      };
-
-      if (sellCategory === 'coins') {
-        requestBody.price_coins = Math.floor(price);
-      } else if (sellCategory === 'crypto') {
-        if (sellCrypto === 'TON') {
-          requestBody.price_ton = price;
-          requestBody.crypto_currency = 'TON';
-        } else {
-          requestBody.price_sol = price;
-          requestBody.crypto_currency = 'SOL';
-        }
-      } else {
-        requestBody.price_rub = Math.round(price * 100) / 100;
-        requestBody.fiat_payment_method = sellFiatMethod;
-      }
-
-      const response = await fetch('/api/marketplace/create', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          ...getApiHeaders()
-        },
-        body: JSON.stringify(requestBody)
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        await appAlert('NFT выставлена на продажу!', { title: 'Готово', type: 'success' });
-        setShowSellModal(false);
-        setSelectedNFT(null);
-        setSellPrice('');
-        setSellCategory('coins');
-        setSellCrypto('TON');
-        setSellFiatMethod('sbp');
-        
-        // ✅ ОБНОВЛЯЕМ ВСЕ КОМПОНЕНТЫ МАГАЗИНА
-        loadMarketplace(); // ✅ Обновляем список лотов в магазине
-        loadMySales();
-        loadMyNFTs();
-        
-        // ✅ ОТПРАВЛЯЕМ СОБЫТИЯ ДЛЯ ОБНОВЛЕНИЯ ДРУГИХ КОМПОНЕНТОВ
-        window.dispatchEvent(new CustomEvent('nft-collection-updated'));
-        window.dispatchEvent(new CustomEvent('marketplace-updated'));
-      } else {
-        await appAlert(data.error || 'Не удалось выставить на продажу', {
-          title: 'Ошибка продажи',
-          type: 'error',
-          details: data.hint,
-        });
-      }
-    } catch (error) {
-      console.error('Ошибка продажи:', error);
-      await appAlert('Ошибка при выставлении на продажу', { title: 'Ошибка', type: 'error' });
-    } finally {
-      setIsSubmittingSell(false);
-    }
+    const sellerName = listing.seller?.username || listing.seller?.first_name || 'продавцу';
+    await appAlert(
+      `После перевода ${Number(listing.price_rub).toLocaleString('ru-RU')} ₽ напишите @${sellerName} для подтверждения и передачи NFT.`,
+      { title: 'Ожидаем подтверждение', type: 'info' }
+    );
   };
 
   const handleDeleteNFT = async (nft: NFTCard) => {
@@ -733,10 +674,7 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
           {activeTab === 'my-nfts' && (
             <MyNFTsTab
               nfts={myNFTs}
-              onSellClick={(nft) => {
-                setSelectedNFT(nft);
-                setShowSellModal(true);
-              }}
+              onSellClick={(nft) => sellModal.openSellModal(nft)}
               onDeleteClick={handleDeleteNFT}
               getSuitColor={getSuitColor}
               getSuitSymbol={getSuitSymbol}
@@ -747,28 +685,48 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
       )}
 
       {/* Sell Modal */}
-      {showSellModal && selectedNFT && (
+      {sellModal.showSellModal && sellModal.sellCard && (
         <SellModal
-          nft={selectedNFT}
-          sellPrice={sellPrice}
-          setSellPrice={setSellPrice}
-          sellCategory={sellCategory}
-          setSellCategory={setSellCategory}
-          sellCrypto={sellCrypto}
-          setSellCrypto={setSellCrypto}
-          sellFiatMethod={sellFiatMethod}
-          setSellFiatMethod={setSellFiatMethod}
-          isSubmitting={isSubmittingSell}
-          onClose={() => {
-            setIsSubmittingSell(false);
-            setShowSellModal(false);
-            setSelectedNFT(null);
-            setSellPrice('');
+          nft={{
+            id: Number(sellModal.sellCard.id),
+            suit: sellModal.sellCard.suit,
+            rank: sellModal.sellCard.rank,
+            rarity: sellModal.sellCard.rarity,
+            image_url: sellModal.sellCard.image_url,
           }}
-          onConfirm={handleSellNFT}
+          sellPrice={sellModal.sellPrice}
+          setSellPrice={sellModal.setSellPrice}
+          sellCategory={sellModal.sellCategory}
+          setSellCategory={sellModal.setSellCategory}
+          sellCrypto={sellModal.sellCrypto}
+          setSellCrypto={sellModal.setSellCrypto}
+          sellFiatMethod={sellModal.sellFiatMethod}
+          setSellFiatMethod={sellModal.setSellFiatMethod}
+          fiatReceiveMode={sellModal.fiatReceiveMode}
+          setFiatReceiveMode={sellModal.setFiatReceiveMode}
+          walletAddress={sellModal.walletAddress}
+          setWalletAddress={sellModal.setWalletAddress}
+          fiatPhone={sellModal.fiatPhone}
+          setFiatPhone={sellModal.setFiatPhone}
+          fiatQrDataUrl={sellModal.fiatQrDataUrl}
+          setFiatQrDataUrl={sellModal.setFiatQrDataUrl}
+          isSubmitting={sellModal.isSubmittingSell}
+          onClose={sellModal.closeSellModal}
+          onConfirm={() => void sellModal.submitSell()}
           getSuitColor={getSuitColor}
           getSuitSymbol={getSuitSymbol}
           getRankDisplay={getRankDisplay}
+        />
+      )}
+
+      {paymentModal && (
+        <BuyPaymentModal
+          listing={paymentModal.listing}
+          mode={paymentModal.mode}
+          onClose={() => setPaymentModal(null)}
+          onProceed={() => void handlePaymentProceed()}
+          getRankDisplay={getRankDisplay}
+          getSuitSymbol={getSuitSymbol}
         />
       )}
     </div>

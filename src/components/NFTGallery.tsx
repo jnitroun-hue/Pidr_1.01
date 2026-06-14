@@ -677,6 +677,14 @@ export default function NFTGallery() {
           setSellCrypto={sellModal.setSellCrypto}
           sellFiatMethod={sellModal.sellFiatMethod}
           setSellFiatMethod={sellModal.setSellFiatMethod}
+          fiatReceiveMode={sellModal.fiatReceiveMode}
+          setFiatReceiveMode={sellModal.setFiatReceiveMode}
+          walletAddress={sellModal.walletAddress}
+          setWalletAddress={sellModal.setWalletAddress}
+          fiatPhone={sellModal.fiatPhone}
+          setFiatPhone={sellModal.setFiatPhone}
+          fiatQrDataUrl={sellModal.fiatQrDataUrl}
+          setFiatQrDataUrl={sellModal.setFiatQrDataUrl}
           isSubmitting={sellModal.isSubmittingSell}
           onClose={sellModal.closeSellModal}
           onConfirm={() => void sellModal.submitSell()}

@@ -31,6 +31,7 @@ import { useTelegram } from '@/hooks/useTelegram';
 import { getCardAssetSrc, deckEntriesToNftMap, buildNftDeckKey } from '@/lib/game/cardAssets';
 import { translateGameText } from '@/lib/i18n/gameRuntimeTranslations';
 import { getApiHeaders } from '@/lib/api-headers';
+import { fetchPremiumStatus, isPremiumUsable } from '@/lib/premium/refresh-premium';
 import { appConfirm } from '@/lib/app-notice';
 import type { TelegramWebAppUser } from '@/types/telegram-webapp';
 
@@ -300,6 +301,7 @@ function GamePageContentComponent({
     showPenaltyDeckModal,
     nftDeckCards: storeNftDeckCards, // ✅ ИСПОЛЬЗУЕМ NFT КАРТЫ ИЗ STORE
     startGame, endGame, resetGame,
+    syncLocalUserPremium,
     drawCard, makeMove, onDeckClick, placeCardOnSelfByRules,
     selectHandCard, playSelectedCard, takeTableCards, showNotification,
     declareOneCard, askHowManyCards, contributePenaltyCard, cancelPenalty,
@@ -631,30 +633,16 @@ function GamePageContentComponent({
         const telegramUser = getTelegramUser();
         const telegramId = telegramUser?.id?.toString() || '';
         const username = telegramUser?.username || telegramUser?.first_name || '';
-        
-        if (!telegramId) {
-          console.error('❌ Telegram WebApp не доступен');
-          setUserData({ coins: 0, username: 'Игрок' });
-          setIsLoadingUserData(false);
-          return;
-        }
-        
-        console.log('🎮 [GamePageContent] Загружаем userData для:', telegramId);
-        
+
         const response = await fetch('/api/user/me', {
           method: 'GET',
           credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-telegram-id': telegramId,
-            'x-username': username
-          }
+          headers: getApiHeaders(),
         });
         
         if (!response.ok) {
           console.error('❌ Ошибка получения данных пользователя:', response.status);
-          // ✅ Даже при ошибке устанавливаем дефолтные данные чтобы игра запустилась
-          setUserData({ coins: 0, username: username || 'Игрок', telegramId });
+          setUserData({ coins: 0, username: username || 'Игрок', telegramId, isPremium: false });
           return;
         }
         
@@ -662,14 +650,12 @@ function GamePageContentComponent({
         
         if (result.success && result.user) {
           console.log('✅ Данные пользователя загрузлены из БД:', result.user);
-          let isPremium = result.user.is_premium || false;
-          try {
-            const premRes = await fetch('/api/premium/status', { credentials: 'include' });
-            if (premRes.ok) {
-              const premData = await premRes.json();
-              if (premData.success) isPremium = premData.premium?.isPremium || isPremium;
-            }
-          } catch { /* ignore */ }
+          const premiumStatus = await fetchPremiumStatus();
+          const isPremium =
+            isPremiumUsable(premiumStatus) ||
+            (result.user.premium_expires_at &&
+              new Date(result.user.premium_expires_at).getTime() > Date.now()) ||
+            !!result.user.is_premium;
           setUserData({
             coins: result.user.coins || 0,
             avatar: result.user.avatar_url || '',
@@ -679,15 +665,14 @@ function GamePageContentComponent({
           });
         } else {
           console.warn('⚠️ Пользователь не найден в БД, используем дефолтные данные');
-          setUserData({ coins: 0, username: username || 'Игрок', telegramId });
+          setUserData({ coins: 0, username: username || 'Игрок', telegramId, isPremium: false });
         }
       } catch (error: unknown) {
         console.error('❌ Ошибка загрузки данных пользователя:', error);
-        // ✅ Даже при ошибке устанавливаем дефолтные данные
         const telegramUser = getTelegramUser();
         const username = telegramUser?.username || telegramUser?.first_name || '';
         const telegramId = telegramUser?.id?.toString() || '';
-        setUserData({ coins: 0, username: username || 'Игрок', telegramId });
+        setUserData({ coins: 0, username: username || 'Игрок', telegramId, isPremium: false });
       } finally {
         setIsLoadingUserData(false);
       }
@@ -695,6 +680,12 @@ function GamePageContentComponent({
 
     fetchUserData();
   }, []);
+
+  useEffect(() => {
+    if (userData?.isPremium) {
+      syncLocalUserPremium(true);
+    }
+  }, [userData?.isPremium, syncLocalUserPremium]);
 
   // ✅ СИНХРОНИЗАЦИЯ ДАННЫХ ПОЛЬЗОВАТЕЛЯ: Слушаем события обновления монет
   useEffect(() => {
@@ -717,32 +708,30 @@ function GamePageContentComponent({
   useEffect(() => {
     const syncUserData = async () => {
       try {
-        const telegramUser = getTelegramUser();
-        const telegramId = telegramUser?.id?.toString() || '';
-        const username = telegramUser?.username || telegramUser?.first_name || '';
-        
-        if (!telegramId) return;
-        
         const response = await fetch('/api/user/me', {
           method: 'GET',
           credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-telegram-id': telegramId,
-            'x-username': username
-          }
+          headers: getApiHeaders(),
         });
-        
+
         if (response.ok) {
           const result = await response.json();
           if (result.success && result.user) {
-            console.log('🔄 [GamePageContent] Синхронизация данных пользователя:', result.user.username);
-            setUserData(prev => ({
+            const premiumStatus = await fetchPremiumStatus();
+            const isPremium =
+              isPremiumUsable(premiumStatus) ||
+              (result.user.premium_expires_at &&
+                new Date(result.user.premium_expires_at).getTime() > Date.now()) ||
+              !!result.user.is_premium;
+
+            setUserData((prev) => ({
               coins: result.user.coins || prev?.coins || 0,
               avatar: result.user.avatar_url || prev?.avatar || '',
               username: result.user.username || result.user.firstName || prev?.username || 'Игрок',
-              telegramId: result.user.telegramId || prev?.telegramId || telegramId
+              telegramId: result.user.telegramId || prev?.telegramId || '',
+              isPremium,
             }));
+            if (isPremium) syncLocalUserPremium(true);
           }
         }
       } catch (error) {
@@ -750,12 +739,11 @@ function GamePageContentComponent({
       }
     };
 
-    // ✅ Обновляем сразу и затем каждые 30 секунд
     syncUserData();
     const interval = setInterval(syncUserData, 30000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [syncLocalUserPremium]);
 
   // ✅ СИНХРОНИЗАЦИЯ ПРОФИЛЯ: Обновляем данные профиля при открытии модального окна
   useEffect(() => {
@@ -1763,7 +1751,7 @@ function GamePageContentComponent({
 
   // Автоматически запускаем игру если она не активна
   useEffect(() => {
-    if (!gameInitialized && userData) { // Ждем загрузки данных пользователя
+    if (!gameInitialized && !isLoadingUserData && userData) {
       console.log('🎮 [AUTOSTART] Запускаем игру автоматически...');
       if (isMultiplayer && multiplayerData) {
         // Для мультиплеера
@@ -1781,7 +1769,7 @@ function GamePageContentComponent({
       }
       setGameInitialized(true);
     }
-  }, [gameInitialized, isMultiplayer, multiplayerData, playerCount, startGame, userData]);
+  }, [gameInitialized, isLoadingUserData, isMultiplayer, multiplayerData, playerCount, startGame, userData]);
 
   // Вычисляемые значения для UI
   const canDrawCard = turnPhase === 'deck_card_revealed' && currentTurnPlayer?.id === currentPlayerId;
@@ -2538,7 +2526,7 @@ function GamePageContentComponent({
                     }} />
                   )}
                   {/* ✅ АВАТАР СВЕРХУ, КАРТЫ СНИЗУ ДЛЯ ВСЕХ ИГРОКОВ */}
-                    <div className={styles.avatarWrap} style={{ order: 1 }}>
+                    <div className={styles.avatarWrap} style={{ order: 1, overflow: player.isPremium ? 'visible' : undefined }}>
                       {/* Сообщение над игроком (как в чате) */}
                       {playerMessages[player.id] && (
                         <div style={{
@@ -2599,7 +2587,7 @@ function GamePageContentComponent({
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          overflow: 'hidden', // ✅ СКРЫВАЕМ ЕБАНЫЙ ТЕКСТ URL!
+                          overflow: player.isPremium ? 'visible' : 'hidden',
                           position: 'relative'
                         }}
                       >

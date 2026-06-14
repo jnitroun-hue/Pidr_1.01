@@ -13,6 +13,8 @@ function isSchemaCompatError(msg: string): boolean {
   return (
     msg.includes('fiat_payment_method') ||
     msg.includes('price_rub') ||
+    msg.includes('seller_wallet') ||
+    msg.includes('seller_fiat') ||
     msg.includes('views_count') ||
     msg.includes('crypto_currency') ||
     msg.includes('schema cache')
@@ -47,7 +49,17 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const nftCardId = parseInt(String(body.nft_card_id), 10);
-    const { price_coins, price_ton, price_sol, price_rub, fiat_payment_method } = body;
+    const {
+      price_coins,
+      price_ton,
+      price_sol,
+      price_rub,
+      fiat_payment_method,
+      seller_wallet_address,
+      seller_wallet_network,
+      seller_fiat_phone,
+      seller_fiat_qr_url,
+    } = body;
 
     if (!nftCardId || Number.isNaN(nftCardId)) {
       return NextResponse.json(
@@ -134,6 +146,12 @@ export async function POST(request: NextRequest) {
       insertRow.price_coins = null;
       insertRow.price_ton = null;
       insertRow.price_sol = null;
+      if (seller_fiat_phone && String(seller_fiat_phone).trim()) {
+        insertRow.seller_fiat_phone = String(seller_fiat_phone).trim();
+      }
+      if (seller_fiat_qr_url && String(seller_fiat_qr_url).trim()) {
+        insertRow.seller_fiat_qr_url = String(seller_fiat_qr_url).trim();
+      }
     } else if (price_coins && Number(price_coins) > 0) {
       insertRow.price_coins = Math.floor(Number(price_coins));
       insertRow.price_ton = null;
@@ -142,10 +160,18 @@ export async function POST(request: NextRequest) {
       insertRow.price_ton = Number(price_ton);
       insertRow.price_coins = null;
       insertRow.price_sol = null;
+      if (seller_wallet_address && String(seller_wallet_address).trim()) {
+        insertRow.seller_wallet_address = String(seller_wallet_address).trim();
+        insertRow.seller_wallet_network = seller_wallet_network === 'SOL' ? 'SOL' : 'TON';
+      }
     } else if (price_sol && Number(price_sol) > 0) {
       insertRow.price_sol = Number(price_sol);
       insertRow.price_coins = null;
       insertRow.price_ton = null;
+      if (seller_wallet_address && String(seller_wallet_address).trim()) {
+        insertRow.seller_wallet_address = String(seller_wallet_address).trim();
+        insertRow.seller_wallet_network = 'SOL';
+      }
     }
 
     let { data: listing, error: insertError } = await db
@@ -155,6 +181,18 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (insertError && isSchemaCompatError(String(insertError.message || ''))) {
+      const wantsRub = priceRubNum !== null && !Number.isNaN(priceRubNum) && priceRubNum > 0;
+      if (wantsRub) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Колонки для оплаты в рублях не найдены в БД',
+            hint: 'Выполните в Supabase SQL Editor: supabase/migrations/0007_marketplace_rub.sql и 0010_marketplace_seller_payment.sql',
+          },
+          { status: 500 }
+        );
+      }
+
       const legacyRow: Record<string, unknown> = {
         nft_card_id: nftCardId,
         seller_user_id: dbUserId,
@@ -175,7 +213,7 @@ export async function POST(request: NextRequest) {
           success: false,
           error: insertError.message,
           hint: isSchemaCompatError(String(insertError.message))
-            ? 'Выполните supabase/migrations/0007_marketplace_rub.sql в Supabase'
+            ? 'Выполните supabase/migrations/0007_marketplace_rub.sql и 0010_marketplace_seller_payment.sql в Supabase'
             : undefined,
         },
         { status: 500 }

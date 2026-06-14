@@ -307,6 +307,7 @@ interface GameState {
   addPlayer: (name: string) => void
   removePlayer: (playerId: string) => void
   updatePlayerScore: (playerId: string, score: number) => void
+  syncLocalUserPremium: (isPremium: boolean) => void
   
   // Настройки
   updateSettings: (settings: Partial<GameSettings>) => void
@@ -532,7 +533,22 @@ export const useGameStore = create<GameState>()(
 
         if (userInfo?.avatar) userAvatar = userInfo.avatar;
         if (userInfo?.username) userName = userInfo.username;
-        const userIsPremium = userInfo?.isPremium === true;
+        let userIsPremium = userInfo?.isPremium === true;
+        if (!userIsPremium) {
+          try {
+            const premRes = await fetch('/api/premium/status', {
+              credentials: 'include',
+              headers: getApiHeaders(),
+              cache: 'no-store',
+            });
+            if (premRes.ok) {
+              const premData = await premRes.json();
+              userIsPremium = premData.success && premData.premium?.isPremium === true;
+            }
+          } catch {
+            /* optional */
+          }
+        }
         
         // ✅ ЗАГРУЖАЕМ NFT КАРТЫ ИЗ КОЛОДЫ (Telegram + web через cookies)
         try {
@@ -1168,6 +1184,16 @@ export const useGameStore = create<GameState>()(
           player.score = score
           set({ players: [...players] })
         }
+      },
+
+      syncLocalUserPremium: (isPremium) => {
+        const { players } = get()
+        if (!players.length) return
+        set({
+          players: players.map((p) =>
+            p.isUser ? { ...p, isPremium } : p
+          ),
+        })
       },
       
       // Настройки

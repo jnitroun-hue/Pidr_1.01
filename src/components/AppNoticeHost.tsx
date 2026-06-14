@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useSyncExternalStore, useState, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import {
   AppNoticeType,
@@ -63,9 +62,7 @@ function primaryBtnClass(type: AppNoticeType, destructive = false) {
 
 function DetailsBlock({ details }: { details?: string }) {
   if (!details) return null;
-
   const isUrlBlock = details.includes('https://') || details.includes('http://');
-
   return (
     <p className={`${styles.details} ${isUrlBlock ? styles.detailsUrl : ''}`}>
       {details}
@@ -73,35 +70,61 @@ function DetailsBlock({ details }: { details?: string }) {
   );
 }
 
-function CloseIconButton({ onClick, label = 'Закрыть' }: { onClick: () => void; label?: string }) {
+function NoticeButton({
+  label,
+  extraClass = '',
+  onPress,
+}: {
+  label: string;
+  extraClass?: string;
+  onPress: () => void;
+}) {
   return (
     <button
       type="button"
-      className={styles.closeIconBtn}
-      onClick={(event) => {
+      className={`${styles.noticeBtn} ${extraClass}`.trim()}
+      onMouseDown={(event) => {
+        event.preventDefault();
         event.stopPropagation();
-        onClick();
+        onPress();
       }}
-      aria-label={label}
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onPress();
+      }}
     >
-      <X size={20} strokeWidth={2.5} />
+      {label}
     </button>
   );
 }
 
 export default function AppNoticeHost() {
-  const [mounted, setMounted] = useState(false);
-  const { currentAlert, currentConfirm } = useSyncExternalStore(
-    subscribeAppNotice,
-    getAppNoticeState,
-    getAppNoticeState
-  );
+  const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
+  const [snapshot, setSnapshot] = useState(getAppNoticeState);
 
   useEffect(() => {
-    setMounted(true);
-    return installGlobalAppAlert();
+    let root = document.getElementById('app-notice-root');
+    if (!root) {
+      root = document.createElement('div');
+      root.id = 'app-notice-root';
+      document.body.appendChild(root);
+    }
+    setPortalRoot(root);
+
+    const unsubscribe = subscribeAppNotice(() => {
+      setSnapshot(getAppNoticeState());
+    });
+
+    const cleanupAlert = installGlobalAppAlert();
+
+    return () => {
+      unsubscribe();
+      cleanupAlert();
+    };
   }, []);
 
+  const { currentAlert, currentConfirm } = snapshot;
   const isOpen = Boolean(currentAlert || currentConfirm);
 
   const dismissAlert = useCallback(() => {
@@ -115,137 +138,135 @@ export default function AppNoticeHost() {
   useEffect(() => {
     if (!isOpen) {
       document.body.classList.remove('app-notice-open');
+      document.body.style.removeProperty('overflow');
       return;
     }
 
     document.body.classList.add('app-notice-open');
+    document.body.style.overflow = 'hidden';
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
       event.preventDefault();
       if (currentConfirm) dismissConfirm(false);
-      else if (currentAlert) dismissAlert();
+      else dismissAlert();
     };
 
     window.addEventListener('keydown', onKeyDown);
     return () => {
       window.removeEventListener('keydown', onKeyDown);
       document.body.classList.remove('app-notice-open');
+      document.body.style.removeProperty('overflow');
     };
-  }, [isOpen, currentAlert, currentConfirm, dismissAlert, dismissConfirm]);
+  }, [isOpen, currentConfirm, dismissAlert, dismissConfirm]);
 
-  if (!mounted) return null;
+  if (!portalRoot || !isOpen) return null;
+
+  const handleBackdrop = () => {
+    if (currentConfirm) dismissConfirm(false);
+    else dismissAlert();
+  };
 
   return createPortal(
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          key={currentAlert?.id ?? currentConfirm?.id ?? 'notice'}
-          className={styles.overlay}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onPointerDown={(event) => {
-            if (event.target === event.currentTarget) {
-              if (currentConfirm) dismissConfirm(false);
-              else if (currentAlert) dismissAlert();
-            }
-          }}
+    <div
+      className={styles.overlay}
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) handleBackdrop();
+      }}
+    >
+      {currentAlert && (
+        <div
+          className={`${styles.modal} ${modalClass(currentAlert.type)}`}
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="app-notice-title"
         >
-          {currentAlert && (
-            <motion.div
-              className={`${styles.modal} ${modalClass(currentAlert.type)}`}
-              role="alertdialog"
-              aria-modal="true"
-              aria-labelledby="app-notice-title"
-              initial={{ scale: 0.92, opacity: 0, y: 16 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.92, opacity: 0, y: 16 }}
-              transition={{ type: 'spring', stiffness: 280, damping: 24 }}
-              onPointerDown={(event) => event.stopPropagation()}
-            >
-              <CloseIconButton onClick={dismissAlert} />
+          <button
+            type="button"
+            className={styles.closeIconBtn}
+            aria-label="Закрыть"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              dismissAlert();
+            }}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              dismissAlert();
+            }}
+          >
+            <X size={20} strokeWidth={2.5} />
+          </button>
 
-              <div className={`${styles.iconWrap} ${iconClass(currentAlert.type)}`}>
-                {ICONS[currentAlert.type]}
-              </div>
-              <h2 id="app-notice-title" className={styles.title}>
-                {currentAlert.title}
-              </h2>
-              <DetailsBlock details={currentAlert.details} />
-              <div className={styles.actionsSingle}>
-                <button
-                  type="button"
-                  className={`${styles.btn} ${primaryBtnClass(currentAlert.type)}`}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    dismissAlert();
-                  }}
-                >
-                  {currentAlert.confirmText}
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.btn} ${styles.btnGhost}`}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    dismissAlert();
-                  }}
-                >
-                  Закрыть
-                </button>
-              </div>
-            </motion.div>
-          )}
+          <div className={`${styles.iconWrap} ${iconClass(currentAlert.type)}`}>
+            {ICONS[currentAlert.type]}
+          </div>
+          <h2 id="app-notice-title" className={styles.title}>
+            {currentAlert.title}
+          </h2>
+          <DetailsBlock details={currentAlert.details} />
 
-          {currentConfirm && (
-            <motion.div
-              className={`${styles.modal} ${modalClass(currentConfirm.type)}`}
-              role="alertdialog"
-              aria-modal="true"
-              aria-labelledby="app-notice-title"
-              initial={{ scale: 0.92, opacity: 0, y: 16 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.92, opacity: 0, y: 16 }}
-              transition={{ type: 'spring', stiffness: 280, damping: 24 }}
-              onPointerDown={(event) => event.stopPropagation()}
-            >
-              <CloseIconButton onClick={() => dismissConfirm(false)} label="Отмена" />
-
-              <div className={`${styles.iconWrap} ${iconClass(currentConfirm.type)}`}>
-                {ICONS[currentConfirm.type]}
-              </div>
-              <h2 id="app-notice-title" className={styles.title}>
-                {currentConfirm.title}
-              </h2>
-              <DetailsBlock details={currentConfirm.details} />
-              <div className={styles.actions}>
-                <button
-                  type="button"
-                  className={`${styles.btn} ${styles.btnGhost}`}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    dismissConfirm(false);
-                  }}
-                >
-                  {currentConfirm.cancelText}
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.btn} ${primaryBtnClass(currentConfirm.type, currentConfirm.destructive)}`}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    dismissConfirm(true);
-                  }}
-                >
-                  {currentConfirm.confirmText}
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </motion.div>
+          <div className={styles.footer}>
+            <NoticeButton
+              label={currentAlert.confirmText}
+              extraClass={primaryBtnClass(currentAlert.type)}
+              onPress={dismissAlert}
+            />
+            <NoticeButton label="Закрыть" extraClass={styles.btnGhost} onPress={dismissAlert} />
+          </div>
+        </div>
       )}
-    </AnimatePresence>,
-    document.body
+
+      {currentConfirm && (
+        <div
+          className={`${styles.modal} ${modalClass(currentConfirm.type)}`}
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="app-notice-title"
+        >
+          <button
+            type="button"
+            className={styles.closeIconBtn}
+            aria-label="Отмена"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              dismissConfirm(false);
+            }}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              dismissConfirm(false);
+            }}
+          >
+            <X size={20} strokeWidth={2.5} />
+          </button>
+
+          <div className={`${styles.iconWrap} ${iconClass(currentConfirm.type)}`}>
+            {ICONS[currentConfirm.type]}
+          </div>
+          <h2 id="app-notice-title" className={styles.title}>
+            {currentConfirm.title}
+          </h2>
+          <DetailsBlock details={currentConfirm.details} />
+
+          <div className={styles.footerSplit}>
+            <NoticeButton
+              label={currentConfirm.cancelText}
+              extraClass={styles.btnGhost}
+              onPress={() => dismissConfirm(false)}
+            />
+            <NoticeButton
+              label={currentConfirm.confirmText}
+              extraClass={primaryBtnClass(currentConfirm.type, currentConfirm.destructive)}
+              onPress={() => dismissConfirm(true)}
+            />
+          </div>
+        </div>
+      )}
+    </div>,
+    portalRoot
   );
 }
