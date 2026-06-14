@@ -349,7 +349,7 @@ export default function NFTGallery() {
               background: 'rgba(2, 6, 23, 0.55)',
             }}
           >
-            <WalletQuickConnect className="!mb-0 !rounded-none !border-none !shadow-none bg-transparent [&>div:last-child]:!border-slate-800/70" />
+            <WalletQuickConnect variant="embedded" />
           </div>
         </div>
       </div>

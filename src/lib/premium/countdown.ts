@@ -48,3 +48,29 @@ export function formatCountdownLabel(c: PremiumCountdown): string {
   if (c.days > 0) return `${c.days}д ${pad(c.hours)}:${pad(c.minutes)}:${pad(c.seconds)}`;
   return `${pad(c.hours)}:${pad(c.minutes)}:${pad(c.seconds)}`;
 }
+
+/** Обратный отсчёт до целевой даты (например, следующая бесплатная генерация) */
+export function getTargetCountdown(targetAt: string | null): PremiumCountdown {
+  if (!targetAt) {
+    return { days: 0, hours: 0, minutes: 0, seconds: 0, totalMs: 0, expired: true, progressPercent: 100 };
+  }
+
+  const end = new Date(targetAt).getTime();
+  const totalMs = Math.max(0, end - Date.now());
+  const expired = totalMs <= 0;
+
+  const days = Math.floor(totalMs / 86400000);
+  const hours = Math.floor((totalMs % 86400000) / 3600000);
+  const minutes = Math.floor((totalMs % 3600000) / 60000);
+  const seconds = Math.floor((totalMs % 60000) / 1000);
+
+  return {
+    days,
+    hours,
+    minutes,
+    seconds,
+    totalMs,
+    expired,
+    progressPercent: expired ? 100 : 0,
+  };
+}

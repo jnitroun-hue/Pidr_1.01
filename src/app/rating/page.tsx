@@ -262,22 +262,47 @@ export default function RatingPage() {
                   <div style={{ fontSize: '13px', fontWeight: '800', color: '#fde68a', marginBottom: '4px' }}>
                     🏆 Еженедельные призы топ-10
                   </div>
-                  <div style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '10px' }}>
+                  <div style={{ fontSize: '10px', color: '#64748b', marginBottom: '10px' }}>
                     Итоги каждый понедельник · следующая раздача: {nextPayoutLabel}
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 12px', fontSize: '11px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {WEEKLY_TOP_PRIZES.slice(0, 3).map((p) => (
-                      <span key={p.place} style={{ color: '#94a3b8' }}>
-                        {p.place === 1 ? '🥇' : p.place === 2 ? '🥈' : '🥉'} {p.place} место
-                      </span>
+                      <div
+                        key={p.place}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '12px',
+                          padding: '8px 10px',
+                          borderRadius: '10px',
+                          background: 'rgba(15, 23, 42, 0.45)',
+                          border: '1px solid rgba(100, 116, 139, 0.12)',
+                        }}
+                      >
+                        <span style={{ color: '#cbd5e1', fontSize: '12px', fontWeight: 600 }}>
+                          {p.place === 1 ? '🥇' : p.place === 2 ? '🥈' : '🥉'} {p.place} место
+                        </span>
+                        <span style={{ color: p.type === 'ton' ? '#38bdf8' : '#eab308', fontSize: '12px', fontWeight: 800 }}>
+                          {p.label}
+                        </span>
+                      </div>
                     ))}
-                    {WEEKLY_TOP_PRIZES.slice(0, 3).map((p) => (
-                      <span key={`prize-${p.place}`} style={{ color: '#38bdf8', fontWeight: 700 }}>
-                        {p.label}
-                      </span>
-                    ))}
-                    <span style={{ color: '#94a3b8' }}>4–10 места</span>
-                    <span style={{ color: '#eab308', fontWeight: 700 }}>15 000 → 1 000 монет</span>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '12px',
+                        padding: '8px 10px',
+                        borderRadius: '10px',
+                        background: 'rgba(15, 23, 42, 0.45)',
+                        border: '1px solid rgba(100, 116, 139, 0.12)',
+                      }}
+                    >
+                      <span style={{ color: '#94a3b8', fontSize: '12px', fontWeight: 600 }}>4–10 места</span>
+                      <span style={{ color: '#eab308', fontSize: '12px', fontWeight: 800 }}>15 000 → 1 000 монет</span>
+                    </div>
                   </div>
                   <div style={{ fontSize: '10px', color: '#64748b', marginTop: '8px' }}>
                     Монеты начисляются автоматически. TON — на подключённый кошелёк (топ-3).

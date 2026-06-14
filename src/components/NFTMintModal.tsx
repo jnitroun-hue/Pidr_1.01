@@ -321,7 +321,7 @@ export default function NFTMintModal({ onClose, onSuccess }: NFTMintModalProps) 
           <h2 className={styles.title}>🎲 Рандомная генерация</h2>
           <p className={styles.subtitle}>
             {premium?.freeRandomAvailable
-              ? '🎁 Premium: 1 бесплатная генерация на этой неделе!'
+              ? '🎁 Premium: бесплатная генерация доступна (раз в 7 дней)!'
               : 'Комиссия: 0.5 TON'}
           </p>
 

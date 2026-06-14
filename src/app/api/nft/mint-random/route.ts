@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       const premiumStatus = await getPremiumStatus(dbUserId);
       if (!premiumStatus.freeRandomAvailable) {
         return NextResponse.json(
-          { success: false, error: 'Бесплатная генерация недоступна (нужен Premium и лимит 1/неделю)' },
+          { success: false, error: 'Бесплатная генерация недоступна (нужен Premium и пауза 7 дней)' },
           { status: 400 }
         );
       }
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
         await supabaseAdmin.from(NFT_CARDS_TABLE).delete().eq('id', savedCard.id);
         await removePremiumFreeCardFromBucket(storagePath);
         return NextResponse.json(
-          { success: false, error: 'Бесплатная генерация уже использована на этой неделе' },
+          { success: false, error: 'Бесплатная генерация будет доступна через 7 дней после последней' },
           { status: 400 }
         );
       }

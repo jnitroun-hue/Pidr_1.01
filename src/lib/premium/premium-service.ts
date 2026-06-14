@@ -1,6 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase';
 import { getPayoutWeekKey } from '@/lib/rating/weekly-prizes';
-import { PREMIUM_DURATION_DAYS } from './constants';
+import { PREMIUM_DURATION_DAYS, PREMIUM_FREE_ROLL_COOLDOWN_MS } from './constants';
 
 export interface PremiumStatus {
   isPremium: boolean;
@@ -8,6 +8,10 @@ export interface PremiumStatus {
   startedAt: string | null;
   daysLeft: number;
   freeRandomAvailable: boolean;
+  /** Когда была использована последняя бесплатная генерация (UTC) */
+  freeRandomUsedAt: string | null;
+  /** Когда снова станет доступна бесплатная генерация (UTC) */
+  freeRandomNextAt: string | null;
   weekKey: string;
   canPurchase: boolean;
 }
@@ -70,15 +74,26 @@ export async function getPremiumStatus(userId: number): Promise<PremiumStatus> {
 
   const weekKey = getPayoutWeekKey();
 
-  const { data: freeGen } = await supabaseAdmin
+  const { data: lastFreeGen } = await supabaseAdmin
     .from('_pidr_premium_free_generations')
-    .select('id')
+    .select('id, created_at')
     .eq('user_id', userId)
-    .eq('week_key', weekKey)
+    .order('created_at', { ascending: false })
+    .limit(1)
     .maybeSingle();
+
+  const lastUsedAt = lastFreeGen?.created_at ?? null;
+  const lastUsedMs = lastUsedAt ? new Date(lastUsedAt).getTime() : 0;
+  const nextAvailableMs = lastUsedMs ? lastUsedMs + PREMIUM_FREE_ROLL_COOLDOWN_MS : 0;
 
   const expiresAt = user?.premium_expires_at ?? null;
   const isPremium = isPremiumActiveFromUser({ premium_expires_at: expiresAt });
+  const freeRandomAvailable =
+    isPremium && (!lastUsedAt || Date.now() >= nextAvailableMs);
+  const freeRandomNextAt =
+    lastUsedAt && !freeRandomAvailable
+      ? new Date(nextAvailableMs).toISOString()
+      : null;
   const daysLeft = expiresAt
     ? Math.max(0, Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 86400000))
     : 0;
@@ -101,7 +116,9 @@ export async function getPremiumStatus(userId: number): Promise<PremiumStatus> {
     expiresAt,
     startedAt,
     daysLeft,
-    freeRandomAvailable: isPremium && !freeGen,
+    freeRandomAvailable,
+    freeRandomUsedAt: lastUsedAt,
+    freeRandomNextAt,
     weekKey,
     canPurchase: !isPremium,
   };
@@ -212,7 +229,7 @@ export async function consumeFreeRandomGeneration(
 
   const { error } = await supabaseAdmin.from('_pidr_premium_free_generations').insert({
     user_id: userId,
-    week_key: status.weekKey,
+    week_key: `roll-${Date.now()}`,
     nft_id: nftId ?? null,
     storage_path: storagePath ?? null,
   });

@@ -26,14 +26,36 @@ import { motion } from 'framer-motion';
 import { Menu, X } from 'lucide-react';
 import { getApiHeaders } from '@/lib/api-headers';
 
+const HOME_SESSION_KEY = 'pidr_home_session';
+
+function readCachedHomeUser(): User | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = sessionStorage.getItem(HOME_SESSION_KEY);
+    return raw ? (JSON.parse(raw) as User) : null;
+  } catch {
+    return null;
+  }
+}
+
+function cacheHomeUser(user: User) {
+  if (typeof window === 'undefined') return;
+  try {
+    sessionStorage.setItem(HOME_SESSION_KEY, JSON.stringify(user));
+  } catch {
+    /* ignore */
+  }
+}
+
 /**
  * P.I.D.R. Game - Автоматическая авторизация через Telegram WebApp
  * Создание пользователя в БД и прямой вход в игру
  */
 function HomeWithParams() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [showMainMenu, setShowMainMenu] = useState(false);
+  const cachedUser = typeof window !== 'undefined' ? readCachedHomeUser() : null;
+  const [user, setUser] = useState<User | null>(cachedUser);
+  const [loading, setLoading] = useState(!cachedUser);
+  const [showMainMenu, setShowMainMenu] = useState(!!cachedUser);
   const [error, setError] = useState<string>('');
   const [isBrowser, setIsBrowser] = useState(false); // ✅ НОВОЕ: Определяем браузер vs mini app
   const [checkingAuth, setCheckingAuth] = useState(false); // ✅ Проверка авторизации в браузере
@@ -58,18 +80,22 @@ function HomeWithParams() {
   };
 
   useEffect(() => {
-    // ✅ ЗАЩИТА ОТ ПОВТОРНОГО ЗАПУСКА
+    if (user) cacheHomeUser(user);
+  }, [user]);
+
+  useEffect(() => {
     if (initialized.current) {
       console.log('🛡️ Уже инициализировано - пропускаем');
       return;
     }
-    
-    // ✅ КРИТИЧНО: Если пользователь уже загружен (например, при возврате назад из профиля) - не создаем заново
-    if (user) {
-      console.log('✅ Пользователь уже загружен, пропускаем инициализацию');
+
+    const restored = readCachedHomeUser();
+    if (restored || user) {
+      console.log('✅ Сессия главной восстановлена — без экрана загрузки');
       initialized.current = true;
       setLoading(false);
       setShowMainMenu(true);
+      if (restored && !user) setUser(restored);
       return;
     }
     
@@ -565,13 +591,7 @@ function HomeWithParams() {
 
   // Показываем экран загрузки с картами (пока идет загрузка ИЛИ проверка авторизации)
   if (loading || checkingAuth) {
-    return (
-      <CardLoadingScreen 
-        language={language}
-        onLoadingComplete={() => setShowMainMenu(true)}
-        duration={user ? 1500 : 2500}
-      />
-    );
+    return <CardLoadingScreen language={language} />;
   }
 
   // Показываем профессиональную заставку загрузки (старая версия - оставляем как fallback)

@@ -4,10 +4,10 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation'
 import NFTGallery from '../../components/NFTGallery'
 import NFTThemeGenerator from '../../components/NFTThemeGenerator'
+import PremiumFreeRollBanner from '../../components/PremiumFreeRollBanner'
 import { useTelegram } from '../../hooks/useTelegram'
 import { getApiHeaders } from '@/lib/api-headers'
 import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme'
-import PageLoadingScreen from '@/components/PageLoadingScreen'
 
 export default function NFTCollectionPage() {
   const router = useRouter()
@@ -51,11 +51,19 @@ export default function NFTCollectionPage() {
 
   if (isLoadingUser) {
     return (
-      <PageLoadingScreen
-        title="NFT коллекция"
-        subtitle="Загрузка..."
-      />
-    )
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'grid',
+          placeItems: 'center',
+          background: `linear-gradient(160deg, ${T.bgDeep} 0%, ${T.bgMain} 100%)`,
+          color: T.textMuted,
+          fontSize: '14px',
+        }}
+      >
+        Загрузка коллекции…
+      </div>
+    );
   }
 
   return (
@@ -119,10 +127,11 @@ export default function NFTCollectionPage() {
             textAlign: 'center',
             letterSpacing: '0.06em',
             textTransform: 'uppercase',
-          }}>
+          }}          >
             Генератор NFT
           </h2>
-          <NFTThemeGenerator 
+          <PremiumFreeRollBanner />
+          <NFTThemeGenerator
             userCoins={userCoins} 
             onBalanceUpdate={handleBalanceUpdate}
           />

@@ -10,7 +10,7 @@ import PremiumSuccessModal from '../../components/PremiumSuccessModal';
 import type { PremiumStatus } from '@/lib/premium/premium-service';
 import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
 import PageLoadingScreen from '@/components/PageLoadingScreen';
-import { appConfirm } from '@/lib/app-notice';
+import { appConfirm, appAlert } from '@/lib/app-notice';
 import { fetchPremiumStatus, isPremiumUsable } from '@/lib/premium/refresh-premium';
 
 interface User {
@@ -287,7 +287,11 @@ export default function ShopPage() {
       }
 
       await loadDailyPromo();
-      alert('🎉 Карта акции дня куплена! Она уже в вашей NFT коллекции.');
+      await appAlert('Карта акции дня куплена! Она уже в вашей NFT коллекции.', {
+        title: 'Покупка успешна',
+        type: 'success',
+        confirmText: 'Отлично',
+      });
     } catch (error) {
       console.error('Ошибка покупки акции:', error);
       alert('Ошибка покупки акции дня');
