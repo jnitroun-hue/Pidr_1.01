@@ -202,7 +202,11 @@ export async function activatePremium(params: {
   return { expiresAt, startedAt };
 }
 
-export async function consumeFreeRandomGeneration(userId: number, nftId?: number): Promise<boolean> {
+export async function consumeFreeRandomGeneration(
+  userId: number,
+  nftId?: number,
+  storagePath?: string | null
+): Promise<boolean> {
   const status = await getPremiumStatus(userId);
   if (!status.freeRandomAvailable) return false;
 
@@ -210,6 +214,7 @@ export async function consumeFreeRandomGeneration(userId: number, nftId?: number
     user_id: userId,
     week_key: status.weekKey,
     nft_id: nftId ?? null,
+    storage_path: storagePath ?? null,
   });
 
   return !error;

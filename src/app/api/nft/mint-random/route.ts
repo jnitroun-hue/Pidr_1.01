@@ -10,6 +10,10 @@ import {
   consumeFreeRandomGeneration,
   getPremiumStatus,
 } from '@/lib/premium/premium-service';
+import {
+  removePremiumFreeCardFromBucket,
+  uploadPremiumFreeCardToBucket,
+} from '@/lib/premium/premium-free-storage';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -64,7 +68,32 @@ export async function POST(request: NextRequest) {
     const rarity = rarityRoll < 60 ? 'common' : rarityRoll < 85 ? 'rare' : 'epic';
 
     const rankFile = randomRankRaw === '10' ? '10' : randomRankRaw.toLowerCase();
-    const imageUrl = `/cards/${rankFile}_of_${randomSuit}.png`;
+    const fallbackImageUrl = `/cards/${rankFile}_of_${randomSuit}.png`;
+
+    let imageUrl = fallbackImageUrl;
+    let storagePath: string | null = null;
+
+    if (wantsFree) {
+      try {
+        const uploaded = await uploadPremiumFreeCardToBucket({
+          userId: dbUserId,
+          suit: randomSuit,
+          rankRaw: randomRankRaw,
+          rankNormalized: randomRank,
+        });
+        imageUrl = uploaded.publicUrl;
+        storagePath = uploaded.storagePath;
+      } catch (uploadErr) {
+        console.error('❌ mint-random premium-free storage:', uploadErr);
+        return NextResponse.json(
+          {
+            success: false,
+            error: uploadErr instanceof Error ? uploadErr.message : 'Ошибка сохранения в Storage',
+          },
+          { status: 500 }
+        );
+      }
+    }
 
     const { data: savedCard, error: saveError } = await supabaseAdmin
       .from(NFT_CARDS_TABLE)
@@ -74,25 +103,31 @@ export async function POST(request: NextRequest) {
         rank: randomRank,
         rarity,
         image_url: imageUrl,
+        storage_path: storagePath,
+        cost: wantsFree ? 0 : null,
+        payment_method: wantsFree ? 'premium_free' : null,
         metadata: {
           mint_type: wantsFree ? 'random_premium_free' : 'random',
           wallet_address: wallet_address || null,
           network: network || 'TON',
           generated_at: new Date().toISOString(),
+          ...(storagePath ? { premium_free_storage_path: storagePath } : {}),
         },
       })
-      .select('id, rank, suit, rarity, image_url')
+      .select('id, rank, suit, rarity, image_url, storage_path')
       .single();
 
     if (saveError || !savedCard) {
       console.error('❌ mint-random save:', saveError);
+      if (storagePath) await removePremiumFreeCardFromBucket(storagePath);
       return NextResponse.json({ success: false, error: 'Ошибка сохранения NFT' }, { status: 500 });
     }
 
     if (wantsFree) {
-      const consumed = await consumeFreeRandomGeneration(dbUserId, savedCard.id);
+      const consumed = await consumeFreeRandomGeneration(dbUserId, savedCard.id, storagePath);
       if (!consumed) {
         await supabaseAdmin.from(NFT_CARDS_TABLE).delete().eq('id', savedCard.id);
+        await removePremiumFreeCardFromBucket(storagePath);
         return NextResponse.json(
           { success: false, error: 'Бесплатная генерация уже использована на этой неделе' },
           { status: 400 }
@@ -114,8 +149,9 @@ export async function POST(request: NextRequest) {
       network: network || 'TON',
       master_wallet_address: masterWalletAddress,
       message: wantsFree
-        ? `Premium: ${randomRankRaw} ${randomSuit} (${rarity})!`
+        ? `Premium: ${randomRankRaw} ${randomSuit} (${rarity})! Сохранено в Storage.`
         : `Выпала карта ${randomRankRaw} of ${randomSuit} (${rarity})!`,
+      storage_path: storagePath,
     });
   } catch (error: unknown) {
     console.error('❌ mint-random:', error);
