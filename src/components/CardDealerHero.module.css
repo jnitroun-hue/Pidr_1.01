@@ -1,4 +1,4 @@
-/* Premium casino dealer — SVG hero */
+/* Premium casino dealer — orbital cards + cowboy hat */
 
 .hero {
   position: relative;
@@ -40,60 +40,130 @@
   pointer-events: none;
 }
 
-/* SVG card styling */
+/* Cards */
 .cardBody {
   fill: url(#cardFaceGrad);
   stroke: #c9a227;
-  stroke-width: 1.5;
+  stroke-width: 1.2;
 }
 
 .cardInnerLine {
   fill: none;
-  stroke: rgba(201, 162, 39, 0.25);
-  stroke-width: 1;
+  stroke: rgba(201, 162, 39, 0.22);
+  stroke-width: 0.8;
 }
 
-.cardRank {
+.cardRankSm {
   font-family: Georgia, 'Times New Roman', serif;
-  font-size: 13px;
+  font-size: 10px;
   font-weight: 700;
 }
 
-.cardSuitSm {
+.cardSuitXs {
   font-family: Georgia, 'Times New Roman', serif;
-  font-size: 11px;
+  font-size: 9px;
 }
 
-.cardSuitLg {
+.cardSuitMd {
   font-family: Georgia, 'Times New Roman', serif;
-  font-size: 24px;
-  opacity: 0.92;
+  font-size: 18px;
+  opacity: 0.9;
 }
 
-.cardDropShadow {
-  fill: rgba(0, 0, 0, 0.35);
+/* Neural network pulse */
+.synapseLine {
+  animation: synapsePulse 2.8s ease-in-out infinite;
 }
 
-/* Animations */
-.dealerFloat,
-.cardFan,
-.handsFloat {
+.nodePulse {
+  animation: nodePulse 2.4s ease-in-out infinite;
+}
+
+@keyframes synapsePulse {
+  0%,
+  100% {
+    opacity: 0.2;
+    stroke-dashoffset: 0;
+  }
+  50% {
+    opacity: 0.75;
+  }
+}
+
+@keyframes nodePulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    r: 2;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.neuralNet {
+  animation: netDrift 8s ease-in-out infinite;
+  transform-origin: 200px 128px;
+}
+
+@keyframes netDrift {
+  0%,
+  100% {
+    transform: rotate(-1deg) scale(1);
+  }
+  50% {
+    transform: rotate(1deg) scale(1.02);
+  }
+}
+
+/* Orbital card motion — like atoms in neural circuits */
+.orbit1,
+.orbit2,
+.orbit3,
+.orbit4,
+.orbit5 {
   transform-box: fill-box;
+  transform-origin: 0 0;
+  animation-name: orbitSpin;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
 }
 
+.counter1,
+.counter2,
+.counter3,
+.counter4,
+.counter5 {
+  transform-box: fill-box;
+  transform-origin: 0 0;
+  animation-name: orbitSpinReverse;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@keyframes orbitSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes orbitSpinReverse {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+/* Dealer */
 .dealerFloat {
   animation: dealerBreath 5s ease-in-out infinite;
-  transform-origin: 50% 55%;
-}
-
-.cardFan {
-  animation: fanSway 3.2s ease-in-out infinite;
-  transform-origin: 50% 72%;
-}
-
-.handsFloat {
-  animation: handsSway 3.2s ease-in-out infinite;
-  transform-origin: 50% 75%;
+  transform-origin: 200px 160px;
+  transform-box: fill-box;
 }
 
 .sparkle {
@@ -108,26 +178,6 @@
     transform: translateY(0);
   }
   50% {
-    transform: translateY(-3px);
-  }
-}
-
-@keyframes fanSway {
-  0%,
-  100% {
-    transform: rotate(-1.2deg);
-  }
-  50% {
-    transform: rotate(1.2deg);
-  }
-}
-
-@keyframes handsSway {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
     transform: translateY(-2px);
   }
 }
@@ -136,19 +186,28 @@
   0%,
   100% {
     opacity: 0.25;
-    transform: scale(0.8);
   }
   50% {
     opacity: 1;
-    transform: scale(1.2);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .dealerFloat,
-  .cardFan,
-  .handsFloat,
-  .sparkle {
+  .orbit1,
+  .orbit2,
+  .orbit3,
+  .orbit4,
+  .orbit5,
+  .counter1,
+  .counter2,
+  .counter3,
+  .counter4,
+  .counter5,
+  .sparkle,
+  .synapseLine,
+  .nodePulse,
+  .neuralNet {
     animation: none !important;
   }
 }
