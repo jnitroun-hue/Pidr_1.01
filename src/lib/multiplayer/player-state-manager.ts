@@ -899,13 +899,14 @@ async function syncPlayerToDatabase(params: {
   
   // Вставляем свежую запись.
   // В БД user_id должен хранить внутренний id пользователя, а не telegram_id.
+  const isBot = isBotUserId(userId);
   const insertData = {
     room_id: parseInt(roomId), // INT4
     user_id: databaseUserId,
     username,
     position,
     is_host: Boolean(isHost), // ✅ ПРИВОДИМ К BOOLEAN И ОПРЕДЕЛЯЕМ ХОСТА!
-    is_ready: Boolean(isHost), // Хост сразу готов
+    is_ready: isBot ? true : Boolean(isHost), // Боты и хост сразу готовы
     joined_at: new Date().toISOString(),
   };
   

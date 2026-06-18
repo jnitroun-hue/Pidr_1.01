@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import {
+  generateHeroCardFastDataUrl,
   generateThemeCardImageDataUrl,
   pickRandomHeroCardSpec,
 } from '@/lib/nft/generate-theme-card-client';
@@ -27,26 +28,33 @@ export default function CardDealerHero({ size = 'default' }: CardDealerHeroProps
 
   useEffect(() => {
     let cancelled = false;
+    const specs = FLOATING_CARDS.map(() => pickRandomHeroCardSpec());
 
-    const loadFaces = async () => {
-      const entries = await Promise.all(
-        FLOATING_CARDS.map(async (card) => {
-          const spec = pickRandomHeroCardSpec();
-          const dataUrl = await generateThemeCardImageDataUrl(
-            spec.suit,
-            spec.rank,
-            spec.theme,
-            spec.themeId
-          );
-          return [card.id, dataUrl] as const;
-        })
-      );
+    const instantFaces = Object.fromEntries(
+      FLOATING_CARDS.map((card, index) => [
+        card.id,
+        generateHeroCardFastDataUrl(specs[index].suit, specs[index].rank),
+      ])
+    );
+    setCardFaces(instantFaces);
 
-      if (cancelled) return;
-      setCardFaces(Object.fromEntries(entries.filter(([, src]) => Boolean(src))));
+    const upgradeFaces = async () => {
+      for (let index = 0; index < FLOATING_CARDS.length; index += 1) {
+        if (cancelled) return;
+        const card = FLOATING_CARDS[index];
+        const spec = specs[index];
+        const dataUrl = await generateThemeCardImageDataUrl(
+          spec.suit,
+          spec.rank,
+          spec.theme,
+          spec.themeId
+        );
+        if (cancelled || !dataUrl) continue;
+        setCardFaces((prev) => ({ ...prev, [card.id]: dataUrl }));
+      }
     };
 
-    void loadFaces();
+    void upgradeFaces();
     return () => {
       cancelled = true;
     };

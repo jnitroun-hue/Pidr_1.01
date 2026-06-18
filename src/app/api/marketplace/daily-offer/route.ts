@@ -257,14 +257,57 @@ async function buyDailyOfferWithCoins(dbUserId: number, listingId: number, price
       .eq('id', listing.seller_user_id);
   }
 
-  const { error: transferError } = await db
-    .from('_pidr_nft_cards')
-    .update({ user_id: dbUserId })
-    .eq('id', listing.nft_card_id);
+  const originalCard = listing.nft_card as {
+    suit?: string;
+    rank?: string;
+    rarity?: string;
+    image_url?: string;
+    metadata?: Record<string, unknown> | null;
+    storage_path?: string | null;
+  } | null;
 
-  if (transferError) {
+  if (!originalCard?.suit || !originalCard?.rank) {
     await db.from('_pidr_users').update({ coins: buyer.coins }).eq('id', dbUserId);
-    throw new Error('Ошибка переноса NFT');
+    throw new Error('Не удалось прочитать данные карты лота');
+  }
+
+  const { promoImageUrl } = await ensurePromoCloneImage(
+    db,
+    listingId,
+    originalCard.image_url || null
+  );
+
+  const { data: clonedCard, error: cloneError } = await db
+    .from('_pidr_nft_cards')
+    .insert({
+      user_id: dbUserId,
+      suit: originalCard.suit,
+      rank: originalCard.rank,
+      rarity: originalCard.rarity || 'rare',
+      image_url: promoImageUrl || originalCard.image_url,
+      storage_path: null,
+      cost: priceCoins,
+      payment_method: 'daily_offer_coins',
+      metadata: {
+        ...(typeof originalCard.metadata === 'object' && originalCard.metadata ? originalCard.metadata : {}),
+        daily_offer_clone: true,
+        source_listing_id: listingId,
+        source_nft_card_id: listing.nft_card_id,
+        cloned_at: new Date().toISOString(),
+      },
+    })
+    .select('id')
+    .single();
+
+  if (cloneError || !clonedCard) {
+    await db.from('_pidr_users').update({ coins: buyer.coins }).eq('id', dbUserId);
+    if (seller) {
+      await db
+        .from('_pidr_users')
+        .update({ coins: seller.coins || 0 })
+        .eq('id', listing.seller_user_id);
+    }
+    throw new Error('Ошибка создания копии NFT');
   }
 
   await db
@@ -282,7 +325,7 @@ async function buyDailyOfferWithCoins(dbUserId: number, listingId: number, price
     balanceAfter: newBuyerBalance,
   });
 
-  return { newBalance: newBuyerBalance, listingId };
+  return { newBalance: newBuyerBalance, listingId, clonedCardId: clonedCard.id };
 }
 
 export async function GET(request: NextRequest) {

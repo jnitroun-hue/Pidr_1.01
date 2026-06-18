@@ -103,7 +103,7 @@ const PlayerHand: React.FC<PlayerHandProps> = ({
                           alt="NFT Card"
                           className={styles.cardImage}
                           draggable={false}
-                          style={{ objectFit: 'cover' }}
+                          style={{ objectFit: 'contain', background: '#ffffff' }}
                         />
                       );
                     }
@@ -128,7 +128,7 @@ const PlayerHand: React.FC<PlayerHandProps> = ({
                         alt={`${cardRank} of ${cardSuit}`}
                         className={styles.cardImage}
                         draggable={false}
-                        style={{ objectFit: 'cover' }}
+                        style={{ objectFit: 'contain', background: '#ffffff' }}
                       />
                     ) : (
                       <img

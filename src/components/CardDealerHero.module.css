@@ -85,6 +85,7 @@
   width: auto;
   height: clamp(52px, 14vw, 72px);
   border-radius: 6px;
+  background: #ffffff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 

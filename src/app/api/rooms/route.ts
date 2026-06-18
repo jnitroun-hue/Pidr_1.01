@@ -61,12 +61,12 @@ export async function GET(req: NextRequest) {
     let query = supabase
       .from('_pidr_rooms')
       .select('*')
-      .in('status', ['waiting', 'playing'])
+      .eq('status', 'waiting')
       .order('created_at', { ascending: false })
       .limit(50);
 
-    if (type === 'public') {
-      query = query.eq('is_private', false);
+    if (type === 'private') {
+      query = query.eq('is_private', true);
     }
 
     console.log(`🔍 [GET ROOMS] Загружаем комнаты типа: ${type}`);
@@ -95,6 +95,19 @@ export async function GET(req: NextRequest) {
     console.log(`📊 [GET ROOMS] Загружено комнат из БД: ${rooms?.length || 0}`);
     
     const roomsForListing = rooms || [];
+
+    const roomIds = roomsForListing.map((room: { id: number }) => room.id);
+    const playerCountMap = new Map<number, number>();
+    if (roomIds.length > 0) {
+      const { data: playerRows } = await supabase
+        .from('_pidr_room_players')
+        .select('room_id')
+        .in('room_id', roomIds);
+
+      (playerRows || []).forEach((row: { room_id: number }) => {
+        playerCountMap.set(row.room_id, (playerCountMap.get(row.room_id) || 0) + 1);
+      });
+    }
     
     // ✅ ОПТИМИЗАЦИЯ ДЛЯ БЕСПЛАТНОГО ПЛАНА: Собираем все host_id и делаем один батч-запрос
     const hostIds = roomsForListing
@@ -180,16 +193,7 @@ export async function GET(req: NextRequest) {
         }
       }
       
-      // Получаем реальное количество игроков из Redis
-      let actualPlayerCount = room.current_players;
-      try {
-        const roomDetails = await getRoomDetails(room.id);
-        actualPlayerCount = roomDetails?.playerCount || room.current_players;
-      } catch (err: any) {
-        console.warn(`⚠️ Ошибка получения деталей комнаты ${room.id} из Redis:`, err);
-        // Используем значение из БД
-        actualPlayerCount = room.current_players;
-      }
+      const actualPlayerCount = playerCountMap.get(room.id) ?? room.current_players ?? 0;
       
       console.log(`📋 [GET ROOMS] Комната ${room.id}: хост=${hostUser?.username || 'Неизвестно'}, игроков=${actualPlayerCount}`);
       
@@ -205,6 +209,7 @@ export async function GET(req: NextRequest) {
         status: room.status,
         is_private: room.is_private,
         isPrivate: room.is_private,
+        hasPassword: Boolean(room.password) || Boolean(room.settings?.hasPassword),
         gameMode: room.settings?.gameMode || 'casual',
         difficulty:
           room.settings?.gameMode === 'pro'

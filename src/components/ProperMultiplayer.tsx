@@ -20,6 +20,7 @@ interface Room {
   current_players: number;
   status: string;
   is_private: boolean;
+  hasPassword?: boolean;
   created_at: string;
   users?: { username: string; avatar?: string };
   players?: any[];
@@ -117,19 +118,21 @@ export const ProperMultiplayer: React.FC = () => {
     }
   }, [user]);
 
-  // Загрузка комнат при открытии лобби + ОЧИСТКА
+  // Загрузка комнат в лобби и на экране присоединения
   useEffect(() => {
-    if (view === 'lobby') {
-      cleanupOldRooms(); // ✅ ОЧИСТКА СТАРЫХ КОМНАТ!
+    if (view === 'lobby' || view === 'join') {
+      if (view === 'lobby') {
+        cleanupOldRooms();
+      }
       fetchRooms();
-      const interval = setInterval(fetchRooms, 8000);
+      const interval = setInterval(fetchRooms, 5000);
       return () => clearInterval(interval);
     }
   }, [view]);
 
-  // ✅ REALTIME ОБНОВЛЕНИЯ СПИСКА КОМНАТ В ЛОББИ
+  // ✅ REALTIME ОБНОВЛЕНИЯ СПИСКА КОМНАТ
   useEffect(() => {
-    if (view !== 'lobby' || !accessChecked || !canPlayMultiplayer) {
+    if ((view !== 'lobby' && view !== 'join') || !accessChecked || !canPlayMultiplayer) {
       return;
     }
 
@@ -461,6 +464,87 @@ export const ProperMultiplayer: React.FC = () => {
     setExistingRoom(null);
   };
 
+  const handleJoinFromList = (room: Room) => {
+    if (room.current_players >= room.max_players) return;
+
+    if (room.hasPassword) {
+      setJoinCode(room.room_code);
+      setView('join');
+      return;
+    }
+
+    void handleJoinRoom(room.room_code);
+  };
+
+  const renderOpenRoomsList = () => (
+    <div className={styles.roomsList}>
+      <div className={styles.roomsHeader}>
+        <h3 className={styles.sectionTitle}>{t.multiplayer.openRooms}</h3>
+        <button
+          type="button"
+          className={`${styles.button} ${styles.refresh}`}
+          onClick={() => void fetchRooms()}
+          disabled={loading}
+          title={t.multiplayer.refreshTitle}
+        >
+          {loading ? `⏳ ${t.game.refresh}` : t.multiplayer.refresh}
+        </button>
+      </div>
+
+      {loading && rooms.length === 0 ? (
+        <PageLoadingScreen
+          fullScreen={false}
+          compact
+          showProgress={false}
+          title={t.multiplayer.pageTitle}
+          subtitle={t.multiplayer.loadingRooms}
+        />
+      ) : rooms.length === 0 ? (
+        <div className={styles.empty}>
+          <p>{t.multiplayer.emptyTitle}</p>
+          <p>{t.multiplayer.emptyHint}</p>
+        </div>
+      ) : (
+        <div className={styles.rooms}>
+          {rooms.map((room) => {
+            const isFull = room.current_players >= room.max_players;
+            return (
+              <div key={room.id} className={styles.roomCard}>
+                <div className={styles.roomInfo}>
+                  <h4 className={styles.roomName}>
+                    {room.name}
+                    {room.is_private ? ' 🔒' : ''}
+                    {room.hasPassword ? ' 🔑' : ''}
+                  </h4>
+                  <p className={styles.roomHost}>
+                    {t.multiplayer.hostPrefix} {room.users?.username || t.multiplayer.unknownHost}
+                  </p>
+                  <p className={styles.roomDetails}>
+                    👥 {room.current_players}/{room.max_players} {t.multiplayer.playersSuffix}
+                  </p>
+                  <p className={styles.roomCode}>{t.multiplayer.codeLabel} {room.room_code}</p>
+                </div>
+
+                <button
+                  type="button"
+                  className={`${styles.button} ${styles.join}`}
+                  onClick={() => handleJoinFromList(room)}
+                  disabled={loading || isFull}
+                >
+                  {isFull
+                    ? t.multiplayer.roomFull
+                    : room.hasPassword
+                      ? `${t.multiplayer.join} 🔑`
+                      : t.multiplayer.join}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+
   const handleJoinRoom = async (roomCode?: string) => {
     const codeToUse = roomCode || joinCode;
     
@@ -790,63 +874,7 @@ export const ProperMultiplayer: React.FC = () => {
             </button>
           </div>
 
-          <div className={styles.roomsList}>
-            <div className={styles.roomsHeader}>
-              <h3 className={styles.sectionTitle}>{t.multiplayer.openRooms}</h3>
-              <button 
-                type="button"
-                className={`${styles.button} ${styles.refresh}`}
-                onClick={async () => {
-                  await fetchRooms();
-                }}
-                disabled={loading}
-                title={t.multiplayer.refreshTitle}
-              >
-                {loading ? `⏳ ${t.game.refresh}` : t.multiplayer.refresh}
-              </button>
-            </div>
-            
-            {loading ? (
-              <PageLoadingScreen
-                fullScreen={false}
-                compact
-                showProgress={false}
-                title={t.multiplayer.pageTitle}
-                subtitle={t.multiplayer.loadingRooms}
-              />
-            ) : rooms.length === 0 ? (
-              <div className={styles.empty}>
-                <p>{t.multiplayer.emptyTitle}</p>
-                <p>{t.multiplayer.emptyHint}</p>
-              </div>
-            ) : (
-              <div className={styles.rooms}>
-                {rooms.map((room) => (
-                  <div key={room.id} className={styles.roomCard}>
-                    <div className={styles.roomInfo}>
-                      <h4 className={styles.roomName}>{room.name}</h4>
-                      <p className={styles.roomHost}>
-                        {t.multiplayer.hostPrefix} {room.users?.username || t.multiplayer.unknownHost}
-                      </p>
-                      <p className={styles.roomDetails}>
-                        👥 {room.current_players}/{room.max_players} {t.multiplayer.playersSuffix}
-                      </p>
-                      <p className={styles.roomCode}>{t.multiplayer.codeLabel} {room.room_code}</p>
-                    </div>
-                    
-                    <button 
-                      type="button"
-                      className={`${styles.button} ${styles.join}`}
-                      onClick={() => handleJoinRoom(room.room_code)}
-                      disabled={loading || room.current_players >= room.max_players}
-                    >
-                      {room.current_players >= room.max_players ? t.multiplayer.roomFull : t.multiplayer.join}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          {renderOpenRoomsList()}
         </div>
       )}
 
@@ -998,10 +1026,10 @@ export const ProperMultiplayer: React.FC = () => {
               {loading ? t.multiplayer.joining : t.multiplayer.joinSubmit}
             </button>
           </div>
+
+          {renderOpenRoomsList()}
         </div>
       )}
-      
-      {/* Модалка замены комнаты */}
       {showReplaceModal && existingRoom && (
         <ReplaceRoomModal
           isOpen={showReplaceModal}

@@ -641,7 +641,7 @@ export default function MultiplayerLobby({
           <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
                       <motion.button
                         onClick={handleAddBot}
-              disabled={isAddingBot}
+              disabled={isAddingBot || lobbyState.players.length >= lobbyState.maxPlayers}
               whileHover={{ scale: 1.02, y: -2 }}
               whileTap={{ scale: 0.98 }}
               style={{
@@ -659,7 +659,11 @@ export default function MultiplayerLobby({
                 transition: 'all 0.2s'
               }}
             >
-              {isAddingBot ? '⏳ Добавление...' : '🤖 Добавить бота'}
+              {isAddingBot
+                ? '⏳ Добавление...'
+                : lobbyState.players.length >= lobbyState.maxPlayers
+                  ? '🤖 Мест нет'
+                  : '🤖 Добавить бота'}
             </motion.button>
 
             <motion.button

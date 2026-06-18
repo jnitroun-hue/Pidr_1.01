@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
-import { atomicJoinRoom } from '@/lib/multiplayer/player-state-manager';
+import { atomicJoinRoom, atomicLeaveRoom } from '@/lib/multiplayer/player-state-manager';
 
 // ✅ Явная конфигурация runtime для Next.js 15
 export const runtime = 'nodejs';
@@ -230,20 +230,32 @@ export async function POST(
 
       console.log(`✅ [ADD BOT] Бот ${botName} успешно добавлен в комнату ${roomId} на позицию ${joinResult.position}`);
 
-      // ✅ ОТПРАВЛЯЕМ BROADCAST ДЛЯ СИНХРОНИЗАЦИИ ВСЕХ КЛИЕНТОВ
       try {
         const channel = supabase.channel(`room:${roomId}`);
-        await channel.send({
-          type: 'broadcast',
-          event: 'player-joined',
-          payload: {
-            userId: String(botId),
-            username: botName,
-            position: joinResult.position,
-            isHost: false,
-            isBot: true,
-            timestamp: Date.now()
-          }
+        await new Promise<void>((resolve) => {
+          const timeout = setTimeout(() => resolve(), 1500);
+          channel.subscribe((status: string) => {
+            if (status === 'SUBSCRIBED') {
+              clearTimeout(timeout);
+              channel
+                .send({
+                  type: 'broadcast',
+                  event: 'player-joined',
+                  payload: {
+                    userId: String(botId),
+                    username: botName,
+                    position: joinResult.position,
+                    isHost: false,
+                    isBot: true,
+                    timestamp: Date.now(),
+                  },
+                })
+                .finally(() => {
+                  supabase.removeChannel(channel);
+                  resolve();
+                });
+            }
+          });
         });
         console.log(`📡 [ADD BOT] Broadcast отправлен для синхронизации клиентов`);
       } catch (broadcastError) {
@@ -281,46 +293,24 @@ export async function POST(
       const botToRemove = bots[0];
       console.log(`🤖 Удаляем бота: ${botToRemove.username}`);
 
-      // УДАЛЯЕМ БОТА
-      const { error: removeError } = await supabase
-        .from('_pidr_room_players')
-        .delete()
-        .eq('id', botToRemove.id);
+      const leaveResult = await atomicLeaveRoom({
+        userId: String(botToRemove.user_id),
+        roomId: String(roomId),
+      });
 
-      if (removeError) {
-        console.error('❌ Ошибка удаления бота:', removeError);
-        return NextResponse.json({ 
-          success: false, 
-          message: 'Ошибка удаления бота: ' + removeError.message 
+      if (!leaveResult.success) {
+        console.error('❌ Ошибка удаления бота через atomicLeaveRoom:', leaveResult.error);
+        return NextResponse.json({
+          success: false,
+          message: leaveResult.error || 'Ошибка удаления бота',
         }, { status: 500 });
-      }
-
-      // После удаления считаем реальное число игроков из таблицы,
-      // чтобы не накапливать ошибки счетчика.
-      const now = new Date().toISOString();
-      const { count: actualCount } = await supabase
-        .from('_pidr_room_players')
-        .select('*', { count: 'exact', head: true })
-        .eq('room_id', roomId);
-
-      const { error: updateError } = await supabase
-        .from('_pidr_rooms')
-        .update({
-          current_players: actualCount ?? Math.max(0, room.current_players - 1),
-          last_activity: now,
-          updated_at: now
-        })
-        .eq('id', roomId);
-
-      if (updateError) {
-        console.error('❌ Ошибка обновления счетчика:', updateError);
       }
 
       console.log(`✅ Бот ${botToRemove.username} удален из комнаты ${roomId}`);
 
-      return NextResponse.json({ 
-        success: true, 
-        message: `Бот ${botToRemove.username} удален`
+      return NextResponse.json({
+        success: true,
+        message: `Бот ${botToRemove.username} удален`,
       });
 
     } else {

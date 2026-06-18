@@ -105,28 +105,6 @@ export async function composeThemeCardBuffer(params: {
   const rank = displayRank(rankRaw, rankNormalized);
   const symbol = suitSymbol(suit);
   const color = suitColor(suit);
-  const isLegendary = theme === 'legendary';
-
-  if (isLegendary) {
-    const bordered = await sharp(themeImage)
-      .resize(300, 420, { fit: 'cover' })
-      .png()
-      .toBuffer();
-
-    const frameSvg = `
-      <svg width="300" height="420">
-        <rect x="4" y="4" width="292" height="412" fill="none" stroke="#000" stroke-width="8"/>
-        <text x="20" y="50" font-family="Arial" font-size="40" font-weight="bold" fill="${color}" stroke="#fff" stroke-width="2">${rank}</text>
-        <text x="20" y="90" font-family="Arial" font-size="36" font-weight="bold" fill="${color}" stroke="#fff" stroke-width="2">${symbol}</text>
-        <text x="260" y="400" font-family="Arial" font-size="40" font-weight="bold" fill="${color}" text-anchor="end" stroke="#fff" stroke-width="2">${rank}</text>
-        <text x="260" y="360" font-family="Arial" font-size="36" font-weight="bold" fill="${color}" text-anchor="end" stroke="#fff" stroke-width="2">${symbol}</text>
-      </svg>`;
-
-    return sharp(bordered)
-      .composite([{ input: Buffer.from(frameSvg), top: 0, left: 0 }])
-      .png()
-      .toBuffer();
-  }
 
   const baseSvg = `
     <svg width="300" height="420">
