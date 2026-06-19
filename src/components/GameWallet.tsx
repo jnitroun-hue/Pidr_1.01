@@ -29,6 +29,8 @@ import ConnectedWalletsList from './ConnectedWalletsList';
 import WalletQuickConnect from './WalletQuickConnect';
 import DailyBonusWheelModal from './DailyBonusWheelModal';
 import { GRAM, formatGramAmount, formatGramRate, gramDisplayFromApi } from '@/lib/crypto/gram-brand';
+import { depositCryptoOptions, getCryptoToken } from '@/lib/crypto/crypto-assets';
+import CryptoIcon from './CryptoIcon';
 
 interface User {
   id: string;
@@ -61,20 +63,7 @@ type PurchaseMode = 'coins' | 'balance';
 type CurrencyMode = 'RUB' | 'USD';
 type WithdrawMethod = 'crypto' | 'bank_card' | 'sberbank' | 'yoo_money' | 'sbp';
 
-function CryptoOptionIcon({ icon }: { icon: string }) {
-  if (icon.startsWith('/')) {
-    return <img src={icon} alt="" width={22} height={22} style={{ display: 'block' }} />;
-  }
-  return <span style={{ fontSize: '22px', lineHeight: '1' }}>{icon}</span>;
-}
-
-const CRYPTO_OPTIONS = [
-  { id: 'TON', icon: GRAM.icon, name: GRAM.name, color: GRAM.color, net: GRAM.networkLabel, eta: '~5 сек' },
-  { id: 'ETH', icon: '⟠', name: 'ETH', color: '#627EEA', net: 'Ethereum (ERC-20)', eta: '2-15 мин' },
-  { id: 'SOL', icon: '◎', name: 'SOL', color: '#9945FF', net: 'Solana (SPL)', eta: '~30 сек' },
-  { id: 'USDT', icon: '₮', name: 'USDT', color: '#26A17B', net: 'Tether (USDT)', eta: '2-15 мин' },
-  { id: 'BTC', icon: '₿', name: 'BTC', color: '#F7931A', net: 'Bitcoin', eta: '10-60 мин' },
-] as const;
+const CRYPTO_OPTIONS = depositCryptoOptions();
 
 const PAYMENT_METHODS = [
   { id: 'bank_card' as const, name: 'Visa / MC', accent: '#ffd700' },
@@ -1227,6 +1216,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
               <div className="crypto-list">
                 {['TON', 'ETH', 'USDT', 'BTC', 'SOL'].map((crypto) => (
                   <div key={crypto} className="crypto-item">
+                    <CryptoIcon src={getCryptoToken(crypto).icon} size={20} alt={crypto} />
                     <span className="crypto-name">{gramDisplayFromApi(crypto)}</span>
                     <span className="crypto-balance">{formatCryptoBalance(crypto)}</span>
                     <button 
@@ -1777,7 +1767,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
                               display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: '3px',
                               boxShadow: selectedCrypto === c.id ? `0 4px 15px ${c.color}25` : 'none',
                             }}>
-                              <CryptoOptionIcon icon={c.icon} />
+                              <CryptoIcon src={c.icon} size={22} alt={c.name} />
                               <span>{c.name}</span>
                             </button>
                           ))}
@@ -2037,7 +2027,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
                             minWidth: 0,
                             boxShadow: selectedCrypto === c.id ? `0 4px 15px ${c.color}20` : 'none',
                           }}>
-                            <CryptoOptionIcon icon={c.icon} />
+                            <CryptoIcon src={c.icon} size={22} alt={c.name} />
                             {c.name}
                           </button>
                         ))}

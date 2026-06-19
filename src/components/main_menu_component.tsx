@@ -12,11 +12,13 @@ import { useTranslations } from '../lib/i18n/translations'
 import OnlineIndicator from './OnlineIndicator'
 import CardDealerHero from './CardDealerHero'
 import { GRAM } from '@/lib/crypto/gram-brand'
+import { CRYPTO_TOKENS } from '@/lib/crypto/crypto-assets'
+import CryptoIcon from './CryptoIcon'
 
 const tokens = [
-  { name: GRAM.name, symbol: GRAM.symbol, color: GRAM.color },
-  { name: 'SOLANA', symbol: 'SOL', color: '#9945ff' },
-  { name: 'ETHEREUM', symbol: 'ETH', color: '#627eea' },
+  { name: GRAM.name, symbol: GRAM.symbol, color: GRAM.color, icon: CRYPTO_TOKENS.GRAM.icon },
+  { name: 'SOLANA', symbol: 'SOL', color: CRYPTO_TOKENS.SOL.color, icon: CRYPTO_TOKENS.SOL.icon },
+  { name: 'ETHEREUM', symbol: 'ETH', color: CRYPTO_TOKENS.ETH.color, icon: CRYPTO_TOKENS.ETH.icon },
 ]
 
 interface MainMenuProps {
@@ -371,7 +373,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
                 gap: '5px'
               }}
             >
-              <div style={{ fontSize: '24px' }}>💎</div>
+              <CryptoIcon src={CRYPTO_TOKENS.GRAM.icon} size={28} alt={GRAM.symbol} />
               <div style={{ 
                 color: 'white', 
                 fontSize: '12px', 
@@ -401,7 +403,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
                 gap: '5px'
               }}
             >
-              <div style={{ fontSize: '24px' }}>⚡</div>
+              <CryptoIcon src={CRYPTO_TOKENS.SOL.icon} size={28} alt="SOL" />
               <div style={{ 
                 color: 'white', 
                 fontSize: '12px', 
@@ -431,7 +433,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
                 gap: '5px'
               }}
             >
-              <div style={{ fontSize: '24px' }}>🦄</div>
+              <CryptoIcon src={CRYPTO_TOKENS.ETH.icon} size={28} alt="ETH" />
               <div style={{ 
                 color: 'white', 
                 fontSize: '12px', 

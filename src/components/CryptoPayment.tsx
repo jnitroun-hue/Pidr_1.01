@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Coins, Zap, ArrowRight, Check, Copy, ExternalLink } from 'lucide-react';
 import { GRAM } from '@/lib/crypto/gram-brand';
+import { CRYPTO_TOKENS } from '@/lib/crypto/crypto-assets';
+import CryptoIcon from './CryptoIcon';
 
 function cryptoDisplaySymbol(symbol: string): string {
   return symbol === 'TON' ? GRAM.symbol : symbol;
@@ -46,36 +48,36 @@ export default function CryptoPayment({ onCoinsAdded }: CryptoPaymentProps) {
     {
       symbol: 'USDT',
       name: 'Tether USD',
-      icon: '💵',
-      color: '#26a17b',
-      rate: 150, // 1 USDT = 150 игровых монет (базовая валюта)
+      icon: CRYPTO_TOKENS.USDT.icon,
+      color: CRYPTO_TOKENS.USDT.color,
+      rate: 150,
       minAmount: 1,
       decimals: 6
     },
     {
       symbol: 'TON',
       name: GRAM.name,
-      icon: GRAM.icon,
-      color: GRAM.color,
-      rate: 750, // ~$5 * 150 = 750 монет
+      icon: CRYPTO_TOKENS.GRAM.icon,
+      color: CRYPTO_TOKENS.GRAM.color,
+      rate: 750,
       minAmount: 0.1,
       decimals: 9
     },
     {
       symbol: 'ETH',
       name: 'Ethereum',
-      icon: '🦄',
-      color: '#627eea',
-      rate: 375000, // ~$2500 * 150 = 375000 монет
+      icon: CRYPTO_TOKENS.ETH.icon,
+      color: CRYPTO_TOKENS.ETH.color,
+      rate: 375000,
       minAmount: 0.001,
       decimals: 18
     },
     {
       symbol: 'SOL',
       name: 'Solana',
-      icon: '⚡',
-      color: '#9945ff',
-      rate: 30000, // ~$200 * 150 = 30000 монет
+      icon: CRYPTO_TOKENS.SOL.icon,
+      color: CRYPTO_TOKENS.SOL.color,
+      rate: 30000,
       minAmount: 0.01,
       decimals: 9
     }

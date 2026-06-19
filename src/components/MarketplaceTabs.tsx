@@ -5,7 +5,10 @@ import Image from 'next/image';
 import { ShoppingBag, X, TrendingUp, Calendar } from 'lucide-react';
 import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
 import { fiatMethodLabel } from '@/lib/marketplace/payment-meta';
+import { listingHasValidPrice } from '@/lib/marketplace/listing-price';
 import { GRAM } from '@/lib/crypto/gram-brand';
+import { CRYPTO_TOKENS } from '@/lib/crypto/crypto-assets';
+import CryptoIcon from '@/components/CryptoIcon';
 
 export { SellNftModal as SellModal } from '@/components/SellNftModal';
 
@@ -57,12 +60,7 @@ interface HelperFunctions {
 }
 
 function listingHasPrice(listing: Listing): boolean {
-  return !!(
-    (listing.price_coins && listing.price_coins > 0) ||
-    (listing.price_ton && listing.price_ton > 0) ||
-    (listing.price_sol && listing.price_sol > 0) ||
-    (listing.price_rub != null && Number(listing.price_rub) > 0)
-  );
+  return listingHasValidPrice(listing);
 }
 
 // ====================================================================
@@ -75,7 +73,9 @@ interface BuyTabProps extends HelperFunctions {
 }
 
 export function BuyTab({ listings, onBuy, userCoins, getSuitColor, getSuitSymbol, getRankDisplay }: BuyTabProps) {
-  if (listings.length === 0) {
+  const buyableListings = listings.filter(listingHasPrice);
+
+  if (buyableListings.length === 0) {
     return (
       <div style={{ textAlign: 'center', padding: '60px 20px' }}>
         <ShoppingBag size={64} style={{ color: '#64748b', margin: '0 auto 20px' }} />
@@ -96,7 +96,7 @@ export function BuyTab({ listings, onBuy, userCoins, getSuitColor, getSuitSymbol
       gap: '20px',
       padding: '10px'
     }}>
-      {listings.map((listing, index) => (
+      {buyableListings.map((listing, index) => (
         <motion.div
           key={listing.id}
           initial={{ opacity: 0, y: 20 }}
@@ -221,7 +221,7 @@ export function BuyTab({ listings, onBuy, userCoins, getSuitColor, getSuitSymbol
                 justifyContent: 'center',
                 gap: '6px'
               }}>
-                <span style={{ fontSize: '22px' }}>💎</span>
+                <CryptoIcon src={CRYPTO_TOKENS.GRAM.icon} size={22} alt={GRAM.symbol} />
                 {listing.price_ton} {GRAM.symbol}
               </div>
             )}
@@ -236,7 +236,7 @@ export function BuyTab({ listings, onBuy, userCoins, getSuitColor, getSuitSymbol
                 justifyContent: 'center',
                 gap: '6px'
               }}>
-                <span style={{ fontSize: '22px' }}>☀️</span>
+                <CryptoIcon src={CRYPTO_TOKENS.SOL.icon} size={22} alt="SOL" />
                 {listing.price_sol} SOL
               </div>
             )}
@@ -789,8 +789,18 @@ function ListingCard({ listing, onCancel, getSuitColor, getSuitSymbol, getRankDi
             {listing.price_coins != null && listing.price_coins > 0 && (
               <div>💰 {listing.price_coins?.toLocaleString()} монет</div>
             )}
-            {listing.price_ton != null && listing.price_ton > 0 && <div>💎 {listing.price_ton} {GRAM.symbol}</div>}
-            {listing.price_sol != null && listing.price_sol > 0 && <div>☀️ {listing.price_sol} SOL</div>}
+            {listing.price_ton != null && listing.price_ton > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <CryptoIcon src={CRYPTO_TOKENS.GRAM.icon} size={18} alt={GRAM.symbol} />
+                {listing.price_ton} {GRAM.symbol}
+              </div>
+            )}
+            {listing.price_sol != null && listing.price_sol > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <CryptoIcon src={CRYPTO_TOKENS.SOL.icon} size={18} alt="SOL" />
+                {listing.price_sol} SOL
+              </div>
+            )}
             {listing.price_rub != null && Number(listing.price_rub) > 0 && (
               <div>₽ {Number(listing.price_rub).toLocaleString('ru-RU')}</div>
             )}
@@ -861,8 +871,8 @@ function SoldCard({ listing, getSuitColor, getSuitSymbol, getRankDisplay }: any)
           </p>
           <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#10b981' }}>
             {listing.price_coins && `✅ Продано за ${listing.price_coins.toLocaleString()} 💰 монет`}
-            {listing.price_ton && `✅ Продано за ${listing.price_ton} 💎 ${GRAM.symbol}`}
-            {listing.price_sol && `✅ Продано за ${listing.price_sol} ☀️ SOL`}
+            {listing.price_ton && `✅ Продано за ${listing.price_ton} ${GRAM.symbol}`}
+            {listing.price_sol && `✅ Продано за ${listing.price_sol} SOL`}
             {listing.price_rub != null && Number(listing.price_rub) > 0 && `✅ Продано за ${Number(listing.price_rub).toLocaleString('ru-RU')} ₽`}
           </div>
         </div>

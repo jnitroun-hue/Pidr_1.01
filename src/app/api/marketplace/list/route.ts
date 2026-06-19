@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { listingHasValidPrice } from '@/lib/marketplace/listing-price';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -182,10 +183,23 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Только лоты с карточкой и картинкой (иначе в магазине пустой слот)
+    // Только лоты с карточкой, картинкой и указанной ценой
     filteredData = filteredData.filter(
-      (item: any) => item.nft_card?.id && item.nft_card?.image_url
+      (item: any) => item.nft_card?.id && item.nft_card?.image_url && listingHasValidPrice(item)
     );
+
+    const brokenIds = (data || [])
+      .filter((item: any) => item.nft_card?.id && !listingHasValidPrice(item))
+      .map((item: any) => item.id)
+      .filter(Boolean);
+
+    if (brokenIds.length > 0) {
+      void db
+        .from('_pidr_nft_marketplace')
+        .update({ status: 'cancelled' })
+        .in('id', brokenIds)
+        .eq('status', 'active');
+    }
     
     console.log(`✅ [Marketplace List] Найдено ${filteredData.length} лотов`);
     

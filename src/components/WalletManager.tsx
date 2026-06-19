@@ -2,16 +2,17 @@
 
 import { useState, useEffect } from 'react';
 import { Box, VStack, HStack, Text, Button, Tabs } from '@chakra-ui/react';
-import { FaWallet, FaHistory, FaBitcoin, FaEthereum, FaCoins } from 'react-icons/fa';
-import { SiSolana } from 'react-icons/si';
+import { FaWallet, FaHistory, FaCoins } from 'react-icons/fa';
 import { useWalletStore } from '../store/walletStore';
 import CryptoExchange from './CryptoExchange';
 import { GRAM } from '@/lib/crypto/gram-brand';
+import { CRYPTO_TOKENS } from '@/lib/crypto/crypto-assets';
+import CryptoIcon from './CryptoIcon';
 
 const walletIcons = {
-  'TON': { icon: FaBitcoin, color: GRAM.color, symbol: GRAM.symbol, name: GRAM.name },
-  'SOL': { icon: SiSolana, color: '#9945ff', symbol: 'SOL', name: 'SOL' },
-  'ETH': { icon: FaEthereum, color: '#627eea', symbol: 'ETH', name: 'ETH' },
+  TON: { icon: CRYPTO_TOKENS.GRAM.icon, color: CRYPTO_TOKENS.GRAM.color, symbol: GRAM.symbol, name: GRAM.name },
+  SOL: { icon: CRYPTO_TOKENS.SOL.icon, color: CRYPTO_TOKENS.SOL.color, symbol: 'SOL', name: 'Solana' },
+  ETH: { icon: CRYPTO_TOKENS.ETH.icon, color: CRYPTO_TOKENS.ETH.color, symbol: 'ETH', name: 'Ethereum' },
 };
 
 interface WalletManagerProps {
@@ -211,7 +212,6 @@ export default function WalletManager({ showExchange = true, onCoinsAdded }: Wal
         <VStack gap={4}>
           {wallets.map((wallet) => {
             const walletConfig = walletIcons[wallet.name as keyof typeof walletIcons];
-            const IconComponent = walletConfig?.icon || FaWallet;
             
             return (
               <Box
@@ -241,7 +241,7 @@ export default function WalletManager({ showExchange = true, onCoinsAdded }: Wal
                       alignItems="center"
                       justifyContent="center"
                     >
-                      <IconComponent color="white" size={24} />
+                      <CryptoIcon src={walletConfig?.icon || '/img/gram-icon.svg'} size={24} alt={wallet.symbol} />
                     </Box>
                     
                     <VStack align="start" gap={1}>

@@ -8,13 +8,14 @@ import {
   FaExchangeAlt, FaArrowUp, FaArrowDown, FaHistory, FaQrcode,
   FaChevronRight, FaFire
 } from 'react-icons/fa';
-import { SiTon } from 'react-icons/si';
 import GameWallet from '@/components/GameWallet';
 import WalletQuickConnect from '@/components/WalletQuickConnect';
 import { useLanguage } from '@/components/LanguageSwitcher';
 import { useTranslations } from '@/lib/i18n/translations';
 import PageLoadingScreen from '@/components/PageLoadingScreen';
 import { GRAM } from '@/lib/crypto/gram-brand';
+import CryptoIcon from '@/components/CryptoIcon';
+import { getCryptoToken } from '@/lib/crypto/crypto-assets';
 
 // ─── Типы ───────────────────────────────────────────────────────────────────
 interface Transaction {
@@ -36,8 +37,8 @@ function TxIcon({ type }: { type: string }) {
     return <FaStar className="text-yellow-400" />;
   if (t.includes('purchase') || t.includes('buy') || t.includes('shop'))
     return <FaShoppingCart className="text-red-400" />;
-  if (t.includes('deposit') || t.includes('ton') || t.includes('crypto'))
-    return <SiTon className="text-blue-400" />;
+  if (t.includes('deposit') || t.includes('ton') || t.includes('crypto') || t.includes('gram'))
+    return <CryptoIcon src={getCryptoToken('TON').icon} size={16} alt="Gram" />;
   if (t.includes('referral') || t.includes('invite'))
     return <FaShareAlt className="text-green-400" />;
   return <FaExchangeAlt className="text-gray-400" />;

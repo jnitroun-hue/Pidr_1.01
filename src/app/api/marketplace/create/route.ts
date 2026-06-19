@@ -6,6 +6,8 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 import { NFT_CARDS_TABLE, NFT_MARKETPLACE_TABLE } from '@/lib/nft/constants';
 import { GRAM } from '@/lib/crypto/gram-brand';
+import { listingHasValidPrice } from '@/lib/marketplace/listing-price';
+import { isYooKassaConfigured } from '@/lib/payments/yookassa-config';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -135,6 +137,21 @@ export async function POST(request: NextRequest) {
         ? fiat_payment_method
         : 'bank_card';
 
+    if (priceRubNum !== null && !Number.isNaN(priceRubNum) && priceRubNum > 0) {
+      const needsPlatformCheckout =
+        resolvedFiat === 'bank_card' || resolvedFiat === 'yoo_money';
+      if (needsPlatformCheckout && !isYooKassaConfigured()) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Оплата картой и ЮMoney пока недоступны — платёжная система не подключена.',
+            hint: 'Выберите СБП или SberPay: покупатель переведёт вам напрямую по номеру телефона или QR.',
+          },
+          { status: 503 }
+        );
+      }
+    }
+
     const insertRow: Record<string, unknown> = {
       nft_card_id: nftCardId,
       seller_user_id: dbUserId,
@@ -216,6 +233,23 @@ export async function POST(request: NextRequest) {
           hint: isSchemaCompatError(String(insertError.message))
             ? 'Выполните supabase/migrations/0007_marketplace_rub.sql и 0010_marketplace_seller_payment.sql в Supabase'
             : undefined,
+        },
+        { status: 500 }
+      );
+    }
+
+    if (!listing || !listingHasValidPrice(listing)) {
+      if (listing?.id) {
+        await db
+          .from(NFT_MARKETPLACE_TABLE)
+          .update({ status: 'cancelled' })
+          .eq('id', listing.id);
+      }
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Лот сохранён без цены — продажа отменена.',
+          hint: 'Для оплаты в рублях выполните миграции 0007 и 0010 в Supabase SQL Editor, затем выставьте лот снова.',
         },
         { status: 500 }
       );

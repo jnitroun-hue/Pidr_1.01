@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { isYooKassaConfigured } from '@/lib/payments/yookassa-config';
 
 /**
  * API endpoint для получения публичных конфигов на клиенте
@@ -25,7 +26,8 @@ export async function GET() {
     // Возвращаем публичные данные
     return NextResponse.json({
       supabaseUrl,
-      supabaseAnonKey
+      supabaseAnonKey,
+      yookassaEnabled: isYooKassaConfigured(),
     });
   } catch (error: unknown) {
     console.error('❌ [/api/config] Ошибка:', error);

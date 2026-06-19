@@ -8,6 +8,7 @@ import {
   getDailyOfferClaimState,
   recordDailyOfferClaim,
 } from '@/lib/marketplace/daily-offer-claims';
+import { listingHasValidPrice } from '@/lib/marketplace/listing-price';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -57,6 +58,7 @@ function listingToRub(item: MarketplaceListing): number | null {
 
 function buildOffer(listings: MarketplaceListing[]) {
   const eligible = listings
+    .filter((item) => listingHasValidPrice(item))
     .map((item) => {
       const rub = listingToRub(item);
       if (!rub) return null;
@@ -174,6 +176,23 @@ async function getOfferFromDb() {
   const db = getSupabaseAdmin();
   if (!db) return { offer: null, error: 'База данных недоступна' };
 
+  const dayTag = new Date().toISOString().slice(0, 10);
+  const cacheKey = `marketplace:daily-offer:payload:${dayTag}`;
+  const redis = getRedis();
+
+  if (redis) {
+    try {
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        const parsed = JSON.parse(cached) as {
+          offer: ReturnType<typeof buildOffer> & { promoImageUrl?: string | null; isClonedImage?: boolean } | null;
+          error: string | null;
+        };
+        return parsed;
+      }
+    } catch { /* ignore */ }
+  }
+
   const { data, error } = await db
     .from('_pidr_nft_marketplace')
     .select(`
@@ -202,10 +221,18 @@ async function getOfferFromDb() {
   );
 
   const { sourceImageUrl, ...rest } = rawOffer;
-  return {
+  const result = {
     offer: { ...rest, promoImageUrl, isClonedImage },
-    error: null,
+    error: null as string | null,
   };
+
+  if (redis) {
+    try {
+      await redis.set(cacheKey, JSON.stringify(result), { ex: 26 * 60 * 60 });
+    } catch { /* ignore */ }
+  }
+
+  return result;
 }
 
 async function buyDailyOfferWithCoins(dbUserId: number, listingId: number, priceCoins: number) {

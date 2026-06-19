@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FaCheckCircle, FaPlus, FaWallet, FaExclamationTriangle } from 'react-icons/fa';
 import { GRAM } from '@/lib/crypto/gram-brand';
+import { getCryptoToken } from '@/lib/crypto/crypto-assets';
+import CryptoIcon from './CryptoIcon';
 
 interface Wallet {
   id: number;
@@ -68,29 +70,12 @@ export default function ConnectedWalletsList({
   };
 
   const getWalletIcon = (type: string) => {
-    switch (type.toLowerCase()) {
-      case 'ton':
-        return '💎';
-      case 'sol':
-        return '◎';
-      case 'eth':
-        return 'Ξ';
-      default:
-        return '💳';
-    }
+    const token = getCryptoToken(type === 'ton' ? 'TON' : type === 'sol' ? 'SOL' : type === 'eth' ? 'ETH' : type);
+    return <CryptoIcon src={token.icon} size={24} alt={token.name} />;
   };
 
   const getWalletColor = (type: string) => {
-    switch (type.toLowerCase()) {
-      case 'ton':
-        return '#0098ea';
-      case 'sol':
-        return '#dc26ff';
-      case 'eth':
-        return '#627eea';
-      default:
-        return '#94a3b8';
-    }
+    return getCryptoToken(type === 'ton' ? 'TON' : type === 'sol' ? 'SOL' : type === 'eth' ? 'ETH' : type).color;
   };
 
   const getWalletName = (type: string) => {
@@ -214,14 +199,12 @@ export default function ConnectedWalletsList({
                   width: '40px',
                   height: '40px',
                   borderRadius: '10px',
-                  background: `linear-gradient(135deg, ${walletColor} 0%, ${walletColor}dd 100%)`,
+                  background: 'rgba(15, 23, 42, 0.85)',
+                  border: `1px solid ${walletColor}66`,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '20px',
-                  fontWeight: 'bold',
-                  color: '#ffffff',
-                  boxShadow: `0 4px 12px ${walletColor}40`
+                  boxShadow: `0 4px 12px ${walletColor}30`
                 }}>
                   {getWalletIcon(wallet.wallet_type)}
                 </div>

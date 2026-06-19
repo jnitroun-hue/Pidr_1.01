@@ -133,7 +133,16 @@ export default function ShopPage() {
     };
 
     loadUser();
+    void loadDailyPromo();
   }, []);
+
+  // Premium повторно после авторизации (Telegram WebApp иногда позже отдаёт initData)
+  useEffect(() => {
+    if (loading) return;
+    void fetchPremiumStatus().then((p) => {
+      if (p) setPremium(p);
+    });
+  }, [loading]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -162,7 +171,10 @@ export default function ShopPage() {
   }, [premium]);
 
   useEffect(() => {
-    const refresh = () => { void fetchPremiumStatus().then((p) => { if (p) setPremium(p); }); };
+    const refresh = () => {
+      void fetchPremiumStatus().then((p) => { if (p) setPremium(p); });
+      void loadDailyPromo();
+    };
     const onVisible = () => {
       if (document.visibilityState === 'visible') refresh();
     };

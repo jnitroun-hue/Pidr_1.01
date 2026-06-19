@@ -1,12 +1,13 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import { GRAM } from '@/lib/crypto/gram-brand';
+import { CRYPTO_TOKENS } from '@/lib/crypto/crypto-assets';
 
 const coins = [
-  { name: GRAM.name, icon: GRAM.icon, value: 12345.6789 },
-  { name: 'Trump', icon: '/img/trump-icon.svg', value: 9876.5432 },
-  { name: 'Solana', icon: '/img/solana-icon.svg', value: 23456.7890 },
-  { name: 'Jetton', icon: '/img/jetton-icon.svg', value: 10000.0001 },
+  { name: GRAM.name, icon: CRYPTO_TOKENS.GRAM.icon, value: 12345.6789 },
+  { name: 'Bitcoin', icon: CRYPTO_TOKENS.BTC.icon, value: 9876.5432 },
+  { name: 'Solana', icon: CRYPTO_TOKENS.SOL.icon, value: 23456.7890 },
+  { name: 'Jetton', icon: CRYPTO_TOKENS.JETTON.icon, value: 10000.0001 },
 ];
 
 function formatCrypto(val: number) {

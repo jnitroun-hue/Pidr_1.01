@@ -8,6 +8,8 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { CRYPTO_TOKENS } from '@/lib/crypto/crypto-assets';
+import CryptoIcon from '@/components/CryptoIcon';
 import ManualWalletInput from './ManualWalletInput';
 import { getApiHeaders } from '@/lib/api-headers';
 import { appConfirm } from '@/lib/app-notice';
@@ -239,7 +241,7 @@ export default function SolanaWalletConnect({ onConnect, onDisconnect, compact =
             boxShadow: compact ? '0 2px 12px rgba(0,136,204,0.25)' : undefined,
           }}
         >
-          <span style={{ fontSize: compact ? '15px' : '18px' }}>◎</span>
+          <CryptoIcon src={CRYPTO_TOKENS.SOL.icon} size={compact ? 18 : 22} alt="SOL" />
           {loading ? '…' : compact ? 'SOL' : 'Подключить Solana'}
         </button>
       )}

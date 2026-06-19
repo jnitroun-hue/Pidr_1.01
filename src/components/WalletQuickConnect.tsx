@@ -8,6 +8,8 @@ import { solanaConnector } from '@/lib/wallets/solana-connector';
 import { ethereumConnector } from '@/lib/wallets/ethereum-connector';
 import { getApiHeaders } from '@/lib/api-headers';
 import { GRAM } from '@/lib/crypto/gram-brand';
+import { WALLET_APPS } from '@/lib/crypto/crypto-assets';
+import CryptoIcon from '@/components/CryptoIcon';
 import { useShallow } from 'zustand/react/shallow';
 import styles from './WalletQuickConnect.module.css';
 
@@ -19,11 +21,11 @@ type PendingTonWallet = {
 } | null;
 
 const walletOptions = [
-  { id: 'ton-wallet', label: GRAM.walletLabel, type: 'ton' as WalletType, accent: GRAM.color, badge: 'G' },
-  { id: 'tonkeeper', label: 'Tonkeeper', type: 'ton' as WalletType, accent: GRAM.color, badge: 'K' },
-  { id: 'metamask', label: 'MetaMask', type: 'eth' as WalletType, accent: '#f59e0b', badge: 'M' },
-  { id: 'trust', label: 'Trust Wallet', type: 'eth' as WalletType, accent: '#2563eb', badge: 'TW' },
-  { id: 'phantom', label: 'Phantom', type: 'sol' as WalletType, accent: '#8b5cf6', badge: 'P' },
+  { ...WALLET_APPS['telegram-wallet'], type: 'ton' as WalletType },
+  { ...WALLET_APPS.tonkeeper, type: 'ton' as WalletType },
+  { ...WALLET_APPS.metamask, type: 'eth' as WalletType },
+  { ...WALLET_APPS.trust, type: 'eth' as WalletType },
+  { ...WALLET_APPS.phantom, type: 'sol' as WalletType },
 ] as const;
 
 type WalletQuickConnectProps = {
@@ -92,14 +94,14 @@ export default function WalletQuickConnect({ className = '', variant = 'default'
     return result;
   };
 
-  const handleTonWallet = async (walletId: 'ton-wallet' | 'tonkeeper', label: string) => {
+  const handleTonWallet = async (walletId: 'telegram-wallet' | 'tonkeeper', label: string) => {
     setLoadingWalletId(walletId);
     setStatusMessage(null);
-    setPendingTonWallet({ label, appName: walletId === 'ton-wallet' ? 'telegram-wallet' : 'tonkeeper' });
+    setPendingTonWallet({ label, appName: walletId === 'telegram-wallet' ? 'telegram-wallet' : 'tonkeeper' });
     try {
       const tonUi = tonConnectUI as { openSingleWalletModal?: (name: string) => Promise<void> };
       if (typeof tonUi?.openSingleWalletModal === 'function') {
-        await tonUi.openSingleWalletModal(walletId === 'ton-wallet' ? 'telegram-wallet' : 'tonkeeper');
+        await tonUi.openSingleWalletModal(walletId === 'telegram-wallet' ? 'telegram-wallet' : 'tonkeeper');
       } else {
         await tonConnectUI.openModal();
       }
@@ -170,7 +172,7 @@ export default function WalletQuickConnect({ className = '', variant = 'default'
   };
 
   const onWalletClick = (wallet: (typeof walletOptions)[number]) => {
-    if (wallet.id === 'ton-wallet' || wallet.id === 'tonkeeper') {
+    if (wallet.id === 'telegram-wallet' || wallet.id === 'tonkeeper') {
       void handleTonWallet(wallet.id, wallet.label);
       return;
     }
@@ -178,7 +180,7 @@ export default function WalletQuickConnect({ className = '', variant = 'default'
       void handlePhantom();
       return;
     }
-    void handleEthereumWallet(wallet.id, wallet.label);
+    void handleEthereumWallet(wallet.id as 'metamask' | 'trust', wallet.label);
   };
 
   const rootClass = `${styles.root} ${variant === 'embedded' ? styles.rootEmbedded : ''} ${className}`.trim();
@@ -229,7 +231,13 @@ export default function WalletQuickConnect({ className = '', variant = 'default'
                   className={styles.walletBadge}
                   style={{ background: `linear-gradient(135deg, ${wallet.accent}, ${wallet.accent}cc)` }}
                 >
-                  {isLoading ? <Loader2 size={16} className={styles.spin} /> : isConnected ? <CheckCircle2 size={18} /> : wallet.badge}
+                  {isLoading ? (
+                    <Loader2 size={16} className={styles.spin} />
+                  ) : isConnected ? (
+                    <CheckCircle2 size={18} />
+                  ) : (
+                    <CryptoIcon src={wallet.icon} size={22} alt={wallet.label} style={{ borderRadius: 6 }} />
+                  )}
                 </div>
               </div>
             </button>

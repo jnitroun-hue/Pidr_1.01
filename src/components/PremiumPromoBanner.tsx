@@ -5,6 +5,7 @@ import { Crown, Gift, Flame, Zap, Sparkles } from 'lucide-react';
 import { PREMIUM_PRICE_RUB, PREMIUM_PRICE_COINS } from '@/lib/premium/constants';
 import { formatCountdownLabel } from '@/lib/premium/countdown';
 import { usePremiumCountdown } from '@/hooks/usePremiumCountdown';
+import { isPremiumUsable } from '@/lib/premium/refresh-premium';
 import type { PremiumStatus } from '@/lib/premium/premium-service';
 
 interface PremiumPromoBannerProps {
@@ -31,7 +32,7 @@ function CountdownBox({ value, label }: { value: string; label: string }) {
 }
 
 export default function PremiumPromoBanner({ premium, compact = false, onOpenPurchase }: PremiumPromoBannerProps) {
-  const isActive = premium?.isPremium;
+  const isActive = isPremiumUsable(premium);
   const countdown = usePremiumCountdown(premium?.expiresAt, premium?.startedAt);
 
   if (isActive && premium) {

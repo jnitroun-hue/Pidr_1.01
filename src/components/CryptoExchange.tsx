@@ -2,17 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { Box, VStack, HStack, Text, Input, Button, Alert } from '@chakra-ui/react';
-import { FaExchangeAlt, FaCoins, FaBitcoin, FaEthereum } from 'react-icons/fa';
-import { SiSolana } from 'react-icons/si';
+import { FaExchangeAlt, FaCoins } from 'react-icons/fa';
 import { useWalletStore } from '../store/walletStore';
 import { CryptoType } from '../lib/wallets/wallet-service';
 import { gramDisplayFromApi } from '@/lib/crypto/gram-brand';
-
-const cryptoIcons: Record<CryptoType, any> = {
-  'TON': FaBitcoin,
-  'SOL': SiSolana,
-  'ETH': FaEthereum,
-};
+import { getCryptoToken } from '@/lib/crypto/crypto-assets';
+import CryptoIcon from './CryptoIcon';
 
 interface CryptoExchangeProps {
   onSuccess?: (amount: number) => void;
@@ -62,7 +57,7 @@ export default function CryptoExchange({ onSuccess }: CryptoExchangeProps) {
   };
 
   const selectedRate = exchangeRates.find(rate => rate.crypto === selectedCrypto);
-  const IconComponent = cryptoIcons[selectedCrypto];
+  const selectedToken = getCryptoToken(selectedCrypto);
 
   return (
     <Box
@@ -163,7 +158,7 @@ export default function CryptoExchange({ onSuccess }: CryptoExchangeProps) {
               transform="translateY(-50%)"
               color="#22c55e"
             >
-              <IconComponent size={20} />
+              <CryptoIcon src={selectedToken.icon} size={20} alt={selectedToken.name} />
             </Box>
           </Box>
         </Box>

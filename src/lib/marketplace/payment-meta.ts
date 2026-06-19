@@ -1,4 +1,5 @@
 import { GRAM } from '@/lib/crypto/gram-brand';
+import { CRYPTO_TOKENS } from '@/lib/crypto/crypto-assets';
 
 export type SellCategory = 'coins' | 'crypto' | 'fiat';
 /** GRAM = нативный токен TON (legacy API: TON) */
@@ -7,8 +8,8 @@ export type FiatMethod = 'bank_card' | 'sbp' | 'yoo_money' | 'sberbank';
 export type FiatReceiveMode = 'phone' | 'qr';
 
 export const CRYPTO_OPTIONS: { id: SellCrypto; label: string; icon: string; color: string }[] = [
-  { id: 'GRAM', label: GRAM.name, icon: GRAM.icon, color: GRAM.color },
-  { id: 'SOL', label: 'Solana', icon: '/img/solana-icon.svg', color: '#9945ff' },
+  { id: 'GRAM', label: GRAM.name, icon: CRYPTO_TOKENS.GRAM.icon, color: CRYPTO_TOKENS.GRAM.color },
+  { id: 'SOL', label: 'Solana', icon: CRYPTO_TOKENS.SOL.icon, color: CRYPTO_TOKENS.SOL.color },
 ];
 
 export const FIAT_OPTIONS: {

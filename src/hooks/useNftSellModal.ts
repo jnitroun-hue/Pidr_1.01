@@ -147,9 +147,19 @@ export function useNftSellModal(onListed?: () => void) {
         (created?.price_rub != null && Number(created.price_rub) > 0);
 
       if (!hasPrice) {
+        if (created?.id) {
+          try {
+            await fetch('/api/marketplace/cancel', {
+              method: 'POST',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json', ...getApiHeaders() },
+              body: JSON.stringify({ listing_id: created.id }),
+            });
+          } catch { /* ignore */ }
+        }
         await appAlert(
-          'Лот создан без цены — выполните миграции БД (0007 и 0010) в Supabase SQL Editor и выставьте лот снова.',
-          { title: 'Нужна миграция БД', type: 'error' }
+          'Лот не был опубликован: цена не сохранилась в базе. Для продажи за ₽ выполните миграции 0007 и 0010 в Supabase или выберите СБП/SberPay вместо карты, пока ЮKassa не подключена.',
+          { title: 'Не удалось выставить', type: 'error' }
         );
         return;
       }
