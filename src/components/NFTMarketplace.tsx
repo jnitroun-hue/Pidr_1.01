@@ -8,6 +8,7 @@ import { BuyPaymentModal } from '@/components/BuyPaymentModal';
 import { useNftSellModal } from '@/hooks/useNftSellModal';
 import { getApiHeaders } from '@/lib/api-headers';
 import { appAlert, appConfirm } from '@/lib/app-notice';
+import { gramDisplayFromApi } from '@/lib/crypto/gram-brand';
 import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
 import PageLoadingScreen from '@/components/PageLoadingScreen';
 
@@ -283,7 +284,7 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
             const opened = window.open(data.payment_url, '_blank');
             if (!opened) {
               await navigator.clipboard.writeText(data.payment_url);
-              await appAlert(`Ссылка скопирована. Оплатите ${amount} ${currency} в кошельке.`, {
+              await appAlert(`Ссылка скопирована. Оплатите ${amount} ${gramDisplayFromApi(currency)} в кошельке.`, {
                 title: 'Оплата в кошельке',
                 type: 'info',
               });
@@ -296,7 +297,7 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
 
         if (
           await appConfirm(
-            `После оплаты ${amount} ${currency} нажмите «Подтвердить» — проверим перевод и передадим карту.`,
+            `После оплаты ${amount} ${gramDisplayFromApi(currency)} нажмите «Подтвердить» — проверим перевод и передадим карту.`,
             { confirmText: 'Я оплатил' }
           )
         ) {
@@ -406,7 +407,7 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
       const amount = listing.price_ton || listing.price_sol;
       if (
         !(await appConfirm(
-          `Купить за ${amount} ${currency}?\n\nОткроется кошелёк для оплаты.`,
+          `Купить за ${amount} ${gramDisplayFromApi(currency)}?\n\nОткроется кошелёк для оплаты.`,
           { confirmText: 'Перейти к оплате' }
         ))
       ) {

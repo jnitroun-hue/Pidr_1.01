@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { tonPaymentService } from '@/lib/wallets/ton-payment-service';
 import { requireAuth } from '@/lib/auth-utils';
+import { GRAM, formatGramRate } from '@/lib/crypto/gram-brand';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -41,18 +42,19 @@ export async function GET(req: NextRequest) {
     return noStoreJson({
       success: true,
       data: {
-        coin: 'TON',
-        network: 'TON',
+        coin: GRAM.symbol,
+        network: GRAM.apiNetwork,
+        display_name: GRAM.name,
         address: paymentInfo.address,
         memo: paymentInfo.memo,
         amount_ton: paymentInfo.amount_ton,
         amount_coins: paymentInfo.amount_coins,
         qr_url: paymentInfo.qr_url,
-        rate: '1 TON = 1000 монет',
+        rate: formatGramRate(),
         min_amount: 0.1,
         instructions: [
-          '1. Откройте ваш TON кошелек',
-          '2. Отправьте TON на указанный адрес',
+          `1. Откройте ваш ${GRAM.walletLabel}`,
+          `2. Отправьте ${GRAM.symbol} на указанный адрес`,
           '3. ОБЯЗАТЕЛЬНО укажите MEMO в комментарии к переводу',
           '4. Монеты зачислятся автоматически в течение 1-2 минут'
         ]
@@ -68,7 +70,7 @@ export async function GET(req: NextRequest) {
           success: false,
           code: 'TON_NOT_CONFIGURED',
           message:
-            'На сервере не задан MASTER_TON_ADDRESS — пополнение TON через этот метод недоступно. Добавьте переменную окружения в Vercel.'
+            `На сервере не задан MASTER_TON_ADDRESS — пополнение ${GRAM.symbol} через этот метод недоступно. Добавьте переменную окружения в Vercel.`
         },
         { status: 503 }
       );

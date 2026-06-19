@@ -30,6 +30,7 @@ import {
   Gift
 } from 'lucide-react';
 import PageLoadingScreen from '@/components/PageLoadingScreen';
+import { GRAM, formatGramAmount } from '@/lib/crypto/gram-brand';
 
 interface User {
   id: number;
@@ -366,7 +367,7 @@ export default function AdminPanel() {
   };
 
   const markPrizePaid = async (id: number) => {
-    const txHash = prompt('Хеш TON-транзакции (опционально):') || '';
+    const txHash = prompt(`Хеш ${GRAM.symbol}-транзакции (опционально):`) || '';
     setMarkingPrizeId(id);
     try {
       const response = await fetch('/api/admin/rating-prizes', {
@@ -536,7 +537,7 @@ export default function AdminPanel() {
             { key: 'card-generator' as TabType, label: 'Карты', icon: Sparkles },
             { key: 'rooms' as TabType, label: 'Комнаты', icon: Home },
             { key: 'rating' as TabType, label: 'Рейтинг', icon: Trophy },
-            { key: 'rating-prizes' as TabType, label: 'Призы TON', icon: Gift },
+            { key: 'rating-prizes' as TabType, label: `Призы ${GRAM.symbol}`, icon: Gift },
             { key: 'online-game' as TabType, label: 'Онлайн', icon: Swords },
           ]).map(({ key, label, icon: Icon }) => {
             const isActive = activeTab === key;
@@ -1226,7 +1227,7 @@ export default function AdminPanel() {
                       outline: 'none'
                     }}
                   >
-                    <option value="TON">TON</option>
+                    <option value="TON">{GRAM.name}</option>
                     <option value="SOL">Solana</option>
                   </select>
                 </div>
@@ -1515,7 +1516,7 @@ export default function AdminPanel() {
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
               <h2 style={{ color: '#e2e8f0', fontSize: '24px', fontWeight: '700', margin: 0 }}>
-                🏆 TON-призы рейтинга (ручная выплата)
+                🏆 {GRAM.symbol}-призы рейтинга (ручная выплата)
               </h2>
               <motion.button
                 onClick={loadRatingPrizes}
@@ -1538,7 +1539,7 @@ export default function AdminPanel() {
                 background: 'rgba(15,23,42,0.6)', borderRadius: '16px',
                 border: '1px solid rgba(100,116,139,0.2)',
               }}>
-                Нет ожидающих TON-призов
+                Нет ожидающих {GRAM.symbol}-призов
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -1561,7 +1562,7 @@ export default function AdminPanel() {
                       </div>
                     </div>
                     <div>
-                      <div style={{ color: '#38bdf8', fontWeight: 800, fontSize: '18px' }}>{prize.amount} TON</div>
+                      <div style={{ color: '#38bdf8', fontWeight: 800, fontSize: '18px' }}>{formatGramAmount(prize.amount)}</div>
                       <div style={{ color: '#94a3b8', fontSize: '11px', wordBreak: 'break-all' }}>
                         {prize.wallet_address === 'pending' ? '⚠️ Кошелёк не подключён' : prize.wallet_address}
                       </div>

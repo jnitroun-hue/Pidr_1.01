@@ -1,5 +1,7 @@
 /** Еженедельные призы топ-10 рейтинга */
 
+import { formatGramAmount } from '@/lib/crypto/gram-brand';
+
 export type WeeklyPrizeType = 'ton' | 'coins';
 
 export interface WeeklyPlacePrize {
@@ -10,9 +12,9 @@ export interface WeeklyPlacePrize {
 }
 
 export const WEEKLY_TOP_PRIZES: WeeklyPlacePrize[] = [
-  { place: 1, type: 'ton', amount: 20, label: '20 TON' },
-  { place: 2, type: 'ton', amount: 10, label: '10 TON' },
-  { place: 3, type: 'ton', amount: 5, label: '5 TON' },
+  { place: 1, type: 'ton', amount: 20, label: formatGramAmount(20) },
+  { place: 2, type: 'ton', amount: 10, label: formatGramAmount(10) },
+  { place: 3, type: 'ton', amount: 5, label: formatGramAmount(5) },
   { place: 4, type: 'coins', amount: 15000, label: '15 000 монет' },
   { place: 5, type: 'coins', amount: 12000, label: '12 000 монет' },
   { place: 6, type: 'coins', amount: 10000, label: '10 000 монет' },

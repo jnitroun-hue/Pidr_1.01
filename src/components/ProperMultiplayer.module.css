@@ -2,8 +2,8 @@
 
 .container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
-  color: white;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+  color: #e2e8f0;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   overflow-x: hidden;
   padding: 20px;
@@ -11,11 +11,12 @@
 
 .header {
   text-align: center;
-  margin-bottom: 40px;
-  padding: 30px;
-  background: rgba(255, 255, 255, 0.05);
+  margin-bottom: 32px;
+  padding: 28px 24px;
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);
   border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
 }
 
 .headerContent {
@@ -48,7 +49,7 @@
 .title {
   font-size: 32px;
   font-weight: 700;
-  background: linear-gradient(135deg, #00d4ff, #5865f2, #ffd700);
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -113,11 +114,12 @@
 }
 
 .roomsList {
-  background: rgba(255, 255, 255, 0.05);
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);
   border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.2);
   overflow: hidden;
   padding: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 .sectionTitle {
@@ -364,27 +366,29 @@
 }
 
 .primary {
-  background: linear-gradient(135deg, #5865f2, #7289da);
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
   color: white;
-  box-shadow: 0 8px 25px rgba(88, 101, 242, 0.3);
+  box-shadow: 0 8px 25px rgba(99, 102, 241, 0.35);
 }
 
 .primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #4752c4, #5b6ecd);
+  background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
   transform: translateY(-3px);
-  box-shadow: 0 12px 35px rgba(88, 101, 242, 0.4);
+  box-shadow: 0 12px 35px rgba(99, 102, 241, 0.45);
 }
 
 .secondary {
-  background: linear-gradient(135deg, #00d4ff, #0099cc);
-  color: white;
-  box-shadow: 0 8px 25px rgba(0, 212, 255, 0.3);
+  background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
+  color: #e2e8f0;
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
 }
 
 .secondary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #00b8e6, #0088bb);
+  background: linear-gradient(135deg, #475569 0%, #334155 100%);
+  border-color: rgba(99, 102, 241, 0.55);
   transform: translateY(-3px);
-  box-shadow: 0 12px 35px rgba(0, 212, 255, 0.4);
+  box-shadow: 0 12px 35px rgba(99, 102, 241, 0.2);
 }
 
 .join {

@@ -12,6 +12,7 @@ import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
 import PageLoadingScreen from '@/components/PageLoadingScreen';
 import { appConfirm, appAlert } from '@/lib/app-notice';
 import { fetchPremiumStatus, isPremiumUsable } from '@/lib/premium/refresh-premium';
+import { GRAM } from '@/lib/crypto/gram-brand';
 
 interface User {
   telegram_id: number;
@@ -417,7 +418,7 @@ export default function ShopPage() {
                 <span style={{ color: T.accentGold }}> покупать</span>
               </h1>
               <p style={{ color: T.textMuted, fontSize: 14, margin: '12px 0 0', maxWidth: 640, lineHeight: 1.55 }}>
-                Лоты за монеты, рубли, TON и SOL. Витрина обновляется в реальном времени, а акция дня теперь контролируется сервером и честно ограничена до 1 раза в 24 часа.
+                Лоты за монеты, рубли, {GRAM.symbol} и SOL. Витрина обновляется в реальном времени, а акция дня теперь контролируется сервером и честно ограничена до 1 раза в 24 часа.
               </p>
             </div>
 

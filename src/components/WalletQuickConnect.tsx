@@ -7,6 +7,7 @@ import { useWalletStore } from '@/store/walletStore';
 import { solanaConnector } from '@/lib/wallets/solana-connector';
 import { ethereumConnector } from '@/lib/wallets/ethereum-connector';
 import { getApiHeaders } from '@/lib/api-headers';
+import { GRAM } from '@/lib/crypto/gram-brand';
 import { useShallow } from 'zustand/react/shallow';
 import styles from './WalletQuickConnect.module.css';
 
@@ -18,8 +19,8 @@ type PendingTonWallet = {
 } | null;
 
 const walletOptions = [
-  { id: 'ton-wallet', label: 'TON Wallet', type: 'ton' as WalletType, accent: '#14b8a6', badge: 'T' },
-  { id: 'tonkeeper', label: 'Tonkeeper', type: 'ton' as WalletType, accent: '#0098ea', badge: 'K' },
+  { id: 'ton-wallet', label: GRAM.walletLabel, type: 'ton' as WalletType, accent: GRAM.color, badge: 'G' },
+  { id: 'tonkeeper', label: 'Tonkeeper', type: 'ton' as WalletType, accent: GRAM.color, badge: 'K' },
   { id: 'metamask', label: 'MetaMask', type: 'eth' as WalletType, accent: '#f59e0b', badge: 'M' },
   { id: 'trust', label: 'Trust Wallet', type: 'eth' as WalletType, accent: '#2563eb', badge: 'TW' },
   { id: 'phantom', label: 'Phantom', type: 'sol' as WalletType, accent: '#8b5cf6', badge: 'P' },
@@ -66,7 +67,7 @@ export default function WalletQuickConnect({ className = '', variant = 'default'
         useWalletStore.setState({ tonAddress, isTonConnected: true });
         setStatusMessage(`${pendingTonWallet.label} подключен`);
       } catch (error: unknown) {
-        setStatusMessage(error instanceof Error ? error.message : 'Не удалось сохранить TON кошелёк');
+        setStatusMessage(error instanceof Error ? error.message : `Не удалось сохранить ${GRAM.walletLabel}`);
       } finally {
         setLoadingWalletId(null);
         setPendingTonWallet(null);
@@ -189,7 +190,7 @@ export default function WalletQuickConnect({ className = '', variant = 'default'
           <div>
             <p className={styles.eyebrow}>Quick Connect</p>
             <h2 className={styles.title}>Подключить кошелёк</h2>
-            <p className={styles.subtitle}>TON, Ethereum и Solana — одним нажатием.</p>
+            <p className={styles.subtitle}>{GRAM.name}, Ethereum и Solana — одним нажатием.</p>
           </div>
           <div className={styles.headerIcon}>
             <Wallet2 size={18} />
@@ -202,7 +203,7 @@ export default function WalletQuickConnect({ className = '', variant = 'default'
           const isLoading = loadingWalletId === wallet.id;
           const isConnected = connectedMap[wallet.type];
           const networkLabel =
-            wallet.type === 'ton' ? 'TON Connect' : wallet.type === 'eth' ? 'EVM · Ethereum' : 'Solana';
+            wallet.type === 'ton' ? GRAM.connectProduct : wallet.type === 'eth' ? 'EVM · Ethereum' : 'Solana';
 
           return (
             <button

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react';
+import { GRAM } from '@/lib/crypto/gram-brand';
 
 export default function RulesPage() {
   const router = useRouter();
@@ -73,7 +74,7 @@ export default function RulesPage() {
         'Создавайте уникальные карты с разными дизайнами',
         'Добавляйте их в свою колоду',
         'Торгуйте картами на маркетплейсе',
-        'Зарабатывайте монеты и TON'
+        `Зарабатывайте монеты и ${GRAM.symbol}`
       ]
     }
   ];

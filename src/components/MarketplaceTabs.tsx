@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { ShoppingBag, X, TrendingUp, Calendar } from 'lucide-react';
 import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
 import { fiatMethodLabel } from '@/lib/marketplace/payment-meta';
+import { GRAM } from '@/lib/crypto/gram-brand';
 
 export { SellNftModal as SellModal } from '@/components/SellNftModal';
 
@@ -221,7 +222,7 @@ export function BuyTab({ listings, onBuy, userCoins, getSuitColor, getSuitSymbol
                 gap: '6px'
               }}>
                 <span style={{ fontSize: '22px' }}>💎</span>
-                {listing.price_ton} TON
+                {listing.price_ton} {GRAM.symbol}
               </div>
             )}
             {listing.price_sol && (
@@ -788,7 +789,7 @@ function ListingCard({ listing, onCancel, getSuitColor, getSuitSymbol, getRankDi
             {listing.price_coins != null && listing.price_coins > 0 && (
               <div>💰 {listing.price_coins?.toLocaleString()} монет</div>
             )}
-            {listing.price_ton != null && listing.price_ton > 0 && <div>💎 {listing.price_ton} TON</div>}
+            {listing.price_ton != null && listing.price_ton > 0 && <div>💎 {listing.price_ton} {GRAM.symbol}</div>}
             {listing.price_sol != null && listing.price_sol > 0 && <div>☀️ {listing.price_sol} SOL</div>}
             {listing.price_rub != null && Number(listing.price_rub) > 0 && (
               <div>₽ {Number(listing.price_rub).toLocaleString('ru-RU')}</div>
@@ -860,7 +861,7 @@ function SoldCard({ listing, getSuitColor, getSuitSymbol, getRankDisplay }: any)
           </p>
           <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#10b981' }}>
             {listing.price_coins && `✅ Продано за ${listing.price_coins.toLocaleString()} 💰 монет`}
-            {listing.price_ton && `✅ Продано за ${listing.price_ton} 💎 TON`}
+            {listing.price_ton && `✅ Продано за ${listing.price_ton} 💎 ${GRAM.symbol}`}
             {listing.price_sol && `✅ Продано за ${listing.price_sol} ☀️ SOL`}
             {listing.price_rub != null && Number(listing.price_rub) > 0 && `✅ Продано за ${Number(listing.price_rub).toLocaleString('ru-RU')} ₽`}
           </div>

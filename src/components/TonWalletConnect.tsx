@@ -7,6 +7,7 @@ import { FaWallet, FaCheckCircle, FaTimes, FaExternalLinkAlt } from 'react-icons
 import styles from './TonWalletConnect.module.css';
 import ManualWalletInput from './ManualWalletInput';
 import { getApiHeaders } from '@/lib/api-headers';
+import { GRAM } from '@/lib/crypto/gram-brand';
 
 interface TonWalletConnectProps {
   onConnect?: (address: string) => void;
@@ -180,21 +181,21 @@ export default function TonWalletConnect({ onConnect, onDisconnect }: TonWalletC
           whileTap={{ scale: 0.98 }}
         >
           <FaWallet />
-          {isConnecting ? 'Подключение...' : 'Подключить TON кошелек'}
+          {isConnecting ? 'Подключение...' : `Подключить ${GRAM.walletLabel}`}
         </motion.button>
       ) : (
         <div className={styles.connectedWallet}>
           <div className={styles.walletInfo}>
             <FaCheckCircle className={styles.checkIcon} />
             <div className={styles.walletDetails}>
-              <span className={styles.walletLabel}>TON кошелек подключен</span>
+              <span className={styles.walletLabel}>{GRAM.walletLabel} подключен</span>
               <span className={styles.walletAddress}>{formatAddress(userFriendlyAddress)}</span>
             </div>
             <button
               type="button"
               className={styles.viewButton}
               onClick={() => window.open(`https://tonscan.org/address/${userFriendlyAddress}`, '_blank')}
-              title="Посмотреть в TON Scan"
+              title={`Посмотреть в ${GRAM.networkLabel} explorer`}
             >
               <FaExternalLinkAlt />
             </button>

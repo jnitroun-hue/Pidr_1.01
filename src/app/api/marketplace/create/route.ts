@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 import { NFT_CARDS_TABLE, NFT_MARKETPLACE_TABLE } from '@/lib/nft/constants';
+import { GRAM } from '@/lib/crypto/gram-brand';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -81,7 +82,7 @@ export async function POST(request: NextRequest) {
 
     if (!hasPrice) {
       return NextResponse.json(
-        { success: false, error: 'Укажите цену (монеты, TON, SOL или ₽)' },
+        { success: false, error: `Укажите цену (монеты, ${GRAM.symbol}, SOL или ₽)` },
         { status: 400 }
       );
     }

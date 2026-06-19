@@ -8,6 +8,7 @@ import {
   formatWeeklyPayoutDate,
   WEEKLY_TOP_PRIZES,
 } from '@/lib/rating/weekly-prizes';
+import { GRAM } from '@/lib/crypto/gram-brand';
 import PageLoadingScreen from '@/components/PageLoadingScreen';
 
 interface UserData {
@@ -305,7 +306,7 @@ export default function RatingPage() {
                     </div>
                   </div>
                   <div style={{ fontSize: '10px', color: '#64748b', marginTop: '8px' }}>
-                    Монеты начисляются автоматически. TON — на подключённый кошелёк (топ-3).
+                    Монеты начисляются автоматически. {GRAM.symbol} — на подключённый кошелёк (топ-3).
                   </div>
                 </div>
 

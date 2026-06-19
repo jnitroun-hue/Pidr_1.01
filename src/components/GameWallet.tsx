@@ -28,6 +28,7 @@ import styles from './GameWallet.module.css';
 import ConnectedWalletsList from './ConnectedWalletsList';
 import WalletQuickConnect from './WalletQuickConnect';
 import DailyBonusWheelModal from './DailyBonusWheelModal';
+import { GRAM, formatGramAmount, formatGramRate, gramDisplayFromApi } from '@/lib/crypto/gram-brand';
 
 interface User {
   id: string;
@@ -60,8 +61,15 @@ type PurchaseMode = 'coins' | 'balance';
 type CurrencyMode = 'RUB' | 'USD';
 type WithdrawMethod = 'crypto' | 'bank_card' | 'sberbank' | 'yoo_money' | 'sbp';
 
+function CryptoOptionIcon({ icon }: { icon: string }) {
+  if (icon.startsWith('/')) {
+    return <img src={icon} alt="" width={22} height={22} style={{ display: 'block' }} />;
+  }
+  return <span style={{ fontSize: '22px', lineHeight: '1' }}>{icon}</span>;
+}
+
 const CRYPTO_OPTIONS = [
-  { id: 'TON', icon: '💎', name: 'TON', color: '#0098EA', net: 'TON Network', eta: '~5 сек' },
+  { id: 'TON', icon: GRAM.icon, name: GRAM.name, color: GRAM.color, net: GRAM.networkLabel, eta: '~5 сек' },
   { id: 'ETH', icon: '⟠', name: 'ETH', color: '#627EEA', net: 'Ethereum (ERC-20)', eta: '2-15 мин' },
   { id: 'SOL', icon: '◎', name: 'SOL', color: '#9945FF', net: 'Solana (SPL)', eta: '~30 сек' },
   { id: 'USDT', icon: '₮', name: 'USDT', color: '#26A17B', net: 'Tether (USDT)', eta: '2-15 мин' },
@@ -657,7 +665,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
           window.open(tonLink, '_blank');
         }
         
-        alert(`✅ Откройте кошелёк и подтвердите транзакцию на ${amount} TON.\n\nПосле подтверждения баланс обновится автоматически.`);
+        alert(`✅ Откройте кошелёк и подтвердите транзакцию на ${formatGramAmount(amount)}.\n\nПосле подтверждения баланс обновится автоматически.`);
         
       } else if (walletType === 'sol' || walletType === 'solana') {
         // Solana - открываем через Phantom
@@ -1219,7 +1227,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
               <div className="crypto-list">
                 {['TON', 'ETH', 'USDT', 'BTC', 'SOL'].map((crypto) => (
                   <div key={crypto} className="crypto-item">
-                    <span className="crypto-name">{crypto}</span>
+                    <span className="crypto-name">{gramDisplayFromApi(crypto)}</span>
                     <span className="crypto-balance">{formatCryptoBalance(crypto)}</span>
                     <button 
                       className="crypto-action-btn"
@@ -1483,7 +1491,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
             
             <div className="exchange-rates">
               <div className="rate-item">
-                <span>1 TON = 1000 монет</span>
+                <span>{formatGramRate()}</span>
                 <button className="exchange-button">Обменять</button>
               </div>
               
@@ -1769,7 +1777,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
                               display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: '3px',
                               boxShadow: selectedCrypto === c.id ? `0 4px 15px ${c.color}25` : 'none',
                             }}>
-                              <span style={{ fontSize: '22px', lineHeight: '1' }}>{c.icon}</span>
+                              <CryptoOptionIcon icon={c.icon} />
                               <span>{c.name}</span>
                             </button>
                           ))}
@@ -1933,7 +1941,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
                             transition: 'all 0.3s ease',
                           }}
                         >
-                          {loading ? '⏳ Обработка...' : <><FaWallet size={14} /> Пополнить через {selectedWalletForDeposit.wallet_type === 'ton' ? 'TON Wallet' : selectedWalletForDeposit.wallet_type === 'sol' ? 'Phantom' : 'MetaMask'}</>}
+                          {loading ? '⏳ Обработка...' : <><FaWallet size={14} /> Пополнить через {selectedWalletForDeposit.wallet_type === 'ton' ? GRAM.walletLabel : selectedWalletForDeposit.wallet_type === 'sol' ? 'Phantom' : 'MetaMask'}</>}
                         </button>
                       ) : (
                         <div style={{
@@ -2029,7 +2037,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
                             minWidth: 0,
                             boxShadow: selectedCrypto === c.id ? `0 4px 15px ${c.color}20` : 'none',
                           }}>
-                            <span style={{ fontSize: '20px' }}>{c.icon}</span>
+                            <CryptoOptionIcon icon={c.icon} />
                             {c.name}
                           </button>
                         ))}

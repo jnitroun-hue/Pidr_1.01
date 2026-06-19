@@ -85,10 +85,10 @@ export function buildSellListingBody(input: SellListingInput, validatedPrice: nu
   if (input.category === 'coins') {
     body.price_coins = Math.floor(validatedPrice);
   } else if (input.category === 'crypto') {
-    if (input.crypto === 'TON') body.price_ton = validatedPrice;
+    if (input.crypto === 'GRAM') body.price_ton = validatedPrice;
     else body.price_sol = validatedPrice;
     body.seller_wallet_address = input.walletAddress.trim();
-    body.seller_wallet_network = input.crypto;
+    body.seller_wallet_network = input.crypto === 'GRAM' ? 'TON' : input.crypto;
   } else {
     body.price_rub = Math.round(validatedPrice * 100) / 100;
     body.fiat_payment_method = input.fiatMethod;

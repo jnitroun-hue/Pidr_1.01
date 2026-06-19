@@ -10,6 +10,7 @@
 
 import crypto from 'crypto';
 import { supabase } from '../supabase';
+import { GRAM } from '@/lib/crypto/gram-brand';
 
 // 🔐 Конфигурация безопасности
 const SECURITY_CONFIG = {
@@ -42,8 +43,8 @@ export const SUPPORTED_NETWORKS = {
     networkType: 'mainnet'
   },
   TON: {
-    name: 'Toncoin',
-    symbol: 'TON',
+    name: GRAM.name,
+    symbol: GRAM.symbol,
     decimals: 9,
     addressPrefix: 'EQ',
     derivationPath: "m/44'/607'/0'/0",

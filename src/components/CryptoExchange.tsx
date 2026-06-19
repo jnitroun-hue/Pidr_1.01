@@ -6,6 +6,7 @@ import { FaExchangeAlt, FaCoins, FaBitcoin, FaEthereum } from 'react-icons/fa';
 import { SiSolana } from 'react-icons/si';
 import { useWalletStore } from '../store/walletStore';
 import { CryptoType } from '../lib/wallets/wallet-service';
+import { gramDisplayFromApi } from '@/lib/crypto/gram-brand';
 
 const cryptoIcons: Record<CryptoType, any> = {
   'TON': FaBitcoin,
@@ -122,7 +123,7 @@ export default function CryptoExchange({ onSuccess }: CryptoExchangeProps) {
           >
             {exchangeRates.map((rate) => (
               <option key={rate.crypto} value={rate.crypto} style={{ background: '#1e293b', color: '#e2e8f0' }}>
-                {rate.crypto} (1 = {rate.rate} монет)
+                {gramDisplayFromApi(rate.crypto)} (1 = {rate.rate} монет)
               </option>
             ))}
           </select>
@@ -131,7 +132,7 @@ export default function CryptoExchange({ onSuccess }: CryptoExchangeProps) {
         {/* Amount Input */}
         <Box w="full">
           <Text mb={3} fontWeight="600" color="#e2e8f0">
-            Количество {selectedCrypto}
+            Количество {gramDisplayFromApi(selectedCrypto)}
           </Text>
           <Box position="relative">
             <Input
@@ -214,13 +215,13 @@ export default function CryptoExchange({ onSuccess }: CryptoExchangeProps) {
               <HStack justify="space-between" w="full">
                 <Text>Курс обмена:</Text>
                 <Text color="#e2e8f0" fontWeight="600">
-                  1 {selectedCrypto} = {selectedRate.rate} монет
+                  1 {gramDisplayFromApi(selectedCrypto)} = {selectedRate.rate} монет
                 </Text>
               </HStack>
               <HStack justify="space-between" w="full">
                 <Text>Минимальная сумма:</Text>
                 <Text color="#e2e8f0" fontWeight="600">
-                  {selectedRate.minAmount} {selectedCrypto}
+                  {selectedRate.minAmount} {gramDisplayFromApi(selectedCrypto)}
                 </Text>
               </HStack>
             </VStack>

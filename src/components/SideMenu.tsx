@@ -1,8 +1,9 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
+import { GRAM } from '@/lib/crypto/gram-brand';
 
 const coins = [
-  { name: 'TON', icon: '/img/ton-icon.svg', value: 12345.6789 },
+  { name: GRAM.name, icon: GRAM.icon, value: 12345.6789 },
   { name: 'Trump', icon: '/img/trump-icon.svg', value: 9876.5432 },
   { name: 'Solana', icon: '/img/solana-icon.svg', value: 23456.7890 },
   { name: 'Jetton', icon: '/img/jetton-icon.svg', value: 10000.0001 },

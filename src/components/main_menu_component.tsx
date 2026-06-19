@@ -11,9 +11,10 @@ import LanguageSwitcher, { useLanguage } from './LanguageSwitcher'
 import { useTranslations } from '../lib/i18n/translations'
 import OnlineIndicator from './OnlineIndicator'
 import CardDealerHero from './CardDealerHero'
+import { GRAM } from '@/lib/crypto/gram-brand'
 
 const tokens = [
-  { name: 'TON', symbol: 'TON', color: '#0088ff' },
+  { name: GRAM.name, symbol: GRAM.symbol, color: GRAM.color },
   { name: 'SOLANA', symbol: 'SOL', color: '#9945ff' },
   { name: 'ETHEREUM', symbol: 'ETH', color: '#627eea' },
 ]
@@ -376,7 +377,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
                 fontSize: '12px', 
                 fontWeight: '600' 
               }}>
-                {isTonConnected ? '✓ TON' : 'TON'}
+                {isTonConnected ? `✓ ${GRAM.symbol}` : GRAM.symbol}
               </div>
             </motion.button>
 

@@ -13,6 +13,7 @@ import {
   type SellCategory,
   type SellCrypto,
 } from '@/lib/marketplace/payment-meta';
+import { GRAM } from '@/lib/crypto/gram-brand';
 import styles from './SellNftModal.module.css';
 
 export interface SellNftCard {
@@ -91,15 +92,15 @@ export function SellNftModal({
   const priceStep =
     sellCategory === 'coins' ? '1' : sellCategory === 'fiat' ? '0.01' : '0.001';
   const placeholder =
-    sellCategory === 'coins' ? '1000' : sellCategory === 'fiat' ? '500' : sellCrypto === 'TON' ? '0.5' : '0.1';
+    sellCategory === 'coins' ? '1000' : sellCategory === 'fiat' ? '500' : sellCrypto === 'GRAM' ? '0.5' : '0.1';
 
   const priceLabel =
     sellCategory === 'fiat'
       ? 'Цена (₽)'
       : sellCategory === 'coins'
         ? 'Цена (монеты)'
-        : sellCrypto === 'TON'
-          ? 'Цена (TON)'
+        : sellCrypto === 'GRAM'
+          ? `Цена (${GRAM.symbol})`
           : 'Цена (SOL)';
 
   const needsP2P = sellCategory === 'fiat' && (sellFiatMethod === 'sbp' || sellFiatMethod === 'sberbank');
@@ -203,14 +204,16 @@ export function SellNftModal({
               ))}
             </div>
             <div className={styles.field}>
-              <label className={styles.fieldLabel}>Ваш {sellCrypto}-кошелёк для получения</label>
+              <label className={styles.fieldLabel}>
+                {sellCrypto === 'GRAM' ? `Ваш ${GRAM.walletLabel} для получения` : 'Ваш Solana-кошелёк для получения'}
+              </label>
               <div className={styles.walletRow}>
                 <input
                   type="text"
                   className={styles.input}
                   value={walletAddress}
                   onChange={(e) => setWalletAddress(e.target.value)}
-                  placeholder={sellCrypto === 'TON' ? 'UQ... или EQ...' : 'Адрес Solana'}
+                  placeholder={sellCrypto === 'GRAM' ? 'UQ... или EQ...' : 'Адрес Solana'}
                 />
                 <button type="button" className={styles.pasteBtn} onClick={() => void pasteWallet()}>
                   Вставить

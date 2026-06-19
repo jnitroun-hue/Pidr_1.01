@@ -1,10 +1,13 @@
+import { GRAM } from '@/lib/crypto/gram-brand';
+
 export type SellCategory = 'coins' | 'crypto' | 'fiat';
-export type SellCrypto = 'TON' | 'SOL';
+/** GRAM = нативный токен TON (legacy API: TON) */
+export type SellCrypto = 'GRAM' | 'SOL';
 export type FiatMethod = 'bank_card' | 'sbp' | 'yoo_money' | 'sberbank';
 export type FiatReceiveMode = 'phone' | 'qr';
 
 export const CRYPTO_OPTIONS: { id: SellCrypto; label: string; icon: string; color: string }[] = [
-  { id: 'TON', label: 'TON', icon: '/img/ton-icon.svg', color: '#0098ea' },
+  { id: 'GRAM', label: GRAM.name, icon: GRAM.icon, color: GRAM.color },
   { id: 'SOL', label: 'Solana', icon: '/img/solana-icon.svg', color: '#9945ff' },
 ];
 
@@ -40,7 +43,7 @@ export function isValidPhone(raw: string): boolean {
 
 export function isValidWallet(network: SellCrypto, address: string): boolean {
   const a = address.trim();
-  if (network === 'TON') return a.length >= 24;
+  if (network === 'GRAM') return a.length >= 24;
   if (network === 'SOL') return a.length >= 32 && a.length <= 48;
   return a.length >= 16;
 }

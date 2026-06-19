@@ -13,6 +13,7 @@ import WalletQuickConnect from '@/components/WalletQuickConnect';
 import { SellModal } from '@/components/MarketplaceTabs';
 import { getApiHeaders } from '@/lib/api-headers';
 import { appAlert, appConfirm } from '@/lib/app-notice';
+import { GRAM } from '@/lib/crypto/gram-brand';
 import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
 import {
   getNftRankDisplay,
@@ -342,7 +343,7 @@ export default function NFTGallery() {
               fontWeight: 700,
             }}
           >
-            Кошельки для NFT · TON / EVM / Solana
+            Кошельки для NFT · {GRAM.symbol} / EVM / Solana
           </p>
 
           <div

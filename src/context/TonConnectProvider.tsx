@@ -2,6 +2,7 @@
 
 import { TonConnectUIProvider } from '@tonconnect/ui-react';
 import { ReactNode } from 'react';
+import { GRAM } from '@/lib/crypto/gram-brand';
 
 const manifestUrl = process.env.NEXT_PUBLIC_TON_MANIFEST_URL || 
   'https://pidr-1-01.vercel.app/tonconnect-manifest.json';
@@ -15,7 +16,7 @@ export function TonConnectProvider({ children }: { children: ReactNode }) {
         includeWallets: [
           {
             appName: 'telegram-wallet',
-            name: 'TON Wallet',
+            name: `${GRAM.name} Wallet`,
             imageUrl: 'https://wallet.tg/images/logo-288.png',
             aboutUrl: 'https://wallet.tg/',
             universalLink: 'https://t.me/wallet/start',

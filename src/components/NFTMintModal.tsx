@@ -7,6 +7,7 @@ import { useTonAddress, useTonConnectUI } from '@tonconnect/ui-react';
 import { toNano } from 'ton-core';
 import styles from './NFTMintModal.module.css';
 import type { PremiumStatus } from '@/lib/premium/premium-service';
+import { GRAM, formatGramAmount } from '@/lib/crypto/gram-brand';
 
 interface NFTMintModalProps {
   onClose: () => void;
@@ -74,7 +75,7 @@ export default function NFTMintModal({ onClose, onSuccess }: NFTMintModalProps) 
 
   const handleRandomMint = async () => {
     if (!userAddress) {
-      alert('Подключите TON кошелек!');
+      alert(`Подключите ${GRAM.walletLabel}!`);
       return;
     }
 
@@ -158,7 +159,7 @@ export default function NFTMintModal({ onClose, onSuccess }: NFTMintModalProps) 
 
   const handleCustomMint = async () => {
     if (!userAddress) {
-      alert('Подключите TON кошелек!');
+      alert(`Подключите ${GRAM.walletLabel}!`);
       return;
     }
 
@@ -273,7 +274,7 @@ export default function NFTMintModal({ onClose, onSuccess }: NFTMintModalProps) 
             >
               <FaDice className={styles.optionIcon} />
               <h3>🎲 Рандомная</h3>
-              <p className={styles.optionPrice}>0.5 TON</p>
+              <p className={styles.optionPrice}>{formatGramAmount(0.5)}</p>
               <ul className={styles.optionFeatures}>
                 <li>Случайная карта</li>
                 <li>2-10: 95% шанс</li>
@@ -291,7 +292,7 @@ export default function NFTMintModal({ onClose, onSuccess }: NFTMintModalProps) 
             >
               <FaPaintBrush className={styles.optionIcon} />
               <h3>🎨 Кастомная</h3>
-              <p className={styles.optionPrice}>3 TON</p>
+              <p className={styles.optionPrice}>{formatGramAmount(3)}</p>
               <ul className={styles.optionFeatures}>
                 <li>Выбор масти и ранга</li>
                 <li>Кастомный стиль</li>
@@ -322,7 +323,7 @@ export default function NFTMintModal({ onClose, onSuccess }: NFTMintModalProps) 
           <p className={styles.subtitle}>
             {premium?.freeRandomAvailable
               ? '🎁 Premium: бесплатная генерация доступна (раз в 7 дней)!'
-              : 'Комиссия: 0.5 TON'}
+              : `Комиссия: ${formatGramAmount(0.5)}`}
           </p>
 
           {premium?.freeRandomAvailable && (
@@ -383,7 +384,7 @@ export default function NFTMintModal({ onClose, onSuccess }: NFTMintModalProps) 
           </button>
 
           <h2 className={styles.title}>🎨 Кастомная генерация</h2>
-          <p className={styles.subtitle}>Комиссия: 3 TON</p>
+          <p className={styles.subtitle}>Комиссия: {formatGramAmount(3)}</p>
 
           <div className={styles.customForm}>
             {/* Выбор ранга */}
@@ -440,7 +441,7 @@ export default function NFTMintModal({ onClose, onSuccess }: NFTMintModalProps) 
             onClick={handleCustomMint}
             disabled={isProcessing || !userAddress}
           >
-            {isProcessing ? '⏳ Обработка...' : '🎨 Создать NFT за 3 TON'}
+            {isProcessing ? '⏳ Обработка...' : `🎨 Создать NFT за ${formatGramAmount(3)}`}
           </button>
 
           <button className={styles.backBtn} onClick={() => setMintType(null)}>

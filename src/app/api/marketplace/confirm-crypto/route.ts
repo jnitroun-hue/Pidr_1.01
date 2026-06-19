@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 import { verifyTonIncomingPayment } from '@/lib/nft/ton-payment-verify';
+import { GRAM } from '@/lib/crypto/gram-brand';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -100,7 +101,7 @@ export async function POST(request: NextRequest) {
 
     if (cryptoCurrency === 'SOL') {
       return NextResponse.json(
-        { success: false, error: 'Подтверждение SOL пока не реализовано — используйте монеты или TON' },
+        { success: false, error: `Подтверждение SOL пока не реализовано — используйте монеты или ${GRAM.symbol}` },
         { status: 501 }
       );
     }

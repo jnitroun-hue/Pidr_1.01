@@ -24,7 +24,7 @@ export function useNftSellModal(onListed?: () => void) {
   const [sellCard, setSellCard] = useState<SellableNftCard | null>(null);
   const [sellPrice, setSellPrice] = useState('');
   const [sellCategory, setSellCategory] = useState<SellCategory>('coins');
-  const [sellCrypto, setSellCrypto] = useState<SellCrypto>('TON');
+  const [sellCrypto, setSellCrypto] = useState<SellCrypto>('GRAM');
   const [sellFiatMethod, setSellFiatMethod] = useState<FiatMethod>('sbp');
   const [fiatReceiveMode, setFiatReceiveMode] = useState<FiatReceiveMode>('phone');
   const [walletAddress, setWalletAddress] = useState('');
@@ -35,7 +35,7 @@ export function useNftSellModal(onListed?: () => void) {
   const resetForm = useCallback(() => {
     setSellPrice('');
     setSellCategory('coins');
-    setSellCrypto('TON');
+    setSellCrypto('GRAM');
     setSellFiatMethod('sbp');
     setFiatReceiveMode('phone');
     setWalletAddress('');
@@ -62,7 +62,7 @@ export function useNftSellModal(onListed?: () => void) {
   useEffect(() => {
     if (!showSellModal || sellCategory !== 'crypto') return;
     let cancelled = false;
-    const walletType = sellCrypto === 'TON' ? 'ton' : 'sol';
+    const walletType = sellCrypto === 'GRAM' ? 'ton' : 'sol';
     (async () => {
       try {
         const res = await fetch('/api/wallet/check', {

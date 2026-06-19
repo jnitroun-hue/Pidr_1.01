@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { X, Copy, Check, Smartphone, QrCode, Wallet } from 'lucide-react';
 import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
 import { CRYPTO_OPTIONS, fiatMethodLabel } from '@/lib/marketplace/payment-meta';
+import { gramDisplayFromApi } from '@/lib/crypto/gram-brand';
 import styles from './BuyPaymentModal.module.css';
 
 export interface BuyPaymentListing {
@@ -56,7 +57,9 @@ export function BuyPaymentModal({
 
   const currency = listing.price_ton ? 'TON' : listing.price_sol ? 'SOL' : null;
   const cryptoAmount = listing.price_ton ?? listing.price_sol;
-  const cryptoMeta = CRYPTO_OPTIONS.find((c) => c.id === currency);
+  const cryptoMeta = listing.price_ton
+    ? CRYPTO_OPTIONS.find((c) => c.id === 'GRAM')
+    : CRYPTO_OPTIONS.find((c) => c.id === currency);
   const wallet = listing.seller_wallet_address?.trim();
   const rubAmount = listing.price_rub != null ? Number(listing.price_rub) : 0;
 
@@ -84,10 +87,10 @@ export function BuyPaymentModal({
           <>
             <div className={styles.amountRow}>
               {cryptoMeta && (
-                <Image src={cryptoMeta.icon} alt={currency} width={32} height={32} />
+                <Image src={cryptoMeta.icon} alt={cryptoMeta.label} width={32} height={32} />
               )}
               <span className={styles.amount}>
-                {cryptoAmount} {currency}
+                {cryptoAmount} {gramDisplayFromApi(currency)}
               </span>
             </div>
             {wallet ? (

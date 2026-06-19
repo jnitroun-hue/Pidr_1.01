@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { GRAM } from '@/lib/crypto/gram-brand';
 import { requireAuth } from '@/lib/auth-utils';
 
 // ✅ Явная конфигурация runtime для Next.js 15
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
         success: true,
         paymentUrl: tonPaymentUrl,
         paymentMethod: 'TON_WALLET',
-        message: 'Откройте TON кошелёк для оплаты'
+        message: `Откройте ${GRAM.walletLabel} для оплаты`
       });
     }
 

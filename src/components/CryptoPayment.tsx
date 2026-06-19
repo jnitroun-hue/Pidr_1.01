@@ -2,6 +2,15 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Coins, Zap, ArrowRight, Check, Copy, ExternalLink } from 'lucide-react';
+import { GRAM } from '@/lib/crypto/gram-brand';
+
+function cryptoDisplaySymbol(symbol: string): string {
+  return symbol === 'TON' ? GRAM.symbol : symbol;
+}
+
+function cryptoDisplayName(crypto: { symbol: string; name: string }): string {
+  return crypto.symbol === 'TON' ? GRAM.name : crypto.name;
+}
 
 interface CryptoCurrency {
   symbol: string;
@@ -45,9 +54,9 @@ export default function CryptoPayment({ onCoinsAdded }: CryptoPaymentProps) {
     },
     {
       symbol: 'TON',
-      name: 'Toncoin',
-      icon: '💎',
-      color: '#0088ff',
+      name: GRAM.name,
+      icon: GRAM.icon,
+      color: GRAM.color,
       rate: 750, // ~$5 * 150 = 750 монет
       minAmount: 0.1,
       decimals: 9
@@ -234,7 +243,7 @@ export default function CryptoPayment({ onCoinsAdded }: CryptoPaymentProps) {
           >
             ← Назад
           </button>
-          <h3 className="payment-title">Оплата {selectedCrypto.symbol}</h3>
+          <h3 className="payment-title">Оплата {cryptoDisplaySymbol(selectedCrypto.symbol)}</h3>
         </div>
 
         <div className="payment-details">
@@ -259,8 +268,14 @@ export default function CryptoPayment({ onCoinsAdded }: CryptoPaymentProps) {
 
           <div className="payment-info">
             <div className="crypto-amount">
-              <span className="crypto-icon">{selectedCrypto.icon}</span>
-              <span className="amount">{paymentAmount} {selectedCrypto.symbol}</span>
+              <span className="crypto-icon">
+                {selectedCrypto.icon.startsWith('/') ? (
+                  <img src={selectedCrypto.icon} alt={cryptoDisplayName(selectedCrypto)} width={24} height={24} />
+                ) : (
+                  selectedCrypto.icon
+                )}
+              </span>
+              <span className="amount">{paymentAmount} {cryptoDisplaySymbol(selectedCrypto.symbol)}</span>
             </div>
 
             <div className="payment-address">
@@ -280,7 +295,7 @@ export default function CryptoPayment({ onCoinsAdded }: CryptoPaymentProps) {
               <h5>Инструкция по оплате:</h5>
               <ol>
                 <li>Скопируйте адрес выше</li>
-                <li>Отправьте точно <strong>{paymentAmount} {selectedCrypto.symbol}</strong></li>
+                <li>Отправьте точно <strong>{paymentAmount} {cryptoDisplaySymbol(selectedCrypto.symbol)}</strong></li>
                 <li>Дождитесь подтверждения транзакции</li>
                 <li>Монеты будут зачислены автоматически</li>
               </ol>
@@ -361,9 +376,15 @@ export default function CryptoPayment({ onCoinsAdded }: CryptoPaymentProps) {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  <span className="crypto-icon">{crypto.icon}</span>
+                  <span className="crypto-icon">
+                    {crypto.icon.startsWith('/') ? (
+                      <img src={crypto.icon} alt={cryptoDisplayName(crypto)} width={24} height={24} />
+                    ) : (
+                      crypto.icon
+                    )}
+                  </span>
                   <div className="crypto-info">
-                    <span className="crypto-symbol">{crypto.symbol}</span>
+                    <span className="crypto-symbol">{cryptoDisplaySymbol(crypto.symbol)}</span>
                     <span className="crypto-amount">
                       {calculateCryptoAmount(coinPackage, crypto)}
                     </span>

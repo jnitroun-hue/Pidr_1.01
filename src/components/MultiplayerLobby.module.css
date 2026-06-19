@@ -1,6 +1,6 @@
 .lobbyRoot {
   min-height: 100vh;
-  background: radial-gradient(ellipse 120% 80% at 50% 0%, #1a2744 0%, #0b0f1a 55%, #05070d 100%);
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
   padding: 16px;
   max-width: 920px;
   margin: 0 auto;

@@ -361,15 +361,19 @@ export const ProperMultiplayer: React.FC = () => {
             roomInfo = roomInfoData.room;
           }
 
-          const allPlayers = playersData.players.map((player: any) => ({
-            id: player.user_id.toString(),
+          const allPlayers = playersData.players.map((player: any) => {
+            const uid = String(player.user_id ?? '');
+            const isBot = player.is_bot === true || uid.startsWith('-') || Number(uid) < 0;
+            return {
+            id: uid,
             name: player.username || 'Игрок',
             isHost: player.is_host || false,
             isReady: player.is_ready || false,
-            isBot: false,
+            isBot,
             avatar: player.avatar_url,
             joinedAt: new Date(player.joined_at || Date.now())
-          }));
+          };
+          });
 
           const roomData: RoomData = {
             id: roomId,
@@ -487,7 +491,7 @@ export const ProperMultiplayer: React.FC = () => {
           disabled={loading}
           title={t.multiplayer.refreshTitle}
         >
-          {loading ? `⏳ ${t.game.refresh}` : t.multiplayer.refresh}
+          {loading ? `⏳ ${t.multiplayer.refresh}` : t.multiplayer.refresh}
         </button>
       </div>
 

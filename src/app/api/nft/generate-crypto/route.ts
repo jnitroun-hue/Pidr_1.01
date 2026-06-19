@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { GRAM } from '@/lib/crypto/gram-brand';
 import { supabaseAdmin } from '@/lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 import {
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
 
     if (crypto !== 'TON') {
       return NextResponse.json(
-        { success: false, error: 'Сейчас поддерживается только оплата TON' },
+        { success: false, error: `Сейчас поддерживается только оплата ${GRAM.symbol}` },
         { status: 400 }
       );
     }
@@ -114,7 +115,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           code: 'PAYMENT_PENDING',
-          error: verify.error || 'Платёж ещё не подтверждён в сети TON',
+          error: verify.error || `Платёж ещё не подтверждён в сети ${GRAM.networkLabel}`,
         },
         { status: 402 }
       );
@@ -179,7 +180,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Карта создана после оплаты TON',
+      message: `Карта создана после оплаты ${GRAM.symbol}`,
       nft: generateData.nft,
     });
   } catch (error: unknown) {

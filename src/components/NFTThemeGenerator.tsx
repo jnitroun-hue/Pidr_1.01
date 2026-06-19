@@ -11,6 +11,7 @@ import { appConfirm } from '@/lib/app-notice';
 import { openNftCardModal } from '@/lib/nft/open-card-modal';
 import { generateThemeCardImageDataUrl } from '@/lib/nft/generate-theme-card-client';
 import type { NftThemeKey } from '@/lib/nft/theme-config';
+import { GRAM, formatGramAmount } from '@/lib/crypto/gram-brand';
 
 interface NFTThemeGeneratorProps {
   userCoins: number;
@@ -159,7 +160,7 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
   const handleTonPayForGeneration = async (kind: 'single' | 'deck') => {
     if (!cryptoTheme || generating) return;
     if (kind === 'deck') {
-      alert('Полная колода за TON: пополните монеты через кошелёк или купите колоду за монеты.');
+      alert(`Полная колода за ${GRAM.symbol}: пополните монеты через кошелёк или купите колоду за монеты.`);
       return;
     }
 
@@ -191,7 +192,7 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
       });
       const payInfo = await payInfoRes.json();
       if (!payInfoRes.ok || !payInfo.success) {
-        throw new Error(payInfo.message || 'TON не настроен на сервере (MASTER_TON_ADDRESS)');
+        throw new Error(payInfo.message || `${GRAM.symbol} не настроен на сервере (MASTER_TON_ADDRESS)`);
       }
 
       const receiverAddress = payInfo.data.address;
@@ -202,7 +203,7 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
       setGenStatus('Генерация изображения...');
       const imageData = await generateThemeCardImage(randomSuit, randomRank, randomId, theme);
 
-      setGenStatus(`Оплата ${costTon} TON...`);
+      setGenStatus(`Оплата ${formatGramAmount(costTon)}...`);
 
       let txHash: string | undefined;
 
@@ -223,10 +224,10 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
         const tonUrl = `ton://transfer/${receiverAddress}?amount=${amountNano}&text=${encodeURIComponent(paymentId)}`;
         (window as any).Telegram.WebApp.openTelegramLink(tonUrl);
       } else {
-        throw new Error('Подключите TON кошелёк (TonConnect) или откройте приложение в Telegram');
+        throw new Error(`Подключите ${GRAM.walletLabel} (${GRAM.connectProduct}) или откройте приложение в Telegram`);
       }
 
-      setGenStatus('Проверка оплаты в сети TON...');
+      setGenStatus(`Проверка оплаты в сети ${GRAM.networkLabel}...`);
       setShowCryptoModal(false);
 
       const maxAttempts = 15;
@@ -939,7 +940,7 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
                   Крипта и другие способы
                 </div>
                 <p style={{ color: '#94a3b8', fontSize: '13px', lineHeight: 1.5, marginBottom: '12px' }}>
-                  Для TON и других криптовалют открой кошелёк, пополни баланс и затем вернись к генерации.
+                  Для {GRAM.symbol} и других криптовалют открой кошелёк, пополни баланс и затем вернись к генерации.
                   Там уже доступны депозит и вывод в едином интерфейсе.
                 </p>
                 <motion.button
@@ -981,11 +982,11 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
                   marginBottom: '12px',
                 }}
               >
-                💎 Оплатить {THEMES[cryptoTheme].cryptoCost.ton} TON (одна карта)
+                💎 Оплатить {formatGramAmount(THEMES[cryptoTheme].cryptoCost.ton)} (одна карта)
               </motion.button>
               {!userTonAddress && (
                 <p style={{ color: '#94a3b8', fontSize: '12px', textAlign: 'center', marginBottom: '16px' }}>
-                  Подключите TON в коллекции или используйте Telegram Wallet
+                  Подключите {GRAM.symbol} в коллекции или используйте Telegram Wallet
                 </p>
               )}
 

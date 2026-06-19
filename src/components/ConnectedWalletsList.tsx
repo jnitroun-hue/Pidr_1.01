@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FaCheckCircle, FaPlus, FaWallet, FaExclamationTriangle } from 'react-icons/fa';
+import { GRAM } from '@/lib/crypto/gram-brand';
 
 interface Wallet {
   id: number;
@@ -95,7 +96,7 @@ export default function ConnectedWalletsList({
   const getWalletName = (type: string) => {
     switch (type.toLowerCase()) {
       case 'ton':
-        return 'TON';
+        return GRAM.name;
       case 'sol':
         return 'Solana';
       case 'eth':

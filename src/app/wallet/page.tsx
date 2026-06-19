@@ -14,6 +14,7 @@ import WalletQuickConnect from '@/components/WalletQuickConnect';
 import { useLanguage } from '@/components/LanguageSwitcher';
 import { useTranslations } from '@/lib/i18n/translations';
 import PageLoadingScreen from '@/components/PageLoadingScreen';
+import { GRAM } from '@/lib/crypto/gram-brand';
 
 // ─── Типы ───────────────────────────────────────────────────────────────────
 interface Transaction {
@@ -75,9 +76,9 @@ export default function WalletPage() {
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
 
-  // Курс: 1 TON = 1000 монет
-  const TON_RATE = 1000;
-  const coinsForAmount = Math.floor(parseFloat(tonAmount || '0') * TON_RATE) || 0;
+  // Курс: formatGramRate() — 1 Gram = 1000 монет
+  const GRAM_RATE = GRAM.coinsPerGram;
+  const coinsForAmount = Math.floor(parseFloat(tonAmount || '0') * GRAM_RATE) || 0;
 
   // ─── Загрузка данных ─────────────────────────────────────────────────────
   const loadData = useCallback(async () => {

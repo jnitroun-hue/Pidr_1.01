@@ -6,9 +6,10 @@ import { FaWallet, FaHistory, FaBitcoin, FaEthereum, FaCoins } from 'react-icons
 import { SiSolana } from 'react-icons/si';
 import { useWalletStore } from '../store/walletStore';
 import CryptoExchange from './CryptoExchange';
+import { GRAM } from '@/lib/crypto/gram-brand';
 
 const walletIcons = {
-  'TON': { icon: FaBitcoin, color: '#0088ff', symbol: 'TON', name: 'TON' },
+  'TON': { icon: FaBitcoin, color: GRAM.color, symbol: GRAM.symbol, name: GRAM.name },
   'SOL': { icon: SiSolana, color: '#9945ff', symbol: 'SOL', name: 'SOL' },
   'ETH': { icon: FaEthereum, color: '#627eea', symbol: 'ETH', name: 'ETH' },
 };
@@ -96,8 +97,8 @@ export default function WalletManager({ showExchange = true, onCoinsAdded }: Wal
 
   const wallets = [
     {
-      name: 'TON',
-      symbol: 'TON',
+      name: GRAM.name,
+      symbol: GRAM.symbol,
       address: tonAddress,
       balance: tonBalance,
       isConnected: isTonConnected,

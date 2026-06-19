@@ -1,5 +1,13 @@
-import { supabaseAdmin as supabase } from '../supabase';
+import { supabase, supabaseAdmin } from '../supabase';
 import { RealtimeChannel } from '@supabase/supabase-js';
+
+/** Серверные DB-операции — admin; в браузере — публичный клиент */
+function db() {
+  return typeof window === 'undefined' ? supabaseAdmin : supabase;
+}
+
+/** Realtime-подписки всегда через публичный anon-клиент (admin недоступен в браузере) */
+const rt = supabase;
 import { getApiHeaders } from '@/lib/api-headers';
 
 interface Room {
@@ -37,7 +45,7 @@ export class RoomManager {
       const roomCode = this.generateRoomCode();
 
       // Создаем комнату в БД
-      const { data: room, error: roomError } = await supabase
+      const { data: room, error: roomError } = await db()
         .from('_pidr_rooms')
         .insert({
           code: roomCode,
@@ -59,14 +67,14 @@ export class RoomManager {
       console.log('✅ [RoomManager] Комната создана:', room);
 
       // Получаем данные пользователя
-      const { data: user } = await supabase
+      const { data: user } = await db()
         .from('_pidr_users')
         .select('username, avatar_url')
         .eq('telegram_id', hostId)
         .single();
 
       // Добавляем хоста как игрока
-      const { error: playerError } = await supabase
+      const { error: playerError } = await db()
         .from('_pidr_room_players')
         .insert({
           room_id: room.id,
@@ -80,7 +88,7 @@ export class RoomManager {
       if (playerError) {
         console.error('❌ [RoomManager] Ошибка добавления хоста:', playerError);
         // Откатываем создание комнаты
-        await supabase.from('_pidr_rooms').delete().eq('id', room.id);
+        await db().from('_pidr_rooms').delete().eq('id', room.id);
         throw new Error('Не удалось добавить хоста в комнату');
       }
 
@@ -102,7 +110,7 @@ export class RoomManager {
       console.log('🚪 [RoomManager] Присоединение к комнате:', { roomCode, userId });
 
       // Находим комнату по коду
-      const { data: room, error: roomError } = await supabase
+      const { data: room, error: roomError } = await db()
         .from('_pidr_rooms')
         .select('*')
         .eq('code', roomCode)
@@ -120,7 +128,7 @@ export class RoomManager {
       }
 
       // Проверяем что игрок еще не в комнате
-      const { data: existingPlayer } = await supabase
+      const { data: existingPlayer } = await db()
         .from('_pidr_room_players')
         .select('*')
         .eq('room_id', room.id)
@@ -136,14 +144,14 @@ export class RoomManager {
       }
 
       // Получаем данные пользователя
-      const { data: user } = await supabase
+      const { data: user } = await db()
         .from('_pidr_users')
         .select('username, avatar_url')
         .eq('telegram_id', userId)
         .single();
 
       // Добавляем игрока в комнату
-      const { error: playerError } = await supabase
+      const { error: playerError } = await db()
         .from('_pidr_room_players')
         .insert({
           room_id: room.id,
@@ -160,7 +168,7 @@ export class RoomManager {
       }
 
       // Обновляем количество игроков
-      await supabase
+      await db()
         .from('_pidr_rooms')
         .update({
           current_players: room.current_players + 1,
@@ -199,8 +207,9 @@ export class RoomManager {
     console.log('📡 [RoomManager] Подписка на комнату:', roomId);
     this.roomId = roomId;
 
-    // Создаем канал для комнаты
-    this.channel = supabase.channel(`room:${roomId}`)
+    try {
+    // Realtime только через публичный клиент (admin в браузере недоступен)
+    this.channel = rt.channel(`room:${roomId}`)
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
@@ -310,6 +319,10 @@ export class RoomManager {
       .subscribe();
 
     console.log('✅ [RoomManager] Подписка активна');
+    } catch (error) {
+      console.error('❌ [RoomManager] Не удалось подписаться на комнату (polling продолжит работу):', error);
+      this.channel = null;
+    }
   }
 
   /**
@@ -438,7 +451,7 @@ export class RoomManager {
   async endGame(roomId: string, results: any[]): Promise<void> {
     try {
       // Обновляем статус комнаты
-      const { error } = await supabase
+      const { error } = await db()
         .from('_pidr_rooms')
         .update({ 
           status: 'finished',
@@ -472,7 +485,7 @@ export class RoomManager {
    */
   async setPlayerReady(roomId: string, userId: string, isReady: boolean): Promise<void> {
     try {
-      const { error } = await supabase
+      const { error } = await db()
         .from('_pidr_room_players')
         .update({ is_ready: isReady })
         .eq('room_id', roomId)
@@ -536,7 +549,7 @@ export class RoomManager {
   async leaveRoom(roomId: string, userId: string): Promise<void> {
     try {
       // Удаляем игрока из комнаты
-      const { error } = await supabase
+      const { error } = await db()
         .from('_pidr_room_players')
         .delete()
         .eq('room_id', roomId)
@@ -548,14 +561,14 @@ export class RoomManager {
       }
 
       // Обновляем количество игроков
-      const { data: room } = await supabase
+      const { data: room } = await db()
         .from('_pidr_rooms')
         .select('current_players, host_id')
         .eq('id', roomId)
         .single();
 
       if (room) {
-        await supabase
+        await db()
           .from('_pidr_rooms')
           .update({
             current_players: Math.max(0, room.current_players - 1),
@@ -565,7 +578,7 @@ export class RoomManager {
 
         // Если хост покинул комнату, удаляем комнату
         if (room.host_id === userId) {
-          await supabase.from('_pidr_rooms').delete().eq('id', roomId);
+          await db().from('_pidr_rooms').delete().eq('id', roomId);
           console.log('🗑️ [RoomManager] Комната удалена (хост покинул)');
         }
       }
@@ -592,7 +605,7 @@ export class RoomManager {
    */
   unsubscribe(): void {
     if (this.channel) {
-      supabase.removeChannel(this.channel);
+      rt.removeChannel(this.channel);
       this.channel = null;
       console.log('✅ [RoomManager] Отписка от комнаты');
     }
@@ -615,7 +628,7 @@ export class RoomManager {
    */
   async getRoomPlayers(roomId: string): Promise<RoomPlayer[]> {
     try {
-      const { data: players, error } = await supabase
+      const { data: players, error } = await db()
         .from('_pidr_room_players')
         .select('*')
         .eq('room_id', roomId)
@@ -638,7 +651,7 @@ export class RoomManager {
    */
   async getRoomInfo(roomId: string): Promise<Room | null> {
     try {
-      const { data: room, error } = await supabase
+      const { data: room, error } = await db()
         .from('_pidr_rooms')
         .select('*')
         .eq('id', roomId)

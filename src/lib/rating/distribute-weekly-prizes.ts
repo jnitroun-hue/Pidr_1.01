@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase';
+import { GRAM } from '@/lib/crypto/gram-brand';
 import {
   WEEKLY_TOP_PRIZES,
   buildPayoutIdempotencyKey,
@@ -270,8 +271,8 @@ export async function distributeWeeklyRatingPrizes(
       });
 
       const walletHint = ton.walletAddress
-        ? `TON будет отправлен на ваш кошелёк <code>${ton.walletAddress.slice(0, 8)}…</code>.`
-        : `Подключите TON-кошелёк в профиле, чтобы получить приз.`;
+        ? `${GRAM.name} будет отправлен на ваш кошелёк <code>${ton.walletAddress.slice(0, 8)}…</code>.`
+        : `Подключите ${GRAM.walletLabel} в профиле, чтобы получить приз.`;
 
       await notifyTelegram(
         player.telegram_id,
