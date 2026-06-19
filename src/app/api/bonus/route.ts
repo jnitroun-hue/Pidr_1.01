@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '../../../lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '../../../lib/auth-utils';
+import { pickDailyWheelAmount } from '@/lib/bonus/daily-wheel';
 
 // ✅ Явная конфигурация runtime для Next.js 15
 export const runtime = 'nodejs';
@@ -110,7 +111,7 @@ export async function POST(req: NextRequest) {
           }, { status: 400 });
         }
         
-        bonusAmount = Math.floor(Math.random() * 150) + 50; // 50-200 монет
+        bonusAmount = pickDailyWheelAmount();
         bonusDescription = `Ежедневный бонус ${todayStart.toDateString()}`; // Добавляем дату в описание
         console.log(`✅ Ежедневный бонус доступен: ${bonusAmount} монет`);
         break;
@@ -323,7 +324,7 @@ export async function GET(req: NextRequest) {
         id: 'daily',
         name: 'Ежедневный бонус',
         description: 'Получайте монеты каждый день',
-        reward: '50-200 монет',
+        reward: '50, 75, 100, 125, 150, 175 или 200 монет',
         icon: '📅',
         available: !dailyBonusToday,
         cooldownUntil: dailyBonusToday ? 

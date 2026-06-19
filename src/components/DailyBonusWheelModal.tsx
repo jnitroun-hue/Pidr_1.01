@@ -2,23 +2,23 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import {
+  DAILY_WHEEL_AMOUNTS,
+  DAILY_WHEEL_SEGMENT_COLORS,
+} from '@/lib/bonus/daily-wheel';
 import styles from './DailyBonusWheelModal.module.css';
 
-const WHEEL_SEGMENTS = [
-  { amount: 50, color: '#1d4ed8' },
-  { amount: 75, color: '#2563eb' },
-  { amount: 100, color: '#7c3aed' },
-  { amount: 125, color: '#9333ea' },
-  { amount: 150, color: '#059669' },
-  { amount: 175, color: '#d97706' },
-  { amount: 200, color: '#ea580c' },
-  { amount: 100, color: '#0891b2' },
-] as const;
+const WHEEL_SEGMENTS = DAILY_WHEEL_AMOUNTS.map((amount, index) => ({
+  amount,
+  color: DAILY_WHEEL_SEGMENT_COLORS[index] ?? DAILY_WHEEL_SEGMENT_COLORS[0],
+}));
 
 function findSegmentIndex(amount: number): number {
+  const exact = WHEEL_SEGMENTS.findIndex((segment) => segment.amount === amount);
+  if (exact >= 0) return exact;
+
   let bestIndex = 0;
   let bestDiff = Number.POSITIVE_INFINITY;
-
   WHEEL_SEGMENTS.forEach((segment, index) => {
     const diff = Math.abs(segment.amount - amount);
     if (diff < bestDiff) {
@@ -26,7 +26,6 @@ function findSegmentIndex(amount: number): number {
       bestIndex = index;
     }
   });
-
   return bestIndex;
 }
 
