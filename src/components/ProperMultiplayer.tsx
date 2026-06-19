@@ -283,7 +283,8 @@ export const ProperMultiplayer: React.FC = () => {
       return;
     }
 
-    if (!user?.id) {
+    const publicUserId = resolveLobbyUserId(user) || getTelegramId();
+    if (!publicUserId) {
       setError(t.multiplayer.errAuth);
       return;
     }

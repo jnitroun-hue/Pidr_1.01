@@ -291,7 +291,7 @@ export async function POST(req: NextRequest) {
       // Попытка 1: ищем по telegram_id
       const telegramIdResult = await supabase
         .from('_pidr_users')
-        .select('id, username, telegram_id')
+        .select('id, username, first_name, telegram_id')
         .eq('telegram_id', userId)
         .maybeSingle();
       
@@ -301,7 +301,7 @@ export async function POST(req: NextRequest) {
         // Попытка 2: ищем по UUID (если userId это UUID)
         const uuidResult = await supabase
           .from('_pidr_users')
-          .select('id, username, telegram_id')
+          .select('id, username, first_name, telegram_id')
           .eq('id', userId)
           .maybeSingle();
         
@@ -312,13 +312,19 @@ export async function POST(req: NextRequest) {
         }
       }
       
-      if (!userData || !userData.username) {
+      if (!userData) {
         console.error('❌ Не удалось получить данные пользователя:', userError);
         console.error('❌ userId:', userId);
         return NextResponse.json({ 
           success: false, 
           message: 'Ошибка получения данных пользователя' 
         }, { status: 500 });
+      }
+
+      if (!userData.username) {
+        userData.username =
+          userData.first_name?.trim() ||
+          (userData.telegram_id ? `Player_${userData.telegram_id}` : `Player_${userData.id}`);
       }
       
       const userUUID = userData.id;

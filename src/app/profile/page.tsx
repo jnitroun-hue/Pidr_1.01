@@ -2171,6 +2171,12 @@ export default function ProfilePage() {
                         </div>
                       )}
                       
+                      {bonus.id === 'referral' && bonus.note && (
+                        <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginTop: '8px' }}>
+                          {bonus.note}
+                        </div>
+                      )}
+                      
                       {bonus.id === 'rank_up' && !bonus.available && (
                         <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginTop: '8px' }}>
                           🎯 Следующий ранг: {bonus.nextRank}
@@ -2184,12 +2190,16 @@ export default function ProfilePage() {
                       )}
                     </div>
                     <div>
-                      {bonus.available ? (
+                      {bonus.id === 'referral' || bonus.available ? (
                         <button
                           onClick={() => handleBonusClick(bonus.id)}
                           style={{
-                            background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.8) 0%, rgba(22, 163, 74, 0.6) 100%)',
-                            border: '1px solid rgba(34, 197, 94, 0.4)',
+                            background: bonus.id === 'referral'
+                              ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.85) 0%, rgba(79, 70, 229, 0.65) 100%)'
+                              : 'linear-gradient(135deg, rgba(34, 197, 94, 0.8) 0%, rgba(22, 163, 74, 0.6) 100%)',
+                            border: bonus.id === 'referral'
+                              ? '1px solid rgba(99, 102, 241, 0.45)'
+                              : '1px solid rgba(34, 197, 94, 0.4)',
                             borderRadius: '12px',
                             color: '#fff',
                             padding: '12px 20px',
@@ -2200,11 +2210,9 @@ export default function ProfilePage() {
                           }}
                           onMouseEnter={(e) => {
                             e.currentTarget.style.transform = 'scale(1.05)';
-                            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(34, 197, 94, 1) 0%, rgba(22, 163, 74, 0.8) 100%)';
                           }}
                           onMouseLeave={(e) => {
                             e.currentTarget.style.transform = 'scale(1)';
-                            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(34, 197, 94, 0.8) 0%, rgba(22, 163, 74, 0.6) 100%)';
                           }}
                         >
                           {bonus.id === 'daily' ? '🎁 ПОЛУЧИТЬ' : 

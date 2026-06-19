@@ -308,6 +308,15 @@ export async function GET(req: NextRequest) {
       .eq('transaction_type', 'bonus')
       .eq('description', 'Бонус за подписку в ВК')
       .limit(1);
+
+    let referralCount = 0;
+    const { count: refCount, error: refCountError } = await supabaseAdmin
+      .from('_pidr_referrals')
+      .select('id', { count: 'exact', head: true })
+      .eq('referrer_user_id', dbUserId);
+    if (!refCountError && refCount != null) {
+      referralCount = refCount;
+    }
     
     const availableBonuses = [
       {
@@ -326,9 +335,9 @@ export async function GET(req: NextRequest) {
         description: 'Приглашайте друзей и получайте бонусы',
         reward: '500 монет за активного друга',
         icon: '👥',
-        available: false, // Не доступен для ручного получения
-        referrals: 0, // TODO: подсчитать из базы
-        note: 'Бонус начисляется автоматически когда приглашенный друг получает первый ежедневный бонус'
+        available: true,
+        referrals: referralCount,
+        note: 'Бонус начисляется автоматически, когда приглашённый друг получит первый ежедневный бонус'
       },
       {
         id: 'telegram_subscribe',
