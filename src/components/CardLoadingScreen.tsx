@@ -18,10 +18,10 @@ export default function CardLoadingScreen({
 
   return (
     <PageLoadingScreen
-      title="P.I.D.R."
       subtitle={subtitle}
       fixed
       showProgress={false}
+      showTitle={false}
     />
   );
 }

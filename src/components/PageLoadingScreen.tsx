@@ -11,6 +11,7 @@ export interface PageLoadingScreenProps {
   fixed?: boolean;
   compact?: boolean;
   showProgress?: boolean;
+  showTitle?: boolean;
   /** 0–100; если не задан — бегущая полоска */
   progress?: number;
   dealerSize?: 'default' | 'compact';
@@ -23,6 +24,7 @@ export default function PageLoadingScreen({
   fixed = false,
   compact = false,
   showProgress = true,
+  showTitle = true,
   progress,
   dealerSize,
 }: PageLoadingScreenProps) {
@@ -43,8 +45,8 @@ export default function PageLoadingScreen({
         transition={{ duration: 0.45, ease: 'easeOut' }}
       >
         <CardDealerHero size={resolvedDealerSize} />
-        <h2 className={styles.title}>{title}</h2>
-        <p className={styles.subtitle}>{subtitle}</p>
+        {showTitle && title ? <h2 className={styles.title}>{title}</h2> : null}
+        {subtitle ? <p className={styles.subtitle}>{subtitle}</p> : null}
 
         {showProgress && (
           <>

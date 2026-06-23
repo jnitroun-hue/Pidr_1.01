@@ -239,20 +239,10 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
           }}
         >
           <CardDealerHero />
-          <h1 style={{
-            fontSize: '42px',
-            fontWeight: '900',
-            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-            marginBottom: '10px'
-          }}>
-            {t.mainMenu.title}
-          </h1>
           <p style={{
             color: '#94a3b8',
-            fontSize: '16px'
+            fontSize: '16px',
+            marginTop: '4px'
           }}>
             {language === 'en' ? 'Choose an action' : 'Выберите действие'}
           </p>
