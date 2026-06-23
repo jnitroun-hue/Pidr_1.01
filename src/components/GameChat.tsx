@@ -1,6 +1,7 @@
 'use client'
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import styles from './GameChat.module.css';
 
 interface ChatMessage {
   id: string;
@@ -31,7 +32,6 @@ export default function GameChat({
   playerId,
   onSendMessage,
   externalMessages = [],
-  isMultiplayer = false,
 }: GameChatProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -94,157 +94,61 @@ export default function GameChat({
     return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
   };
 
+  const canSend = Boolean(inputText.trim());
+
   return (
-    <>
-      {/* Кнопка чата */}
+    <div className={styles.root}>
       <motion.button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
-        whileTap={{ scale: 0.9 }}
-        style={{
-          position: 'fixed',
-          bottom: '16px',
-          left: '16px',
-          zIndex: 500,
-          width: '48px',
-          height: '48px',
-          borderRadius: '50%',
-          border: '2px solid rgba(99,102,241,0.6)',
-          background: 'linear-gradient(135deg, rgba(30,41,59,0.95) 0%, rgba(15,23,42,0.95) 100%)',
-          color: '#a5b4fc',
-          fontSize: '20px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.4), 0 0 15px rgba(99,102,241,0.2)',
-          backdropFilter: 'blur(8px)',
-          transition: 'all 0.2s',
-        }}
+        whileTap={{ scale: 0.92 }}
+        className={`${styles.toggleBtn} ${isOpen ? styles.toggleBtnOpen : ''}`}
+        aria-label={isOpen ? 'Закрыть чат' : 'Открыть чат'}
       >
-        💬
+        <svg className={styles.toggleIcon} viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+        </svg>
         {unreadCount > 0 && (
-          <motion.div
+          <motion.span
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            style={{
-              position: 'absolute',
-              top: '-4px',
-              right: '-4px',
-              width: '20px',
-              height: '20px',
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, #ef4444, #dc2626)',
-              color: '#fff',
-              fontSize: '11px',
-              fontWeight: '800',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: '2px solid rgba(15,23,42,0.9)',
-            }}
+            className={styles.unreadBadge}
           >
             {unreadCount > 9 ? '9+' : unreadCount}
-          </motion.div>
+          </motion.span>
         )}
       </motion.button>
 
-      {/* Панель чата */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, x: -30, scale: 0.95 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: -30, scale: 0.95 }}
-            transition={{ type: 'spring', damping: 24, stiffness: 300 }}
-            style={{
-              position: 'fixed',
-              bottom: '72px',
-              left: '12px',
-              width: 'min(320px, calc(100vw - 24px))',
-              height: 'min(420px, 55vh)',
-              zIndex: 501,
-              borderRadius: '20px',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-              border: '1.5px solid rgba(99,102,241,0.3)',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.6), 0 0 30px rgba(99,102,241,0.1)',
-            }}
+            initial={{ opacity: 0, y: 12, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 12, scale: 0.97 }}
+            transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+            className={styles.panel}
           >
-            {/* Заголовок чата */}
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(30,41,59,0.98) 0%, rgba(15,23,42,0.98) 100%)',
-              padding: '12px 16px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              borderBottom: '1px solid rgba(99,102,241,0.2)',
-              backdropFilter: 'blur(16px)',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{
-                  width: '8px', height: '8px', borderRadius: '50%',
-                  background: '#22c55e',
-                  boxShadow: '0 0 8px rgba(34,197,94,0.6)',
-                }} />
-                <span style={{
-                  color: '#e2e8f0',
-                  fontSize: '14px',
-                  fontWeight: '700',
-                  letterSpacing: '0.5px',
-                }}>
-                  Чат за столом
-                </span>
-                <span style={{
-                  color: '#64748b',
-                  fontSize: '11px',
-                }}>
-                  {messages.length} сообщ.
-                </span>
+            <div className={styles.header}>
+              <div className={styles.headerTitle}>
+                <span className={styles.statusDot} />
+                <span>Чат за столом</span>
+                <span className={styles.headerMeta}>{messages.length}</span>
               </div>
-              <motion.button
+              <button
+                type="button"
                 onClick={() => setIsOpen(false)}
-                whileTap={{ scale: 0.85 }}
-                style={{
-                  background: 'rgba(239,68,68,0.12)',
-                  border: '1px solid rgba(239,68,68,0.25)',
-                  borderRadius: '8px',
-                  padding: '4px 8px',
-                  cursor: 'pointer',
-                  color: '#f87171',
-                  fontSize: '16px',
-                  lineHeight: 1,
-                }}
+                className={styles.closeBtn}
+                aria-label="Закрыть"
               >
                 ✕
-              </motion.button>
+              </button>
             </div>
 
-            {/* Область сообщений */}
-            <div style={{
-              flex: 1,
-              overflowY: 'auto',
-              padding: '12px',
-              background: 'linear-gradient(180deg, rgba(15,23,42,0.96) 0%, rgba(10,15,30,0.98) 100%)',
-              backdropFilter: 'blur(16px)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '6px',
-            }}>
+            <div className={styles.messages}>
               {messages.length === 0 && (
-                <div style={{
-                  textAlign: 'center',
-                  color: '#475569',
-                  fontSize: '13px',
-                  padding: '40px 16px',
-                  lineHeight: '1.6',
-                }}>
-                  <div style={{ fontSize: '32px', marginBottom: '8px', opacity: 0.5 }}>💬</div>
-                  Начните общение!
-                  <br />
-                  <span style={{ fontSize: '11px', color: '#334155' }}>
-                    Используйте быстрые фразы или эмодзи
-                  </span>
+                <div className={styles.emptyState}>
+                  <div className={styles.emptyIcon}>♠</div>
+                  Быстрые фразы и эмодзи — над столом и здесь
                 </div>
               )}
 
@@ -255,13 +159,7 @@ export default function GameChat({
 
                 if (isSystem) {
                   return (
-                    <div key={msg.id} style={{
-                      textAlign: 'center',
-                      color: '#64748b',
-                      fontSize: '11px',
-                      padding: '4px 0',
-                      fontStyle: 'italic',
-                    }}>
+                    <div key={msg.id} className={styles.systemMsg}>
                       {msg.text}
                     </div>
                   );
@@ -271,16 +169,11 @@ export default function GameChat({
                   return (
                     <motion.div
                       key={msg.id}
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      style={{
-                        alignSelf: isMe ? 'flex-end' : 'flex-start',
-                        fontSize: '32px',
-                        lineHeight: 1,
-                        padding: '4px',
-                      }}
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      className={`${styles.msgRow} ${isMe ? styles.msgRowMe : styles.msgRowOther}`}
                     >
-                      {msg.text}
+                      <span className={styles.emojiMsg}>{msg.text}</span>
                     </motion.div>
                   );
                 }
@@ -288,46 +181,16 @@ export default function GameChat({
                 return (
                   <motion.div
                     key={msg.id}
-                    initial={{ opacity: 0, y: 8 }}
+                    initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
-                    style={{
-                      alignSelf: isMe ? 'flex-end' : 'flex-start',
-                      maxWidth: '85%',
-                    }}
+                    className={`${styles.msgRow} ${isMe ? styles.msgRowMe : styles.msgRowOther}`}
                   >
                     {!isMe && (
-                      <div style={{
-                        fontSize: '10px',
-                        color: '#8b5cf6',
-                        fontWeight: '600',
-                        marginBottom: '2px',
-                        paddingLeft: '8px',
-                      }}>
-                        {msg.playerName}
-                      </div>
+                      <div className={styles.msgAuthor}>{msg.playerName}</div>
                     )}
-                    <div style={{
-                      background: isMe
-                        ? 'linear-gradient(135deg, rgba(99,102,241,0.25) 0%, rgba(139,92,246,0.2) 100%)'
-                        : 'rgba(30,41,59,0.7)',
-                      border: `1px solid ${isMe ? 'rgba(99,102,241,0.3)' : 'rgba(51,65,85,0.4)'}`,
-                      borderRadius: isMe ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
-                      padding: '8px 12px',
-                      color: '#e2e8f0',
-                      fontSize: '13px',
-                      lineHeight: '1.4',
-                      wordBreak: 'break-word',
-                    }}>
+                    <div className={`${styles.msgBubble} ${isMe ? styles.msgBubbleMe : styles.msgBubbleOther}`}>
                       {msg.text}
-                      <span style={{
-                        fontSize: '9px',
-                        color: '#475569',
-                        marginLeft: '8px',
-                        float: 'right',
-                        marginTop: '2px',
-                      }}>
-                        {formatTime(msg.timestamp)}
-                      </span>
+                      <span className={styles.msgTime}>{formatTime(msg.timestamp)}</span>
                     </div>
                   </motion.div>
                 );
@@ -335,66 +198,34 @@ export default function GameChat({
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Быстрые эмодзи и фразы */}
             <AnimatePresence>
               {showEmojis && (
                 <motion.div
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: 'auto', opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  style={{
-                    background: 'rgba(15,23,42,0.98)',
-                    borderTop: '1px solid rgba(99,102,241,0.15)',
-                    overflow: 'hidden',
-                  }}
+                  transition={{ duration: 0.18 }}
+                  className={styles.quickPanel}
                 >
-                  <div style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '4px',
-                    padding: '8px 12px',
-                  }}>
+                  <div className={styles.quickEmojis}>
                     {QUICK_EMOJIS.map(e => (
                       <button
                         key={e}
+                        type="button"
                         onClick={() => { sendMessage(e); setShowEmojis(false); }}
-                        style={{
-                          background: 'rgba(51,65,85,0.4)',
-                          border: '1px solid rgba(71,85,105,0.3)',
-                          borderRadius: '8px',
-                          padding: '6px 8px',
-                          cursor: 'pointer',
-                          fontSize: '18px',
-                          lineHeight: 1,
-                          transition: 'all 0.15s',
-                        }}
+                        className={styles.quickEmojiBtn}
                       >
                         {e}
                       </button>
                     ))}
                   </div>
-                  <div style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '4px',
-                    padding: '0 12px 8px',
-                  }}>
+                  <div className={styles.quickPhrases}>
                     {QUICK_PHRASES.map(p => (
                       <button
                         key={p}
+                        type="button"
                         onClick={() => { sendMessage(p); setShowEmojis(false); }}
-                        style={{
-                          background: 'rgba(99,102,241,0.12)',
-                          border: '1px solid rgba(99,102,241,0.2)',
-                          borderRadius: '10px',
-                          padding: '4px 10px',
-                          cursor: 'pointer',
-                          color: '#a5b4fc',
-                          fontSize: '12px',
-                          fontWeight: '600',
-                          transition: 'all 0.15s',
-                        }}
+                        className={styles.quickChip}
                       >
                         {p}
                       </button>
@@ -404,30 +235,14 @@ export default function GameChat({
               )}
             </AnimatePresence>
 
-            {/* Поле ввода */}
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(30,41,59,0.98) 0%, rgba(15,23,42,0.98) 100%)',
-              padding: '10px 12px',
-              display: 'flex',
-              gap: '8px',
-              alignItems: 'center',
-              borderTop: '1px solid rgba(99,102,241,0.15)',
-            }}>
+            <div className={styles.inputBar}>
               <button
+                type="button"
                 onClick={() => setShowEmojis(!showEmojis)}
-                style={{
-                  background: showEmojis ? 'rgba(99,102,241,0.2)' : 'transparent',
-                  border: '1px solid rgba(99,102,241,0.3)',
-                  borderRadius: '10px',
-                  padding: '6px 8px',
-                  cursor: 'pointer',
-                  fontSize: '16px',
-                  lineHeight: 1,
-                  transition: 'all 0.15s',
-                  flexShrink: 0,
-                }}
+                className={`${styles.emojiToggle} ${showEmojis ? styles.emojiToggleActive : ''}`}
+                aria-label="Быстрые фразы"
               >
-                😊
+                ☺
               </button>
               <input
                 ref={inputRef}
@@ -437,38 +252,15 @@ export default function GameChat({
                 onKeyDown={handleKeyDown}
                 placeholder="Сообщение..."
                 maxLength={120}
-                style={{
-                  flex: 1,
-                  background: 'rgba(15,23,42,0.6)',
-                  border: '1px solid rgba(99,102,241,0.2)',
-                  borderRadius: '12px',
-                  padding: '8px 14px',
-                  color: '#e2e8f0',
-                  fontSize: '13px',
-                  outline: 'none',
-                  transition: 'border-color 0.2s',
-                }}
+                className={styles.input}
               />
               <motion.button
+                type="button"
                 onClick={() => sendMessage(inputText)}
-                whileTap={{ scale: 0.85 }}
-                style={{
-                  background: inputText.trim()
-                    ? 'linear-gradient(135deg, #6366f1, #8b5cf6)'
-                    : 'rgba(51,65,85,0.4)',
-                  border: 'none',
-                  borderRadius: '10px',
-                  padding: '8px 12px',
-                  cursor: inputText.trim() ? 'pointer' : 'default',
-                  color: '#fff',
-                  fontSize: '14px',
-                  fontWeight: '700',
-                  lineHeight: 1,
-                  flexShrink: 0,
-                  opacity: inputText.trim() ? 1 : 0.4,
-                  transition: 'all 0.2s',
-                }}
-                disabled={!inputText.trim()}
+                whileTap={canSend ? { scale: 0.9 } : undefined}
+                className={`${styles.sendBtn} ${canSend ? styles.sendBtnActive : styles.sendBtnDisabled}`}
+                disabled={!canSend}
+                aria-label="Отправить"
               >
                 ➤
               </motion.button>
@@ -476,6 +268,6 @@ export default function GameChat({
           </motion.div>
         )}
       </AnimatePresence>
-    </>
+    </div>
   );
 }

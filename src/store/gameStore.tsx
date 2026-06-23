@@ -242,6 +242,7 @@ interface GameState {
   
   // Методы для P.I.D.R игры
   getCardRank: (imageName: string) => number
+  resolveCardRank: (card: Card | { rank?: number | string; image?: string }) => number
   getCardSuit: (imageName: string) => 'clubs' | 'diamonds' | 'hearts' | 'spades' | 'unknown'
   getNFTKey: (imageName: string) => string // ✅ Получение ключа для NFT карты (rank_of_suit)
   findAvailableTargets: (currentPlayerId: string) => number[]
@@ -1331,6 +1332,22 @@ export const useGameStore = create<GameState>()(
         }
         return rank;
       },
+
+      /** Ранг из поля card.rank (NFT/мультиплеер) или из имени файла */
+      resolveCardRank: (card: Card | { rank?: number | string; image?: string }) => {
+        const raw = card.rank;
+        if (raw !== undefined && raw !== null && raw !== '') {
+          if (typeof raw === 'number' && raw > 0) return raw;
+          const r = String(raw).toLowerCase();
+          if (r === 'ace' || r === 'a') return 14;
+          if (r === 'king' || r === 'k') return 13;
+          if (r === 'queen' || r === 'q') return 12;
+          if (r === 'jack' || r === 'j') return 11;
+          const parsed = parseInt(r, 10);
+          if (!Number.isNaN(parsed) && parsed > 0) return parsed;
+        }
+        return get().getCardRank(card.image || '');
+      },
       
       // ✅ НОВОЕ: Получение ключа для NFT карты (rank_of_suit)
       getNFTKey: (imageName: string) => {
@@ -1372,7 +1389,7 @@ export const useGameStore = create<GameState>()(
         const topCard = currentPlayer.cards[currentPlayer.cards.length - 1];
         if (!topCard || !topCard.open) return [];
         
-        const currentRank = get().getCardRank(topCard.image || '');
+        const currentRank = get().resolveCardRank(topCard);
         
         // Определяем целевой ранг с учетом правил P.I.D.R. 1-й стадии
         // ПРАВИЛО: СТАРШАЯ карта бьет МЛАДШУЮ (ищем карту на 1 ранг НИЖЕ)
@@ -1385,7 +1402,7 @@ export const useGameStore = create<GameState>()(
           
           const playerTopCard = player.cards[player.cards.length - 1];
           if (playerTopCard && playerTopCard.open) {
-            const playerRank = get().getCardRank(playerTopCard.image || '');
+            const playerRank = get().resolveCardRank(playerTopCard);
             
             // ДВОЙКА (2) кладется ТОЛЬКО на ТУЗ (14)!
             if (currentRank === 2 && playerRank === 14) {
@@ -1847,7 +1864,7 @@ export const useGameStore = create<GameState>()(
                 setTimeout(() => get().nextTurn(), 550);
               }
             } else if (!currentPlayer.isBot) {
-              get().showNotification(`${currentPlayer.name}: выберите карту для хода`, 'info');
+              get().showNotification(`${currentPlayer.name}: нажмите на карту соперника`, 'info');
             }
             return;
           } else {
@@ -2069,8 +2086,8 @@ export const useGameStore = create<GameState>()(
       canPlaceCardOnSelf: (deckCard: Card, playerTopCard: Card) => {
         if (!deckCard.image || !playerTopCard.image) return false;
         
-        const deckRank = get().getCardRank(deckCard.image);
-        const playerRank = get().getCardRank(playerTopCard.image);
+        const deckRank = get().resolveCardRank(deckCard);
+        const playerRank = get().resolveCardRank(playerTopCard);
         
         // ДВОЙКА (2) кладется ТОЛЬКО на ТУЗ (14)!
         if (deckRank === 2) {
@@ -2193,7 +2210,7 @@ export const useGameStore = create<GameState>()(
           const { players, currentPlayerId } = get();
           if (!deckCard.image || !currentPlayerId) return [];
           
-          const deckRank = get().getCardRank(deckCard.image);
+          const deckRank = get().resolveCardRank(deckCard);
           const targets: number[] = [];
           
           players.forEach((player, index) => {
@@ -2202,7 +2219,7 @@ export const useGameStore = create<GameState>()(
             // Проверяем верхнюю карту игрока
             const playerTopCard = player.cards[player.cards.length - 1];
             if (playerTopCard && playerTopCard.open && playerTopCard.image) {
-              const playerRank = get().getCardRank(playerTopCard.image);
+              const playerRank = get().resolveCardRank(playerTopCard);
               
               // ДВОЙКА (2) кладется ТОЛЬКО на ТУЗ (14)!
               if (deckRank === 2 && playerRank === 14) {

@@ -1723,7 +1723,7 @@ function GamePageContentComponent({
   // Вычисляемые значения для UI
   const canDrawCard = turnPhase === 'deck_card_revealed' && currentTurnPlayer?.id === currentPlayerId;
   const canClickDeck = turnPhase === 'showing_deck_hint' && currentTurnPlayer?.id === currentPlayerId;
-  const waitingForTarget = turnPhase === 'waiting_target_selection';
+  const waitingForTarget = turnPhase === 'waiting_target_selection' || turnPhase === 'analyzing_hand';
 
   const adaptiveSeatPositions = useMemo(() => {
     const totalPlayers = players.length;
@@ -2451,6 +2451,10 @@ function GamePageContentComponent({
               const isCurrentTurn = player.id === currentPlayerId;
               const playerCards = player.cards || []; // ИСПРАВЛЕНО: используем player.cards из gameStore!
               const isHumanPlayer = player.isUser === true; // ИСПРАВЛЕНО: используем флаг isUser из gameStore!
+              const isMyTurnGlobal = currentPlayerId === myPlayer?.id;
+              const canPickStage1Target = gameStage === 1 && isMyTurnGlobal &&
+                (turnPhase === 'analyzing_hand' || turnPhase === 'waiting_target_selection');
+              const isStage1Target = !isHumanPlayer && canPickStage1Target && availableTargets.includes(index);
               
               // Расположение карт — всегда снизу аватара (столбик)
 
@@ -2499,13 +2503,17 @@ function GamePageContentComponent({
                       
                       {/* ✅ ТОЛЬКО АВАТАР ВО ВЕСЬ КОНТЕЙНЕР - ПРИ КЛИКЕ МОДАЛКА */}
                       <div 
-                        className={styles.avatarContainer}
+                        className={`${styles.avatarContainer} ${isStage1Target ? styles.avatarTargetable : ''}`}
                         onClick={(e) => {
                           e.stopPropagation();
+                          if (isStage1Target) {
+                            makeMove(player.id);
+                            return;
+                          }
                           handlePlayerClick(player);
                         }}
                         style={{ 
-                          cursor: 'pointer',
+                          cursor: isStage1Target ? 'pointer' : 'pointer',
                           width: '100%',
                           display: 'flex',
                           alignItems: 'center',
@@ -2610,11 +2618,11 @@ function GamePageContentComponent({
                           const isTopCard = cardIndex === playerCards.length - 1;
                           const showOpen = isHumanPlayer || (gameStage === 1 && isTopCard);
                           const isMyTurn = player.id === currentPlayerId;
-                          const canMakeMove = gameStage === 1 && isMyTurn && isHumanPlayer && turnPhase === 'analyzing_hand' && availableTargets.length > 0;
+                          const canMakeMove = gameStage === 1 && isMyTurn && isHumanPlayer && canPickStage1Target && availableTargets.length > 0;
                           const shouldHighlight = gameStage === 1 && isTopCard && canMakeMove;
                           
-                          // Подсветка игрока как доступной цели
-                          let isAvailableTarget = gameStage === 1 && !isHumanPlayer && availableTargets.includes(index) && turnPhase === 'waiting_target_selection';
+                          // Подсветка игрока как доступной цели (сразу при analyzing_hand, без лишнего клика по своей карте)
+                          let isAvailableTarget = gameStage === 1 && isStage1Target;
                           
                           // Также подсвечиваем цели для карты из колоды
                           if (gameStage === 1 && !isHumanPlayer && turnPhase === 'waiting_deck_action' && revealedDeckCard) {
@@ -2807,8 +2815,8 @@ function GamePageContentComponent({
                                   position: 'absolute',
                                   inset: '-2px',
                                   borderRadius: '10px',
-                                  border: '2px solid rgba(59, 130, 246, 0.78)',
-                                  boxShadow: '0 0 10px rgba(59, 130, 246, 0.35)',
+                                  border: '2px solid rgba(212, 175, 55, 0.78)',
+                                  boxShadow: '0 0 10px rgba(212, 175, 55, 0.35)',
                                   pointerEvents: 'none'
                                 }} />
                               )}
