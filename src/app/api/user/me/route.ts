@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { supabaseAdmin } from '../../../../lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '../../../../lib/auth-utils';
+import { resolveAuthMethod } from '@/lib/user/resolve-auth-method';
 import { syncPremiumFlag } from '../../../../lib/premium/premium-service';
 
 // ✅ Явная конфигурация runtime для Next.js 15
@@ -88,6 +89,7 @@ export async function GET(req: NextRequest) {
         firstName: user.first_name,
         lastName: user.last_name,
         avatar_url: user.avatar_url,
+        auth_method: resolveAuthMethod(user),
         telegramId: user.telegram_id,
         coins: user.coins,
         rating: user.rating,

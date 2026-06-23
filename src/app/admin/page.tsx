@@ -31,6 +31,9 @@ import {
 } from 'lucide-react';
 import PageLoadingScreen from '@/components/PageLoadingScreen';
 import { GRAM, formatGramAmount } from '@/lib/crypto/gram-brand';
+import UserAvatarBadge from '@/components/UserAvatarBadge';
+import AuthMethodBadge from '@/components/AuthMethodBadge';
+import type { AuthMethod } from '@/lib/user/resolve-auth-method';
 
 interface User {
   id: number;
@@ -43,6 +46,7 @@ interface User {
   games_played: number;
   games_won: number;
   avatar_url: string | null;
+  auth_method?: AuthMethod;
   is_admin: boolean;
   is_active: boolean;
   last_seen: string | null;
@@ -713,7 +717,7 @@ export default function AdminPanel() {
                     background: 'rgba(99, 102, 241, 0.08)',
                     borderBottom: '1px solid rgba(100, 116, 139, 0.25)'
                   }}>
-                    <th style={{ padding: '14px 16px', textAlign: 'left', color: '#94a3b8', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Никнейм</th>
+                    <th style={{ padding: '14px 16px', textAlign: 'left', color: '#94a3b8', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Игрок</th>
                     <th style={{ padding: '14px 16px', textAlign: 'right', color: '#94a3b8', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Монеты</th>
                     <th style={{ padding: '14px 16px', textAlign: 'center', color: '#94a3b8', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Игры</th>
                     <th style={{ padding: '14px 16px', textAlign: 'center', color: '#94a3b8', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Победы</th>
@@ -733,8 +737,23 @@ export default function AdminPanel() {
                       }}
                       whileHover={{ background: 'rgba(99, 102, 241, 0.04)' }}
                     >
-                      <td style={{ padding: '14px 16px', color: '#e2e8f0', fontWeight: '600' }}>
-                        {user.username || user.first_name || 'Без имени'}
+                      <td style={{ padding: '14px 16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <UserAvatarBadge
+                            username={user.username || user.first_name}
+                            avatarUrl={user.avatar_url}
+                            authMethod={user.auth_method || 'web'}
+                            size="sm"
+                          />
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span style={{ color: '#e2e8f0', fontWeight: '600' }}>
+                                {user.username || user.first_name || 'Без имени'}
+                              </span>
+                              <AuthMethodBadge method={user.auth_method || 'web'} size="sm" />
+                            </div>
+                          </div>
+                        </div>
                       </td>
                       <td style={{ padding: '14px 16px', textAlign: 'right', color: '#fbbf24', fontWeight: '600' }}>
                         {user.coins.toLocaleString()}
@@ -1457,7 +1476,20 @@ export default function AdminPanel() {
                       }}>
                         #{player.rank}
                       </div>
-                      <div style={{ fontWeight: '600' }}>{player.username}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                        <UserAvatarBadge
+                          username={player.username}
+                          avatarUrl={player.avatar_url}
+                          authMethod={player.auth_method || 'web'}
+                          size="sm"
+                        />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+                          <span style={{ fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {player.username}
+                          </span>
+                          <AuthMethodBadge method={player.auth_method || 'web'} size="sm" />
+                        </div>
+                      </div>
                       <div style={{ color: '#fbbf24', fontWeight: '600' }}>{player.rating}</div>
                       <div>{player.games_played}</div>
                       <div style={{ color: '#22c55e' }}>{player.games_won}</div>

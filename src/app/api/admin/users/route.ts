@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin-utils';
 import { supabaseAdmin } from '@/lib/supabase';
+import { resolveAuthMethod } from '@/lib/user/resolve-auth-method';
 
 /**
  * GET /api/admin/users
@@ -26,7 +27,7 @@ export async function GET(req: NextRequest) {
     // Получаем список пользователей (колонки из реальной БД)
     let query = supabaseAdmin
       .from('_pidr_users')
-      .select('id, telegram_id, username, first_name, last_name, coins, rating, games_played, games_won, avatar_url, is_admin, is_active, last_seen, created_at, updated_at')
+      .select('id, telegram_id, vk_id, username, first_name, last_name, coins, rating, games_played, games_won, avatar_url, auth_method, is_admin, is_active, last_seen, created_at, updated_at')
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -47,7 +48,10 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      users: users || [],
+      users: (users || []).map((u: Record<string, unknown>) => ({
+        ...u,
+        auth_method: resolveAuthMethod(u),
+      })),
       pagination: {
         page,
         limit,

@@ -25,6 +25,7 @@ import {
   healthCheck,
 } from '../../../lib/multiplayer/player-state-manager';
 import { lightCleanup, cleanupOfflinePlayers } from '../../../lib/auto-cleanup';
+import { clampRoomSize, normalizeMatchType } from '../../../lib/multiplayer/room-rules';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -67,6 +68,8 @@ export async function GET(req: NextRequest) {
 
     if (type === 'private') {
       query = query.eq('is_private', true);
+    } else {
+      query = query.eq('is_private', false);
     }
 
     console.log(`🔍 [GET ROOMS] Загружаем комнаты типа: ${type}`);
@@ -210,7 +213,8 @@ export async function GET(req: NextRequest) {
         is_private: room.is_private,
         isPrivate: room.is_private,
         hasPassword: Boolean(room.password) || Boolean(room.settings?.hasPassword),
-        gameMode: room.settings?.gameMode || 'casual',
+        gameMode: room.match_type || room.settings?.matchType || room.settings?.gameMode || 'normal',
+        matchType: room.match_type || normalizeMatchType(room.settings?.gameMode),
         difficulty:
           room.settings?.gameMode === 'pro'
             ? 'hard'
@@ -276,6 +280,8 @@ export async function POST(req: NextRequest) {
     
     if (action === 'create') {
       const { name, maxPlayers, gameMode, hasPassword, password, isPrivate, forceReplace } = body;
+      const roomMaxPlayers = clampRoomSize(maxPlayers);
+      const matchType = normalizeMatchType(gameMode);
       
       console.log('🆕 Создание новой комнаты...');
       
@@ -382,10 +388,11 @@ export async function POST(req: NextRequest) {
       // 3. СОЗДАЕМ КОМНАТУ В БД
       const roomCode = generateRoomCode();
       const roomSettings = {
-        gameMode: gameMode || 'casual',
-        isRanked: gameMode === 'ranked',
-        allowBots: true,
-        maxPlayers: maxPlayers || 6,
+        gameMode: matchType,
+        matchType,
+        isRanked: matchType === 'rated',
+        allowBots: false,
+        maxPlayers: roomMaxPlayers,
         hasPassword: hasPassword || false
       };
       
@@ -396,11 +403,12 @@ export async function POST(req: NextRequest) {
           room_code: roomCode,
           name: name || 'Новая комната',
           host_id: userUUID, // ✅ ИСПОЛЬЗУЕМ UUID, А НЕ TELEGRAM_ID!
-          max_players: maxPlayers || 6,
+          max_players: roomMaxPlayers,
           current_players: 0, // Будет обновлено atomicJoinRoom
           status: 'waiting',
           is_private: isPrivate || false,
           password: hasPassword ? password : null,
+          match_type: matchType,
           settings: roomSettings,
           created_at: now,
           updated_at: now, // ✅ ОБНОВЛЯЕМ ВРЕМЯ СОЗДАНИЯ
@@ -425,7 +433,7 @@ export async function POST(req: NextRequest) {
         username: userData.username,
         roomId: room.id,
         roomCode,
-        maxPlayers: maxPlayers || 6,
+        maxPlayers: roomMaxPlayers,
         isHost: true, // ✅ Создатель = хост
       });
       

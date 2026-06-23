@@ -17,6 +17,9 @@ import { getApiHeaders } from '@/lib/api-headers';
 import { appAlert, appConfirm } from '@/lib/app-notice';
 import { fetchPremiumStatus, isPremiumUsable } from '@/lib/premium/refresh-premium';
 import { buildReferralLink, buildReferralShareText } from '@/lib/referral/referral-links';
+import UserAvatarBadge from '@/components/UserAvatarBadge';
+import AuthMethodBadge from '@/components/AuthMethodBadge';
+import type { AuthMethod } from '@/lib/user/resolve-auth-method';
 
 // Компонент таймера для бонусов
 function BonusCooldownTimer({ bonus, onCooldownEnd }: { bonus: any; onCooldownEnd: () => void }) {
@@ -1345,23 +1348,12 @@ export default function ProfilePage() {
             gap: '10px'
           }}>
             {/* Аватар (меньше) */}
-            <div style={{
-              width: '80px',
-              height: '80px',
-              borderRadius: '50%',
-              border: '3px solid rgba(99, 102, 241, 0.5)',
-              overflow: 'hidden',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.2))'
-            }}>
-              {avatarUrl.startsWith('data:') || avatarUrl.startsWith('http') ? (
-                <img src={avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : (
-                <span style={{ fontSize: '40px' }}>{avatarUrl}</span>
-              )}
-            </div>
+            <UserAvatarBadge
+              username={user?.username || user?.firstName}
+              avatarUrl={avatarUrl}
+              authMethod={(user?.auth_method as AuthMethod) || 'web'}
+              size="lg"
+            />
 
             {/* Ник */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1373,6 +1365,7 @@ export default function ProfilePage() {
               }}>
                 {user?.username || user?.firstName || 'Загрузка...'}
               </h3>
+              <AuthMethodBadge method={(user?.auth_method as AuthMethod) || 'web'} size="md" />
               <button
                 onClick={() => {
                   const newUsername = prompt('Введите новое имя (3-20 символов):', user?.username || '');

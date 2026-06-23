@@ -1,0 +1,49 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.sm {
+  width: 18px;
+  height: 18px;
+  font-size: 10px;
+}
+
+.md {
+  width: 22px;
+  height: 22px;
+  font-size: 12px;
+}
+
+.lg {
+  width: 26px;
+  height: 26px;
+  font-size: 14px;
+}
+
+.telegram {
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.45);
+}
+
+.vk {
+  color: #60a5fa;
+  border-color: rgba(96, 165, 250, 0.45);
+}
+
+.web {
+  color: #d4af37;
+  border-color: rgba(212, 175, 55, 0.45);
+}
+
+.google {
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.45);
+}

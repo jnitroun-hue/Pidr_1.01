@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { resolveAuthMethod } from '@/lib/user/resolve-auth-method';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -14,7 +15,7 @@ export async function GET(req: NextRequest) {
 
     const { data: users, error } = await supabaseAdmin
       .from('_pidr_users')
-      .select('id, username, first_name, rating, games_played, games_won, avatar_url')
+      .select('id, username, first_name, rating, games_played, games_won, avatar_url, auth_method, telegram_id, vk_id')
       .eq('is_active', true)
       .order('rating', { ascending: false })
       .limit(limit);
@@ -31,6 +32,7 @@ export async function GET(req: NextRequest) {
       games_played: u.games_played || 0,
       games_won: u.games_won || 0,
       avatar_url: u.avatar_url || null,
+      auth_method: resolveAuthMethod(u),
     }));
 
     return NextResponse.json({ success: true, players });

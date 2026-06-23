@@ -21,7 +21,6 @@ import React from 'react';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { useGameStore } from '@/store/gameStore';
 import { AIPlayer, AIDifficulty } from '@/lib/game/ai-player';
-import MultiplayerGame from '@/components/MultiplayerGame';
 import GameChat from '@/components/GameChat';
 import GameWallet from '@/components/GameWallet';
 import { useLanguage } from '../../components/LanguageSwitcher';
@@ -3361,19 +3360,6 @@ function GamePageContentComponent({
             })}
           </div>
         </div>
-      )}
-
-      {/* Мультиплеер компонент */}
-      {isMultiplayer && multiplayerRoom && (
-        <MultiplayerGame
-          roomId={multiplayerRoom.id}
-          roomCode={multiplayerRoom.code}
-          isHost={multiplayerRoom.isHost}
-          onGameStateUpdate={(gameState) => {
-            console.log('🔄 [Multiplayer] Получено обновление состояния:', gameState);
-            // Здесь можно обновить локальное состояние игры
-          }}
-        />
       )}
 
       {/* Модальное окно профиля игрока */}

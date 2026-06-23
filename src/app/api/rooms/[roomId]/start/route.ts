@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
+import { canStartRoom } from '@/lib/multiplayer/room-rules';
 
 // ✅ Явная конфигурация runtime для Next.js 15
 export const runtime = 'nodejs';
@@ -64,60 +65,32 @@ export async function POST(
       return NextResponse.json({ success: false, error: 'Ошибка получения игроков' }, { status: 500 });
     }
 
-    const realPlayers = players.filter((p: any) => parseInt(String(p.user_id), 10) > 0);
-    const botPlayers = players.filter((p: any) => parseInt(String(p.user_id), 10) < 0);
+    console.log(`👥 [START GAME] Игроков: ${players.length}/${room.max_players}`);
 
-    console.log(`👥 [START GAME] Реальных игроков: ${realPlayers.length}, ботов: ${botPlayers.length}`);
+    if (!canStartRoom(players.length, room.max_players)) {
+      return NextResponse.json({
+        success: false,
+        error: `Нужно ${room.max_players} игроков за столом (сейчас ${players.length})`,
+      }, { status: 400 });
+    }
 
-    // ❌ НЕ РАЗРЕШАЕМ СТАРТ ЕСЛИ ТОЛЬКО БОТЫ!
+    const realPlayers = players.filter((p: { user_id: unknown }) => parseInt(String(p.user_id), 10) > 0);
     if (realPlayers.length === 0) {
-      console.error('❌ [START GAME] Нет реальных игроков!');
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Нельзя начать игру без реальных игроков!' 
+      return NextResponse.json({
+        success: false,
+        error: 'Нельзя начать игру без реальных игроков',
       }, { status: 400 });
     }
+    const botPlayers = players.filter((p: { user_id: unknown }) => parseInt(String(p.user_id), 10) < 0);
 
-    // ✅ МИНИМУМ 2 ИГРОКА (РЕАЛЬНЫХ + БОТОВ)
-    if (players.length < 2) {
-      console.error('❌ [START GAME] Недостаточно игроков:', players.length);
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Минимум 2 игрока для начала игры' 
-      }, { status: 400 });
-    }
-
-    // 3️⃣ ПРОВЕРЯЕМ ЧТО ВСЕ РЕАЛЬНЫЕ ИГРОКИ ГОТОВЫ
-    const { data: allPlayers, error: allPlayersError } = await supabase
-      .from('_pidr_room_players')
-      .select('user_id, is_ready')
-      .eq('room_id', roomId);
-
-    if (allPlayersError) {
-      console.error('❌ [START GAME] Ошибка проверки готовности:', allPlayersError);
-      return NextResponse.json({ success: false, error: 'Ошибка проверки готовности' }, { status: 500 });
-    }
-
-    const notReadyRealPlayers = allPlayers.filter((p: any) => {
-      const uid = parseInt(String(p.user_id), 10);
-      return uid > 0 && !p.is_ready; // Только реальные игроки
-    });
-
-    if (notReadyRealPlayers.length > 0) {
-      console.error('❌ [START GAME] Не все игроки готовы:', notReadyRealPlayers.length);
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Не все игроки готовы' 
-      }, { status: 400 });
-    }
-
-    // 4️⃣ МЕНЯЕМ СТАТУС КОМНАТЫ НА "PLAYING"
+    // МЕНЯЕМ СТАТУС КОМНАТЫ НА "PLAYING"
     const now = new Date().toISOString();
     const { error: updateError } = await supabase
       .from('_pidr_rooms')
       .update({
         status: 'playing',
-        last_activity: now, // ✅ ОБНОВЛЯЕМ АКТИВНОСТЬ
+        started_at: now,
+        last_activity: now,
         updated_at: now
       })
       .eq('id', roomId);

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '../../../../lib/supabase';
 import { requireAdmin } from '../../../../lib/admin-utils';
+import { resolveAuthMethod } from '@/lib/user/resolve-auth-method';
 
 // GET /api/admin/rating - Получить рейтинг пользователей для админа
 export async function GET(req: NextRequest) {
@@ -23,7 +24,7 @@ export async function GET(req: NextRequest) {
     // Загружаем пользователей с рейтингом (реальные колонки из БД)
     const { data: users, error: usersError } = await supabaseAdmin
       .from('_pidr_users')
-      .select('id, telegram_id, username, first_name, last_name, rating, games_played, games_won, coins, created_at')
+      .select('id, telegram_id, vk_id, username, first_name, last_name, rating, games_played, games_won, coins, avatar_url, auth_method, created_at')
       .order('rating', { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -51,6 +52,8 @@ export async function GET(req: NextRequest) {
         ? Math.round(((user.games_won || 0) / user.games_played) * 100)
         : 0,
       coins: user.coins || 0,
+      avatar_url: user.avatar_url || null,
+      auth_method: resolveAuthMethod(user),
       created_at: user.created_at
     }));
 

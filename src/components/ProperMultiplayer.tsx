@@ -84,7 +84,7 @@ export const ProperMultiplayer: React.FC = () => {
   // Форма создания комнаты
   const [roomName, setRoomName] = useState('');
   const [maxPlayers, setMaxPlayers] = useState(6); // ДЕФОЛТ 6 ИГРОКОВ
-  const [gameMode, setGameMode] = useState('casual');
+  const [gameMode, setGameMode] = useState('normal');
   const [hasPassword, setHasPassword] = useState(false);
   const [password, setPassword] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
@@ -903,7 +903,7 @@ export const ProperMultiplayer: React.FC = () => {
            <div className={styles.field}>
              <label className={styles.label}>{t.multiplayer.maxPlayersLabel}</label>
              <div className={styles.playerCards}>
-               {[4, 5, 6, 7].map((num) => (
+               {[4, 5, 6, 7, 8, 9].map((num) => (
                  <button
                    key={num}
                    type="button"
@@ -924,8 +924,8 @@ export const ProperMultiplayer: React.FC = () => {
               value={gameMode}
               onChange={(e) => setGameMode(e.target.value)}
             >
-              <option value="casual">{t.multiplayer.casual}</option>
-              <option value="ranked">{t.multiplayer.ranked}</option>
+              <option value="normal">Обычный матч</option>
+              <option value="rated">Рейтинговый матч</option>
               <option value="tournament">{t.multiplayer.tournament}</option>
             </select>
           </div>

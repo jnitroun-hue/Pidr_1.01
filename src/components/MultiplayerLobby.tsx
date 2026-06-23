@@ -6,6 +6,7 @@ import { RoomManager } from '../lib/multiplayer/room-manager';
 import InviteFriendsModal from './InviteFriendsModal';
 import { getApiHeaders } from '@/lib/api-headers';
 import lobbyStyles from './MultiplayerLobby.module.css';
+import { canStartRoom } from '@/lib/multiplayer/room-rules';
 
 interface MultiplayerLobbyProps {
   roomId: string;
@@ -29,13 +30,6 @@ interface LobbyPlayer {
 function isBotPlayer(player: LobbyPlayer): boolean {
   const id = String(player.user_id ?? '');
   return player.is_bot === true || id.startsWith('-') || Number(id) < 0;
-}
-
-function computeCanStart(players: LobbyPlayer[]): boolean {
-  if (players.length < 2) return false;
-  const humans = players.filter((p) => !isBotPlayer(p));
-  if (humans.length === 0) return false;
-  return humans.every((p) => p.is_ready);
 }
 
 export default function MultiplayerLobby({ 
@@ -143,13 +137,16 @@ export default function MultiplayerLobby({
           setIsHost(myPlayer.is_host);
         }
         
-        setLobbyState((prev) => ({
-          ...prev,
-          players,
-          maxPlayers: data.maxPlayers || prev.maxPlayers || 6,
-          canStart: computeCanStart(players),
-          gameInProgress: data.roomStatus === 'playing',
-        }));
+        setLobbyState((prev) => {
+          const maxPlayers = data.maxPlayers || prev.maxPlayers || 6;
+          return {
+            ...prev,
+            players,
+            maxPlayers,
+            canStart: canStartRoom(players.length, maxPlayers),
+            gameInProgress: data.roomStatus === 'playing',
+          };
+        });
 
         if (data.roomStatus === 'playing') {
           triggerGameStart();
@@ -722,7 +719,7 @@ export default function MultiplayerLobby({
                 🚀 Начать игру!
               </>
             ) : (
-              `⏳ Ждем готовности (${readyPlayersCount}/${lobbyState.players.length})`
+              `⏳ За столом ${lobbyState.players.length}/${lobbyState.maxPlayers}`
             )}
           </motion.button>
         )}

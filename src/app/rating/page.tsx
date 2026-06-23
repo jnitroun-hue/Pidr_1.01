@@ -10,6 +10,9 @@ import {
 } from '@/lib/rating/weekly-prizes';
 import { GRAM } from '@/lib/crypto/gram-brand';
 import PageLoadingScreen from '@/components/PageLoadingScreen';
+import UserAvatarBadge from '@/components/UserAvatarBadge';
+import AuthMethodBadge from '@/components/AuthMethodBadge';
+import type { AuthMethod } from '@/lib/user/resolve-auth-method';
 
 interface UserData {
   id: number;
@@ -20,6 +23,7 @@ interface UserData {
   games_played: number;
   games_won: number;
   avatar_url: string | null;
+  auth_method?: AuthMethod;
 }
 
 interface RatingEntry {
@@ -29,6 +33,7 @@ interface RatingEntry {
   games_played: number;
   games_won: number;
   avatar_url: string | null;
+  auth_method?: AuthMethod;
 }
 
 function getRankInfo(rating: number): { title: string; color: string; bg: string } {
@@ -161,6 +166,31 @@ export default function RatingPage() {
                   border: `1px solid ${rank.color}30`,
                   marginBottom: '12px',
                 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                    <UserAvatarBadge
+                      username={userData?.username || userData?.first_name}
+                      avatarUrl={userData?.avatar_url}
+                      authMethod={userData?.auth_method || 'web'}
+                      size="md"
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ fontSize: '15px', fontWeight: 700, color: '#e2e8f0' }}>
+                          {userData?.username || userData?.first_name || 'Игрок'}
+                        </span>
+                        <AuthMethodBadge method={userData?.auth_method || 'web'} size="sm" />
+                      </div>
+                      <span style={{
+                        display: 'inline-block', marginTop: '4px',
+                        background: rank.bg, color: rank.color,
+                        padding: '3px 10px', borderRadius: '20px',
+                        fontSize: '11px', fontWeight: '700',
+                        border: `1px solid ${rank.color}30`,
+                      }}>
+                        {rank.title}
+                      </span>
+                    </div>
+                  </div>
                   <div style={{ textAlign: 'center', marginBottom: '16px' }}>
                     <div style={{ fontSize: '48px', fontWeight: '800', color: rank.color, lineHeight: '1' }}>
                       {userData?.rating || 0}
@@ -168,20 +198,6 @@ export default function RatingPage() {
                     <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                       Текущий рейтинг
                     </div>
-                  </div>
-
-                  {/* Бейдж ранга */}
-                  <div style={{
-                    display: 'flex', justifyContent: 'center', marginBottom: '16px',
-                  }}>
-                    <span style={{
-                      background: rank.bg, color: rank.color,
-                      padding: '5px 14px', borderRadius: '20px',
-                      fontSize: '12px', fontWeight: '700',
-                      border: `1px solid ${rank.color}30`,
-                    }}>
-                      {rank.title}
-                    </span>
                   </div>
 
                   {/* Прогресс-бар */}
@@ -353,29 +369,26 @@ export default function RatingPage() {
                           </div>
 
                           {/* Аватар */}
-                          <div style={{
-                            width: '32px', height: '32px', borderRadius: '50%',
-                            background: `linear-gradient(135deg, ${pRank.color}40, ${pRank.color}20)`,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: '13px', fontWeight: '700', color: pRank.color,
-                            flexShrink: 0,
-                            border: `1.5px solid ${pRank.color}40`,
-                            overflow: 'hidden',
-                          }}>
-                            {player.avatar_url ? (
-                              <img src={player.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            ) : (
-                              (player.username || '?')[0].toUpperCase()
-                            )}
-                          </div>
+                          <UserAvatarBadge
+                            username={player.username}
+                            avatarUrl={player.avatar_url}
+                            authMethod={player.auth_method || 'web'}
+                            size="sm"
+                          />
 
                           {/* Имя + ранг */}
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{
-                              fontSize: '13px', fontWeight: '600', color: '#e2e8f0',
-                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                              display: 'flex', alignItems: 'center', gap: '6px',
                             }}>
-                              {player.username || 'Игрок'}
+                              <div style={{
+                                fontSize: '13px', fontWeight: '600', color: '#e2e8f0',
+                                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                flex: 1, minWidth: 0,
+                              }}>
+                                {player.username || 'Игрок'}
+                              </div>
+                              <AuthMethodBadge method={player.auth_method || 'web'} size="sm" />
                             </div>
                             <div style={{ fontSize: '10px', color: pRank.color }}>
                               {pRank.title}

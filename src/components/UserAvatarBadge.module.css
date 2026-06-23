@@ -1,0 +1,48 @@
+.wrap {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.avatar {
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(139, 92, 246, 0.15));
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  color: #e2e8f0;
+  font-weight: 700;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sm {
+  width: 32px;
+  height: 32px;
+  font-size: 13px;
+}
+
+.md {
+  width: 40px;
+  height: 40px;
+  font-size: 15px;
+}
+
+.lg {
+  width: 80px;
+  height: 80px;
+  font-size: 28px;
+}
+
+.authBadge {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  z-index: 2;
+}
