@@ -10,6 +10,7 @@ import { useFreeRollCountdown } from '@/hooks/useFreeRollCountdown';
 import { PREMIUM_FREE_ROLL_COOLDOWN_DAYS } from '@/lib/premium/constants';
 import { appAlert } from '@/lib/app-notice';
 import { getApiHeaders } from '@/lib/api-headers';
+import { parseJsonResponse } from '@/lib/api/parse-json-response';
 import { openNftCardModal } from '@/lib/nft/open-card-modal';
 
 interface PremiumFreeRollBannerProps {
@@ -101,9 +102,15 @@ export default function PremiumFreeRollBanner({ onGenerated }: PremiumFreeRollBa
         body: JSON.stringify({ useFreePremium: true }),
       });
 
-      const result = await response.json();
-      if (!result.success) {
-        await appAlert(result.error || result.message || 'Не удалось сгенерировать карту', {
+      const parsed = await parseJsonResponse<{ success?: boolean; error?: string; message?: string; nft?: Record<string, unknown>; card?: Record<string, unknown>; theme?: string; theme_id?: number }>(response);
+      if (parsed.error && !parsed.data) {
+        await appAlert(parsed.error, { title: 'Ошибка', type: 'error' });
+        return;
+      }
+
+      const result = parsed.data;
+      if (!result?.success) {
+        await appAlert(result?.error || result?.message || 'Не удалось сгенерировать карту', {
           title: 'Ошибка',
           type: 'error',
         });
@@ -111,18 +118,29 @@ export default function PremiumFreeRollBanner({ onGenerated }: PremiumFreeRollBa
         return;
       }
 
-      const card = result.nft || result.card;
+      const card = (result.nft || result.card) as {
+        id: number;
+        rank: string;
+        suit: string;
+        rarity?: string;
+        image_url?: string;
+      };
 
       window.dispatchEvent(new CustomEvent('nft-collection-updated'));
       onGenerated?.();
       await refreshPremium();
+
+      if (!card?.id) {
+        await appAlert('Карта создана, но не удалось открыть превью', { title: 'Готово', type: 'success' });
+        return;
+      }
 
       openNftCardModal({
         id: card.id,
         rank: card.rank,
         suit: card.suit,
         rarity: card.rarity ?? result.theme ?? 'common',
-        image_url: card.image_url,
+        image_url: card.image_url ?? '',
         metadata: {
           theme: result.theme,
           theme_id: result.theme_id,

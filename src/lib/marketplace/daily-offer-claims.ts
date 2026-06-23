@@ -76,8 +76,10 @@ export async function recordDailyOfferClaim(
     user_id: userId,
     amount: meta?.coinsPaid ? -Math.abs(meta.coinsPaid) : 0,
     transaction_type: CLAIM_TYPE,
-    description: meta?.listingId
-      ? `Акция дня — покупка лота #${meta.listingId}`
+    description: meta?.coinsPaid
+      ? meta.listingId
+        ? `Акция дня — покупка лота #${meta.listingId}`
+        : `Premium акция дня — ${meta.coinsPaid.toLocaleString('ru-RU')} монет`
       : 'Акция дня — активация',
     balance_before: balance + (meta?.coinsPaid || 0),
     balance_after: meta?.balanceAfter ?? balance,

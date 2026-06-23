@@ -12,6 +12,7 @@ import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
 import PageLoadingScreen from '@/components/PageLoadingScreen';
 import { appConfirm, appAlert } from '@/lib/app-notice';
 import { fetchPremiumStatus, isPremiumUsable } from '@/lib/premium/refresh-premium';
+import { parseJsonResponse } from '@/lib/api/parse-json-response';
 import { GRAM } from '@/lib/crypto/gram-brand';
 
 interface User {
@@ -41,15 +42,11 @@ interface Listing {
 interface PromoCard {
   listingId: number;
   cardTitle: string;
-  originalRub: number;
-  discountedRub: number;
-  originalCoins?: number;
+  priceCoins?: number;
   discountedCoins?: number;
-  tonPrice: number;
-  solPrice: number;
-  discountPercent: number;
   promoImageUrl?: string | null;
-  isClonedImage?: boolean;
+  themeLabel?: string;
+  isPremiumDaily?: boolean;
 }
 
 export default function ShopPage() {
@@ -58,6 +55,7 @@ export default function ShopPage() {
   const [loading, setLoading] = useState(true);
   const [listings, setListings] = useState<Listing[]>([]);
   const [dailyPromo, setDailyPromo] = useState<PromoCard | null>(null);
+  const [dailyPromoRequiresPremium, setDailyPromoRequiresPremium] = useState(false);
   const [canClaimPromo, setCanClaimPromo] = useState(true);
   const [claimRemainingMs, setClaimRemainingMs] = useState(0);
   const [promoCooldownLabel, setPromoCooldownLabel] = useState('00:00:00');
@@ -96,10 +94,32 @@ export default function ShopPage() {
         credentials: 'include',
         cache: 'no-store',
       });
-      const data = await response.json();
+      const parsed = await parseJsonResponse<{
+        success?: boolean;
+        requiresPremium?: boolean;
+        offer?: PromoCard;
+        claim?: { canClaim?: boolean; remainingMs?: number };
+        error?: string;
+      }>(response);
 
-      if (data.success) {
-        setDailyPromo(data.offer || null);
+      if (parsed.error && !parsed.data) {
+        console.error('Ошибка загрузки акции дня:', parsed.error);
+        return;
+      }
+
+      const data = parsed.data;
+      if (!data) return;
+
+      if (data.requiresPremium || parsed.status === 403) {
+        setDailyPromoRequiresPremium(true);
+        setDailyPromo(null);
+        return;
+      }
+
+      setDailyPromoRequiresPremium(false);
+
+      if (data.success && data.offer) {
+        setDailyPromo(data.offer);
         const remaining = Number(data.claim?.remainingMs || 0);
         setClaimRemainingMs(remaining);
         setCanClaimPromo(Boolean(data.claim?.canClaim));
@@ -224,8 +244,9 @@ export default function ShopPage() {
   }, []);
 
   useEffect(() => {
-    loadDailyPromo();
-  }, []);
+    if (loading) return;
+    void loadDailyPromo();
+  }, [loading, premium?.isPremium]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -260,7 +281,7 @@ export default function ShopPage() {
       return;
     }
 
-    const coinPrice = dailyPromo.discountedCoins ?? Math.ceil(dailyPromo.discountedRub / 0.2);
+    const coinPrice = dailyPromo.discountedCoins ?? dailyPromo.priceCoins ?? 0;
     if ((user?.coins || 0) < coinPrice) {
       await appAlert(`Недостаточно монет. Нужно ${coinPrice.toLocaleString('ru-RU')} 🪙`, {
         title: 'Недостаточно монет',
@@ -270,7 +291,7 @@ export default function ShopPage() {
     }
 
     if (!(await appConfirm(
-      `Купить карту акции дня за ${coinPrice.toLocaleString('ru-RU')} монет?\n\n${dailyPromo.cardTitle}\nСкидка -${dailyPromo.discountPercent}%`,
+      `Купить карту акции дня за ${coinPrice.toLocaleString('ru-RU')} монет?\n\n${dailyPromo.cardTitle}`,
       { confirmText: 'Купить', type: 'info' }
     ))) {
       return;
@@ -279,20 +300,34 @@ export default function ShopPage() {
     try {
       const response = await fetch('/api/marketplace/daily-offer', {
         method: 'POST',
-        headers: getApiHeaders(),
+        headers: {
+          ...getApiHeaders(),
+          'Content-Type': 'application/json',
+        },
         credentials: 'include',
         body: JSON.stringify({ action: 'buy_coins' }),
       });
-      const data = await response.json();
+      const parsed = await parseJsonResponse<{
+        success?: boolean;
+        error?: string;
+        claim?: { remainingMs?: number };
+        purchase?: { newBalance?: number };
+      }>(response);
+      const data = parsed.data;
 
-      if (!data.success) {
-        const remaining = Number(data.claim?.remainingMs || 0);
+      if (parsed.error && !data) {
+        await appAlert(parsed.error, { title: 'Ошибка', type: 'error' });
+        return;
+      }
+
+      if (!data?.success) {
+        const remaining = Number(data?.claim?.remainingMs || 0);
         if (remaining > 0) {
           setClaimRemainingMs(remaining);
           setCanClaimPromo(false);
           setPromoCooldownLabel(formatCountdown(remaining));
         }
-        await appAlert(data.error || 'Не удалось купить акцию', { title: 'Ошибка', type: 'error' });
+        await appAlert(data?.error || 'Не удалось купить акцию', { title: 'Ошибка', type: 'error' });
         return;
       }
 
@@ -437,7 +472,7 @@ export default function ShopPage() {
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
               <Badge icon={<ShieldCheck size={15} />} label="Безопасные сделки" />
               <Badge icon={<TimerReset size={15} />} label="Обновление 24/7" />
-              <Badge icon={<Percent size={15} />} label="Акция дня -29%" />
+              <Badge icon={<Percent size={15} />} label="Premium · акция дня" />
             </div>
           </div>
         </motion.div>
@@ -448,8 +483,8 @@ export default function ShopPage() {
           onOpenPurchase={() => setShowPremiumModal(true)}
         />
 
-        {/* Daily promo */}
-        {dailyPromo && (
+        {/* Daily promo — Premium: случайная карта 1000–5000 монет */}
+        {(dailyPromo || dailyPromoRequiresPremium || isPremiumUsable(premium)) && (
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
@@ -462,29 +497,58 @@ export default function ShopPage() {
               boxShadow: '0 16px 42px rgba(249,115,22,0.16)',
             }}
           >
+            {!isPremiumUsable(premium) || dailyPromoRequiresPremium ? (
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+                <div>
+                  <div style={{ color: '#fed7aa', fontSize: 12, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                    Premium · акция дня
+                  </div>
+                  <h3 style={{ color: '#fff7ed', margin: '8px 0 6px', fontSize: 22 }}>
+                    Случайная NFT-карта каждый день
+                  </h3>
+                  <p style={{ color: '#fed7aa', margin: 0, fontSize: 13, lineHeight: 1.5 }}>
+                    Для Premium: уникальная карта за 1 000–5 000 монет · 1 раз в 24 часа
+                  </p>
+                </div>
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setShowPremiumModal(true)}
+                  style={{
+                    border: 'none',
+                    borderRadius: '12px',
+                    padding: '12px 18px',
+                    background: 'linear-gradient(135deg, #f97316 0%, #ef4444 100%)',
+                    color: '#fff',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  Получить Premium
+                </motion.button>
+              </div>
+            ) : dailyPromo ? (
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
               <div>
                 <div style={{ color: '#fed7aa', fontSize: 12, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                  Акция дня · серверный лимит 1/24ч
+                  Premium · акция дня · 1/24ч
                 </div>
                 <h3 style={{ color: '#fff7ed', margin: '8px 0 6px', fontSize: 22 }}>
                   {dailyPromo.cardTitle}
                 </h3>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                  {(dailyPromo.originalCoins ?? 0) > 0 && (
-                    <span style={{ color: '#fdba74', fontSize: 14, textDecoration: 'line-through' }}>
-                      {(dailyPromo.originalCoins ?? 0).toLocaleString('ru-RU')} 🪙
+                  <span style={{ color: '#fde047', fontSize: 26, fontWeight: 900 }}>
+                    {(dailyPromo.discountedCoins ?? dailyPromo.priceCoins ?? 0).toLocaleString('ru-RU')} 🪙
+                  </span>
+                  {dailyPromo.themeLabel && (
+                    <span style={{ color: '#fef08a', fontSize: 12, fontWeight: 800 }}>
+                      {dailyPromo.themeLabel}
                     </span>
                   )}
-                  <span style={{ color: '#fde047', fontSize: 26, fontWeight: 900 }}>
-                    {(dailyPromo.discountedCoins ?? Math.ceil(dailyPromo.discountedRub / 0.2)).toLocaleString('ru-RU')} 🪙
-                  </span>
-                  <span style={{ color: '#fef08a', fontSize: 12, fontWeight: 800 }}>
-                    -{dailyPromo.discountPercent}%
-                  </span>
                 </div>
                 <p style={{ color: '#fed7aa', margin: '8px 0 0', fontSize: 12 }}>
-                  Покупка за монеты · 1 раз в 24 часа · карта сразу в коллекцию
+                  Случайная карта · 1 000–5 000 монет · сразу в коллекцию
                 </p>
               </div>
 
@@ -531,11 +595,14 @@ export default function ShopPage() {
                   }}
                 >
                   {canClaimPromo
-                    ? `Купить за ${(dailyPromo.discountedCoins ?? Math.ceil(dailyPromo.discountedRub / 0.2)).toLocaleString('ru-RU')} 🪙`
+                    ? `Купить за ${(dailyPromo.discountedCoins ?? dailyPromo.priceCoins ?? 0).toLocaleString('ru-RU')} 🪙`
                     : 'Уже куплено сегодня'}
                 </motion.button>
               </div>
             </div>
+            ) : (
+              <p style={{ color: '#fed7aa', margin: 0, fontSize: 13 }}>Загрузка акции дня…</p>
+            )}
           </motion.div>
         )}
 

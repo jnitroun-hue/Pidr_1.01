@@ -8,6 +8,8 @@ import { toNano } from 'ton-core';
 import styles from './NFTMintModal.module.css';
 import type { PremiumStatus } from '@/lib/premium/premium-service';
 import { GRAM, formatGramAmount } from '@/lib/crypto/gram-brand';
+import { getApiHeaders } from '@/lib/api-headers';
+import { parseJsonResponse } from '@/lib/api/parse-json-response';
 
 interface NFTMintModalProps {
   onClose: () => void;
@@ -52,16 +54,25 @@ export default function NFTMintModal({ onClose, onSuccess }: NFTMintModalProps) 
     try {
       const response = await fetch('/api/nft/mint-random', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...getApiHeaders(),
+        },
         credentials: 'include',
         body: JSON.stringify({ useFreePremium: true }),
       });
-      const result = await response.json();
-      if (!result.success) {
-        alert(result.error || result.message || 'Ошибка');
+      const parsed = await parseJsonResponse<{ success?: boolean; error?: string; message?: string; nft?: { rank: string; suit: string; rarity: string }; card?: { rank: string; suit: string; rarity: string } }>(response);
+      if (parsed.error && !parsed.data) {
+        alert(parsed.error);
+        return;
+      }
+      const result = parsed.data;
+      if (!result?.success) {
+        alert(result?.error || result?.message || 'Ошибка');
         return;
       }
       const card = result.nft || result.card;
+      if (!card) return;
       alert(`🎁 Premium free roll!\n\n${card.rank} ${card.suit} (${card.rarity})`);
       window.dispatchEvent(new CustomEvent('nft-collection-updated'));
       onSuccess();
@@ -84,21 +95,42 @@ export default function NFTMintModal({ onClose, onSuccess }: NFTMintModalProps) 
       // 1. Резервируем рандомную карту
       const response = await fetch('/api/nft/mint-random', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...getApiHeaders(),
+        },
         credentials: 'include',
         body: JSON.stringify({ wallet_address: userAddress })
       });
 
-      const result = await response.json();
-      if (!result.success) {
-        alert(result.error || result.message || 'Ошибка');
+      const parsed = await parseJsonResponse<{
+        success?: boolean;
+        error?: string;
+        message?: string;
+        isPremiumFree?: boolean;
+        nft?: Record<string, unknown>;
+        card?: Record<string, unknown> & { card_name?: string; rank?: string; suit?: string; rarity?: string };
+        master_wallet_address?: string;
+        mint_price?: number;
+        mint_id?: string | number;
+      }>(response);
+      if (parsed.error && !parsed.data) {
+        alert(parsed.error);
+        setIsProcessing(false);
+        return;
+      }
+      const result = parsed.data;
+      if (!result?.success) {
+        alert(result?.error || result?.message || 'Ошибка');
         setIsProcessing(false);
         return;
       }
 
       if (result.isPremiumFree) {
         const card = result.nft || result.card;
-        alert(`🎉 ${card.rank} ${card.suit} (${card.rarity})!`);
+        if (card && typeof card.rank === 'string' && typeof card.suit === 'string') {
+          alert(`🎉 ${card.rank} ${card.suit} (${String(card.rarity ?? 'common')})!`);
+        }
         onSuccess();
         onClose();
         return;
@@ -144,7 +176,8 @@ export default function NFTMintModal({ onClose, onSuccess }: NFTMintModalProps) 
 
       const confirmResult = await confirmResponse.json();
       if (confirmResult.success) {
-        alert(`🎉 NFT заминчен! Вам выпала: ${result.card.card_name}`);
+        const cardName = result.card?.card_name ?? 'NFT карта';
+        alert(`🎉 NFT заминчен! Вам выпала: ${cardName}`);
         onSuccess();
         onClose();
       }

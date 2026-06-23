@@ -14,6 +14,7 @@ import { useTranslations } from '../../lib/i18n/translations';
 import { avatarFrames, getRarityColor, getRarityName } from '../../data/avatar-frames';
 import TonWalletConnect from '../../components/TonWalletConnect';
 import { getApiHeaders } from '@/lib/api-headers';
+import { parseJsonResponse } from '@/lib/api/parse-json-response';
 import { appAlert, appConfirm } from '@/lib/app-notice';
 import { fetchPremiumStatus, isPremiumUsable } from '@/lib/premium/refresh-premium';
 import { buildReferralLink, buildReferralShareText } from '@/lib/referral/referral-links';
@@ -994,8 +995,13 @@ export default function ProfilePage() {
           ...getApiHeaders(),
         },
       });
-      const result = await response.json();
-      if (result.success) {
+      const parsed = await parseJsonResponse<{ success?: boolean; error?: string; message?: string }>(response);
+      if (parsed.error && !parsed.data) {
+        await appAlert(parsed.error, { title: 'Ошибка', type: 'error' });
+        return;
+      }
+      const result = parsed.data;
+      if (result?.success) {
         await loadNftCollection();
         window.dispatchEvent(new CustomEvent('deck-updated'));
         window.dispatchEvent(new CustomEvent('nft-deck-updated'));
@@ -1004,14 +1010,14 @@ export default function ProfilePage() {
           title: 'Готово',
           type: 'success',
         });
-      } else if (result.error === 'ALREADY_HAS_CARDS') {
+      } else if (result?.error === 'ALREADY_HAS_CARDS') {
         await loadNftCollection();
         await appAlert('У вас уже есть карты в коллекции. Добавьте одну из них в колоду.', {
           title: 'Коллекция не пуста',
           type: 'info',
         });
       } else {
-        await appAlert(result.error || result.message || 'Не удалось создать карту', {
+        await appAlert(result?.error || result?.message || 'Не удалось создать карту', {
           title: 'Ошибка',
           type: 'error',
         });

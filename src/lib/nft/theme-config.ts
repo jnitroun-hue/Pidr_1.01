@@ -45,6 +45,12 @@ const themeAssetPool: ThemeAssetPick[] = (() => {
   return pool;
 })();
 
+/** Карта из общего пула по детерминированному seed (акция дня и т.п.) */
+export function pickSeededThemeAsset(seed: number): ThemeAssetPick {
+  const idx = Math.abs(seed) % themeAssetPool.length;
+  return themeAssetPool[idx];
+}
+
 /** Случайная картинка из ВСЕХ тем (74 ассета) */
 export function pickRandomThemeAsset(): ThemeAssetPick {
   return themeAssetPool[Math.floor(Math.random() * themeAssetPool.length)];
