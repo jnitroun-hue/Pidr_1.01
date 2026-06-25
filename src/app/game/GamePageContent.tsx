@@ -28,6 +28,8 @@ import { useTranslations } from '../../lib/i18n/translations';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useTelegram } from '@/hooks/useTelegram';
 import { getCardAssetSrc, deckEntriesToNftMap, buildNftDeckKey } from '@/lib/game/cardAssets';
+import { BOT_TIMING } from '@/lib/game/botTiming';
+import { preloadNftCardUrls, preloadStandardCardAssets } from '@/lib/game/preload-card-assets';
 import { translateGameText } from '@/lib/i18n/gameRuntimeTranslations';
 import { getApiHeaders } from '@/lib/api-headers';
 import { loadGameUserProfile } from '@/lib/game/load-game-profile';
@@ -337,8 +339,8 @@ function GamePageContentComponent({
     showWinnerModal, winnerModalData, showLoserModal, loserModalData,
     showGameResultsModal, gameResults,
     showPenaltyDeckModal,
-    nftDeckCards: storeNftDeckCards, // ✅ ИСПОЛЬЗУЕМ NFT КАРТЫ ИЗ STORE
-    startGame, endGame, resetGame,
+    nftDeckCards: storeNftDeckCards,
+    startGame, endGame, resetGame, setNftDeckCards: patchStoreNftDeck,
     syncLocalUserPremium,
     syncLocalUserProfile,
     drawCard, makeMove, onDeckClick, placeCardOnSelfByRules,
@@ -354,8 +356,17 @@ function GamePageContentComponent({
     username?: string;
     telegramId?: string;
     isPremium?: boolean;
-  } | null>(null);
-  const [isLoadingUserData, setIsLoadingUserData] = useState(true);
+  } | null>(() => {
+    const tg = getTelegramUser();
+    if (!tg) return null;
+    return {
+      coins: 0,
+      username: tg.username || tg.first_name || 'Игрок',
+      telegramId: String(tg.id),
+      isPremium: false,
+    };
+  });
+  const [isLoadingUserData, setIsLoadingUserData] = useState(() => !getTelegramUser());
 
   const applyGameProfile = useCallback(
     (profile: NonNullable<Awaited<ReturnType<typeof loadGameUserProfile>>>) => {
@@ -378,17 +389,6 @@ function GamePageContentComponent({
 
   // Текущая открытая карта из колоды (для отображения рядом с колодой)
   const [currentCard, setCurrentCard] = useState<string | null>(null);
-
-  // ✅ NFT КАРТЫ ИЗ КОЛОДЫ (используем из store, но также загружаем локально для синхронизации)
-  const [nftDeckCards, setNftDeckCards] = useState<Record<string, string>>({}); // { "ace_of_hearts": "https://..." }
-  
-  // ✅ СИНХРОНИЗИРУЕМ С STORE
-  useEffect(() => {
-    if (storeNftDeckCards && Object.keys(storeNftDeckCards).length > 0) {
-      console.log('🔄 [GamePageContent] Синхронизируем NFT карты из store:', Object.keys(storeNftDeckCards).length);
-      setNftDeckCards(storeNftDeckCards);
-    }
-  }, [storeNftDeckCards]);
 
   // Модальное окно профиля игрока
   const [selectedPlayerProfile, setSelectedPlayerProfile] = useState<PlayerProfile | null>(null);
@@ -656,7 +656,6 @@ function GamePageContentComponent({
     let cancelled = false;
     const fetchUserData = async () => {
       try {
-        setIsLoadingUserData(true);
         const profile = await loadGameUserProfile();
         if (cancelled) return;
         if (profile) {
@@ -829,12 +828,14 @@ function GamePageContentComponent({
     }
   }, [showGameResultsModal, gameResults]);
 
-  // ✅ ЗАГРУЗКА NFT КАРТ ИЗ КОЛОДЫ (Telegram + web через cookies)
+  useEffect(() => {
+    preloadStandardCardAssets();
+  }, []);
+
+  // ✅ ЗАГРУЗКА NFT КАРТ ИЗ КОЛОДЫ (фон — стандартные PNG уже на столе)
   useEffect(() => {
     const loadNFTDeck = async () => {
       try {
-        console.log('🎴 [GamePageContent] Загружаем NFT карты из колоды...');
-
         const response = await fetch('/api/user/deck', {
           method: 'GET',
           headers: {
@@ -849,8 +850,10 @@ function GamePageContentComponent({
           const result = await response.json();
           if (result.success && result.deck) {
             const nftMap = deckEntriesToNftMap(result.deck);
-            console.log(`✅ [GamePageContent] Загружено ${Object.keys(nftMap).length} NFT карт из колоды`);
-            setNftDeckCards(nftMap);
+            if (Object.keys(nftMap).length > 0) {
+              patchStoreNftDeck(nftMap);
+              preloadNftCardUrls(Object.values(nftMap));
+            }
           }
         }
       } catch (error: unknown) {
@@ -858,8 +861,8 @@ function GamePageContentComponent({
       }
     };
 
-    loadNFTDeck();
-  }, []);
+    void loadNFTDeck();
+  }, [patchStoreNftDeck]);
 
   // ✅ УДАЛЕНО: Периодическое обновление баланса (тормозило игру)
   // Баланс обновляется только при явных действиях пользователя
@@ -1333,9 +1336,9 @@ function GamePageContentComponent({
                       setTimeout(() => {
                         const { nextTurn } = useGameStore.getState();
                         if (nextTurn) nextTurn();
-                      }, 500);
+                      }, BOT_TIMING.aiErrorRecovery);
                     }
-                  }, 400);
+                  }, BOT_TIMING.aiPlayAfterSelect);
                 } else {
                   console.error(`🚨 [AI] Карта ${decision.cardToPlay?.image} не найдена в руке ${currentTurnPlayer.name}!`);
                   console.log(`🚨 [AI] Карты в руке:`, currentTurnPlayer.cards.map(c => c.image));
@@ -1352,7 +1355,7 @@ function GamePageContentComponent({
                         const { nextTurn } = useGameStore.getState();
                         if (nextTurn) nextTurn();
                       }
-                    }, 400);
+                    }, BOT_TIMING.aiPlayAfterSelect);
                   } else {
                     // Нет карт - передаем ход
                     console.log(`⚠️ [AI] У ${currentTurnPlayer.name} нет карт, передаем ход`);
@@ -1392,7 +1395,7 @@ function GamePageContentComponent({
     };
     
     // Запускаем ход ИИ с небольшой задержкой (УСКОРЕНО В 2 РАЗА)
-    const delay = (gameStage === 2 || gameStage === 3) ? 250 : 500;
+    const delay = (gameStage === 2 || gameStage === 3) ? BOT_TIMING.aiEntryDelayStage23 : BOT_TIMING.aiEntryDelayStage1;
     const timeoutId = setTimeout(makeAIMove, delay);
     
     return () => {
@@ -2610,7 +2613,7 @@ function GamePageContentComponent({
                           } else if (cardRank && cardSuit) {
                             // ✅ ИСПРАВЛЕНО: Ищем NFT для всех игроков по ключу
                             const nftKey = getNFTKey?.(cardImage) || buildNftDeckKey(cardRank, cardSuit);
-                            nftImageUrl = (nftDeckCards[nftKey] || storeNftDeckCards?.[nftKey]) || null;
+                            nftImageUrl = storeNftDeckCards?.[nftKey] || null;
                           }
                           
                           // Верхняя карта должна быть последней добавленной для любого игрока.
@@ -3145,7 +3148,7 @@ function GamePageContentComponent({
                 nftImageUrl = cardImage; // ✅ cardImage уже является NFT URL!
               } else {
                 const nftKey = getNFTKey?.(cardImage) || buildNftDeckKey(cardRank, cardSuit);
-                nftImageUrl = (nftDeckCards[nftKey] || storeNftDeckCards?.[nftKey]) || null;
+                nftImageUrl = storeNftDeckCards?.[nftKey] || null;
               }
               
               const cardId = typeof card === 'string' ? undefined : card.id;

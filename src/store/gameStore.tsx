@@ -4,6 +4,7 @@ import { persist } from 'zustand/middleware'
 import { createPlayers, generateAvatar } from '../lib/game/avatars'
 import { getApiHeaders } from '../lib/api-headers'
 import { deckEntriesToNftMap } from '../lib/game/cardAssets'
+import { BOT_TIMING } from '../lib/game/botTiming'
 import { calculateRatingRewards, calculatePlayerPositions } from '../lib/rating/ratingSystem'
 import { RoomManager } from '../lib/multiplayer/room-manager'
 import type { TelegramWebAppUser } from '../types/telegram-webapp'
@@ -238,6 +239,7 @@ interface GameState {
   drawCard: () => void
   nextTurn: () => void
   resetGame: () => void
+  setNftDeckCards: (map: Record<string, string>) => void
   updatePlayerRewards: (experience: number, coins: number, ratingChange?: number) => Promise<void>
   
   // Методы для P.I.D.R игры
@@ -512,72 +514,44 @@ export const useGameStore = create<GameState>()(
         const players: Player[] = []
         const cardsPerPlayer = 3;
         
-        // ЗАГРУЖАЕМ данные реального игрока из БД
-        let userAvatar = '';
-        let userName = 'Игрок';
-        let nftDeckCards: Record<string, string> = {}; // ✅ NFT карты из колоды
-        
-        try {
-          const response = await fetch('/api/auth', {
-            method: 'GET',
-            credentials: 'include',
-            cache: 'no-store',
-            headers: getApiHeaders(),
-          });
-          if (response.ok) {
-            const result = await response.json();
-            if (result.success && result.user) {
-              userAvatar = result.user.avatar_url || result.user.avatar || '';
-              // ✅ ИСПРАВЛЕНО: Используем fallback для username
-              userName = result.user.username || result.user.firstName || result.user.first_name || 'Игрок';
-              console.log(`🎮 [gameStore] Загружен username для игры: "${userName}" (из: username="${result.user.username}", firstName="${result.user.firstName}")`);
-            }
-          }
-        } catch (error: unknown) {
-          console.error('❌ Ошибка загрузки игрока:', error);
-        }
-
-        if (userInfo?.avatar) userAvatar = userInfo.avatar;
-        if (userInfo?.username) userName = userInfo.username;
+        // Профиль игрока — сразу из props, без блокировки старта
+        let userAvatar = userInfo?.avatar || '';
+        let userName = userInfo?.username || 'Игрок';
         let userIsPremium = userInfo?.isPremium === true;
+        const nftDeckCards: Record<string, string> = {};
+
+        // Фоновое обновление имени/аватара (не блокирует раздачу)
+        void fetch('/api/auth', {
+          method: 'GET',
+          credentials: 'include',
+          cache: 'no-store',
+          headers: getApiHeaders(),
+        })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((result) => {
+            if (result?.success && result.user) {
+              console.log(`🎮 [gameStore] Профиль подгружен: ${result.user.username || result.user.firstName}`);
+            }
+          })
+          .catch(() => {});
+
         if (!userIsPremium) {
-          try {
-            const premRes = await fetch('/api/premium/status', {
-              credentials: 'include',
-              headers: getApiHeaders(),
-              cache: 'no-store',
-            });
-            if (premRes.ok) {
-              const premData = await premRes.json();
-              userIsPremium = premData.success && premData.premium?.isPremium === true;
-            }
-          } catch {
-            /* optional */
-          }
-        }
-        
-        // ✅ ЗАГРУЖАЕМ NFT КАРТЫ ИЗ КОЛОДЫ (Telegram + web через cookies)
-        try {
-            const { getApiHeaders } = await import('@/lib/api-headers');
-            const deckResponse = await fetch('/api/user/deck', {
-              method: 'GET',
-              headers: {
-                ...getApiHeaders(),
-                'Cache-Control': 'no-cache',
-              },
-              credentials: 'include',
-              cache: 'no-store'
-            });
-            
-            if (deckResponse.ok) {
-              const deckResult = await deckResponse.json();
-              if (deckResult.success && deckResult.deck) {
-                nftDeckCards = deckEntriesToNftMap(deckResult.deck);
-                console.log(`✅ [startGame] Загружено ${Object.keys(nftDeckCards).length} NFT карт из колоды`);
+          void fetch('/api/premium/status', {
+            credentials: 'include',
+            headers: getApiHeaders(),
+            cache: 'no-store',
+          })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((premData) => {
+              if (premData?.success && premData.premium?.isPremium === true) {
+                const { players: currentPlayers } = get();
+                const updated = currentPlayers.map((p) =>
+                  p.isUser ? { ...p, isPremium: true } : p
+                );
+                set({ players: updated });
               }
-            }
-        } catch (error: unknown) {
-          console.error('❌ Ошибка загрузки NFT колоды:', error);
+            })
+            .catch(() => {});
         }
         
         const playerInfos = createPlayers(playersCount, 0, userAvatar, userName);
@@ -597,16 +571,13 @@ export const useGameStore = create<GameState>()(
             const cardIndex = i * cardsPerPlayer + j;
             const imageName = shuffledImages[cardIndex];
             
-            // ✅ ПРОВЕРЯЕМ ЕСТЬ ЛИ NFT ВЕРСИЯ ЭТОЙ КАРТЫ (только для игрока!)
-            const nftKey = get().getNFTKey(imageName);
-            const nftImageUrl = !playerInfo.isBot && nftKey && nftDeckCards[nftKey] ? nftDeckCards[nftKey] : null;
-            
+            // NFT подставляется при рендере через nftDeckCards — раздаём стандартные PNG сразу
             const card: Card = {
               id: `card_${Date.now()}_${i}_${j}_${Math.random().toString(36).substr(2, 9)}`, // ✅ УНИКАЛЬНЫЙ ID
               type: 'normal',
               title: `Карта ${j + 1}`,
               description: '',
-              image: nftImageUrl || imageName, // ✅ ИСПОЛЬЗУЕМ NFT ЕСЛИ ЕСТЬ
+              image: imageName,
               rarity: 'common',
               rank: get().getCardRank(imageName),
               suit: get().getCardSuit(imageName),
@@ -645,16 +616,12 @@ export const useGameStore = create<GameState>()(
         
         // Оставшиеся карты в колоде
         const remainingCards: Card[] = shuffledImages.slice(playersCount * cardsPerPlayer).map((imageName, index) => {
-          // ✅ ПРОВЕРЯЕМ ЕСТЬ ЛИ NFT ВЕРСИЯ ЭТОЙ КАРТЫ
-          const nftKey = get().getNFTKey(imageName);
-          const nftImageUrl = nftKey && nftDeckCards[nftKey] ? nftDeckCards[nftKey] : null;
-          
           return {
             id: `deck_${Date.now()}_${index}_${Math.random().toString(36).substr(2, 9)}`, // ✅ УНИКАЛЬНЫЙ ID
             type: 'normal',
             title: `Карта колоды`,
             description: '',
-            image: nftImageUrl || imageName, // ✅ ИСПОЛЬЗУЕМ NFT ЕСЛИ ЕСТЬ
+            image: imageName,
             rarity: 'common',
             rank: get().getCardRank(imageName),
             suit: get().getCardSuit(imageName),
@@ -724,7 +691,26 @@ export const useGameStore = create<GameState>()(
         // Запускаем обработку хода первого игрока
         setTimeout(() => {
           get().processPlayerTurn(players[firstPlayerIndex].id);
-        }, 500);
+        }, BOT_TIMING.storeFirstTurn);
+
+        // NFT-колода подгружается в фоне — стандартные PNG уже на столе
+        void fetch('/api/user/deck', {
+          method: 'GET',
+          headers: { ...getApiHeaders(), 'Cache-Control': 'no-cache' },
+          credentials: 'include',
+          cache: 'no-store',
+        })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((deckResult) => {
+            if (deckResult?.success && deckResult.deck) {
+              const map = deckEntriesToNftMap(deckResult.deck);
+              if (Object.keys(map).length > 0) {
+                set({ nftDeckCards: map });
+                console.log(`✅ [startGame] NFT колода подгружена: ${Object.keys(map).length} карт`);
+              }
+            }
+          })
+          .catch((err) => console.warn('⚠️ [startGame] NFT deck background load:', err));
         
         } catch (error: unknown) {
           console.error('❌ Ошибка старта игры:', error);
@@ -939,11 +925,11 @@ export const useGameStore = create<GameState>()(
         
         // Запускаем обработку хода для соответствующей стадии (УСКОРЕНО В 2 РАЗА, затем в 1.5)
         if (gameStage === 1) {
-          setTimeout(() => get().processPlayerTurn(nextPlayerId), 330)
+          setTimeout(() => get().processPlayerTurn(nextPlayerId), BOT_TIMING.storeNextTurn)
         } else if (gameStage === 2 || gameStage === 3) {
           // Для 2-й и 3-й стадий устанавливаем фазу выбора карты (правила одинаковые)
           set({ stage2TurnPhase: 'selecting_card' });
-          setTimeout(() => get().processPlayerTurn(nextPlayerId), 330)
+          setTimeout(() => get().processPlayerTurn(nextPlayerId), BOT_TIMING.storeNextTurn)
         }
         
         // УДАЛЕНО: Неправильная логика завершения игры по maxRounds
@@ -967,6 +953,8 @@ export const useGameStore = create<GameState>()(
           penaltyDeck: []
         })
       },
+
+      setNftDeckCards: (map) => set({ nftDeckCards: map }),
       
       // Обновление наград игрока
       updatePlayerRewards: async (experience: number, coins: number, ratingChange?: number) => {
@@ -1789,7 +1777,7 @@ export const useGameStore = create<GameState>()(
             console.log(`⚠️ [processPlayerTurn] У ${currentPlayer.name} нет карт и пеньков - передаем ход`);
             setTimeout(() => {
               get().nextTurn();
-            }, 300);
+            }, BOT_TIMING.storeEmptyHandPass);
             return;
           }
           
@@ -1859,9 +1847,9 @@ export const useGameStore = create<GameState>()(
                   } catch (error: unknown) {
                     console.error(`🚨 Ошибка хода бота:`, error);
                   }
-                }, 450);
+                }, BOT_TIMING.storeStage1HandMove);
               } else {
-                setTimeout(() => get().nextTurn(), 550);
+                setTimeout(() => get().nextTurn(), BOT_TIMING.storeStage1NoTarget);
               }
             } else if (!currentPlayer.isBot) {
               get().showNotification(`${currentPlayer.name}: нажмите на карту соперника`, 'info');
@@ -1877,7 +1865,7 @@ export const useGameStore = create<GameState>()(
             if (currentPlayer.isBot) {
               setTimeout(() => {
                 get().onDeckClick();
-              }, 300);
+              }, BOT_TIMING.storeStage1DeckClick);
             } else if (!currentPlayer.isBot) {
               get().showNotification(`${currentPlayer.name}: нет ходов из руки, кликните на колоду`, 'warning');
             }
@@ -1898,7 +1886,7 @@ export const useGameStore = create<GameState>()(
         if (currentPlayer.isBot) {
           setTimeout(() => {
             get().onDeckClick();
-          }, 300);
+          }, BOT_TIMING.storeStage1DeckClick);
         } else if (!currentPlayer.isBot) {
           get().showNotification(`${currentPlayer.name}: кликните на колоду чтобы открыть карту`, 'info');
         }
@@ -1943,7 +1931,7 @@ export const useGameStore = create<GameState>()(
           if (currentPlayer.isBot) {
             setTimeout(() => {
               get().placeCardOnSelfByRules();
-            }, 650);
+            }, BOT_TIMING.storePlaceOnSelf);
           } else {
             get().showNotification('Выберите действие: положить на себя или пропустить ход', 'info', 2500);
           }
@@ -1959,7 +1947,7 @@ export const useGameStore = create<GameState>()(
           });
           setTimeout(() => {
             get().takeCardNotByRules();
-          }, currentPlayer.isBot ? 650 : 800);
+          }, currentPlayer.isBot ? BOT_TIMING.storeTakeNotByRulesBot : 800);
           return;
         }
         
@@ -1975,7 +1963,7 @@ export const useGameStore = create<GameState>()(
             const targetIndex = deckTargets[0];
             const targetPlayer = players[targetIndex];
             get().makeMove(targetPlayer?.id || '');
-          }, 700);
+          }, BOT_TIMING.storeDeckToOpponent);
         } else if (!currentPlayer.isBot && canMoveToOpponents) {
           // Для игрока - показываем что нужно КЛИКНУТЬ по карте
           get().showNotification('✓ Кликните по открытой карте чтобы сходить', 'info');
@@ -2537,7 +2525,7 @@ export const useGameStore = create<GameState>()(
             setTimeout(() => {
               console.log(`🎮 [playSelectedCard] Запускаем новый ход для ${currentPlayer.name}`);
               get().processPlayerTurn(currentPlayer.id);
-            }, 500);
+            }, BOT_TIMING.storeRoundClosedContinue);
             
             return;
           }
@@ -2552,8 +2540,8 @@ export const useGameStore = create<GameState>()(
           get().checkVictoryCondition();
           // ✅ ИСПРАВЛЕНО: Убрали дублирующий вызов checkOneCardStatus() - он уже вызывается в nextTurn()
           
-          // ПРАВИЛА P.I.D.R.: Ход переходит к следующему игроку (УСКОРЕНО)
-          setTimeout(() => get().nextTurn(), 200);
+          // ПРАВИЛА P.I.D.R.: Ход переходит к следующему игроку
+          setTimeout(() => get().nextTurn(), BOT_TIMING.storePlayToNextTurn);
          },
          
         // ✅ ИСПРАВЛЕНО: Правильная логика побития карт
@@ -2686,7 +2674,7 @@ export const useGameStore = create<GameState>()(
            
            // ПРАВИЛА P.I.D.R.: Ход переходит к следующему игроку (УСКОРЕНО)
            console.log(`🃏 [takeTableCards P.I.D.R.] ✅ Ход к следующему игроку`);
-           setTimeout(() => get().nextTurn(), 200);
+           setTimeout(() => get().nextTurn(), BOT_TIMING.storePlayToNextTurn);
          },
          
          // Проверка завершения раунда

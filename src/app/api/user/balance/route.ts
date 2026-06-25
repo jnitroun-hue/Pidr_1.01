@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '../../../../lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '../../../../lib/auth-utils';
+import { normalizeUserStats } from '@/lib/user/normalize-user-stats';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -53,6 +54,8 @@ export async function GET(req: NextRequest) {
       .order('created_at', { ascending: false })
       .limit(10);
     
+    const stats = normalizeUserStats(user);
+
     return noStoreJson({ 
       success: true, 
       data: {
@@ -61,8 +64,8 @@ export async function GET(req: NextRequest) {
           id: user.id,
           username: user.username,
           rating: user.rating,
-          gamesPlayed: user.games_played,
-          gamesWon: user.games_won,
+          gamesPlayed: stats.gamesPlayed,
+          gamesWon: stats.wins,
           memberSince: user.created_at
         },
         recentTransactions: recentTransactions || []

@@ -7,6 +7,7 @@ import crypto from 'crypto';
 import { hasJwtSecret, requireJwtSecret } from '../../../lib/auth/jwt-secret';
 import { applyReferralForNewUser } from '@/lib/referral/apply-referral';
 import { PENDING_REFERRAL_COOKIE } from '@/lib/referral/constants';
+import { normalizeUserStats } from '@/lib/user/normalize-user-stats';
 
 // ✅ Явная конфигурация runtime для Next.js 15
 export const runtime = 'nodejs';
@@ -375,6 +376,7 @@ export async function GET(req: NextRequest) {
 
     console.log('✅ Активная сессия найдена:', user.username);
 
+    const sessionStats = normalizeUserStats(user);
     const response = NextResponse.json({
       success: true,
       message: 'Сессия активна',
@@ -387,9 +389,9 @@ export async function GET(req: NextRequest) {
         avatar_url: user.avatar_url,
         coins: user.coins,
         rating: user.rating,
-        gamesPlayed: user.total_games_played || user.games_played || 0,
-        wins: user.wins || user.games_won || 0,
-        losses: user.losses || 0,
+        gamesPlayed: sessionStats.gamesPlayed,
+        wins: sessionStats.wins,
+        losses: sessionStats.losses,
         status: user.online_status || user.status || 'offline',
         is_admin: user.is_admin || false
       }
@@ -712,6 +714,7 @@ export async function POST(req: NextRequest) {
       { expiresIn: '30d' }
     );
 
+    const loginStats = normalizeUserStats(user);
     // Устанавливаем cookie с токеном
     const response = NextResponse.json({
       success: true,
@@ -725,9 +728,9 @@ export async function POST(req: NextRequest) {
         telegramId: user.telegram_id,
         coins: user.coins,
         rating: user.rating,
-        gamesPlayed: user.total_games_played || user.games_played || 0,
-        wins: user.wins || user.games_won || 0,
-        losses: user.losses || 0,
+        gamesPlayed: loginStats.gamesPlayed,
+        wins: loginStats.wins,
+        losses: loginStats.losses,
         status: user.online_status || user.status || 'offline'
       }
     });

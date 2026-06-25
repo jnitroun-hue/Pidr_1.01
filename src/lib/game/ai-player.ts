@@ -1,6 +1,7 @@
 // ИИ для игры в P.I.D.R.
 
 import type { Card, Player } from '../../types/game';
+import { getAiThinkDelayMs } from '@/lib/game/botTiming';
 
 export type AIDifficulty = 'easy' | 'medium' | 'hard';
 
@@ -445,17 +446,10 @@ export class AIPlayer {
     return this.getCardSuit(card) === trumpSuit;
   }
   
-  // Задержка для имитации размышления (УСКОРЕНО В 2 РАЗА)
+  // Задержка для имитации размышления
   async makeDecisionWithDelay(gameState: any): Promise<AIDecision> {
-    // Задержка зависит от сложности (уменьшена в 2 раза)
-    const delays = {
-      easy: 170 + Math.random() * 330,    // Ускорено в 1.5 раза (было 250 + 500)
-      medium: 330 + Math.random() * 500,  // Ускорено в 1.5 раза (было 500 + 750)
-      hard: 500 + Math.random() * 670     // Ускорено в 1.5 раза (было 750 + 1000)
-    };
-    
-    const delay = delays[this.difficulty];
-    
+    const delay = getAiThinkDelayMs(this.difficulty);
+
     return new Promise(resolve => {
       setTimeout(() => {
         resolve(this.makeDecision(gameState));

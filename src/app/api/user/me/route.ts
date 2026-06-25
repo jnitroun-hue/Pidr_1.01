@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { supabaseAdmin } from '../../../../lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '../../../../lib/auth-utils';
 import { resolveAuthMethod } from '@/lib/user/resolve-auth-method';
+import { normalizeUserStats } from '@/lib/user/normalize-user-stats';
 import { syncPremiumFlag } from '../../../../lib/premium/premium-service';
 
 // ✅ Явная конфигурация runtime для Next.js 15
@@ -67,10 +68,8 @@ export async function GET(req: NextRequest) {
       })
       .eq('id', dbUserId);
 
-    // ✅ ЛОГИРОВАНИЕ для отладки
-    const totalGames = user.total_games || user.games_played || 0;
-    const wins = user.games_won || user.wins || 0;
-    console.log(`📊 [API /user/me] Пользователь ${userId}: total_games=${user.total_games}, games_played=${user.games_played}, games_won=${user.games_won}, wins=${user.wins}`);
+    const stats = normalizeUserStats(user);
+    console.log(`📊 [API /user/me] Пользователь ${userId}: games=${stats.gamesPlayed}, wins=${stats.wins}`);
 
     // ✅ ЛОГИРОВАНИЕ: Проверяем что приходит из БД
     console.log(`📊 [API /user/me] Данные из БД:`, {
@@ -94,11 +93,11 @@ export async function GET(req: NextRequest) {
         coins: user.coins,
         rating: user.rating,
         experience: user.experience || 0,
-        games_played: totalGames,
-        gamesPlayed: totalGames,
-        games_won: wins,
-        wins: wins,
-        losses: user.losses || 0,
+        games_played: stats.gamesPlayed,
+        gamesPlayed: stats.gamesPlayed,
+        games_won: stats.wins,
+        wins: stats.wins,
+        losses: stats.losses,
         best_win_streak: user.best_win_streak || 0,
         status: user.status,
         created_at: user.created_at,
