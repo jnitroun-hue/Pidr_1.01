@@ -5,9 +5,13 @@ import {
   type NftThemeKey,
   type ThemeAssetPick,
 } from '@/lib/nft/theme-config';
-import { composeThemeCardBuffer } from '@/lib/nft/compose-theme-card';
+import {
+  composeSeededThemeCardBuffer,
+  composeSvgOnlyCardBuffer,
+  downloadStorageBuffer,
+} from '@/lib/nft/compose-theme-card';
 import { normalizeRankToken, normalizeSuitToken } from '@/lib/game/cardAssets';
-import { getSupabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 import { NFT_CARDS_TABLE, NFT_STORAGE_BUCKET } from '@/lib/nft/constants';
 
 export const DAILY_OFFER_MIN_COINS = 1000;
@@ -26,6 +30,7 @@ export interface PremiumDailyOfferSpec {
   cardTitle: string;
   promoImageUrl: string;
   themeLabel: string;
+  seed: number;
 }
 
 function hashSeed(input: string): number {
@@ -82,19 +87,103 @@ export function buildPremiumDailyOffer(userId: number, dayTag = getDayTag()): Pr
     priceCoins,
     themePick,
     themeLabel,
-    promoImageUrl: getThemeAssetPublicPath(themePick),
+    seed,
+    promoImageUrl: '',
     cardTitle: `${rankDisplay(rankRaw)} ${suitSymbol(suit)} · ${themeLabel}`,
   };
+}
+
+function getDailyOfferPreviewStoragePath(userId: number, spec: PremiumDailyOfferSpec): string {
+  return `daily-offer/${spec.dayTag}/preview/user-${userId}-${spec.suit}_${spec.rankNormalized}.png`;
+}
+
+function getDailyOfferCardStoragePath(userId: number, spec: PremiumDailyOfferSpec): string {
+  return `daily-offer/${spec.dayTag}/user-${userId}-${spec.suit}_${spec.rankNormalized}.png`;
+}
+
+async function uploadDailyOfferCardBuffer(
+  storagePath: string,
+  buffer: Buffer
+): Promise<string | null> {
+  const { error: uploadError } = await supabaseAdmin.storage.from(NFT_STORAGE_BUCKET).upload(storagePath, buffer, {
+    contentType: 'image/png',
+    cacheControl: '86400',
+    upsert: true,
+  });
+
+  if (uploadError) {
+    console.warn('⚠️ [daily-offer] upload failed:', uploadError.message);
+    return null;
+  }
+
+  const { data: urlData } = supabaseAdmin.storage.from(NFT_STORAGE_BUCKET).getPublicUrl(storagePath);
+  return urlData?.publicUrl || null;
+}
+
+/** Собирает PNG карты: превью из Storage → тема → SVG fallback */
+async function resolveDailyOfferCardBuffer(
+  userId: number,
+  spec: PremiumDailyOfferSpec
+): Promise<{ buffer: Buffer; themePick: ThemeAssetPick }> {
+  const previewPath = getDailyOfferPreviewStoragePath(userId, spec);
+  const cachedPreview = await downloadStorageBuffer(NFT_STORAGE_BUCKET, previewPath);
+  if (cachedPreview) {
+    return { buffer: cachedPreview, themePick: spec.themePick };
+  }
+
+  try {
+    const composed = await composeSeededThemeCardBuffer({
+      suit: spec.suit,
+      rankRaw: spec.rankRaw,
+      rankNormalized: spec.rankNormalized,
+      seed: spec.seed,
+    });
+    return { buffer: composed.buffer, themePick: composed.pick };
+  } catch (error) {
+    console.warn('⚠️ [daily-offer] themed compose failed, SVG fallback:', error);
+  }
+
+  const buffer = await composeSvgOnlyCardBuffer({
+    suit: spec.suit,
+    rankRaw: spec.rankRaw,
+    rankNormalized: spec.rankNormalized,
+    themeLabel: spec.themeLabel,
+  });
+  return { buffer, themePick: spec.themePick };
+}
+
+/** Собирает PNG карты с рангом/мастью и заливает в Storage (превью акции дня). */
+export async function buildPremiumDailyOfferPreviewUrl(
+  userId: number,
+  spec: PremiumDailyOfferSpec
+): Promise<string> {
+  const storagePath = getDailyOfferPreviewStoragePath(userId, spec);
+
+  try {
+    const { buffer } = await resolveDailyOfferCardBuffer(userId, spec);
+    const publicUrl = await uploadDailyOfferCardBuffer(storagePath, buffer);
+    if (publicUrl) return publicUrl;
+  } catch (error) {
+    console.warn('⚠️ [daily-offer] preview compose failed:', error);
+  }
+
+  return getThemeAssetPublicPath(spec.themePick);
+}
+
+export async function buildPremiumDailyOfferWithPreview(
+  userId: number,
+  dayTag = getDayTag()
+): Promise<PremiumDailyOfferSpec> {
+  const spec = buildPremiumDailyOffer(userId, dayTag);
+  const promoImageUrl = await buildPremiumDailyOfferPreviewUrl(userId, spec);
+  return { ...spec, promoImageUrl };
 }
 
 export async function purchasePremiumDailyOffer(
   userId: number,
   spec: PremiumDailyOfferSpec
-): Promise<{ newBalance: number; cardId: number }> {
-  const db = getSupabaseAdmin();
-  if (!db) throw new Error('База данных недоступна');
-
-  const { data: buyer, error: buyerError } = await db
+): Promise<{ newBalance: number; cardId: number; imageUrl: string }> {
+  const { data: buyer, error: buyerError } = await supabaseAdmin
     .from('_pidr_users')
     .select('id, coins')
     .eq('id', userId)
@@ -107,82 +196,72 @@ export async function purchasePremiumDailyOffer(
     );
   }
 
-  const buffer = await composeThemeCardBuffer({
-    suit: spec.suit,
-    rankRaw: spec.rankRaw,
-    rankNormalized: spec.rankNormalized,
-    theme: spec.themePick.theme,
-    themeId: spec.themePick.themeId,
-  });
-
-  const storagePath = `daily-offer/${spec.dayTag}/user-${userId}-${spec.suit}_${spec.rankNormalized}.png`;
-  const { error: uploadError } = await db.storage.from(NFT_STORAGE_BUCKET).upload(storagePath, buffer, {
-    contentType: 'image/png',
-    cacheControl: '86400',
-    upsert: true,
-  });
-
-  if (uploadError) {
-    throw new Error(`Ошибка сохранения карты: ${uploadError.message}`);
-  }
-
-  const { data: urlData } = db.storage.from(NFT_STORAGE_BUCKET).getPublicUrl(storagePath);
-  const imageUrl = urlData?.publicUrl || spec.promoImageUrl;
+  const { buffer, themePick } = await resolveDailyOfferCardBuffer(userId, spec);
+  const storagePath = getDailyOfferCardStoragePath(userId, spec);
+  const imageUrl =
+    (await uploadDailyOfferCardBuffer(storagePath, buffer)) ||
+    spec.promoImageUrl ||
+    getThemeAssetPublicPath(themePick);
 
   const normalizedSuit = normalizeSuitToken(spec.suit);
   const normalizedRank = normalizeRankToken(spec.rankNormalized);
   const newBalance = (buyer.coins || 0) - spec.priceCoins;
 
-  const { error: deductError } = await db
+  const { error: deductError } = await supabaseAdmin
     .from('_pidr_users')
     .update({ coins: newBalance })
     .eq('id', userId);
 
   if (deductError) {
-    await db.storage.from(NFT_STORAGE_BUCKET).remove([storagePath]);
-    throw new Error('Ошибка списания монет');
+    await supabaseAdmin.storage.from(NFT_STORAGE_BUCKET).remove([storagePath]).catch(() => {});
+    throw new Error(`Ошибка списания монет: ${deductError.message}`);
   }
 
-  const { data: savedCard, error: saveError } = await db
+  const { data: savedCard, error: saveError } = await supabaseAdmin
     .from(NFT_CARDS_TABLE)
     .insert({
       user_id: userId,
       suit: normalizedSuit,
       rank: normalizedRank,
-      rarity: spec.themePick.theme,
+      rarity: themePick.theme,
       image_url: imageUrl,
       storage_path: storagePath,
       cost: spec.priceCoins,
-      payment_method: 'daily_offer_premium',
+      payment_method: 'coins',
       metadata: {
         daily_offer_premium: true,
         day_tag: spec.dayTag,
-        theme: spec.themePick.theme,
-        theme_id: spec.themePick.themeId,
+        theme: themePick.theme,
+        theme_id: themePick.themeId,
         price_coins: spec.priceCoins,
         purchased_at: new Date().toISOString(),
+        offer_payment_method: 'daily_offer_premium',
       },
     })
     .select('id')
     .single();
 
   if (saveError || !savedCard) {
-    await db.from('_pidr_users').update({ coins: buyer.coins }).eq('id', userId);
-    await db.storage.from(NFT_STORAGE_BUCKET).remove([storagePath]);
-    throw new Error('Ошибка создания NFT');
+    await supabaseAdmin.from('_pidr_users').update({ coins: buyer.coins }).eq('id', userId);
+    await supabaseAdmin.storage.from(NFT_STORAGE_BUCKET).remove([storagePath]).catch(() => {});
+    throw new Error(`Ошибка создания NFT: ${saveError?.message || 'unknown'}`);
   }
 
-  return { newBalance, cardId: savedCard.id };
+  return { newBalance, cardId: savedCard.id, imageUrl };
 }
 
 export function offerToApiPayload(spec: PremiumDailyOfferSpec) {
+  const promoImageUrl = spec.promoImageUrl
+    ? `${spec.promoImageUrl}${spec.promoImageUrl.includes('?') ? '&' : '?'}v=${spec.dayTag}`
+    : spec.promoImageUrl;
+
   return {
     listingId: 0,
     cardTitle: spec.cardTitle,
     priceCoins: spec.priceCoins,
     discountedCoins: spec.priceCoins,
     originalCoins: spec.priceCoins,
-    promoImageUrl: spec.promoImageUrl,
+    promoImageUrl,
     theme: spec.themePick.theme,
     themeId: spec.themePick.themeId,
     themeLabel: spec.themeLabel,

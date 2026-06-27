@@ -7,9 +7,12 @@ import {
   getThemeAssetRelativePath,
   NFT_THEME_CONFIG,
   pickRandomThemeAsset,
+  pickSeededThemeAsset,
   type NftThemeKey,
   type ThemeAssetPick,
 } from '@/lib/nft/theme-config';
+
+const REMOTE_FETCH_TIMEOUT_MS = 2500;
 
 function displayRank(rankRaw: string, rankNormalized: string): string {
   if (rankRaw === '10' || rankNormalized === '10') return '10';
@@ -36,16 +39,26 @@ function suitColor(suit: string): string {
   return suit === 'hearts' || suit === 'diamonds' ? '#ef4444' : '#000000';
 }
 
-async function downloadFromStorage(bucket: string, objectPath: string): Promise<Buffer | null> {
-  const { data, error } = await supabaseAdmin.storage.from(bucket).download(objectPath);
-  if (error || !data) return null;
-  const buffer = Buffer.from(await data.arrayBuffer());
-  return buffer.length ? buffer : null;
+export async function downloadStorageBuffer(
+  bucket: string,
+  objectPath: string
+): Promise<Buffer | null> {
+  try {
+    const { data, error } = await supabaseAdmin.storage.from(bucket).download(objectPath);
+    if (error || !data) return null;
+    const buffer = Buffer.from(await data.arrayBuffer());
+    return buffer.length > 100 ? buffer : null;
+  } catch {
+    return null;
+  }
 }
 
 async function fetchRemoteBuffer(url: string): Promise<Buffer | null> {
   try {
-    const res = await fetch(url, { cache: 'no-store' });
+    const res = await fetch(url, {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(REMOTE_FETCH_TIMEOUT_MS),
+    });
     if (!res.ok) return null;
     const buffer = Buffer.from(await res.arrayBuffer());
     return buffer.length > 100 ? buffer : null;
@@ -64,6 +77,18 @@ async function loadThemeImageBuffer(pick: ThemeAssetPick): Promise<Buffer> {
     return fs.readFileSync(localPath);
   }
 
+  const storageCandidates = [
+    { bucket: NFT_STORAGE_BUCKET, path: `themes/${relativePath}` },
+    { bucket: NFT_STORAGE_BUCKET, path: relativePath },
+    { bucket: POKEMON_STORAGE_BUCKET, path: fileName },
+    { bucket: POKEMON_STORAGE_BUCKET, path: `${pick.themeId}.png` },
+  ];
+
+  for (const { bucket, path: objectPath } of storageCandidates) {
+    const buffer = await downloadStorageBuffer(bucket, objectPath);
+    if (buffer) return buffer;
+  }
+
   const appBases = [
     process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, ''),
     process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
@@ -76,19 +101,41 @@ async function loadThemeImageBuffer(pick: ThemeAssetPick): Promise<Buffer> {
     if (buffer) return buffer;
   }
 
-  const storageCandidates = [
-    { bucket: NFT_STORAGE_BUCKET, path: `themes/${relativePath}` },
-    { bucket: NFT_STORAGE_BUCKET, path: relativePath },
-    { bucket: POKEMON_STORAGE_BUCKET, path: fileName },
-    { bucket: POKEMON_STORAGE_BUCKET, path: `${pick.themeId}.png` },
-  ];
-
-  for (const { bucket, path: objectPath } of storageCandidates) {
-    const buffer = await downloadFromStorage(bucket, objectPath);
-    if (buffer) return buffer;
-  }
-
   throw new Error(`Ассет темы не найден: ${relativePath}`);
+}
+
+function escapeXml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/** Карта только с рангом/мастью — без внешних ассетов (fallback) */
+export async function composeSvgOnlyCardBuffer(params: {
+  suit: string;
+  rankRaw: string;
+  rankNormalized: string;
+  themeLabel?: string;
+}): Promise<Buffer> {
+  const rank = escapeXml(displayRank(params.rankRaw, params.rankNormalized));
+  const symbol = escapeXml(suitSymbol(params.suit));
+  const color = suitColor(params.suit);
+  const label = escapeXml(params.themeLabel || 'Premium');
+
+  const svg = `
+    <svg width="300" height="420" xmlns="http://www.w3.org/2000/svg">
+      <rect width="300" height="420" fill="#ffffff"/>
+      <rect x="4" y="4" width="292" height="412" fill="none" stroke="#000000" stroke-width="8"/>
+      <text x="20" y="50" font-family="Arial, sans-serif" font-size="40" font-weight="bold" fill="${color}">${rank}</text>
+      <text x="20" y="90" font-family="Arial, sans-serif" font-size="36" font-weight="bold" fill="${color}">${symbol}</text>
+      <text x="260" y="400" font-family="Arial, sans-serif" font-size="40" font-weight="bold" fill="${color}" text-anchor="end">${rank}</text>
+      <text x="260" y="360" font-family="Arial, sans-serif" font-size="36" font-weight="bold" fill="${color}" text-anchor="end">${symbol}</text>
+      <text x="150" y="215" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#64748b" text-anchor="middle">${label}</text>
+    </svg>`;
+
+  return sharp(Buffer.from(svg)).png().toBuffer();
 }
 
 export async function composeThemeCardBuffer(params: {
@@ -102,18 +149,18 @@ export async function composeThemeCardBuffer(params: {
   const pick: ThemeAssetPick = { theme, themeId };
   const themeImage = await loadThemeImageBuffer(pick);
 
-  const rank = displayRank(rankRaw, rankNormalized);
-  const symbol = suitSymbol(suit);
+  const rank = escapeXml(displayRank(rankRaw, rankNormalized));
+  const symbol = escapeXml(suitSymbol(suit));
   const color = suitColor(suit);
 
   const baseSvg = `
-    <svg width="300" height="420">
+    <svg width="300" height="420" xmlns="http://www.w3.org/2000/svg">
       <rect width="300" height="420" fill="#ffffff"/>
       <rect x="4" y="4" width="292" height="412" fill="none" stroke="#000000" stroke-width="8"/>
-      <text x="20" y="50" font-family="Arial" font-size="40" font-weight="bold" fill="${color}">${rank}</text>
-      <text x="20" y="90" font-family="Arial" font-size="36" font-weight="bold" fill="${color}">${symbol}</text>
-      <text x="260" y="400" font-family="Arial" font-size="40" font-weight="bold" fill="${color}" text-anchor="end">${rank}</text>
-      <text x="260" y="360" font-family="Arial" font-size="36" font-weight="bold" fill="${color}" text-anchor="end">${symbol}</text>
+      <text x="20" y="50" font-family="Arial, sans-serif" font-size="40" font-weight="bold" fill="${color}">${rank}</text>
+      <text x="20" y="90" font-family="Arial, sans-serif" font-size="36" font-weight="bold" fill="${color}">${symbol}</text>
+      <text x="260" y="400" font-family="Arial, sans-serif" font-size="40" font-weight="bold" fill="${color}" text-anchor="end">${rank}</text>
+      <text x="260" y="360" font-family="Arial, sans-serif" font-size="36" font-weight="bold" fill="${color}" text-anchor="end">${symbol}</text>
     </svg>`;
 
   const themeResized = await sharp(themeImage)
@@ -155,4 +202,41 @@ export async function composeRandomThemedCardBuffer(params: {
   }
 
   throw lastError ?? new Error('Не удалось собрать тематическую карту');
+}
+
+/** Тема из seed акции дня + запасные попытки */
+export async function composeSeededThemeCardBuffer(params: {
+  suit: string;
+  rankRaw: string;
+  rankNormalized: string;
+  seed: number;
+  maxAttempts?: number;
+}): Promise<{ buffer: Buffer; pick: ThemeAssetPick }> {
+  const maxAttempts = params.maxAttempts ?? 6;
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const pick =
+      attempt === 0
+        ? pickSeededThemeAsset(params.seed >>> 4)
+        : pickRandomThemeAsset();
+    try {
+      const buffer = await composeThemeCardBuffer({
+        suit: params.suit,
+        rankRaw: params.rankRaw,
+        rankNormalized: params.rankNormalized,
+        theme: pick.theme,
+        themeId: pick.themeId,
+      });
+      return { buffer, pick };
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      console.warn(
+        `⚠️ [compose-seeded] попытка ${attempt + 1} (${pick.theme}/${pick.themeId}):`,
+        lastError.message
+      );
+    }
+  }
+
+  throw lastError ?? new Error('Не удалось собрать карту акции дня');
 }

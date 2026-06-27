@@ -234,48 +234,63 @@ export const ProperMultiplayer: React.FC = () => {
     }
   };
 
-  // ✅ Загружаем количество игр — НЕ ЖДЁМ fetchUser, сразу пробуем через Telegram headers
-  useEffect(() => {
-    const loadGamesCount = async () => {
-      try {
-        const response = await fetch('/api/user/bot-games', {
-          method: 'GET',
-          headers: getApiHeaders(),
-          credentials: 'include'
-        });
+  // ✅ Загружаем количество игр — обновляем при входе и после игры с ботами
+  const loadGamesCount = React.useCallback(async () => {
+    try {
+      const response = await fetch('/api/user/bot-games', {
+        method: 'GET',
+        headers: getApiHeaders(),
+        credentials: 'include',
+        cache: 'no-store',
+      });
 
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            setGamesPlayed(data.gamesPlayed || 0);
-            setCanPlayMultiplayer(Boolean(data.canPlayMultiplayer));
-            if (!data.canPlayMultiplayer) {
-              setShowAccessModal(true);
-            }
-          } else {
-            setGamesPlayed(0);
-            setCanPlayMultiplayer(false);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setGamesPlayed(data.gamesPlayed || 0);
+          setCanPlayMultiplayer(Boolean(data.canPlayMultiplayer));
+          if (!data.canPlayMultiplayer) {
             setShowAccessModal(true);
+          } else {
+            setShowAccessModal(false);
           }
         } else {
-          console.warn('⚠️ [ProperMultiplayer] bot-games вернул ошибку — блокируем доступ');
           setGamesPlayed(0);
           setCanPlayMultiplayer(false);
           setShowAccessModal(true);
         }
-      } catch (error) {
-        console.error('❌ [ProperMultiplayer] Ошибка загрузки игр:', error);
+      } else {
+        console.warn('⚠️ [ProperMultiplayer] bot-games вернул ошибку — блокируем доступ');
         setGamesPlayed(0);
         setCanPlayMultiplayer(false);
         setShowAccessModal(true);
-      } finally {
-        setAccessChecked(true);
+      }
+    } catch (error) {
+      console.error('❌ [ProperMultiplayer] Ошибка загрузки игр:', error);
+      setGamesPlayed(0);
+      setCanPlayMultiplayer(false);
+      setShowAccessModal(true);
+    } finally {
+      setAccessChecked(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadGamesCount();
+
+    const refreshOnReturn = () => {
+      if (document.visibilityState === 'visible') {
+        void loadGamesCount();
       }
     };
 
-    // Запускаем проверку сразу, не дожидаясь fetchUser
-    loadGamesCount();
-  }, []);
+    window.addEventListener('focus', refreshOnReturn);
+    document.addEventListener('visibilitychange', refreshOnReturn);
+    return () => {
+      window.removeEventListener('focus', refreshOnReturn);
+      document.removeEventListener('visibilitychange', refreshOnReturn);
+    };
+  }, [loadGamesCount]);
 
   const handleCreateRoom = async (forceReplace: boolean = false) => {
     if (!roomName.trim()) {
@@ -790,13 +805,23 @@ export const ProperMultiplayer: React.FC = () => {
 
   // Рендер комнаты ожидания
   if (view === 'waiting' && currentRoom) {
-    // ✅ isHost будет обновляться из БД в MultiplayerLobby через loadRoomPlayers
+    const lobbyUserId = resolveLobbyUserId(user);
+    const isRoomHostForUser =
+      currentRoom.hostId === lobbyUserId ||
+      currentRoom.players.some(
+        (p) => p.isHost && String(p.id) === String(lobbyUserId)
+      );
+    const alternateUserIds = [user?.telegramId, user?.id]
+      .filter((value) => value != null && String(value).trim() !== '')
+      .map(String);
+
     return (
       <MultiplayerLobby
         roomId={currentRoom.id.toString()}
         roomCode={currentRoom.code}
-        isHost={currentRoom.hostId === resolveLobbyUserId(user)}
-        currentUserId={resolveLobbyUserId(user)}
+        isHost={isRoomHostForUser}
+        currentUserId={lobbyUserId}
+        alternateUserIds={alternateUserIds}
         onGameStart={handleStartGame}
         onLeaveRoom={handleLeaveRoom}
       />

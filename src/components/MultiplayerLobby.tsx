@@ -7,24 +7,47 @@ import InviteFriendsModal from './InviteFriendsModal';
 import { getApiHeaders } from '@/lib/api-headers';
 import lobbyStyles from './MultiplayerLobby.module.css';
 import { canStartRoom } from '@/lib/multiplayer/room-rules';
+import {
+  getTelegramIdFromWindow,
+} from '@/lib/multiplayer/public-user-id';
 
 interface MultiplayerLobbyProps {
   roomId: string;
   roomCode: string;
   isHost: boolean;
   currentUserId: string;
+  alternateUserIds?: string[];
   onGameStart: (gameSettings: any) => void;
   onLeaveRoom: () => void;
 }
 
 interface LobbyPlayer {
   user_id: string;
+  db_user_id?: number | null;
   username: string;
   position: number;
   is_ready: boolean;
   is_host?: boolean;
   is_bot?: boolean;
   avatar_url?: string;
+}
+
+function collectLobbyUserIds(primaryId: string, extraIds: string[] = []): Set<string> {
+  const ids = new Set<string>();
+  if (primaryId) ids.add(String(primaryId));
+  extraIds.forEach((id) => {
+    if (id) ids.add(String(id));
+  });
+  const fromWindow = getTelegramIdFromWindow();
+  if (fromWindow) ids.add(fromWindow);
+  return ids;
+}
+
+function playerMatchesLobbyUser(player: LobbyPlayer, userIds: Set<string>): boolean {
+  const keys = [player.user_id, player.db_user_id].filter(
+    (value) => value != null && String(value).trim() !== ''
+  );
+  return keys.some((key) => userIds.has(String(key)));
 }
 
 function isBotPlayer(player: LobbyPlayer): boolean {
@@ -37,6 +60,7 @@ export default function MultiplayerLobby({
   roomCode, 
   isHost: initialIsHost,
   currentUserId,
+  alternateUserIds = [],
   onGameStart, 
   onLeaveRoom 
 }: MultiplayerLobbyProps) {
@@ -65,7 +89,12 @@ export default function MultiplayerLobby({
   const [codeCopied, setCodeCopied] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [isAddingBot, setIsAddingBot] = useState(false);
+  const [addBotError, setAddBotError] = useState('');
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const lobbyUserIds = React.useMemo(
+    () => collectLobbyUserIds(currentUserId, alternateUserIds),
+    [currentUserId, alternateUserIds]
+  );
   const [newlyJoinedIds, setNewlyJoinedIds] = useState<Set<string>>(new Set());
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const refreshInFlightRef = useRef(false);
@@ -132,9 +161,14 @@ export default function MultiplayerLobby({
         }
         prevPlayerIdsRef.current = currentIds;
 
-        const myPlayer = players.find((p) => String(p.user_id) === String(currentUserId));
-        if (myPlayer?.is_host !== undefined) {
-          setIsHost(myPlayer.is_host);
+        const myPlayer = players.find((p) => playerMatchesLobbyUser(p, lobbyUserIds));
+        if (myPlayer) {
+          setIsHost(Boolean(myPlayer.is_host));
+        } else {
+          const hostPlayer = players.find((p) => p.is_host && !isBotPlayer(p));
+          if (hostPlayer && playerMatchesLobbyUser(hostPlayer, lobbyUserIds)) {
+            setIsHost(true);
+          }
         }
         
         setLobbyState((prev) => {
@@ -159,7 +193,11 @@ export default function MultiplayerLobby({
     } finally {
       refreshInFlightRef.current = false;
     }
-  }, [roomId, currentUserId, onLeaveRoom, triggerGameStart]);
+  }, [roomId, currentUserId, lobbyUserIds, onLeaveRoom, triggerGameStart]);
+
+  useEffect(() => {
+    setIsHost(initialIsHost);
+  }, [initialIsHost]);
 
   useEffect(() => {
     if (!roomManagerRef.current) {
@@ -261,8 +299,11 @@ export default function MultiplayerLobby({
 
   // ✅ ДОБАВЛЕНИЕ БОТА (ТОЛЬКО ХОСТОМ)
   const handleAddBot = async () => {
-    if (!isHost) {
+    if (!isRoomHost) {
       alert('Добавлять ботов может только хост комнаты');
+      return;
+    }
+    if (lobbyState.players.length >= lobbyState.maxPlayers) {
       return;
     }
     if (!currentUserId) {
@@ -272,6 +313,7 @@ export default function MultiplayerLobby({
 
     try {
       setIsAddingBot(true);
+      setAddBotError('');
       console.log('🤖 [MultiplayerLobby] Добавляем бота в комнату', roomId);
 
       const response = await fetch(`/api/rooms/${roomId}/bots`, {
@@ -284,33 +326,35 @@ export default function MultiplayerLobby({
         body: JSON.stringify({ action: 'add' })
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ [MultiplayerLobby] Ошибка добавления бота:', response.status, errorText);
-        alert(errorText || 'Не удалось добавить бота');
+      const raw = await response.text();
+      let data: { success?: boolean; message?: string; bot?: unknown } = {};
+      try {
+        data = raw ? JSON.parse(raw) : {};
+      } catch {
+        data = { message: raw };
+      }
+
+      if (!response.ok || !data.success) {
+        const message = data.message || raw || 'Не удалось добавить бота';
+        console.error('❌ [MultiplayerLobby] Ошибка добавления бота:', response.status, message);
+        setAddBotError(message);
+        alert(message);
         return;
       }
 
-      const data = await response.json();
-      if (data.success) {
-        console.log('✅ [MultiplayerLobby] Бот добавлен:', data.bot);
-        // ✅ ИСПРАВЛЕНО: Ждём немного и обновляем список несколько раз
-        await loadRoomPlayers();
-        setTimeout(() => loadRoomPlayers(), 500);
-        setTimeout(() => loadRoomPlayers(), 1500);
-        // Обновим активность комнаты
-        await fetch('/api/user/heartbeat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...getApiHeaders() },
-          credentials: 'include',
-        });
-      } else {
-        console.error('❌ [MultiplayerLobby] API вернул ошибку при добавлении бота:', data.message);
-        alert(data.message || 'Не удалось добавить бота');
-      }
+      console.log('✅ [MultiplayerLobby] Бот добавлен:', data.bot);
+      await loadRoomPlayers(true);
+      setTimeout(() => loadRoomPlayers(true), 500);
+      await fetch('/api/user/heartbeat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getApiHeaders() },
+        credentials: 'include',
+      }).catch(() => {});
     } catch (error) {
       console.error('❌ [MultiplayerLobby] Ошибка добавления бота:', error);
-      alert('Ошибка добавления бота');
+      const message = error instanceof Error ? error.message : 'Ошибка добавления бота';
+      setAddBotError(message);
+      alert(message);
     } finally {
       setIsAddingBot(false);
     }
@@ -318,7 +362,7 @@ export default function MultiplayerLobby({
 
   // ✅ ЗАПУСК ИГРЫ ЧЕРЕЗ API
   const handleStartGame = async () => {
-    if (!isHost || !lobbyState.canStart) return;
+    if (!isRoomHost || !lobbyState.canStart) return;
 
     try {
       const roomManager = roomManagerRef.current;
@@ -339,8 +383,14 @@ export default function MultiplayerLobby({
     onLeaveRoom();
   };
 
-  // ✅ ИСПРАВЛЕНО: Нормализуем сравнение - приводим оба к строке
-  const currentPlayer = lobbyState.players.find((p) => String(p.user_id) === String(currentUserId));
+  const currentPlayer = lobbyState.players.find((p) => playerMatchesLobbyUser(p, lobbyUserIds));
+  const isRoomHost = Boolean(
+    isHost || initialIsHost || currentPlayer?.is_host === true
+  );
+  const canAddBot =
+    isRoomHost &&
+    lobbyState.players.length < lobbyState.maxPlayers &&
+    !isAddingBot;
   const readyPlayersCount = lobbyState.players.filter(p => p.is_ready).length;
 
   return (
@@ -443,7 +493,7 @@ export default function MultiplayerLobby({
             const y = Math.sin((angle * Math.PI) / 180) * radius;
             const userIdStr = player ? String(player.user_id) : '';
             const isBot = player ? isBotPlayer(player) : false;
-            const isCurrentUser = player && userIdStr === String(currentUserId);
+            const isCurrentUser = player ? playerMatchesLobbyUser(player, lobbyUserIds) : false;
             const isHostPlayer = Boolean(player?.is_host);
             const justJoined = player && newlyJoinedIds.has(userIdStr);
 
@@ -457,11 +507,24 @@ export default function MultiplayerLobby({
                 }}
               >
                 {isEmpty ? (
-                  <div className={lobbyStyles.seatEmpty}>
-                    <UserPlus size={16} style={{ opacity: 0.45 }} />
-                    <span>Место {position}</span>
-                    <span style={{ opacity: 0.7 }}>Ждём игрока</span>
-                  </div>
+                  canAddBot ? (
+                    <button
+                      type="button"
+                      className={lobbyStyles.seatEmptyBot}
+                      onClick={handleAddBot}
+                      disabled={isAddingBot}
+                      aria-label="Добавить бота на это место"
+                    >
+                      <Bot size={18} />
+                      <span>{isAddingBot ? 'Добавление…' : 'Добавить бота'}</span>
+                    </button>
+                  ) : (
+                    <div className={lobbyStyles.seatEmpty}>
+                      <UserPlus size={16} style={{ opacity: 0.45 }} />
+                      <span>Место {position}</span>
+                      <span style={{ opacity: 0.7 }}>Ждём игрока</span>
+                    </div>
+                  )
                 ) : (
                   <motion.div
                     initial={justJoined ? { opacity: 0, scale: 0.5, y: 12 } : false}
@@ -509,10 +572,9 @@ export default function MultiplayerLobby({
         <div className="players-list">
           <AnimatePresence>
             {lobbyState.players.map((player, index) => {
-              const userIdStr = String(player.user_id || '');
-              const isBot = userIdStr.startsWith('-') || parseInt(userIdStr) < 0;
-              const isCurrentUser = userIdStr === String(currentUserId);
+              const isCurrentUser = playerMatchesLobbyUser(player, lobbyUserIds);
               const isHostPlayer = player.is_host === true;
+              const isBot = isBotPlayer(player);
 
               return (
                 <motion.div
@@ -562,10 +624,35 @@ export default function MultiplayerLobby({
           
           {/* Пустые слоты */}
           {Array.from({ length: lobbyState.maxPlayers - lobbyState.players.length }, (_, index) => (
-            <div key={`empty-${index}`} className="player-item empty-slot">
+            <div
+              key={`empty-${index}`}
+              className={`player-item empty-slot ${canAddBot ? 'empty-slot-action' : ''}`}
+              onClick={canAddBot ? handleAddBot : undefined}
+              onKeyDown={
+                canAddBot
+                  ? (e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleAddBot();
+                      }
+                    }
+                  : undefined
+              }
+              role={canAddBot ? 'button' : undefined}
+              tabIndex={canAddBot ? 0 : undefined}
+            >
               <div className="empty-slot-content">
-                <UserPlus className="empty-slot-icon" />
-                <span>Ожидание игрока...</span>
+                {canAddBot ? (
+                  <>
+                    <Bot className="empty-slot-icon bot-add-icon" />
+                    <span>{isAddingBot ? 'Добавление бота…' : '🤖 Добавить бота'}</span>
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="empty-slot-icon" />
+                    <span>Ожидание игрока...</span>
+                  </>
+                )}
               </div>
             </div>
           ))}
@@ -584,6 +671,37 @@ export default function MultiplayerLobby({
         borderRadius: '16px',
         border: '1px solid rgba(255, 255, 255, 0.1)'
       }}>
+        {isRoomHost && canAddBot && (
+          <motion.button
+            type="button"
+            onClick={handleAddBot}
+            disabled={isAddingBot}
+            whileHover={{ scale: 1.02, y: -2 }}
+            whileTap={{ scale: 0.98 }}
+            style={{
+              padding: '16px 24px',
+              borderRadius: '12px',
+              border: 'none',
+              background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+              color: 'white',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              cursor: isAddingBot ? 'wait' : 'pointer',
+              opacity: isAddingBot ? 0.7 : 1,
+              boxShadow: '0 4px 12px rgba(139, 92, 246, 0.4)',
+              width: '100%',
+            }}
+          >
+            {isAddingBot ? '⏳ Добавление бота…' : '🤖 Добавить бота'}
+          </motion.button>
+        )}
+
+        {addBotError && (
+          <div style={{ color: '#f87171', fontSize: '13px', textAlign: 'center' }}>
+            {addBotError}
+          </div>
+        )}
+
         {/* Кнопка готовности */}
         <motion.button
           onClick={(e) => {
@@ -634,10 +752,11 @@ export default function MultiplayerLobby({
         </motion.button>
 
         {/* Добавить бота и пригласить друзей (ВСЕГДА ПОКАЗЫВАЕМ ХОСТУ) */}
-        {isHost && (
+        {isRoomHost && (
           <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
-                      <motion.button
-                        onClick={handleAddBot}
+            <motion.button
+              type="button"
+              onClick={handleAddBot}
               disabled={isAddingBot || lobbyState.players.length >= lobbyState.maxPlayers}
               whileHover={{ scale: 1.02, y: -2 }}
               whileTap={{ scale: 0.98 }}
@@ -687,7 +806,7 @@ export default function MultiplayerLobby({
         )}
 
         {/* Запуск игры (только хост) */}
-        {isHost && (
+        {isRoomHost && (
           <motion.button
             onClick={handleStartGame}
             disabled={!lobbyState.canStart || !isConnected}
@@ -1131,6 +1250,22 @@ export default function MultiplayerLobby({
         .empty-slot {
           opacity: 0.5;
           border-style: dashed;
+        }
+
+        .empty-slot-action {
+          opacity: 1;
+          cursor: pointer;
+          border-color: rgba(139, 92, 246, 0.55);
+          background: linear-gradient(135deg, rgba(139, 92, 246, 0.18) 0%, rgba(124, 58, 237, 0.12) 100%);
+        }
+
+        .empty-slot-action:hover {
+          border-color: rgba(139, 92, 246, 0.85);
+          transform: translateY(-2px);
+        }
+
+        .bot-add-icon {
+          color: #a78bfa;
         }
 
         .lobby-actions {

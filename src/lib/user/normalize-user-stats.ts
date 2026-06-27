@@ -30,3 +30,29 @@ export function normalizeUserStats(user: UserStatsRow): NormalizedUserStats {
 
   return { gamesPlayed, wins, losses, winRate };
 }
+
+/** Синхронные значения для записи в БД после +1 игры */
+export function nextGamesPlayedColumns(user: UserStatsRow): {
+  games_played: number;
+  total_games: number;
+  total_games_played: number;
+} {
+  const next = normalizeUserStats(user).gamesPlayed + 1;
+  return {
+    games_played: next,
+    total_games: next,
+    total_games_played: next,
+  };
+}
+
+/** Синхронные значения побед для всех дублирующих колонок */
+export function nextWinsColumns(user: UserStatsRow): {
+  games_won: number;
+  wins: number;
+} {
+  const next = normalizeUserStats(user).wins + 1;
+  return {
+    games_won: next,
+    wins: next,
+  };
+}

@@ -1737,23 +1737,108 @@ function GamePageContentComponent({
   useEffect(() => {
     if (!gameInitialized && !isLoadingUserData && userData) {
       console.log('🎮 [AUTOSTART] Запускаем игру автоматически...');
+
+      const profilePayload = {
+        avatar: userData.avatar,
+        username: userData.username,
+        isPremium: userData.isPremium,
+      };
+
       if (isMultiplayer && multiplayerData) {
-        // Для мультиплеера
-        startGame('multiplayer', playerCount, null, {
-          avatar: userData.avatar,
-          username: userData.username,
-          isPremium: userData.isPremium,
-        });
-      } else {
-        startGame('single', playerCount, null, {
-          avatar: userData.avatar,
-          username: userData.username,
-          isPremium: userData.isPremium,
-        });
+        let cancelled = false;
+
+        void (async () => {
+          const multiplayerConfig: {
+            roomId: string;
+            roomCode: string;
+            isHost: boolean;
+            roomPlayers?: Array<{
+              id: string;
+              name: string;
+              avatar?: string | null;
+              isBot: boolean;
+              position: number;
+              isUser?: boolean;
+            }>;
+          } = {
+            roomId: multiplayerData.roomId,
+            roomCode: multiplayerData.roomCode,
+            isHost: multiplayerData.isHost,
+          };
+
+          let tableSize = playerCount;
+
+          try {
+            const response = await fetch(`/api/rooms/${multiplayerData.roomId}/players`, {
+              method: 'GET',
+              credentials: 'include',
+              headers: getApiHeaders(),
+              cache: 'no-store',
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              if (data.success && Array.isArray(data.players) && data.players.length > 0) {
+                const myIds = new Set(
+                  [userData.telegramId, userPlayerId]
+                    .filter((value) => value != null && String(value).trim() !== '')
+                    .map(String)
+                );
+
+                const roomPlayers = data.players.map((player: {
+                  user_id: string | number;
+                  db_user_id?: number | null;
+                  username?: string;
+                  avatar_url?: string | null;
+                  is_bot?: boolean;
+                  position?: number;
+                }) => {
+                  const publicId = String(player.user_id);
+                  const dbId =
+                    player.db_user_id != null ? String(player.db_user_id) : '';
+                  const isBot =
+                    player.is_bot === true || Number(publicId) < 0;
+                  const isUser =
+                    myIds.has(publicId) || (dbId !== '' && myIds.has(dbId));
+
+                  return {
+                    id: publicId,
+                    name: player.username || (isBot ? 'Бот' : 'Игрок'),
+                    avatar: player.avatar_url,
+                    isBot,
+                    position: player.position ?? 0,
+                    isUser,
+                  };
+                });
+
+                multiplayerConfig.roomPlayers = roomPlayers;
+                tableSize = roomPlayers.length;
+                console.log(
+                  `🎮 [AUTOSTART] Загружено игроков комнаты: ${tableSize}`,
+                  roomPlayers
+                );
+              }
+            }
+          } catch (error) {
+            console.warn('⚠️ [AUTOSTART] Не удалось загрузить игроков комнаты:', error);
+          }
+
+          if (cancelled) return;
+
+          await startGame('multiplayer', tableSize, multiplayerConfig, profilePayload);
+          setGameInitialized(true);
+        })();
+
+        return () => {
+          cancelled = true;
+        };
       }
-      setGameInitialized(true);
+
+      void startGame('single', playerCount, null, profilePayload).then(() => {
+        setGameInitialized(true);
+      });
     }
-  }, [gameInitialized, isLoadingUserData, isMultiplayer, multiplayerData, playerCount, startGame, userData]);
+  }, [gameInitialized, isLoadingUserData, isMultiplayer, multiplayerData, playerCount, startGame, userData, userPlayerId]);
 
   // Вычисляемые значения для UI
   const canDrawCard = turnPhase === 'deck_card_revealed' && currentTurnPlayer?.id === currentPlayerId;

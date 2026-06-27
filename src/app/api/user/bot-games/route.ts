@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, supabaseAdmin } from '@/lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
+import { normalizeUserStats } from '@/lib/user/normalize-user-stats';
 
 // ✅ Явная конфигурация runtime для Next.js 15
 export const runtime = 'nodejs';
@@ -35,11 +35,7 @@ export async function GET(request: NextRequest) {
 
     // ✅ ИСПРАВЛЕНО: учитываем все исторические поля статистики
     const user = dbUser;
-    const gamesPlayed =
-      user?.total_games_played ||
-      user?.total_games ||
-      user?.games_played ||
-      0;
+    const { gamesPlayed } = normalizeUserStats(user);
     const isAdmin = user?.is_admin === true;
     
     // ✅ ПРОВЕРКА ДАТЫ РЕГИСТРАЦИИ: Только для пользователей после 10.02.2026

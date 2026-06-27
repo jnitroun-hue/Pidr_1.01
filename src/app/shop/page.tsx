@@ -327,7 +327,11 @@ export default function ShopPage() {
           setCanClaimPromo(false);
           setPromoCooldownLabel(formatCountdown(remaining));
         }
-        await appAlert(data?.error || 'Не удалось купить акцию', { title: 'Ошибка', type: 'error' });
+        const serverMessage =
+          (data && typeof data.error === 'string' && data.error) ||
+          parsed.error ||
+          'Не удалось купить акцию';
+        await appAlert(serverMessage, { title: 'Ошибка', type: 'error' });
         return;
       }
 

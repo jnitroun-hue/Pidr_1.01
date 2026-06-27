@@ -18,11 +18,15 @@ export async function parseJsonResponse<T = Record<string, unknown>>(
 
   try {
     const data = (await response.json()) as T;
+    const bodyError =
+      !response.ok && data && typeof data === 'object' && 'error' in data && typeof (data as { error?: unknown }).error === 'string'
+        ? (data as { error: string }).error
+        : null;
     return {
       ok: response.ok,
       status: response.status,
       data,
-      error: response.ok ? null : 'Request failed',
+      error: response.ok ? null : bodyError || 'Request failed',
     };
   } catch {
     return {

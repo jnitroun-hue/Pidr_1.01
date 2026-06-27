@@ -8,6 +8,7 @@ import {
 } from '@/lib/marketplace/daily-offer-claims';
 import {
   buildPremiumDailyOffer,
+  buildPremiumDailyOfferWithPreview,
   DAILY_OFFER_MAX_COINS,
   DAILY_OFFER_MIN_COINS,
   offerToApiPayload,
@@ -16,6 +17,13 @@ import {
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
+
+function jsonError(error: unknown, status = 500) {
+  const message = error instanceof Error ? error.message : 'Internal server error';
+  console.error('❌ [daily-offer]', message, error);
+  return NextResponse.json({ success: false, error: message }, { status });
+}
 
 async function getAuthDbUserId(request: NextRequest): Promise<number | null> {
   const auth = requireAuth(request);
@@ -44,7 +52,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const spec = buildPremiumDailyOffer(dbUserId);
+    const spec = await buildPremiumDailyOfferWithPreview(dbUserId);
     const claim = await getDailyOfferClaimState(dbUserId);
 
     const response = NextResponse.json({
@@ -58,10 +66,7 @@ export async function GET(request: NextRequest) {
     response.headers.set('Cache-Control', 'no-store');
     return response;
   } catch (error: unknown) {
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Internal server error' },
-      { status: 500 }
-    );
+    return jsonError(error);
   }
 }
 
@@ -99,26 +104,28 @@ export async function POST(request: NextRequest) {
     const spec = buildPremiumDailyOffer(dbUserId);
     const result = await purchasePremiumDailyOffer(dbUserId, spec);
 
-    await recordDailyOfferClaim(dbUserId, {
-      listingId: 0,
-      coinsPaid: spec.priceCoins,
-      balanceAfter: result.newBalance,
-    });
+    try {
+      await recordDailyOfferClaim(dbUserId, {
+        listingId: 0,
+        coinsPaid: spec.priceCoins,
+        balanceAfter: result.newBalance,
+      });
+    } catch (claimError) {
+      console.warn('⚠️ [daily-offer] claim log failed (purchase ok):', claimError);
+    }
 
     return NextResponse.json({
       success: true,
       message: 'Карта акции дня куплена за монеты!',
-      offer: offerToApiPayload(spec),
+      offer: offerToApiPayload({ ...spec, promoImageUrl: result.imageUrl }),
       purchase: {
         newBalance: result.newBalance,
         cardId: result.cardId,
+        imageUrl: result.imageUrl,
       },
       claim: { canClaim: false, remainingMs: DAILY_OFFER_COOLDOWN_MS },
     });
   } catch (error: unknown) {
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Internal server error' },
-      { status: 500 }
-    );
+    return jsonError(error);
   }
 }

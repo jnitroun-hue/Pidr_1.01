@@ -67,11 +67,21 @@ interface MultiplayerPlayerRef {
   id: string
 }
 
+interface RoomLobbyPlayer {
+  id: string
+  name: string
+  avatar?: string | null
+  isBot: boolean
+  position: number
+  isUser?: boolean
+}
+
 interface MultiplayerConfig {
   roomId: string
   roomCode: string
   isHost: boolean
   players?: MultiplayerPlayerRef[]
+  roomPlayers?: RoomLobbyPlayer[]
 }
 
 interface RemoteGameState {
@@ -558,9 +568,26 @@ export const useGameStore = create<GameState>()(
         }
         
         const playerInfos = createPlayers(playersCount, 0, userAvatar, userName);
+        const roomPlayers =
+          mode === 'multiplayer' && multiplayerConfig?.roomPlayers?.length
+            ? [...multiplayerConfig.roomPlayers].sort((a, b) => a.position - b.position)
+            : null;
+        const effectivePlayersCount = roomPlayers?.length ?? playersCount;
         
-        for (let i = 0; i < playersCount; i++) {
-          const playerInfo = playerInfos[i];
+        for (let i = 0; i < effectivePlayersCount; i++) {
+          const roomPlayer = roomPlayers?.[i];
+          const playerInfo = roomPlayer
+            ? {
+                name: roomPlayer.isUser ? (userName || roomPlayer.name) : roomPlayer.name,
+                avatar: roomPlayer.isUser
+                  ? (userAvatar || roomPlayer.avatar || '')
+                  : (roomPlayer.avatar || generateAvatar(roomPlayer.name, i)),
+                isBot: roomPlayer.isBot,
+                difficulty: roomPlayer.isBot
+                  ? (['easy', 'medium', 'hard'] as const)[i % 3]
+                  : undefined,
+              }
+            : playerInfos[i];
           
           if (!playerInfo) {
             throw new Error(`Не удалось создать информацию для игрока ${i + 1}`);
@@ -606,9 +633,9 @@ export const useGameStore = create<GameState>()(
             penki: playerPenki, // 2 пеньки (для 3-й стадии!)
             playerStage: 1 as 1, // Все начинают с 1-й стадии
             isCurrentPlayer: i === 0,
-            isUser: !playerInfo.isBot,
-            isBot: playerInfo.isBot,
-            isPremium: !playerInfo.isBot && userIsPremium,
+            isUser: roomPlayer ? Boolean(roomPlayer.isUser) : !playerInfo.isBot,
+            isBot: roomPlayer ? roomPlayer.isBot : playerInfo.isBot,
+            isPremium: (roomPlayer ? Boolean(roomPlayer.isUser) : !playerInfo.isBot) && userIsPremium,
             difficulty: playerInfo.difficulty
           };
           
@@ -618,7 +645,7 @@ export const useGameStore = create<GameState>()(
         }
         
         // Оставшиеся карты в колоде
-        const remainingCards: Card[] = shuffledImages.slice(playersCount * cardsPerPlayer).map((imageName, index) => {
+        const remainingCards: Card[] = shuffledImages.slice(effectivePlayersCount * cardsPerPlayer).map((imageName, index) => {
           return {
             id: `deck_${Date.now()}_${index}_${Math.random().toString(36).substr(2, 9)}`, // ✅ УНИКАЛЬНЫЙ ID
             type: 'normal',

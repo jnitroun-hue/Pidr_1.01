@@ -4,6 +4,7 @@ import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 import { getRedis } from '@/lib/redis/init';
 import { isPremiumActiveFromUser } from '@/lib/premium/premium-service';
 import { PREMIUM_RATING_MULTIPLIER } from '@/lib/premium/constants';
+import { nextGamesPlayedColumns, nextWinsColumns } from '@/lib/user/normalize-user-stats';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -132,14 +133,13 @@ export async function POST(req: NextRequest) {
       });
       
       if (updateStats.gamesPlayed) {
-        updateData.games_played = (userData.games_played || 0) + 1;
-        updateData.total_games = (userData.total_games || 0) + 1;
-        updateData.total_games_played = (userData.total_games_played || 0) + 1;
-        console.log(`📊 [${traceId || 'NO_TRACE'}] Игр сыграно: ${userData.games_played || 0} → ${updateData.games_played}`);
+        Object.assign(updateData, nextGamesPlayedColumns(userData));
+        console.log(
+          `📊 [${traceId || 'NO_TRACE'}] Игр сыграно: ${userData.games_played || 0} → ${updateData.games_played}`
+        );
       }
       if (updateStats.wins) {
-        updateData.games_won = (userData.games_won || 0) + 1;
-        updateData.wins = (userData.wins || 0) + 1;
+        Object.assign(updateData, nextWinsColumns(userData));
         console.log(`🏆 [${traceId || 'NO_TRACE'}] Побед: ${userData.games_won || 0} → ${updateData.games_won}`);
       }
       // ✅ КРИТИЧНО: Обновляем поражения (раньше не записывались в БД!)
