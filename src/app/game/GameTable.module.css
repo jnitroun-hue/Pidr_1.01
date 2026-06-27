@@ -1109,48 +1109,34 @@
   transform: translateY(-2px);
 }
 
-/* Компактный контейнер для карт игрока с премиум дизайном */
+/* Компактный контейнер для карт игрока */
 .playerHand {
-  background: 
-    linear-gradient(145deg, #0f172a 0%, #1e293b 100%),
-    radial-gradient(circle at top right, rgba(99, 102, 241, 0.1), transparent);
-  border: 2px solid rgba(99, 102, 241, 0.3);
-  border-radius: 8px;
-  padding: 5px 8px;
-  box-shadow: 
-    0 10px 20px rgba(0, 0, 0, 0.5),
-    0 0 20px rgba(99, 102, 241, 0.15),
-    0 0 0 1px rgba(99, 102, 241, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(15px);
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.94) 0%, rgba(30, 41, 59, 0.88) 100%);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  border-radius: 14px;
+  padding: 8px 10px 10px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(12px);
   position: fixed;
-  bottom: calc(40px + env(safe-area-inset-bottom)); /* ✅ SAFE AREA ДЛЯ IPHONE! */
+  bottom: calc(12px + env(safe-area-inset-bottom));
   left: 50%;
   transform: translateX(-50%);
   overflow: visible;
-  min-height: 50px;
   width: auto;
-  max-width: calc(90vw - env(safe-area-inset-left) - env(safe-area-inset-right)); /* ✅ УЧИТЫВАЕМ SAFE AREA! */
-  padding-left: 12px;
-  padding-right: 12px;
+  max-width: min(96vw, 900px);
   z-index: 100;
 }
 
 @media (min-width: 769px) {
   .playerHand {
-    bottom: 10px;
-    max-width: min(62vw, 760px);
-    padding: 4px 10px;
+    bottom: 16px;
+    max-width: min(72vw, 920px);
+    padding: 10px 14px 12px;
   }
 
   .handCards {
-    min-height: 88px;
-    padding: 8px 0;
-  }
-
-  .handCard {
-    width: 48px;
-    height: 72px;
+    min-height: auto;
+    padding: 6px 0 2px;
   }
 }
 
@@ -1191,28 +1177,31 @@
 .handCards {
   display: flex;
   justify-content: center;
-  align-items: center;
-  min-height: 140px;
+  align-items: flex-end;
+  min-height: auto;
   z-index: 1;
   position: relative;
-  padding: 14px 0;
+  padding: 4px 0 0;
 }
 
 .handCard {
   position: relative;
-  width: 55px; /* ✅ УМЕНЬШЕНО С 70px! */
-  height: 82px; /* ✅ УМЕНЬШЕНО С 105px! */
+  flex-shrink: 0;
   border-radius: 8px;
-  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  cursor: pointer;
-  transform-style: preserve-3d;
-  margin: 0; /* ✅ УБРАН MARGIN - используем только marginLeft из inline стилей */
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, z-index 0s;
 }
 
 .handCard:hover {
-  transform: translateY(-15px) scale(1.1) rotateY(8deg);
-  z-index: 100 !important;
-  margin: 0 10px;
+  transform: translateY(-10px);
+  z-index: 180 !important;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+}
+
+.handCard.selected {
+  transform: translateY(-18px) scale(1.04);
+  z-index: 220 !important;
+  box-shadow: 0 0 0 2px #fbbf24, 0 12px 28px rgba(251, 191, 36, 0.35);
 }
 
 .handCard.open {
@@ -1260,17 +1249,18 @@
   align-items: center;
   justify-content: center;
   background: transparent;
-  border-radius: 8px;
+  border-radius: 4px;
   padding: 0;
   box-shadow: none;
 }
 
 .revealedCardImage {
-  border-radius: 8px !important;
+  border-radius: 3px !important;
   background: white;
   box-shadow: 0 6px 16px rgba(99, 102, 241, 0.25), 0 0 0 1px rgba(99, 102, 241, 0.25), 0 2px 8px rgba(0, 0, 0, 0.1);
   animation: none;
-  padding: 2px;
+  padding: 0;
+  object-fit: contain !important;
 }
 
 /* Table stack in center */
@@ -1432,10 +1422,9 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
-  border-radius: 7px;
-  transition: all 0.3s ease;
-  background: white;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border-radius: inherit;
+  display: block;
+  background: #fff;
 }
 
 .handCard:hover img {
@@ -1760,12 +1749,14 @@
 
 /* Контейнер для активных карт поверх пеньков */
 .activeCardContainer {
-  position: relative; /* ✅ ИЗМЕНЕНО: relative для правильного позиционирования в flex-контейнере */
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: flex-start; /* Выравнивание по левому краю */
-  z-index: 15; /* ✅ ВЫШЕ АВАТАРОВ (аватары = 5) */
-  flex-direction: row; /* ✅ Горизонтальное расположение карт по умолчанию */
+  justify-content: flex-start;
+  z-index: 15;
+  flex-direction: row;
+  max-width: 100%;
+  margin: 0 auto;
 }
 
 /* Карта игрока — базовый размер (мобильный) */
@@ -1794,17 +1785,18 @@
 .cardOnPenki img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  border-radius: 6px;
+  object-fit: contain;
+  border-radius: inherit;
   display: block !important;
   opacity: 1 !important;
   visibility: visible !important;
+  background: #fff;
 }
 
 .cardOnPenki.open {
   background: 
     linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
-  border-radius: 8px;
+  border-radius: 4px;
   box-shadow: 
     0 6px 20px rgba(0, 0, 0, 0.4),
     0 0 0 1px #e2e8f0,
@@ -1816,7 +1808,7 @@
 .cardOnPenki.closed {
   background: 
     linear-gradient(145deg, #334155 0%, #475569 100%);
-  border-radius: 8px;
+  border-radius: 4px;
   box-shadow: 
     0 4px 15px rgba(0, 0, 0, 0.5),
     0 0 0 1px rgba(99, 102, 241, 0.2);
@@ -3414,9 +3406,9 @@
   --name-font: 9px;
 
   --cards-gap: 2px;
-  --opponent-card-width: 30px;
-  --opponent-card-height: 44px;
-  --opponent-card-radius: 6px;
+  --opponent-card-width: 36px;
+  --opponent-card-height: 53px;
+  --opponent-card-radius: 4px;
 
   --deck-card-width: 38px;
   --deck-card-height: 57px;
@@ -3500,6 +3492,8 @@
 .deckStack img {
   width: var(--deck-card-width) !important;
   height: var(--deck-card-height) !important;
+  object-fit: contain !important;
+  border-radius: 3px !important;
 }
 
 .deckCount {
@@ -3512,13 +3506,10 @@
   width: var(--player-hand-width) !important;
   bottom: var(--player-hand-bottom) !important;
   padding: var(--player-hand-padding-y) var(--player-hand-padding-x) !important;
-  min-height: var(--player-hand-min-height) !important;
+  min-height: auto !important;
 }
 
-.handCard {
-  width: var(--hand-card-width) !important;
-  height: var(--hand-card-height) !important;
-}
+/* Размеры handCard задаются inline из layoutMetrics — не перебиваем */
 
 @media (min-width: 481px) and (max-width: 768px) {
   .gameContainer {
@@ -3545,8 +3536,8 @@
     --name-font: 10px;
 
     --cards-gap: 3px;
-    --opponent-card-width: 34px;
-    --opponent-card-height: 50px;
+    --opponent-card-width: 40px;
+    --opponent-card-height: 58px;
     --deck-card-width: 42px;
     --deck-card-height: 63px;
     --deck-count-size: 26px;
@@ -3591,8 +3582,8 @@
     --name-font: 11px;
 
     --cards-gap: 3px;
-    --opponent-card-width: 38px;
-    --opponent-card-height: 56px;
+    --opponent-card-width: 46px;
+    --opponent-card-height: 67px;
     --opponent-card-radius: 7px;
     --deck-card-width: 48px;
     --deck-card-height: 72px;
@@ -3638,8 +3629,8 @@
     --name-font: 12px;
 
     --cards-gap: 4px;
-    --opponent-card-width: 44px;
-    --opponent-card-height: 64px;
+    --opponent-card-width: 52px;
+    --opponent-card-height: 76px;
     --opponent-card-radius: 8px;
     --deck-card-width: 54px;
     --deck-card-height: 80px;

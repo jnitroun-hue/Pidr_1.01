@@ -28,9 +28,22 @@ import styles from './GameWallet.module.css';
 import ConnectedWalletsList from './ConnectedWalletsList';
 import WalletQuickConnect from './WalletQuickConnect';
 import DailyBonusWheelModal from './DailyBonusWheelModal';
+import { useTonConnectUI } from '@tonconnect/ui-react';
+import { beginCell, toNano } from '@ton/core';
 import { GRAM, formatGramAmount, formatGramRate, gramDisplayFromApi } from '@/lib/crypto/gram-brand';
-import { depositCryptoOptions, getCryptoToken } from '@/lib/crypto/crypto-assets';
+import { depositCryptoOptions, getCryptoToken, cryptoDisplaySymbol } from '@/lib/crypto/crypto-assets';
 import CryptoIcon from './CryptoIcon';
+
+const buildTonCommentPayload = (comment: string) =>
+  beginCell().storeUint(0, 32).storeStringTail(comment).endCell().toBoc().toString('base64');
+
+const walletTypeLabel = (type: string) => {
+  const t = type.toLowerCase();
+  if (t === 'ton') return GRAM.walletLabel;
+  if (t === 'sol' || t === 'solana') return 'Phantom';
+  if (t === 'eth' || t === 'ethereum') return 'MetaMask';
+  return type.toUpperCase();
+};
 
 interface User {
   id: string;
@@ -136,6 +149,8 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
   const reduceMotion = useReducedMotion();
   const shouldOptimizeAnimations = Boolean(reduceMotion) || isMobileViewport;
   const masterWalletService = useMemo(() => new MasterWalletService(), []);
+  const [tonConnectUI] = useTonConnectUI();
+  const selectedCryptoLabel = useMemo(() => cryptoDisplaySymbol(selectedCrypto), [selectedCrypto]);
 
   /** Стабильный ключ пользователя из пропсов (избегаем Infinity loop: новый объект user на каждом рендере родителя). */
   const propIdentityKey =
@@ -640,22 +655,45 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
       const masterAddress = masterAddressData.address;
       console.log(`📬 MASTER_WALLET адрес для ${selectedCrypto}:`, masterAddress);
 
-      // ✅ Открываем кошелёк с готовой транзакцией
       if (walletType === 'ton') {
-        // TonConnect - открываем через tonkeeper/tonhub
-        const tonAmountNano = Math.floor(amount * 1e9); // TON в nanoTON
         const currentUser = getCurrentUser();
-        const tonLink = `ton://transfer/${masterAddress}?amount=${tonAmountNano}&text=deposit_${currentUser?.id || user?.id || 'unknown'}`;
-        
-        // Пробуем открыть через Telegram WebApp
-        if ((window as any).Telegram?.WebApp?.openLink) {
-          (window as any).Telegram.WebApp.openLink(tonLink);
-        } else {
-          window.open(tonLink, '_blank');
+        const comment = `deposit_${currentUser?.id || user?.id || 'unknown'}`;
+        const transaction = {
+          validUntil: Math.floor(Date.now() / 1000) + 600,
+          messages: [
+            {
+              address: masterAddress,
+              amount: toNano(amount).toString(),
+              payload: buildTonCommentPayload(comment),
+            },
+          ],
+        };
+
+        if (!tonConnectUI.connected) {
+          const tonUi = tonConnectUI as { openSingleWalletModal?: (name: string) => Promise<void> };
+          if (typeof tonUi.openSingleWalletModal === 'function') {
+            await tonUi.openSingleWalletModal('telegram-wallet');
+          } else {
+            await tonConnectUI.openModal();
+          }
         }
-        
-        alert(`✅ Откройте кошелёк и подтвердите транзакцию на ${formatGramAmount(amount)}.\n\nПосле подтверждения баланс обновится автоматически.`);
-        
+
+        try {
+          await tonConnectUI.sendTransaction(transaction);
+        } catch (txError: unknown) {
+          const msg = txError instanceof Error ? txError.message : String(txError);
+          if (/reject|cancel|declin/i.test(msg)) {
+            throw new Error('Транзакция отменена в кошельке');
+          }
+          if (!tonConnectUI.connected) {
+            throw new Error(`Подключите ${GRAM.walletLabel} и нажмите «Пополнить» снова`);
+          }
+          throw txError;
+        }
+
+        alert(
+          `✅ Транзакция отправлена на ${formatGramAmount(amount)}.\n\nПосле подтверждения в сети баланс обновится автоматически.`
+        );
       } else if (walletType === 'sol' || walletType === 'solana') {
         // Solana - открываем через Phantom
         const solLink = `https://phantom.app/ul/v1/signAndSendTransaction?network=mainnet-beta`;
@@ -764,7 +802,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
       }
 
       const methodLabel = withdrawMethod === 'crypto'
-        ? `${selectedCrypto} wallet`
+        ? `${selectedCryptoLabel} wallet`
         : PAYMENT_METHODS.find((method) => method.id === withdrawMethod)?.name || 'Способ вывода';
 
       const rubEquivalent = Math.floor(amount / 50);
@@ -1782,7 +1820,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
                         border: '1px solid rgba(255,215,0,0.12)',
                       }}>
                         <span style={{ fontSize: '12px', color: '#ffd700', fontWeight: '600' }}>
-                          {CRYPTO_OPTIONS.find((option) => option.id === selectedCrypto)?.net || selectedCrypto}
+                          {CRYPTO_OPTIONS.find((option) => option.id === selectedCrypto)?.net || selectedCryptoLabel}
                         </span>
                         <span style={{ fontSize: '11px', color: '#64748b' }}>
                           {CRYPTO_OPTIONS.find((option) => option.id === selectedCrypto)?.eta || '~'}
@@ -1810,7 +1848,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
                           display: 'flex', alignItems: 'center', gap: '6px',
                         }}>
                           <span style={{ fontSize: '14px' }}>✓</span>
-                          {selectedWalletForDeposit.wallet_type.toUpperCase()} — {selectedWalletForDeposit.wallet_address.slice(0, 8)}...{selectedWalletForDeposit.wallet_address.slice(-4)}
+                          {walletTypeLabel(selectedWalletForDeposit.wallet_type)} — {selectedWalletForDeposit.wallet_address.slice(0, 8)}...{selectedWalletForDeposit.wallet_address.slice(-4)}
                         </div>
                       )}
 
@@ -1820,7 +1858,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
                         background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,215,0,0.1)',
                       }}>
                         <label style={{ display: 'block', fontSize: '11px', color: '#94a3b8', marginBottom: '6px', fontWeight: '600' }}>
-                          Адрес для пополнения ({selectedCrypto})
+                          Адрес для пополнения ({selectedCryptoLabel})
                         </label>
                         <div className={`address-container hd-address-container ${isGeneratingAddress ? 'hd-generating' : ''}`}>
                           <input
@@ -1871,7 +1909,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
                       {/* Сумма */}
                       <div style={{ marginBottom: '12px' }}>
                         <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#ffd700', marginBottom: '8px' }}>
-                          Сумма ({selectedCrypto})
+                          Сумма ({selectedCryptoLabel})
                         </label>
                         <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                           <input
@@ -1890,7 +1928,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
                             background: 'linear-gradient(135deg, rgba(255,215,0,0.15), rgba(6,182,212,0.1))',
                             color: '#ffd700', fontWeight: '700', fontSize: '14px',
                             border: '1px solid rgba(255,215,0,0.2)', display: 'flex', alignItems: 'center',
-                          }}>{selectedCrypto}</span>
+                          }}>{selectedCryptoLabel}</span>
                         </div>
                     
                         {/* Быстрые суммы */}
@@ -1931,7 +1969,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
                             transition: 'all 0.3s ease',
                           }}
                         >
-                          {loading ? '⏳ Обработка...' : <><FaWallet size={14} /> Пополнить через {selectedWalletForDeposit.wallet_type === 'ton' ? GRAM.walletLabel : selectedWalletForDeposit.wallet_type === 'sol' ? 'Phantom' : 'MetaMask'}</>}
+                          {loading ? '⏳ Обработка...' : <><FaWallet size={14} /> Пополнить через {walletTypeLabel(selectedWalletForDeposit.wallet_type)}</>}
                         </button>
                       ) : (
                         <div style={{

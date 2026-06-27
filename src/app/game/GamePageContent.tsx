@@ -30,6 +30,11 @@ import { useTelegram } from '@/hooks/useTelegram';
 import { getCardAssetSrc, deckEntriesToNftMap, buildNftDeckKey } from '@/lib/game/cardAssets';
 import { BOT_TIMING } from '@/lib/game/botTiming';
 import { preloadNftCardUrls, preloadStandardCardAssets } from '@/lib/game/preload-card-assets';
+import {
+  computeCardFanLayout,
+  getOpponentStackDisplayCount,
+  playingCardHeight,
+} from '@/lib/game/card-fan-layout';
 import { translateGameText } from '@/lib/i18n/gameRuntimeTranslations';
 import { getApiHeaders } from '@/lib/api-headers';
 import { loadGameUserProfile } from '@/lib/game/load-game-profile';
@@ -340,6 +345,7 @@ function GamePageContentComponent({
     showGameResultsModal, gameResults,
     showPenaltyDeckModal,
     nftDeckCards: storeNftDeckCards,
+    canPlaceOnSelfByRules,
     startGame, endGame, resetGame, setNftDeckCards: patchStoreNftDeck,
     syncLocalUserPremium,
     syncLocalUserProfile,
@@ -944,6 +950,15 @@ function GamePageContentComponent({
   // ✅ ИСПРАВЛЕНО: Находим РЕАЛЬНОГО ИГРОКА (не бота)
   const myPlayer = useMemo(() => players.find(p => !p.isBot), [players]);
   const isMyTurn = currentPlayerId === myPlayer?.id;
+  const canPlaceDeckOnSelf = useMemo(
+    () =>
+      gameStage === 1 &&
+      turnPhase === 'waiting_deck_action' &&
+      canPlaceOnSelfByRules &&
+      !!revealedDeckCard &&
+      currentPlayerId === myPlayer?.id,
+    [gameStage, turnPhase, canPlaceOnSelfByRules, revealedDeckCard, currentPlayerId, myPlayer?.id]
+  );
 
   // ✅ ТАЙМЕР ДЕЙСТВИЯ: 15 секунд на действие, обратный отсчёт
   const TURN_ACTION_SECONDS = 15;
@@ -1064,14 +1079,22 @@ function GamePageContentComponent({
     const vw = screenInfo.viewportWidth || 390;
     const vh = screenInfo.viewportHeight || 844;
 
+    const base = (handW: number, oppW: number, handFanMax: number, oppFanMax: number) => ({
+      handCardWidth: handW,
+      handCardHeight: playingCardHeight(handW),
+      handMaxFanWidth: handFanMax,
+      opponentCardWidth: oppW,
+      opponentCardHeight: playingCardHeight(oppW),
+      opponentMaxFanWidth: oppFanMax,
+    });
+
     if (vw >= 1400) {
       return {
+        ...base(92, 54, Math.min(vw * 0.55, 820), 118),
         centerCardWidth: 82,
-        centerCardHeight: 122,
+        centerCardHeight: 120,
         revealedCardWidth: 58,
         revealedCardHeight: 86,
-        handCardWidth: 96,
-        handCardHeight: 142,
         tableStackOffset: 28,
         tableStackMinWidth: 260,
         tableStackMinHeight: 146,
@@ -1080,12 +1103,11 @@ function GamePageContentComponent({
 
     if (vw >= 1024) {
       return {
+        ...base(86, 50, Math.min(vw * 0.58, 760), 110),
         centerCardWidth: 76,
         centerCardHeight: 114,
         revealedCardWidth: 54,
         revealedCardHeight: 81,
-        handCardWidth: 88,
-        handCardHeight: 130,
         tableStackOffset: 26,
         tableStackMinWidth: 238,
         tableStackMinHeight: 136,
@@ -1094,12 +1116,11 @@ function GamePageContentComponent({
 
     if (vw >= 769) {
       return {
+        ...base(78, 46, Math.min(vw * 0.62, 680), 102),
         centerCardWidth: 68,
         centerCardHeight: 102,
         revealedCardWidth: 48,
         revealedCardHeight: 72,
-        handCardWidth: 80,
-        handCardHeight: 118,
         tableStackOffset: 22,
         tableStackMinWidth: 214,
         tableStackMinHeight: 124,
@@ -1108,12 +1129,11 @@ function GamePageContentComponent({
 
     if (screenInfo.isLandscape && vh <= 500) {
       return {
+        ...base(58, 34, Math.min(vw * 0.88, 520), 72),
         centerCardWidth: 50,
         centerCardHeight: 75,
         revealedCardWidth: 38,
         revealedCardHeight: 57,
-        handCardWidth: 56,
-        handCardHeight: 84,
         tableStackOffset: 16,
         tableStackMinWidth: 170,
         tableStackMinHeight: 92,
@@ -1122,12 +1142,11 @@ function GamePageContentComponent({
 
     if (screenInfo.isVerySmallMobile) {
       return {
+        ...base(54, 32, Math.min(vw * 0.94, 360), 68),
         centerCardWidth: 48,
         centerCardHeight: 72,
         revealedCardWidth: 36,
         revealedCardHeight: 54,
-        handCardWidth: 54,
-        handCardHeight: 80,
         tableStackOffset: 15,
         tableStackMinWidth: 162,
         tableStackMinHeight: 88,
@@ -1136,12 +1155,11 @@ function GamePageContentComponent({
 
     if (screenInfo.isSmallMobile) {
       return {
+        ...base(62, 36, Math.min(vw * 0.92, 400), 74),
         centerCardWidth: 54,
         centerCardHeight: 81,
         revealedCardWidth: 38,
         revealedCardHeight: 57,
-        handCardWidth: 60,
-        handCardHeight: 90,
         tableStackOffset: 18,
         tableStackMinWidth: 176,
         tableStackMinHeight: 96,
@@ -1149,17 +1167,28 @@ function GamePageContentComponent({
     }
 
     return {
+      ...base(68, 38, Math.min(vw * 0.92, 420), 80),
       centerCardWidth: 60,
       centerCardHeight: 90,
       revealedCardWidth: 42,
       revealedCardHeight: 63,
-      handCardWidth: 68,
-      handCardHeight: 102,
       tableStackOffset: 20,
       tableStackMinWidth: 192,
       tableStackMinHeight: 104,
     };
   }, [screenInfo]);
+
+  const myHandFan = useMemo(() => {
+    const count = myPlayer?.cards.length ?? 0;
+    if (!count) return null;
+    const minPeek = (screenInfo.viewportWidth || 390) >= 769 ? 24 : 18;
+    return computeCardFanLayout({
+      cardWidth: layoutMetrics.handCardWidth,
+      cardCount: count,
+      maxFanWidth: layoutMetrics.handMaxFanWidth,
+      minPeekPx: minPeek,
+    });
+  }, [myPlayer?.cards.length, layoutMetrics, screenInfo.viewportWidth]);
 
   // Инициализация ИИ игроков
   useEffect(() => {
@@ -1291,9 +1320,13 @@ function GamePageContentComponent({
         switch (decision.action) {
           case 'place_on_target':
             if (decision.targetPlayerId !== undefined) {
-              const { makeMove } = useGameStore.getState();
-              if (makeMove) makeMove(decision.targetPlayerId.toString());
+              const { makeMove, players: livePlayers } = useGameStore.getState();
+              const target = livePlayers[decision.targetPlayerId as number];
+              if (makeMove && target) makeMove(target.id);
             }
+            break;
+          case 'place_on_self':
+            if (placeCardOnSelfByRules) placeCardOnSelfByRules();
             break;
           case 'draw_card':
             // В 1-й стадии ИИ кликает по колоде только если не может ходить из руки
@@ -2237,29 +2270,32 @@ function GamePageContentComponent({
                     style={{ 
                       position: 'relative',
                       background: '#ffffff',
-                      borderRadius: '8px',
-                      padding: '2px',
+                      borderRadius: '4px',
+                      padding: '1px',
                       boxShadow: turnPhase === 'waiting_deck_action' 
                         ? '0 0 30px rgba(99, 102, 241, 0.8), 0 0 50px rgba(99, 102, 241, 0.5)' 
                         : '0 0 20px rgba(255, 255, 255, 0.3), 0 4px 12px rgba(0,0,0,0.4)',
-                      border: '2px solid #e2e8f0',
+                      border: canPlaceDeckOnSelf
+                        ? '2px solid rgba(34, 197, 94, 0.85)'
+                        : '2px solid #e2e8f0',
                       animation: turnPhase === 'waiting_deck_action' ? 'pulse 2s ease-in-out infinite' : 'none',
-                      cursor: (turnPhase === 'waiting_deck_action' && availableTargets.length > 0) ? 'pointer' : 'default',
+                      cursor: (turnPhase === 'waiting_deck_action' && (availableTargets.length > 0 || canPlaceDeckOnSelf)) ? 'pointer' : 'default',
                       transition: 'transform 0.2s ease'
                     }}
                     onClick={() => {
-                      const myPlayer = players.find(p => p.isUser);
-                      if (turnPhase === 'waiting_deck_action' && availableTargets.length > 0 && currentPlayerId === myPlayer?.id) {
-                        // Автоматически ходим на первую доступную цель
-                        const targetIndex = availableTargets[0];
-                        const targetPlayer = players[targetIndex];
-                        console.log(`🎴 [КЛИК ПО КАРТЕ ИЗ КОЛОДЫ] Ходим на ${targetPlayer?.name}`);
+                      if (currentPlayerId !== myPlayer?.id || turnPhase !== 'waiting_deck_action') return;
+                      if (canPlaceDeckOnSelf && availableTargets.length === 0) {
+                        placeCardOnSelfByRules();
+                        return;
+                      }
+                      if (availableTargets.length === 1) {
+                        const targetPlayer = players[availableTargets[0]];
                         makeMove(targetPlayer?.id || '');
                       }
                     }}
                     onMouseEnter={(e) => {
-                      if (turnPhase === 'waiting_deck_action' && availableTargets.length > 0) {
-                        e.currentTarget.style.transform = 'scale(1.1)';
+                      if (turnPhase === 'waiting_deck_action' && (availableTargets.length > 0 || canPlaceDeckOnSelf)) {
+                        e.currentTarget.style.transform = 'scale(1.08)';
                       }
                     }}
                     onMouseLeave={(e) => {
@@ -2275,12 +2311,12 @@ function GamePageContentComponent({
                         style={{ 
                           width: `${layoutMetrics.revealedCardWidth}px`,
                           height: `${layoutMetrics.revealedCardHeight}px`,
-                          borderRadius: '8px',
+                          borderRadius: '3px',
                           opacity: 1,
                           filter: 'none',
                           visibility: 'visible',
                           display: 'block',
-                          objectFit: 'contain' // ✅ ИСПРАВЛЕНО: contain вместо cover - карта не обрезается
+                          objectFit: 'contain'
                         }}
                       />
                     ) : (
@@ -2292,12 +2328,12 @@ function GamePageContentComponent({
                         style={{
                           width: `${layoutMetrics.revealedCardWidth}px`,
                           height: `${layoutMetrics.revealedCardHeight}px`,
-                          borderRadius: '8px',
+                          borderRadius: '3px',
                           opacity: 1,
                           filter: 'none',
                           visibility: 'visible',
                           display: 'block',
-                          objectFit: 'cover'
+                          objectFit: 'contain'
                         }}
                       />
                     )}
@@ -2320,13 +2356,13 @@ function GamePageContentComponent({
                       return (
                         <div style={{
                           position: 'absolute',
-                          top: '3px',
-                          left: '4px',
-                          fontSize: '12px',
+                          top: '4px',
+                          left: '5px',
+                          fontSize: '11px',
                           fontWeight: 'bold',
                           color: deckCardSuit === 'hearts' || deckCardSuit === 'diamonds' ? '#dc2626' : '#1f2937',
-                          textShadow: '0 0 3px white, 0 0 3px white',
-                        lineHeight: '1',
+                          textShadow: '0 0 3px white, 0 0 3px white, 0 1px 2px white',
+                        lineHeight: '1.1',
                         pointerEvents: 'none'
                       }}>
                         <div>{formatRank(deckCardRank)}</div>
@@ -2334,12 +2370,12 @@ function GamePageContentComponent({
                       </div>
                       );
                     })()}
-                    {turnPhase === 'waiting_deck_action' && availableTargets.length > 0 && (
+                    {turnPhase === 'waiting_deck_action' && (availableTargets.length > 0 || canPlaceDeckOnSelf) && (
                       <div style={{
                         position: 'absolute',
                         top: '-8px',
                         right: '-8px',
-                        background: '#10b981',
+                        background: canPlaceDeckOnSelf && availableTargets.length === 0 ? '#22c55e' : '#10b981',
                         color: 'white',
                         borderRadius: '50%',
                         width: '20px',
@@ -2352,8 +2388,36 @@ function GamePageContentComponent({
                         border: '2px solid white',
                         boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
                       }}>
-                        ✓
+                        {canPlaceDeckOnSelf && availableTargets.length === 0 ? '↓' : '✓'}
                       </div>
+                    )}
+                    {canPlaceDeckOnSelf && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          placeCardOnSelfByRules();
+                        }}
+                        style={{
+                          position: 'absolute',
+                          left: '50%',
+                          bottom: '-34px',
+                          transform: 'translateX(-50%)',
+                          whiteSpace: 'nowrap',
+                          padding: '5px 10px',
+                          borderRadius: '8px',
+                          border: '1px solid rgba(34, 197, 94, 0.65)',
+                          background: 'rgba(34, 197, 94, 0.92)',
+                          color: '#fff',
+                          fontSize: '10px',
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                          boxShadow: '0 4px 12px rgba(34, 197, 94, 0.35)',
+                          zIndex: 20,
+                        }}
+                      >
+                        Положить на себя (+1)
+                      </button>
                     )}
                   </div>
                   );
@@ -2363,7 +2427,7 @@ function GamePageContentComponent({
                 <div 
                   style={{ 
                     position: 'relative',
-                    cursor: (currentPlayerId === players.find(p => p.isUser)?.id && (turnPhase === 'showing_deck_hint' || turnPhase === 'waiting_deck_action')) ? 'pointer' : 'default',
+                    cursor: (currentPlayerId === myPlayer?.id && turnPhase === 'showing_deck_hint') ? 'pointer' : 'default',
                     transition: 'transform 0.2s ease, box-shadow 0.3s ease',
                     borderRadius: '8px',
                     padding: '4px',
@@ -2377,19 +2441,19 @@ function GamePageContentComponent({
                       : 'none',
                   }}
                   onClick={() => {
-                    const myPlayer = players.find(p => p.isUser);
-                    if (currentPlayerId === myPlayer?.id && (turnPhase === 'showing_deck_hint' || turnPhase === 'waiting_deck_action')) {
+                    if (currentPlayerId === myPlayer?.id && turnPhase === 'showing_deck_hint') {
                       console.log('🎴 [КЛИК НА КОЛОДУ] Игрок кликнул на колоду');
                       onDeckClick();
                     } else if (currentPlayerId !== myPlayer?.id) {
                       console.log('⛔ [КЛИК НА КОЛОДУ] Сейчас не ваш ход');
+                    } else if (turnPhase === 'waiting_deck_action') {
+                      showNotification('Сначала положите открытую карту на себя или на соперника', 'warning', 2500);
                     } else {
                       showNotification('Сначала попробуйте сходить из руки!', 'warning', 2000);
                     }
                   }}
                   onMouseEnter={(e) => {
-                    const myPlayer = players.find(p => p.isUser);
-                    if (currentPlayerId === myPlayer?.id && (turnPhase === 'showing_deck_hint' || turnPhase === 'waiting_deck_action')) {
+                    if (currentPlayerId === myPlayer?.id && turnPhase === 'showing_deck_hint') {
                       e.currentTarget.style.transform = 'scale(1.15)';
                     }
                   }}
@@ -2575,8 +2639,30 @@ function GamePageContentComponent({
                       order: 2,
                       flexDirection: 'row',
                     }}>
-                      <div className={styles.activeCardContainer}>
-                        {playerCards.map((card: LegacyCardLike, cardIndex: number) => {
+                      {(() => {
+                        const opponentClosedStack = !isHumanPlayer && gameStage >= 2;
+                        const cardsToRender = opponentClosedStack
+                          ? playerCards.slice(-getOpponentStackDisplayCount(playerCards.length, gameStage))
+                          : playerCards;
+                        const opponentFan = computeCardFanLayout({
+                          cardWidth: layoutMetrics.opponentCardWidth,
+                          cardCount: Math.max(cardsToRender.length, 1),
+                          maxFanWidth: layoutMetrics.opponentMaxFanWidth,
+                          minPeekPx: opponentClosedStack ? 4 : 10,
+                          maxPeekPx: opponentClosedStack ? 7 : Math.round(layoutMetrics.opponentCardWidth * 0.38),
+                        });
+
+                        return (
+                      <div
+                        className={styles.activeCardContainer}
+                        style={{
+                          width: opponentFan.totalWidthPx,
+                          maxWidth: layoutMetrics.opponentMaxFanWidth,
+                          position: 'relative',
+                          margin: '0 auto',
+                        }}
+                      >
+                        {cardsToRender.map((card: LegacyCardLike, cardIndex: number) => {
                           // Карта может быть строкой "7_of_spades.png(open)" или объектом {rank, suit, image}
                           const rawCardImage = typeof card === 'string'
                             ? card
@@ -2617,9 +2703,10 @@ function GamePageContentComponent({
                           }
                           
                           // Верхняя карта должна быть последней добавленной для любого игрока.
-                          const isTopCard = cardIndex === playerCards.length - 1;
+                          const isTopCard = cardIndex === cardsToRender.length - 1;
                           const showOpen = isHumanPlayer || (gameStage === 1 && isTopCard);
                           const isMyTurn = player.id === currentPlayerId;
+                          const canPlaceDeckOnSelfHere = isHumanPlayer && isTopCard && canPlaceDeckOnSelf;
                           const canMakeMove = gameStage === 1 && isMyTurn && isHumanPlayer && canPickStage1Target && availableTargets.length > 0;
                           const shouldHighlight = gameStage === 1 && isTopCard && canMakeMove;
                           
@@ -2652,23 +2739,10 @@ function GamePageContentComponent({
                           const cardImageUrl = showOpen
                             ? resolvedOpenCardSrc
                             : getCardAssetSrc({ faceDown: true });
-                          
-                          // ✅ ИСПРАВЛЕНО: Динамическое перекрытие - УВЕЛИЧЕНО для закрытых карт
+
                           const isOpponentCard = !isHumanPlayer;
                           const isStage2 = gameStage >= 2;
-                          const totalCards = playerCards.length;
-                          const isClosedCard = !showOpen; // ✅ Закрытая карта (рубашкой вверх)
-                          
-                          // ✅ УВЕЛИЧЕНО ПЕРЕКРЫТИЕ: для закрытых карт больше наложение
-                          const baseOverlap = isClosedCard ? 60 : 50; // ✅ Больше перекрытие для закрытых карт
-                          const minVisible = isClosedCard ? 4 : 8; // ✅ Меньше видимой части для закрытых карт
-                          
-                          // Динамическое перекрытие: чем больше карт, тем меньше перекрытие
-                          // Но для закрытых карт перекрытие больше
-                          const dynamicOverlap = totalCards > 1 
-                            ? Math.max(minVisible, baseOverlap - (totalCards - 1) * (isClosedCard ? 1.5 : 2)) 
-                            : 0;
-                          const overlap = cardIndex > 0 ? `-${dynamicOverlap}px` : '0';
+                          const overlap = cardIndex > 0 ? `-${opponentFan.marginLeftPx}px` : '0';
                           const cardStackZIndex = cardIndex + 1;
                           
                           const cardId = typeof card === 'string' ? undefined : card.id;
@@ -2677,28 +2751,34 @@ function GamePageContentComponent({
                               key={cardId || `${player.id}-${cardImage}-${cardIndex}-${showOpen ? 'open' : 'closed'}`} 
                               className={styles.cardOnPenki} 
                               style={{
+                                width: layoutMetrics.opponentCardWidth,
+                                height: layoutMetrics.opponentCardHeight,
+                                flexShrink: 0,
                                 marginLeft: overlap,
                                 zIndex: cardStackZIndex,
-                                cursor: (shouldHighlight || isAvailableTarget) ? 'pointer' : 'default',
+                                cursor: (shouldHighlight || isAvailableTarget || canPlaceDeckOnSelfHere) ? 'pointer' : 'default',
                                 position: 'relative',
-                                transform: isStage2 && isOpponentCard ? `translateY(${cardIndex * 2}px)` : 'none', // Небольшое вертикальное смещение для глубины
+                                transform: isStage2 && isOpponentCard ? `translateY(${cardIndex * 1}px)` : 'none',
                                 transition: 'all 0.2s ease',
+                                boxShadow: canPlaceDeckOnSelfHere
+                                  ? '0 0 16px rgba(34, 197, 94, 0.75), 0 0 0 2px rgba(34, 197, 94, 0.85)'
+                                  : undefined,
                               }}
                               onClick={() => {
                                 if (gameStage === 1) {
-                                  if (shouldHighlight && isTopCard) {
-                                    // Клик по своей верхней карте - инициируем выбор цели
+                                  if (canPlaceDeckOnSelfHere) {
+                                    placeCardOnSelfByRules();
+                                  } else if (shouldHighlight && isTopCard) {
                                     console.log(`🎴 [1-я стадия] Клик по своей карте, инициируем выбор цели`);
                                     makeMove('initiate_move');
                                   } else if (isAvailableTarget) {
-                                    // Клик по доступной цели - делаем ход
                                     console.log(`🎴 [1-я стадия] Клик по цели: ${player.name}`);
                                     makeMove(player.id);
                                   }
                                 }
                               }}
                               onMouseEnter={(e) => {
-                                if (isAvailableTarget) {
+                                if (isAvailableTarget || canPlaceDeckOnSelfHere) {
                                   e.currentTarget.style.transform = 'scale(1.05)';
                                 }
                               }}
@@ -2736,7 +2816,7 @@ function GamePageContentComponent({
                                       ? '0 0 12px rgba(59, 130, 246, 0.8)'
                                       : 'none',
                                     transition: 'all 0.3s ease',
-                                    objectFit: 'cover',
+                                    objectFit: 'contain',
                                   }}
                                 />
                                   {/* ✅ ОВЕРЛЕЙ РАНГА И МАСТИ НА NFT КАРТЕ */}
@@ -2794,7 +2874,7 @@ function GamePageContentComponent({
                                       ? '0 0 12px rgba(59, 130, 246, 0.8)'
                                       : 'none',
                                     transition: 'all 0.3s ease',
-                                    objectFit: 'cover',
+                                    objectFit: 'contain',
                                   }}
                                 />
                               )}
@@ -2824,7 +2904,7 @@ function GamePageContentComponent({
                               )}
                               
                               {/* 🔢 ПОКАЗЫВАЕМ КОЛИЧЕСТВО КАРТ ВО 2-Й СТАДИИ (только для закрытых карт) */}
-                              {gameStage >= 2 && !showOpen && cardIndex === playerCards.length - 1 && (
+                              {opponentClosedStack && !showOpen && cardIndex === cardsToRender.length - 1 && (
                                 <div style={{
                                   position: 'absolute',
                                   top: '50%',
@@ -2852,6 +2932,8 @@ function GamePageContentComponent({
                           );
                         })}
                       </div>
+                        );
+                      })()}
                     </div>
                   )}
 
@@ -3099,7 +3181,10 @@ function GamePageContentComponent({
             )}
           </div>
           
-          <div className={styles.handCards}>
+          <div
+            className={styles.handCards}
+            style={myHandFan ? { width: myHandFan.totalWidthPx, maxWidth: layoutMetrics.handMaxFanWidth, margin: '0 auto' } : undefined}
+          >
             {myPlayer.cards.length === 0 && myPlayer.penki.length > 0 && (
               <div style={{
                 padding: '10px 14px',
@@ -3152,6 +3237,8 @@ function GamePageContentComponent({
               }
               
               const cardId = typeof card === 'string' ? undefined : card.id;
+              const isTopHandCard = index === myPlayer.cards.length - 1;
+              const highlightSelfPlacement = canPlaceDeckOnSelf && isTopHandCard;
               // Проверяем можно ли сыграть эту карту
               const isMyTurn = myPlayer.id === currentPlayerId;
               const isSelected = selectedHandCard?.id === cardId || selectedHandCard?.image === cardImage;
@@ -3178,7 +3265,7 @@ function GamePageContentComponent({
               return (
                 <div
                   key={`hand-${index}-${cardImage}`}
-                  className={`${styles.handCard} ${isSelected ? styles.selected : ''} ${canPlay ? styles.playable : ''} ${!isMyTurn ? styles.disabled : ''}`}
+                  className={`${styles.handCard} ${isSelected ? styles.selected : ''} ${canPlay ? styles.playable : ''} ${highlightSelfPlacement ? styles.playable : ''} ${!isMyTurn ? styles.disabled : ''}`}
                   draggable={isMyTurn && canPlay}
                   onDragStart={(e) => {
                     if (!isMyTurn || !canPlay) {
@@ -3231,16 +3318,27 @@ function GamePageContentComponent({
                     }
                   }}
                   style={{
-                    marginLeft: index > 0 ? `-${Math.round(layoutMetrics.handCardWidth * 0.42)}px` : '0',
-                    zIndex: isSelected ? 100 : index + 1,
-                    cursor: isMyTurn && canPlay ? 'grab' : isMyTurn ? 'pointer' : 'not-allowed',
+                    width: layoutMetrics.handCardWidth,
+                    height: layoutMetrics.handCardHeight,
+                    flexShrink: 0,
+                    marginLeft: index > 0 && myHandFan ? `-${myHandFan.marginLeftPx}px` : '0',
+                    zIndex: isSelected ? 200 : index + 1,
+                    cursor: highlightSelfPlacement ? 'pointer' : isMyTurn && canPlay ? 'grab' : isMyTurn ? 'pointer' : 'not-allowed',
                     position: 'relative',
-                    transition: 'transform 0.2s ease', // ✅ Плавная анимация для touch
-                    touchAction: 'none', // ✅ Отключаем стандартное поведение браузера
+                    transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                    touchAction: 'none',
+                    boxShadow: highlightSelfPlacement
+                      ? '0 0 18px rgba(34, 197, 94, 0.75), 0 0 0 2px rgba(34, 197, 94, 0.85)'
+                      : undefined,
                   }}
                   onClick={() => {
                     if (!isMyTurn) {
                       showNotification('Сейчас не ваш ход!', 'warning', 2000);
+                      return;
+                    }
+
+                    if (highlightSelfPlacement) {
+                      placeCardOnSelfByRules();
                       return;
                     }
                     

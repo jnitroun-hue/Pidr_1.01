@@ -20,6 +20,7 @@ import { fetchPremiumStatus, isPremiumUsable } from '@/lib/premium/refresh-premi
 import { buildReferralLink, buildReferralShareText } from '@/lib/referral/referral-links';
 import UserAvatarBadge from '@/components/UserAvatarBadge';
 import AuthMethodBadge from '@/components/AuthMethodBadge';
+import AddToDeckModal from '@/components/AddToDeckModal';
 import type { AuthMethod } from '@/lib/user/resolve-auth-method';
 
 // Компонент таймера для бонусов
@@ -960,6 +961,7 @@ export default function ProfilePage() {
     }
 
     setSelectedDeckCardIds([]);
+    setShowAddToDeckPicker(false);
     await loadNftCollection();
     await reloadDeckCards();
     window.dispatchEvent(new CustomEvent('deck-updated'));
@@ -1028,10 +1030,6 @@ export default function ProfilePage() {
     } finally {
       setIsGeneratingStarter(false);
     }
-  };
-
-  const handleAddCardToDeck = (card: { id: string | number }) => {
-    toggleDeckCardSelection(card.id);
   };
 
   // ✅ УДАЛЕНИЕ КАРТЫ ИЗ КОЛОДЫ
@@ -2471,141 +2469,52 @@ export default function ProfilePage() {
                       </>
                     ) : (
                       <div style={{ marginBottom: '8px' }}>
-                        Пока нет карт в колоде. Выберите карты из коллекции ниже.
+                        Пока нет карт в колоде. Нажмите «Добавить карты в колоду».
                       </div>
                     )}
                   </div>
                 )}
 
-                {/* ✅ ДОБАВЛЕНИЕ КАРТ — всегда видно, пока есть доступные */}
+                {/* Кнопка открытия модалки добавления карт */}
                 {!isLoadingDeck && !isLoadingNftCollection && cardsAvailableForDeck.length > 0 && (
-                  <div style={{
-                    marginTop: deckCards.length > 0 ? '8px' : '0',
-                    background: 'rgba(30, 41, 59, 0.5)',
-                    border: '1px solid rgba(99, 102, 241, 0.25)',
-                    borderRadius: '12px',
-                    padding: '20px',
-                  }}>
-                    {!showAddToDeckPicker ? (
-                      <>
-                        <p style={{ color: '#94a3b8', marginBottom: '12px', fontSize: '0.9rem', textAlign: 'center' }}>
-                          В коллекции {cardsAvailableForDeck.length}{' '}
-                          {cardsAvailableForDeck.length === 1 ? 'карта доступна' : 'карт доступно'} для колоды
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => setShowAddToDeckPicker(true)}
-                          style={{
-                            width: '100%',
-                            background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.9) 0%, rgba(22, 163, 74, 0.8) 100%)',
-                            border: '1px solid rgba(74, 222, 128, 0.5)',
-                            borderRadius: '12px',
-                            color: '#fff',
-                            padding: '14px 24px',
-                            fontSize: '0.95rem',
-                            fontWeight: '700',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          ➕ Добавить карты в колоду
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <p style={{ color: '#94a3b8', marginBottom: '12px', fontSize: '0.85rem', textAlign: 'center' }}>
-                          Выберите одну или несколько карт ({selectedDeckCardIds.length} выбрано из {cardsAvailableForDeck.length})
-                        </p>
-                        <div style={{
-                          display: 'grid',
-                          gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
-                          gap: '12px',
-                          maxHeight: '280px',
-                          overflowY: 'auto',
-                          padding: '4px',
-                        }}>
-                          {cardsAvailableForDeck.map((card: any) => {
-                            const isSelected = selectedDeckCardIds.includes(String(card.id));
-                            return (
-                              <button
-                                key={card.id}
-                                type="button"
-                                onClick={() => handleAddCardToDeck(card)}
-                                disabled={isAddingToDeckBatch}
-                                style={{
-                                  background: isSelected ? 'rgba(34, 197, 94, 0.15)' : 'rgba(15, 23, 42, 0.8)',
-                                  border: isSelected
-                                    ? '2px solid rgba(34, 197, 94, 0.8)'
-                                    : '1px solid rgba(100, 116, 139, 0.4)',
-                                  borderRadius: '10px',
-                                  padding: '8px',
-                                  cursor: isAddingToDeckBatch ? 'wait' : 'pointer',
-                                  opacity: isAddingToDeckBatch ? 0.6 : 1,
-                                }}
-                              >
-                                {card.image_url && (
-                                  <img
-                                    src={card.image_url}
-                                    alt={`${card.rank} ${card.suit}`}
-                                    style={{
-                                      width: '100%',
-                                      height: 'auto',
-                                      borderRadius: '6px',
-                                      marginBottom: '6px',
-                                    }}
-                                  />
-                                )}
-                                <span style={{ color: '#e2e8f0', fontSize: '0.75rem', fontWeight: 600 }}>
-                                  {isSelected ? '✓ ' : ''}{card.rank} {card.suit}
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                        <div style={{ display: 'flex', gap: '10px', marginTop: '14px', flexWrap: 'wrap' }}>
-                          <button
-                            type="button"
-                            onClick={handleAddSelectedCardsToDeck}
-                            disabled={isAddingToDeckBatch || selectedDeckCardIds.length === 0}
-                            style={{
-                              flex: 1,
-                              minWidth: '140px',
-                              background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.9) 0%, rgba(22, 163, 74, 0.8) 100%)',
-                              border: '1px solid rgba(74, 222, 128, 0.5)',
-                              borderRadius: '10px',
-                              color: '#fff',
-                              padding: '12px 16px',
-                              fontSize: '0.9rem',
-                              fontWeight: '700',
-                              cursor: selectedDeckCardIds.length === 0 ? 'not-allowed' : 'pointer',
-                              opacity: selectedDeckCardIds.length === 0 ? 0.5 : 1,
-                            }}
-                          >
-                            {isAddingToDeckBatch
-                              ? '⏳ Добавляем...'
-                              : `✓ Добавить выбранные (${selectedDeckCardIds.length})`}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setShowAddToDeckPicker(false);
-                              setSelectedDeckCardIds([]);
-                            }}
-                            style={{
-                              background: 'transparent',
-                              border: '1px solid rgba(100, 116, 139, 0.4)',
-                              borderRadius: '10px',
-                              color: '#94a3b8',
-                              padding: '12px 16px',
-                              fontSize: '0.85rem',
-                              cursor: 'pointer',
-                            }}
-                          >
-                            Свернуть
-                          </button>
-                        </div>
-                      </>
-                    )}
+                  <div style={{ marginTop: deckCards.length > 0 ? '12px' : '0' }}>
+                    <p style={{ color: '#94a3b8', marginBottom: '12px', fontSize: '0.9rem', textAlign: 'center' }}>
+                      В коллекции {cardsAvailableForDeck.length}{' '}
+                      {cardsAvailableForDeck.length === 1 ? 'карта доступна' : 'карт доступно'} для колоды
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setShowAddToDeckPicker(true)}
+                      style={{
+                        width: '100%',
+                        background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.9) 0%, rgba(22, 163, 74, 0.8) 100%)',
+                        border: '1px solid rgba(74, 222, 128, 0.5)',
+                        borderRadius: '12px',
+                        color: '#fff',
+                        padding: '14px 24px',
+                        fontSize: '0.95rem',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      ➕ Добавить карты в колоду
+                    </button>
                   </div>
+                )}
+
+                {showAddToDeckPicker && cardsAvailableForDeck.length > 0 && (
+                  <AddToDeckModal
+                    cards={cardsAvailableForDeck}
+                    selectedIds={selectedDeckCardIds}
+                    isSubmitting={isAddingToDeckBatch}
+                    onToggle={toggleDeckCardSelection}
+                    onConfirm={handleAddSelectedCardsToDeck}
+                    onClose={() => {
+                      if (isAddingToDeckBatch) return;
+                      setShowAddToDeckPicker(false);
+                      setSelectedDeckCardIds([]);
+                    }}
+                  />
                 )}
 
                 {!isLoadingDeck && !isLoadingNftCollection && nftCollection.length > 0 && cardsAvailableForDeck.length === 0 && deckCards.length > 0 && (
