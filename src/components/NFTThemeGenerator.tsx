@@ -122,9 +122,7 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
       const response = await fetch('/api/payments/yookassa/create', {
         method: 'POST',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: getApiHeaders(),
         body: JSON.stringify({
           amount: amountRub,
           description: `Пополнение для генерации ${targetLabel} ${themeConfig.name}: ${formatCoins(targetCoins)} монет`,
@@ -324,9 +322,7 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
       const response = await fetch('/api/nft/generate-theme', {
         method: 'POST',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: getApiHeaders(),
         body: JSON.stringify({
           suit: randomSuit,
           rank: randomRank,
@@ -372,9 +368,7 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
                 method: 'GET',
                 credentials: 'include',
                 cache: 'no-store',
-                headers: {
-                  'Content-Type': 'application/json'
-                }
+                headers: getApiHeaders(),
               });
               if (balanceResponse.ok) {
                 const balanceData = await balanceResponse.json();
@@ -457,9 +451,7 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
           const response = await fetch('/api/nft/generate-theme', {
             method: 'POST',
             credentials: 'include',
-            headers: {
-              'Content-Type': 'application/json'
-            },
+            headers: getApiHeaders(),
             body: JSON.stringify({
               suit,
               rank,
@@ -484,9 +476,7 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
       const deductResponse = await fetch('/api/user/add-coins', {
         method: 'POST',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: getApiHeaders(),
         body: JSON.stringify({
           amount: -themeConfig.deckCost
         })

@@ -101,8 +101,9 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
 
   const showBackButton = (callback: () => void) => {
     if (webApp?.BackButton) {
-      webApp.BackButton.show()
+      webApp.BackButton.offClick(callback)
       webApp.BackButton.onClick(callback)
+      webApp.BackButton.show()
     }
   }
 
