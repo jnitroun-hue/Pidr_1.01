@@ -327,23 +327,44 @@ export async function canPlayerJoinRoom(
   userId: string,
   targetRoomId: string
 ): Promise<{ canJoin: boolean; reason?: string; currentRoomId?: string }> {
-  // Проверяем текущую комнату игрока
+  const normTarget = String(targetRoomId);
+
+  // БД — источник истины (Redis может быть устаревшим после serverless cold start)
+  try {
+    const databaseUserId = await resolveDatabaseUserId(userId);
+    const { data: dbRow } = await supabase
+      .from('_pidr_room_players')
+      .select('room_id')
+      .eq('user_id', databaseUserId)
+      .maybeSingle();
+
+    if (dbRow?.room_id != null) {
+      const dbRoom = String(dbRow.room_id);
+      if (dbRoom === normTarget) {
+        if (redis) await redis.set(KEYS.userRoom(userId), dbRoom, { ex: 7200 });
+        return { canJoin: true };
+      }
+      return {
+        canJoin: false,
+        reason: 'Вы уже находитесь в другой комнате',
+        currentRoomId: dbRoom,
+      };
+    }
+  } catch (err) {
+    console.warn('⚠️ [canPlayerJoinRoom] DB check error:', err);
+  }
+
   const currentRoomId = await getPlayerRoom(userId);
-  
-  if (currentRoomId) {
-    // Если игрок уже в этой комнате - разрешаем (переподключение)
-    if (currentRoomId === targetRoomId) {
+  const normCurrent = currentRoomId != null ? String(currentRoomId) : null;
+
+  if (normCurrent) {
+    if (normCurrent === normTarget) {
       return { canJoin: true };
     }
-    
-    // Игрок уже в другой комнате
-    return {
-      canJoin: false,
-      reason: 'Вы уже находитесь в другой комнате',
-      currentRoomId,
-    };
+    // Зависший Redis без записи в БД — очищаем
+    await setPlayerRoom(userId, null);
   }
-  
+
   return { canJoin: true };
 }
 
@@ -562,7 +583,10 @@ export async function removePlayerFromAllRooms(
   const currentRoomId = await getPlayerRoom(userId);
   const databaseUserId = await resolveDatabaseUserId(userId);
   
-  if (currentRoomId && currentRoomId !== exceptRoomId) {
+  if (
+    currentRoomId &&
+    String(currentRoomId) !== (exceptRoomId != null ? String(exceptRoomId) : '')
+  ) {
     await removePlayerFromRoom(currentRoomId, userId);
     const position = await getPlayerPosition(currentRoomId, userId);
     if (position !== null) {

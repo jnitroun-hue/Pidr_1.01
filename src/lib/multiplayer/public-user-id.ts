@@ -1,3 +1,14 @@
+/** Redis/lobby key: telegram_id если есть, иначе числовой id из БД (web) */
+export function getRedisUserId(user: {
+  id: number;
+  telegram_id?: number | string | null;
+}): string {
+  if (user.telegram_id != null && String(user.telegram_id).trim() !== '') {
+    return String(user.telegram_id);
+  }
+  return String(user.id);
+}
+
 /** Публичный ID игрока для сравнения в лобби (telegram_id или db id для web) */
 export function getMultiplayerPublicUserId(user: {
   id?: number | string | null;

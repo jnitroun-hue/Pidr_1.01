@@ -26,6 +26,8 @@ import {
 } from '../../../lib/multiplayer/player-state-manager';
 import { lightCleanup, cleanupOfflinePlayers } from '../../../lib/auto-cleanup';
 import { clampRoomSize, normalizeMatchType } from '../../../lib/multiplayer/room-rules';
+import { getRedisUserId } from '../../../lib/multiplayer/public-user-id';
+import { getUserIdFromDatabase } from '../../../lib/auth-utils';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -261,14 +263,15 @@ export async function POST(req: NextRequest) {
   
   try {
     const auth = requireAuth(req);
-    if (auth.error) {
+    if ('error' in auth) {
       return NextResponse.json({ 
         success: false, 
         message: auth.error 
       }, { status: 401 });
     }
     
-    const userId = auth.userId as string;
+    const userId = auth.userId;
+    const environment = auth.environment;
     const body = await req.json();
     const { action } = body;
     
@@ -334,12 +337,11 @@ export async function POST(req: NextRequest) {
       }
       
       const userUUID = userData.id;
-      const userTelegramId = userData.telegram_id;
-      console.log(`👤 Пользователь найден: UUID=${userUUID}, telegram_id=${userTelegramId}`);
+      const redisUserId = getRedisUserId(userData);
+      console.log(`👤 Пользователь найден: UUID=${userUUID}, redisUserId=${redisUserId}`);
       
       // 2. ПРОВЕРЯЕМ МОЖЕТ ЛИ ИГРОК СОЗДАТЬ КОМНАТУ
-      // ✅ Используем telegram_id для Redis (string)
-      const currentRoomId = await getPlayerRoom(userTelegramId.toString());
+      const currentRoomId = await getPlayerRoom(redisUserId);
       
       if (currentRoomId) {
         // Проверяем существует ли эта комната в БД (СРАВНИВАЕМ UUID С UUID!)
@@ -368,7 +370,7 @@ export async function POST(req: NextRequest) {
               .eq('room_id', existingRoom.id);
             
             // Очищаем Redis
-            await removePlayerFromAllRooms(userTelegramId.toString());
+            await removePlayerFromAllRooms(redisUserId);
             
             console.log(`✅ [CREATE ROOM] Старая комната закрыта, создаем новую`);
           } else {
@@ -381,7 +383,7 @@ export async function POST(req: NextRequest) {
           }
         } else {
           // Комната есть в Redis но не в БД - очищаем Redis
-          await removePlayerFromAllRooms(userTelegramId.toString());
+          await removePlayerFromAllRooms(redisUserId);
         }
       }
       
@@ -427,11 +429,11 @@ export async function POST(req: NextRequest) {
       
       // 4. АТОМАРНО ДОБАВЛЯЕМ ХОСТА В КОМНАТУ
       // ✅ Используем telegram_id для Redis
-      console.log(`👑 [CREATE ROOM] Создаем комнату ${room.id}, добавляем хоста ${userTelegramId} с isHost=true`);
+      console.log(`👑 [CREATE ROOM] Создаем комнату ${room.id}, добавляем хоста ${redisUserId} с isHost=true`);
       const joinResult = await atomicJoinRoom({
-        userId: userTelegramId.toString(),
+        userId: redisUserId,
         username: userData.username,
-        roomId: room.id,
+        roomId: String(room.id),
         roomCode,
         maxPlayers: roomMaxPlayers,
         isHost: true, // ✅ Создатель = хост
@@ -541,14 +543,13 @@ export async function POST(req: NextRequest) {
       }
       
       const userUUID2 = userData2.id;
-      const userTelegramId2 = userData2.telegram_id;
-      console.log(`👤 Пользователь найден: UUID=${userUUID2}, telegram_id=${userTelegramId2}`);
+      const redisUserId2 = getRedisUserId(userData2);
+      console.log(`👤 Пользователь найден: UUID=${userUUID2}, redisUserId=${redisUserId2}`);
       
       // 4. ПРОВЕРЯЕМ МОЖЕТ ЛИ ИГРОК ПРИСОЕДИНИТЬСЯ
-      // ✅ Используем telegram_id для Redis
-      const canJoin = await canPlayerJoinRoom(userTelegramId2.toString(), room.id);
+      const canJoin = await canPlayerJoinRoom(redisUserId2, String(room.id));
       
-      if (!canJoin.canJoin && canJoin.currentRoomId !== room.id) {
+      if (!canJoin.canJoin && String(canJoin.currentRoomId) !== String(room.id)) {
         // Игрок уже в другой комнате
         const { data: currentRoom } = await supabase
           .from('_pidr_rooms')
@@ -569,9 +570,9 @@ export async function POST(req: NextRequest) {
       // 6. АТОМАРНО ПРИСОЕДИНЯЕМСЯ К КОМНАТЕ
       // ✅ Используем telegram_id для Redis
       const joinResult = await atomicJoinRoom({
-        userId: userTelegramId2.toString(),
+        userId: redisUserId2,
         username: userData2.username,
-        roomId: room.id,
+        roomId: String(room.id),
         roomCode: room.room_code,
         maxPlayers: room.max_players,
         isHost,
@@ -585,7 +586,7 @@ export async function POST(req: NextRequest) {
         }, { status: 400 });
       }
       
-      console.log(`✅ Игрок ${userTelegramId2} присоединился к комнате ${room.room_code} на позиции ${joinResult.position}`);
+      console.log(`✅ Игрок ${redisUserId2} присоединился к комнате ${room.room_code} на позиции ${joinResult.position}`);
       
       return NextResponse.json({ 
         success: true, 
@@ -615,25 +616,12 @@ export async function POST(req: NextRequest) {
       
       console.log(`🚶 Выход из комнаты: ${roomId}`);
       
-      // ✅ ПОЛУЧАЕМ telegram_id для Redis
-      let userTelegramId3: string = userId;
+      const { dbUserId: leaveDbUserId, user: leaveUser } = await getUserIdFromDatabase(userId, environment);
+      const redisUserId3 = leaveUser ? getRedisUserId(leaveUser) : userId;
       
-      // Если userId это UUID, получаем telegram_id
-      const uuidCheck = await supabase
-        .from('_pidr_users')
-        .select('telegram_id')
-        .eq('id', userId)
-        .maybeSingle();
-      
-      if (uuidCheck.data) {
-        userTelegramId3 = uuidCheck.data.telegram_id.toString();
-      }
-      
-      // АТОМАРНО ВЫХОДИМ ИЗ КОМНАТЫ
-      // ✅ Используем telegram_id для Redis
       const leaveResult = await atomicLeaveRoom({
-        userId: userTelegramId3,
-        roomId,
+        userId: redisUserId3,
+        roomId: String(roomId),
       });
       
       if (!leaveResult.success) {
@@ -643,10 +631,9 @@ export async function POST(req: NextRequest) {
         }, { status: 500 });
       }
       
-      console.log(`✅ Игрок ${userTelegramId3} вышел из комнаты ${roomId}`);
+      console.log(`✅ Игрок ${redisUserId3} вышел из комнаты ${roomId}`);
       
-      // ✅ ДОПОЛНИТЕЛЬНАЯ ОЧИСТКА REDIS - убеждаемся что игрок удален из всех комнат
-      await removePlayerFromAllRooms(userTelegramId3);
+      await removePlayerFromAllRooms(redisUserId3);
       
       // Проверяем нужно ли удалить комнату (если хост вышел и комната пустая)
       const { data: room } = await supabase
@@ -655,21 +642,12 @@ export async function POST(req: NextRequest) {
         .eq('id', roomId)
         .single();
       
-      if (room && room.current_players === 0) {
-        // ✅ ПОЛУЧАЕМ UUID ПОЛЬЗОВАТЕЛЯ ПО TELEGRAM_ID ДЛЯ СРАВНЕНИЯ
-        const { data: userData } = await supabase
-          .from('_pidr_users')
-          .select('id')
-          .eq('telegram_id', userId)
-          .single();
-        
-        if (userData && room.host_id === userData.id) { // ✅ Сравниваем UUID с UUID!
+      if (room && room.current_players === 0 && leaveDbUserId && room.host_id === leaveDbUserId) {
           console.log(`🗑️ Удаляем пустую комнату хоста ${roomId}`);
           await supabase
             .from('_pidr_rooms')
             .delete()
             .eq('id', roomId);
-        }
       }
       
       return NextResponse.json({ 
