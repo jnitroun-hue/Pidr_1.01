@@ -1,7 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabase';
 import { NFT_STORAGE_BUCKET } from '@/lib/nft/constants';
 import { getPayoutWeekKey } from '@/lib/rating/weekly-prizes';
-import { composeRandomThemedCardBuffer } from '@/lib/nft/compose-theme-card';
+import { composeRandomThemedCardBuffer, COMPOSE_VERSION } from '@/lib/nft/compose-theme-card';
 import type { ThemeAssetPick } from '@/lib/nft/theme-config';
 
 /** Корневая папка бесплатных Premium-генераций в бакете nft-card */
@@ -18,7 +18,7 @@ export function buildPremiumFreeStoragePath(params: {
   const safeRank = params.rank.replace(/[^a-z0-9]/gi, '_').toLowerCase();
   const safeSuit = params.suit.replace(/[^a-z0-9]/gi, '_').toLowerCase();
   const ext = params.ext ?? 'png';
-  return `${PREMIUM_FREE_STORAGE_PREFIX}/${params.userId}/${weekKey}/${safeSuit}_${safeRank}_${Date.now()}.${ext}`;
+  return `${PREMIUM_FREE_STORAGE_PREFIX}/v${COMPOSE_VERSION}/${params.userId}/${weekKey}/${safeSuit}_${safeRank}_${Date.now()}.${ext}`;
 }
 
 /** Premium free roll: случайная картинка из ВСЕХ тем + сохранение в premium-free/ */

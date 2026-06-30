@@ -7,6 +7,7 @@
  */
 
 import { getSupabaseAdmin } from '../supabase';
+import { resolveMasterAddress } from '@/lib/wallets/master-addresses';
 
 interface TonTransaction {
   hash: string;
@@ -28,15 +29,7 @@ export class TonPaymentService {
                   process.env.TON_CENTER_API || 
                   process.env.TONCENTER_API || 
                   '';
-    this.masterAddress = process.env.MASTER_TON_ADDRESS || 
-                         process.env.TON_MASTER_ADDRESS || 
-                         '';
-    
-    // Нормализуем адрес (конвертируем UQ в EQ если нужно)
-    if (this.masterAddress && this.masterAddress.startsWith('UQ')) {
-      this.masterAddress = 'EQ' + this.masterAddress.substring(2);
-      console.log('✅ Конвертирован UQ адрес в EQ:', this.masterAddress);
-    }
+    this.masterAddress = resolveMasterAddress('TON')?.address || '';
     
     // ✅ Показываем предупреждения только если переменные действительно отсутствуют
     // И только во время сборки (build time), не в runtime

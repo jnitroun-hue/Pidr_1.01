@@ -54,8 +54,12 @@ export async function GET(
     }
 
     const dbUserIds = (players || [])
-      .map((player: any) => player.user_id)
-      .filter((id: any) => typeof id === 'number' && id > 0);
+      .map((player: any) => {
+        const raw = player.user_id;
+        const numeric = typeof raw === 'number' ? raw : parseInt(String(raw), 10);
+        return Number.isFinite(numeric) ? numeric : null;
+      })
+      .filter((id: number | null): id is number => id != null && id > 0);
 
     const { data: users } = dbUserIds.length > 0
       ? await supabase
@@ -70,9 +74,16 @@ export async function GET(
     });
 
     const playersWithHost = (players || []).map((player: any) => {
-      const isBot = typeof player.user_id === 'number' && player.user_id < 0;
-      const userData = isBot ? null : usersMap.get(player.user_id);
-      const isHost = !isBot && room?.host_id && String(room.host_id) === String(player.user_id);
+      const rawUserId = player.user_id;
+      const numericUserId =
+        typeof rawUserId === 'number' ? rawUserId : parseInt(String(rawUserId), 10);
+      const isBot = Number.isFinite(numericUserId) && numericUserId < 0;
+      const userData = isBot ? null : usersMap.get(numericUserId);
+      const isHost =
+        !isBot &&
+        room?.host_id &&
+        (String(room.host_id) === String(rawUserId) ||
+          (userData?.id != null && String(room.host_id) === String(userData.id)));
       const publicUserId = isBot
         ? String(player.user_id)
         : String(userData?.telegram_id ?? player.user_id);
@@ -80,7 +91,7 @@ export async function GET(
       return {
         ...player,
         user_id: publicUserId,
-        db_user_id: isBot ? null : player.user_id,
+        db_user_id: isBot ? null : (userData?.id ?? (Number.isFinite(numericUserId) ? numericUserId : null)),
         username: player.username || userData?.username || 'Игрок',
         avatar_url: player.avatar_url || userData?.avatar_url || null,
         is_host: isHost || player.is_host === true,

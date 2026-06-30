@@ -4,6 +4,11 @@ import sharp from 'sharp';
 import { supabaseAdmin } from '@/lib/supabase';
 import { NFT_STORAGE_BUCKET, POKEMON_STORAGE_BUCKET } from '@/lib/nft/constants';
 import {
+  buildCardFaceSvg,
+  CARD_FACE,
+  type CardFaceSpec,
+} from '@/lib/nft/card-face-builder';
+import {
   getThemeAssetRelativePath,
   NFT_THEME_CONFIG,
   pickRandomThemeAsset,
@@ -13,31 +18,9 @@ import {
 } from '@/lib/nft/theme-config';
 
 const REMOTE_FETCH_TIMEOUT_MS = 2500;
+const COMPOSE_VERSION = 2;
 
-function displayRank(rankRaw: string, rankNormalized: string): string {
-  if (rankRaw === '10' || rankNormalized === '10') return '10';
-  const map: Record<string, string> = {
-    jack: 'J',
-    queen: 'Q',
-    king: 'K',
-    ace: 'A',
-  };
-  return map[rankNormalized] ?? rankRaw.toUpperCase();
-}
-
-function suitSymbol(suit: string): string {
-  const map: Record<string, string> = {
-    hearts: '♥',
-    diamonds: '♦',
-    clubs: '♣',
-    spades: '♠',
-  };
-  return map[suit] ?? suit;
-}
-
-function suitColor(suit: string): string {
-  return suit === 'hearts' || suit === 'diamonds' ? '#ef4444' : '#000000';
-}
+export { COMPOSE_VERSION };
 
 export async function downloadStorageBuffer(
   bucket: string,
@@ -67,7 +50,7 @@ async function fetchRemoteBuffer(url: string): Promise<Buffer | null> {
   }
 }
 
-async function loadThemeImageBuffer(pick: ThemeAssetPick): Promise<Buffer> {
+export async function loadThemeImageBuffer(pick: ThemeAssetPick): Promise<Buffer> {
   const cfg = NFT_THEME_CONFIG[pick.theme];
   const fileName = `${cfg.prefix}${pick.themeId}.png`;
   const relativePath = getThemeAssetRelativePath(pick);
@@ -104,12 +87,18 @@ async function loadThemeImageBuffer(pick: ThemeAssetPick): Promise<Buffer> {
   throw new Error(`Ассет темы не найден: ${relativePath}`);
 }
 
-function escapeXml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+function toCardFaceSpec(params: {
+  suit: string;
+  rankRaw: string;
+  rankNormalized: string;
+  theme?: NftThemeKey;
+}): CardFaceSpec {
+  return {
+    suit: params.suit,
+    rankRaw: params.rankRaw,
+    rankNormalized: params.rankNormalized,
+    themeLabel: params.theme ? NFT_THEME_CONFIG[params.theme].name : undefined,
+  };
 }
 
 /** Карта только с рангом/мастью — без внешних ассетов (fallback) */
@@ -119,23 +108,13 @@ export async function composeSvgOnlyCardBuffer(params: {
   rankNormalized: string;
   themeLabel?: string;
 }): Promise<Buffer> {
-  const rank = escapeXml(displayRank(params.rankRaw, params.rankNormalized));
-  const symbol = escapeXml(suitSymbol(params.suit));
-  const color = suitColor(params.suit);
-  const label = escapeXml(params.themeLabel || 'Premium');
-
-  const svg = `
-    <svg width="300" height="420" xmlns="http://www.w3.org/2000/svg">
-      <rect width="300" height="420" fill="#ffffff"/>
-      <rect x="4" y="4" width="292" height="412" fill="none" stroke="#000000" stroke-width="8"/>
-      <text x="20" y="50" font-family="Arial, sans-serif" font-size="40" font-weight="bold" fill="${color}">${rank}</text>
-      <text x="20" y="90" font-family="Arial, sans-serif" font-size="36" font-weight="bold" fill="${color}">${symbol}</text>
-      <text x="260" y="400" font-family="Arial, sans-serif" font-size="40" font-weight="bold" fill="${color}" text-anchor="end">${rank}</text>
-      <text x="260" y="360" font-family="Arial, sans-serif" font-size="36" font-weight="bold" fill="${color}" text-anchor="end">${symbol}</text>
-      <text x="150" y="215" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#64748b" text-anchor="middle">${label}</text>
-    </svg>`;
-
-  return sharp(Buffer.from(svg)).png().toBuffer();
+  const spec: CardFaceSpec = {
+    suit: params.suit,
+    rankRaw: params.rankRaw,
+    rankNormalized: params.rankNormalized,
+    themeLabel: params.themeLabel,
+  };
+  return sharp(Buffer.from(buildCardFaceSvg(spec))).png().toBuffer();
 }
 
 export async function composeThemeCardBuffer(params: {
@@ -145,31 +124,21 @@ export async function composeThemeCardBuffer(params: {
   theme: NftThemeKey;
   themeId: number;
 }): Promise<Buffer> {
-  const { suit, rankRaw, rankNormalized, theme, themeId } = params;
-  const pick: ThemeAssetPick = { theme, themeId };
-  const themeImage = await loadThemeImageBuffer(pick);
-
-  const rank = escapeXml(displayRank(rankRaw, rankNormalized));
-  const symbol = escapeXml(suitSymbol(suit));
-  const color = suitColor(suit);
-
-  const baseSvg = `
-    <svg width="300" height="420" xmlns="http://www.w3.org/2000/svg">
-      <rect width="300" height="420" fill="#ffffff"/>
-      <rect x="4" y="4" width="292" height="412" fill="none" stroke="#000000" stroke-width="8"/>
-      <text x="20" y="50" font-family="Arial, sans-serif" font-size="40" font-weight="bold" fill="${color}">${rank}</text>
-      <text x="20" y="90" font-family="Arial, sans-serif" font-size="36" font-weight="bold" fill="${color}">${symbol}</text>
-      <text x="260" y="400" font-family="Arial, sans-serif" font-size="40" font-weight="bold" fill="${color}" text-anchor="end">${rank}</text>
-      <text x="260" y="360" font-family="Arial, sans-serif" font-size="36" font-weight="bold" fill="${color}" text-anchor="end">${symbol}</text>
-    </svg>`;
+  const { theme, themeId } = params;
+  const themeImage = await loadThemeImageBuffer({ theme, themeId });
+  const spec = toCardFaceSpec({ ...params, theme });
+  const { art } = CARD_FACE;
 
   const themeResized = await sharp(themeImage)
-    .resize(200, 200, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 1 } })
+    .resize(art.size, art.size, {
+      fit: 'contain',
+      background: { r: 241, g: 245, b: 249, alpha: 1 },
+    })
     .png()
     .toBuffer();
 
-  return sharp(Buffer.from(baseSvg))
-    .composite([{ input: themeResized, top: 110, left: 50 }])
+  return sharp(Buffer.from(buildCardFaceSvg(spec)))
+    .composite([{ input: themeResized, top: art.top, left: art.left }])
     .png()
     .toBuffer();
 }

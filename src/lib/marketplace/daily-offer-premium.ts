@@ -8,6 +8,7 @@ import {
 import {
   composeSeededThemeCardBuffer,
   composeSvgOnlyCardBuffer,
+  COMPOSE_VERSION,
   downloadStorageBuffer,
 } from '@/lib/nft/compose-theme-card';
 import { normalizeRankToken, normalizeSuitToken } from '@/lib/game/cardAssets';
@@ -94,11 +95,11 @@ export function buildPremiumDailyOffer(userId: number, dayTag = getDayTag()): Pr
 }
 
 function getDailyOfferPreviewStoragePath(userId: number, spec: PremiumDailyOfferSpec): string {
-  return `daily-offer/${spec.dayTag}/preview/user-${userId}-${spec.suit}_${spec.rankNormalized}.png`;
+  return `daily-offer/v${COMPOSE_VERSION}/${spec.dayTag}/preview/user-${userId}-${spec.suit}_${spec.rankNormalized}.png`;
 }
 
 function getDailyOfferCardStoragePath(userId: number, spec: PremiumDailyOfferSpec): string {
-  return `daily-offer/${spec.dayTag}/user-${userId}-${spec.suit}_${spec.rankNormalized}.png`;
+  return `daily-offer/v${COMPOSE_VERSION}/${spec.dayTag}/user-${userId}-${spec.suit}_${spec.rankNormalized}.png`;
 }
 
 async function uploadDailyOfferCardBuffer(
@@ -268,5 +269,6 @@ export function offerToApiPayload(spec: PremiumDailyOfferSpec) {
     rank: spec.rankRaw,
     suit: spec.suit,
     isPremiumDaily: true,
+    composeVersion: COMPOSE_VERSION,
   };
 }

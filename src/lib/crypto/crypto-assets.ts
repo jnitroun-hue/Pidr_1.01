@@ -14,7 +14,7 @@ export interface WalletAppMeta {
   label: string;
   icon: string;
   accent: string;
-  network: 'ton' | 'eth' | 'sol';
+  network: 'ton' | 'eth' | 'sol' | 'tron';
 }
 
 const gramToken: CryptoTokenMeta = {
@@ -28,13 +28,6 @@ const gramToken: CryptoTokenMeta = {
 export const CRYPTO_TOKENS = {
   GRAM: gramToken,
   TON: gramToken,
-  BTC: {
-    symbol: 'BTC',
-    name: 'Bitcoin',
-    icon: '/img/btc-icon.svg',
-    color: '#F7931A',
-    apiKey: 'BTC',
-  },
   ETH: {
     symbol: 'ETH',
     name: 'Ethereum',
@@ -55,6 +48,20 @@ export const CRYPTO_TOKENS = {
     icon: '/img/usdt-icon.svg',
     color: '#26A17B',
     apiKey: 'USDT',
+  },
+  TRX: {
+    symbol: 'TRX',
+    name: 'Tron',
+    icon: '/img/trx-icon.svg',
+    color: '#EF0027',
+    apiKey: 'TRX',
+  },
+  BTC: {
+    symbol: 'BTC',
+    name: 'Bitcoin',
+    icon: '/img/btc-icon.svg',
+    color: '#F7931A',
+    apiKey: 'BTC',
   },
   JETTON: {
     symbol: 'JETTON',
@@ -123,10 +130,17 @@ export const WALLET_APPS: Record<string, WalletAppMeta> = {
     accent: '#AB9FF2',
     network: 'sol',
   },
+  tronlink: {
+    id: 'tronlink',
+    label: 'TronLink',
+    icon: '/img/trx-icon.svg',
+    accent: '#EF0027',
+    network: 'tron',
+  },
 };
 
 /** Порядок для депозита в GameWallet */
-export const DEPOSIT_CRYPTO_ORDER = ['TON', 'ETH', 'SOL', 'USDT', 'BTC'] as const;
+export const DEPOSIT_CRYPTO_ORDER = ['TON', 'ETH', 'SOL', 'USDT', 'TRX'] as const;
 
 export function depositCryptoOptions() {
   return DEPOSIT_CRYPTO_ORDER.map((apiKey) => {
@@ -144,16 +158,19 @@ export function depositCryptoOptions() {
             : apiKey === 'SOL'
               ? 'Solana (SPL)'
               : apiKey === 'USDT'
-                ? 'Tether (USDT)'
-                : 'Bitcoin',
+                ? 'Tron (TRC-20)'
+                : apiKey === 'TRX'
+                  ? 'Tron (TRC-20)'
+                  : 'Ethereum',
       eta:
         apiKey === 'TON'
           ? '~5 сек'
           : apiKey === 'SOL'
             ? '~30 сек'
-            : apiKey === 'BTC'
-              ? '10-60 мин'
+            : apiKey === 'TRX' || apiKey === 'USDT'
+              ? '~1 мин'
               : '2-15 мин',
+      telegramWallet: true,
     };
   });
 }

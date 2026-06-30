@@ -22,27 +22,42 @@ import {
   FaMoneyBillWave
 } from 'react-icons/fa';
 import { SiVisa, SiMastercard } from 'react-icons/si';
-import { MasterWalletService } from '@/lib/wallets/master-wallet-service';
 import { buildReferralLink, buildReferralShareText } from '@/lib/referral/referral-links';
 import styles from './GameWallet.module.css';
 import ConnectedWalletsList from './ConnectedWalletsList';
 import WalletQuickConnect from './WalletQuickConnect';
 import DailyBonusWheelModal from './DailyBonusWheelModal';
 import { useTonConnectUI } from '@tonconnect/ui-react';
-import { beginCell, toNano } from '@ton/core';
 import { GRAM, formatGramAmount, formatGramRate, gramDisplayFromApi } from '@/lib/crypto/gram-brand';
 import { depositCryptoOptions, getCryptoToken, cryptoDisplaySymbol } from '@/lib/crypto/crypto-assets';
+import {
+  copyDepositDetails,
+  depositCoinLabel,
+  isTelegramWebApp,
+  openExternalWalletForDeposit,
+  sendGramViaTonConnect,
+} from '@/lib/wallets/telegram-wallet-deposit';
 import CryptoIcon from './CryptoIcon';
-
-const buildTonCommentPayload = (comment: string) =>
-  beginCell().storeUint(0, 32).storeStringTail(comment).endCell().toBoc().toString('base64');
 
 const walletTypeLabel = (type: string) => {
   const t = type.toLowerCase();
   if (t === 'ton') return GRAM.walletLabel;
   if (t === 'sol' || t === 'solana') return 'Phantom';
   if (t === 'eth' || t === 'ethereum') return 'MetaMask';
+  if (t === 'trx' || t === 'tron') return 'TronLink';
   return type.toUpperCase();
+};
+
+type MasterAddressEntry = {
+  id: string;
+  coin: string;
+  address: string;
+  memo?: string;
+  network?: string;
+  envKey?: string;
+  note?: string;
+  isActive: boolean;
+  createdAt: string;
 };
 
 interface User {
@@ -121,10 +136,11 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
   const [rubAmount, setRubAmount] = useState('');
   const [selectedPayMethod, setSelectedPayMethod] = useState<'bank_card' | 'sberbank' | 'yoo_money' | 'sbp'>('bank_card');
   const [yookassaLoading, setYookassaLoading] = useState(false);
-  const [masterAddresses, setMasterAddresses] = useState<any[]>([]);
-  const masterAddressesRef = useRef<any[]>([]);
+  const [masterAddresses, setMasterAddresses] = useState<MasterAddressEntry[]>([]);
+  const masterAddressesRef = useRef<MasterAddressEntry[]>([]);
   masterAddressesRef.current = masterAddresses;
   const [isGeneratingAddress, setIsGeneratingAddress] = useState(false);
+  const [depositAddressError, setDepositAddressError] = useState('');
   const [isMonitoringPayments, setIsMonitoringPayments] = useState(false);
   const [bonusAvailable, setBonusAvailable] = useState(true); // Состояние доступности бонуса
   const [dailyBonusModal, setDailyBonusModal] = useState<{
@@ -137,8 +153,9 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
     TON: 0,
     ETH: 0,
     USDT: 0,
+    TRX: 0,
     BTC: 0,
-    SOL: 0
+    SOL: 0,
   });
   const [hasLoadedCryptoBalances, setHasLoadedCryptoBalances] = useState(false);
   const [selectedWalletForDeposit, setSelectedWalletForDeposit] = useState<any>(null);
@@ -148,7 +165,6 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const reduceMotion = useReducedMotion();
   const shouldOptimizeAnimations = Boolean(reduceMotion) || isMobileViewport;
-  const masterWalletService = useMemo(() => new MasterWalletService(), []);
   const [tonConnectUI] = useTonConnectUI();
   const selectedCryptoLabel = useMemo(() => cryptoDisplaySymbol(selectedCrypto), [selectedCrypto]);
 
@@ -306,34 +322,46 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
     if (!ownerForWalletApis) return;
 
     try {
-      console.log('🏦 Загружаем мастер адреса для пользователя:', ownerForWalletApis);
+      const { getApiHeaders } = await import('@/lib/api-headers');
+      const response = await fetch('/api/wallet/deposit-info', {
+        method: 'GET',
+        credentials: 'include',
+        headers: getApiHeaders(),
+        cache: 'no-store',
+      });
 
-      // Создаем адреса для всех поддерживаемых монет
-      const coins = ['USDT', 'TON', 'ETH', 'SOL', 'BTC'];
-      const addresses = [];
-
-      for (const coin of coins) {
-        try {
-          const paymentInfo = masterWalletService.getPaymentAddress(ownerForWalletApis, coin);
-          addresses.push({
-            id: `master-${coin}-${ownerForWalletApis}`,
-            coin: coin,
-            address: paymentInfo.address,
-            memo: paymentInfo.memo,
-            note: paymentInfo.note,
-            isActive: true,
-            createdAt: new Date().toISOString()
-          });
-          console.log(`✅ ${coin} мастер адрес создан:`, paymentInfo.address);
-        } catch (error) {
-          console.error(`❌ Ошибка создания ${coin} адреса:`, error);
-        }
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        setDepositAddressError(result.message || 'Не удалось загрузить адреса пополнения');
+        setMasterAddresses([]);
+        return;
       }
-      
+
+      const addresses: MasterAddressEntry[] = (result.addresses || []).map((item: {
+        apiKey: string;
+        coin: string;
+        address: string;
+        memo?: string | null;
+        network?: string;
+        envKey?: string;
+      }) => ({
+        id: `master-${item.apiKey}-${ownerForWalletApis}`,
+        coin: item.apiKey,
+        address: item.address,
+        memo: item.memo || '',
+        network: item.network,
+        envKey: item.envKey,
+        note: `Master (${item.envKey})`,
+        isActive: true,
+        createdAt: new Date().toISOString(),
+      }));
+
       setMasterAddresses(addresses);
-      console.log('🏦 Мастер адреса загружены:', addresses.length);
+      setDepositAddressError(addresses.length === 0 ? 'На сервере не настроены MASTER_*_ADDRESS в Vercel' : '');
+      console.log('🏦 Master-адреса с сервера:', addresses.length);
     } catch (error) {
-      console.error('❌ Ошибка загрузки мастер адресов:', error);
+      console.error('❌ Ошибка загрузки master-адресов:', error);
+      setDepositAddressError('Ошибка связи с сервером при загрузке адресов');
     }
   };
 
@@ -357,8 +385,9 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
         TON: 0,
         ETH: 0,
         USDT: 0,
+        TRX: 0,
         BTC: 0,
-        SOL: 0
+        SOL: 0,
       };
 
       if (result.success && Array.isArray(result.wallets)) {
@@ -391,6 +420,11 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
 
   const selectedDepositAddress = useMemo(
     () => masterAddresses.find((addr) => addr.coin === selectedCrypto.toUpperCase())?.address ?? '',
+    [masterAddresses, selectedCrypto]
+  );
+
+  const selectedDepositMemo = useMemo(
+    () => masterAddresses.find((addr) => addr.coin === selectedCrypto.toUpperCase())?.memo ?? '',
     [masterAddresses, selectedCrypto]
   );
 
@@ -625,7 +659,65 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
     }
   };
 
-  // ✅ НОВОЕ: Пополнение через подключенный кошелёк (TonConnect/Phantom/MetaMask)
+  const handleTelegramWalletDeposit = async () => {
+    const amount = parseFloat(depositAmount);
+    if (!amount || amount <= 0) {
+      alert('Введите корректную сумму для пополнения');
+      return;
+    }
+
+    let address = selectedDepositAddress;
+    let memo = selectedDepositMemo;
+    if (!address && ownerForWalletApis) {
+      address = await generateDepositAddress(selectedCrypto, ownerForWalletApis);
+      memo = masterAddressesRef.current.find((a) => a.coin === selectedCrypto.toUpperCase())?.memo || '';
+    }
+
+    if (!address) {
+      alert(depositAddressError || 'Адрес пополнения не настроен на сервере');
+      return;
+    }
+
+    const coin = selectedCrypto.toUpperCase();
+    try {
+      setLoading(true);
+
+      if (coin === 'TON') {
+        const currentUser = getCurrentUser();
+        const depositMemo = memo || `deposit_${currentUser?.id || ownerForWalletApis || 'user'}`;
+        await sendGramViaTonConnect({
+          tonConnectUI,
+          masterAddress: address,
+          amount,
+          memo: depositMemo,
+        });
+        alert(`✅ ${formatGramAmount(amount)} отправлено через ${GRAM.walletLabel}. Баланс обновится после подтверждения сети.`);
+      } else {
+        if (isTelegramWebApp()) {
+          await copyDepositDetails(address, memo);
+          openExternalWalletForDeposit({ coin, masterAddress: address, amount, memo });
+          alert(
+            `Адрес и memo скопированы.\n\nОтправьте ${depositCoinLabel(coin)} на ваш master-адрес через Telegram Wallet или внешний кошелёк.`
+          );
+        } else {
+          openExternalWalletForDeposit({ coin, masterAddress: address, amount, memo });
+          alert(`Откройте кошелёк и отправьте ${amount} ${depositCoinLabel(coin)} на указанный адрес.`);
+        }
+      }
+
+      setActiveModal(null);
+      setDepositAmount('');
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      if (!/reject|cancel|declin/i.test(msg)) {
+        alert(`Ошибка: ${msg}`);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ✅ Пополнение через подключенный кошелёк (TonConnect/Phantom/MetaMask)
   const handleDepositViaWallet = async () => {
     if (!selectedWalletForDeposit) {
       alert('Выберите кошелёк для пополнения');
@@ -645,51 +737,31 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
       console.log(`💳 Пополнение через ${walletType}:`, { amount, crypto: selectedCrypto });
 
       // ✅ Получаем MASTER_WALLET адрес для выбранной криптовалюты
-      const masterAddressResponse = await fetch(`/api/wallet/unified?action=get_master_address&network=${selectedCrypto}`);
+      const masterAddressResponse = await fetch(
+        `/api/wallet/deposit-info?coin=${encodeURIComponent(selectedCrypto)}`,
+        { method: 'GET', credentials: 'include', headers: (await import('@/lib/api-headers')).getApiHeaders() }
+      );
       const masterAddressData = await masterAddressResponse.json();
-      
-      if (!masterAddressData.success || !masterAddressData.address) {
-        throw new Error('Не удалось получить адрес для пополнения');
+
+      if (!masterAddressResponse.ok || !masterAddressData.success || !masterAddressData.address) {
+        throw new Error(masterAddressData.message || 'Не удалось получить адрес для пополнения с сервера');
       }
 
-      const masterAddress = masterAddressData.address;
-      console.log(`📬 MASTER_WALLET адрес для ${selectedCrypto}:`, masterAddress);
+      const masterAddress = masterAddressData.address as string;
+      const currentUser = getCurrentUser();
+      const depositMemo =
+        (masterAddressData.memo as string) ||
+        selectedDepositMemo ||
+        `deposit_${currentUser?.id || user?.id || 'unknown'}`;
+      console.log(`📬 MASTER адрес для ${selectedCrypto}:`, masterAddress);
 
       if (walletType === 'ton') {
-        const currentUser = getCurrentUser();
-        const comment = `deposit_${currentUser?.id || user?.id || 'unknown'}`;
-        const transaction = {
-          validUntil: Math.floor(Date.now() / 1000) + 600,
-          messages: [
-            {
-              address: masterAddress,
-              amount: toNano(amount).toString(),
-              payload: buildTonCommentPayload(comment),
-            },
-          ],
-        };
-
-        if (!tonConnectUI.connected) {
-          const tonUi = tonConnectUI as { openSingleWalletModal?: (name: string) => Promise<void> };
-          if (typeof tonUi.openSingleWalletModal === 'function') {
-            await tonUi.openSingleWalletModal('telegram-wallet');
-          } else {
-            await tonConnectUI.openModal();
-          }
-        }
-
-        try {
-          await tonConnectUI.sendTransaction(transaction);
-        } catch (txError: unknown) {
-          const msg = txError instanceof Error ? txError.message : String(txError);
-          if (/reject|cancel|declin/i.test(msg)) {
-            throw new Error('Транзакция отменена в кошельке');
-          }
-          if (!tonConnectUI.connected) {
-            throw new Error(`Подключите ${GRAM.walletLabel} и нажмите «Пополнить» снова`);
-          }
-          throw txError;
-        }
+        await sendGramViaTonConnect({
+          tonConnectUI,
+          masterAddress,
+          amount,
+          memo: depositMemo || `deposit_${currentUser?.id || user?.id || 'unknown'}`,
+        });
 
         alert(
           `✅ Транзакция отправлена на ${formatGramAmount(amount)}.\n\nПосле подтверждения в сети баланс обновится автоматически.`
@@ -1071,93 +1143,59 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
   };
 
   // 🔥 ИСПРАВЛЕННАЯ генерация адреса через Unified Master Wallet API
-  const generateDepositAddress = useCallback(async (crypto: string, userId: string): Promise<string> => {
-    console.log(`🎯 generateDepositAddress вызвана для ${crypto}, userId: ${userId}`);
-    
-    if (!userId) {
-      console.log('❌ generateDepositAddress: нет userId');
-      return 'Ошибка: нет ID пользователя';
+  const generateDepositAddress = useCallback(async (crypto: string, _userId: string): Promise<string> => {
+    const coin = crypto.toUpperCase();
+    const existing = masterAddressesRef.current.find((addr) => addr.coin === coin);
+    if (existing?.address) {
+      return existing.address;
     }
 
-    try {
-      console.log(`🔄 generateDepositAddress: начинаем генерацию для ${crypto}`);
-      
-      const existingAddress = masterAddressesRef.current.find(addr => addr.coin === crypto.toUpperCase());
-      console.log(`🔍 generateDepositAddress: проверяем существующие адреса`, { 
-        crypto: crypto.toUpperCase(), 
-        masterAddresses: masterAddressesRef.current.length,
-        existingAddress: !!existingAddress 
-      });
-      
-      if (existingAddress) {
-        console.log(`✅ generateDepositAddress: используем существующий адрес для ${crypto}:`, existingAddress.address);
-        return existingAddress.address;
-      }
+    setIsGeneratingAddress(true);
+    setDepositAddressError('');
 
-      setIsGeneratingAddress(true);
-      console.log(`🔄 Получаем Master адрес для ${crypto}...`);
-      
-      const response = await fetch(`/api/wallet/unified?action=get_master_address&network=${crypto.toUpperCase()}`, {
+    try {
+      const { getApiHeaders } = await import('@/lib/api-headers');
+      const response = await fetch(`/api/wallet/deposit-info?coin=${encodeURIComponent(coin)}`, {
         method: 'GET',
-        credentials: 'include'
+        credentials: 'include',
+        headers: getApiHeaders(),
+        cache: 'no-store',
       });
 
       const result = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(result.message || 'Ошибка API');
-      }
-      
-      if (result.success && result.address) {
-        const newAddress = {
-          id: `master-${crypto}-${userId}`,
-          coin: crypto.toUpperCase(),
-          address: result.address,
-          memo: result.memo || '',
-          note: `Master адрес для ${crypto} (${result.memo ? 'с memo' : 'без memo'})`,
-          isActive: true,
-          createdAt: new Date().toISOString()
-        };
-        
-        setMasterAddresses(prev => [...prev, newAddress]);
-        console.log(`✅ Master адрес получен для ${crypto}:`, result.address);
-        if (result.memo) {
-          console.log(`📝 Memo для ${crypto}:`, result.memo);
-        }
-        
-        return result.address;
+      if (!response.ok || !result.success || !result.address) {
+        const message =
+          result.message ||
+          `Адрес ${depositCoinLabel(coin)} не настроен на сервере (MASTER_*_ADDRESS в Vercel)`;
+        setDepositAddressError(message);
+        throw new Error(message);
       }
 
-      throw new Error(result.message || 'Не удалось получить адрес');
+      const entry: MasterAddressEntry = {
+        id: `master-${coin}-${_userId}`,
+        coin,
+        address: result.address,
+        memo: result.memo || '',
+        network: result.network,
+        envKey: result.envKey,
+        note: `Master (${result.envKey})`,
+        isActive: true,
+        createdAt: new Date().toISOString(),
+      };
+
+      setMasterAddresses((prev) => {
+        const filtered = prev.filter((item) => item.coin !== coin);
+        return [...filtered, entry];
+      });
+
+      return result.address;
     } catch (error) {
-      console.error(`❌ Ошибка генерации адреса для ${crypto}:`, error);
-      
-      try {
-        console.log(`🔄 Fallback: используем MasterWalletService для ${crypto}...`);
-        const paymentInfo = masterWalletService.getPaymentAddress(userId, crypto.toUpperCase());
-        
-        const fallbackAddress = {
-          id: `fallback-${crypto}-${userId}`,
-          coin: crypto.toUpperCase(),
-          address: paymentInfo.address,
-          memo: paymentInfo.memo,
-          note: paymentInfo.note,
-          isActive: true,
-          createdAt: new Date().toISOString()
-        };
-        
-        setMasterAddresses(prev => [...prev, fallbackAddress]);
-        console.log(`✅ Fallback адрес создан для ${crypto}:`, paymentInfo.address);
-        
-        return paymentInfo.address;
-      } catch (fallbackError) {
-        console.error(`❌ Fallback также не сработал:`, fallbackError);
-        return `Ошибка: ${error}`;
-      }
+      console.error(`❌ Ошибка получения адреса ${coin}:`, error);
+      return '';
     } finally {
       setIsGeneratingAddress(false);
     }
-  }, [masterWalletService]);
+  }, []);
 
   // Функция для мониторинга и обновления баланса
   const checkPaymentsAndUpdateBalance = async () => {
@@ -1858,7 +1896,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
                         background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,215,0,0.1)',
                       }}>
                         <label style={{ display: 'block', fontSize: '11px', color: '#94a3b8', marginBottom: '6px', fontWeight: '600' }}>
-                          Адрес для пополнения ({selectedCryptoLabel})
+                          Адрес для пополнения ({selectedCryptoLabel}) — ваш кошелёк проекта
                         </label>
                         <div className={`address-container hd-address-container ${isGeneratingAddress ? 'hd-generating' : ''}`}>
                           <input
@@ -1881,7 +1919,33 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
                             {isGeneratingAddress ? <FaDatabase /> : '📋'}
                           </button>
                         </div>
-                        {!selectedDepositAddress && ownerForWalletApis && (
+                        {depositAddressError && (
+                          <div style={{
+                            marginTop: '8px', padding: '8px 10px', borderRadius: '8px',
+                            background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)',
+                            color: '#fca5a5', fontSize: '11px', lineHeight: 1.4,
+                          }}>
+                            {depositAddressError}
+                          </div>
+                        )}
+                        {selectedDepositMemo && (selectedCrypto === 'TON' || selectedCrypto === 'USDT' || selectedCrypto === 'TRX') && (
+                          <div style={{ marginTop: '8px' }}>
+                            <label style={{ display: 'block', fontSize: '11px', color: '#fbbf24', marginBottom: '4px', fontWeight: '600' }}>
+                              Memo / комментарий (обязательно!)
+                            </label>
+                            <input
+                              type="text"
+                              value={selectedDepositMemo}
+                              readOnly
+                              style={{
+                                width: '100%', padding: '8px 10px', borderRadius: '8px',
+                                border: '1px solid rgba(251,191,36,0.35)', background: 'rgba(0,0,0,0.35)',
+                                color: '#fde68a', fontSize: '12px', fontFamily: 'monospace',
+                              }}
+                            />
+                          </div>
+                        )}
+                        {!selectedDepositAddress && ownerForWalletApis && !depositAddressError && (
                           <button
                             type="button"
                             onClick={() => {
@@ -1933,10 +1997,11 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
                     
                         {/* Быстрые суммы */}
                         <div style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}>
-                          {(selectedCrypto === 'TON' ? ['1', '5', '10', '25'] : 
+                          {(selectedCrypto === 'TON' ? ['1', '5', '10', '25'] :
                             selectedCrypto === 'SOL' ? ['0.1', '0.5', '1', '5'] :
+                            selectedCrypto === 'TRX' || selectedCrypto === 'USDT' ? ['10', '50', '100', '500'] :
                             selectedCrypto === 'BTC' ? ['0.001', '0.005', '0.01', '0.05'] :
-                            ['5', '10', '25', '50']).map((amount) => (
+                            ['0.01', '0.05', '0.1', '0.5']).map((amount) => (
                             <button key={amount} onClick={() => setDepositAmount(amount)} style={{
                               flex: 1, padding: '8px', borderRadius: '8px',
                               border: depositAmount === amount ? '1.5px solid rgba(255,215,0,0.5)' : '1px solid rgba(255,255,255,0.1)',
@@ -1952,7 +2017,24 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
                         </div>
                       </div>
 
-                      {/* Кнопка пополнения */}
+                      {/* Telegram Wallet — Gram, SOL, ETH, USDT, TRX */}
+                      {(isTelegramWebApp() || selectedCrypto === 'TON') && (
+                        <button
+                          type="button"
+                          onClick={() => void handleTelegramWalletDeposit()}
+                          disabled={loading || !depositAmount || parseFloat(depositAmount) <= 0 || !selectedDepositAddress}
+                          style={{
+                            width: '100%', padding: '13px', borderRadius: '12px', marginBottom: '10px',
+                            border: '1.5px solid rgba(38,165,228,0.45)',
+                            background: 'linear-gradient(135deg, rgba(38,165,228,0.22), rgba(255,215,0,0.08))',
+                            color: '#fff', fontSize: '14px', fontWeight: '700', cursor: loading ? 'wait' : 'pointer',
+                          }}
+                        >
+                          📱 Пополнить через Telegram Wallet ({selectedCryptoLabel})
+                        </button>
+                      )}
+
+                      {/* Кнопка пополнения через подключённый кошелёк */}
                       {selectedWalletForDeposit ? (
                         <button
                           onClick={() => handleDepositViaWallet()}

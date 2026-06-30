@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 import { atomicJoinRoom, atomicLeaveRoom } from '@/lib/multiplayer/player-state-manager';
+import { idsEqual, isRoomHostUser } from '@/lib/multiplayer/room-host';
 
 // ✅ Явная конфигурация runtime для Next.js 15
 export const runtime = 'nodejs';
@@ -51,20 +52,28 @@ export async function POST(
       return NextResponse.json({ success: false, message: 'Комната не найдена' }, { status: 404 });
     }
 
-    // ПРОВЕРЯЕМ ЯВЛЯЕТСЯ ЛИ ПОЛЬЗОВАТЕЛЬ ХОСТОМ (СРАВНИВАЕМ UUID С UUID!)
-    console.log(`🔍 [BOTS] Проверка хоста:`, {
-      'room.host_id (UUID)': room.host_id,
-      'userUUID (UUID)': userUUID,
-      'are_equal': room.host_id === userUUID,
-      'telegramId (для справки)': telegramId
+    const userIsHost = await isRoomHostUser(supabase, roomId, {
+      dbUserId: userUUID,
+      telegramId: dbUser.telegram_id ?? telegramId,
+      vkId: dbUser.vk_id,
     });
-    
-    if (room.host_id !== userUUID) {
-      console.error(`❌ [BOTS] Пользователь ${telegramId} (UUID: ${userUUID}) НЕ является хостом комнаты (хост UUID: ${room.host_id})`);
+
+    console.log(`🔍 [BOTS] Проверка хоста:`, {
+      roomHostId: room.host_id,
+      dbUserId: userUUID,
+      telegramId,
+      idsEqual: idsEqual(room.host_id, userUUID),
+      userIsHost,
+    });
+
+    if (!userIsHost) {
+      console.error(
+        `❌ [BOTS] Пользователь ${telegramId} (db id: ${userUUID}) не хост комнаты (host_id: ${room.host_id})`
+      );
       return NextResponse.json({ success: false, message: 'Только хост может управлять ботами' }, { status: 403 });
     }
-    
-    console.log(`✅ [BOTS] Пользователь ${telegramId} (UUID: ${userUUID}) является хостом комнаты ${roomId}`);
+
+    console.log(`✅ [BOTS] Пользователь ${telegramId} (db id: ${userUUID}) — хост комнаты ${roomId}`);
 
     if (action === 'add') {
       // ✅ ДОБАВЛЯЕМ БОТА: СНАЧАЛА ИЩЕМ СВОБОДНОГО ИЗ БД, ПОТОМ СОЗДАЁМ НОВОГО

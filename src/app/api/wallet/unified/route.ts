@@ -11,6 +11,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { masterWallet, SupportedNetwork, SUPPORTED_NETWORKS } from '../../../../lib/wallets/unified-master-wallet';
+import { mapCoinToUnifiedNetwork } from '@/lib/wallets/master-addresses';
 import { supabase } from '../../../../lib/supabase';
 import jwt from 'jsonwebtoken';
 import { getJwtSecret, getUserIdFromAuthPayload } from '@/lib/auth/jwt-secret';
@@ -106,11 +107,17 @@ export async function GET(req: NextRequest) {
       }
 
       case 'get_master_address': {
-        const network = url.searchParams.get('network') as SupportedNetwork;
+        const networkParam = url.searchParams.get('network');
+        const mapped = mapCoinToUnifiedNetwork(networkParam || '');
+        const network = (mapped && SUPPORTED_NETWORKS[mapped as SupportedNetwork]
+          ? mapped
+          : networkParam) as SupportedNetwork;
+
         if (!network || !SUPPORTED_NETWORKS[network]) {
           return NextResponse.json({
             success: false,
-            message: 'Параметр network обязателен и должен быть поддерживаемой сетью'
+            message: 'Параметр network обязателен и должен быть поддерживаемой сетью',
+            supportedNetworks: Object.keys(SUPPORTED_NETWORKS),
           }, { status: 400 });
         }
 
@@ -121,13 +128,14 @@ export async function GET(req: NextRequest) {
             network,
             address: masterAddress.address,
             memo: masterAddress.memo,
-            message: `Master адрес ${network} для депозитов`
+            message: `Master адрес ${network} для депозитов`,
           });
-        } catch (error: any) {
+        } catch (error: unknown) {
           return NextResponse.json({
             success: false,
-            message: error instanceof Error ? error.message : String(error)
-          }, { status: 404 });
+            code: 'ADDRESS_NOT_CONFIGURED',
+            message: error instanceof Error ? error.message : String(error),
+          }, { status: 503 });
         }
       }
 

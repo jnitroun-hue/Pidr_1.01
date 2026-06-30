@@ -106,11 +106,6 @@ export default function WalletPage() {
         const d = await payRes.value.json();
         if (d.success && d.data?.address) setMasterAddress(d.data.address);
       }
-
-      // Fallback: берём адрес из env через публичный API
-      if (!masterAddress) {
-        setMasterAddress(process.env.NEXT_PUBLIC_MASTER_TON_ADDRESS || '');
-      }
     } catch (e) {
       console.error('Ошибка загрузки кошелька:', e);
     } finally {

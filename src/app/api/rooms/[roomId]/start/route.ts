@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 import { canStartRoom } from '@/lib/multiplayer/room-rules';
+import { isRoomHostUser } from '@/lib/multiplayer/room-host';
 
 // ✅ Явная конфигурация runtime для Next.js 15
 export const runtime = 'nodejs';
@@ -48,8 +49,13 @@ export async function POST(
       return NextResponse.json({ success: false, error: 'Комната не найдена' }, { status: 404 });
     }
 
-    // ✅ ИСПРАВЛЕНО: Сравниваем UUID с UUID
-    if (room.host_id !== userUUID) {
+    const userIsHost = await isRoomHostUser(supabase, roomId, {
+      dbUserId: userUUID,
+      telegramId: dbUser.telegram_id ?? userId,
+      vkId: dbUser.vk_id,
+    });
+
+    if (!userIsHost) {
       console.error('❌ [START GAME] Не хост:', { userUUID, hostId: room.host_id, telegramId: userId });
       return NextResponse.json({ success: false, error: 'Только хост может начать игру' }, { status: 403 });
     }

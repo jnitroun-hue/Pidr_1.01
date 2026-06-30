@@ -11,6 +11,7 @@
 import crypto from 'crypto';
 import { supabase } from '../supabase';
 import { GRAM } from '@/lib/crypto/gram-brand';
+import { resolveMasterAddress } from '@/lib/wallets/master-addresses';
 
 // 🔐 Конфигурация безопасности
 const SECURITY_CONFIG = {
@@ -77,6 +78,15 @@ export const SUPPORTED_NETWORKS = {
     derivationPath: "m/44'/501'/0'/0",
     minConfirmations: 32,
     networkType: 'mainnet'
+  },
+  TRX: {
+    name: 'Tron',
+    symbol: 'TRX',
+    decimals: 6,
+    addressPrefix: 'T',
+    derivationPath: "m/44'/195'/0'/0",
+    minConfirmations: 20,
+    networkType: 'tron'
   }
 } as const;
 
@@ -200,18 +210,32 @@ export class UnifiedMasterWallet {
    * 🔍 Получение адреса из переменных окружения
    */
   private getEnvAddress(network: SupportedNetwork): string {
+    const coinByNetwork: Partial<Record<SupportedNetwork, string>> = {
+      TON: 'TON',
+      ETH: 'ETH',
+      SOL: 'SOL',
+      BTC: 'BTC',
+      USDT_TRC20: 'USDT',
+      USDT_ERC20: 'USDT',
+      TRX: 'TRX',
+    };
+    const coin = coinByNetwork[network];
+    if (coin) {
+      const resolved = resolveMasterAddress(coin);
+      if (resolved) return resolved.address;
+    }
+
     const envVars = [
       `MASTER_${network}_ADDRESS`,
       `${network}_MASTER_ADDRESS`,
       `MASTER_${network}_WALLET`,
       `${network}_MASTER_WALLET`,
-      // Дополнительные варианты для совместимости с Vercel
-      `MASTER_${network.replace('_', '')}_WALLET`, // MASTER_USDT_TRC20 -> MASTER_USDTTRC20_WALLET
-      `${network.replace('_', '')}_MASTER_WALLET`   // USDT_TRC20 -> USDTTRC20_MASTER_WALLET
+      `MASTER_${network.replace('_', '')}_WALLET`,
+      `${network.replace('_', '')}_MASTER_WALLET`,
     ];
 
     for (const envVar of envVars) {
-      const value = process.env[envVar];
+      const value = process.env[envVar]?.trim();
       if (value) return value;
     }
 

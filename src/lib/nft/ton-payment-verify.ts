@@ -23,16 +23,10 @@ export interface TonVerifyResult {
   error?: string;
 }
 
+import { resolveMasterAddress } from '@/lib/wallets/master-addresses';
+
 function getMasterAddress(): string {
-  let addr =
-    process.env.MASTER_TON_ADDRESS ||
-    process.env.TON_MASTER_ADDRESS ||
-    process.env.MASTER_TON_WALLET ||
-    '';
-  if (addr.startsWith('UQ')) {
-    addr = 'EQ' + addr.slice(2);
-  }
-  return addr.trim();
+  return resolveMasterAddress('TON')?.address ?? '';
 }
 
 function getApiKey(): string {
