@@ -121,9 +121,6 @@ export const ProperMultiplayer: React.FC = () => {
   // Загрузка комнат в лобби и на экране присоединения
   useEffect(() => {
     if (view === 'lobby' || view === 'join') {
-      if (view === 'lobby') {
-        cleanupOldRooms();
-      }
       fetchRooms();
       const interval = setInterval(fetchRooms, 5000);
       return () => clearInterval(interval);

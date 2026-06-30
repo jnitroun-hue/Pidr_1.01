@@ -13,10 +13,10 @@ export function normalizeRankToken(rank?: string | number) {
   const rankStr = String(rank).toLowerCase().trim();
   const rankNum = Number(rankStr);
 
-  if (rankNum === 11 || rankStr === 'j' || rankStr === 'jack') return 'jack';
-  if (rankNum === 12 || rankStr === 'q' || rankStr === 'queen') return 'queen';
-  if (rankNum === 13 || rankStr === 'k' || rankStr === 'king') return 'king';
-  if (rankNum === 14 || rankStr === 'a' || rankStr === 'ace') return 'ace';
+  if (rankNum === 11 || rankStr === 'j' || rankStr === 'jack' || rankStr === 'валет') return 'jack';
+  if (rankNum === 12 || rankStr === 'q' || rankStr === 'queen' || rankStr === 'дама') return 'queen';
+  if (rankNum === 13 || rankStr === 'k' || rankStr === 'king' || rankStr === 'король') return 'king';
+  if (rankNum === 14 || rankStr === 'a' || rankStr === 'ace' || rankStr === 'туз') return 'ace';
   if (rankNum >= 2 && rankNum <= 10) return String(rankNum);
 
   return rankStr;
@@ -24,10 +24,21 @@ export function normalizeRankToken(rank?: string | number) {
 
 export function normalizeSuitToken(suit?: string) {
   const s = String(suit || '').toLowerCase().trim();
-  if (s === 'h' || s === 'heart') return 'hearts';
-  if (s === 'd' || s === 'diamond') return 'diamonds';
-  if (s === 'c' || s === 'club') return 'clubs';
-  if (s === 's' || s === 'spade') return 'spades';
+  if (s === 'h' || s === 'heart' || s === 'hearts' || s === 'черви' || s === 'червы') return 'hearts';
+  if (
+    s === 'd' ||
+    s === 'diamond' ||
+    s === 'diamonds' ||
+    s === 'buby' ||
+    s === 'bubi' ||
+    s === 'бубны' ||
+    s === 'буби' ||
+    s === 'бубен'
+  ) {
+    return 'diamonds';
+  }
+  if (s === 'c' || s === 'club' || s === 'clubs' || s === 'трефы' || s === 'треф') return 'clubs';
+  if (s === 's' || s === 'spade' || s === 'spades' || s === 'пики' || s === 'пика') return 'spades';
   return s;
 }
 

@@ -3,9 +3,11 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, User, CheckCircle, AlertCircle } from 'lucide-react';
+import { fetchWithAuth } from '@/lib/api-headers';
 
 interface Friend {
-  telegram_id: string;
+  id: number;
+  telegram_id?: string | number | null;
   username?: string;
   first_name?: string;
   avatar_url?: string;
@@ -41,21 +43,10 @@ export default function InviteFriendsModal({
     try {
       setLoading(true);
       setError(null);
-      
-      const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
-      
-      if (!telegramUser) {
-        setError('Пользователь не найден');
-        return;
-      }
 
-      const response = await fetch('/api/friends/list', {
+      const response = await fetchWithAuth('/api/friends/list', {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-telegram-id': telegramUser.id.toString(),
-          'x-username': telegramUser.username || telegramUser.first_name || 'User'
-        }
+        cache: 'no-store',
       });
 
       if (!response.ok) {
@@ -68,34 +59,23 @@ export default function InviteFriendsModal({
       } else {
         setError(result.error || 'Ошибка загрузки друзей');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Ошибка загрузки друзей';
       console.error('❌ Ошибка загрузки друзей:', err);
-      setError(err.message || 'Ошибка загрузки друзей');
+      setError(message);
     } finally {
       setLoading(false);
     }
   };
 
-  const inviteFriend = async (friendId: string) => {
+  const inviteFriend = async (friendDbId: number) => {
     try {
-      setInviting(friendId);
+      setInviting(String(friendDbId));
       setError(null);
-      
-      const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
-      
-      if (!telegramUser) {
-        setError('Пользователь не найден');
-        return;
-      }
 
-      const response = await fetch(`/api/rooms/${roomId}/invite`, {
+      const response = await fetchWithAuth(`/api/rooms/${roomId}/invite`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-telegram-id': telegramUser.id.toString(),
-          'x-username': telegramUser.username || telegramUser.first_name || 'User'
-        },
-        body: JSON.stringify({ friendId })
+        body: JSON.stringify({ friendId: friendDbId }),
       });
 
       if (!response.ok) {
@@ -105,7 +85,7 @@ export default function InviteFriendsModal({
 
       const result = await response.json();
       if (result.success) {
-        setInvited(prev => new Set([...prev, friendId]));
+        setInvited(prev => new Set([...prev, String(friendDbId)]));
         // Вибрация для подтверждения
         if ((window as any).Telegram?.WebApp?.HapticFeedback) {
           (window as any).Telegram.WebApp.HapticFeedback.impactOccurred('medium');
@@ -265,12 +245,13 @@ export default function InviteFriendsModal({
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {friends.map((friend) => {
-                  const isInvited = invited.has(friend.telegram_id);
-                  const isInviting = inviting === friend.telegram_id;
+                  const friendKey = String(friend.id);
+                  const isInvited = invited.has(friendKey);
+                  const isInviting = inviting === friendKey;
                   
                   return (
                     <motion.div
-                      key={friend.telegram_id}
+                      key={friend.id}
                       whileHover={{ scale: 1.02 }}
                       style={{
                         backgroundColor: '#0f172a',
@@ -341,7 +322,7 @@ export default function InviteFriendsModal({
                         </div>
                       ) : (
                         <motion.button
-                          onClick={() => inviteFriend(friend.telegram_id)}
+                          onClick={() => inviteFriend(friend.id)}
                           disabled={isInviting}
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}

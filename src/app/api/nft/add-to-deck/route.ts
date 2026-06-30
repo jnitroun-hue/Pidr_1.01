@@ -6,6 +6,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 import { normalizeRankToken, normalizeSuitToken } from '@/lib/game/cardAssets';
+import {
+  deckOwnerIds,
+  fetchUserDeckRows,
+  findDeckSlotByRankSuit,
+  formatDuplicateDeckResponse,
+  isUniqueViolation,
+} from '@/lib/nft/deck-slots';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -23,7 +30,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Требуется авторизация' }, { status: 401 });
     }
 
-    const { dbUserId: userId } = await getUserIdFromDatabase(auth.userId, auth.environment);
+    const { dbUserId: userId, user: dbUser } = await getUserIdFromDatabase(
+      auth.userId,
+      auth.environment
+    );
     if (!userId) {
       return NextResponse.json({ success: false, error: 'Пользователь не найден в БД' }, { status: 404 });
     }
@@ -62,54 +72,49 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: existing, error: checkError } = await supabaseAdmin
-      .from('_pidr_user_nft_deck')
-      .select('*, nft_card:_pidr_nft_cards(id, image_url, rarity)')
-      .eq('user_id', userId)
-      .eq('suit', normalizedSuit)
-      .eq('rank', normalizedRank)
-      .maybeSingle();
-
-    if (checkError) {
-      console.error('❌ [add-to-deck] Ошибка проверки дубликата:', checkError);
-      return NextResponse.json({ success: false, error: checkError.message }, { status: 500 });
-    }
+    const ownerIds = deckOwnerIds(userId, dbUser?.telegram_id);
+    const deckRows = await fetchUserDeckRows(supabaseAdmin, ownerIds);
+    const existing = findDeckSlotByRankSuit(deckRows, normalizedRank, normalizedSuit);
 
     if (existing) {
-      const existingCardInfo = (existing as { nft_card?: { image_url?: string; rarity?: string } }).nft_card || {};
-      return NextResponse.json({
-        success: false,
-        error: 'DUPLICATE_CARD',
-        message: `У вас уже есть карта ${normalizedRank} ${normalizedSuit} в колоде`,
-        existingCard: {
-          id: existing.id,
-          nft_card_id: existing.nft_card_id,
-          image_url: existing.image_url || existingCardInfo.image_url,
-          rarity: existingCardInfo.rarity,
-        },
-        newCard: {
+      return NextResponse.json(
+        formatDuplicateDeckResponse(existing, {
           id: nftCard.id,
           image_url: resolvedImageUrl,
           suit: normalizedSuit,
           rank: normalizedRank,
-        },
-      });
+        })
+      );
     }
 
-    const { error: insertError } = await supabaseAdmin
-      .from('_pidr_user_nft_deck')
-      .insert({
-        user_id: userId,
-        nft_card_id: nftCard.id,
-        suit: normalizedSuit,
-        rank: normalizedRank,
-        image_url: resolvedImageUrl,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      });
+    const { error: insertError } = await supabaseAdmin.from('_pidr_user_nft_deck').insert({
+      user_id: userId,
+      nft_card_id: nftCard.id,
+      suit: normalizedSuit,
+      rank: normalizedRank,
+      image_url: resolvedImageUrl,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
 
     if (insertError) {
       console.error('❌ [add-to-deck] Ошибка insert:', insertError);
+
+      if (isUniqueViolation(insertError)) {
+        const retryRows = await fetchUserDeckRows(supabaseAdmin, ownerIds);
+        const retryExisting = findDeckSlotByRankSuit(retryRows, normalizedRank, normalizedSuit);
+        if (retryExisting) {
+          return NextResponse.json(
+            formatDuplicateDeckResponse(retryExisting, {
+              id: nftCard.id,
+              image_url: resolvedImageUrl,
+              suit: normalizedSuit,
+              rank: normalizedRank,
+            })
+          );
+        }
+      }
+
       return NextResponse.json({ success: false, error: 'Ошибка добавления карты' }, { status: 500 });
     }
 

@@ -9,22 +9,36 @@ export async function POST(request: NextRequest) {
     let deletedCount = 0;
     let deletedPlayers = 0;
 
-    // 1️⃣ УДАЛЯЕМ ОФЛАЙН ИГРОКОВ ИЗ КОМНАТ (НЕ ОНЛАЙН БОЛЬШЕ 5 МИНУТ)
+    // 1️⃣ УДАЛЯЕМ ОФЛАЙН ИГРОКОВ ИЗ КОМНАТ (НЕ БОТОВ — у них telegram_id < 0)
     const { data: offlineUsers, error: offlineError } = await supabase
       .from('_pidr_users')
-      .select('telegram_id')
+      .select('id, telegram_id')
       .lt('last_seen', new Date(Date.now() - 5 * 60 * 1000).toISOString())
       .neq('status', 'online');
 
-    if (offlineUsers && offlineUsers.length > 0) {
+    const realOffline = (offlineUsers || []).filter((u: { telegram_id?: number | string | null }) => {
+      const tid = u.telegram_id != null ? Number(u.telegram_id) : null;
+      return tid == null || tid >= 0;
+    });
+
+    if (realOffline.length > 0) {
+      const userIdsToRemove = new Set<number>();
+      for (const u of realOffline) {
+        userIdsToRemove.add(u.id);
+        if (u.telegram_id != null) {
+          const tid = Number(u.telegram_id);
+          if (Number.isFinite(tid)) userIdsToRemove.add(tid);
+        }
+      }
+
       const { error: deletePlayersError } = await supabase
         .from('_pidr_room_players')
         .delete()
-        .in('user_id', offlineUsers.map((u: any) => u.telegram_id));
+        .in('user_id', Array.from(userIdsToRemove));
 
       if (!deletePlayersError) {
-        deletedPlayers = offlineUsers.length;
-        console.log(`✅ [CLEANUP] Удалено ${deletedPlayers} офлайн игроков из комнат`);
+        deletedPlayers = realOffline.length;
+        console.log(`✅ [CLEANUP] Удалено ${deletedPlayers} офлайн игроков из комнат (боты не затронуты)`);
       } else {
         console.error('❌ [CLEANUP] Ошибка удаления офлайн игроков:', deletePlayersError);
       }

@@ -102,35 +102,53 @@ export async function lightCleanup() {
 }
 
 /**
- * Удаление офлайн игроков из комнат
+ * Удаление офлайн игроков из комнат (не трогаем ботов: telegram_id < 0)
  * Вызывается при присоединении к комнате
  */
 export async function cleanupOfflinePlayers() {
   try {
     console.log('🧹 [AUTO-CLEANUP] Удаление офлайн игроков...');
-    
+
+    const cutoff = new Date(Date.now() - 3 * 60 * 1000).toISOString();
     const { data: offlineUsers } = await supabase
       .from('_pidr_users')
-      .select('id')
-      .lt('last_seen', new Date(Date.now() - 3 * 60 * 1000).toISOString())
+      .select('id, telegram_id')
+      .lt('last_seen', cutoff)
       .neq('status', 'online');
-    
-    if (offlineUsers && offlineUsers.length > 0) {
-      const { error } = await supabase
-        .from('_pidr_room_players')
-        .delete()
-        .in('user_id', offlineUsers.map((u: any) => u.id));
-      
-      if (!error) {
-        console.log(`✅ [AUTO-CLEANUP] Удалено ${offlineUsers.length} офлайн игроков`);
-        return { success: true, count: offlineUsers.length };
+
+    const realOffline = (offlineUsers || []).filter((u: { id: number; telegram_id?: number | string | null }) => {
+      const tid = u.telegram_id != null ? Number(u.telegram_id) : null;
+      return tid == null || tid >= 0;
+    });
+
+    if (realOffline.length === 0) {
+      return { success: true, count: 0 };
+    }
+
+    const userIdsToRemove = new Set<number>();
+    for (const u of realOffline) {
+      userIdsToRemove.add(u.id);
+      if (u.telegram_id != null) {
+        const tid = Number(u.telegram_id);
+        if (Number.isFinite(tid)) userIdsToRemove.add(tid);
       }
     }
-    
-    return { success: true, count: 0 };
-  } catch (error: any) {
-    console.error('❌ [AUTO-CLEANUP] Ошибка удаления офлайн игроков:', error);
+
+    const { error } = await supabase
+      .from('_pidr_room_players')
+      .delete()
+      .in('user_id', Array.from(userIdsToRemove));
+
+    if (!error) {
+      console.log(`✅ [AUTO-CLEANUP] Удалено ${realOffline.length} офлайн игроков из комнат`);
+      return { success: true, count: realOffline.length };
+    }
+
     return { success: false, error: error.message };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('❌ [AUTO-CLEANUP] Ошибка удаления офлайн игроков:', error);
+    return { success: false, error: message };
   }
 }
 

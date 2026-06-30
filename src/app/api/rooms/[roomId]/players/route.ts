@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
+import { syncRoomRedisFromDatabase } from '@/lib/multiplayer/player-state-manager';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -54,23 +55,28 @@ export async function GET(
     }
 
     const dbUserIds = (players || [])
-      .map((player: any) => {
+      .map((player: { user_id: number | string }) => {
         const raw = player.user_id;
         const numeric = typeof raw === 'number' ? raw : parseInt(String(raw), 10);
-        return Number.isFinite(numeric) ? numeric : null;
+        return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
       })
-      .filter((id: number | null): id is number => id != null && id > 0);
+      .filter((id: number | null): id is number => id != null);
 
     const { data: users } = dbUserIds.length > 0
       ? await supabase
           .from('_pidr_users')
           .select('id, telegram_id, username, avatar_url')
-          .in('id', dbUserIds)
-      : { data: [] as any[] };
+          .or(`id.in.(${dbUserIds.join(',')}),telegram_id.in.(${dbUserIds.join(',')})`)
+      : { data: [] as Array<{ id: number; telegram_id?: number | string | null; username?: string; avatar_url?: string | null }> };
 
-    const usersMap = new Map<number, any>();
-    (users || []).forEach((user: any) => {
+    type UserRow = { id: number; telegram_id?: number | string | null; username?: string; avatar_url?: string | null };
+    const usersMap = new Map<number, UserRow>();
+    (users || []).forEach((user: UserRow) => {
       usersMap.set(user.id, user);
+      if (user.telegram_id != null) {
+        const tid = Number(user.telegram_id);
+        if (Number.isFinite(tid)) usersMap.set(tid, user);
+      }
     });
 
     const playersWithHost = (players || []).map((player: any) => {
@@ -133,7 +139,9 @@ export async function GET(
 
     console.log(`✅ [GET /api/rooms/players] Найдено игроков: ${players?.length || 0}, max: ${room.max_players}`);
 
-    const response = NextResponse.json({ 
+    void syncRoomRedisFromDatabase(String(roomId));
+
+    const response = NextResponse.json({
       success: true, 
       players: playersWithHost || [], // ✅ ИСПОЛЬЗУЕМ playersWithHost
       maxPlayers: room.max_players, // ✅ ДОБАВЛЕНО!

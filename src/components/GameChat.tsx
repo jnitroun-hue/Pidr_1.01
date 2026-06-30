@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import styles from './GameChat.module.css';
 
@@ -18,6 +18,8 @@ interface GameChatProps {
   onSendMessage?: (text: string) => void;
   externalMessages?: ChatMessage[];
   isMultiplayer?: boolean;
+  /** playerId из игры — сообщения этих игроков не показываются только вам */
+  blockedPlayerIds?: string[];
 }
 
 const QUICK_EMOJIS = ['👍', '😂', '😎', '🔥', '💀', '😡', '🎉', '👏'];
@@ -32,7 +34,17 @@ export default function GameChat({
   playerId,
   onSendMessage,
   externalMessages = [],
+  blockedPlayerIds = [],
 }: GameChatProps) {
+  const blockedSet = useMemo(
+    () => new Set(blockedPlayerIds.map(String)),
+    [blockedPlayerIds]
+  );
+
+  const isVisible = useCallback(
+    (msg: ChatMessage) => !blockedSet.has(String(msg.playerId)),
+    [blockedSet]
+  );
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
@@ -45,13 +57,19 @@ export default function GameChat({
     if (externalMessages.length > 0) {
       setMessages(prev => {
         const existingIds = new Set(prev.map(m => m.id));
-        const newMsgs = externalMessages.filter(m => !existingIds.has(m.id));
+        const newMsgs = externalMessages.filter(
+          (m) => !existingIds.has(m.id) && isVisible(m)
+        );
         if (newMsgs.length === 0) return prev;
         if (!isOpen) setUnreadCount(c => c + newMsgs.length);
         return [...prev, ...newMsgs];
       });
     }
-  }, [externalMessages, isOpen]);
+  }, [externalMessages, isOpen, isVisible]);
+
+  useEffect(() => {
+    setMessages((prev) => prev.filter(isVisible));
+  }, [blockedSet, isVisible]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });

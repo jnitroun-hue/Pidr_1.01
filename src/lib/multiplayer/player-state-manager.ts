@@ -17,6 +17,7 @@
 
 import { getRedis, isRedisAvailable } from '../redis/init';
 import { supabaseAdmin as supabase } from '../supabase';
+import { getRedisUserId } from './public-user-id';
 import type { Redis } from '@upstash/redis';
 
 // Получаем Redis клиент через универсальную инициализацию
@@ -426,28 +427,96 @@ export async function removePlayerFromRoom(
 }
 
 /**
- * Получить количество игроков в комнате (Redis с fallback на БД)
+ * Синхронизировать Redis-кэш комнаты с PostgreSQL (источник истины)
+ */
+export async function syncRoomRedisFromDatabase(roomId: string): Promise<void> {
+  if (!redis) return;
+
+  try {
+    const { data: rows, error } = await supabase
+      .from('_pidr_room_players')
+      .select('user_id, position')
+      .eq('room_id', parseInt(roomId, 10));
+
+    if (error || !rows) return;
+
+    const positiveIds = rows
+      .map((row: { user_id: number | string }) => {
+        const numeric =
+          typeof row.user_id === 'number'
+            ? row.user_id
+            : parseInt(String(row.user_id), 10);
+        return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+      })
+      .filter((id: number | null): id is number => id != null);
+
+    const usersMap = new Map<number, string>();
+    if (positiveIds.length > 0) {
+      const { data: users } = await supabase
+        .from('_pidr_users')
+        .select('id, telegram_id')
+        .in('id', positiveIds);
+
+      (users || []).forEach((user: { id: number; telegram_id?: number | string | null }) => {
+        usersMap.set(user.id, getRedisUserId(user));
+      });
+    }
+
+    const redisClient = redis;
+    const playersKey = KEYS.roomPlayers(roomId);
+    const slotsKey = KEYS.roomSlots(roomId);
+
+    await redisClient.del(playersKey);
+    await redisClient.del(slotsKey);
+
+    for (const row of rows) {
+      const raw = row.user_id;
+      const numeric = typeof raw === 'number' ? raw : parseInt(String(raw), 10);
+      let redisUserId: string | null = null;
+
+      if (Number.isFinite(numeric) && numeric < 0) {
+        redisUserId = String(numeric);
+      } else if (Number.isFinite(numeric) && numeric > 0) {
+        redisUserId = usersMap.get(numeric) || String(numeric);
+      }
+
+      if (!redisUserId) continue;
+
+      await redisClient.sadd(playersKey, redisUserId);
+      if (row.position) {
+        await redisClient.hset(slotsKey, { [String(row.position)]: redisUserId });
+      }
+    }
+
+    await redisClient.expire(playersKey, 7200);
+    await redisClient.expire(slotsKey, 7200);
+  } catch (err) {
+    console.warn('⚠️ [syncRoomRedisFromDatabase] Ошибка:', err);
+  }
+}
+
+/**
+ * Получить количество игроков в комнате (PostgreSQL — источник истины)
  */
 export async function getRoomPlayerCount(roomId: string): Promise<number> {
+  try {
+    const { count, error } = await supabase
+      .from('_pidr_room_players')
+      .select('*', { count: 'exact', head: true })
+      .eq('room_id', parseInt(roomId, 10));
+
+    if (!error && count !== null) return count;
+  } catch (err) {
+    console.warn('⚠️ [getRoomPlayerCount] DB error:', err);
+  }
+
   if (redis) {
     const redisClient = redis;
     const key = KEYS.roomPlayers(roomId);
     const count = await redisClient.scard(key);
     if (count && count > 0) return count;
   }
-  
-  // Fallback: считаем из БД
-  try {
-    const { count, error } = await supabase
-      .from('_pidr_room_players')
-      .select('*', { count: 'exact', head: true })
-      .eq('room_id', parseInt(roomId));
-    
-    if (!error && count !== null) return count;
-  } catch (err) {
-    console.warn('⚠️ [getRoomPlayerCount] DB fallback error:', err);
-  }
-  
+
   return 0;
 }
 
@@ -463,43 +532,35 @@ export async function hasRoomSpace(
 }
 
 /**
- * Получить свободную позицию за столом (Redis с fallback на БД)
+ * Получить свободную позицию за столом (PostgreSQL — источник истины)
  */
 export async function getFreePosition(
   roomId: string,
   maxPlayers: number
 ): Promise<number | null> {
-  let occupiedPositions: Set<number> = new Set();
-  
-  if (redis) {
-    const redisClient = redis;
-    const slotsKey = KEYS.roomSlots(roomId);
-    const occupiedSlots = await redisClient.hgetall(slotsKey);
-    if (occupiedSlots) {
-      Object.keys(occupiedSlots).forEach(pos => occupiedPositions.add(parseInt(pos)));
-    }
-  }
-  
-  // Also check DB for positions
+  await syncRoomRedisFromDatabase(roomId);
+
+  const occupiedPositions = new Set<number>();
+
   try {
     const { data } = await supabase
       .from('_pidr_room_players')
       .select('position')
-      .eq('room_id', parseInt(roomId));
-    
+      .eq('room_id', parseInt(roomId, 10));
+
     if (data) {
-      data.forEach((p: any) => {
+      data.forEach((p: { position?: number | null }) => {
         if (p.position) occupiedPositions.add(p.position);
       });
     }
   } catch (err) {
-    console.warn('⚠️ [getFreePosition] DB fallback error:', err);
+    console.warn('⚠️ [getFreePosition] DB error:', err);
   }
-  
+
   for (let pos = 1; pos <= maxPlayers; pos++) {
     if (!occupiedPositions.has(pos)) return pos;
   }
-  
+
   return null;
 }
 
@@ -762,6 +823,7 @@ export async function atomicJoinRoom(params: {
       
       // 10. ОБНОВЛЯЕМ СЧЕТЧИК В БД
       await updateRoomPlayerCount(roomId);
+      await syncRoomRedisFromDatabase(roomId);
       
       // 11. ✅ Realtime: postgres_changes достаточно; broadcast опционален
       try {
@@ -874,6 +936,7 @@ export async function atomicLeaveRoom(params: {
       
       // 7. ОБНОВЛЯЕМ СЧЕТЧИК
       await updateRoomPlayerCount(roomId);
+      await syncRoomRedisFromDatabase(roomId);
       
       console.log(`✅ [ATOMIC LEAVE] Игрок ${userId} успешно покинул комнату ${roomId}`);
       

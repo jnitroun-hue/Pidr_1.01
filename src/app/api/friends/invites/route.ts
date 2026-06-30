@@ -1,55 +1,57 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
+import { formatFriendForApi } from '@/lib/friends/friend-links';
 
-// GET /api/friends/invites - получить активные приглашения в комнаты для текущего пользователя
+/** GET /api/friends/invites — приглашения в комнаты для текущего пользователя */
 export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseAdmin();
     if (!supabase) {
-      console.error('❌ [FRIENDS INVITES] Supabase admin client не инициализирован');
       return NextResponse.json(
         { success: false, message: 'Database connection error' },
         { status: 500 }
       );
     }
 
-    const telegramId = request.headers.get('x-telegram-id');
-    if (!telegramId) {
-      return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
-        { status: 401 }
-      );
+    const auth = requireAuth(request);
+    if (auth.error || !auth.userId) {
+      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
-    const toUserId = parseInt(telegramId, 10);
-    if (isNaN(toUserId)) {
-      return NextResponse.json(
-        { success: false, message: 'Некорректный telegram_id' },
-        { status: 400 }
-      );
+    const { dbUserId, user: dbUser } = await getUserIdFromDatabase(
+      auth.userId,
+      auth.environment
+    );
+
+    if (!dbUserId) {
+      return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
+    }
+
+    const recipientKeys = [dbUserId];
+    if (dbUser?.telegram_id) {
+      const tg = parseInt(String(dbUser.telegram_id), 10);
+      if (!Number.isNaN(tg)) recipientKeys.push(tg);
     }
 
     const nowIso = new Date().toISOString();
 
-    // Получаем все активные приглашения
     const { data: invites, error } = await supabase
       .from('_pidr_room_invites')
       .select('id, room_id, room_code, from_user_id, created_at, expires_at, status')
-      .eq('to_user_id', toUserId)
+      .in('to_user_id', recipientKeys)
       .eq('status', 'pending')
       .gt('expires_at', nowIso)
       .order('created_at', { ascending: false })
       .limit(10);
 
     if (error) {
-      console.error('❌ [FRIENDS INVITES] Ошибка получения приглашений:', error);
       return NextResponse.json(
         { success: false, message: 'Ошибка получения приглашений' },
         { status: 500 }
       );
     }
 
-    // Обогащаем данными о комнатах и отправителях
     const detailed = await Promise.all(
       (invites || []).map(async (invite: {
         id: number;
@@ -60,7 +62,7 @@ export async function GET(request: NextRequest) {
         expires_at: string;
         status: string;
       }) => {
-        const [roomRes, userRes] = await Promise.all([
+        const [roomRes, fromUser] = await Promise.all([
           supabase
             .from('_pidr_rooms')
             .select('id, room_code, name, status, max_players, current_players')
@@ -68,32 +70,27 @@ export async function GET(request: NextRequest) {
             .single(),
           supabase
             .from('_pidr_users')
-            .select('telegram_id, username, first_name, avatar_url, status')
-            .eq('telegram_id', invite.from_user_id)
-            .single()
+            .select(
+              'id, telegram_id, username, first_name, avatar_url, status, online_status'
+            )
+            .or(`id.eq.${invite.from_user_id},telegram_id.eq.${invite.from_user_id}`)
+            .maybeSingle(),
         ]);
 
         return {
           id: invite.id,
           room: roomRes.data || null,
-          from: userRes.data || null,
+          from: fromUser.data ? formatFriendForApi(fromUser.data) : null,
           created_at: invite.created_at,
-          expires_at: invite.expires_at
+          expires_at: invite.expires_at,
         };
       })
     );
 
-    return NextResponse.json({
-      success: true,
-      invites: detailed
-    });
-  } catch (error: any) {
+    return NextResponse.json({ success: true, invites: detailed });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Internal server error';
     console.error('❌ [FRIENDS INVITES] Ошибка API:', error);
-    return NextResponse.json(
-      { success: false, message: error.message || 'Внутренняя ошибка сервера' },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, message }, { status: 500 });
   }
 }
-
-

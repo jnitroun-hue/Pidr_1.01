@@ -36,8 +36,15 @@ import {
   playingCardHeight,
 } from '@/lib/game/card-fan-layout';
 import { translateGameText } from '@/lib/i18n/gameRuntimeTranslations';
-import { getApiHeaders } from '@/lib/api-headers';
+import { getApiHeaders, fetchWithAuth } from '@/lib/api-headers';
 import { loadGameUserProfile } from '@/lib/game/load-game-profile';
+import {
+  fetchChatBlocksFromDb,
+  setChatBlockInDb,
+  isPlayerChatBlocked,
+  resolveChatBlockTarget,
+  type ChatBlocksState,
+} from '@/lib/chat/chat-blocks';
 import { appConfirm } from '@/lib/app-notice';
 import type { TelegramWebAppUser } from '@/types/telegram-webapp';
 
@@ -47,14 +54,22 @@ interface PlayerProfile {
   avatar?: string;
   isBot?: boolean;
   isUser?: boolean;
+  isSelf?: boolean;
+  dbUserId?: number;
   level?: number;
   rating?: number;
   gamesPlayed?: number;
   wins?: number;
+  losses?: number;
   winRate?: number;
   bestStreak?: number;
   status?: string;
   joinedDate?: string;
+  isChatBlocked?: boolean;
+  canAddFriend?: boolean;
+  canBlockChat?: boolean;
+  friendActionLabel?: string;
+  friendActionDisabled?: boolean;
 }
 
 type LegacyCardLike = string | (Partial<StoreCard> & { id?: string; image?: string; rank?: number | string; suit?: string });
@@ -361,6 +376,7 @@ function GamePageContentComponent({
     avatar?: string;
     username?: string;
     telegramId?: string;
+    dbUserId?: number;
     isPremium?: boolean;
   } | null>(() => {
     const tg = getTelegramUser();
@@ -381,6 +397,7 @@ function GamePageContentComponent({
         avatar: profile.avatar,
         username: profile.username,
         telegramId: profile.telegramId,
+        dbUserId: profile.userId,
         isPremium: profile.isPremium,
       });
       syncLocalUserProfile({
@@ -401,6 +418,10 @@ function GamePageContentComponent({
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [chatBlocks, setChatBlocks] = useState<ChatBlocksState>({
+    blockedUserIds: new Set(),
+    blockedPlayerKeys: new Set(),
+  });
 
   // ✅ СИСТЕМА ОБУЧЕНИЯ: Проверяем первые 3 игры
   const [gamesPlayed, setGamesPlayed] = useState<number | null>(null);
@@ -509,6 +530,30 @@ function GamePageContentComponent({
     loadGamesCount();
   }, [user?.id, isMultiplayer]);
 
+  useEffect(() => {
+    if (isLoadingUserData) return;
+    let cancelled = false;
+    fetchChatBlocksFromDb().then((blocks) => {
+      if (!cancelled) setChatBlocks(blocks);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoadingUserData]);
+
+  const blockedGamePlayerIds = useMemo(() => {
+    const ids: string[] = [];
+    for (const p of players) {
+      if (isPlayerChatBlocked(chatBlocks, p)) ids.push(p.id);
+    }
+    return ids;
+  }, [players, chatBlocks]);
+
+  const blockedGamePlayerIdSet = useMemo(
+    () => new Set(blockedGamePlayerIds),
+    [blockedGamePlayerIds]
+  );
+
   // Модальное окно сдачи штрафных карт (УДАЛЕНО - теперь используется showPenaltyCardSelection из store)
   // const [showPenaltyModal, setShowPenaltyModal] = useState(false);
   // const [penaltyTargets, setPenaltyTargets] = useState<StorePlayer[]>([]);
@@ -516,6 +561,8 @@ function GamePageContentComponent({
 
   // Функция генерации профиля игрока
   const generatePlayerProfile = async (player: StorePlayer): Promise<PlayerProfile> => {
+    const chatBlocked = isPlayerChatBlocked(chatBlocks, player);
+
     if (player.isUser) {
       try {
         const profile = await loadGameUserProfile();
@@ -527,6 +574,8 @@ function GamePageContentComponent({
             avatar: profile.avatar || player.avatar || '',
             isBot: false,
             isUser: true,
+            isSelf: true,
+            dbUserId: profile.userId,
             level: 1,
             rating: 0,
             gamesPlayed: 0,
@@ -535,6 +584,8 @@ function GamePageContentComponent({
             bestStreak: 0,
             status: profile.isPremium ? '💎 Premium' : '🟢 Online',
             joinedDate: 'Недавно',
+            canAddFriend: false,
+            canBlockChat: false,
           };
         }
       } catch (error: unknown) {
@@ -547,6 +598,8 @@ function GamePageContentComponent({
         avatar: userData?.avatar || '',
         isBot: false,
         isUser: true,
+        isSelf: true,
+        dbUserId: userData?.dbUserId,
         level: 1,
         rating: 0,
         gamesPlayed: 0,
@@ -555,9 +608,12 @@ function GamePageContentComponent({
         bestStreak: 0,
         status: '🟢 Online',
         joinedDate: 'Сегодня',
+        canAddFriend: false,
+        canBlockChat: false,
       };
-    } else {
-      // Бот - генерируем рандомные данные
+    }
+
+    if (player.isBot) {
       const seed = player.name.length + player.id.length;
       return {
         id: player.id,
@@ -565,14 +621,136 @@ function GamePageContentComponent({
         avatar: player.avatar,
         isBot: true,
         isUser: false,
+        isSelf: false,
         level: Math.floor(Math.random() * 50) + 1,
         rating: Math.floor(Math.random() * 2000) + 500,
         gamesPlayed: Math.floor(Math.random() * 500) + 50,
-        winRate: Math.floor(Math.random() * 40) + 30, // 30-70%
+        wins: Math.floor(Math.random() * 200) + 10,
+        winRate: Math.floor(Math.random() * 40) + 30,
         bestStreak: Math.floor(Math.random() * 15) + 1,
         status: '🤖 AI Bot',
         joinedDate: `${Math.floor(Math.random() * 30) + 1}.${Math.floor(Math.random() * 12) + 1}.2024`,
+        isChatBlocked: chatBlocked,
+        canAddFriend: false,
+        canBlockChat: true,
       };
+    }
+
+    let name = player.name;
+    let avatar = player.avatar;
+    let rating = 1000;
+    let gamesPlayed = 0;
+    let wins = 0;
+    let losses = 0;
+    let winRate = 0;
+
+    if (player.dbUserId) {
+      try {
+        const resp = await fetch(`/api/user/public?userId=${player.dbUserId}`, {
+          cache: 'no-store',
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.success && data.user) {
+            name = data.user.username || name;
+            avatar = data.user.avatar_url || avatar;
+            rating = data.user.rating ?? rating;
+            gamesPlayed = data.user.gamesPlayed ?? 0;
+            wins = data.user.wins ?? 0;
+            losses = data.user.losses ?? 0;
+            winRate = data.user.winRate ?? 0;
+          }
+        }
+      } catch (error: unknown) {
+        console.warn('⚠️ [generatePlayerProfile] public profile:', error);
+      }
+    }
+
+    return {
+      id: player.id,
+      name,
+      avatar,
+      isBot: false,
+      isUser: false,
+      isSelf: false,
+      dbUserId: player.dbUserId,
+      level: 1,
+      rating,
+      gamesPlayed,
+      wins,
+      losses,
+      winRate,
+      bestStreak: 0,
+      status: '🟢 Online',
+      joinedDate: 'Недавно',
+      isChatBlocked: chatBlocked,
+      canAddFriend: !!player.dbUserId,
+      canBlockChat: true,
+      friendActionLabel: 'Добавить в друзья',
+    };
+  };
+
+  const handleAddFriendFromModal = async () => {
+    if (!selectedPlayerProfile?.dbUserId) return;
+    try {
+      const resp = await fetchWithAuth('/api/friends/add', {
+        method: 'POST',
+        body: JSON.stringify({ friend_id: selectedPlayerProfile.dbUserId }),
+      });
+      const data = await resp.json();
+      if (data.success) {
+        setSelectedPlayerProfile((prev) =>
+          prev
+            ? {
+                ...prev,
+                friendActionLabel: data.alreadyFriends ? 'Уже в друзьях' : 'Заявка отправлена',
+                friendActionDisabled: true,
+              }
+            : null
+        );
+      } else {
+        setSelectedPlayerProfile((prev) =>
+          prev
+            ? {
+                ...prev,
+                friendActionLabel: data.error || 'Не удалось добавить',
+                friendActionDisabled: false,
+              }
+            : null
+        );
+      }
+    } catch (error: unknown) {
+      console.error('❌ [handleAddFriendFromModal]', error);
+    }
+  };
+
+  const handleToggleChatBlockFromModal = async () => {
+    if (!selectedPlayerProfile) return;
+    const storePlayer = players.find((p) => p.id === selectedPlayerProfile.id);
+    if (!storePlayer) return;
+
+    const target = resolveChatBlockTarget(storePlayer);
+    const currentlyBlocked = isPlayerChatBlocked(chatBlocks, storePlayer);
+
+    try {
+      await setChatBlockInDb({ ...target, block: !currentlyBlocked });
+      setChatBlocks((prev) => {
+        const blockedUserIds = new Set(prev.blockedUserIds);
+        const blockedPlayerKeys = new Set(prev.blockedPlayerKeys);
+        if (!currentlyBlocked) {
+          if (target.blockedUserId != null) blockedUserIds.add(target.blockedUserId);
+          if (target.blockedPlayerKey) blockedPlayerKeys.add(target.blockedPlayerKey);
+        } else {
+          if (target.blockedUserId != null) blockedUserIds.delete(target.blockedUserId);
+          if (target.blockedPlayerKey) blockedPlayerKeys.delete(target.blockedPlayerKey);
+        }
+        return { blockedUserIds, blockedPlayerKeys };
+      });
+      setSelectedPlayerProfile((prev) =>
+        prev ? { ...prev, isChatBlocked: !currentlyBlocked } : null
+      );
+    } catch (error: unknown) {
+      console.error('❌ [handleToggleChatBlockFromModal]', error);
     }
   };
 
@@ -1780,7 +1958,7 @@ function GamePageContentComponent({
               const data = await response.json();
               if (data.success && Array.isArray(data.players) && data.players.length > 0) {
                 const myIds = new Set(
-                  [userData.telegramId, userPlayerId]
+                  [userData.telegramId, userPlayerId, userData.dbUserId != null ? String(userData.dbUserId) : '']
                     .filter((value) => value != null && String(value).trim() !== '')
                     .map(String)
                 );
@@ -1808,6 +1986,7 @@ function GamePageContentComponent({
                     isBot,
                     position: player.position ?? 0,
                     isUser,
+                    dbUserId: player.db_user_id ?? null,
                   };
                 });
 
@@ -2635,7 +2814,7 @@ function GamePageContentComponent({
                   {/* ✅ АВАТАР СВЕРХУ, КАРТЫ СНИЗУ ДЛЯ ВСЕХ ИГРОКОВ */}
                     <div className={styles.avatarWrap} style={{ order: 1, overflow: player.isPremium ? 'visible' : undefined }}>
                       {/* Сообщение над игроком (как в чате) */}
-                      {playerMessages[player.id] && (() => {
+                      {playerMessages[player.id] && !blockedGamePlayerIdSet.has(player.id) && (() => {
                         const msg = playerMessages[player.id];
                         const isChatBubble = msg.source === 'chat';
                         const isEmojiBubble = isChatBubble && isEmojiOnlyChatText(msg.text);
@@ -3555,6 +3734,8 @@ function GamePageContentComponent({
         isOpen={isProfileModalOpen}
         onClose={() => setIsProfileModalOpen(false)}
           player={selectedPlayerProfile}
+          onAddFriend={selectedPlayerProfile.canAddFriend ? handleAddFriendFromModal : undefined}
+          onToggleChatBlock={selectedPlayerProfile.canBlockChat ? handleToggleChatBlockFromModal : undefined}
         />
       )}
 
@@ -3887,6 +4068,7 @@ function GamePageContentComponent({
           playerId={userPlayerId || 'user'}
           isMultiplayer={isMultiplayer}
           externalMessages={chatActionMessages}
+          blockedPlayerIds={blockedGamePlayerIds}
           onSendMessage={(text) => {
             const pid = myPlayer?.id || userPlayerId || 'user';
             if (pid) showPlayerMessage(pid, text, 'info', 6000, 'chat');

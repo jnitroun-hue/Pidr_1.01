@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 import { normalizeRankToken, normalizeSuitToken } from '@/lib/game/cardAssets';
+import { deckOwnerIds } from '@/lib/nft/deck-slots';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -20,10 +21,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Требуется авторизация' }, { status: 401 });
     }
 
-    const { dbUserId: userId } = await getUserIdFromDatabase(auth.userId, auth.environment);
+    const { dbUserId: userId, user: dbUser } = await getUserIdFromDatabase(
+      auth.userId,
+      auth.environment
+    );
     if (!userId) {
       return NextResponse.json({ success: false, error: 'Пользователь не найден в БД' }, { status: 404 });
     }
+
+    const ownerIds = deckOwnerIds(userId, dbUser?.telegram_id);
 
     const body = await request.json();
     const { existingCardId, newCardId, suit, rank, image_url } = body;
@@ -54,6 +60,7 @@ export async function POST(request: NextRequest) {
     const { error: updateError } = await supabaseAdmin
       .from('_pidr_user_nft_deck')
       .update({
+        user_id: userId,
         nft_card_id: nftCard.id,
         suit: normalizedSuit,
         rank: normalizedRank,
@@ -61,7 +68,7 @@ export async function POST(request: NextRequest) {
         updated_at: new Date().toISOString(),
       })
       .eq('id', existingCardId)
-      .eq('user_id', userId);
+      .in('user_id', ownerIds);
 
     if (updateError) {
       console.error('❌ [replace-deck-card] Ошибка:', updateError);

@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { normalizeReferralCode } from './referral-links';
 import { resolveReferrerByCode } from './resolve-referrer';
 import type { ReferralAuthMethod } from './constants';
+import { ensureMutualFriendship } from '@/lib/friends/friend-links';
 
 export interface ApplyReferralParams {
   referredUserId: number;
@@ -66,6 +67,7 @@ export async function applyReferralForNewUser(
 
     if (!rpcError && rpcData?.success) {
       await patchReferredUserMeta(supabase, referredUserId, referrer.id, params.authMethod, code);
+      await ensureMutualFriendship(supabase, referrer.id, referredUserId);
       if (params.grantBonuses) {
         await tryGrantBonuses(referrer.id, referredUserId);
       }
@@ -88,6 +90,7 @@ export async function applyReferralForNewUser(
   }
 
   await patchReferredUserMeta(supabase, referredUserId, referrer.id, params.authMethod, code);
+  await ensureMutualFriendship(supabase, referrer.id, referredUserId);
 
   if (params.grantBonuses) {
     await tryGrantBonuses(referrer.id, referredUserId);

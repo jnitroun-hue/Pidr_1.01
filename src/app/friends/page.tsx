@@ -1,14 +1,16 @@
 'use client'
 
-import { buildReferralLink, buildReferralShareText, getPublicAppUrl } from '@/lib/referral/referral-links';
+import { buildReferralShareText } from '@/lib/referral/referral-links';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ArrowLeft, UserPlus, Search, User, Users, Share2, Trophy } from 'lucide-react';
 import PageLoadingScreen from '@/components/PageLoadingScreen';
+import { fetchWithAuth } from '@/lib/api-headers';
 
 interface Friend {
-  telegram_id: number;
+  id: number;
+  telegram_id?: number | string | null;
   username: string;
   first_name: string;
   avatar_url?: string;
@@ -28,6 +30,8 @@ export default function FriendsPage() {
   const [searching, setSearching] = useState(false);
   const [inviteRoomId, setInviteRoomId] = useState<string | null>(null);
   const [inviteRoomCode, setInviteRoomCode] = useState<string | null>(null);
+  const [referralInviteUrl, setReferralInviteUrl] = useState<string>('');
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
   // ✅ ПРОВЕРЯЕМ URL НА ПАРАМЕТРЫ ПРИГЛАШЕНИЯ
   useEffect(() => {
@@ -42,29 +46,43 @@ export default function FriendsPage() {
     }
   }, []);
 
-  // Загрузка друзей из БД
+  // Загрузка друзей из БД (web / telegram / vk — через cookie + getApiHeaders)
   useEffect(() => {
     loadFriends();
+    loadReferralLink();
   }, []);
+
+  const loadReferralLink = async () => {
+    try {
+      const authResp = await fetchWithAuth('/api/auth', { method: 'GET', cache: 'no-store' });
+      if (authResp.ok) {
+        const authData = await authResp.json();
+        if (authData.success && authData.user?.id) {
+          setCurrentUserId(Number(authData.user.id));
+        }
+      }
+      const refResp = await fetchWithAuth('/api/referral?action=get_link', {
+        method: 'GET',
+        cache: 'no-store',
+      });
+      if (refResp.ok) {
+        const refData = await refResp.json();
+        if (refData.success && refData.referralLink) {
+          setReferralInviteUrl(refData.referralLink);
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+  };
 
   const loadFriends = async () => {
     try {
       setLoading(true);
-      const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
-      
-      if (!telegramUser) {
-        console.error('❌ Telegram user не найден');
-        return;
-      }
 
-      const response = await fetch('/api/friends/list', {
+      const response = await fetchWithAuth('/api/friends/list', {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-telegram-id': telegramUser.id.toString(),
-          'x-username': telegramUser.username || telegramUser.first_name
-        },
-        credentials: 'include'
+        cache: 'no-store',
       });
 
       if (response.ok) {
@@ -73,6 +91,8 @@ export default function FriendsPage() {
           setFriends(result.friends || []);
           console.log('✅ Друзья загружены:', result.friends?.length);
         }
+      } else {
+        console.warn('⚠️ [Friends] list:', response.status);
       }
     } catch (error) {
       console.error('❌ Ошибка загрузки друзей:', error);
@@ -93,23 +113,15 @@ export default function FriendsPage() {
 
     try {
       setSearching(true);
-      const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
-      
-      console.log('🔍 [FRONTEND] Поиск друзей:', query, 'Telegram ID:', telegramUser?.id);
-      
-      const response = await fetch(`/api/friends/search?query=${encodeURIComponent(query)}`, {
-        headers: {
-          'x-telegram-id': telegramUser?.id?.toString() || '',
-          'x-username': telegramUser?.username || ''
-        }
-      });
+
+      const response = await fetchWithAuth(
+        `/api/friends/search?query=${encodeURIComponent(query)}`,
+        { cache: 'no-store' }
+      );
 
       if (response.ok) {
         const result = await response.json();
-        console.log('✅ [FRONTEND] Результаты поиска:', result);
         setSearchResults(result.users || []);
-      } else {
-        console.error('❌ [FRONTEND] Ошибка ответа:', response.status, await response.text());
       }
     } catch (error) {
       console.error('❌ Ошибка поиска:', error);
@@ -119,37 +131,22 @@ export default function FriendsPage() {
   };
 
   // Добавить в друзья
-  const handleAddFriend = async (friendId: number) => {
+  const handleAddFriend = async (friendDbId: number) => {
     try {
-      const telegramUser = typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
-      
-      console.log('👥 [FRONTEND] Добавление друга:', {
-        currentUserId: telegramUser?.id,
-        friendId: friendId
-      });
-      
-      const response = await fetch('/api/friends/add', {
+      const response = await fetchWithAuth('/api/friends/add', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-telegram-id': telegramUser?.id?.toString() || '',
-          'x-username': telegramUser?.username || ''
-        },
-        body: JSON.stringify({ friend_id: friendId })
+        body: JSON.stringify({ friend_id: friendDbId }),
       });
 
       const result = await response.json();
-      console.log('📥 [FRONTEND] Ответ сервера:', result);
 
       if (response.ok && result.success) {
         alert('✅ Друг добавлен!');
-        await loadFriends(); // Перезагружаем список друзей
-        setSearchQuery(''); // Очищаем поиск
-        setSearchResults([]); // Очищаем результаты
+        await loadFriends();
+        setSearchQuery('');
+        setSearchResults([]);
       } else {
-        const errorMsg = result.error || 'Неизвестная ошибка';
-        console.error('❌ [FRONTEND] Ошибка добавления:', errorMsg);
-        alert(`❌ Ошибка: ${errorMsg}`);
+        alert(`❌ Ошибка: ${result.error || 'Неизвестная ошибка'}`);
       }
     } catch (error) {
       console.error('❌ [FRONTEND] Ошибка добавления друга:', error);
@@ -159,16 +156,13 @@ export default function FriendsPage() {
 
   // Поделиться приглашением
   const handleShareInvite = () => {
-    const currentUserId =
-      (typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id) ||
-      null;
-    const inviteLink = currentUserId
-      ? buildReferralLink(currentUserId)
-      : `${getPublicAppUrl()}/`;
+    const inviteLink = referralInviteUrl || window.location.origin + '/';
     const shareText = buildReferralShareText(inviteLink);
-    
+
     if ((window as any).Telegram?.WebApp) {
-      (window as any).Telegram.WebApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(shareText)}`);
+      (window as any).Telegram.WebApp.openTelegramLink(
+        `https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(shareText)}`
+      );
     } else if (navigator.clipboard) {
       navigator.clipboard.writeText(`${shareText}\n${inviteLink}`);
       alert('Реферальная ссылка скопирована!');
@@ -328,7 +322,7 @@ export default function FriendsPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {searchResults.map(user => (
                 <motion.div
-                  key={user.telegram_id}
+                  key={user.id}
                   whileHover={{ scale: 1.02 }}
                   style={{
                     padding: '16px',
@@ -375,14 +369,12 @@ export default function FriendsPage() {
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       onClick={() => {
-                        const telegramUser = (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
-                        const referralCode = telegramUser?.id || '';
-                        const base = getPublicAppUrl();
+                        const base = window.location.origin;
                         const params = new URLSearchParams({
                           roomId: String(inviteRoomId),
                           roomCode: String(inviteRoomCode),
                         });
-                        if (referralCode) params.set('ref', String(referralCode));
+                        if (currentUserId) params.set('ref', String(currentUserId));
                         const inviteLink = `${base}/multiplayer?${params.toString()}`;
                         const message = `🎮 ${user.username || user.first_name}, присоединяйся к игре The Must!\n\nКод комнаты: ${inviteRoomCode}\n${inviteLink}`;
                         
@@ -407,7 +399,7 @@ export default function FriendsPage() {
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
-                      onClick={() => handleAddFriend(user.telegram_id)}
+                      onClick={() => handleAddFriend(user.id)}
                       style={{
                         padding: '8px 16px',
                         background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
@@ -457,7 +449,7 @@ export default function FriendsPage() {
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {onlineFriends.map(friend => (
-              <FriendCard key={friend.telegram_id} friend={friend} />
+              <FriendCard key={friend.id} friend={friend} />
             ))}
           </div>
         </motion.div>
@@ -502,7 +494,7 @@ export default function FriendsPage() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {friends.map(friend => (
-              <FriendCard key={friend.telegram_id} friend={friend} />
+              <FriendCard key={friend.id} friend={friend} />
             ))}
           </div>
         )}

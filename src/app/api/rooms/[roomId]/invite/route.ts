@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
+import { getRedisUserId } from '@/lib/multiplayer/public-user-id';
+import { resolveFriendUser } from '@/lib/friends/friend-links';
 
 // ✅ Явная конфигурация runtime для Next.js 15
 export const runtime = 'nodejs';
@@ -41,17 +43,17 @@ export async function POST(
     const { userId, environment } = auth;
     
     // ✅ УНИВЕРСАЛЬНО: Получаем пользователя из БД
-    const { dbUserId } = await getUserIdFromDatabase(userId, environment);
+    const { dbUserId, user: dbUser } = await getUserIdFromDatabase(userId, environment);
     
-    if (!dbUserId) {
+    if (!dbUserId || !dbUser) {
       return NextResponse.json({ success: false, message: 'Пользователь не найден' }, { status: 404 });
     }
-    
-    const fromTelegramId = userId; // Для совместимости с остальным кодом
+
+    const fromRoomUserId = getRedisUserId({ id: dbUserId, telegram_id: dbUser.telegram_id });
     const body = await request.json();
     const { friendId } = body as { friendId?: string | number };
 
-    console.log('📨 [ROOM INVITE] Запрос:', { roomId, fromTelegramId, friendId });
+    console.log('📨 [ROOM INVITE] Запрос:', { roomId, fromRoomUserId, dbUserId, friendId });
 
     if (!friendId) {
       return NextResponse.json(
@@ -60,8 +62,17 @@ export async function POST(
       );
     }
 
-    const toTelegramId = String(friendId);
-    if (toTelegramId === fromTelegramId) {
+    const friendUser = await resolveFriendUser(adminSupabase, friendId);
+    if (!friendUser) {
+      return NextResponse.json({ success: false, message: 'Друг не найден' }, { status: 404 });
+    }
+
+    const toRoomUserId = getRedisUserId({
+      id: friendUser.id,
+      telegram_id: friendUser.telegram_id,
+    });
+
+    if (toRoomUserId === fromRoomUserId || friendUser.id === dbUserId) {
       return NextResponse.json(
         { success: false, message: 'Нельзя пригласить самого себя' },
         { status: 400 }
@@ -86,11 +97,12 @@ export async function POST(
     }
 
     // Проверяем, что отправитель действительно в этой комнате
+    const senderKeys = [...new Set([fromRoomUserId, String(dbUserId)])];
     const { data: senderPlayer } = await adminSupabase
       .from('_pidr_room_players')
       .select('id')
       .eq('room_id', roomId)
-      .eq('user_id', fromTelegramId)
+      .in('user_id', senderKeys)
       .maybeSingle();
 
     console.log('👤 [ROOM INVITE] Отправитель в комнате:', senderPlayer);
@@ -106,7 +118,7 @@ export async function POST(
     const { data: friendship, error: friendshipError } = await adminSupabase
       .from('_pidr_friends')
       .select('id, status, user_id, friend_id')
-      .or(`and(user_id.eq.${fromTelegramId},friend_id.eq.${toTelegramId}),and(user_id.eq.${toTelegramId},friend_id.eq.${fromTelegramId})`)
+      .or(`and(user_id.eq.${fromRoomUserId},friend_id.eq.${friendUser.id}),and(user_id.eq.${friendUser.id},friend_id.eq.${dbUserId})`)
       .eq('status', 'accepted')
       .maybeSingle();
 
@@ -124,19 +136,21 @@ export async function POST(
     const expiresAt = new Date(now.getTime() + 10 * 60 * 1000).toISOString(); // 10 минут
 
     // ✅ Удаляем старые приглашения этому пользователю в эту комнату
+    const toInviteId = parseInt(toRoomUserId, 10);
+    const fromInviteId = parseInt(fromRoomUserId, 10);
+
     await adminSupabase
       .from('_pidr_room_invites')
       .delete()
       .eq('room_id', parseInt(roomId, 10))
-      .eq('to_user_id', parseInt(toTelegramId, 10))
+      .eq('to_user_id', toInviteId)
       .in('status', ['pending', 'expired']);
 
-    // Создаем приглашение
     console.log('📝 [ROOM INVITE] Создаём приглашение:', {
       room_id: parseInt(roomId, 10),
       room_code: room.room_code,
-      from_user_id: parseInt(fromTelegramId, 10),
-      to_user_id: parseInt(toTelegramId, 10)
+      from_user_id: fromInviteId,
+      to_user_id: toInviteId,
     });
 
     const { data: invite, error: inviteError } = await adminSupabase
@@ -144,10 +158,10 @@ export async function POST(
       .insert({
         room_id: parseInt(roomId, 10),
         room_code: room.room_code,
-        from_user_id: parseInt(fromTelegramId, 10),
-        to_user_id: parseInt(toTelegramId, 10),
+        from_user_id: fromInviteId,
+        to_user_id: toInviteId,
         status: 'pending',
-        expires_at: expiresAt
+        expires_at: expiresAt,
       })
       .select()
       .single();

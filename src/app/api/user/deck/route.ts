@@ -2,28 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 import { normalizeRankToken, normalizeSuitToken } from '@/lib/game/cardAssets';
+import { deckOwnerIds, fetchUserDeckRows } from '@/lib/nft/deck-slots';
 
 // ✅ Явная конфигурация runtime для Next.js 15
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-interface DeckCardRow {
-  id: number;
-  user_id: number;
-  nft_card_id: number;
-  suit?: string;
-  rank?: string | number;
-  image_url?: string;
-  created_at: string;
-  nft_card?: {
-    id: number;
-    suit?: string;
-    rank?: string | number;
-    rarity?: string;
-    image_url?: string;
-    metadata?: unknown;
-  } | null;
-}
 
 // 🎴 API: Получение игровой колоды пользователя
 
@@ -55,60 +38,12 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // ПОЛУЧАЕМ ВСЕ КАРТЫ ИЗ КОЛОДЫ
-    // ✅ ИСПРАВЛЕНО: Используем явное указание foreign key через !nft_card_id
-    const { data: deckCards, error } = await supabaseAdmin
-      .from('_pidr_user_nft_deck')
-      .select(`
-        *,
-        nft_card:_pidr_nft_cards!nft_card_id(
-          id,
-          suit,
-          rank,
-          rarity,
-          image_url,
-          metadata
-        )
-      `)
-      .eq('user_id', dbUserId)
-      .order('created_at', { ascending: false });
+    const ownerIds = deckOwnerIds(dbUserId, user.telegram_id);
+    const deckCards = await fetchUserDeckRows(supabaseAdmin, ownerIds);
 
-    if (error) {
-      console.error('❌ [GET DECK] Ошибка получения колоды:', error);
-      const message = error instanceof Error ? error.message : String((error as any)?.message || error);
-      const code = String((error as any)?.code || '');
-      const isSchemaMissing =
-        code === '42P01' ||
-        code === 'PGRST200' ||
-        message.includes('_pidr_user_nft_deck') ||
-        message.includes('_pidr_nft_cards') ||
-        message.toLowerCase().includes('relationship');
+    console.log(`✅ [GET DECK] Найдено ${deckCards.length} карт в колоде (owners: ${ownerIds.join(',')})`);
 
-      if (isSchemaMissing) {
-        console.warn('⚠️ [GET DECK] NFT deck schema не готова, возвращаем пустую колоду');
-        const response = NextResponse.json({
-          success: true,
-          deck: [],
-          total: 0,
-          warning: 'NFT deck schema is not available'
-        });
-        response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-        response.headers.set('Pragma', 'no-cache');
-        response.headers.set('Expires', '0');
-        return response;
-      }
-
-      return NextResponse.json({ 
-        success: false, 
-        error: message
-      }, { status: 500 });
-    }
-
-    console.log(`✅ [GET DECK] Найдено ${deckCards?.length || 0} карт в колоде`);
-
-    // ФОРМИРУЕМ ОТВЕТ
-    // ✅ ИСПРАВЛЕНО: Используем данные из nft_card если есть, иначе из deck
-    const deck = (deckCards as DeckCardRow[] | null)?.map((card) => {
+    const deck = deckCards.map((card) => {
       const nftCard = card.nft_card || null;
       const rawSuit = nftCard?.suit ?? card.suit;
       const rawRank = nftCard?.rank ?? card.rank;
@@ -121,7 +56,7 @@ export async function GET(request: NextRequest) {
         rarity: nftCard?.rarity || 'common',
         image_url: nftCard?.image_url || card.image_url,
         metadata: nftCard?.metadata || null,
-        created_at: card.created_at,
+        created_at: card.created_at || new Date().toISOString(),
         nft_card: nftCard,
       };
     }) || [];
@@ -160,13 +95,17 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const { dbUserId: userId } = await getUserIdFromDatabase(auth.userId, auth.environment);
+    const { dbUserId: userId, user: dbUser } = await getUserIdFromDatabase(
+      auth.userId,
+      auth.environment
+    );
     if (!userId) {
       return NextResponse.json(
         { success: false, message: 'Пользователь не найден' },
         { status: 404 }
       );
     }
+    const ownerIds = deckOwnerIds(userId, dbUser?.telegram_id);
     const body = await request.json();
     const { deckCardId } = body; // ID записи в _pidr_user_nft_deck
 
@@ -184,7 +123,7 @@ export async function DELETE(request: NextRequest) {
       .from('_pidr_user_nft_deck')
       .delete()
       .eq('id', deckCardId)
-      .eq('user_id', userId); // Проверяем владельца!
+      .in('user_id', ownerIds);
 
     if (error) {
       console.error('❌ [DELETE FROM DECK] Ошибка:', error);

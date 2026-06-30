@@ -37,6 +37,10 @@ export interface Player {
   difficulty?: 'easy' | 'medium' | 'hard' // Сложность бота
   isWinner?: boolean // Является ли игрок победителем (для зрителей)
   finishTime?: number // ✅ Время выхода игрока (timestamp) для правильного определения мест
+  /** id из БД — для друзей / блокировки чата */
+  dbUserId?: number
+  /** Публичный id (telegram или db) из мультиплеера */
+  publicUserId?: string
 }
 
 export interface GameStats {
@@ -74,6 +78,7 @@ interface RoomLobbyPlayer {
   isBot: boolean
   position: number
   isUser?: boolean
+  dbUserId?: number | null
 }
 
 interface MultiplayerConfig {
@@ -625,7 +630,9 @@ export const useGameStore = create<GameState>()(
           }
           
           const newPlayer: Player = {
-            id: `player_${i + 1}`,
+            id: roomPlayer
+              ? String(roomPlayer.id)
+              : `player_${i + 1}`,
             name: playerInfo.name,
             avatar: playerInfo.avatar,
             score: 0,
@@ -636,7 +643,9 @@ export const useGameStore = create<GameState>()(
             isUser: roomPlayer ? Boolean(roomPlayer.isUser) : !playerInfo.isBot,
             isBot: roomPlayer ? roomPlayer.isBot : playerInfo.isBot,
             isPremium: (roomPlayer ? Boolean(roomPlayer.isUser) : !playerInfo.isBot) && userIsPremium,
-            difficulty: playerInfo.difficulty
+            difficulty: playerInfo.difficulty,
+            dbUserId: roomPlayer?.dbUserId ?? undefined,
+            publicUserId: roomPlayer ? String(roomPlayer.id) : undefined,
           };
           
           console.log(`🎴 [startGame] Создан ${newPlayer.isBot ? 'бот' : 'игрок'} ${newPlayer.name}: ${newPlayer.cards.length} карт в руке, ${newPlayer.penki.length} пеньков`);

@@ -952,6 +952,37 @@ export default function ProfilePage() {
         const result = await response.json();
         if (result.success) {
           added += 1;
+        } else if (result.error === 'DUPLICATE_CARD' && result.existingCard?.id) {
+          const label = `${card.rank} ${card.suit}`;
+          const replaceOk = await appConfirm(
+            `Карта ${label} уже есть в колоде. Заменить на выбранную NFT-карту?`,
+            { confirmText: 'Заменить', cancelText: 'Пропустить', type: 'warning' }
+          );
+          if (replaceOk) {
+            const replaceResp = await fetch('/api/nft/replace-deck-card', {
+              method: 'POST',
+              credentials: 'include',
+              headers: {
+                'Content-Type': 'application/json',
+                ...getApiHeaders(),
+              },
+              body: JSON.stringify({
+                existingCardId: result.existingCard.id,
+                newCardId: card.id,
+                suit: card.suit,
+                rank: card.rank,
+                image_url: card.image_url,
+              }),
+            });
+            const replaceResult = await replaceResp.json();
+            if (replaceResult.success) {
+              added += 1;
+            } else {
+              failed.push(label);
+            }
+          } else {
+            failed.push(`${label} (отмена замены)`);
+          }
         } else {
           failed.push(`${card.rank} ${card.suit}`);
         }
