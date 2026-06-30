@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTelegram } from '../hooks/useTelegram';
 import { getApiHeaders } from '@/lib/api-headers';
+import { hasAuthTokenCookie } from '@/lib/auth/session-client';
 
 /**
  * Компонент для автоматического обновления онлайн статуса
@@ -22,6 +23,10 @@ export default function OnlineHeartbeat() {
       if (realTelegramUser?.id) {
         setResolvedUserId(realTelegramUser.id.toString());
         setAuthSource('telegram');
+        return;
+      }
+
+      if (!hasAuthTokenCookie()) {
         return;
       }
       

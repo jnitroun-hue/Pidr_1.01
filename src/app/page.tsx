@@ -25,6 +25,10 @@ import BurgerMenu from '../components/BurgerMenu';
 import { motion } from 'framer-motion';
 import { Menu, X } from 'lucide-react';
 import { getApiHeaders } from '@/lib/api-headers';
+import {
+  captureReferralFromCurrentUrl,
+  getPendingReferralFromClient,
+} from '@/lib/referral/pending-referral-client';
 
 const HOME_SESSION_KEY = 'pidr_home_session';
 
@@ -111,6 +115,9 @@ function HomeWithParams() {
       
       // Проверяем сессию через API (cookie → Redis/БД)
       const checkAuth = async () => {
+        captureReferralFromCurrentUrl();
+        const pendingReferral = getPendingReferralFromClient();
+
         try {
           console.log('🔍 [Браузер] Проверяем сессию через /api/auth...');
           
@@ -220,7 +227,7 @@ function HomeWithParams() {
                 setCheckingAuth(false);
                 setIsBrowser(true);
                 initialized.current = true;
-                router.push('/auth/login');
+                router.push(getPendingReferralFromClient() ? '/auth/register' : '/auth/login');
               }, 2000); // Ждем 2 секунды перед повторной попыткой
               return; // Не продолжаем дальше, ждем результат повторной попытки
             }
@@ -244,12 +251,16 @@ function HomeWithParams() {
         // ✅ ИСПРАВЛЕНО: Проверяем, есть ли уже пользователь перед редиректом
         // Если пользователь уже загружен (например, из pendingAuth) - не редиректим
         if (!user) {
-          // Если нет авторизации - редиректим на страницу входа
-          console.log('📝 Нет активной сессии и пользователя - редирект на страницу входа');
+          const authPath = pendingReferral ? '/auth/register' : '/auth/login';
+          console.log(
+            pendingReferral
+              ? `🎁 Реферальная ссылка (${pendingReferral}) — редирект на регистрацию`
+              : '📝 Нет активной сессии — редирект на страницу входа'
+          );
           setCheckingAuth(false);
           setIsBrowser(true);
           initialized.current = true;
-          router.push('/auth/login');
+          router.push(authPath);
         } else {
           console.log('✅ Пользователь уже загружен, не редиректим на логин');
           setCheckingAuth(false);

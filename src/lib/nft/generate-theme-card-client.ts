@@ -24,11 +24,20 @@ export function pickRandomHeroCardSpec(): RandomHeroCardSpec {
 
 function normalizeRankForSpec(rank: string): string {
   const r = rank.toLowerCase();
-  if (r === 'j') return 'jack';
-  if (r === 'q') return 'queen';
-  if (r === 'k') return 'king';
-  if (r === 'a') return 'ace';
+  if (r === 'j' || r === 'jack') return 'jack';
+  if (r === 'q' || r === 'queen') return 'queen';
+  if (r === 'k' || r === 'king') return 'king';
+  if (r === 'a' || r === 'ace') return 'ace';
   return r;
+}
+
+/** Ранг для отображения на canvas (J, Q, 10, …) */
+export function rankForCanvas(rank: string): string {
+  const n = normalizeRankForSpec(rank);
+  const map: Record<string, string> = { jack: 'J', queen: 'Q', king: 'K', ace: 'A' };
+  if (map[n]) return map[n];
+  if (n === '10') return '10';
+  return rank.toUpperCase();
 }
 
 function toSpec(suit: string, rank: string, theme?: NftThemeKey): CardFaceSpec {

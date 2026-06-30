@@ -8,6 +8,8 @@ import { isVKMiniApp, loginWithVKMiniApp } from '@/lib/auth/vk-bridge';
 import { buildVkOAuthUrl, detectMiniAppContext } from '@/lib/auth/social-auth';
 import Link from 'next/link';
 import { getApiHeaders } from '@/lib/api-headers';
+import { hasAuthTokenCookie } from '@/lib/auth/session-client';
+import ReferralWelcomeBanner from '@/components/ReferralWelcomeBanner';
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -40,6 +42,7 @@ export default function RegisterPage() {
   useEffect(() => {
     // Проверяем сессию через API (без клиентского хранилища)
     const checkSession = async () => {
+      if (!hasAuthTokenCookie()) return;
       try {
         const response = await fetch('/api/auth', {
           method: 'GET',
@@ -305,6 +308,8 @@ export default function RegisterPage() {
               Создайте новый аккаунт
             </p>
           </motion.div>
+
+          <ReferralWelcomeBanner />
 
           {/* Error */}
           {error && (

@@ -168,7 +168,20 @@ export async function buildPremiumDailyOfferPreviewUrl(
     console.warn('⚠️ [daily-offer] preview compose failed:', error);
   }
 
-  return getThemeAssetPublicPath(spec.themePick);
+  try {
+    const buffer = await composeSvgOnlyCardBuffer({
+      suit: spec.suit,
+      rankRaw: spec.rankRaw,
+      rankNormalized: spec.rankNormalized,
+      themeLabel: spec.themeLabel,
+    });
+    const publicUrl = await uploadDailyOfferCardBuffer(storagePath, buffer);
+    if (publicUrl) return publicUrl;
+  } catch {
+    /* ignore */
+  }
+
+  return '';
 }
 
 export async function buildPremiumDailyOfferWithPreview(

@@ -23,6 +23,7 @@ import {
 } from '@/lib/nft/card-display';
 import { useNftSellModal } from '@/hooks/useNftSellModal';
 import { NFT_OPEN_CARD_MODAL_EVENT, type NftCardModalPayload } from '@/lib/nft/open-card-modal';
+import NftThemedCardCanvas, { resolveThemeFromMetadata } from '@/components/NftThemedCardCanvas';
 import styles from './NFTGallery.module.css';
 
 interface NFTCard {
@@ -56,6 +57,56 @@ export default function NFTGallery() {
   const getSuitSymbol = getNftSuitSymbol;
   const getRarityLabel = getNftRarityLabel;
   const getRankDisplay = getNftRankDisplay;
+
+  const renderCardVisual = (card: NFTCard, width: number, height: number, onClick?: () => void) => {
+    const themeInfo = resolveThemeFromMetadata(card.metadata, card.rarity);
+    if (themeInfo) {
+      return (
+        <NftThemedCardCanvas
+          suit={card.suit}
+          rank={card.rank}
+          theme={themeInfo.theme}
+          themeId={themeInfo.themeId}
+          fallbackImageUrl={card.image_url}
+          width={width}
+          height={height}
+          fluid
+          onClick={onClick}
+          style={{ boxShadow: 'none', borderRadius: 8, ...(onClick ? {} : { width: '100%', height: '100%' }) }}
+        />
+      );
+    }
+    if (card.image_url) {
+      return (
+        <img
+          src={card.image_url}
+          alt={`${card.rank} of ${card.suit}`}
+          loading="lazy"
+          decoding="async"
+          style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+          onClick={onClick}
+        />
+      );
+    }
+    return (
+      <div
+        style={{
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: getSuitColor(card.suit),
+          fontSize: '24px',
+          fontWeight: 'bold',
+        }}
+      >
+        <div>{getSuitSymbol(card.suit)}</div>
+        <div style={{ fontSize: '16px', marginTop: '4px' }}>{getRankDisplay(card.rank)}</div>
+      </div>
+    );
+  };
 
   useEffect(() => {
     loadCollection();
@@ -386,92 +437,20 @@ export default function NFTGallery() {
               }}
             >
               {/* ИЗОБРАЖЕНИЕ КАРТЫ - ОПТИМИЗИРОВАНО ДЛЯ МОБИЛЬНЫХ */}
-              <div style={{
-                width: '100%',
-                aspectRatio: '0.7',
-                position: 'relative',
-                borderRadius: '6px',
-                overflow: 'hidden',
-                marginBottom: '8px',
-                background: '#ffffff',
-                border: '1px solid rgba(255,255,255,0.1)',
-                pointerEvents: 'none'
-              }}>
-                {card.image_url ? (
-                  <>
-                    {/* ✅ PLACEHOLDER ПРИ ЗАГРУЗКЕ */}
-                    <div 
-                      className="card-placeholder"
-                      style={{
-                        position: 'absolute',
-                        inset: 0,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: suitColor,
-                        fontSize: '24px',
-                        fontWeight: 'bold',
-                        background: '#f8f9fa',
-                        zIndex: 1
-                      }}
-                    >
-                      <div>{getSuitSymbol(card.suit)}</div>
-                      <div style={{ fontSize: '16px', marginTop: '4px' }}>{card.rank?.toUpperCase()}</div>
-                    </div>
-                    
-                    {/* ✅ ОПТИМИЗИРОВАННОЕ ИЗОБРАЖЕНИЕ */}
-                    <img
-                      src={card.image_url}
-                      alt={`${card.rank} of ${card.suit}`}
-                      loading="lazy"
-                      decoding="async"
-                      style={{ 
-                        width: '100%', 
-                        height: '100%', 
-                        objectFit: 'contain',
-                        display: 'block',
-                        position: 'relative',
-                        zIndex: 2,
-                        opacity: 0,
-                        transition: 'opacity 0.3s ease-in-out'
-                      }}
-                      onLoad={(e) => {
-                        // ✅ Скрываем placeholder когда изображение загрузилось
-                        const img = e.currentTarget;
-                        img.style.opacity = '1';
-                        const placeholder = img.parentElement?.querySelector('.card-placeholder') as HTMLElement;
-                        if (placeholder) {
-                          placeholder.style.display = 'none';
-                        }
-                      }}
-                      onError={(e) => {
-                        // ✅ При ошибке показываем placeholder
-                        const img = e.currentTarget;
-                        img.style.display = 'none';
-                        const placeholder = img.parentElement?.querySelector('.card-placeholder') as HTMLElement;
-                        if (placeholder) {
-                          placeholder.style.display = 'flex';
-                        }
-                      }}
-                    />
-                  </>
-                ) : (
-                  <div style={{
-                    width: '100%',
-                    height: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: suitColor,
-                    fontSize: '24px',
-                    fontWeight: 'bold'
-                  }}>
-                    <div>{getSuitSymbol(card.suit)}</div>
-                    <div style={{ fontSize: '16px', marginTop: '4px' }}>{card.rank?.toUpperCase()}</div>
-                  </div>
-                )}
+              <div
+                style={{
+                  width: '100%',
+                  aspectRatio: '0.7',
+                  position: 'relative',
+                  borderRadius: '6px',
+                  overflow: 'hidden',
+                  marginBottom: '8px',
+                  background: '#ffffff',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  pointerEvents: 'none',
+                }}
+              >
+                {renderCardVisual(card, 300, 420)}
               </div>
 
               {/* Rank and Suit Info */}
@@ -527,11 +506,8 @@ export default function NFTGallery() {
                     </div>
                   )}
 
-                  <div className={styles.cardFrame}>
-                    <img
-                      src={selectedCard.image_url}
-                      alt={`${selectedCard.rank} ${getSuitSymbol(selectedCard.suit)}`}
-                    />
+                  <div className={`${styles.cardFrame} ${styles.cardFrameLarge}`}>
+                    {renderCardVisual(selectedCard, 280, 392)}
                   </div>
 
                   <div className={styles.cardTitle}>

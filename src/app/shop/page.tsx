@@ -13,6 +13,9 @@ import PageLoadingScreen from '@/components/PageLoadingScreen';
 import { appConfirm, appAlert } from '@/lib/app-notice';
 import { fetchPremiumStatus, isPremiumUsable } from '@/lib/premium/refresh-premium';
 import { parseJsonResponse } from '@/lib/api/parse-json-response';
+import DailyOfferCardModal from '../../components/DailyOfferCardModal';
+import NftThemedCardCanvas from '../../components/NftThemedCardCanvas';
+import type { NftThemeKey } from '@/lib/nft/theme-config';
 import { GRAM } from '@/lib/crypto/gram-brand';
 
 interface User {
@@ -46,6 +49,10 @@ interface PromoCard {
   discountedCoins?: number;
   promoImageUrl?: string | null;
   themeLabel?: string;
+  theme?: NftThemeKey | string;
+  themeId?: number;
+  rank?: string;
+  suit?: string;
   isPremiumDaily?: boolean;
 }
 
@@ -63,6 +70,7 @@ export default function ShopPage() {
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [showPremiumSuccess, setShowPremiumSuccess] = useState(false);
   const [premiumSuccessData, setPremiumSuccessData] = useState<PremiumStatus | null>(null);
+  const [showDailyOfferModal, setShowDailyOfferModal] = useState(false);
   const [stats, setStats] = useState({
     totalListings: 0,
     totalSales: 0,
@@ -557,25 +565,35 @@ export default function ShopPage() {
               </div>
 
               <div style={{ minWidth: 230, textAlign: 'right' }}>
-                {dailyPromo.promoImageUrl && (
-                  <div
+                {dailyPromo.suit && dailyPromo.rank && (
+                  <motion.div
+                    whileHover={{ scale: 1.04 }}
+                    whileTap={{ scale: 0.97 }}
                     style={{
-                      width: 94,
-                      height: 132,
+                      width: 120,
                       marginLeft: 'auto',
                       marginBottom: 10,
-                      borderRadius: 10,
-                      overflow: 'hidden',
-                      border: '1px solid rgba(251,146,60,0.55)',
-                      background: '#fff',
                     }}
                   >
-                    <img
-                      src={dailyPromo.promoImageUrl}
-                      alt="promo-card"
-                      style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+                    <NftThemedCardCanvas
+                      suit={dailyPromo.suit}
+                      rank={dailyPromo.rank}
+                      theme={dailyPromo.theme}
+                      themeId={dailyPromo.themeId}
+                      fallbackImageUrl={dailyPromo.promoImageUrl}
+                      width={120}
+                      height={168}
+                      alt={dailyPromo.cardTitle}
+                      onClick={() => setShowDailyOfferModal(true)}
+                      style={{
+                        border: '2px solid rgba(251,146,60,0.65)',
+                        boxShadow: '0 8px 24px rgba(249,115,22,0.35)',
+                      }}
                     />
-                  </div>
+                    <div style={{ color: '#fdba74', fontSize: 10, marginTop: 6, fontWeight: 700 }}>
+                      Нажмите для просмотра
+                    </div>
+                  </motion.div>
                 )}
                 <div style={{ color: '#ffedd5', fontSize: 12, marginBottom: 8 }}>
                   {canClaimPromo ? 'Доступна покупка за монеты' : `Новый шанс через ${promoCooldownLabel}`}
@@ -645,6 +663,31 @@ export default function ShopPage() {
           />
         </div>
       </div>
+
+      <DailyOfferCardModal
+        offer={
+          dailyPromo?.suit && dailyPromo?.rank
+            ? {
+                cardTitle: dailyPromo.cardTitle,
+                themeLabel: dailyPromo.themeLabel,
+                suit: dailyPromo.suit,
+                rank: dailyPromo.rank,
+                theme: dailyPromo.theme,
+                themeId: dailyPromo.themeId,
+                promoImageUrl: dailyPromo.promoImageUrl,
+                discountedCoins: dailyPromo.discountedCoins,
+                priceCoins: dailyPromo.priceCoins,
+                canClaim: canClaimPromo,
+                promoCooldownLabel,
+              }
+            : null
+        }
+        onClose={() => setShowDailyOfferModal(false)}
+        onBuy={() => {
+          setShowDailyOfferModal(false);
+          void handleClaimPromo();
+        }}
+      />
 
       <PremiumPurchaseModal
         open={showPremiumModal}

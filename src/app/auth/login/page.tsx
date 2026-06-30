@@ -8,6 +8,8 @@ import { isVKMiniApp, loginWithVKMiniApp } from '@/lib/auth/vk-bridge';
 import { buildVkOAuthUrl, detectMiniAppContext } from '@/lib/auth/social-auth';
 import Link from 'next/link';
 import { getApiHeaders } from '@/lib/api-headers';
+import { hasAuthTokenCookie } from '@/lib/auth/session-client';
+import ReferralWelcomeBanner from '@/components/ReferralWelcomeBanner';
 
 export default function LoginPage() {
   const [credentials, setCredentials] = useState({ 
@@ -27,6 +29,7 @@ export default function LoginPage() {
   useEffect(() => {
     // Проверяем сессию через API (без клиентского хранилища)
     const checkSession = async () => {
+      if (!hasAuthTokenCookie()) return;
       try {
         const response = await fetch('/api/auth', {
           method: 'GET',
@@ -274,6 +277,8 @@ export default function LoginPage() {
               Войдите в свой аккаунт
             </p>
           </motion.div>
+
+          <ReferralWelcomeBanner />
 
           {/* Error */}
           {error && (

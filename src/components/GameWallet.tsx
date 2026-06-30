@@ -1405,91 +1405,50 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
               </motion.button>
             </div>
 
-            {/* Быстрые действия */}
+            {/* Быстрые действия — реферальная реклама */}
             <div className="quick-actions">
               <h3 className="section-title">Быстрые действия</h3>
-              
-              <div className="quick-action-item" style={{
-                flexDirection: 'column',
-                alignItems: 'stretch',
-                gap: '12px',
-                padding: '20px',
-                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(16, 185, 129, 0.15) 100%)',
-                border: '2px solid rgba(59, 130, 246, 0.4)',
-                borderRadius: '16px',
-                backdropFilter: 'blur(10px)'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                  <FaTrophy className="quick-icon" style={{ fontSize: '24px', color: '#ffd700' }} />
-                  <div style={{ flex: 1 }}>
-                    <span className="quick-title" style={{ fontSize: '18px', fontWeight: '700', color: '#3b82f6' }}>
-                      Реферальная ссылка
-                    </span>
-                    <div className="quick-desc" style={{ fontSize: '14px', color: '#94a3b8', marginTop: '4px' }}>
-                      +500 монет за активного друга
-                    </div>
-                  </div>
+
+              <motion.div
+                className="referral-promo-card"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                whileHover={shouldOptimizeAnimations ? undefined : { scale: 1.01 }}
+              >
+                <div className="referral-promo-shimmer" aria-hidden />
+                <div className="referral-promo-header">
+                  <span className="referral-promo-tag">🔥 АКЦИЯ</span>
+                  <FaTrophy className="referral-promo-trophy" />
                 </div>
-                {/* ✅ УЛУЧШЕННЫЙ контейнер с реферальной ссылкой */}
-                <div style={{ 
-                  marginTop: '8px', 
-                  padding: '14px 16px', 
-                  background: 'rgba(15, 23, 42, 0.8)', 
-                  borderRadius: '12px',
-                  border: '1px solid rgba(59, 130, 246, 0.3)',
-                  fontFamily: 'monospace',
-                  fontSize: '13px',
-                  color: '#3b82f6',
-                  wordBreak: 'break-all',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  position: 'relative'
-                }}>
-                  <span style={{ 
-                    flex: 1,
-                    lineHeight: '1.5',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis'
-                  }}>
-                    {referralInviteUrl}
-                  </span>
-                  <button
+                <h4 className="referral-promo-title">Пригласи друга — получи монеты!</h4>
+                <div className="referral-promo-reward">
+                  <span className="referral-promo-coin">💰</span>
+                  <span className="referral-promo-amount">+500</span>
+                  <span className="referral-promo-reward-text">за каждого активного друга</span>
+                </div>
+                <p className="referral-promo-desc">
+                  Отправь ссылку другу — он регистрируется любым способом, бонус начислится автоматически
+                </p>
+                <div className="referral-promo-link-box">
+                  <span className="referral-promo-link">{referralInviteUrl}</span>
+                  <motion.button
+                    type="button"
+                    className="referral-promo-copy"
+                    whileTap={shouldOptimizeAnimations ? undefined : { scale: 0.96 }}
                     onClick={async () => {
                       try {
                         await navigator.clipboard.writeText(referralInviteUrl);
-                        alert('✅ Реферальная ссылка скопирована!\n\nПоделитесь ей с друзьями и получите +500 монет за каждого активного друга!');
-                      } catch (error) {
-                        alert(`Реферальная ссылка:\n\n${referralInviteUrl}\n\nСкопируйте её вручную`);
+                        alert('✅ Ссылка скопирована!\n\nПоделитесь с друзьями — +500 монет за каждого активного игрока!');
+                      } catch {
+                        alert(`Реферальная ссылка:\n\n${referralInviteUrl}`);
                       }
                     }}
                     disabled={loading}
-                    style={{
-                      padding: '8px 12px',
-                      background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                      border: '1px solid #ffd700',
-                      borderRadius: '8px',
-                      color: 'white',
-                      fontSize: '12px',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                      transition: 'all 0.3s',
-                      flexShrink: 0,
-                      whiteSpace: 'nowrap'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'scale(1.05)';
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.4)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'scale(1)';
-                      e.currentTarget.style.boxShadow = 'none';
-                    }}
                   >
                     📋 Копировать
-                  </button>
+                  </motion.button>
                 </div>
-              </div>
+              </motion.div>
             </div>
           </motion.div>
         )}
@@ -2690,6 +2649,155 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
           border-radius: 16px;
           padding: 20px;
           backdrop-filter: blur(10px);
+        }
+
+        .referral-promo-card {
+          position: relative;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          padding: 22px 18px;
+          border-radius: 18px;
+          border: 2px solid #fbbf24;
+          background: linear-gradient(135deg, #1d4ed8 0%, #7c3aed 50%, #db2777 100%);
+          box-shadow:
+            0 0 36px rgba(251, 191, 36, 0.28),
+            0 10px 28px rgba(0, 0, 0, 0.35);
+        }
+
+        .referral-promo-shimmer {
+          position: absolute;
+          inset: -50%;
+          background: conic-gradient(from 0deg, transparent, rgba(255, 255, 255, 0.12), transparent 30%);
+          animation: referralShimmer 4s linear infinite;
+          pointer-events: none;
+        }
+
+        .referral-promo-header {
+          position: relative;
+          z-index: 1;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+
+        .referral-promo-tag {
+          padding: 5px 12px;
+          border-radius: 999px;
+          background: linear-gradient(90deg, #fde047, #f59e0b);
+          color: #1e1b4b;
+          font-size: 11px;
+          font-weight: 900;
+          letter-spacing: 0.06em;
+        }
+
+        .referral-promo-trophy {
+          font-size: 28px;
+          color: #fde047;
+          filter: drop-shadow(0 0 10px rgba(253, 224, 71, 0.65));
+          animation: referralTrophyPulse 2s ease-in-out infinite;
+        }
+
+        .referral-promo-title {
+          position: relative;
+          z-index: 1;
+          margin: 0;
+          color: #fff;
+          font-size: 1.25rem;
+          font-weight: 900;
+          text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+        }
+
+        .referral-promo-reward {
+          position: relative;
+          z-index: 1;
+          display: flex;
+          align-items: baseline;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+
+        .referral-promo-coin {
+          font-size: 1.5rem;
+          animation: referralCoinBounce 1.5s ease-in-out infinite;
+        }
+
+        .referral-promo-amount {
+          color: #fde047;
+          font-size: 2rem;
+          font-weight: 900;
+          line-height: 1;
+          text-shadow: 0 0 20px rgba(253, 224, 71, 0.7);
+        }
+
+        .referral-promo-reward-text {
+          color: rgba(255, 255, 255, 0.92);
+          font-size: 0.9rem;
+          font-weight: 600;
+        }
+
+        .referral-promo-desc {
+          position: relative;
+          z-index: 1;
+          margin: 0;
+          color: rgba(255, 255, 255, 0.88);
+          font-size: 0.85rem;
+          line-height: 1.45;
+        }
+
+        .referral-promo-link-box {
+          position: relative;
+          z-index: 1;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 12px 14px;
+          border-radius: 12px;
+          background: rgba(15, 23, 42, 0.72);
+          border: 1px solid rgba(251, 191, 36, 0.45);
+        }
+
+        .referral-promo-link {
+          flex: 1;
+          font-family: monospace;
+          font-size: 12px;
+          color: #93c5fd;
+          word-break: break-all;
+          line-height: 1.4;
+        }
+
+        .referral-promo-copy {
+          flex-shrink: 0;
+          padding: 10px 14px;
+          border: 2px solid #fde047;
+          border-radius: 10px;
+          background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+          color: #fff;
+          font-size: 12px;
+          font-weight: 800;
+          cursor: pointer;
+          white-space: nowrap;
+          box-shadow: 0 4px 16px rgba(37, 99, 235, 0.45);
+        }
+
+        .referral-promo-copy:disabled {
+          opacity: 0.55;
+          cursor: not-allowed;
+        }
+
+        @keyframes referralShimmer {
+          to { transform: rotate(360deg); }
+        }
+
+        @keyframes referralTrophyPulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.12); }
+        }
+
+        @keyframes referralCoinBounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-5px); }
         }
 
         .section-title {

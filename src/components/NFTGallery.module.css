@@ -62,6 +62,20 @@
   display: block;
 }
 
+.cardFrameLarge {
+  width: min(280px, 88%);
+  aspect-ratio: 300 / 420;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.cardFrameLarge img,
+.cardFrameLarge > div {
+  width: 100% !important;
+  height: 100% !important;
+}
+
 .cardTitle {
   text-align: center;
   margin-bottom: 18px;
