@@ -100,14 +100,35 @@ export async function GET(
     });
 
     const missingHostFlag = playersWithHost.find((player: any) => player.is_host && !player.is_bot);
-    if (missingHostFlag && !players?.find((player: any) => player.user_id === missingHostFlag.db_user_id && player.is_host)) {
-      supabase
-        .from('_pidr_room_players')
-        .update({ is_host: true })
-        .eq('room_id', roomId)
-        .eq('user_id', missingHostFlag.db_user_id)
-        .then(() => console.log(`✅ [GET /api/rooms/players] is_host исправлен для ${missingHostFlag.db_user_id}`))
-        .catch((err: unknown) => console.error(`❌ [GET /api/rooms/players] Ошибка исправления is_host:`, err));
+    if (missingHostFlag?.db_user_id != null) {
+      const hostRow = (players || []).find((player: any) => {
+        const rawId = player.user_id;
+        const numericId =
+          typeof rawId === 'number' ? rawId : parseInt(String(rawId), 10);
+        return (
+          String(rawId) === String(missingHostFlag.db_user_id) ||
+          (Number.isFinite(numericId) && numericId === missingHostFlag.db_user_id)
+        );
+      });
+
+      if (hostRow && hostRow.is_host !== true) {
+        const updateKey = hostRow.user_id;
+        void supabase
+          .from('_pidr_room_players')
+          .update({ is_host: true })
+          .eq('room_id', roomId)
+          .eq('user_id', updateKey)
+          .select('id')
+          .then((result: { data: { id: number }[] | null; error: unknown }) => {
+            if (result.error) {
+              console.error(`❌ [GET /api/rooms/players] Ошибка исправления is_host:`, result.error);
+              return;
+            }
+            if (result.data?.length) {
+              console.log(`✅ [GET /api/rooms/players] is_host исправлен для ${missingHostFlag.db_user_id}`);
+            }
+          });
+      }
     }
 
     console.log(`✅ [GET /api/rooms/players] Найдено игроков: ${players?.length || 0}, max: ${room.max_players}`);
