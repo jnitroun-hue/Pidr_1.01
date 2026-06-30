@@ -37,6 +37,8 @@ import {
   openExternalWalletForDeposit,
   sendGramViaTonConnect,
 } from '@/lib/wallets/telegram-wallet-deposit';
+import { openWalletPayLink, isInsideTelegramMiniApp } from '@/lib/wallets/open-wallet-pay';
+import { gameCoinsForDeposit } from '@/lib/wallets/wallet-pay-currencies';
 import CryptoIcon from './CryptoIcon';
 
 const walletTypeLabel = (type: string) => {
@@ -141,6 +143,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
   masterAddressesRef.current = masterAddresses;
   const [isGeneratingAddress, setIsGeneratingAddress] = useState(false);
   const [depositAddressError, setDepositAddressError] = useState('');
+  const [walletPayEnabled, setWalletPayEnabled] = useState(false);
   const [isMonitoringPayments, setIsMonitoringPayments] = useState(false);
   const [bonusAvailable, setBonusAvailable] = useState(true); // Состояние доступности бонуса
   const [dailyBonusModal, setDailyBonusModal] = useState<{
@@ -316,6 +319,16 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
 
     return () => clearInterval(interval);
   }, [ownerForWalletApis]);
+
+  useEffect(() => {
+    if (!isInsideTelegramMiniApp()) return;
+    fetch('/api/wallet/pay/create-order', { method: 'GET', cache: 'no-store' })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success && d.configured) setWalletPayEnabled(true);
+      })
+      .catch(() => {});
+  }, []);
 
   // Загрузка мастер адресов пользователя
   const loadMasterAddresses = async () => {
@@ -659,7 +672,52 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
     }
   };
 
-  const handleTelegramWalletDeposit = async () => {
+  const handleWalletPayDeposit = async () => {
+    const amount = parseFloat(depositAmount);
+    if (!amount || amount <= 0) {
+      alert('Введите корректную сумму для пополнения');
+      return;
+    }
+
+    const coin = selectedCrypto.toUpperCase();
+    const gameCoins = gameCoinsForDeposit(coin, amount);
+
+    try {
+      setLoading(true);
+      const headers = (await import('@/lib/api-headers')).getApiHeaders();
+      const response = await fetch('/api/wallet/pay/create-order', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', ...headers },
+        body: JSON.stringify({ coin, amount }),
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        if (data.fallback) {
+          await handleTelegramWalletDepositLegacy();
+          return;
+        }
+        throw new Error(data.error || 'Не удалось создать платёж');
+      }
+
+      openWalletPayLink(data.payLink);
+      setActiveModal(null);
+      setDepositAmount('');
+      alert(
+        `👛 Подтвердите оплату в Telegram Wallet.\n\nЗачисление: ${gameCoins.toLocaleString('ru-RU')} монет после оплаты.`
+      );
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      if (!/reject|cancel|declin/i.test(msg)) {
+        alert(`Ошибка: ${msg}`);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTelegramWalletDepositLegacy = async () => {
     const amount = parseFloat(depositAmount);
     if (!amount || amount <= 0) {
       alert('Введите корректную сумму для пополнения');
@@ -715,6 +773,14 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleTelegramWalletDeposit = async () => {
+    if (walletPayEnabled && isInsideTelegramMiniApp()) {
+      await handleWalletPayDeposit();
+      return;
+    }
+    await handleTelegramWalletDepositLegacy();
   };
 
   // ✅ Пополнение через подключенный кошелёк (TonConnect/Phantom/MetaMask)
@@ -1976,21 +2042,38 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
                         </div>
                       </div>
 
-                      {/* Telegram Wallet — Gram, SOL, ETH, USDT, TRX */}
-                      {(isTelegramWebApp() || selectedCrypto === 'TON') && (
+                      {/* Telegram Wallet Pay — как Jetton: одно подтверждение */}
+                      {(walletPayEnabled && isInsideTelegramMiniApp()) || isTelegramWebApp() || selectedCrypto === 'TON' ? (
                         <button
                           type="button"
                           onClick={() => void handleTelegramWalletDeposit()}
-                          disabled={loading || !depositAmount || parseFloat(depositAmount) <= 0 || !selectedDepositAddress}
+                          disabled={loading || !depositAmount || parseFloat(depositAmount) <= 0 || (!walletPayEnabled && !selectedDepositAddress)}
                           style={{
-                            width: '100%', padding: '13px', borderRadius: '12px', marginBottom: '10px',
-                            border: '1.5px solid rgba(38,165,228,0.45)',
-                            background: 'linear-gradient(135deg, rgba(38,165,228,0.22), rgba(255,215,0,0.08))',
-                            color: '#fff', fontSize: '14px', fontWeight: '700', cursor: loading ? 'wait' : 'pointer',
+                            width: '100%', padding: '14px', borderRadius: '12px', marginBottom: '10px',
+                            border: '1.5px solid rgba(38,165,228,0.55)',
+                            background: 'linear-gradient(135deg, rgba(38,165,228,0.35), rgba(0,152,234,0.15))',
+                            color: '#fff', fontSize: '15px', fontWeight: '800', cursor: loading ? 'wait' : 'pointer',
+                            boxShadow: '0 4px 20px rgba(38,165,228,0.25)',
                           }}
                         >
-                          📱 Пополнить через Telegram Wallet ({selectedCryptoLabel})
+                          {walletPayEnabled && isInsideTelegramMiniApp()
+                            ? `👛 Pay via Wallet · ${selectedCryptoLabel}`
+                            : `📱 Пополнить через Telegram Wallet (${selectedCryptoLabel})`}
                         </button>
+                      ) : null}
+                      {walletPayEnabled && isInsideTelegramMiniApp() && depositAmount && parseFloat(depositAmount) > 0 && (
+                        <div style={{
+                          marginBottom: '12px', padding: '10px 12px', borderRadius: '10px',
+                          background: 'rgba(38,165,228,0.08)', border: '1px solid rgba(38,165,228,0.2)',
+                          fontSize: '12px', color: '#7dd3fc', textAlign: 'center',
+                        }}>
+                          Зачисление: <strong style={{ color: '#ffd700' }}>
+                            {gameCoinsForDeposit(selectedCrypto, parseFloat(depositAmount)).toLocaleString('ru-RU')} монет
+                          </strong>
+                          <div style={{ fontSize: '10px', color: '#64748b', marginTop: '4px' }}>
+                            Оплата любой монетой из Telegram Wallet (USDT, ETH, BTC, GRAM, TRX, SOL)
+                          </div>
+                        </div>
                       )}
 
                       {/* Кнопка пополнения через подключённый кошелёк */}

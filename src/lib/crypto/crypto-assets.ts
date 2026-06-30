@@ -139,8 +139,8 @@ export const WALLET_APPS: Record<string, WalletAppMeta> = {
   },
 };
 
-/** Порядок для депозита в GameWallet */
-export const DEPOSIT_CRYPTO_ORDER = ['TON', 'ETH', 'SOL', 'USDT', 'TRX'] as const;
+/** Порядок как в Telegram Wallet → «Популярные» */
+export const DEPOSIT_CRYPTO_ORDER = ['USDT', 'ETH', 'BTC', 'TON', 'TRX', 'SOL'] as const;
 
 export function depositCryptoOptions() {
   return DEPOSIT_CRYPTO_ORDER.map((apiKey) => {
@@ -154,14 +154,16 @@ export function depositCryptoOptions() {
         apiKey === 'TON'
           ? GRAM.networkLabel
           : apiKey === 'ETH'
-            ? 'Ethereum (ERC-20)'
+            ? 'Ethereum'
             : apiKey === 'SOL'
               ? 'Solana (SPL)'
-              : apiKey === 'USDT'
-                ? 'Tron (TRC-20)'
-                : apiKey === 'TRX'
-                  ? 'Tron (TRC-20)'
-                  : 'Ethereum',
+              : apiKey === 'BTC'
+                ? 'Bitcoin'
+                : apiKey === 'USDT'
+                  ? 'Tron (TRC-20) / ERC-20'
+                  : apiKey === 'TRX'
+                    ? 'Tron (TRC-20)'
+                    : 'Ethereum',
       eta:
         apiKey === 'TON'
           ? '~5 сек'
