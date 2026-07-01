@@ -19,6 +19,7 @@ import {
   atomicJoinRoom,
   atomicLeaveRoom,
   canPlayerJoinRoom,
+  evictStalePlayerRoomMembership,
   getPlayerRoom,
   removePlayerFromAllRooms,
   getRoomDetails,
@@ -27,6 +28,7 @@ import {
 import { lightCleanup, cleanupOfflinePlayers } from '../../../lib/auto-cleanup';
 import { clampRoomSize, normalizeMatchType } from '../../../lib/multiplayer/room-rules';
 import { getRedisUserId } from '../../../lib/multiplayer/public-user-id';
+import { isRoomHostUser } from '../../../lib/multiplayer/room-host';
 import { getUserIdFromDatabase } from '../../../lib/auth-utils';
 
 export const runtime = 'nodejs';
@@ -339,6 +341,43 @@ export async function POST(req: NextRequest) {
       const userUUID = userData.id;
       const redisUserId = getRedisUserId(userData);
       console.log(`👤 Пользователь найден: UUID=${userUUID}, redisUserId=${redisUserId}`);
+
+      await evictStalePlayerRoomMembership(redisUserId);
+
+      const { data: dbMembership } = await supabase
+        .from('_pidr_room_players')
+        .select('room_id')
+        .eq('user_id', userUUID)
+        .maybeSingle();
+
+      if (dbMembership?.room_id) {
+        const stuckRoomId = String(dbMembership.room_id);
+        const { data: stuckRoom } = await supabase
+          .from('_pidr_rooms')
+          .select('id, name, room_code, host_id')
+          .eq('id', dbMembership.room_id)
+          .maybeSingle();
+
+        if (forceReplace) {
+          await atomicLeaveRoom({ userId: redisUserId, roomId: stuckRoomId });
+          if (stuckRoom && String(stuckRoom.host_id) === String(userUUID)) {
+            await supabase
+              .from('_pidr_rooms')
+              .update({ status: 'finished' })
+              .eq('id', stuckRoom.id);
+          }
+        } else {
+          return NextResponse.json(
+            {
+              success: false,
+              message: `Вы уже находитесь в комнате "${stuckRoom?.name || 'Неизвестная'}" (${stuckRoom?.room_code || '?'}). Покиньте её сначала.`,
+              currentRoomId: stuckRoomId,
+              currentRoom: stuckRoom,
+            },
+            { status: 400 }
+          );
+        }
+      }
       
       // 2. ПРОВЕРЯЕМ МОЖЕТ ЛИ ИГРОК СОЗДАТЬ КОМНАТУ
       const currentRoomId = await getPlayerRoom(redisUserId);
@@ -545,6 +584,8 @@ export async function POST(req: NextRequest) {
       const userUUID2 = userData2.id;
       const redisUserId2 = getRedisUserId(userData2);
       console.log(`👤 Пользователь найден: UUID=${userUUID2}, redisUserId=${redisUserId2}`);
+
+      await evictStalePlayerRoomMembership(redisUserId2);
       
       // 4. ПРОВЕРЯЕМ МОЖЕТ ЛИ ИГРОК ПРИСОЕДИНИТЬСЯ
       const canJoin = await canPlayerJoinRoom(redisUserId2, String(room.id));
@@ -564,8 +605,11 @@ export async function POST(req: NextRequest) {
         }, { status: 400 });
       }
       
-      // 5. ОПРЕДЕЛЯЕМ ЯВЛЯЕТСЯ ЛИ ИГРОК ХОСТОМ (СРАВНИВАЕМ UUID С UUID!)
-      const isHost = room.host_id === userUUID2; // ✅ Сравниваем UUID с UUID!
+      // 5. ОПРЕДЕЛЯЕМ ЯВЛЯЕТСЯ ЛИ ИГРОК ХОСТОМ
+      const isHost = await isRoomHostUser(supabase, room.id, {
+        dbUserId: userUUID2,
+        telegramId: userData2.telegram_id,
+      });
       
       // 6. АТОМАРНО ПРИСОЕДИНЯЕМСЯ К КОМНАТЕ
       // ✅ Используем telegram_id для Redis
@@ -597,6 +641,20 @@ export async function POST(req: NextRequest) {
           position: joinResult.position,
           isHost
         }
+      });
+    }
+    
+    // ============================================================
+    // ACTION: EVICT-STALE — сброс зависшего membership (2+ мин offline)
+    // ============================================================
+    if (action === 'evict-stale') {
+      const { dbUserId, user: evictUser } = await getUserIdFromDatabase(userId, environment);
+      const redisEvictId = evictUser ? getRedisUserId(evictUser) : userId;
+      const evictedFrom = await evictStalePlayerRoomMembership(redisEvictId);
+      return NextResponse.json({
+        success: true,
+        evicted: Boolean(evictedFrom),
+        evictedFromRoomId: evictedFrom,
       });
     }
     

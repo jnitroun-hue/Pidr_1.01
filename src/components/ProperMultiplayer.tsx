@@ -73,6 +73,7 @@ export const ProperMultiplayer: React.FC = () => {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [currentRoom, setCurrentRoom] = useState<RoomData | null>(null);
   const [currentRoomId, setCurrentRoomId] = useState<string | null>(null); // Для отслеживания текущей комнаты
+  const [blockedRoomId, setBlockedRoomId] = useState<string | null>(null); // Зависшая комната из API
   const [playerPosition, setPlayerPosition] = useState<number | null>(null); // Позиция игрока
   
   // ✅ ПРОВЕРКА ДОСТУПА К МУЛЬТИПЛЕЕРУ
@@ -98,6 +99,17 @@ export const ProperMultiplayer: React.FC = () => {
   useEffect(() => {
     fetchUser();
   }, []);
+
+  // Сброс зависшего membership при открытии лобби (2+ мин offline)
+  useEffect(() => {
+    if (!user?.id) return;
+    void fetch('/api/rooms', {
+      method: 'POST',
+      credentials: 'include',
+      headers: mergeApiHeaders(),
+      body: JSON.stringify({ action: 'evict-stale' }),
+    }).catch(() => {});
+  }, [user?.id]);
 
   // ✅ ОБРАБОТКА ПРИГЛАШЕНИЯ В КОМНАТУ ИЗ URL
   useEffect(() => {
@@ -413,7 +425,6 @@ export const ProperMultiplayer: React.FC = () => {
       } else {
         const errorData = await response.json();
         
-        // ✅ ПРОВЕРЯЕМ ЕСТЬ ЛИ АКТИВНАЯ КОМНАТА
         if (errorData.message && errorData.message.includes('уже есть активная комната') && errorData.currentRoom) {
           // Сохраняем данные для создания новой комнаты
           setPendingRoomData({
@@ -432,6 +443,10 @@ export const ProperMultiplayer: React.FC = () => {
           setShowReplaceModal(true);
           setLoading(false);
           return;
+        }
+
+        if (errorData.currentRoomId) {
+          setBlockedRoomId(String(errorData.currentRoomId));
         }
         
         throw new Error(errorData.message || t.multiplayer.errCreateFallback);
@@ -653,15 +668,23 @@ export const ProperMultiplayer: React.FC = () => {
         setView('waiting');
       } else {
         const errorData = await response.json();
+        if (errorData.currentRoomId) {
+          setBlockedRoomId(String(errorData.currentRoomId));
+        }
         throw new Error(errorData.message || t.multiplayer.errJoinFallback);
       }
     } catch (error: any) {
       console.error('❌ Ошибка присоединения к комнате:', error);
       
-      // Специальная обработка ошибок
-      if (error.message && error.message.includes('уже находитесь в другой комнате')) {
-        setError(`${error.message} ${t.multiplayer.inOtherRoomTail}`);
-      } else if (error.message && error.message.includes('нет свободных мест')) {
+      const msg = error.message || '';
+      if (
+        msg.includes('уже находитесь') ||
+        msg.includes('Покиньте') ||
+        msg.includes('активная комната') ||
+        msg.includes('уже есть активная')
+      ) {
+        setError(`${msg} ${t.multiplayer.inOtherRoomTail}`);
+      } else if (msg.includes('нет свободных мест')) {
         setError(t.multiplayer.errRoomFullMsg);
       } else {
         setError(error.message || t.multiplayer.errJoinFallback);
@@ -710,7 +733,8 @@ export const ProperMultiplayer: React.FC = () => {
   
   // Функция для быстрого выхода из текущей комнаты
   const handleForceLeave = async () => {
-    if (!currentRoomId) return;
+    const roomToLeave = blockedRoomId || currentRoomId;
+    if (!roomToLeave) return;
     
     setLoading(true);
     try {
@@ -720,10 +744,11 @@ export const ProperMultiplayer: React.FC = () => {
         credentials: 'include',
         body: JSON.stringify({
           action: 'leave',
-          roomId: currentRoomId
+          roomId: roomToLeave
         })
       });
       
+      setBlockedRoomId(null);
       setCurrentRoomId(null);
       setPlayerPosition(null);
       setError('');
@@ -824,7 +849,11 @@ export const ProperMultiplayer: React.FC = () => {
       {error && (
         <div className={styles.error}>
           ❌ {error}
-          {error.includes('уже находитесь в другой комнате') && currentRoomId && (
+          {(blockedRoomId || currentRoomId) &&
+            (error.includes('уже находитесь') ||
+              error.includes('Покиньте') ||
+              error.includes('активная комната') ||
+              error.includes('уже есть активная')) && (
             <button 
               className={`${styles.button} ${styles.secondary}`}
               onClick={handleForceLeave}

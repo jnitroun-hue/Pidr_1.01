@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     const { data: offlineUsers, error: offlineError } = await supabase
       .from('_pidr_users')
       .select('id, telegram_id')
-      .lt('last_seen', new Date(Date.now() - 5 * 60 * 1000).toISOString())
+      .lt('last_seen', new Date(Date.now() - 2 * 60 * 1000).toISOString())
       .neq('status', 'online');
 
     const realOffline = (offlineUsers || []).filter((u: { telegram_id?: number | string | null }) => {

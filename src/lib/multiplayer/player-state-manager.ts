@@ -18,7 +18,11 @@
 import { getRedis, isRedisAvailable } from '../redis/init';
 import { supabaseAdmin as supabase } from '../supabase';
 import { getRedisUserId } from './public-user-id';
+import { idsEqual, isRoomHostUser } from './room-host';
 import type { Redis } from '@upstash/redis';
+
+/** Нет активности в комнате → автоматически выходим из membership */
+export const STALE_ROOM_MEMBERSHIP_MS = 2 * 60 * 1000;
 
 // Получаем Redis клиент через универсальную инициализацию
 const redis: Redis | null = getRedis();
@@ -322,6 +326,101 @@ export async function setPlayerRoom(
 }
 
 /**
+ * Проверить, «зависло» ли членство в комнате (игра/лobby закончились, давно offline).
+ */
+async function isStaleRoomMembership(
+  userId: string,
+  roomId: string,
+  membership?: { last_activity?: string | null; is_online?: boolean | null } | null
+): Promise<boolean> {
+  const numericRoomId = parseInt(roomId, 10);
+  if (!Number.isFinite(numericRoomId)) return true;
+
+  const { data: room } = await supabase
+    .from('_pidr_rooms')
+    .select('status, last_activity')
+    .eq('id', numericRoomId)
+    .maybeSingle();
+
+  if (!room) return true;
+  if (room.status === 'finished') return true;
+
+  let row = membership;
+  if (!row) {
+    const databaseUserId = await resolveDatabaseUserId(userId);
+    const { data } = await supabase
+      .from('_pidr_room_players')
+      .select('last_activity, is_online')
+      .eq('room_id', numericRoomId)
+      .eq('user_id', databaseUserId)
+      .maybeSingle();
+    row = data;
+  }
+
+  if (!row) return true;
+
+  const lastMs = row.last_activity ? new Date(row.last_activity).getTime() : 0;
+  if (lastMs > 0 && Date.now() - lastMs > STALE_ROOM_MEMBERSHIP_MS) {
+    return true;
+  }
+
+  if (row.is_online === false && lastMs > 0 && Date.now() - lastMs > STALE_ROOM_MEMBERSHIP_MS / 2) {
+    return true;
+  }
+
+  // Комната playing, но реальных людей уже нет — только боты
+  if (room.status === 'playing') {
+    const { data: players } = await supabase
+      .from('_pidr_room_players')
+      .select('user_id, is_online, last_activity')
+      .eq('room_id', numericRoomId);
+
+    const databaseUserId = await resolveDatabaseUserId(userId);
+    const realHumans = (players || []).filter((p: { user_id: number | string }) => {
+      const uid = typeof p.user_id === 'number' ? p.user_id : parseInt(String(p.user_id), 10);
+      return Number.isFinite(uid) && uid > 0;
+    });
+
+    const otherActiveHumans = realHumans.filter((p: { user_id: number | string; is_online?: boolean; last_activity?: string }) => {
+      const uid = typeof p.user_id === 'number' ? p.user_id : parseInt(String(p.user_id), 10);
+      if (uid === databaseUserId) return false;
+      const act = p.last_activity ? new Date(p.last_activity).getTime() : 0;
+      return p.is_online !== false && Date.now() - act < STALE_ROOM_MEMBERSHIP_MS;
+    });
+
+    if (realHumans.length <= 1 && otherActiveHumans.length === 0) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/** Автовыход из зависшей комнаты */
+export async function evictStalePlayerRoomMembership(userId: string): Promise<string | null> {
+  const databaseUserId = await resolveDatabaseUserId(userId);
+  const { data: row } = await supabase
+    .from('_pidr_room_players')
+    .select('room_id, last_activity, is_online')
+    .eq('user_id', databaseUserId)
+    .maybeSingle();
+
+  if (!row?.room_id) {
+    await setPlayerRoom(userId, null);
+    return null;
+  }
+
+  const roomId = String(row.room_id);
+  if (!(await isStaleRoomMembership(userId, roomId, row))) {
+    return null;
+  }
+
+  console.log(`🧹 [evictStale] Автовыход ${userId} из комнаты ${roomId}`);
+  await atomicLeaveRoom({ userId, roomId });
+  return roomId;
+}
+
+/**
  * Проверить может ли игрок присоединиться к комнате
  */
 export async function canPlayerJoinRoom(
@@ -335,7 +434,7 @@ export async function canPlayerJoinRoom(
     const databaseUserId = await resolveDatabaseUserId(userId);
     const { data: dbRow } = await supabase
       .from('_pidr_room_players')
-      .select('room_id')
+      .select('room_id, last_activity, is_online')
       .eq('user_id', databaseUserId)
       .maybeSingle();
 
@@ -345,11 +444,16 @@ export async function canPlayerJoinRoom(
         if (redis) await redis.set(KEYS.userRoom(userId), dbRoom, { ex: 7200 });
         return { canJoin: true };
       }
-      return {
-        canJoin: false,
-        reason: 'Вы уже находитесь в другой комнате',
-        currentRoomId: dbRoom,
-      };
+
+      if (await isStaleRoomMembership(userId, dbRoom, dbRow)) {
+        await atomicLeaveRoom({ userId, roomId: dbRoom });
+      } else {
+        return {
+          canJoin: false,
+          reason: 'Вы уже находитесь в другой комнате',
+          currentRoomId: dbRoom,
+        };
+      }
     }
   } catch (err) {
     console.warn('⚠️ [canPlayerJoinRoom] DB check error:', err);
@@ -362,8 +466,11 @@ export async function canPlayerJoinRoom(
     if (normCurrent === normTarget) {
       return { canJoin: true };
     }
-    // Зависший Redis без записи в БД — очищаем
-    await setPlayerRoom(userId, null);
+    if (await isStaleRoomMembership(userId, normCurrent)) {
+      await atomicLeaveRoom({ userId, roomId: normCurrent });
+    } else {
+      await setPlayerRoom(userId, null);
+    }
   }
 
   return { canJoin: true };
@@ -759,6 +866,85 @@ export async function atomicJoinRoom(params: {
     }
     
     try {
+      const databaseUserId = await resolveDatabaseUserId(userId);
+      const numericRoomId = parseInt(roomId, 10);
+
+      // 4a. Повторный вход в ту же комнату (refresh / back) — не занимаем новый слот
+      const { data: existingRow } = await supabase
+        .from('_pidr_room_players')
+        .select('position, is_host')
+        .eq('room_id', numericRoomId)
+        .eq('user_id', databaseUserId)
+        .maybeSingle();
+
+      if (existingRow) {
+        const resolvedIsHost =
+          isHost ||
+          (await isRoomHostUser(supabase, roomId, {
+            dbUserId: databaseUserId,
+            telegramId: userId,
+          }));
+
+        let position = resolvedIsHost ? 1 : (existingRow.position ?? 1);
+        const now = new Date().toISOString();
+
+        if (resolvedIsHost && position !== 1) {
+          const { data: occupant } = await supabase
+            .from('_pidr_room_players')
+            .select('user_id, position')
+            .eq('room_id', numericRoomId)
+            .eq('position', 1)
+            .maybeSingle();
+
+          const occUid =
+            occupant?.user_id != null ? parseInt(String(occupant.user_id), 10) : null;
+          const isSelfOnP1 = occUid === databaseUserId;
+
+          if (!isSelfOnP1 && occupant) {
+            await supabase
+              .from('_pidr_room_players')
+              .update({ position: existingRow.position ?? 2 })
+              .eq('room_id', numericRoomId)
+              .eq('user_id', occupant.user_id);
+          }
+          position = 1;
+        }
+
+        await supabase
+          .from('_pidr_room_players')
+          .update({
+            position,
+            is_host: resolvedIsHost,
+            is_online: true,
+            last_activity: now,
+            username,
+            ...(resolvedIsHost ? { is_ready: true } : {}),
+          })
+          .eq('room_id', numericRoomId)
+          .eq('user_id', databaseUserId);
+
+        await addPlayerToRoom(roomId, userId);
+        await occupyPosition(roomId, userId, position);
+        await setPlayerRoom(userId, roomId);
+
+        const playerState: PlayerState = {
+          userId,
+          username,
+          currentRoomId: roomId,
+          status: 'in_room',
+          position,
+          isHost: resolvedIsHost,
+          lastActivity: Date.now(),
+          sessionId: `${userId}-${Date.now()}`,
+        };
+        await setPlayerState(userId, playerState);
+        await updateRoomPlayerCount(roomId);
+        await syncRoomRedisFromDatabase(roomId);
+
+        console.log(`♻️ [ATOMIC JOIN] Rejoin ${userId} → комната ${roomId}, позиция ${position}, host=${resolvedIsHost}`);
+        return { success: true, position };
+      }
+
       // 4. ПРОВЕРЯЕМ ЕСТЬ ЛИ МЕСТО В КОМНАТЕ
       const hasSpace = await hasRoomSpace(roomId, maxPlayers);
       if (!hasSpace) {
