@@ -29,6 +29,8 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const listingId = Number(body.listing_id);
+    const paymentMethod = String(body.payment_method || body.paymentMethod || '').trim();
+
     if (!listingId || Number.isNaN(listingId)) {
       return NextResponse.json({ success: false, error: 'listing_id обязателен' }, { status: 400 });
     }
@@ -55,7 +57,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Нельзя купить свой лот' }, { status: 400 });
     }
 
-    const pm = listing.fiat_payment_method || 'bank_card';
+    const allowedMethods = ['bank_card', 'sberbank', 'yoo_money', 'sbp'] as const;
+    const pmFromBody = allowedMethods.includes(paymentMethod as (typeof allowedMethods)[number])
+      ? (paymentMethod as (typeof allowedMethods)[number])
+      : null;
+    const pm = pmFromBody || listing.fiat_payment_method || 'bank_card';
+
+    if (!allowedMethods.includes(pm as (typeof allowedMethods)[number])) {
+      return NextResponse.json({ success: false, error: 'Недопустимый способ оплаты' }, { status: 400 });
+    }
     const amountStr = Number(listing.price_rub).toFixed(2);
 
     const returnUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/payment/success?payment_id={PAYMENT_ID}`;
@@ -79,7 +89,7 @@ export async function POST(request: NextRequest) {
         buyerDbUserId: String(dbUserId),
       },
       payment_method_data: {
-        type: pm as 'bank_card' | 'sberbank' | 'yoo_money' | 'sbp',
+        type: pm,
       },
     });
 
@@ -93,6 +103,7 @@ export async function POST(request: NextRequest) {
         id: payment.id,
         confirmationUrl: payment.confirmation.confirmation_url,
         amount: payment.amount.value,
+        paymentMethod: pm,
       },
     });
   } catch (e: unknown) {

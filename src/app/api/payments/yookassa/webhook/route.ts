@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getYooKassaPaymentStatus, captureYooKassaPayment } from '@/lib/payments/yookassa';
 import { supabaseAdmin } from '@/lib/supabase';
+import { fulfillNftListingPurchase } from '@/lib/marketplace/fulfill-listing';
 
 /**
  * POST /api/payments/yookassa/webhook
@@ -164,49 +165,14 @@ async function handlePaymentSucceeded(supabase: any, payment: any) {
       return;
     }
 
-    const { data: listing, error: le } = await supabase
-      .from('_pidr_nft_marketplace')
-      .select('id, status, seller_user_id, nft_card_id, price_rub')
-      .eq('id', listingId)
-      .single();
+    const result = await fulfillNftListingPurchase(supabase, {
+      listingId,
+      buyerDbUserId,
+      paidAmount: paidRub,
+    });
 
-    if (le || !listing || listing.status !== 'active') {
-      console.error('❌ nft_listing: лот не найден или неактивен', le);
-      return;
-    }
-
-    if (listing.seller_user_id === buyerDbUserId) {
-      console.error('❌ nft_listing: покупатель = продавец');
-      return;
-    }
-
-    const expected = Number(listing.price_rub);
-    if (!expected || Math.abs(expected - paidRub) > 0.05) {
-      console.error(`❌ nft_listing: сумма не совпадает (ожид. ${expected}, оплата ${paidRub})`);
-      return;
-    }
-
-    const { error: transferErr } = await supabase
-      .from('_pidr_nft_cards')
-      .update({ user_id: buyerDbUserId, updated_at: new Date().toISOString() })
-      .eq('id', listing.nft_card_id);
-
-    if (transferErr) {
-      console.error('❌ nft_listing: ошибка переноса NFT', transferErr);
-      return;
-    }
-
-    const { error: updErr } = await supabase
-      .from('_pidr_nft_marketplace')
-      .update({
-        status: 'sold',
-        buyer_user_id: buyerDbUserId,
-        sold_at: new Date().toISOString(),
-      })
-      .eq('id', listingId);
-
-    if (updErr) {
-      console.error('❌ nft_listing: ошибка обновления лота', updErr);
+    if (!result.ok) {
+      console.error('❌ nft_listing:', result.error);
       return;
     }
 

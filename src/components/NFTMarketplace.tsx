@@ -5,6 +5,8 @@ import { ShoppingCart, DollarSign, Package, TrendingUp, Filter, Search, X, Check
 import Image from 'next/image';
 import { BuyTab, SellTab, MyNFTsTab, SellModal } from './MarketplaceTabs';
 import { BuyPaymentModal } from '@/components/BuyPaymentModal';
+import { MarketplaceCheckoutModal, type CheckoutMethod } from '@/components/MarketplaceCheckoutModal';
+import { openWalletPayLink, isInsideTelegramMiniApp } from '@/lib/wallets/open-wallet-pay';
 import { useNftSellModal } from '@/hooks/useNftSellModal';
 import { getApiHeaders } from '@/lib/api-headers';
 import { appAlert, appConfirm } from '@/lib/app-notice';
@@ -72,6 +74,12 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
     listing: Listing;
     mode: 'crypto' | 'fiat_p2p';
   } | null>(null);
+  const [checkoutModal, setCheckoutModal] = useState<{
+    listing: Listing;
+    variant: 'rub' | 'crypto';
+  } | null>(null);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [walletPayEnabled, setWalletPayEnabled] = useState(false);
 
   const sellModal = useNftSellModal(() => {
     loadMarketplace();
@@ -199,7 +207,16 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
     }
   }, [activeTab, loadMarketplace, loadMySales, loadMyNFTs]);
 
-  // ✅ СЛУШАЕМ СОБЫТИЯ ОБНОВЛЕНИЯ МАГАЗИНА И КОЛЛЕКЦИИ
+  useEffect(() => {
+    fetch('/api/wallet/pay/create-order', { method: 'GET', cache: 'no-store' })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success && d.configured && isInsideTelegramMiniApp()) {
+          setWalletPayEnabled(true);
+        }
+      })
+      .catch(() => {});
+  }, []);
   useEffect(() => {
     const handleMarketplaceUpdate = () => {
       console.log('🔄 [NFTMarketplace] Обновляем магазин...');
@@ -403,32 +420,24 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
         setPaymentModal({ listing, mode: 'crypto' });
         return;
       }
-      const currency = listing.price_ton ? 'TON' : 'SOL';
-      const amount = listing.price_ton || listing.price_sol;
-      if (
-        !(await appConfirm(
-          `Купить за ${amount} ${gramDisplayFromApi(currency)}?\n\nОткроется кошелёк для оплаты.`,
-          { confirmText: 'Перейти к оплате' }
-        ))
-      ) {
-        return;
-      }
-      await executeCryptoPurchase(listing);
+      setCheckoutModal({ listing, variant: 'crypto' });
     } else if (listing.price_rub && Number(listing.price_rub) > 0) {
       if (isFiatP2P(listing)) {
         setPaymentModal({ listing, mode: 'fiat_p2p' });
         return;
       }
-      if (
-        !(await appConfirm(
-          `Купить за ${listing.price_rub} ₽ через ЮКассу?\n\nОткроется оплата картой или ЮMoney.`,
-          { confirmText: 'Оплатить' }
-        ))
-      ) {
-        return;
-      }
-      try {
-        const response = await fetch('/api/marketplace/create-rub-payment', {
+      setCheckoutModal({ listing, variant: 'rub' });
+    }
+  };
+
+  const handleCheckoutPay = async (method: CheckoutMethod) => {
+    if (!checkoutModal) return;
+    const { listing, variant } = checkoutModal;
+    setCheckoutLoading(true);
+
+    try {
+      if (method === 'wallet_pay') {
+        const response = await fetch('/api/marketplace/create-wallet-pay-order', {
           method: 'POST',
           credentials: 'include',
           headers: {
@@ -438,16 +447,51 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
           body: JSON.stringify({ listing_id: listing.id }),
         });
         const data = await response.json();
-        if (data.success && data.payment?.confirmationUrl) {
-          window.location.href = data.payment.confirmationUrl;
+        if (data.success && data.payLink) {
+          setCheckoutModal(null);
+          openWalletPayLink(data.payLink);
+          await appAlert(
+            'После оплаты в @wallet NFT появится в коллекции в течение минуты.',
+            { title: 'Подтвердите в Wallet', type: 'info' }
+          );
           loadMarketplace();
         } else {
-          await appAlert(data.error || 'Не удалось создать платёж', { title: 'Ошибка', type: 'error' });
+          await appAlert(data.error || 'Wallet Pay недоступен', { title: 'Ошибка', type: 'error' });
         }
-      } catch (e) {
-        console.error(e);
-        await appAlert('Ошибка при создании платежа', { title: 'Ошибка', type: 'error' });
+        return;
       }
+
+      if (method === 'crypto_wallet') {
+        setCheckoutModal(null);
+        await executeCryptoPurchase(listing);
+        return;
+      }
+
+      const response = await fetch('/api/marketplace/create-rub-payment', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getApiHeaders(),
+        },
+        body: JSON.stringify({
+          listing_id: listing.id,
+          payment_method: method,
+        }),
+      });
+      const data = await response.json();
+      if (data.success && data.payment?.confirmationUrl) {
+        setCheckoutModal(null);
+        window.location.href = data.payment.confirmationUrl;
+        loadMarketplace();
+      } else {
+        await appAlert(data.error || 'Не удалось создать платёж', { title: 'Ошибка', type: 'error' });
+      }
+    } catch (e) {
+      console.error(e);
+      await appAlert('Ошибка при создании платежа', { title: 'Ошибка', type: 'error' });
+    } finally {
+      setCheckoutLoading(false);
     }
   };
 
@@ -717,6 +761,19 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
           getSuitColor={getSuitColor}
           getSuitSymbol={getSuitSymbol}
           getRankDisplay={getRankDisplay}
+        />
+      )}
+
+      {checkoutModal && (
+        <MarketplaceCheckoutModal
+          listing={checkoutModal.listing}
+          variant={checkoutModal.variant}
+          walletPayEnabled={walletPayEnabled}
+          loading={checkoutLoading}
+          onClose={() => setCheckoutModal(null)}
+          onPay={(method) => void handleCheckoutPay(method)}
+          getRankDisplay={getRankDisplay}
+          getSuitSymbol={getSuitSymbol}
         />
       )}
 
