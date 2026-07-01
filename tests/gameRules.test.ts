@@ -47,6 +47,14 @@ describe('Stage 1 rules', () => {
     expect(targets).toEqual([1])
   })
 
+  it('findAvailableTargets (hand): jack can go on 10', () => {
+    const p1 = { id: 'p1', name: 'A', score: 0, cards: [card(img('jack_of_spades'))], penki: [], playerStage: 1, isCurrentPlayer: true }
+    const p2 = { id: 'p2', name: 'B', score: 0, cards: [card(img('10_of_diamonds'))], penki: [], playerStage: 1, isCurrentPlayer: false }
+    useGameStore.setState({ players: [p1, p2], currentPlayerId: 'p1' } as any)
+    const store = useGameStore.getState() as any
+    expect(store.findAvailableTargets('p1')).toEqual([1])
+  })
+
   it('findAvailableTargetsForDeckCard: 5 can go on 4, 2 only on Ace', () => {
     const p1 = { id: 'p1', name: 'A', score: 0, cards: [card(img('7_of_hearts'))], penki: [], playerStage: 1, isCurrentPlayer: true }
     const p2 = { id: 'p2', name: 'B', score: 0, cards: [card(img('4_of_spades'))], penki: [], playerStage: 1, isCurrentPlayer: false }

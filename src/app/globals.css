@@ -70,6 +70,40 @@ body {
   padding-bottom: 70px;
 }
 
+.app-root {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* Telegram Mini App — на десктопе/web растягиваем на весь iframe */
+html.telegram-mini-app,
+html.telegram-mini-app body {
+  width: 100%;
+  height: var(--app-viewport-height, 100dvh);
+  min-height: var(--app-viewport-height, 100dvh);
+  background: var(--background-color, #0f172a);
+  overflow-x: hidden;
+}
+
+html.telegram-mini-app body {
+  padding-bottom: 0;
+}
+
+html.telegram-mini-app .app-root {
+  width: 100%;
+  min-height: var(--app-viewport-height, 100dvh);
+  height: var(--app-viewport-height, 100dvh);
+}
+
+html.telegram-mini-app.telegram-desktop .multiplayer-lobby,
+html.telegram-mini-app.telegram-desktop .multiplayer-page,
+html.telegram-mini-app.telegram-desktop [class*='lobbyRoot'] {
+  max-width: none !important;
+  width: 100% !important;
+  margin: 0 !important;
+  min-height: var(--app-viewport-height, 100dvh) !important;
+}
+
 body.app-notice-open {
   overflow: hidden;
 }

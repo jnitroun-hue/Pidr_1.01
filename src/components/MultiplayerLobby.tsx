@@ -205,6 +205,10 @@ export default function MultiplayerLobby({
   }, [roomId, currentUserId, lobbyUserIds, onLeaveRoom, beginSyncedCountdown]);
 
   useEffect(() => {
+    void import('@/app/game/GamePageContent');
+  }, []);
+
+  useEffect(() => {
     setIsHost(initialIsHost);
   }, [initialIsHost]);
 
@@ -845,12 +849,20 @@ export default function MultiplayerLobby({
       <style jsx>{`
         .multiplayer-lobby {
           min-height: 100vh;
+          min-height: var(--app-viewport-height, 100dvh);
           background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
           padding: 16px;
+          width: 100%;
           max-width: 900px;
           margin: 0 auto;
           position: relative;
           overflow-x: hidden;
+          box-sizing: border-box;
+        }
+
+        :global(html.telegram-mini-app.telegram-desktop) .multiplayer-lobby {
+          max-width: none;
+          margin: 0;
         }
 
         @media (max-width: 768px) {

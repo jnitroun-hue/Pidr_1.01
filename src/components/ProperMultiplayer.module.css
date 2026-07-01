@@ -2,7 +2,8 @@
 
 .container {
   min-height: 100vh;
-  min-height: 100dvh;
+  min-height: var(--app-viewport-height, 100dvh);
+  width: 100%;
   background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
   color: #e2e8f0;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -792,6 +793,56 @@
   .createFooter {
     position: static;
   }
+}
+
+.activeRoomBanner {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding: 18px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.12) 0%, rgba(15, 23, 42, 0.95) 100%);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.activeRoomBannerTitle {
+  color: #86efac;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.activeRoomBannerName {
+  color: #f8fafc;
+  font-size: 20px;
+  font-weight: 800;
+  margin-top: 4px;
+}
+
+.activeRoomBannerMeta {
+  color: #94a3b8;
+  font-size: 13px;
+  margin-top: 6px;
+}
+
+.activeRoomBannerHint {
+  color: #64748b;
+  font-size: 12px;
+  margin: 8px 0 0;
+}
+
+.activeRoomBannerActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.activeRoomBannerActions .button {
+  flex: 1;
+  min-width: 140px;
 }
 
 /* Скроллбар */

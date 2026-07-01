@@ -11,6 +11,7 @@ import OnlineHeartbeat from '../components/OnlineHeartbeat'
 import { LanguageProvider } from '../components/LanguageSwitcher'
 import AppNoticeHost from '../components/AppNoticeHost'
 import TelegramBackNavigation from '../components/TelegramBackNavigation'
+import { initTelegramMiniApp, isTelegramMiniAppClient } from '../lib/telegram/init-mini-app'
 
 // Add global augmentation for Window to include Telegram
 declare global {
@@ -23,11 +24,15 @@ declare global {
 
 export function Providers({ children }: { children: React.ReactNode }) {
   useEffect(() => {
+    initTelegramMiniApp()
+  }, [])
+
+  useEffect(() => {
     // Инициализация CSS переменных для Telegram
     const root = document.documentElement
     
-    if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
-      const tg = window.Telegram.WebApp as TelegramWebApp
+    if (typeof window !== 'undefined' && isTelegramMiniAppClient()) {
+      const tg = window.Telegram!.WebApp as TelegramWebApp
       
       // Применяем цвета темы Telegram
       if (tg.themeParams) {

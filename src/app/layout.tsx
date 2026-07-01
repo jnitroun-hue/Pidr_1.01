@@ -52,7 +52,7 @@ export default function RootLayout({
         <ChunkErrorHandler />
         <Providers>
           <AppUpdateGate>
-          <div style={{ minHeight: '100vh' }}>
+          <div className="app-root">
             {children}
           </div>
           {/* Глобальный слушатель приглашений в комнаты (отображается поверх ЛЮБОЙ страницы) */}

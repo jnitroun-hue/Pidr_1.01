@@ -27,6 +27,17 @@ export interface TelegramWebApp {
   close(): void;
   expand(): void;
   isExpanded: boolean;
+  platform?: string;
+  viewportHeight?: number;
+  viewportStableHeight?: number;
+  isFullscreen?: boolean;
+  requestFullscreen?(): void;
+  exitFullscreen?(): void;
+  onEvent?(eventType: 'viewportChanged' | 'fullscreenChanged' | string, callback: () => void): void;
+  offEvent?(eventType: string, callback: () => void): void;
+  setHeaderColor?(color: string): void;
+  setBackgroundColor?(color: string): void;
+  disableVerticalSwipes?(): void;
   sendData(data: string): void;
   colorScheme?: 'light' | 'dark';
   themeParams?: {

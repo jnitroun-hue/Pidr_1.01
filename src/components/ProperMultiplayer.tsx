@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import MultiplayerLobby from './MultiplayerLobby'; // ✅ ИСПОЛЬЗУЕМ НОВЫЙ КОМПОНЕНТ!
 import ReplaceRoomModal from './ReplaceRoomModal';
+import ActiveRoomModal from './ActiveRoomModal';
 import MultiplayerAccessModal from './MultiplayerAccessModal';
 import styles from './ProperMultiplayer.module.css';
 import { supabase } from '../lib/supabase';
@@ -95,20 +96,88 @@ export const ProperMultiplayer: React.FC = () => {
   const [pendingRoomData, setPendingRoomData] = useState<any>(null);
   const [existingRoom, setExistingRoom] = useState<{ name: string; code: string } | null>(null);
 
+  const [showActiveRoomModal, setShowActiveRoomModal] = useState(false);
+  const [activeRoomInfo, setActiveRoomInfo] = useState<{
+    id: string;
+    name: string;
+    code: string;
+    gameMode: 'normal' | 'rated';
+  } | null>(null);
+
+  const [myActiveRoom, setMyActiveRoom] = useState<{
+    id: string;
+    name: string;
+    room_code: string;
+    status: string;
+    position: number | null;
+    is_host: boolean;
+    gameMode: 'normal' | 'rated';
+  } | null>(null);
+
+  const parseRoomGameMode = (room?: { match_type?: string; settings?: { gameMode?: string; matchType?: string } } | null): 'normal' | 'rated' => {
+    const raw = room?.match_type || room?.settings?.matchType || room?.settings?.gameMode || 'normal';
+    const value = String(raw).toLowerCase();
+    if (value === 'rated' || value === 'ranked' || value === 'competitive') return 'rated';
+    return 'normal';
+  };
+
+  const isStuckRoomMessage = (msg: string) =>
+    msg.includes('уже находитесь') ||
+    msg.includes('Покиньте') ||
+    msg.includes('активная комната') ||
+    msg.includes('уже есть активная');
+
+  const openActiveRoomModal = async (errorData: {
+    currentRoomId?: string | number;
+    currentRoom?: {
+      id?: string | number;
+      name?: string;
+      room_code?: string;
+      roomCode?: string;
+      match_type?: string;
+      settings?: { gameMode?: string; matchType?: string };
+    };
+  }) => {
+    const roomId = String(errorData.currentRoomId || errorData.currentRoom?.id || '');
+    let room = errorData.currentRoom;
+
+    if ((!room?.name || !room?.room_code) && roomId) {
+      try {
+        const res = await fetch(`/api/rooms/${roomId}`, {
+          method: 'GET',
+          credentials: 'include',
+          headers: mergeApiHeaders(),
+          cache: 'no-store',
+        });
+        if (res.ok) {
+          const data = await res.json();
+          room = data.room;
+        }
+      } catch (err) {
+        console.warn('Не удалось загрузить данные комнаты для модалки:', err);
+      }
+    }
+
+    if (roomId) setBlockedRoomId(roomId);
+    setActiveRoomInfo({
+      id: roomId,
+      name: room?.name || '—',
+      code: room?.room_code || room?.roomCode || '—',
+      gameMode: parseRoomGameMode(room),
+    });
+    setShowActiveRoomModal(true);
+    setError('');
+  };
+
   // Загрузка пользователя при монтировании
   useEffect(() => {
     fetchUser();
   }, []);
 
-  // Сброс зависшего membership при открытии лобби (2+ мин offline)
+  // Сброс зависшего membership + проверка текущей комнаты
   useEffect(() => {
     if (!user?.id) return;
-    void fetch('/api/rooms', {
-      method: 'POST',
-      credentials: 'include',
-      headers: mergeApiHeaders(),
-      body: JSON.stringify({ action: 'evict-stale' }),
-    }).catch(() => {});
+    void fetchMyActiveRoom(true);
   }, [user?.id]);
 
   // ✅ ОБРАБОТКА ПРИГЛАШЕНИЯ В КОМНАТУ ИЗ URL
@@ -130,6 +199,9 @@ export const ProperMultiplayer: React.FC = () => {
   useEffect(() => {
     if (view === 'lobby' || view === 'join') {
       fetchRooms();
+      if (view === 'lobby') {
+        void fetchMyActiveRoom(false);
+      }
       const interval = setInterval(fetchRooms, 5000);
       return () => clearInterval(interval);
     }
@@ -209,6 +281,135 @@ export const ProperMultiplayer: React.FC = () => {
       return String(user.telegramId);
     }
     return '';
+  };
+
+  const fetchMyActiveRoom = async (runEvictStale = false) => {
+    try {
+      if (runEvictStale) {
+        await fetch('/api/rooms', {
+          method: 'POST',
+          credentials: 'include',
+          headers: mergeApiHeaders(),
+          body: JSON.stringify({ action: 'evict-stale' }),
+        }).catch(() => {});
+      }
+
+      const response = await fetch('/api/rooms', {
+        method: 'POST',
+        credentials: 'include',
+        headers: mergeApiHeaders(),
+        body: JSON.stringify({ action: 'my-room' }),
+      });
+
+      if (!response.ok) return;
+
+      const data = await response.json();
+      if (data.inRoom && data.room) {
+        setMyActiveRoom(data.room);
+        setBlockedRoomId(String(data.room.id));
+      } else {
+        setMyActiveRoom(null);
+      }
+    } catch (error) {
+      console.warn('⚠️ [Multiplayer] Не удалось загрузить текущую комнату:', error);
+    }
+  };
+
+  const enterWaitingRoom = async (
+    roomId: string,
+    roomCode: string,
+    position?: number | null,
+    roomName?: string
+  ) => {
+    setCurrentRoomId(roomId);
+    if (position != null) setPlayerPosition(position);
+
+    const playersResponse = await fetch(`/api/rooms/${roomId}/players`, {
+      method: 'GET',
+      credentials: 'include',
+      headers: mergeApiHeaders(),
+      cache: 'no-store',
+    });
+
+    if (!playersResponse.ok) {
+      throw new Error(t.multiplayer.errRoomDb);
+    }
+
+    const playersData = await playersResponse.json();
+
+    const roomInfoResponse = await fetch(`/api/rooms/${roomId}`, {
+      method: 'GET',
+      credentials: 'include',
+      headers: mergeApiHeaders(),
+      cache: 'no-store',
+    });
+
+    let roomInfo: any = null;
+    if (roomInfoResponse.ok) {
+      const roomInfoData = await roomInfoResponse.json();
+      roomInfo = roomInfoData.room;
+    }
+
+    const allPlayers = playersData.players.map((player: any) => {
+      const isBot = player.is_bot || (typeof player.user_id === 'number' && player.user_id < 0);
+      return {
+        id: player.user_id.toString(),
+        name: player.username || 'Игрок',
+        isHost: player.is_host || false,
+        isReady: player.is_ready || false,
+        isBot,
+        avatar: player.avatar_url,
+        joinedAt: new Date(player.joined_at || Date.now()),
+      };
+    });
+
+    const roomData: RoomData = {
+      id: roomId,
+      code: roomCode,
+      name: roomName || roomInfo?.name || 'Комната',
+      host: allPlayers.find((p: any) => p.isHost)?.name || 'Хост',
+      hostId: allPlayers.find((p: any) => p.isHost)?.id || 'host_id',
+      maxPlayers: roomInfo?.max_players || 6,
+      gameMode: roomInfo?.settings?.gameMode === 'ranked' ? 'competitive' : 'casual',
+      hasPassword: roomInfo?.password ? true : false,
+      isPrivate: roomInfo?.is_private || false,
+      status: roomInfo?.status || 'waiting',
+      players: allPlayers,
+      settings: {
+        autoStart: roomInfo?.settings?.autoStart || false,
+        allowBots: roomInfo?.settings?.allowBots !== false,
+        minPlayers: 4,
+      },
+    };
+
+    setCurrentRoom(roomData);
+    setMyActiveRoom(null);
+    setView('waiting');
+  };
+
+  const handleRejoinActiveRoom = async () => {
+    if (!myActiveRoom) return;
+
+    if (myActiveRoom.status === 'playing') {
+      const params = new URLSearchParams({
+        mode: 'multiplayer',
+        roomId: myActiveRoom.id,
+        roomCode: myActiveRoom.room_code,
+        isHost: myActiveRoom.is_host ? '1' : '0',
+      });
+      window.location.href = `/game?${params.toString()}`;
+      return;
+    }
+
+    await handleJoinRoom(myActiveRoom.room_code);
+  };
+
+  const handleLeaveActiveRoom = async () => {
+    if (!myActiveRoom) return;
+    setBlockedRoomId(myActiveRoom.id);
+    await handleForceLeave();
+    setMyActiveRoom(null);
+    void fetchMyActiveRoom(false);
   };
 
   const fetchRooms = async () => {
@@ -448,6 +649,15 @@ export const ProperMultiplayer: React.FC = () => {
         if (errorData.currentRoomId) {
           setBlockedRoomId(String(errorData.currentRoomId));
         }
+
+        if (
+          isStuckRoomMessage(errorData.message || '') &&
+          !errorData.message?.includes('уже есть активная комната')
+        ) {
+          await openActiveRoomModal(errorData);
+          setLoading(false);
+          return;
+        }
         
         throw new Error(errorData.message || t.multiplayer.errCreateFallback);
       }
@@ -596,80 +806,21 @@ export const ProperMultiplayer: React.FC = () => {
       if (response.ok) {
         const result = await response.json();
         console.log('✅ Присоединились к комнате:', result.room);
-        
-        // ✅ ЗАГРУЖАЕМ ВСЕ ДАННЫЕ ИЗ БД (ИСТОЧНИК ИСТИНЫ!)
-        const roomId = result.room.id.toString();
-        setCurrentRoomId(roomId);
-        setPlayerPosition(result.room.position);
 
-        // Загружаем всех игроков из БД
-        const playersResponse = await fetch(`/api/rooms/${roomId}/players`, {
-          method: 'GET',
-          credentials: 'include',
-          headers: mergeApiHeaders(),
-          cache: 'no-store',
-        });
-
-        if (!playersResponse.ok) {
-          throw new Error(t.multiplayer.errRoomDb);
-        }
-
-        const playersData = await playersResponse.json();
-        console.log('✅ Загружены игроки комнаты из БД:', playersData.players);
-        
-        // Загружаем информацию о комнате из БД
-        const roomInfoResponse = await fetch(`/api/rooms/${roomId}`, {
-          method: 'GET',
-          credentials: 'include',
-          headers: mergeApiHeaders(),
-          cache: 'no-store',
-        });
-
-        let roomInfo: any = null;
-        if (roomInfoResponse.ok) {
-          const roomInfoData = await roomInfoResponse.json();
-          roomInfo = roomInfoData.room;
-        }
-
-        // ✅ ИСПРАВЛЕНО: Определяем ботов по user_id < 0 или is_bot из БД
-        const allPlayers = playersData.players.map((player: any) => {
-          const isBot = player.is_bot || (typeof player.user_id === 'number' && player.user_id < 0);
-          return {
-            id: player.user_id.toString(),
-            name: player.username || 'Игрок',
-            isHost: player.is_host || false, // ✅ ИСПОЛЬЗУЕМ is_host ИЗ БД!
-            isReady: player.is_ready || false,
-            isBot: isBot, // ✅ ИСПРАВЛЕНО: Определяем бота правильно
-            avatar: player.avatar_url,
-            joinedAt: new Date(player.joined_at || Date.now())
-          };
-        });
-
-        const roomData: RoomData = {
-          id: roomId,
-          code: result.room.roomCode,
-          name: roomInfo?.name || result.room.name || 'Комната',
-          host: allPlayers.find((p: any) => p.isHost)?.name || 'Хост',
-          hostId: allPlayers.find((p: any) => p.isHost)?.id || 'host_id',
-          maxPlayers: roomInfo?.max_players || 6,
-          gameMode: roomInfo?.settings?.gameMode === 'ranked' ? 'competitive' : 'casual',
-          hasPassword: roomInfo?.password ? true : false,
-          isPrivate: roomInfo?.is_private || false,
-          status: roomInfo?.status || 'waiting',
-          players: allPlayers, // ✅ ВСЕ ИГРОКИ ИЗ БД!
-          settings: {
-            autoStart: roomInfo?.settings?.autoStart || false,
-            allowBots: roomInfo?.settings?.allowBots !== false,
-            minPlayers: 4
-          }
-        };
-
-        setCurrentRoom(roomData);
-        setView('waiting');
+        await enterWaitingRoom(
+          result.room.id.toString(),
+          result.room.roomCode,
+          result.room.position,
+          result.room.name
+        );
       } else {
         const errorData = await response.json();
-        if (errorData.currentRoomId) {
-          setBlockedRoomId(String(errorData.currentRoomId));
+        if (
+          isStuckRoomMessage(errorData.message || '') ||
+          errorData.currentRoomId
+        ) {
+          await openActiveRoomModal(errorData);
+          return;
         }
         throw new Error(errorData.message || t.multiplayer.errJoinFallback);
       }
@@ -677,16 +828,9 @@ export const ProperMultiplayer: React.FC = () => {
       console.error('❌ Ошибка присоединения к комнате:', error);
       
       const msg = error.message || '';
-      if (
-        msg.includes('уже находитесь') ||
-        msg.includes('Покиньте') ||
-        msg.includes('активная комната') ||
-        msg.includes('уже есть активная')
-      ) {
-        setError(`${msg} ${t.multiplayer.inOtherRoomTail}`);
-      } else if (msg.includes('нет свободных мест')) {
+      if (msg.includes('нет свободных мест')) {
         setError(t.multiplayer.errRoomFullMsg);
-      } else {
+      } else if (!isStuckRoomMessage(msg)) {
         setError(error.message || t.multiplayer.errJoinFallback);
       }
     } finally {
@@ -723,11 +867,12 @@ export const ProperMultiplayer: React.FC = () => {
       console.error('❌ Ошибка API выхода:', error);
     } finally {
       setLoading(false);
-      // Очищаем состояние
       setCurrentRoom(null);
       setCurrentRoomId(null);
       setPlayerPosition(null);
+      setMyActiveRoom(null);
       setView('lobby');
+      void fetchMyActiveRoom(false);
     }
   };
   
@@ -751,6 +896,9 @@ export const ProperMultiplayer: React.FC = () => {
       setBlockedRoomId(null);
       setCurrentRoomId(null);
       setPlayerPosition(null);
+      setShowActiveRoomModal(false);
+      setActiveRoomInfo(null);
+      setMyActiveRoom(null);
       setError('');
       console.log('✅ Вышли из текущей комнаты');
     } catch (error) {
@@ -782,7 +930,7 @@ export const ProperMultiplayer: React.FC = () => {
   // ✅ БЛОКИРОВКА: Показываем ТОЛЬКО модалку доступа, если не прошли проверку
   if (!accessChecked) {
     return (
-      <div className={styles.container}>
+      <div className={`${styles.container} multiplayer-page`}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', color: '#94a3b8', fontSize: '16px' }}>
           ⏳ {t.multiplayer.accessChecking}
         </div>
@@ -792,7 +940,7 @@ export const ProperMultiplayer: React.FC = () => {
 
   if (!canPlayMultiplayer) {
     return (
-      <div className={styles.container}>
+      <div className={`${styles.container} multiplayer-page`}>
         <MultiplayerAccessModal
           isOpen={true}
           gamesPlayed={gamesPlayed || 0}
@@ -834,7 +982,7 @@ export const ProperMultiplayer: React.FC = () => {
   }
 
   return (
-    <div className={styles.container}>
+    <div className={`${styles.container} multiplayer-page`}>
       <div className={styles.header}>
         <button 
           className={styles.backButton}
@@ -849,20 +997,6 @@ export const ProperMultiplayer: React.FC = () => {
       {error && (
         <div className={styles.error}>
           ❌ {error}
-          {(blockedRoomId || currentRoomId) &&
-            (error.includes('уже находитесь') ||
-              error.includes('Покиньте') ||
-              error.includes('активная комната') ||
-              error.includes('уже есть активная')) && (
-            <button 
-              className={`${styles.button} ${styles.secondary}`}
-              onClick={handleForceLeave}
-              disabled={loading}
-              style={{ marginTop: '10px', width: '100%' }}
-            >
-              {t.multiplayer.forceLeave}
-            </button>
-          )}
         </div>
       )}
       
@@ -912,6 +1046,42 @@ export const ProperMultiplayer: React.FC = () => {
               {t.multiplayer.lobbyJoinRoom}
             </button>
           </div>
+
+          {myActiveRoom && view === 'lobby' && (
+            <div className={styles.activeRoomBanner}>
+              <div className={styles.activeRoomBannerText}>
+                <div className={styles.activeRoomBannerTitle}>{t.multiplayer.myActiveRoomTitle}</div>
+                <div className={styles.activeRoomBannerName}>{myActiveRoom.name}</div>
+                <div className={styles.activeRoomBannerMeta}>
+                  {t.multiplayer.codeLabel} {myActiveRoom.room_code}
+                  {' · '}
+                  {myActiveRoom.gameMode === 'rated'
+                    ? t.multiplayer.activeRoomModeRated
+                    : t.multiplayer.activeRoomModeNormal}
+                  {myActiveRoom.status === 'playing' ? ` · ${t.multiplayer.myActiveRoomPlaying}` : ''}
+                </div>
+                <p className={styles.activeRoomBannerHint}>{t.multiplayer.myActiveRoomHint}</p>
+              </div>
+              <div className={styles.activeRoomBannerActions}>
+                <button
+                  type="button"
+                  className={`${styles.button} ${styles.primary}`}
+                  onClick={() => void handleRejoinActiveRoom()}
+                  disabled={loading}
+                >
+                  {t.multiplayer.myActiveRoomRejoin}
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.button} ${styles.secondary}`}
+                  onClick={() => void handleLeaveActiveRoom()}
+                  disabled={loading}
+                >
+                  {t.multiplayer.myActiveRoomLeave}
+                </button>
+              </div>
+            </div>
+          )}
 
           {renderOpenRoomsList()}
         </div>
@@ -1052,6 +1222,28 @@ export const ProperMultiplayer: React.FC = () => {
             </button>
           </div>
         </div>
+      )}
+
+      {showActiveRoomModal && activeRoomInfo && (
+        <ActiveRoomModal
+          isOpen={showActiveRoomModal}
+          onClose={() => {
+            setShowActiveRoomModal(false);
+            setActiveRoomInfo(null);
+          }}
+          onLeave={handleForceLeave}
+          loading={loading}
+          roomName={activeRoomInfo.name}
+          roomCode={activeRoomInfo.code}
+          gameMode={activeRoomInfo.gameMode}
+          title={t.multiplayer.activeRoomTitle}
+          description={t.multiplayer.activeRoomDescription}
+          modeLabel={t.multiplayer.activeRoomModeLabel}
+          modeNormal={t.multiplayer.activeRoomModeNormal}
+          modeRated={t.multiplayer.activeRoomModeRated}
+          leaveButton={t.multiplayer.forceLeave}
+          stayButton={t.multiplayer.activeRoomStay}
+        />
       )}
 
       {showReplaceModal && existingRoom && (

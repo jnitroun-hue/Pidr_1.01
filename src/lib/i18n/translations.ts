@@ -304,6 +304,17 @@ export interface Translations {
     errRoomFullMsg: string;
     inOtherRoomTail: string;
     forceLeave: string;
+    activeRoomTitle: string;
+    activeRoomDescription: string;
+    activeRoomModeLabel: string;
+    activeRoomModeNormal: string;
+    activeRoomModeRated: string;
+    activeRoomStay: string;
+    myActiveRoomTitle: string;
+    myActiveRoomHint: string;
+    myActiveRoomRejoin: string;
+    myActiveRoomLeave: string;
+    myActiveRoomPlaying: string;
     yourPositionLabel: string;
     badgeHost: string;
     lobbyCreateRoom: string;
@@ -643,7 +654,18 @@ export const translations: Record<Language, Translations> = {
       errJoinFallback: 'Не удалось присоединиться к комнате',
       errRoomFullMsg: '❌ Комната заполнена. Попробуйте другую комнату.',
       inOtherRoomTail: 'Нажмите «Выйти из текущей комнаты» ниже.',
-      forceLeave: '🚪 Выйти из текущей комнаты',
+      forceLeave: '🚪 Выйти из комнаты',
+      activeRoomTitle: 'Вы в старой комнате',
+      activeRoomDescription: 'Чтобы создать или присоединиться к новой, сначала выйдите из текущей.',
+      activeRoomModeLabel: 'Режим',
+      activeRoomModeNormal: 'Обычка',
+      activeRoomModeRated: 'Рейт',
+      activeRoomStay: 'Остаться',
+      myActiveRoomTitle: 'Вы в комнате',
+      myActiveRoomHint: 'Можно вернуться в лобби комнаты или выйти из неё.',
+      myActiveRoomRejoin: '🚪 Войти обратно',
+      myActiveRoomLeave: 'Выйти из комнаты',
+      myActiveRoomPlaying: 'Игра идёт',
       yourPositionLabel: '🎯 Ваша позиция:',
       badgeHost: '👑 (Хост)',
       lobbyCreateRoom: '🏠 Создать комнату',
@@ -957,7 +979,18 @@ export const translations: Record<Language, Translations> = {
       errJoinFallback: 'Could not join room',
       errRoomFullMsg: '❌ Room is full. Try another one.',
       inOtherRoomTail: 'Tap “Leave current room” below.',
-      forceLeave: '🚪 Leave current room',
+      forceLeave: '🚪 Leave room',
+      activeRoomTitle: 'You are in an old room',
+      activeRoomDescription: 'To create or join a new one, leave your current room first.',
+      activeRoomModeLabel: 'Mode',
+      activeRoomModeNormal: 'Casual',
+      activeRoomModeRated: 'Rated',
+      activeRoomStay: 'Stay',
+      myActiveRoomTitle: 'You are in a room',
+      myActiveRoomHint: 'Return to the room lobby or leave it.',
+      myActiveRoomRejoin: '🚪 Rejoin',
+      myActiveRoomLeave: 'Leave room',
+      myActiveRoomPlaying: 'Game in progress',
       yourPositionLabel: '🎯 Your seat:',
       badgeHost: '👑 (Host)',
       lobbyCreateRoom: '🏠 Create room',

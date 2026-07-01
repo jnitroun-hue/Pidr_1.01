@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import type { TelegramWebApp } from '../types/telegram-webapp'
+import { initTelegramMiniApp } from '../lib/telegram/init-mini-app'
 import { appAlert, appConfirm } from '@/lib/app-notice'
 
 interface TelegramUser {
@@ -39,13 +40,7 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
     const initializeTelegram = () => {
       try {
         if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
-          const tg = window.Telegram.WebApp
-          tg.ready()
-          try {
-            tg.expand()
-          } catch (expandErr) {
-            console.warn('Telegram WebApp expand skipped:', expandErr)
-          }
+          const tg = initTelegramMiniApp() ?? window.Telegram.WebApp
           
           setWebApp(tg)
           setIsReady(true)

@@ -60,6 +60,27 @@ export default function NFTGallery() {
 
   const renderCardVisual = (card: NFTCard, width: number, height: number, onClick?: () => void) => {
     const themeInfo = resolveThemeFromMetadata(card.metadata, card.rarity);
+    const useStoredImage = Boolean(card.image_url && width <= 240);
+
+    if (useStoredImage) {
+      return (
+        <img
+          src={card.image_url}
+          alt={`${getRankDisplay(card.rank)} ${card.suit}`}
+          onClick={onClick}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+            display: 'block',
+            borderRadius: 8,
+            background: '#fff',
+            cursor: onClick ? 'pointer' : undefined,
+          }}
+        />
+      );
+    }
+
     if (themeInfo) {
       return (
         <NftThemedCardCanvas

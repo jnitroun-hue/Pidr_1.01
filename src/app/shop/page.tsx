@@ -570,26 +570,53 @@ export default function ShopPage() {
                     whileHover={{ scale: 1.04 }}
                     whileTap={{ scale: 0.97 }}
                     style={{
-                      width: 120,
+                      width: 140,
                       marginLeft: 'auto',
                       marginBottom: 10,
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => setShowDailyOfferModal(true)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setShowDailyOfferModal(true);
+                      }
                     }}
                   >
-                    <NftThemedCardCanvas
-                      suit={dailyPromo.suit}
-                      rank={dailyPromo.rank}
-                      theme={dailyPromo.theme}
-                      themeId={dailyPromo.themeId}
-                      fallbackImageUrl={dailyPromo.promoImageUrl}
-                      width={120}
-                      height={168}
-                      alt={dailyPromo.cardTitle}
-                      onClick={() => setShowDailyOfferModal(true)}
-                      style={{
-                        border: '2px solid rgba(251,146,60,0.65)',
-                        boxShadow: '0 8px 24px rgba(249,115,22,0.35)',
-                      }}
-                    />
+                    {dailyPromo.promoImageUrl ? (
+                      <img
+                        src={dailyPromo.promoImageUrl}
+                        alt={dailyPromo.cardTitle}
+                        style={{
+                          width: '100%',
+                          height: 'auto',
+                          aspectRatio: '300 / 420',
+                          objectFit: 'contain',
+                          display: 'block',
+                          borderRadius: 12,
+                          background: '#fff',
+                          border: '2px solid rgba(251,146,60,0.65)',
+                          boxShadow: '0 8px 24px rgba(249,115,22,0.35)',
+                        }}
+                      />
+                    ) : (
+                      <NftThemedCardCanvas
+                        suit={dailyPromo.suit}
+                        rank={dailyPromo.rank}
+                        theme={dailyPromo.theme}
+                        themeId={dailyPromo.themeId}
+                        fallbackImageUrl={dailyPromo.promoImageUrl}
+                        width={140}
+                        height={196}
+                        alt={dailyPromo.cardTitle}
+                        style={{
+                          border: '2px solid rgba(251,146,60,0.65)',
+                          boxShadow: '0 8px 24px rgba(249,115,22,0.35)',
+                        }}
+                      />
+                    )}
                     <div style={{ color: '#fdba74', fontSize: 10, marginTop: 6, fontWeight: 700 }}>
                       Нажмите для просмотра
                     </div>
@@ -665,6 +692,7 @@ export default function ShopPage() {
       </div>
 
       <DailyOfferCardModal
+        isOpen={showDailyOfferModal}
         offer={
           dailyPromo?.suit && dailyPromo?.rank
             ? {

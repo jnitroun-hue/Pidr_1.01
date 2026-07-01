@@ -41,6 +41,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ roomId:
         current_players: room.current_players,
         status: room.status,
         is_private: room.is_private,
+        match_type: room.match_type,
         password: room.password ? true : false, // Не возвращаем сам пароль
         settings: room.settings,
         created_at: room.created_at,

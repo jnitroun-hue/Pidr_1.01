@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
@@ -22,19 +23,33 @@ export type DailyOfferPreview = {
 };
 
 type Props = {
+  isOpen: boolean;
   offer: DailyOfferPreview | null;
   onClose: () => void;
   onBuy: () => void;
 };
 
-export default function DailyOfferCardModal({ offer, onClose, onBuy }: Props) {
+export default function DailyOfferCardModal({ isOpen, offer, onClose, onBuy }: Props) {
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.body.classList.add('app-notice-open');
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.classList.remove('app-notice-open');
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [isOpen, onClose]);
+
   if (typeof document === 'undefined') return null;
 
   const price = offer?.discountedCoins ?? offer?.priceCoins ?? 0;
 
   return createPortal(
     <AnimatePresence>
-      {offer && (
+      {isOpen && offer && (
         <motion.div
           key="daily-offer-modal"
           className={styles.cardOverlay}

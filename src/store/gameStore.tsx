@@ -352,8 +352,9 @@ interface GameState {
   isOneRankHigher: (higher: Card | { rank?: number | string; image?: string }, lower: Card | { rank?: number | string; image?: string }) => boolean
   getDeckCardPlayOptions: (deckCard: Card) => { opponentTargets: number[]; canPlaceOnSelf: boolean }
   findAvailableTargets: (currentPlayerId: string) => number[]
+  refreshStage1Targets: () => void
   canMakeMove: (currentPlayerId: string) => boolean
-  makeMove: (targetPlayerId: string) => void
+  makeMove: (targetPlayerId: string, opts?: { fromRemote?: boolean }) => void
   drawCardFromDeck: () => boolean // возвращает true если карта взята
   placeCardOnSelf: () => void
   checkStage1End: () => void
@@ -363,7 +364,7 @@ interface GameState {
   // Новые методы для алгоритма хода
   revealDeckCard: () => boolean
   canPlaceCardOnSelf: (deckCard: Card, playerTopCard: Card) => boolean  
-  placeCardOnSelfByRules: () => void
+  placeCardOnSelfByRules: (opts?: { fromRemote?: boolean }) => void
   takeCardNotByRules: () => void // Положить карту поверх своих карт (если нет ходов)
   resetTurnState: () => void
   onDeckClick: () => void
@@ -1529,7 +1530,7 @@ export const useGameStore = create<GameState>()(
         if (name.startsWith('ace')) rank = 14;
         else if (name.startsWith('king')) rank = 13;
         else if (name.startsWith('queen')) rank = 12;
-        else if (name.startsWith('jack')) rank = 11;
+        else if (name.startsWith('jack') || name.startsWith('j_')) rank = 11;
         else {
           // ✅ ИСПРАВЛЕНО: Парсим число из начала имени файла (поддерживает NFT карты с числами)
           // Формат может быть: "92_of_diamonds" или "7_of_spades"
@@ -1566,9 +1567,9 @@ export const useGameStore = create<GameState>()(
           if (r === 'ace' || r === 'a') return 14;
           if (r === 'king' || r === 'k') return 13;
           if (r === 'queen' || r === 'q') return 12;
-          if (r === 'jack' || r === 'j') return 11;
+          if (r === 'jack' || r === 'j' || r === 'валет') return 11;
           const parsed = parseInt(r, 10);
-          if (!Number.isNaN(parsed) && parsed > 0) return parsed;
+          if (!Number.isNaN(parsed) && parsed >= 2 && parsed <= 14) return parsed;
         }
         return get().getCardRank(card.image || '');
       },
@@ -1647,6 +1648,24 @@ export const useGameStore = create<GameState>()(
         
         return targets;
       },
+
+      refreshStage1Targets: () => {
+        const { gameStage, turnPhase, currentPlayerId, revealedDeckCard } = get();
+        if (gameStage !== 1 || !currentPlayerId) return;
+
+        if (turnPhase === 'analyzing_hand' || turnPhase === 'waiting_target_selection') {
+          set({ availableTargets: get().findAvailableTargets(currentPlayerId) });
+          return;
+        }
+
+        if (turnPhase === 'waiting_deck_action' && revealedDeckCard) {
+          const { opponentTargets, canPlaceOnSelf } = get().getDeckCardPlayOptions(revealedDeckCard);
+          set({
+            availableTargets: opponentTargets,
+            canPlaceOnSelfByRules: canPlaceOnSelf,
+          });
+        }
+      },
       
       // Проверка возможности сделать ход
       canMakeMove: (currentPlayerId: string) => {
@@ -1655,7 +1674,7 @@ export const useGameStore = create<GameState>()(
       },
       
       // Выполнение хода (обновленная логика)
-      makeMove: (targetPlayerId: string) => {
+      makeMove: (targetPlayerId: string, opts?: { fromRemote?: boolean }) => {
         const { players, currentPlayerId, revealedDeckCard, turnPhase, deck } = get();
         if (!currentPlayerId) return;
         
@@ -1686,7 +1705,7 @@ export const useGameStore = create<GameState>()(
           ) {
             const topCard = currentPlayer.cards[currentPlayer.cards.length - 1];
             if (topCard && get().canPlaceCardOnSelf(revealedDeckCard, topCard)) {
-              get().placeCardOnSelfByRules();
+              get().placeCardOnSelfByRules(opts);
               return;
             }
           }
@@ -1706,7 +1725,9 @@ export const useGameStore = create<GameState>()(
           console.warn(`🚫 [makeMove] Недопустимая цель ${targetPlayerId} для ${currentPlayer.name}`, {
             validTargets,
             turnPhase,
-            revealedDeckCard: !!revealedDeckCard
+            revealedDeckCard: !!revealedDeckCard,
+            myTop: currentPlayer.cards[currentPlayer.cards.length - 1],
+            targetTop: targetPlayer.cards[targetPlayer.cards.length - 1],
           });
           if (!currentPlayer.isBot) {
             get().showNotification('На эту карту сейчас ходить нельзя', 'warning', 2500);
@@ -1741,14 +1762,8 @@ export const useGameStore = create<GameState>()(
         
         if (!cardToMove) return;
 
-        if (shouldDeferHumanMoveToHost(get(), currentPlayerId)) {
-          get().sendPlayerMove({
-            type: 'make_move',
-            playerId: currentPlayerId,
-            targetId: targetPlayerId,
-          });
-          return;
-        }
+        const shouldBroadcast =
+          !opts?.fromRemote && shouldDeferHumanMoveToHost(get(), currentPlayerId);
 
         const movedCard: Card = {
           ...cardToMove,
@@ -1802,6 +1817,14 @@ export const useGameStore = create<GameState>()(
         }
         
         get().showNotification(`Карта переложена на ${targetPlayer.name}!`, 'success');
+
+        if (shouldBroadcast) {
+          void get().sendPlayerMove({
+            type: 'make_move',
+            playerId: currentPlayerId,
+            targetId: targetPlayerId,
+          });
+        }
         
         // ИСПРАВЛЕНО: После успешного хода игрок ПРОДОЛЖАЕТ ходить (анализ руки)
         // Ход передается только когда игрок не может больше ходить
@@ -1826,10 +1849,7 @@ export const useGameStore = create<GameState>()(
         const currentPlayer = players.find(p => p.id === currentPlayerId);
         if (!currentPlayer) return false;
 
-        if (shouldDeferHumanMoveToHost(get(), currentPlayerId)) {
-          get().sendPlayerMove({ type: 'card_taken', playerId: currentPlayerId });
-          return false;
-        }
+        const shouldBroadcast = shouldDeferHumanMoveToHost(get(), currentPlayerId);
         
         const drawnCard = { ...deck[0] }; // ✅ КОПИРУЕМ КАРТУ
         // ✅ ПРОВЕРЯЕМ ЕСТЬ ЛИ NFT ВЕРСИЯ (только для игрока!)
@@ -1868,6 +1888,11 @@ export const useGameStore = create<GameState>()(
         }
         
         get().showNotification(`${currentPlayer.name} взял карту из колоды (осталось: ${newDeck.length})`, 'info');
+
+        if (shouldBroadcast) {
+          void get().sendPlayerMove({ type: 'card_taken', playerId: currentPlayerId });
+        }
+
         return true;
       },
       
@@ -2107,6 +2132,7 @@ export const useGameStore = create<GameState>()(
               availableTargets: targets,
               turnPhase: 'analyzing_hand'
             });
+            get().refreshStage1Targets();
             
             if (isAutomatedPlayer(currentPlayer)) {
               if (targets.length > 0) {
@@ -2350,18 +2376,13 @@ export const useGameStore = create<GameState>()(
         return get().isOneRankHigher(deckCard, playerTopCard);
       },
        
-       placeCardOnSelfByRules: () => {
+       placeCardOnSelfByRules: (opts?: { fromRemote?: boolean }) => {
          const { players, currentPlayerId, revealedDeckCard, deck, turnPhase } = get();
          if (!currentPlayerId || !revealedDeckCard) return;
          if (turnPhase !== 'waiting_deck_action') return;
 
-         if (shouldDeferHumanMoveToHost(get(), currentPlayerId)) {
-           get().sendPlayerMove({
-             type: 'place_on_self',
-             playerId: currentPlayerId,
-           });
-           return;
-         }
+         const shouldBroadcast =
+           !opts?.fromRemote && shouldDeferHumanMoveToHost(get(), currentPlayerId);
          
          const currentPlayer = players.find(p => p.id === currentPlayerId);
          if (!currentPlayer || currentPlayer.cards.length === 0) return;
@@ -2402,6 +2423,13 @@ export const useGameStore = create<GameState>()(
         }
          
          get().showNotification(`${currentPlayer.name} положил карту на себя по правилам - ходит снова!`, 'success');
+
+         if (shouldBroadcast) {
+           void get().sendPlayerMove({
+             type: 'place_on_self',
+             playerId: currentPlayerId,
+           });
+         }
          
          // ИСПРАВЛЕНО: Продолжаем ход (анализируем руку, если нет открытых карт - идем к колоде)
          setTimeout(() => {
@@ -4372,6 +4400,7 @@ export const useGameStore = create<GameState>()(
            }
            
            set(stateUpdates);
+           get().refreshStage1Targets();
          },
          
         sendPlayerMove: async (moveData) => {
@@ -4416,16 +4445,33 @@ export const useGameStore = create<GameState>()(
            if (localUser && moveData.playerId === localUser.id) return;
            
            try {
+             if (moveData.playerId && moveData.type !== 'make_move') {
+               const { currentPlayerId } = get();
+               if (currentPlayerId !== moveData.playerId) {
+                 set({ currentPlayerId: String(moveData.playerId) });
+               }
+             }
+
              switch (moveData.type) {
                case 'make_move':
+                 if (moveData.targetId === 'initiate_move' && moveData.playerId) {
+                   if (get().currentPlayerId !== moveData.playerId) {
+                     set({ currentPlayerId: String(moveData.playerId) });
+                   }
+                   get().makeMove('initiate_move', { fromRemote: true });
+                   break;
+                 }
                  if (moveData.targetId && moveData.playerId) {
-                   get().makeMove(String(moveData.targetId));
+                   if (get().currentPlayerId !== moveData.playerId) {
+                     set({ currentPlayerId: String(moveData.playerId) });
+                   }
+                   get().makeMove(String(moveData.targetId), { fromRemote: true });
                  }
                  break;
 
                case 'place_on_self':
                  if (moveData.playerId) {
-                   get().placeCardOnSelfByRules();
+                   get().placeCardOnSelfByRules({ fromRemote: true });
                  }
                  break;
 

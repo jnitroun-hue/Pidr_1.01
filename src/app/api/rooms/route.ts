@@ -354,7 +354,7 @@ export async function POST(req: NextRequest) {
         const stuckRoomId = String(dbMembership.room_id);
         const { data: stuckRoom } = await supabase
           .from('_pidr_rooms')
-          .select('id, name, room_code, host_id')
+          .select('id, name, room_code, host_id, match_type, settings')
           .eq('id', dbMembership.room_id)
           .maybeSingle();
 
@@ -386,7 +386,7 @@ export async function POST(req: NextRequest) {
         // Проверяем существует ли эта комната в БД (СРАВНИВАЕМ UUID С UUID!)
         const { data: existingRoom } = await supabase
           .from('_pidr_rooms')
-          .select('id, name, room_code')
+          .select('id, name, room_code, match_type, settings')
           .eq('id', currentRoomId)
           .eq('host_id', userUUID) // ✅ Используем UUID!
           .in('status', ['waiting', 'playing'])
@@ -594,14 +594,15 @@ export async function POST(req: NextRequest) {
         // Игрок уже в другой комнате
         const { data: currentRoom } = await supabase
           .from('_pidr_rooms')
-          .select('name, room_code')
+          .select('id, name, room_code, match_type, settings')
           .eq('id', canJoin.currentRoomId)
           .single();
         
         return NextResponse.json({ 
           success: false, 
           message: `Вы уже находитесь в комнате "${currentRoom?.name || 'Неизвестная'}" (${currentRoom?.room_code || '?'}). Покиньте её сначала.`,
-          currentRoomId: canJoin.currentRoomId
+          currentRoomId: canJoin.currentRoomId,
+          currentRoom,
         }, { status: 400 });
       }
       
@@ -623,10 +624,21 @@ export async function POST(req: NextRequest) {
       });
       
       if (!joinResult.success) {
+        let blockingRoom: { id: string; name: string; room_code: string; match_type?: string; settings?: unknown } | null = null;
+        if (joinResult.currentRoomId) {
+          const { data: roomRow } = await supabase
+            .from('_pidr_rooms')
+            .select('id, name, room_code, match_type, settings')
+            .eq('id', joinResult.currentRoomId)
+            .maybeSingle();
+          blockingRoom = roomRow;
+        }
+
         return NextResponse.json({ 
           success: false, 
           message: joinResult.error || 'Не удалось присоединиться к комнате',
-          currentRoomId: joinResult.currentRoomId
+          currentRoomId: joinResult.currentRoomId,
+          currentRoom: blockingRoom,
         }, { status: 400 });
       }
       
@@ -655,6 +667,64 @@ export async function POST(req: NextRequest) {
         success: true,
         evicted: Boolean(evictedFrom),
         evictedFromRoomId: evictedFrom,
+      });
+    }
+
+    // ============================================================
+    // ACTION: MY-ROOM — текущая комната игрока (для «вернуться в лобби»)
+    // ============================================================
+    if (action === 'my-room') {
+      const { dbUserId, user: meUser } = await getUserIdFromDatabase(userId, environment);
+      if (!dbUserId) {
+        return NextResponse.json({ success: false, message: 'Пользователь не найден' }, { status: 404 });
+      }
+
+      const redisUserId = meUser ? getRedisUserId(meUser) : userId;
+
+      const { data: membership } = await supabase
+        .from('_pidr_room_players')
+        .select('room_id, position, is_host')
+        .eq('user_id', dbUserId)
+        .maybeSingle();
+
+      let roomId = membership?.room_id ? String(membership.room_id) : null;
+      if (!roomId) {
+        const redisRoom = await getPlayerRoom(redisUserId);
+        roomId = redisRoom ? String(redisRoom) : null;
+      }
+
+      if (!roomId) {
+        return NextResponse.json({ success: true, inRoom: false });
+      }
+
+      const { data: room } = await supabase
+        .from('_pidr_rooms')
+        .select('id, name, room_code, status, max_players, match_type, settings, host_id')
+        .eq('id', roomId)
+        .in('status', ['waiting', 'playing'])
+        .maybeSingle();
+
+      if (!room) {
+        return NextResponse.json({ success: true, inRoom: false });
+      }
+
+      const matchType = room.match_type || room.settings?.matchType || room.settings?.gameMode || 'normal';
+      const gameMode =
+        matchType === 'rated' || matchType === 'ranked' || matchType === 'competitive' ? 'rated' : 'normal';
+
+      return NextResponse.json({
+        success: true,
+        inRoom: true,
+        room: {
+          id: String(room.id),
+          name: room.name,
+          room_code: room.room_code,
+          status: room.status,
+          max_players: room.max_players,
+          position: membership?.position ?? null,
+          is_host: Boolean(membership?.is_host),
+          gameMode,
+        },
       });
     }
     

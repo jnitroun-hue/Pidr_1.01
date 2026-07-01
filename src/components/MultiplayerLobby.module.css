@@ -1,11 +1,19 @@
 .lobbyRoot {
   min-height: 100vh;
+  min-height: var(--app-viewport-height, 100dvh);
   background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
   padding: 16px;
+  width: 100%;
   max-width: 920px;
   margin: 0 auto;
   position: relative;
   overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+:global(html.telegram-mini-app.telegram-desktop) .lobbyRoot {
+  max-width: none;
+  margin: 0;
 }
 
 .lobbyRoot::before {
