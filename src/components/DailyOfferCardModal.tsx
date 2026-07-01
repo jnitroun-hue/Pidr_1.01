@@ -125,6 +125,7 @@ export default function DailyOfferCardModal({ isOpen, offer, onClose, onBuy }: P
                   rank={offer.rank}
                   theme={offer.theme}
                   themeId={offer.themeId}
+                  themeLabel={offer.themeLabel}
                   fallbackImageUrl={offer.promoImageUrl}
                   width={280}
                   height={392}

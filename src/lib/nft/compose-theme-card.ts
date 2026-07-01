@@ -14,8 +14,8 @@ import {
 } from '@/lib/nft/theme-config';
 
 const REMOTE_FETCH_TIMEOUT_MS = 2500;
-/** v3: canvas-сборка как в NFT-генераторе (не sharp SVG) */
-const COMPOSE_VERSION = 3;
+/** v4: canvas с Path2D-мастями, сброс битых превью из Storage */
+const COMPOSE_VERSION = 4;
 
 export { COMPOSE_VERSION };
 

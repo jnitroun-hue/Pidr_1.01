@@ -18,6 +18,21 @@ export function getNftSuitSymbol(suit: string): string {
   return symbols[suit?.toLowerCase()] || '?';
 }
 
+/** Буква масти — без Unicode (Telegram / старые Android не ломают в □) */
+export function getNftSuitAbbrev(suit: string): string {
+  const map: Record<string, string> = {
+    hearts: 'H',
+    diamonds: 'D',
+    clubs: 'C',
+    spades: 'S',
+  };
+  return map[suit?.toLowerCase()] || '?';
+}
+
+export function formatNftRankSuit(rank: string, suit: string): string {
+  return `${getNftRankDisplay(rank)}${getNftSuitAbbrev(suit)}`;
+}
+
 export function getNftRankDisplay(rank: string): string {
   const map: Record<string, string> = {
     a: 'A',

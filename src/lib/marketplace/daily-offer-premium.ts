@@ -51,17 +51,22 @@ function normalizeRank(rank: string): string {
   return rank.toLowerCase();
 }
 
-function suitSymbol(suit: string): string {
+function suitDisplay(suit: string): string {
   const map: Record<string, string> = {
-    hearts: '♥',
-    diamonds: '♦',
-    clubs: '♣',
-    spades: '♠',
+    hearts: 'H',
+    diamonds: 'D',
+    clubs: 'C',
+    spades: 'S',
   };
-  return map[suit] ?? suit;
+  return map[suit] ?? suit.slice(0, 1).toUpperCase();
 }
 
 function rankDisplay(rankRaw: string): string {
+  const r = rankRaw.toLowerCase();
+  if (r === 'jack' || r === 'j') return 'J';
+  if (r === 'queen' || r === 'q') return 'Q';
+  if (r === 'king' || r === 'k') return 'K';
+  if (r === 'ace' || r === 'a') return 'A';
   return rankRaw === '10' ? '10' : rankRaw.toUpperCase();
 }
 
@@ -89,7 +94,7 @@ export function buildPremiumDailyOffer(userId: number, dayTag = getDayTag()): Pr
     themeLabel,
     seed,
     promoImageUrl: '',
-    cardTitle: `${rankDisplay(rankRaw)} ${suitSymbol(suit)} · ${themeLabel}`,
+    cardTitle: `${rankDisplay(rankRaw)}${suitDisplay(suit)} · ${themeLabel}`,
   };
 }
 
