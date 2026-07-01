@@ -29,6 +29,19 @@ const REDIS_KEYS = {
 // 💓 API: Heartbeat для обновления онлайн статуса с Redis кешированием
 export async function POST(request: NextRequest) {
   try {
+    let body: { offline?: boolean; roomId?: string | number } = {};
+    try {
+      body = await request.json();
+    } catch {
+      body = {};
+    }
+
+    const explicitOffline = body.offline === true;
+    const bodyRoomId =
+      body.roomId != null && String(body.roomId).trim() !== ''
+        ? String(body.roomId)
+        : null;
+
     // ✅ ИСПРАВЛЕНО: Используем универсальную систему авторизации
     const { userId, environment } = getUserIdFromRequest(request);
     
@@ -47,6 +60,48 @@ export async function POST(request: NextRequest) {
     const cacheUserId = String(dbUserId);
     const now = new Date().toISOString();
     const nowTimestamp = Date.now();
+
+    if (explicitOffline) {
+      const offlineUpdate: Record<string, string | boolean> = {
+        last_seen: now,
+        online_status: 'offline',
+        status: 'offline',
+      };
+
+      await supabaseAdmin.from('_pidr_users').update(offlineUpdate).eq('id', userIdBigInt);
+
+      let roomId = bodyRoomId;
+      if (!roomId) {
+        const { data: playerRoom } = await supabaseAdmin
+          .from('_pidr_room_players')
+          .select('room_id')
+          .eq('user_id', userIdBigInt)
+          .maybeSingle();
+        roomId = playerRoom?.room_id?.toString() ?? null;
+      }
+
+      if (roomId) {
+        await supabaseAdmin
+          .from('_pidr_room_players')
+          .update({ is_online: false, last_activity: now })
+          .eq('user_id', userIdBigInt)
+          .eq('room_id', parseInt(roomId, 10));
+
+        if (redis) {
+          await redis.srem(`room:${roomId}:online_players`, cacheUserId);
+        }
+      }
+
+      if (redis) {
+        await redis.del(REDIS_KEYS.userOnline(cacheUserId));
+      }
+
+      return noStoreJson({
+        success: true,
+        message: 'Игрок отмечен offline',
+        timestamp: now,
+      });
+    }
 
     // ✅ ОПТИМИЗАЦИЯ ДЛЯ БЕСПЛАТНОГО ПЛАНА: Минимизируем Redis операции
     // Используем pipeline для батч-операций (экономия запросов к Redis)
@@ -120,9 +175,9 @@ export async function POST(request: NextRequest) {
 
     // ✅ ОБНОВЛЯЕМ is_online В _pidr_room_players И last_activity КОМНАТЫ (с Redis кешем)
     try {
-      let roomId: string | null = null;
+      let roomId: string | null = bodyRoomId;
       
-      if (redis) {
+      if (!roomId && redis) {
         // Проверяем Redis кеш для комнаты
         const cachedRoomId = await redis.get(`user:${cacheUserId}:room`);
         if (cachedRoomId) {
@@ -148,16 +203,19 @@ export async function POST(request: NextRequest) {
       
       if (roomId) {
         const now = new Date().toISOString();
-        
+        const inGamePulse = bodyRoomId != null;
+
         // Обновляем Redis кеш для комнаты (если доступен)
         if (redis) {
           await redis.set(`room:${roomId}:last_activity`, nowTimestamp.toString(), { ex: 300 });
           await redis.sadd(`room:${roomId}:online_players`, cacheUserId);
           await redis.expire(`room:${roomId}:online_players`, 300);
           
-          // Обновляем БД (реже)
           const lastRoomDbUpdate = await redis.get(`room:${roomId}:last_db_update`);
-          const shouldUpdateRoomDb = !lastRoomDbUpdate || (Date.now() - parseInt(lastRoomDbUpdate as string)) > 30000;
+          const shouldUpdateRoomDb =
+            inGamePulse ||
+            !lastRoomDbUpdate ||
+            Date.now() - parseInt(lastRoomDbUpdate as string, 10) > 30000;
           
           if (shouldUpdateRoomDb) {
             // ✅ ИСПРАВЛЕНО: Обновляем is_online в _pidr_room_players
@@ -183,23 +241,22 @@ export async function POST(request: NextRequest) {
             console.log(`✅ [HEARTBEAT] Обновлена активность комнаты ${roomId} и is_online для игрока`);
           }
         } else {
-          // Если Redis недоступен, обновляем БД напрямую
           await supabaseAdmin
             .from('_pidr_room_players')
-            .update({ 
+            .update({
               is_online: true,
-              last_activity: now
+              last_activity: now,
             })
             .eq('user_id', userIdBigInt)
-            .eq('room_id', parseInt(roomId));
-          
+            .eq('room_id', parseInt(roomId, 10));
+
           await supabaseAdmin
             .from('_pidr_rooms')
-            .update({ 
+            .update({
               last_activity: now,
-              updated_at: now
+              updated_at: now,
             })
-            .eq('id', parseInt(roomId));
+            .eq('id', parseInt(roomId, 10));
         }
       }
     } catch (roomError) {

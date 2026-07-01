@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { syncRoomRedisFromDatabase } from '@/lib/multiplayer/player-state-manager';
+import { isRoomPlayerConnected } from '@/lib/multiplayer/presence';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -27,7 +28,7 @@ export async function GET(
     // ✅ ИСПРАВЛЕНО: Один запрос для получения всей информации о комнате
     const { data: room, error: roomError } = await supabase
       .from('_pidr_rooms')
-      .select('max_players, current_players, status, host_id')
+      .select('max_players, current_players, status, host_id, game_settings')
       .eq('id', roomId)
       .single();
 
@@ -101,7 +102,8 @@ export async function GET(
         username: player.username || userData?.username || 'Игрок',
         avatar_url: player.avatar_url || userData?.avatar_url || null,
         is_host: isHost || player.is_host === true,
-        is_bot: isBot
+        is_bot: isBot,
+        is_connected: isRoomPlayerConnected(player),
       };
     });
 
@@ -141,12 +143,22 @@ export async function GET(
 
     void syncRoomRedisFromDatabase(String(roomId));
 
+    const gameSettings =
+      room.game_settings && typeof room.game_settings === 'object' && !Array.isArray(room.game_settings)
+        ? room.game_settings
+        : {};
+    const gameLaunchAt =
+      typeof (gameSettings as { gameLaunchAt?: unknown }).gameLaunchAt === 'number'
+        ? (gameSettings as { gameLaunchAt: number }).gameLaunchAt
+        : null;
+
     const response = NextResponse.json({
       success: true, 
       players: playersWithHost || [], // ✅ ИСПОЛЬЗУЕМ playersWithHost
       maxPlayers: room.max_players, // ✅ ДОБАВЛЕНО!
       currentPlayers: players?.length || 0,
-      roomStatus: room.status
+      roomStatus: room.status,
+      gameLaunchAt,
     });
 
     response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');

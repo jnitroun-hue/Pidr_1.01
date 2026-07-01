@@ -89,7 +89,13 @@ export async function POST(
     }
     const botPlayers = players.filter((p: { user_id: unknown }) => parseInt(String(p.user_id), 10) < 0);
 
-    // МЕНЯЕМ СТАТУС КОМНАТЫ НА "PLAYING"
+    const gameLaunchAt = Date.now() + 3200;
+    const existingSettings =
+      room.game_settings && typeof room.game_settings === 'object' && !Array.isArray(room.game_settings)
+        ? room.game_settings
+        : {};
+
+    // МЕНЯЕМ СТАТУС КОМНАТЫ НА "PLAYING" + фиксируем единый момент старта для всех клиентов
     const now = new Date().toISOString();
     const { error: updateError } = await supabase
       .from('_pidr_rooms')
@@ -97,7 +103,11 @@ export async function POST(
         status: 'playing',
         started_at: now,
         last_activity: now,
-        updated_at: now
+        updated_at: now,
+        game_settings: {
+          ...existingSettings,
+          gameLaunchAt,
+        },
       })
       .eq('id', roomId);
 
@@ -111,12 +121,14 @@ export async function POST(
     return NextResponse.json({
       success: true,
       message: 'Игра началась!',
+      gameLaunchAt,
       room: {
         id: roomId,
         status: 'playing',
         player_count: players.length,
         real_players: realPlayers.length,
-        bots: botPlayers.length
+        bots: botPlayers.length,
+        gameLaunchAt,
       }
     });
 

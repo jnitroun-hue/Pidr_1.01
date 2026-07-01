@@ -738,6 +738,25 @@
   font-size: 12px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.8);
+  z-index: 8;
+}
+
+.disconnectBadge {
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fecaca;
+  background: linear-gradient(145deg, rgba(127, 29, 29, 0.95), rgba(185, 28, 28, 0.92));
+  border: 1.5px solid rgba(252, 165, 165, 0.85);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.55);
+  z-index: 9;
+  pointer-events: none;
 }
 
 /* Удалена вращающаяся рамка аватара - слишком отвлекает */

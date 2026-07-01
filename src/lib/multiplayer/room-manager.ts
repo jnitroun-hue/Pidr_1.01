@@ -203,6 +203,7 @@ export class RoomManager {
     onOneCardDeclared?: (playerId: string) => void;
     onGameEnded?: (results: any[]) => void;
     onGameStateSync?: (gameState: any) => void;
+    onGameCountdown?: (payload: { gameLaunchAt: number; roomId: string }) => void;
   }): void {
     console.log('📡 [RoomManager] Подписка на комнату:', roomId);
     this.roomId = roomId;
@@ -316,6 +317,12 @@ export class RoomManager {
           callbacks.onGameStateSync(payload.payload);
         }
       })
+      .on('broadcast', { event: 'game-countdown' }, (payload: any) => {
+        console.log('⏱️ [RoomManager] Старт отсчёта:', payload);
+        if (callbacks.onGameCountdown && payload.payload?.gameLaunchAt) {
+          callbacks.onGameCountdown(payload.payload);
+        }
+      })
       .subscribe();
 
     console.log('✅ [RoomManager] Подписка активна');
@@ -346,7 +353,7 @@ export class RoomManager {
    * ✅ НОВОЕ: Отправить ход игрока (broadcast)
    */
   async broadcastMove(roomId: string, moveData: any): Promise<void> {
-    if (!this.channel && this.roomId !== roomId) {
+    if (!this.channel || this.roomId !== roomId) {
       console.warn('❌ [RoomManager] Канал не инициализирован или не та комната');
       return;
     }
@@ -363,6 +370,22 @@ export class RoomManager {
   }
 
   /**
+   * Синхронизированный отсчёт до старта (все клиенты)
+   */
+  broadcastGameCountdown(roomId: string, gameLaunchAt: number): void {
+    if (!this.channel || this.roomId !== roomId) {
+      console.warn('❌ [RoomManager] Канал не готов для game-countdown');
+      return;
+    }
+
+    this.channel.send({
+      type: 'broadcast',
+      event: 'game-countdown',
+      payload: { gameLaunchAt, roomId, timestamp: Date.now() },
+    });
+  }
+
+  /**
    * ✅ НОВОЕ: Синхронизация полного состояния игры
    */
   async syncGameState(roomId: string, gameState: {
@@ -373,8 +396,9 @@ export class RoomManager {
     tableStack: any[];
     trumpSuit: string | null;
     playedCards: any[];
+    [key: string]: unknown;
   }): Promise<void> {
-    if (!this.channel) {
+    if (!this.channel || this.roomId !== roomId) {
       console.warn('❌ [RoomManager] Канал не инициализирован');
       return;
     }
@@ -516,7 +540,7 @@ export class RoomManager {
   /**
    * Начать игру (только хост) - ЧЕРЕЗ API!
    */
-  async startGame(roomId: string, hostId: string): Promise<void> {
+  async startGame(roomId: string, hostId: string): Promise<number> {
     try {
       console.log(`🚀 [RoomManager] Запуск игры через API: комната ${roomId}, хост ${hostId}`);
 
@@ -537,6 +561,16 @@ export class RoomManager {
 
       const data = await response.json();
       console.log('✅ [RoomManager] Игра началась через API:', data);
+
+      const gameLaunchAt =
+        typeof data.gameLaunchAt === 'number'
+          ? data.gameLaunchAt
+          : typeof data.room?.gameLaunchAt === 'number'
+            ? data.room.gameLaunchAt
+            : Date.now() + 3200;
+
+      this.broadcastGameCountdown(roomId, gameLaunchAt);
+      return gameLaunchAt;
     } catch (error: unknown) {
       console.error('❌ [RoomManager] Ошибка startGame:', error);
       throw error;

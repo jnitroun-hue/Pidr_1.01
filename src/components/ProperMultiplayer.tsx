@@ -83,15 +83,11 @@ export const ProperMultiplayer: React.FC = () => {
 
   // Форма создания комнаты
   const [roomName, setRoomName] = useState('');
-  const [maxPlayers, setMaxPlayers] = useState(6); // ДЕФОЛТ 6 ИГРОКОВ
-  const [gameMode, setGameMode] = useState('normal');
-  const [hasPassword, setHasPassword] = useState(false);
-  const [password, setPassword] = useState('');
-  const [isPrivate, setIsPrivate] = useState(false);
+  const [maxPlayers, setMaxPlayers] = useState(6);
+  const [gameMode, setGameMode] = useState<'normal' | 'rated'>('normal');
 
   // Форма присоединения
   const [joinCode, setJoinCode] = useState('');
-  const [joinPassword, setJoinPassword] = useState('');
   
   // Модалка замены комнаты
   const [showReplaceModal, setShowReplaceModal] = useState(false);
@@ -332,10 +328,10 @@ export const ProperMultiplayer: React.FC = () => {
           name: roomName,
           maxPlayers,
           gameMode,
-          hasPassword,
-          password: hasPassword ? password : null,
-          isPrivate,
-          forceReplace // ✅ ДОБАВЛЕНО для принудительной замены
+          hasPassword: false,
+          password: null,
+          isPrivate: false,
+          forceReplace
         })
       });
 
@@ -424,9 +420,9 @@ export const ProperMultiplayer: React.FC = () => {
             name: roomName,
             maxPlayers,
             gameMode,
-            hasPassword,
-            password: hasPassword ? password : null,
-            isPrivate
+            hasPassword: false,
+            password: null,
+            isPrivate: false,
           });
           // Показываем модалку подтверждения
           setExistingRoom({
@@ -483,13 +479,6 @@ export const ProperMultiplayer: React.FC = () => {
 
   const handleJoinFromList = (room: Room) => {
     if (room.current_players >= room.max_players) return;
-
-    if (room.hasPassword) {
-      setJoinCode(room.room_code);
-      setView('join');
-      return;
-    }
-
     void handleJoinRoom(room.room_code);
   };
 
@@ -530,8 +519,6 @@ export const ProperMultiplayer: React.FC = () => {
                 <div className={styles.roomInfo}>
                   <h4 className={styles.roomName}>
                     {room.name}
-                    {room.is_private ? ' 🔒' : ''}
-                    {room.hasPassword ? ' 🔑' : ''}
                   </h4>
                   <p className={styles.roomHost}>
                     {t.multiplayer.hostPrefix} {room.users?.username || t.multiplayer.unknownHost}
@@ -550,9 +537,7 @@ export const ProperMultiplayer: React.FC = () => {
                 >
                   {isFull
                     ? t.multiplayer.roomFull
-                    : room.hasPassword
-                      ? `${t.multiplayer.join} 🔑`
-                      : t.multiplayer.join}
+                    : t.multiplayer.join}
                 </button>
               </div>
             );
@@ -590,14 +575,12 @@ export const ProperMultiplayer: React.FC = () => {
         body: JSON.stringify({
           action: 'join',
           roomCode: codeToUse.toUpperCase(),
-          password: joinPassword || null
         })
       });
 
       if (response.ok) {
         const result = await response.json();
         console.log('✅ Присоединились к комнате:', result.room);
-        setJoinPassword('');
         
         // ✅ ЗАГРУЖАЕМ ВСЕ ДАННЫЕ ИЗ БД (ИСТОЧНИК ИСТИНЫ!)
         const roomId = result.room.id.toString();
@@ -907,95 +890,84 @@ export const ProperMultiplayer: React.FC = () => {
 
       {/* Создание комнаты */}
       {view === 'create' && (
-        <div className={styles.form}>
-          <h3 className={styles.formTitle}>{t.multiplayer.createTitle}</h3>
-          
-          <div className={styles.field}>
-            <label className={styles.label}>{t.multiplayer.roomNameLabel}</label>
-            <input
-              type="text"
-              className={styles.input}
-              value={roomName}
-              onChange={(e) => setRoomName(e.target.value)}
-              placeholder={t.multiplayer.roomNamePlaceholder}
-              maxLength={50}
-            />
-          </div>
-
-           <div className={styles.field}>
-             <label className={styles.label}>{t.multiplayer.maxPlayersLabel}</label>
-             <div className={styles.playerCards}>
-               {[4, 5, 6, 7, 8, 9].map((num) => (
-                 <button
-                   key={num}
-                   type="button"
-                   className={`${styles.playerCard} ${maxPlayers === num ? styles.selected : ''}`}
-                   onClick={() => setMaxPlayers(num)}
-                 >
-                   <div className={styles.cardNumber}>{num}</div>
-                   <div className={styles.cardLabel}>{t.multiplayer.playersCardSuffix}</div>
-                 </button>
-               ))}
-             </div>
-           </div>
-
-          <div className={styles.field}>
-            <label className={styles.label}>{t.multiplayer.gameModeLabel}</label>
-            <select
-              className={styles.select}
-              value={gameMode}
-              onChange={(e) => setGameMode(e.target.value)}
-            >
-              <option value="normal">Обычный матч</option>
-              <option value="rated">Рейтинговый матч</option>
-              <option value="tournament">{t.multiplayer.tournament}</option>
-            </select>
-          </div>
-
-          <div className={styles.checkboxes}>
-            <label className={styles.checkbox}>
-              <input
-                type="checkbox"
-                checked={hasPassword}
-                onChange={(e) => setHasPassword(e.target.checked)}
-              />
-              <span>{t.multiplayer.setPassword}</span>
-            </label>
-
-            {hasPassword && (
-              <input
-                type="password"
-                className={styles.input}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder={t.multiplayer.passwordPlaceholder}
-                maxLength={20}
-              />
-            )}
-
-            <label className={styles.checkbox}>
-              <input
-                type="checkbox"
-                checked={isPrivate}
-                onChange={(e) => setIsPrivate(e.target.checked)}
-              />
-              <span>{t.multiplayer.privateRoom}</span>
-            </label>
-          </div>
-
-          <div className={styles.formActions}>
-            <button 
+        <div className={styles.createPanel}>
+          <div className={styles.createHeader}>
+            <button
               type="button"
-              className={`${styles.button} ${styles.secondary}`}
+              className={styles.createBack}
               onClick={() => setView('lobby')}
               disabled={loading}
+              aria-label={t.common.back}
             >
-              ← {t.common.back}
+              ←
             </button>
-            
-            <button 
+            <div>
+              <h3 className={styles.createTitle}>{t.multiplayer.createTitle}</h3>
+              <p className={styles.createHint}>Настройте стол и пригласите друзей</p>
+            </div>
+          </div>
+
+          <div className={styles.createCard}>
+            <div className={styles.field}>
+              <label className={styles.label}>{t.multiplayer.roomNameLabel}</label>
+              <input
+                type="text"
+                className={styles.input}
+                value={roomName}
+                onChange={(e) => setRoomName(e.target.value)}
+                placeholder={t.multiplayer.roomNamePlaceholder}
+                maxLength={50}
+                autoComplete="off"
+              />
+            </div>
+
+            <div className={styles.field}>
+              <label className={styles.label}>{t.multiplayer.maxPlayersLabel}</label>
+              <div className={styles.playerCards}>
+                {[4, 5, 6, 7, 8, 9].map((num) => (
+                  <button
+                    key={num}
+                    type="button"
+                    className={`${styles.playerCard} ${maxPlayers === num ? styles.selected : ''}`}
+                    onClick={() => setMaxPlayers(num)}
+                    aria-pressed={maxPlayers === num}
+                  >
+                    <div className={styles.cardNumber}>{num}</div>
+                    <div className={styles.cardLabel}>{t.multiplayer.playersCardSuffix}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className={styles.field}>
+              <label className={styles.label}>{t.multiplayer.gameModeLabel}</label>
+              <div className={styles.modeCards} role="group" aria-label={t.multiplayer.gameModeLabel}>
+                <button
+                  type="button"
+                  className={`${styles.modeCard} ${gameMode === 'normal' ? styles.modeCardActive : ''}`}
+                  onClick={() => setGameMode('normal')}
+                  aria-pressed={gameMode === 'normal'}
+                >
+                  <span className={styles.modeCardTitle}>Обычный</span>
+                  <span className={styles.modeCardDesc}>Без рейтинга</span>
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.modeCard} ${gameMode === 'rated' ? styles.modeCardActive : ''}`}
+                  onClick={() => setGameMode('rated')}
+                  aria-pressed={gameMode === 'rated'}
+                >
+                  <span className={styles.modeCardTitle}>Рейтинговый</span>
+                  <span className={styles.modeCardDesc}>За очки рейтинга</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className={styles.createFooter}>
+            <button
               type="button"
-              className={`${styles.button} ${styles.primary}`}
+              className={`${styles.button} ${styles.primary} ${styles.createSubmit}`}
               onClick={() => handleCreateRoom(false)}
               disabled={loading || !roomName.trim()}
             >
@@ -1007,56 +979,52 @@ export const ProperMultiplayer: React.FC = () => {
 
       {/* Присоединение к комнате */}
       {view === 'join' && (
-        <div className={styles.form}>
-          <h3 className={styles.formTitle}>{t.multiplayer.joinTitle}</h3>
-          
-          <div className={styles.field}>
-            <label className={styles.label}>{t.multiplayer.joinCodeLabel}</label>
-            <input
-              type="text"
-              className={styles.input}
-              value={joinCode}
-              onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-              placeholder={t.multiplayer.joinCodePlaceholder}
-              maxLength={6}
-            />
-          </div>
-
-          <div className={styles.field}>
-            <label className={styles.label}>{t.multiplayer.joinPassLabel}</label>
-            <input
-              type="password"
-              className={styles.input}
-              value={joinPassword}
-              onChange={(e) => setJoinPassword(e.target.value)}
-              placeholder={t.multiplayer.joinPassPlaceholder}
-              maxLength={20}
-            />
-          </div>
-
-          <div className={styles.formActions}>
-            <button 
+        <div className={styles.createPanel}>
+          <div className={styles.createHeader}>
+            <button
               type="button"
-              className={`${styles.button} ${styles.secondary}`}
+              className={styles.createBack}
               onClick={() => setView('lobby')}
               disabled={loading}
+              aria-label={t.common.back}
             >
-              ← {t.common.back}
+              ←
             </button>
-            
-            <button 
+            <div>
+              <h3 className={styles.createTitle}>{t.multiplayer.joinTitle}</h3>
+              <p className={styles.createHint}>Введите код из 6 символов</p>
+            </div>
+          </div>
+
+          <div className={styles.createCard}>
+            <div className={styles.field}>
+              <label className={styles.label}>{t.multiplayer.joinCodeLabel}</label>
+              <input
+                type="text"
+                className={`${styles.input} ${styles.codeInput}`}
+                value={joinCode}
+                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                placeholder={t.multiplayer.joinCodePlaceholder}
+                maxLength={6}
+                autoComplete="off"
+                inputMode="text"
+              />
+            </div>
+          </div>
+
+          <div className={styles.createFooter}>
+            <button
               type="button"
-              className={`${styles.button} ${styles.primary}`}
+              className={`${styles.button} ${styles.primary} ${styles.createSubmit}`}
               onClick={() => handleJoinRoom()}
               disabled={loading || !joinCode.trim()}
             >
               {loading ? t.multiplayer.joining : t.multiplayer.joinSubmit}
             </button>
           </div>
-
-          {renderOpenRoomsList()}
         </div>
       )}
+
       {showReplaceModal && existingRoom && (
         <ReplaceRoomModal
           isOpen={showReplaceModal}

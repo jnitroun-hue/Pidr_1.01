@@ -17,6 +17,7 @@ import { useDragAndDrop } from '@/hooks/useDragAndDrop';
 // TableSelector удален - выбор стола больше не нужен
 import type { Player as StorePlayer, Card as StoreCard } from '../../store/gameStore';
 import { motion, AnimatePresence } from 'framer-motion';
+import { WifiOff } from 'lucide-react';
 import React from 'react';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { useGameStore } from '@/store/gameStore';
@@ -25,7 +26,6 @@ import GameChat from '@/components/GameChat';
 import GameWallet from '@/components/GameWallet';
 import { useLanguage } from '../../components/LanguageSwitcher';
 import { useTranslations } from '../../lib/i18n/translations';
-import { useWebSocket } from '@/hooks/useWebSocket';
 import { useTelegram } from '@/hooks/useTelegram';
 import { getCardAssetSrc, deckEntriesToNftMap, buildNftDeckKey } from '@/lib/game/cardAssets';
 import { BOT_TIMING } from '@/lib/game/botTiming';
@@ -1083,6 +1083,105 @@ function GamePageContentComponent({
     }
   }, [multiplayerData]);
 
+  // Realtime-синхронизация мультиплеера (подписка после перехода из лобби в игру)
+  useEffect(() => {
+    if (!isMultiplayer || !multiplayerData?.roomId || !isGameActive) return;
+
+    const { initMultiplayerRealtime, cleanupMultiplayerRealtime } = useGameStore.getState();
+    initMultiplayerRealtime();
+
+    return () => {
+      cleanupMultiplayerRealtime();
+    };
+  }, [isMultiplayer, multiplayerData?.roomId, isGameActive]);
+
+  // Пульс «я в игре» + отметка offline при закрытии (для иконки разрыва у других)
+  useEffect(() => {
+    if (!isMultiplayer || !multiplayerData?.roomId || !isGameActive) return;
+
+    const roomId = multiplayerData.roomId;
+    let cancelled = false;
+
+    const sendGameHeartbeat = async (offline = false) => {
+      try {
+        const headers = new Headers(getApiHeaders() as HeadersInit);
+        headers.set('Content-Type', 'application/json');
+        await fetch('/api/user/heartbeat', {
+          method: 'POST',
+          credentials: 'include',
+          cache: 'no-store',
+          headers,
+          keepalive: offline,
+          body: JSON.stringify({ roomId, offline }),
+        });
+      } catch {
+        /* ignore */
+      }
+    };
+
+    void sendGameHeartbeat(false);
+    const pulse = setInterval(() => {
+      if (!cancelled) void sendGameHeartbeat(false);
+    }, 5000);
+
+    const markOffline = () => {
+      void sendGameHeartbeat(true);
+    };
+    window.addEventListener('pagehide', markOffline);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') markOffline();
+    });
+
+    return () => {
+      cancelled = true;
+      clearInterval(pulse);
+      window.removeEventListener('pagehide', markOffline);
+      markOffline();
+    };
+  }, [isMultiplayer, multiplayerData?.roomId, isGameActive]);
+
+  // Presence: хост опрашивает комнату и включает бота за offline-игрока
+  useEffect(() => {
+    if (!isMultiplayer || !multiplayerData?.roomId || !isGameActive) return;
+    if (!multiplayerData.isHost) return;
+
+    const roomId = multiplayerData.roomId;
+    let cancelled = false;
+
+    const pollPresence = async () => {
+      try {
+        const response = await fetch(`/api/rooms/${roomId}/players`, {
+          method: 'GET',
+          credentials: 'include',
+          headers: getApiHeaders(),
+          cache: 'no-store',
+        });
+        if (!response.ok || cancelled) return;
+
+        const data = await response.json();
+        if (!data.success || !Array.isArray(data.players)) return;
+
+        const updates = data.players
+          .filter((p: { is_bot?: boolean }) => !p.is_bot)
+          .map((p: { user_id: string; is_connected?: boolean }) => ({
+            playerId: String(p.user_id),
+            isOnline: p.is_connected !== false,
+          }));
+
+        useGameStore.getState().applyMultiplayerPresence(updates, { authoritative: true });
+      } catch {
+        /* ignore */
+      }
+    };
+
+    void pollPresence();
+    const interval = setInterval(pollPresence, 4000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [isMultiplayer, multiplayerData?.roomId, multiplayerData?.isHost, isGameActive]);
+
   // ❌ УДАЛЕНО: Старая логика WinnerScreen - теперь используем WinnerModal из gameStore
     // Отслеживаем завершение игры для мультиплеера
   useEffect(() => {
@@ -1372,7 +1471,7 @@ function GamePageContentComponent({
   useEffect(() => {
     const newAiPlayers = new Map<number, AIPlayer>();
     players.forEach(player => {
-      if (player.isBot) {
+      if (player.isBot || player.isBotSubstitute) {
         const playerId = typeof player.id === 'string' ? 
           parseInt(player.id.replace('player_', '')) : player.id;
         newAiPlayers.set(playerId, new AIPlayer(playerId, player.difficulty || 'medium'));
@@ -1393,6 +1492,11 @@ function GamePageContentComponent({
     const { isGameActive, currentPlayerId, players, gameStage, stage2TurnPhase, deck, availableTargets, revealedDeckCard, trumpSuit, tableStack, isGamePaused, pendingPenalty } = useGameStore.getState();
     
     if (!isGameActive || !currentPlayerId) {
+      return;
+    }
+
+    // В мультиплеере ботами управляет только хост — иначе клиенты расходятся
+    if (isMultiplayer && multiplayerData && !multiplayerData.isHost) {
       return;
     }
     
@@ -1421,7 +1525,7 @@ function GamePageContentComponent({
       return;
     }
     
-    if (!currentTurnPlayer.isBot) {
+    if (!currentTurnPlayer.isBot && !currentTurnPlayer.isBotSubstitute) {
       return;
     }
     
@@ -1473,7 +1577,7 @@ function GamePageContentComponent({
     const makeAIMove = async () => {
       try {
         // ПРОВЕРКА: Убеждаемся что все нужные данные есть
-        if (!currentTurnPlayer || !currentTurnPlayer.isBot || !players.length) {
+        if (!currentTurnPlayer || (!currentTurnPlayer.isBot && !currentTurnPlayer.isBotSubstitute) || !players.length) {
           aiProcessingRef.current = null;
           return;
         }
@@ -1614,10 +1718,11 @@ function GamePageContentComponent({
       // Сбрасываем флаг при очистке useEffect
       aiProcessingRef.current = null;
     };
-  }, [isGameActive, currentPlayerId, gameStage, stage2TurnPhase, turnPhase, pendingPenalty, isGamePaused, isTutorialPaused]);
+  }, [isGameActive, currentPlayerId, gameStage, stage2TurnPhase, turnPhase, pendingPenalty, isGamePaused, isTutorialPaused, isMultiplayer, multiplayerData?.isHost]);
 
   // Защита от зависания раунда, когда бот "застревает" в фазе хода.
   useEffect(() => {
+    if (isMultiplayer && multiplayerData && !multiplayerData.isHost) return;
     if (!isGameActive || !currentPlayerId || (gameStage !== 2 && gameStage !== 3)) {
       botStallGuardRef.current = { key: '', since: 0 };
       return;
@@ -1629,7 +1734,7 @@ function GamePageContentComponent({
     }
 
     const currentTurnPlayer = players.find(p => p.id === currentPlayerId);
-    if (!currentTurnPlayer?.isBot) {
+    if (!currentTurnPlayer?.isBot && !currentTurnPlayer?.isBotSubstitute) {
       botStallGuardRef.current = { key: '', since: 0 };
       return;
     }
@@ -2887,13 +2992,20 @@ function GamePageContentComponent({
                             transition: 'all 0.3s ease',
                             objectFit: 'cover',
                             position: 'relative',
-                            zIndex: 5
+                            zIndex: 5,
+                            opacity: !player.isBot && player.isOnline === false ? 0.55 : 1,
+                            filter: !player.isBot && player.isOnline === false ? 'grayscale(0.7)' : undefined,
                           }}
                           />
                         </PremiumAvatarFire>
                       {player.isBot && (
                         <div className={styles.botBadge}>🤖</div>
                         )}
+                      {!player.isBot && player.isOnline === false && (
+                        <div className={styles.disconnectBadge} title="Нет связи с игроком">
+                          <WifiOff size={12} strokeWidth={2.5} />
+                        </div>
+                      )}
                           </div>
                     </div>
                     

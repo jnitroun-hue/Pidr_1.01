@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Users, Copy, Check, Crown, Play, Clock, Wifi, WifiOff, UserPlus, Bot } from 'lucide-react';
 import { RoomManager } from '../lib/multiplayer/room-manager';
 import InviteFriendsModal from './InviteFriendsModal';
+import GameStartCountdownModal from './GameStartCountdownModal';
 import { getApiHeaders } from '@/lib/api-headers';
 import lobbyStyles from './MultiplayerLobby.module.css';
 import { canStartRoom } from '@/lib/multiplayer/room-rules';
@@ -87,7 +88,8 @@ export default function MultiplayerLobby({
   });
 
   const [codeCopied, setCodeCopied] = useState(false);
-  const [countdown, setCountdown] = useState(0);
+  const [launchAtMs, setLaunchAtMs] = useState<number | null>(null);
+  const [showCountdown, setShowCountdown] = useState(false);
   const [isAddingBot, setIsAddingBot] = useState(false);
   const [addBotError, setAddBotError] = useState('');
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -101,23 +103,28 @@ export default function MultiplayerLobby({
   const lastRefreshAtRef = useRef(0);
   const prevPlayerIdsRef = useRef<Set<string>>(new Set());
   const gameStartedRef = useRef(false);
+  const launchAtRef = useRef<number | null>(null);
+  const navigateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onGameStartRef = useRef(onGameStart);
   onGameStartRef.current = onGameStart;
 
-  const triggerGameStart = useCallback(() => {
-    if (gameStartedRef.current) return;
+  const beginSyncedCountdown = useCallback((gameLaunchAt: number) => {
+    if (gameStartedRef.current && launchAtRef.current === gameLaunchAt) return;
+
+    launchAtRef.current = gameLaunchAt;
     gameStartedRef.current = true;
-    setCountdown(3);
-    const countdownInterval = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(countdownInterval);
-          onGameStartRef.current({});
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+    setLaunchAtMs(gameLaunchAt);
+    setShowCountdown(true);
+
+    if (navigateTimerRef.current) {
+      clearTimeout(navigateTimerRef.current);
+    }
+
+    const delay = Math.max(0, gameLaunchAt - Date.now());
+    navigateTimerRef.current = setTimeout(() => {
+      setShowCountdown(false);
+      onGameStartRef.current({});
+    }, delay);
   }, []);
 
   const loadRoomPlayers = useCallback(async (force = false) => {
@@ -183,7 +190,9 @@ export default function MultiplayerLobby({
         });
 
         if (data.roomStatus === 'playing') {
-          triggerGameStart();
+          const launchAt =
+            typeof data.gameLaunchAt === 'number' ? data.gameLaunchAt : Date.now() + 800;
+          beginSyncedCountdown(launchAt);
         }
       } else {
         console.error('❌ [MultiplayerLobby] API вернул ошибку:', data.message);
@@ -193,7 +202,7 @@ export default function MultiplayerLobby({
     } finally {
       refreshInFlightRef.current = false;
     }
-  }, [roomId, currentUserId, lobbyUserIds, onLeaveRoom, triggerGameStart]);
+  }, [roomId, currentUserId, lobbyUserIds, onLeaveRoom, beginSyncedCountdown]);
 
   useEffect(() => {
     setIsHost(initialIsHost);
@@ -217,7 +226,12 @@ export default function MultiplayerLobby({
         loadRoomPlayers(true);
       },
       onGameStart: () => {
-        triggerGameStart();
+        loadRoomPlayers(true);
+      },
+      onGameCountdown: (payload) => {
+        if (payload?.gameLaunchAt) {
+          beginSyncedCountdown(payload.gameLaunchAt);
+        }
       },
     });
 
@@ -226,17 +240,21 @@ export default function MultiplayerLobby({
 
     const interval = setInterval(() => {
       loadRoomPlayers(true);
-    }, 2000);
+    }, 500);
 
     return () => {
       clearInterval(interval);
+      if (navigateTimerRef.current) {
+        clearTimeout(navigateTimerRef.current);
+        navigateTimerRef.current = null;
+      }
       if (refreshTimerRef.current) {
         clearTimeout(refreshTimerRef.current);
         refreshTimerRef.current = null;
       }
       roomManager.unsubscribe();
     };
-  }, [roomId, loadRoomPlayers, triggerGameStart]);
+  }, [roomId, loadRoomPlayers, beginSyncedCountdown]);
 
   const copyRoomCode = async () => {
     try {
@@ -368,8 +386,8 @@ export default function MultiplayerLobby({
       const roomManager = roomManagerRef.current;
       if (!roomManager) return;
 
-      await roomManager.startGame(roomId, currentUserId);
-      triggerGameStart();
+      const gameLaunchAt = await roomManager.startGame(roomId, currentUserId);
+      beginSyncedCountdown(gameLaunchAt);
     } catch (error) {
       console.error('❌ [MultiplayerLobby] Ошибка запуска игры:', error);
       alert(error instanceof Error ? error.message : 'Не удалось начать игру');
@@ -865,21 +883,11 @@ export default function MultiplayerLobby({
         </motion.button>
       </div>
 
-      {/* Обратный отсчет до начала игры */}
-      <AnimatePresence>
-        {countdown > 0 && (
-          <motion.div
-            className="game-countdown"
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.5 }}
-            transition={{ duration: 0.3 }}
-          >
-            <div className="countdown-number">{countdown}</div>
-            <div className="countdown-text">Игра начинается...</div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Синхронизированный отсчёт — полноэкранная модалка */}
+      <GameStartCountdownModal
+        visible={showCountdown}
+        launchAtMs={launchAtMs ?? Date.now()}
+      />
 
       {/* Статус подключения */}
       {!isConnected && (
