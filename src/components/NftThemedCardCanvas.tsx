@@ -67,7 +67,6 @@ export default function NftThemedCardCanvas({
 }: Props) {
   const themeKey = theme && theme in NFT_THEME_CONFIG ? (theme as NftThemeKey) : null;
   const validThemeId = themeId != null && themeId > 0 ? themeId : null;
-  const usesClientCompose = Boolean(themeKey && validThemeId);
 
   const cacheKey = useMemo(
     () => `${suit}|${rank}|${themeKey ?? ''}|${validThemeId ?? ''}`,
@@ -107,10 +106,7 @@ export default function NftThemedCardCanvas({
     };
   }, [cacheKey, themeKey, validThemeId, suit, rank]);
 
-  const imgSrc =
-    dataUrl ??
-    (!usesClientCompose && !failed ? fallbackImageUrl : null) ??
-    (failed ? fallbackImageUrl : null);
+  const imgSrc = !failed && dataUrl ? dataUrl : fallbackImageUrl || null;
 
   return (
     <div
