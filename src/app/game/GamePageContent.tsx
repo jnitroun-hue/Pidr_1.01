@@ -28,6 +28,12 @@ import { useLanguage } from '../../components/LanguageSwitcher';
 import { useTranslations } from '../../lib/i18n/translations';
 import { useTelegram } from '@/hooks/useTelegram';
 import { getCardAssetSrc, deckEntriesToNftMap, buildNftDeckKey } from '@/lib/game/cardAssets';
+import {
+  GAME_HEARTBEAT_INTERVAL_MS,
+  PRESENCE_API_POLL_MS,
+  PRESENCE_STALE_CHECK_MS,
+  MULTIPLAYER_PRESENCE_TIMEOUT_MS,
+} from '@/lib/multiplayer/presence';
 import { BOT_TIMING } from '@/lib/game/botTiming';
 import { preloadNftCardUrls, preloadStandardCardAssets } from '@/lib/game/preload-card-assets';
 import {
@@ -1095,12 +1101,18 @@ function GamePageContentComponent({
     };
   }, [isMultiplayer, multiplayerData?.roomId, isGameActive]);
 
-  // Пульс «я в игре» + отметка offline при закрытии (для иконки разрыва у других)
+  // Пульс «я в игре» + мгновенный Realtime-presence
+  const presenceLastSeenRef = useRef<Map<string, number>>(new Map());
+
   useEffect(() => {
     if (!isMultiplayer || !multiplayerData?.roomId || !isGameActive) return;
 
     const roomId = multiplayerData.roomId;
     let cancelled = false;
+    const now = Date.now();
+    useGameStore.getState().players
+      .filter((p) => !p.isBot)
+      .forEach((p) => presenceLastSeenRef.current.set(p.id, now));
 
     const sendGameHeartbeat = async (offline = false) => {
       try {
@@ -1114,22 +1126,32 @@ function GamePageContentComponent({
           keepalive: offline,
           body: JSON.stringify({ roomId, offline }),
         });
+        if (!offline && !cancelled) {
+          const me = useGameStore.getState().players.find((p) => p.isUser);
+          if (me) {
+            presenceLastSeenRef.current.set(me.id, Date.now());
+            useGameStore.getState().broadcastLocalPresence(true);
+          }
+        }
       } catch {
         /* ignore */
       }
     };
 
+    const markOffline = () => {
+      useGameStore.getState().broadcastLocalPresence(false);
+      void sendGameHeartbeat(true);
+    };
+
     void sendGameHeartbeat(false);
     const pulse = setInterval(() => {
       if (!cancelled) void sendGameHeartbeat(false);
-    }, 5000);
+    }, GAME_HEARTBEAT_INTERVAL_MS);
 
-    const markOffline = () => {
-      void sendGameHeartbeat(true);
-    };
     window.addEventListener('pagehide', markOffline);
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') markOffline();
+      else if (!cancelled) void sendGameHeartbeat(false);
     });
 
     return () => {
@@ -1140,10 +1162,50 @@ function GamePageContentComponent({
     };
   }, [isMultiplayer, multiplayerData?.roomId, isGameActive]);
 
-  // Presence: хост опрашивает комнату и включает бота за offline-игрока
+  // Локальный таймер: нет Realtime-пульса → offline (~3 с); pagehide — мгновенно
+  useEffect(() => {
+    if (!isMultiplayer || !isGameActive) return;
+
+    const tick = () => {
+      const state = useGameStore.getState();
+      const now = Date.now();
+      const updates: Array<{ playerId: string; isOnline: boolean }> = [];
+
+      state.players.forEach((player) => {
+        if (player.isBot || player.isUser) return;
+        const last = presenceLastSeenRef.current.get(player.id) ?? now;
+        if (now - last > MULTIPLAYER_PRESENCE_TIMEOUT_MS && player.isOnline !== false) {
+          updates.push({ playerId: player.id, isOnline: false });
+        }
+      });
+
+      if (updates.length > 0) {
+        state.applyMultiplayerPresence(updates, {
+          authoritative: state.multiplayerData?.isHost === true,
+        });
+      }
+    };
+
+    const id = setInterval(tick, PRESENCE_STALE_CHECK_MS);
+    return () => clearInterval(id);
+  }, [isMultiplayer, isGameActive, multiplayerData?.isHost]);
+
+  useEffect(() => {
+    if (!isMultiplayer || !isGameActive) return;
+
+    const onPulse = (event: Event) => {
+      const playerId = (event as CustomEvent<{ playerId?: string }>).detail?.playerId;
+      if (playerId) {
+        presenceLastSeenRef.current.set(playerId, Date.now());
+      }
+    };
+
+    window.addEventListener('pidr-mp-presence-pulse', onPulse);
+    return () => window.removeEventListener('pidr-mp-presence-pulse', onPulse);
+  }, [isMultiplayer, isGameActive]);
+
   useEffect(() => {
     if (!isMultiplayer || !multiplayerData?.roomId || !isGameActive) return;
-    if (!multiplayerData.isHost) return;
 
     const roomId = multiplayerData.roomId;
     let cancelled = false;
@@ -1161,6 +1223,15 @@ function GamePageContentComponent({
         const data = await response.json();
         if (!data.success || !Array.isArray(data.players)) return;
 
+        const now = Date.now();
+        data.players
+          .filter((p: { is_bot?: boolean }) => !p.is_bot)
+          .forEach((p: { user_id: string; is_connected?: boolean }) => {
+            if (p.is_connected !== false) {
+              presenceLastSeenRef.current.set(String(p.user_id), now);
+            }
+          });
+
         const updates = data.players
           .filter((p: { is_bot?: boolean }) => !p.is_bot)
           .map((p: { user_id: string; is_connected?: boolean }) => ({
@@ -1168,14 +1239,16 @@ function GamePageContentComponent({
             isOnline: p.is_connected !== false,
           }));
 
-        useGameStore.getState().applyMultiplayerPresence(updates, { authoritative: true });
+        useGameStore.getState().applyMultiplayerPresence(updates, {
+          authoritative: multiplayerData.isHost,
+        });
       } catch {
         /* ignore */
       }
     };
 
     void pollPresence();
-    const interval = setInterval(pollPresence, 4000);
+    const interval = setInterval(pollPresence, PRESENCE_API_POLL_MS);
     return () => {
       cancelled = true;
       clearInterval(interval);

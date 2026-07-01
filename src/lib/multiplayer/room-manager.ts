@@ -204,6 +204,8 @@ export class RoomManager {
     onGameEnded?: (results: any[]) => void;
     onGameStateSync?: (gameState: any) => void;
     onGameCountdown?: (payload: { gameLaunchAt: number; roomId: string }) => void;
+    onPlayerPresence?: (payload: { playerId: string; isOnline: boolean; timestamp: number }) => void;
+    onRequestGameStateSync?: () => void;
   }): void {
     console.log('📡 [RoomManager] Подписка на комнату:', roomId);
     this.roomId = roomId;
@@ -323,6 +325,16 @@ export class RoomManager {
           callbacks.onGameCountdown(payload.payload);
         }
       })
+      .on('broadcast', { event: 'player-presence' }, (payload: any) => {
+        if (callbacks.onPlayerPresence && payload.payload?.playerId != null) {
+          callbacks.onPlayerPresence(payload.payload);
+        }
+      })
+      .on('broadcast', { event: 'request-game-state-sync' }, () => {
+        if (callbacks.onRequestGameStateSync) {
+          callbacks.onRequestGameStateSync();
+        }
+      })
       .subscribe();
 
     console.log('✅ [RoomManager] Подписка активна');
@@ -372,6 +384,26 @@ export class RoomManager {
   /**
    * Синхронизированный отсчёт до старта (все клиенты)
    */
+  broadcastPlayerPresence(roomId: string, playerId: string, isOnline: boolean): void {
+    if (!this.channel || this.roomId !== roomId) return;
+
+    this.channel.send({
+      type: 'broadcast',
+      event: 'player-presence',
+      payload: { playerId, isOnline, timestamp: Date.now() },
+    });
+  }
+
+  requestGameStateSync(roomId: string): void {
+    if (!this.channel || this.roomId !== roomId) return;
+
+    this.channel.send({
+      type: 'broadcast',
+      event: 'request-game-state-sync',
+      payload: { timestamp: Date.now() },
+    });
+  }
+
   broadcastGameCountdown(roomId: string, gameLaunchAt: number): void {
     if (!this.channel || this.roomId !== roomId) {
       console.warn('❌ [RoomManager] Канал не готов для game-countdown');
