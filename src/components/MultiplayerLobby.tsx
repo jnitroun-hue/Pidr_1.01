@@ -689,31 +689,6 @@ export default function MultiplayerLobby({
         borderRadius: '16px',
         border: '1px solid rgba(255, 255, 255, 0.1)'
       }}>
-        {isRoomHost && canAddBot && (
-          <motion.button
-            type="button"
-            onClick={handleAddBot}
-            disabled={isAddingBot}
-            whileHover={{ scale: 1.02, y: -2 }}
-            whileTap={{ scale: 0.98 }}
-            style={{
-              padding: '16px 24px',
-              borderRadius: '12px',
-              border: 'none',
-              background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-              color: 'white',
-              fontSize: '16px',
-              fontWeight: 'bold',
-              cursor: isAddingBot ? 'wait' : 'pointer',
-              opacity: isAddingBot ? 0.7 : 1,
-              boxShadow: '0 4px 12px rgba(139, 92, 246, 0.4)',
-              width: '100%',
-            }}
-          >
-            {isAddingBot ? '⏳ Добавление бота…' : '🤖 Добавить бота'}
-          </motion.button>
-        )}
-
         {addBotError && (
           <div style={{ color: '#f87171', fontSize: '13px', textAlign: 'center' }}>
             {addBotError}
@@ -769,58 +744,29 @@ export default function MultiplayerLobby({
           {currentPlayer?.is_ready ? '✅ Готов' : '⏳ Не готов'}
         </motion.button>
 
-        {/* Добавить бота и пригласить друзей (ВСЕГДА ПОКАЗЫВАЕМ ХОСТУ) */}
+        {/* Пригласить друзей (хост) — бота добавляют кликом по пустому месту за столом */}
         {isRoomHost && (
-          <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
-            <motion.button
-              type="button"
-              onClick={handleAddBot}
-              disabled={isAddingBot || lobbyState.players.length >= lobbyState.maxPlayers}
-              whileHover={{ scale: 1.02, y: -2 }}
-              whileTap={{ scale: 0.98 }}
-              style={{
-                flex: 1,
-                padding: '14px 24px',
-                borderRadius: '12px',
-                border: 'none',
-                background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-                color: 'white',
-                fontSize: '16px',
-                fontWeight: 'bold',
-                cursor: isAddingBot ? 'not-allowed' : 'pointer',
-                opacity: isAddingBot ? 0.5 : 1,
-                boxShadow: '0 4px 12px rgba(139, 92, 246, 0.4)',
-                transition: 'all 0.2s'
-              }}
-            >
-              {isAddingBot
-                ? '⏳ Добавление...'
-                : lobbyState.players.length >= lobbyState.maxPlayers
-                  ? '🤖 Мест нет'
-                  : '🤖 Добавить бота'}
-            </motion.button>
-
-            <motion.button
-              onClick={() => setShowInviteModal(true)}
-              whileHover={{ scale: 1.02, y: -2 }}
-              whileTap={{ scale: 0.98 }}
-              style={{
-                flex: 1,
-                padding: '14px 24px',
-                borderRadius: '12px',
-                border: 'none',
-                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                color: 'white',
-                fontSize: '16px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)',
-                transition: 'all 0.2s'
-              }}
-            >
-              👥 Пригласить друзей
-            </motion.button>
-          </div>
+          <motion.button
+            type="button"
+            onClick={() => setShowInviteModal(true)}
+            whileHover={{ scale: 1.02, y: -2 }}
+            whileTap={{ scale: 0.98 }}
+            style={{
+              width: '100%',
+              padding: '14px 24px',
+              borderRadius: '12px',
+              border: 'none',
+              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+              color: 'white',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)',
+              transition: 'all 0.2s',
+            }}
+          >
+            👥 Пригласить друзей
+          </motion.button>
         )}
 
         {/* Запуск игры (только хост) */}
