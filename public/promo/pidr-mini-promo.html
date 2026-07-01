@@ -48,8 +48,8 @@
       position: absolute;
       inset: 0;
       background:
-        radial-gradient(ellipse at 50% 40%, rgba(10, 14, 23, 0.55) 0%, rgba(5, 8, 16, 0.88) 70%),
-        linear-gradient(180deg, rgba(5, 8, 16, 0.35) 0%, rgba(5, 8, 16, 0.92) 100%);
+        radial-gradient(ellipse at 50% 78%, rgba(10, 14, 23, 0.2) 0%, rgba(5, 8, 16, 0.75) 55%),
+        linear-gradient(180deg, rgba(5, 8, 16, 0.55) 0%, rgba(5, 8, 16, 0.88) 45%, rgba(5, 8, 16, 0.92) 100%);
     }
 
     .bg-glow {
@@ -64,7 +64,13 @@
       50% { opacity: 1; }
     }
 
-    /* Слайды */
+    /* Слайды — обёртка, чтобы nth-child считал только слайды */
+    .slides {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+    }
+
     .slide {
       position: absolute;
       inset: 0;
@@ -77,21 +83,19 @@
       opacity: 0;
       transform: scale(0.94) translateY(12px);
       animation: show 24s infinite;
-      z-index: 2;
     }
 
-    .slide:nth-child(3) { animation-delay: 0s; }
-    .slide:nth-child(4) { animation-delay: 3.4s; }
-    .slide:nth-child(5) { animation-delay: 6.8s; }
-    .slide:nth-child(6) { animation-delay: 10.2s; }
-    .slide:nth-child(7) { animation-delay: 13.6s; }
-    .slide:nth-child(8) { animation-delay: 17s; }
-    .slide:nth-child(9) { animation-delay: 20.4s; }
+    .slides .slide:nth-child(1) { animation-delay: 0s; }
+    .slides .slide:nth-child(2) { animation-delay: 4s; }
+    .slides .slide:nth-child(3) { animation-delay: 8s; }
+    .slides .slide:nth-child(4) { animation-delay: 12s; }
+    .slides .slide:nth-child(5) { animation-delay: 16s; }
+    .slides .slide:nth-child(6) { animation-delay: 20s; }
 
     @keyframes show {
-      0%, 1.5%   { opacity: 0; transform: scale(0.94) translateY(12px); }
-      3.5%, 11%  { opacity: 1; transform: scale(1) translateY(0); }
-      13%, 100%  { opacity: 0; transform: scale(1.02) translateY(-8px); }
+      0%, 1%     { opacity: 0; transform: scale(0.94) translateY(12px); }
+      2.5%, 14%  { opacity: 1; transform: scale(1) translateY(0); }
+      16.67%, 100% { opacity: 0; transform: scale(1.02) translateY(-8px); }
     }
 
     .logo {
@@ -409,15 +413,19 @@
       z-index: 10;
     }
 
-    .watermark {
-      position: absolute;
-      top: 18px;
-      left: 24px;
-      font-size: 13px;
-      font-weight: 800;
-      letter-spacing: 0.15em;
-      color: rgba(255, 215, 0, 0.55);
-      z-index: 10;
+    .step-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #ffd700, #f59e0b);
+      color: #0f172a;
+      font-size: 22px;
+      font-weight: 900;
+      margin-bottom: 12px;
+      box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
     }
   </style>
 </head>
@@ -426,12 +434,11 @@
     <div class="bg-art"></div>
     <div class="bg-overlay"></div>
     <div class="bg-glow"></div>
-    <div class="watermark">P.I.D.R.</div>
 
-    <!-- 1. Заставка -->
+    <div class="slides">
+    <!-- 1. Заставка (логотип уже на фоне — без повтора P.I.D.R.) -->
     <div class="slide">
-      <div class="logo">P.I.D.R.</div>
-      <div class="sub">Уникальная стратегическая карточная игра</div>
+      <div class="sub" style="margin-top: 0; font-size: 32px;">Уникальная стратегическая карточная игра</div>
       <div class="sub-sm">NFT-коллекции • Онлайн мультиплеер • Рейтинг</div>
       <div class="platforms">
         <div class="platform vk"><img src="../img/vk-app-icon-512-clean.png" alt="VK" /> ВКонтакте</div>
@@ -443,7 +450,8 @@
 
     <!-- 2. Стадия 1 -->
     <div class="slide">
-      <div class="rule-stage">Стадия 1</div>
+      <div class="step-num">1</div>
+      <div class="rule-stage">Стадия 1 — одна открытая карта</div>
       <div class="card-row">
         <div class="gcard legendary winner">
           <div class="gcard-inner">
@@ -470,6 +478,7 @@
 
     <!-- 3. Стадия 2 — козырь -->
     <div class="slide">
+      <div class="step-num">2</div>
       <div class="rule-stage">Стадия 2 — козырь</div>
       <div class="card-row">
         <div class="gcard trump winner">
@@ -497,7 +506,8 @@
 
     <!-- 4. Пеньки -->
     <div class="slide">
-      <div class="rule-stage">Пеньки</div>
+      <div class="step-num">3</div>
+      <div class="rule-stage">Стадия 3 — пеньки</div>
       <div class="card-row">
         <div class="gcard face-down">
           <div class="gcard-inner"><div class="gcard-back-logo">PIDR</div></div>
@@ -522,7 +532,8 @@
 
     <!-- 5. Одна карта -->
     <div class="slide">
-      <div class="rule-stage">Правило «Одна карта!»</div>
+      <div class="step-num">4</div>
+      <div class="rule-stage">Главное правило</div>
       <div class="card-row">
         <div class="gcard gold winner" style="width: 130px; height: 186px;">
           <div class="gcard-inner">
@@ -539,10 +550,10 @@
       </div>
     </div>
 
-    <!-- 6. Платформы + фичи -->
+    <!-- 6. Финал — платформы (без повтора логотипа) -->
     <div class="slide">
-      <div class="logo" style="font-size: 64px;">P.I.D.R.</div>
-      <div class="sub">Доступно на всех платформах</div>
+      <div class="sub" style="margin-top: 0; font-size: 36px; color: #ffd700;">Начни игру прямо сейчас!</div>
+      <div class="sub-sm">VK • Telegram • Браузер</div>
       <div class="platforms">
         <div class="platform vk"><img src="../img/vk-app-icon-512-clean.png" alt="" /> VK Mini App</div>
         <div class="platform tg"><img src="../img/telegram-logo.png" alt="" /> Telegram Mini App</div>
@@ -555,7 +566,8 @@
         <span class="feat">🛒 Маркетплейс</span>
         <span class="feat">💎 Крипто & ₽</span>
       </div>
-      <div class="badge" style="margin-top: 26px; font-size: 24px;">▶ Начни игру прямо сейчас!</div>
+      <div class="badge" style="margin-top: 26px; font-size: 22px;">▶ P.I.D.R. — играй на любой платформе</div>
+    </div>
     </div>
 
     <div class="progress"></div>

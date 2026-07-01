@@ -9,7 +9,6 @@ import {
   composeSeededThemeCardBuffer,
   composeSvgOnlyCardBuffer,
   COMPOSE_VERSION,
-  downloadStorageBuffer,
 } from '@/lib/nft/compose-theme-card';
 import { normalizeRankToken, normalizeSuitToken } from '@/lib/game/cardAssets';
 import { supabaseAdmin } from '@/lib/supabase';
@@ -121,17 +120,11 @@ async function uploadDailyOfferCardBuffer(
   return urlData?.publicUrl || null;
 }
 
-/** Собирает PNG карты: превью из Storage → тема → SVG fallback */
+/** Собирает PNG карты: всегда canvas v3 (не кэш v1/v2 sharp) */
 async function resolveDailyOfferCardBuffer(
   userId: number,
   spec: PremiumDailyOfferSpec
 ): Promise<{ buffer: Buffer; themePick: ThemeAssetPick }> {
-  const previewPath = getDailyOfferPreviewStoragePath(userId, spec);
-  const cachedPreview = await downloadStorageBuffer(NFT_STORAGE_BUCKET, previewPath);
-  if (cachedPreview) {
-    return { buffer: cachedPreview, themePick: spec.themePick };
-  }
-
   try {
     const composed = await composeSeededThemeCardBuffer({
       suit: spec.suit,

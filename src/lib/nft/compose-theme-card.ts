@@ -1,13 +1,9 @@
 import fs from 'fs';
 import path from 'path';
-import sharp from 'sharp';
 import { supabaseAdmin } from '@/lib/supabase';
 import { NFT_STORAGE_BUCKET, POKEMON_STORAGE_BUCKET } from '@/lib/nft/constants';
-import {
-  buildCardFaceSvg,
-  CARD_FACE,
-  type CardFaceSpec,
-} from '@/lib/nft/card-face-builder';
+import { type CardFaceSpec } from '@/lib/nft/card-face-builder';
+import { composeCardBufferServer } from '@/lib/nft/compose-card-server';
 import {
   getThemeAssetRelativePath,
   NFT_THEME_CONFIG,
@@ -18,7 +14,8 @@ import {
 } from '@/lib/nft/theme-config';
 
 const REMOTE_FETCH_TIMEOUT_MS = 2500;
-const COMPOSE_VERSION = 2;
+/** v3: canvas-сборка как в NFT-генераторе (не sharp SVG) */
+const COMPOSE_VERSION = 3;
 
 export { COMPOSE_VERSION };
 
@@ -114,7 +111,7 @@ export async function composeSvgOnlyCardBuffer(params: {
     rankNormalized: params.rankNormalized,
     themeLabel: params.themeLabel,
   };
-  return sharp(Buffer.from(buildCardFaceSvg(spec))).png().toBuffer();
+  return composeCardBufferServer(spec);
 }
 
 export async function composeThemeCardBuffer(params: {
@@ -127,20 +124,7 @@ export async function composeThemeCardBuffer(params: {
   const { theme, themeId } = params;
   const themeImage = await loadThemeImageBuffer({ theme, themeId });
   const spec = toCardFaceSpec({ ...params, theme });
-  const { art } = CARD_FACE;
-
-  const themeResized = await sharp(themeImage)
-    .resize(art.size, art.size, {
-      fit: 'contain',
-      background: { r: 241, g: 245, b: 249, alpha: 1 },
-    })
-    .png()
-    .toBuffer();
-
-  return sharp(Buffer.from(buildCardFaceSvg(spec)))
-    .composite([{ input: themeResized, top: art.top, left: art.left }])
-    .png()
-    .toBuffer();
+  return composeCardBufferServer(spec, themeImage);
 }
 
 /** Случайная тематическая карта из общего пула (Premium free roll) */
