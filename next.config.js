@@ -1,7 +1,18 @@
 /** @type {import('next').NextConfig} */
+
+const APP_BUILD_ID =
+  process.env.VERCEL_GIT_COMMIT_SHA ||
+  process.env.VERCEL_DEPLOYMENT_ID ||
+  process.env.APP_BUILD_ID ||
+  'local-dev';
+
 const nextConfig = {
   reactStrictMode: true,
   serverExternalPackages: ['sharp', '@napi-rs/canvas'],
+
+  env: {
+    NEXT_PUBLIC_APP_BUILD_ID: APP_BUILD_ID,
+  },
   
   // ✅ ОПТИМИЗАЦИЯ ИЗОБРАЖЕНИЙ
   images: {
@@ -75,15 +86,33 @@ const nextConfig = {
     pagesBufferLength: 2,
   },
   
-  // ✅ ОПТИМИЗАЦИЯ ДЛЯ МОБИЛЬНЫХ УСТРОЙСТВ (Telegram WebApp)
+  // ✅ КЭШ: HTML/API без кэша; hashed static — долго (иначе Telegram держит старую версию сутками)
   async headers() {
     return [
       {
-        source: '/(.*)',
+        source: '/_next/static/:path*',
         headers: [
           {
             key: 'Cache-Control',
-            value: 'public, max-age=86400, must-revalidate', // 24 часа - минимум для бесплатного Vercel
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
+        source: '/api/app/version',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          },
+        ],
+      },
+      {
+        source: '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2)$).*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store, max-age=0, must-revalidate',
           },
           {
             key: 'X-Content-Type-Options',

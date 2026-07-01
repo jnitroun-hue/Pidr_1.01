@@ -82,7 +82,7 @@
       text-align: center;
       opacity: 0;
       transform: scale(0.94) translateY(12px);
-      animation: show 24s infinite;
+      animation: show 28s infinite;
     }
 
     .slides .slide:nth-child(1) { animation-delay: 0s; }
@@ -91,11 +91,12 @@
     .slides .slide:nth-child(4) { animation-delay: 12s; }
     .slides .slide:nth-child(5) { animation-delay: 16s; }
     .slides .slide:nth-child(6) { animation-delay: 20s; }
+    .slides .slide:nth-child(7) { animation-delay: 24s; }
 
     @keyframes show {
-      0%, 1%     { opacity: 0; transform: scale(0.94) translateY(12px); }
-      2.5%, 14%  { opacity: 1; transform: scale(1) translateY(0); }
-      16.67%, 100% { opacity: 0; transform: scale(1.02) translateY(-8px); }
+      0%, 1%      { opacity: 0; transform: scale(0.94) translateY(12px); }
+      2.5%, 12.5% { opacity: 1; transform: scale(1) translateY(0); }
+      14.28%, 100% { opacity: 0; transform: scale(1.02) translateY(-8px); }
     }
 
     .logo {
@@ -185,27 +186,65 @@
     .platform {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
       padding: 14px 22px;
       border-radius: 16px;
-      font-size: 18px;
+      font-size: 17px;
       font-weight: 800;
       color: #fff;
       backdrop-filter: blur(10px);
-      border: 2px solid rgba(255, 255, 255, 0.15);
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      border: 2px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
     }
 
-    .platform img {
-      width: 32px;
-      height: 32px;
-      object-fit: contain;
-      border-radius: 8px;
+    .platform-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
     }
 
-    .platform.vk   { background: linear-gradient(135deg, rgba(0, 119, 255, 0.55), rgba(0, 68, 153, 0.65)); border-color: rgba(81, 162, 255, 0.5); }
-    .platform.tg   { background: linear-gradient(135deg, rgba(34, 158, 217, 0.55), rgba(0, 136, 204, 0.65)); border-color: rgba(56, 189, 248, 0.5); }
-    .platform.web  { background: linear-gradient(135deg, rgba(255, 215, 0, 0.25), rgba(168, 85, 247, 0.35)); border-color: rgba(255, 215, 0, 0.45); }
+    .platform-icon svg {
+      width: 24px;
+      height: 24px;
+      display: block;
+    }
+
+    .platform.vk  { background: linear-gradient(135deg, rgba(0, 119, 255, 0.72), rgba(0, 78, 180, 0.85)); border-color: rgba(81, 162, 255, 0.55); }
+    .platform.vk  .platform-icon { background: #0077ff; }
+    .platform.tg  { background: linear-gradient(135deg, rgba(34, 158, 217, 0.72), rgba(0, 136, 204, 0.85)); border-color: rgba(56, 189, 248, 0.55); }
+    .platform.tg  .platform-icon { background: #229ed9; }
+    .platform.web { background: linear-gradient(135deg, rgba(255, 215, 0, 0.28), rgba(168, 85, 247, 0.42)); border-color: rgba(255, 215, 0, 0.5); }
+    .platform.web .platform-icon { background: linear-gradient(135deg, #ffd700, #a855f7); }
+
+    .deal-label {
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #94a3b8;
+      margin-top: 8px;
+    }
+
+    .gcard.opening {
+      animation: penkiFlip 2s ease-in-out infinite;
+    }
+
+    @keyframes penkiFlip {
+      0%, 40% { transform: rotateY(0deg) translateY(0); }
+      50%, 90% { transform: rotateY(180deg) translateY(-10px); }
+      100% { transform: rotateY(360deg) translateY(0); }
+    }
+
+    .open-arrow {
+      font-size: 36px;
+      color: #4ade80;
+      text-shadow: 0 0 20px rgba(74, 222, 128, 0.6);
+      animation: vsPulse 1.2s ease-in-out infinite;
+    }
 
     .features {
       display: flex;
@@ -395,7 +434,7 @@
       left: 0;
       height: 5px;
       background: linear-gradient(90deg, #ffd700, #f472b6, #22d3ee);
-      animation: bar 24s linear infinite;
+      animation: bar 28s linear infinite;
       z-index: 10;
     }
 
@@ -441,17 +480,43 @@
       <div class="sub" style="margin-top: 0; font-size: 32px;">Уникальная стратегическая карточная игра</div>
       <div class="sub-sm">NFT-коллекции • Онлайн мультиплеер • Рейтинг</div>
       <div class="platforms">
-        <div class="platform vk"><img src="../img/vk-app-icon-512-clean.png" alt="VK" /> ВКонтакте</div>
-        <div class="platform tg"><img src="../img/telegram-logo.png" alt="TG" /> Telegram</div>
-        <div class="platform web"><img src="../globe.svg" alt="Web" /> Веб-версия</div>
+        <div class="platform vk"><span class="platform-icon" data-icon="vk"></span> ВКонтакте</div>
+        <div class="platform tg"><span class="platform-icon" data-icon="tg"></span> Telegram</div>
+        <div class="platform web"><span class="platform-icon" data-icon="web"></span> Веб-версия</div>
       </div>
       <div class="badge">Играй где удобно — один аккаунт везде</div>
     </div>
 
-    <!-- 2. Стадия 1 -->
+    <!-- 2. Старт — раздача (2 пенька + 1 открытая) -->
+    <div class="slide">
+      <div class="rule-stage" style="margin-bottom: 20px;">Старт игры — раздача</div>
+      <div class="card-row">
+        <div class="gcard face-down">
+          <div class="gcard-inner"><div class="gcard-back-logo">PIDR</div></div>
+        </div>
+        <div class="gcard face-down">
+          <div class="gcard-inner"><div class="gcard-back-logo">PIDR</div></div>
+        </div>
+        <div class="gcard legendary winner">
+          <div class="gcard-inner">
+            <div class="gcard-rank">A</div>
+            <div class="gcard-suit-big">♥</div>
+            <div class="gcard-label">Open</div>
+          </div>
+        </div>
+      </div>
+      <div class="rule-title">2 пенька + 1 открытая</div>
+      <div class="rule-body">
+        Каждому сдаётся <span class="accent">2 закрытых пенька</span> и <span class="accent">1 открытая карта</span>.<br />
+        Пеньки лежат рубашкой вверх до 3-й стадии.
+      </div>
+      <div class="deal-label">это начало партии, не стадия 3</div>
+    </div>
+
+    <!-- 3. Стадия 1 -->
     <div class="slide">
       <div class="step-num">1</div>
-      <div class="rule-stage">Стадия 1 — одна открытая карта</div>
+      <div class="rule-stage">Стадия 1</div>
       <div class="card-row">
         <div class="gcard legendary winner">
           <div class="gcard-inner">
@@ -469,14 +534,14 @@
           </div>
         </div>
       </div>
-      <div class="rule-title">Одна открытая карта</div>
+      <div class="rule-title">Ход открытой картой</div>
       <div class="rule-body">
-        Старшая бьёт младшую.<br />
-        <span class="cyan">Двойка бьёт только Туз!</span> — неожиданный поворот.
+        Старшая бьёт младшую. Не можешь — бери из колоды.<br />
+        <span class="cyan">Двойка бьёт только Туз!</span>
       </div>
     </div>
 
-    <!-- 3. Стадия 2 — козырь -->
+    <!-- 4. Стадия 2 — козырь -->
     <div class="slide">
       <div class="step-num">2</div>
       <div class="rule-stage">Стадия 2 — козырь</div>
@@ -497,43 +562,49 @@
           </div>
         </div>
       </div>
-      <div class="rule-title">Появляется козырь</div>
+      <div class="rule-title">Колода кончилась — козырь</div>
       <div class="rule-body">
-        <span class="danger">ПИКИ БЬЮТ ТОЛЬКО ПИКИ!</span><br />
-        Стратегия меняется — каждый ход на вес золота.
+        Козырь = последняя взятая карта (кроме пик).<br />
+        <span class="danger">ПИКИ БЬЮТ ТОЛЬКО ПИКИ!</span>
       </div>
     </div>
 
-    <!-- 4. Пеньки -->
+    <!-- 5. Стадия 3 — открытие пеньков -->
     <div class="slide">
       <div class="step-num">3</div>
-      <div class="rule-stage">Стадия 3 — пеньки</div>
+      <div class="rule-stage">Стадия 3 — открытие пеньков</div>
       <div class="card-row">
-        <div class="gcard face-down">
-          <div class="gcard-inner"><div class="gcard-back-logo">PIDR</div></div>
+        <div class="gcard face-down opening">
+          <div class="gcard-inner"><div class="gcard-back-logo">?</div></div>
         </div>
-        <div class="gcard face-down">
-          <div class="gcard-inner"><div class="gcard-back-logo">PIDR</div></div>
-        </div>
+        <div class="open-arrow">→</div>
         <div class="gcard fire winner">
           <div class="gcard-inner">
             <div class="gcard-rank">J</div>
             <div class="gcard-suit-big">♦</div>
-            <div class="gcard-label">Epic</div>
+            <div class="gcard-label">NFT</div>
+          </div>
+        </div>
+        <div class="open-arrow">→</div>
+        <div class="gcard epic winner">
+          <div class="gcard-inner">
+            <div class="gcard-rank">9</div>
+            <div class="gcard-suit-big">♣</div>
+            <div class="gcard-label">NFT</div>
           </div>
         </div>
       </div>
-      <div class="rule-title">Две закрытые + одна открытая</div>
+      <div class="rule-title">🔓 Пеньки открываются!</div>
       <div class="rule-body">
-        Колода пуста — включается <span class="accent">интрига до финала</span>.<br />
-        Блеф, риск и яркие NFT-карты в каждой партии.
+        Когда колода пуста и рука пуста — <span class="accent">переворачиваешь 2 пенька</span>.<br />
+        Играешь ими по правилам 2-й стадии. Закончились — выходишь из игры.
       </div>
     </div>
 
-    <!-- 5. Одна карта -->
+    <!-- 6. Одна карта -->
     <div class="slide">
-      <div class="step-num">4</div>
-      <div class="rule-stage">Главное правило</div>
+      <div class="step-num">!</div>
+      <div class="rule-stage">Правило «Одна карта!»</div>
       <div class="card-row">
         <div class="gcard gold winner" style="width: 130px; height: 186px;">
           <div class="gcard-inner">
@@ -545,19 +616,19 @@
       </div>
       <div class="rule-title">☝️ Объяви вслух!</div>
       <div class="rule-body">
-        Осталась одна карта — <span class="accent">крикни «Одна!»</span><br />
+        На 2–3 стадии: осталась одна карта — <span class="accent">крикни «Одна!»</span><br />
         <span class="danger">Забыл — штраф от всех игроков.</span>
       </div>
     </div>
 
-    <!-- 6. Финал — платформы (без повтора логотипа) -->
+    <!-- 7. Финал -->
     <div class="slide">
       <div class="sub" style="margin-top: 0; font-size: 36px; color: #ffd700;">Начни игру прямо сейчас!</div>
       <div class="sub-sm">VK • Telegram • Браузер</div>
       <div class="platforms">
-        <div class="platform vk"><img src="../img/vk-app-icon-512-clean.png" alt="" /> VK Mini App</div>
-        <div class="platform tg"><img src="../img/telegram-logo.png" alt="" /> Telegram Mini App</div>
-        <div class="platform web"><img src="../globe.svg" alt="" /> Браузер / PWA</div>
+        <div class="platform vk"><span class="platform-icon" data-icon="vk"></span> VK Mini App</div>
+        <div class="platform tg"><span class="platform-icon" data-icon="tg"></span> Telegram Mini App</div>
+        <div class="platform web"><span class="platform-icon" data-icon="web"></span> Браузер / PWA</div>
       </div>
       <div class="features">
         <span class="feat">🃏 Яркие NFT-карты</span>
@@ -571,7 +642,24 @@
     </div>
 
     <div class="progress"></div>
-    <div class="hint">F11 → запись экрана 24 сек → promo VK / TG / сайт</div>
+    <div class="hint">F11 → запись экрана 28 сек → promo VK / TG / сайт</div>
   </div>
+
+  <!-- Иконки платформ (официальные цвета) -->
+  <template id="icon-vk">
+    <svg viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M12.785 16.241s.288-.032.436-.194c.136-.148.132-.427.132-.653 0-.356.005-2.234.005-2.234s0-1.655.767-1.898c.781-.252 1.785 1.624 2.848 2.343.803.547 1.412.427 1.412.427l2.822-.041s1.476-.092.775-1.254c-.058-.094-.411-.864-2.115-2.443-1.788-1.658-1.549-.695.605-2.129 1.312-1.009 1.838-1.624 1.674-1.886-.154-.244-1.103-.18-1.103-.18l-2.403.015s-.178-.025-.31.055c-.128.078-.209.258-.209.258s-.375 1.002-.874 1.854c-1.053 1.786-1.476 1.878-1.648 1.767-.402-.262-.302-1.052-.302-1.616 0-1.756.266-2.488-.518-2.677-.26-.063-.451-.104-1.117-.111-.853-.009-1.573.003-1.981.208-.272.133-.482.429-.354.446.158.022.516.097.705.355.245.334.236 1.083.236 1.083s.141 2.073-.328 2.329c-.323.178-.766-.185-1.717-1.853-.486-.838-.853-1.764-.853-1.764s-.071-.174-.198-.268c-.153-.113-.367-.149-.367-.149l-2.283.015s-.343.01-.469.158c-.112.133-.009.408-.009.408s1.793 4.193 3.819 6.305c1.861 1.938 3.977 1.812 3.977 1.812h.958z"/></svg>
+  </template>
+  <template id="icon-tg">
+    <svg viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M9.417 15.18l-.397 5.584c.568 0 .816-.244 1.115-.537l2.663-2.545 5.518 4.041c1.012.558 1.73.264 1.984-.929l3.594-16.84h.001c.319-1.486-.541-2.066-1.527-1.697L1.173 9.773C-.277 10.394-.259 11.14.905 11.481l5.963 1.859L19.28 6.27c.595-.394 1.136-.176.691.218"/></svg>
+  </template>
+  <template id="icon-web">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+  </template>
+  <script>
+    document.querySelectorAll('[data-icon]').forEach((el) => {
+      const tpl = document.getElementById('icon-' + el.dataset.icon);
+      if (tpl) el.appendChild(tpl.content.cloneNode(true));
+    });
+  </script>
 </body>
 </html>

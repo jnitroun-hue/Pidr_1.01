@@ -5,6 +5,7 @@ import './globals.css'
 import { Providers } from './providers'
 import ChunkErrorHandler from '../components/ChunkErrorHandler'
 import GlobalRoomInviteListener from '../components/GlobalRoomInviteListener'
+import AppUpdateGate from '../components/AppUpdateGate'
 import ReferralCapture from '../components/ReferralCapture'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -43,16 +44,21 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://telegram.org" />
         <link rel="preconnect" href="https://cdnjs.cloudflare.com" />
         <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com" />
+        <meta httpEquiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+        <meta httpEquiv="Pragma" content="no-cache" />
+        <meta httpEquiv="Expires" content="0" />
       </head>
       <body className={inter.className}>
         <ChunkErrorHandler />
         <Providers>
+          <AppUpdateGate>
           <div style={{ minHeight: '100vh' }}>
             {children}
           </div>
           {/* Глобальный слушатель приглашений в комнаты (отображается поверх ЛЮБОЙ страницы) */}
           <GlobalRoomInviteListener />
           <ReferralCapture />
+          </AppUpdateGate>
         </Providers>
       </body>
     </html>
