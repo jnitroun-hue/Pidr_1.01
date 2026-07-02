@@ -98,7 +98,7 @@ export function buildCardFaceSvg(spec: CardFaceSpec): string {
     </svg>`;
 }
 
-/** Canvas: масть через Path2D (те же path data) */
+/** Canvas: масть примитивами (Path2D ломается в Telegram WebView) */
 export function drawSuitIconCanvas(
   ctx: CanvasRenderingContext2D,
   suit: string,
@@ -107,14 +107,62 @@ export function drawSuitIconCanvas(
   size: number,
   color: string
 ) {
-  const pathData = SUIT_PATHS[suit] ?? SUIT_PATHS.spades;
-  const scale = size / 24;
   ctx.save();
   ctx.translate(x, y);
-  ctx.scale(scale, scale);
-  const path = new Path2D(pathData);
   ctx.fillStyle = color;
-  ctx.fill(path);
+
+  const cx = size / 2;
+  const r = size * 0.22;
+
+  const circle = (ox: number, oy: number, radius: number) => {
+    ctx.beginPath();
+    ctx.arc(ox, oy, radius, 0, Math.PI * 2);
+    ctx.fill();
+  };
+
+  switch (suit) {
+    case 'hearts': {
+      circle(cx - r * 0.95, r * 1.05, r);
+      circle(cx + r * 0.95, r * 1.05, r);
+      ctx.beginPath();
+      ctx.moveTo(cx - r * 2.1, r * 1.35);
+      ctx.lineTo(cx + r * 2.1, r * 1.35);
+      ctx.lineTo(cx, size - r * 0.15);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    }
+    case 'diamonds': {
+      ctx.beginPath();
+      ctx.moveTo(cx, 0);
+      ctx.lineTo(size, cx);
+      ctx.lineTo(cx, size);
+      ctx.lineTo(0, cx);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    }
+    case 'clubs': {
+      circle(cx, r * 1.15, r);
+      circle(cx - r * 1.35, r * 2.35, r);
+      circle(cx + r * 1.35, r * 2.35, r);
+      ctx.fillRect(cx - r * 0.35, r * 3.05, r * 0.7, size - r * 3.05);
+      break;
+    }
+    case 'spades':
+    default: {
+      circle(cx, r * 1.35, r * 1.05);
+      ctx.beginPath();
+      ctx.moveTo(cx - r * 2.2, r * 2.15);
+      ctx.lineTo(cx + r * 2.2, r * 2.15);
+      ctx.lineTo(cx, size * 0.42);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillRect(cx - r * 0.35, size * 0.42, r * 0.7, size * 0.58);
+      break;
+    }
+  }
+
   ctx.restore();
 }
 
@@ -135,7 +183,7 @@ export function drawCardFaceCanvas(
   ctx.lineWidth = border;
   ctx.strokeRect(border / 2, border / 2, width - border, height - border);
 
-  ctx.fillStyle = '#f1f5f9';
+  ctx.fillStyle = '#ffffff';
   ctx.fillRect(art.left, art.top, art.size, art.size);
 
   if (themeImage) {
@@ -146,6 +194,9 @@ export function drawCardFaceCanvas(
     const drawX = art.left + (art.size - drawW) / 2;
     const drawY = art.top + (art.size - drawH) / 2;
     ctx.drawImage(img, drawX, drawY, drawW, drawH);
+  } else {
+    ctx.fillStyle = '#f1f5f9';
+    ctx.fillRect(art.left, art.top, art.size, art.size);
   }
 
   const drawCorner = (originX: number, originY: number, rotate180: boolean) => {

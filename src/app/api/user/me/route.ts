@@ -45,6 +45,28 @@ export async function GET(req: NextRequest) {
     
     const user = dbUser;
 
+    const authSource = req.headers.get('x-auth-source');
+    const telegramPhoto = req.headers.get('x-telegram-photo');
+    const telegramFirstName = req.headers.get('x-telegram-first-name');
+
+    if (authSource === 'telegram' && dbUserId) {
+      const patch: Record<string, string> = {};
+      if (telegramPhoto && telegramPhoto.startsWith('http') && telegramPhoto !== user.avatar_url) {
+        patch.avatar_url = telegramPhoto;
+      }
+      if (!user.auth_method || user.auth_method === 'web') {
+        patch.auth_method = 'telegram';
+      }
+      if (telegramFirstName && !user.first_name) {
+        patch.first_name = telegramFirstName;
+      }
+      if (Object.keys(patch).length > 0) {
+        patch.last_seen = new Date().toISOString();
+        await supabaseAdmin.from('_pidr_users').update(patch).eq('id', dbUserId);
+        Object.assign(user, patch);
+      }
+    }
+
     await syncPremiumFlag(Number(dbUserId));
 
     const { data: freshUser } = await supabaseAdmin

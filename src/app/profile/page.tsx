@@ -185,7 +185,8 @@ export default function ProfilePage() {
             firstName: result.user.firstName,
             lastName: result.user.lastName,
             telegramId: result.user.telegramId,
-            coins: actualCoins, // ✅ ИСПОЛЬЗУЕМ актуальный баланс из БД
+            auth_method: result.user.auth_method || 'web',
+            coins: actualCoins,
             rating: result.user.rating || 0,
             gamesPlayed: result.user.gamesPlayed || result.user.games_played || 0,
             wins: result.user.wins || 0,

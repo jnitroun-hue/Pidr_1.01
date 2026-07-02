@@ -511,7 +511,7 @@ function scheduleHostMultiplayerState(): void {
   multiplayerStateSyncTimer = setTimeout(() => {
     multiplayerStateSyncTimer = null;
     publishHostMultiplayerState();
-  }, 0);
+  }, 80);
 }
 
 /** Немедленная отправка состояния (после хода и т.п.) */
@@ -1734,6 +1734,15 @@ export const useGameStore = create<GameState>()(
           }
           return;
         }
+
+        if (!opts?.fromRemote && shouldDeferHumanMoveToHost(get(), currentPlayerId)) {
+          void get().sendPlayerMove({
+            type: 'make_move',
+            playerId: currentPlayerId,
+            targetId: targetPlayerId,
+          });
+          return;
+        }
         
         let cardToMove: Card | undefined;
         let newDeck = deck;
@@ -1761,9 +1770,6 @@ export const useGameStore = create<GameState>()(
         }
         
         if (!cardToMove) return;
-
-        const shouldBroadcast =
-          !opts?.fromRemote && shouldDeferHumanMoveToHost(get(), currentPlayerId);
 
         const movedCard: Card = {
           ...cardToMove,
@@ -1817,14 +1823,6 @@ export const useGameStore = create<GameState>()(
         }
         
         get().showNotification(`Карта переложена на ${targetPlayer.name}!`, 'success');
-
-        if (shouldBroadcast) {
-          void get().sendPlayerMove({
-            type: 'make_move',
-            playerId: currentPlayerId,
-            targetId: targetPlayerId,
-          });
-        }
         
         // ИСПРАВЛЕНО: После успешного хода игрок ПРОДОЛЖАЕТ ходить (анализ руки)
         // Ход передается только когда игрок не может больше ходить
@@ -1849,7 +1847,10 @@ export const useGameStore = create<GameState>()(
         const currentPlayer = players.find(p => p.id === currentPlayerId);
         if (!currentPlayer) return false;
 
-        const shouldBroadcast = shouldDeferHumanMoveToHost(get(), currentPlayerId);
+        if (shouldDeferHumanMoveToHost(get(), currentPlayerId)) {
+          void get().sendPlayerMove({ type: 'card_taken', playerId: currentPlayerId });
+          return true;
+        }
         
         const drawnCard = { ...deck[0] }; // ✅ КОПИРУЕМ КАРТУ
         // ✅ ПРОВЕРЯЕМ ЕСТЬ ЛИ NFT ВЕРСИЯ (только для игрока!)
@@ -1888,10 +1889,6 @@ export const useGameStore = create<GameState>()(
         }
         
         get().showNotification(`${currentPlayer.name} взял карту из колоды (осталось: ${newDeck.length})`, 'info');
-
-        if (shouldBroadcast) {
-          void get().sendPlayerMove({ type: 'card_taken', playerId: currentPlayerId });
-        }
 
         return true;
       },
@@ -2395,6 +2392,14 @@ export const useGameStore = create<GameState>()(
            return;
          }
 
+         if (shouldBroadcast) {
+           void get().sendPlayerMove({
+             type: 'place_on_self',
+             playerId: currentPlayerId,
+           });
+           return;
+         }
+
          const placedCard: Card = { ...revealedDeckCard, open: true };
          const newPlayers = players.map((p) =>
            p.id === currentPlayerId ? { ...p, cards: [...p.cards, placedCard] } : p
@@ -2424,14 +2429,6 @@ export const useGameStore = create<GameState>()(
          
          get().showNotification(`${currentPlayer.name} положил карту на себя по правилам - ходит снова!`, 'success');
 
-         if (shouldBroadcast) {
-           void get().sendPlayerMove({
-             type: 'place_on_self',
-             playerId: currentPlayerId,
-           });
-         }
-         
-         // ИСПРАВЛЕНО: Продолжаем ход (анализируем руку, если нет открытых карт - идем к колоде)
          setTimeout(() => {
            get().processPlayerTurn(currentPlayerId);
          }, 1000);
@@ -4489,7 +4486,7 @@ export const useGameStore = create<GameState>()(
                       get().playSelectedCard();
                     }
                   } else if (moveData.targetId) {
-                    get().makeMove(String(moveData.targetId));
+                    get().makeMove(String(moveData.targetId), { fromRemote: true });
                   }
                  }
                  break;

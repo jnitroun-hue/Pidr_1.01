@@ -14,8 +14,8 @@ import {
 } from '@/lib/nft/theme-config';
 
 const REMOTE_FETCH_TIMEOUT_MS = 2500;
-/** v4: canvas с Path2D-мастями, сброс битых превью из Storage */
-const COMPOSE_VERSION = 4;
+/** v5: примитивные масти + PNG темы из Storage/API, сброс битых превью */
+const COMPOSE_VERSION = 5;
 
 export { COMPOSE_VERSION };
 

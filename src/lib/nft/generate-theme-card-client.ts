@@ -1,4 +1,5 @@
 import { NFT_THEME_CONFIG, pickRandomThemeAsset, type NftThemeKey } from '@/lib/nft/theme-config';
+import { getThemeAssetCandidateUrls } from '@/lib/nft/theme-asset-urls';
 import {
   CARD_FACE,
   drawCardFaceCanvas,
@@ -51,7 +52,7 @@ function toSpec(suit: string, rank: string, theme?: NftThemeKey): CardFaceSpec {
 
 const themeImageCache = new Map<string, HTMLImageElement>();
 
-function loadThemeImage(imagePath: string): Promise<HTMLImageElement> {
+function loadThemeImageFromUrl(imagePath: string): Promise<HTMLImageElement> {
   const cached = themeImageCache.get(imagePath);
   if (cached) return Promise.resolve(cached);
 
@@ -65,6 +66,19 @@ function loadThemeImage(imagePath: string): Promise<HTMLImageElement> {
     img.onerror = () => reject(new Error(`Failed to load ${imagePath}`));
     img.src = imagePath;
   });
+}
+
+async function loadThemeImage(theme: NftThemeKey, themeId: number): Promise<HTMLImageElement> {
+  const candidates = getThemeAssetCandidateUrls(theme, themeId);
+  let lastError: Error | null = null;
+  for (const url of candidates) {
+    try {
+      return await loadThemeImageFromUrl(url);
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+    }
+  }
+  throw lastError ?? new Error(`Theme asset not found: ${theme}/${themeId}`);
 }
 
 /** Мгновенная карта без загрузки темы — для первого кадра на главной */
@@ -95,9 +109,6 @@ export function generateThemeCardImageDataUrl(
       return;
     }
 
-    const themeConfig = NFT_THEME_CONFIG[theme];
-    const fileName = `${themeConfig.prefix}${themeId}.png`;
-    const imagePath = `/${themeConfig.folder}/${fileName}`;
     const spec = toSpec(suit, rank, theme);
 
     const finish = (img: HTMLImageElement | null) => {
@@ -110,7 +121,7 @@ export function generateThemeCardImageDataUrl(
       }
     };
 
-    loadThemeImage(imagePath)
+    loadThemeImage(theme, themeId)
       .then((img) => finish(img))
       .catch(() => finish(null));
   });

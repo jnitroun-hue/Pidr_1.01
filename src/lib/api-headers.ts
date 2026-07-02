@@ -48,6 +48,14 @@ export function getApiHeaders(): HeadersInit {
       headers['x-telegram-id'] = String(user.id);
       headers['x-auth-source'] = 'telegram';
     }
+
+    if (user?.photo_url) {
+      headers['x-telegram-photo'] = user.photo_url;
+    }
+
+    if (user?.first_name) {
+      headers['x-telegram-first-name'] = user.first_name;
+    }
     
     if (user?.username) {
       headers['x-username'] = user.username;

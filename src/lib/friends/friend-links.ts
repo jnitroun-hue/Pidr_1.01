@@ -1,4 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { resolveAuthMethod } from '@/lib/user/resolve-auth-method';
+import { normalizeUserStats } from '@/lib/user/normalize-user-stats';
+import { resolveFriendPresence } from '@/lib/friends/presence';
 
 /** Ключ связи в `_pidr_friends` — всегда id пользователя из БД */
 export function friendLinkId(dbUserId: number | string): string {
@@ -20,16 +23,24 @@ export function friendLinkIdsForUser(
 export type FriendUserRow = {
   id: number;
   telegram_id?: string | null;
+  vk_id?: string | null;
+  auth_method?: string | null;
   username?: string | null;
   first_name?: string | null;
   avatar_url?: string | null;
   rating?: number | null;
   games_played?: number | null;
+  total_games_played?: number | null;
   wins?: number | null;
+  games_won?: number | null;
+  losses?: number | null;
   status?: string | null;
   online_status?: string | null;
   last_seen?: string | null;
 };
+
+const FRIEND_USER_SELECT =
+  'id, telegram_id, vk_id, auth_method, username, first_name, avatar_url, rating, games_played, total_games_played, wins, games_won, losses, status, online_status, last_seen';
 
 /** Разрешить пользователей по ключам из `_pidr_friends` (id или legacy telegram_id) */
 export async function resolveUsersByFriendKeys(
@@ -45,12 +56,7 @@ export async function resolveUsersByFriendKeys(
 
   const byId = numericIds.length
     ? (
-        await supabase
-          .from('_pidr_users')
-          .select(
-            'id, telegram_id, username, first_name, avatar_url, rating, games_played, wins, status, online_status, last_seen'
-          )
-          .in('id', numericIds)
+        await supabase.from('_pidr_users').select(FRIEND_USER_SELECT).in('id', numericIds)
       ).data
     : [];
 
@@ -65,9 +71,7 @@ export async function resolveUsersByFriendKeys(
   if (legacyTelegramKeys.length) {
     const { data } = await supabase
       .from('_pidr_users')
-      .select(
-        'id, telegram_id, username, first_name, avatar_url, rating, games_played, wins, status, online_status, last_seen'
-      )
+      .select(FRIEND_USER_SELECT)
       .in('telegram_id', legacyTelegramKeys);
     byTelegram = (data as FriendUserRow[]) || [];
   }
@@ -90,9 +94,7 @@ export async function resolveFriendUser(
   if (!Number.isNaN(asNum)) {
     const { data } = await supabase
       .from('_pidr_users')
-      .select(
-        'id, telegram_id, username, first_name, avatar_url, rating, games_played, wins, status, online_status, last_seen'
-      )
+      .select(FRIEND_USER_SELECT)
       .eq('id', asNum)
       .maybeSingle();
     if (data) return data as FriendUserRow;
@@ -100,9 +102,7 @@ export async function resolveFriendUser(
 
   const { data: byTelegram } = await supabase
     .from('_pidr_users')
-    .select(
-      'id, telegram_id, username, first_name, avatar_url, rating, games_played, wins, status, online_status, last_seen'
-    )
+    .select(FRIEND_USER_SELECT)
     .eq('telegram_id', key)
     .maybeSingle();
 
@@ -110,16 +110,27 @@ export async function resolveFriendUser(
 }
 
 export function formatFriendForApi(u: FriendUserRow) {
+  const stats = normalizeUserStats(u);
+  const presence = resolveFriendPresence(u);
+  const gamesPlayed = stats.gamesPlayed;
+  const wins = stats.wins;
+  const winRate = gamesPlayed > 0 ? Math.round((wins / gamesPlayed) * 100) : 0;
+
   return {
     id: u.id,
     telegram_id: u.telegram_id ? Number(u.telegram_id) || u.telegram_id : null,
     username: u.username || u.first_name || `player_${u.id}`,
     first_name: u.first_name || u.username || `Игрок ${u.id}`,
     avatar_url: u.avatar_url,
+    auth_method: resolveAuthMethod(u),
     rating: u.rating ?? 0,
-    games_played: u.games_played ?? 0,
-    wins: u.wins ?? 0,
-    status: u.online_status || u.status || 'offline',
+    games_played: gamesPlayed,
+    wins,
+    losses: stats.losses,
+    win_rate: winRate,
+    status: presence.status,
+    status_label: presence.label,
+    is_online: presence.isOnline,
     last_seen: u.last_seen,
   };
 }

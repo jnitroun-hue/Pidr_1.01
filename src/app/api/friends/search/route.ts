@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     let usersQuery = supabase
       .from('_pidr_users')
       .select(
-        'id, telegram_id, username, first_name, avatar_url, rating, games_played, wins, status, online_status, last_seen'
+        'id, telegram_id, vk_id, auth_method, username, first_name, avatar_url, rating, games_played, total_games_played, wins, games_won, losses, status, online_status, last_seen'
       )
       .ilike('username', `%${query}%`)
       .limit(20);

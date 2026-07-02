@@ -244,7 +244,7 @@ export default function MultiplayerLobby({
 
     const interval = setInterval(() => {
       loadRoomPlayers(true);
-    }, 500);
+    }, 2500);
 
     return () => {
       clearInterval(interval);

@@ -2141,6 +2141,24 @@ function GamePageContentComponent({
                     .map(String)
                 );
 
+                const myPlayerRow = data.players.find((player: {
+                  user_id: string | number;
+                  db_user_id?: number | null;
+                  is_host?: boolean;
+                }) => {
+                  const publicId = String(player.user_id);
+                  const dbId =
+                    player.db_user_id != null ? String(player.db_user_id) : '';
+                  return myIds.has(publicId) || (dbId !== '' && myIds.has(dbId));
+                });
+
+                if (myPlayerRow?.is_host === true) {
+                  multiplayerConfig.isHost = true;
+                  console.log('👑 [AUTOSTART] Хост подтверждён сервером');
+                } else if (myPlayerRow) {
+                  multiplayerConfig.isHost = false;
+                }
+
                 const roomPlayers = data.players.map((player: {
                   user_id: string | number;
                   db_user_id?: number | null;

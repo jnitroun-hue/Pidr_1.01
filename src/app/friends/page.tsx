@@ -1,23 +1,42 @@
-'use client'
+'use client';
 
 import { buildReferralShareText } from '@/lib/referral/referral-links';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { ArrowLeft, UserPlus, Search, User, Users, Share2, Trophy } from 'lucide-react';
+import {
+  ArrowLeft,
+  UserPlus,
+  Search,
+  User,
+  Users,
+  Share2,
+  Trophy,
+  Copy,
+  Gamepad2,
+  Target,
+} from 'lucide-react';
 import PageLoadingScreen from '@/components/PageLoadingScreen';
 import { fetchWithAuth } from '@/lib/api-headers';
+import { appAlert } from '@/lib/app-notice';
+import UserAvatarBadge from '@/components/UserAvatarBadge';
+import AuthMethodBadge from '@/components/AuthMethodBadge';
+import type { AuthMethod } from '@/lib/user/resolve-auth-method';
+import styles from './FriendsPage.module.css';
 
 interface Friend {
   id: number;
-  telegram_id?: number | string | null;
   username: string;
   first_name: string;
   avatar_url?: string;
+  auth_method?: AuthMethod;
   rating: number;
   games_played: number;
   wins: number;
-  status: 'online' | 'offline';
+  win_rate: number;
+  status: 'online' | 'offline' | 'in_room' | 'playing';
+  status_label: string;
+  is_online: boolean;
   last_seen?: string;
 }
 
@@ -30,29 +49,38 @@ export default function FriendsPage() {
   const [searching, setSearching] = useState(false);
   const [inviteRoomId, setInviteRoomId] = useState<string | null>(null);
   const [inviteRoomCode, setInviteRoomCode] = useState<string | null>(null);
-  const [referralInviteUrl, setReferralInviteUrl] = useState<string>('');
+  const [referralInviteUrl, setReferralInviteUrl] = useState('');
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [invitingId, setInvitingId] = useState<number | null>(null);
 
-  // ✅ ПРОВЕРЯЕМ URL НА ПАРАМЕТРЫ ПРИГЛАШЕНИЯ
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const roomId = params.get('invite_room');
     const roomCode = params.get('room_code');
-    
     if (roomId && roomCode) {
       setInviteRoomId(roomId);
       setInviteRoomCode(roomCode);
-      console.log('🎮 Режим приглашения в комнату:', roomId, roomCode);
     }
   }, []);
 
-  // Загрузка друзей из БД (web / telegram / vk — через cookie + getApiHeaders)
-  useEffect(() => {
-    loadFriends();
-    loadReferralLink();
+  const loadFriends = useCallback(async () => {
+    try {
+      const response = await fetchWithAuth('/api/friends/list', {
+        method: 'GET',
+        cache: 'no-store',
+      });
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) setFriends(result.friends || []);
+      }
+    } catch (error) {
+      console.error('❌ Ошибка загрузки друзей:', error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const loadReferralLink = async () => {
+  const loadReferralLink = useCallback(async () => {
     try {
       const authResp = await fetchWithAuth('/api/auth', { method: 'GET', cache: 'no-store' });
       if (authResp.ok) {
@@ -74,51 +102,27 @@ export default function FriendsPage() {
     } catch {
       /* ignore */
     }
-  };
+  }, []);
 
-  const loadFriends = async () => {
-    try {
-      setLoading(true);
+  useEffect(() => {
+    void loadFriends();
+    void loadReferralLink();
+    const interval = setInterval(() => void loadFriends(), 30000);
+    return () => clearInterval(interval);
+  }, [loadFriends, loadReferralLink]);
 
-      const response = await fetchWithAuth('/api/friends/list', {
-        method: 'GET',
-        cache: 'no-store',
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success) {
-          setFriends(result.friends || []);
-          console.log('✅ Друзья загружены:', result.friends?.length);
-        }
-      } else {
-        console.warn('⚠️ [Friends] list:', response.status);
-      }
-    } catch (error) {
-      console.error('❌ Ошибка загрузки друзей:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Поиск пользователей
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
-    
-    // ✅ УБРАЛИ ПРОВЕРКУ НА ДЛИНУ - ПОИСК С 1 БУКВЫ
     if (query.trim().length === 0) {
       setSearchResults([]);
       return;
     }
-
     try {
       setSearching(true);
-
       const response = await fetchWithAuth(
         `/api/friends/search?query=${encodeURIComponent(query)}`,
         { cache: 'no-store' }
       );
-
       if (response.ok) {
         const result = await response.json();
         setSearchResults(result.users || []);
@@ -130,463 +134,338 @@ export default function FriendsPage() {
     }
   };
 
-  // Добавить в друзья
   const handleAddFriend = async (friendDbId: number) => {
     try {
       const response = await fetchWithAuth('/api/friends/add', {
         method: 'POST',
         body: JSON.stringify({ friend_id: friendDbId }),
       });
-
       const result = await response.json();
-
       if (response.ok && result.success) {
-        alert('✅ Друг добавлен!');
+        await appAlert('Друг добавлен в список!', { title: 'Готово', type: 'success' });
         await loadFriends();
         setSearchQuery('');
         setSearchResults([]);
       } else {
-        alert(`❌ Ошибка: ${result.error || 'Неизвестная ошибка'}`);
+        await appAlert(result.error || 'Не удалось добавить', { title: 'Ошибка', type: 'error' });
       }
-    } catch (error) {
-      console.error('❌ [FRONTEND] Ошибка добавления друга:', error);
-      alert('❌ Произошла ошибка при добавлении друга');
+    } catch {
+      await appAlert('Ошибка при добавлении друга', { title: 'Ошибка', type: 'error' });
     }
   };
 
-  // Поделиться приглашением
-  const handleShareInvite = () => {
-    const inviteLink = referralInviteUrl || window.location.origin + '/';
+  const handleShareInvite = async () => {
+    const inviteLink = referralInviteUrl || `${window.location.origin}/`;
     const shareText = buildReferralShareText(inviteLink);
 
     if ((window as any).Telegram?.WebApp) {
       (window as any).Telegram.WebApp.openTelegramLink(
         `https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(shareText)}`
       );
-    } else if (navigator.clipboard) {
-      navigator.clipboard.writeText(`${shareText}\n${inviteLink}`);
-      alert('Реферальная ссылка скопирована!');
+      return;
+    }
+
+    if (navigator.clipboard) {
+      await navigator.clipboard.writeText(`${shareText}\n${inviteLink}`);
+      await appAlert('Реферальная ссылка скопирована', { title: 'Скопировано', type: 'success' });
     }
   };
 
-  const onlineFriends = friends.filter(f => f.status === 'online');
-  const offlineFriends = friends.filter(f => f.status === 'offline');
+  const handleCopyReferral = async () => {
+    const inviteLink = referralInviteUrl || `${window.location.origin}/`;
+    if (navigator.clipboard) {
+      await navigator.clipboard.writeText(inviteLink);
+      await appAlert('Ссылка скопирована', { title: 'Реферал', type: 'success' });
+    }
+  };
+
+  const inviteFriendToRoom = async (friend: Friend) => {
+    if (!inviteRoomId) return;
+    try {
+      setInvitingId(friend.id);
+      const response = await fetchWithAuth(`/api/rooms/${inviteRoomId}/invite`, {
+        method: 'POST',
+        body: JSON.stringify({ friendId: friend.id }),
+      });
+      const result = await response.json();
+      if (response.ok && result.success) {
+        await appAlert(`Приглашение отправлено ${friend.first_name}`, {
+          title: 'Приглашение',
+          type: 'success',
+        });
+      } else {
+        await appAlert(result.message || result.error || 'Не удалось пригласить', {
+          title: 'Ошибка',
+          type: 'error',
+        });
+      }
+    } catch {
+      await appAlert('Ошибка отправки приглашения', { title: 'Ошибка', type: 'error' });
+    } finally {
+      setInvitingId(null);
+    }
+  };
+
+  const shareRoomLink = (friend: Friend) => {
+    if (!inviteRoomId || !inviteRoomCode) return;
+    const params = new URLSearchParams({
+      roomId: String(inviteRoomId),
+      roomCode: String(inviteRoomCode),
+    });
+    if (currentUserId) params.set('ref', String(currentUserId));
+    const inviteLink = `${window.location.origin}/multiplayer?${params.toString()}`;
+    const message = `🎮 ${friend.first_name}, присоединяйся к игре!\n\nКод: ${inviteRoomCode}\n${inviteLink}`;
+
+    if ((window as any).Telegram?.WebApp) {
+      (window as any).Telegram.WebApp.openTelegramLink(
+        `https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(message)}`
+      );
+    } else if (navigator.clipboard) {
+      void navigator.clipboard.writeText(message);
+      void appAlert('Ссылка на комнату скопирована', { title: 'Комната', type: 'success' });
+    }
+  };
+
+  const sortedFriends = [...friends].sort((a, b) => Number(b.is_online) - Number(a.is_online));
+  const onlineCount = friends.filter((f) => f.is_online).length;
+  const offlineFriends = sortedFriends.filter((f) => !f.is_online);
+  const friendIds = new Set(friends.map((f) => f.id));
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)',
-      padding: '20px',
-      paddingTop: '80px',
-      paddingBottom: '40px'
-    }}>
-      {/* Кнопка назад */}
+    <div className={styles.page}>
       <motion.button
-        initial={{ x: -20, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
+        type="button"
+        className={styles.backBtn}
+        whileTap={{ scale: 0.96 }}
         onClick={() => router.back()}
-        style={{
-          position: 'fixed',
-          top: '20px',
-          left: '20px',
-          background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.8) 0%, rgba(220, 38, 38, 0.6) 100%)',
-          border: '2px solid rgba(239, 68, 68, 0.4)',
-          borderRadius: '16px',
-          padding: '12px 20px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          cursor: 'pointer',
-          color: '#ffffff',
-          fontSize: '16px',
-          fontWeight: '700',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
-          zIndex: 1000
-        }}
       >
-        <ArrowLeft size={20} />
-        НАЗАД
+        <ArrowLeft size={18} />
+        Назад
       </motion.button>
 
-      {/* Заголовок */}
-      <motion.h1
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        style={{
-          fontSize: '32px',
-          fontWeight: '900',
-          textAlign: 'center',
-          marginBottom: '24px',
-          background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          letterSpacing: '2px'
-        }}
-      >
-        👥 ДРУЗЬЯ
-      </motion.h1>
+      <header className={styles.header}>
+        <h1 className={styles.title}>ДРУЗЬЯ</h1>
+        <p className={styles.subtitle}>Приглашай, играй вместе, следи за статистикой</p>
+      </header>
 
-      {/* Поиск */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        style={{
-          position: 'relative',
-          marginBottom: '24px'
-        }}
-      >
-        <Search 
-          size={20} 
-          style={{
-            position: 'absolute',
-            left: '16px',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            color: '#64748b',
-            zIndex: 2
-          }}
-        />
+      {inviteRoomId && inviteRoomCode && (
+        <div className={styles.inviteBanner}>
+          🎮 Режим приглашения в комнату · код <strong>{inviteRoomCode}</strong>
+          <br />
+          Онлайн-друзьям можно отправить invite прямо в игру.
+        </div>
+      )}
+
+      <div className={styles.searchWrap}>
+        <Search size={18} className={styles.searchIcon} />
         <input
           type="text"
-          placeholder="Поиск друзей..."
+          className={styles.searchInput}
+          placeholder="Поиск по нику..."
           value={searchQuery}
-          onChange={(e) => handleSearch(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '14px 20px 14px 50px',
-            background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.6) 100%)',
-            border: '2px solid rgba(99, 102, 241, 0.3)',
-            borderRadius: '16px',
-            color: '#e2e8f0',
-            fontSize: '16px',
-            outline: 'none',
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)'
-          }}
+          onChange={(e) => void handleSearch(e.target.value)}
         />
-      </motion.div>
+      </div>
 
-      {/* Кнопка пригласить */}
-      <motion.button
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-        onClick={handleShareInvite}
-        style={{
-          width: '100%',
-          padding: '16px',
-          marginBottom: '24px',
-          background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-          border: '2px solid rgba(16, 185, 129, 0.4)',
-          borderRadius: '16px',
-          color: '#ffffff',
-          fontSize: '16px',
-          fontWeight: '700',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '12px',
-          cursor: 'pointer',
-          boxShadow: '0 4px 20px rgba(16, 185, 129, 0.3)'
-        }}
-      >
-        <Share2 size={20} />
-        ПРИГЛАСИТЬ ДРУЗЕЙ
-      </motion.button>
+      <div className={styles.actionsRow}>
+        <button type="button" className={styles.btnPrimary} onClick={() => void handleShareInvite()}>
+          <Share2 size={18} />
+          Пригласить
+        </button>
+        <button type="button" className={styles.btnSecondary} onClick={() => void handleCopyReferral()}>
+          <Copy size={18} />
+          Ссылка
+        </button>
+      </div>
 
-      {/* Результаты поиска */}
+      {referralInviteUrl && (
+        <div className={styles.referralBox}>Реферал: {referralInviteUrl}</div>
+      )}
+
       {searchQuery.length >= 1 && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          style={{ marginBottom: '24px' }}
-        >
-          <h2 style={{
-            color: '#94a3b8',
-            fontSize: '14px',
-            fontWeight: '700',
-            marginBottom: '12px',
-            letterSpacing: '1px'
-          }}>
-            🔍 РЕЗУЛЬТАТЫ ПОИСКА ({searchResults.length})
-          </h2>
+        <section className={styles.section}>
+          <h2 className={styles.sectionTitle}>🔍 Поиск · {searchResults.length}</h2>
           {searching ? (
-            <div style={{ textAlign: 'center', color: '#64748b', padding: '20px' }}>
-              Поиск...
-            </div>
+            <div className={styles.empty}>Поиск...</div>
           ) : searchResults.length === 0 ? (
-            <div style={{ textAlign: 'center', color: '#64748b', padding: '20px' }}>
-              Ничего не найдено
-            </div>
+            <div className={styles.empty}>Никого не найдено</div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {searchResults.map(user => (
-                <motion.div
+            <div className={styles.cardList}>
+              {searchResults.map((user) => (
+                <PersonCard
                   key={user.id}
-                  whileHover={{ scale: 1.02 }}
-                  style={{
-                    padding: '16px',
-                    background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.6) 100%)',
-                    border: '2px solid rgba(99, 102, 241, 0.3)',
-                    borderRadius: '16px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)'
-                  }}
-                >
-                  <div style={{
-                    width: '48px',
-                    height: '48px',
-                    borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '24px'
-                  }}>
-                    {user.avatar_url ? (
-                      <img src={user.avatar_url} alt={user.username} style={{
-                        width: '100%',
-                        height: '100%',
-                        borderRadius: '50%',
-                        objectFit: 'cover'
-                      }} />
-                    ) : (
-                      '👤'
-                    )}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ color: '#e2e8f0', fontWeight: '700', fontSize: '16px' }}>
-                      {user.first_name}
-                    </div>
-                    <div style={{ color: '#64748b', fontSize: '14px' }}>
-                      @{user.username}
-                    </div>
-                  </div>
-                  {inviteRoomId && inviteRoomCode ? (
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => {
-                        const base = window.location.origin;
-                        const params = new URLSearchParams({
-                          roomId: String(inviteRoomId),
-                          roomCode: String(inviteRoomCode),
-                        });
-                        if (currentUserId) params.set('ref', String(currentUserId));
-                        const inviteLink = `${base}/multiplayer?${params.toString()}`;
-                        const message = `🎮 ${user.username || user.first_name}, присоединяйся к игре The Must!\n\nКод комнаты: ${inviteRoomCode}\n${inviteLink}`;
-                        
-                        if ((window as any).Telegram?.WebApp) {
-                          (window as any).Telegram.WebApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(message)}`);
-                        }
-                      }}
-                      style={{
-                        padding: '8px 16px',
-                        background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                        border: 'none',
-                        borderRadius: '12px',
-                        color: '#ffffff',
-                        fontSize: '14px',
-                        fontWeight: '700',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      🎮 Пригласить
-                    </motion.button>
-                  ) : (
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => handleAddFriend(user.id)}
-                      style={{
-                        padding: '8px 16px',
-                        background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-                        border: 'none',
-                        borderRadius: '12px',
-                        color: '#ffffff',
-                        fontSize: '14px',
-                        fontWeight: '700',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      <UserPlus size={16} />
-                    </motion.button>
-                  )}
-                </motion.div>
+                  person={user}
+                  alreadyFriend={friendIds.has(user.id)}
+                  inviteRoomMode={Boolean(inviteRoomId && inviteRoomCode)}
+                  inviting={invitingId === user.id}
+                  onAdd={() => void handleAddFriend(user.id)}
+                  onInviteRoom={() =>
+                    inviteRoomId ? void inviteFriendToRoom(user) : void shareRoomLink(user)
+                  }
+                />
               ))}
             </div>
           )}
-        </motion.div>
+        </section>
       )}
 
-      {/* Онлайн друзья */}
-      {onlineFriends.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          style={{ marginBottom: '24px' }}
-        >
-          <h2 style={{
-            color: '#22c55e',
-            fontSize: '14px',
-            fontWeight: '700',
-            marginBottom: '12px',
-            letterSpacing: '1px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}>
-            <div style={{
-              width: '8px',
-              height: '8px',
-              borderRadius: '50%',
-              background: '#22c55e',
-              animation: 'pulse 2s ease-in-out infinite'
-            }}></div>
-            ОНЛАЙН ({onlineFriends.length})
+      {onlineCount > 0 && (
+        <section className={styles.section}>
+          <h2 className={`${styles.sectionTitle} ${styles.sectionTitleOnline}`}>
+            <span className={styles.onlineDot} />
+            В сети · {onlineCount}
           </h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {onlineFriends.map(friend => (
-              <FriendCard key={friend.id} friend={friend} />
-            ))}
+          <div className={styles.cardList}>
+            {sortedFriends
+              .filter((f) => f.is_online)
+              .map((friend) => (
+                <PersonCard
+                  key={`online-${friend.id}`}
+                  person={friend}
+                  alreadyFriend
+                  inviteRoomMode={Boolean(inviteRoomId && inviteRoomCode)}
+                  inviting={invitingId === friend.id}
+                  onInviteRoom={() =>
+                    inviteRoomId ? void inviteFriendToRoom(friend) : void shareRoomLink(friend)
+                  }
+                />
+              ))}
           </div>
-        </motion.div>
+        </section>
       )}
 
-      {/* Все друзья */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
-        <h2 style={{
-          color: '#94a3b8',
-          fontSize: '14px',
-          fontWeight: '700',
-          marginBottom: '12px',
-          letterSpacing: '1px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px'
-        }}>
-          <Users size={16} />
-          ВСЕ ДРУЗЬЯ ({friends.length})
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>
+          <Users size={14} />
+          Все друзья · {friends.length}
+          {onlineCount > 0 && ` · ${onlineCount} онлайн`}
         </h2>
         {loading ? (
-          <PageLoadingScreen
-            fullScreen={false}
-            compact
-            showProgress={false}
-            title="Друзья"
-            subtitle="Загрузка..."
-          />
+          <PageLoadingScreen fullScreen={false} compact showProgress={false} title="Друзья" subtitle="Загрузка..." />
         ) : friends.length === 0 ? (
-          <div style={{ textAlign: 'center', color: '#64748b', padding: '40px' }}>
-            <User size={48} style={{ margin: '0 auto 16px' }} />
-            <div style={{ fontSize: '18px', fontWeight: '700', marginBottom: '8px' }}>
-              У вас пока нет друзей
-            </div>
-            <div style={{ fontSize: '14px' }}>
-              Пригласите друзей через кнопку выше!
-            </div>
+          <div className={styles.empty}>
+            <User size={40} />
+            <div className={styles.emptyTitle}>Пока нет друзей</div>
+            <p>Поделись реферальной ссылкой — друг появится здесь после регистрации</p>
           </div>
+        ) : onlineCount > 0 && offlineFriends.length === 0 ? (
+          <div className={styles.empty}>Все друзья сейчас в сети — смотри блок выше</div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {friends.map(friend => (
-              <FriendCard key={friend.id} friend={friend} />
+          <div className={styles.cardList}>
+            {(onlineCount > 0 ? offlineFriends : sortedFriends).map((friend) => (
+              <PersonCard
+                key={friend.id}
+                person={friend}
+                alreadyFriend
+                inviteRoomMode={Boolean(inviteRoomId && inviteRoomCode)}
+                inviting={invitingId === friend.id}
+                onInviteRoom={() =>
+                  inviteRoomId ? void inviteFriendToRoom(friend) : void shareRoomLink(friend)
+                }
+              />
             ))}
           </div>
         )}
-      </motion.div>
+      </section>
     </div>
   );
 }
 
-// Компонент карточки друга
-function FriendCard({ friend }: { friend: Friend }) {
+function PersonCard({
+  person,
+  alreadyFriend,
+  inviteRoomMode,
+  inviting,
+  onAdd,
+  onInviteRoom,
+}: {
+  person: Friend;
+  alreadyFriend?: boolean;
+  inviteRoomMode?: boolean;
+  inviting?: boolean;
+  onAdd?: () => void;
+  onInviteRoom?: () => void;
+}) {
+  const presenceClass =
+    person.status === 'playing' || person.status === 'in_room'
+      ? styles.presencePlaying
+      : person.is_online
+        ? styles.presenceOnline
+        : styles.presenceOffline;
+
+  const dotClass =
+    person.status === 'playing' || person.status === 'in_room'
+      ? styles.statusPlaying
+      : person.is_online
+        ? styles.statusOnline
+        : styles.statusOffline;
+
   return (
     <motion.div
-      whileHover={{ scale: 1.02, y: -2 }}
-      style={{
-        padding: '16px',
-        background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.6) 100%)',
-        border: `2px solid ${friend.status === 'online' ? 'rgba(34, 197, 94, 0.4)' : 'rgba(100, 116, 139, 0.3)'}`,
-        borderRadius: '16px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
-        transition: 'all 0.3s ease'
-      }}
+      className={`${styles.card} ${person.is_online ? styles.cardOnline : ''}`}
+      whileHover={{ y: -1 }}
     >
-      <div style={{ position: 'relative' }}>
-        <div style={{
-          width: '56px',
-          height: '56px',
-          borderRadius: '50%',
-          background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '28px'
-        }}>
-          {friend.avatar_url ? (
-            <img src={friend.avatar_url} alt={friend.username} style={{
-              width: '100%',
-              height: '100%',
-              borderRadius: '50%',
-              objectFit: 'cover'
-            }} />
-          ) : (
-            '👤'
-          )}
+      <div className={styles.avatarWrap}>
+        <UserAvatarBadge
+          username={person.first_name || person.username}
+          avatarUrl={person.avatar_url}
+          authMethod={(person.auth_method as AuthMethod) || 'web'}
+          size="md"
+          showAuthBadge={false}
+        />
+        <span className={`${styles.statusDot} ${dotClass}`} />
+      </div>
+
+      <div className={styles.cardBody}>
+        <div className={styles.nameRow}>
+          <span className={styles.name}>{person.first_name}</span>
+          <AuthMethodBadge method={(person.auth_method as AuthMethod) || 'web'} size="sm" />
         </div>
-        {friend.status === 'online' && (
-          <div style={{
-            position: 'absolute',
-            bottom: '2px',
-            right: '2px',
-            width: '14px',
-            height: '14px',
-            borderRadius: '50%',
-            background: '#22c55e',
-            border: '2px solid #0f172a'
-          }}></div>
+        <div className={styles.handle}>@{person.username}</div>
+        <div className={styles.statsRow}>
+          <span className={`${styles.statPill} ${styles.statGold}`}>
+            <Trophy size={11} />
+            {person.rating}
+          </span>
+          <span className={styles.statPill}>
+            <Gamepad2 size={11} />
+            {person.games_played} игр
+          </span>
+          <span className={styles.statPill}>
+            <Target size={11} />
+            {person.win_rate}% побед
+          </span>
+        </div>
+      </div>
+
+      <div className={styles.cardActions}>
+        <span className={`${styles.presencePill} ${presenceClass}`}>
+          {person.status_label || (person.is_online ? 'В сети' : 'Не в сети')}
+        </span>
+
+        {inviteRoomMode && person.is_online && onInviteRoom && (
+          <button
+            type="button"
+            className={`${styles.iconBtn} ${styles.iconBtnInvite}`}
+            disabled={inviting}
+            title="Пригласить в комнату"
+            onClick={onInviteRoom}
+          >
+            <Gamepad2 size={18} />
+          </button>
+        )}
+
+        {!alreadyFriend && onAdd && (
+          <button
+            type="button"
+            className={`${styles.iconBtn} ${styles.iconBtnAdd}`}
+            title="Добавить в друзья"
+            onClick={onAdd}
+          >
+            <UserPlus size={18} />
+          </button>
         )}
       </div>
-      <div style={{ flex: 1 }}>
-        <div style={{
-          color: '#e2e8f0',
-          fontWeight: '700',
-          fontSize: '16px',
-          marginBottom: '4px'
-        }}>
-          {friend.first_name}
-        </div>
-        <div style={{
-          color: '#64748b',
-          fontSize: '12px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px'
-        }}>
-          <Trophy size={12} style={{ color: '#fbbf24' }} />
-          {friend.rating} • {friend.wins}/{friend.games_played}
-        </div>
-      </div>
-      {friend.status === 'online' && (
-        <div style={{
-          padding: '6px 12px',
-          background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-          borderRadius: '12px',
-          color: '#ffffff',
-          fontSize: '12px',
-          fontWeight: '700'
-        }}>
-          В сети
-        </div>
-      )}
     </motion.div>
   );
 }

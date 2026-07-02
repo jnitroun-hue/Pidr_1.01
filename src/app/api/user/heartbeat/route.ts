@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { getUserIdFromRequest, getUserIdFromDatabase } from '@/lib/auth-utils';
 import { getRedis } from '@/lib/redis/init';
+import { getRedisUserId } from '@/lib/multiplayer/public-user-id';
 
 // ✅ Явная конфигурация runtime для Next.js 15
 export const runtime = 'nodejs';
@@ -50,14 +51,14 @@ export async function POST(request: NextRequest) {
     }
 
     // ✅ УНИВЕРСАЛЬНО: Получаем id из БД для обновления статуса
-    const { dbUserId } = await getUserIdFromDatabase(userId, environment);
+    const { dbUserId, user: dbUser } = await getUserIdFromDatabase(userId, environment);
     
-    if (!dbUserId) {
+    if (!dbUserId || !dbUser) {
       return noStoreJson({ success: false, error: 'Пользователь не найден в БД' }, { status: 404 });
     }
 
     const userIdBigInt = dbUserId;
-    const cacheUserId = String(dbUserId);
+    const cacheUserId = getRedisUserId({ id: dbUserId, telegram_id: dbUser.telegram_id });
     const now = new Date().toISOString();
     const nowTimestamp = Date.now();
 

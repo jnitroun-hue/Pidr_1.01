@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
-import { friendLinkId, resolveFriendUser } from '@/lib/friends/friend-links';
+import { friendLinkId, resolveFriendUser, ensureMutualFriendship } from '@/lib/friends/friend-links';
 
 /**
  * POST /api/friends/add
  * friend_id — id пользователя из БД (или legacy telegram_id)
+ * Сразу взаимная дружба (как при реферале).
  */
 export async function POST(request: NextRequest) {
   try {
@@ -64,29 +65,16 @@ export async function POST(request: NextRequest) {
       .eq('friend_id', friendKey)
       .maybeSingle();
 
-    if (existing) {
+    if (existing?.status === 'accepted') {
       return NextResponse.json(
-        { success: false, error: `Уже в друзьях (статус: ${existing.status})` },
+        { success: false, error: 'Уже в друзьях' },
         { status: 400 }
       );
     }
 
-    const { error: error1 } = await supabase.from('_pidr_friends').insert({
-      user_id: ownerKey,
-      friend_id: friendKey,
-      status: 'pending',
-      created_at: new Date().toISOString(),
-    });
+    await ensureMutualFriendship(supabase, dbUserId, friendUser.id);
 
-    if (error1) {
-      console.error('❌ [FRIENDS ADD]:', error1);
-      return NextResponse.json(
-        { success: false, error: `Ошибка создания запроса: ${error1.message}` },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({ success: true, message: 'Запрос в друзья отправлен!' });
+    return NextResponse.json({ success: true, message: 'Друг добавлен!' });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('❌ Ошибка API /api/friends/add:', error);

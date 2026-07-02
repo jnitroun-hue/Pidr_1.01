@@ -510,6 +510,7 @@ export async function POST(req: NextRequest) {
         first_name: firstName || finalUsername,
         last_name: lastName || '',
         avatar_url: photoUrl || null,
+        auth_method: 'telegram',
         coins: 1000,
         rating: 0,
         created_at: new Date().toISOString(),
@@ -658,10 +659,11 @@ export async function POST(req: NextRequest) {
       }
       
       const updateData: Record<string, string> = {
-        username: finalUsername, // ✅ Всегда обновляем username (даже если используем существующий)
+        username: finalUsername,
         first_name: firstName || user.first_name,
         last_name: lastName || user.last_name,
         avatar_url: photoUrl || user.avatar_url,
+        auth_method: 'telegram',
         last_seen: moscowTime,
         updated_at: new Date().toISOString(),
         online_status: 'online',
