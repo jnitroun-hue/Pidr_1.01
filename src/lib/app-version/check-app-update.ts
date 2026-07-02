@@ -56,6 +56,22 @@ export function commitAppBuildId(buildId: string): void {
   }
 }
 
+function isReloadLoopForBuild(serverBuildId: string): boolean {
+  try {
+    return sessionStorage.getItem(APP_UPDATE_RELOAD_KEY) === serverBuildId;
+  } catch {
+    return false;
+  }
+}
+
+function markReloadAttempt(serverBuildId: string): void {
+  try {
+    sessionStorage.setItem(APP_UPDATE_RELOAD_KEY, serverBuildId);
+  } catch {
+    /* ignore */
+  }
+}
+
 /**
  * true = нужна перезагрузка (вызывающий код делает location.replace).
  * false = версия актуальна.
@@ -63,13 +79,26 @@ export function commitAppBuildId(buildId: string): void {
 export async function shouldReloadForAppUpdate(): Promise<boolean> {
   if (typeof window === 'undefined') return false;
 
+  const embeddedBuildId = getEmbeddedBuildId();
   const server = await fetchServerAppVersion();
+
   if (!server) {
-    commitAppBuildId(getEmbeddedBuildId());
+    commitAppBuildId(embeddedBuildId);
     return false;
   }
 
   const serverBuildId = server.buildId;
+
+  // Закэшированный JS-бандл старее сервера — перезагрузка даже при первом визите
+  if (embeddedBuildId !== serverBuildId) {
+    if (isReloadLoopForBuild(serverBuildId)) {
+      commitAppBuildId(serverBuildId);
+      return false;
+    }
+    markReloadAttempt(serverBuildId);
+    return true;
+  }
+
   let storedBuildId: string | null = null;
   try {
     storedBuildId = localStorage.getItem(APP_BUILD_STORAGE_KEY);
@@ -77,32 +106,18 @@ export async function shouldReloadForAppUpdate(): Promise<boolean> {
     storedBuildId = null;
   }
 
-  const embeddedBuildId = getEmbeddedBuildId();
-
-  // Первая сессия — запоминаем и продолжаем
-  if (!storedBuildId) {
-    commitAppBuildId(serverBuildId);
-    return false;
-  }
-
-  // Уже на актуальной версии
-  if (storedBuildId === serverBuildId && embeddedBuildId === serverBuildId) {
-    commitAppBuildId(serverBuildId);
-    return false;
-  }
-
-  // Защита от бесконечного reload
-  try {
-    if (sessionStorage.getItem(APP_UPDATE_RELOAD_KEY) === serverBuildId) {
+  // Сервер обновился, localStorage ещё со старым id
+  if (storedBuildId && storedBuildId !== serverBuildId) {
+    if (isReloadLoopForBuild(serverBuildId)) {
       commitAppBuildId(serverBuildId);
       return false;
     }
-    sessionStorage.setItem(APP_UPDATE_RELOAD_KEY, serverBuildId);
-  } catch {
-    /* ignore */
+    markReloadAttempt(serverBuildId);
+    return true;
   }
 
-  return true;
+  commitAppBuildId(serverBuildId);
+  return false;
 }
 
 export async function reloadAppToLatestVersion(): Promise<void> {

@@ -14,8 +14,8 @@ import {
 } from '@/lib/nft/theme-config';
 
 const REMOTE_FETCH_TIMEOUT_MS = 2500;
-/** v5: примитивные масти + PNG темы из Storage/API, сброс битых превью */
-const COMPOSE_VERSION = 5;
+/** v6: sharp+SVG на сервере (без canvas/Path2D), сброс битых превью */
+const COMPOSE_VERSION = 6;
 
 export { COMPOSE_VERSION };
 

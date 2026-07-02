@@ -1,25 +1,37 @@
 /**
- * Серверная сборка NFT-карты — тот же canvas API, что и в generate-theme-card-client.
- * sharp/librsvg ломает SVG-текст (крошечные ранги, жёлтая полоса бейджа).
+ * Серверная сборка NFT-карты через sharp + SVG (без @napi-rs/canvas / Path2D).
  */
-import { createCanvas, loadImage } from '@napi-rs/canvas';
-import { CARD_FACE, drawCardFaceCanvas, type CardFaceSpec } from '@/lib/nft/card-face-builder';
+import sharp from 'sharp';
+import { CARD_FACE, buildCardFaceSvg, type CardFaceSpec } from '@/lib/nft/card-face-builder';
 
 export async function composeCardBufferServer(
   spec: CardFaceSpec,
   themeImageBuffer?: Buffer | null
 ): Promise<Buffer> {
-  const canvas = createCanvas(CARD_FACE.width, CARD_FACE.height);
-  const ctx = canvas.getContext('2d');
-  if (!ctx) {
-    throw new Error('Canvas 2D context unavailable');
+  const svgBuffer = Buffer.from(buildCardFaceSvg(spec));
+  const baseBuffer = await sharp(svgBuffer).png().toBuffer();
+
+  if (!themeImageBuffer || themeImageBuffer.length <= 100) {
+    return baseBuffer;
   }
 
-  let themeImg: Awaited<ReturnType<typeof loadImage>> | null = null;
-  if (themeImageBuffer && themeImageBuffer.length > 100) {
-    themeImg = await loadImage(themeImageBuffer);
-  }
+  const { art } = CARD_FACE;
+  const themeMeta = await sharp(themeImageBuffer).metadata();
+  const tw = themeMeta.width || art.size;
+  const th = themeMeta.height || art.size;
+  const scale = Math.min(art.size / tw, art.size / th);
+  const drawW = Math.max(1, Math.round(tw * scale));
+  const drawH = Math.max(1, Math.round(th * scale));
+  const drawX = art.left + Math.round((art.size - drawW) / 2);
+  const drawY = art.top + Math.round((art.size - drawH) / 2);
 
-  drawCardFaceCanvas(ctx as unknown as CanvasRenderingContext2D, spec, themeImg as unknown as CanvasImageSource);
-  return canvas.toBuffer('image/png');
+  const resizedTheme = await sharp(themeImageBuffer)
+    .resize(drawW, drawH, { fit: 'inside' })
+    .png()
+    .toBuffer();
+
+  return sharp(baseBuffer)
+    .composite([{ input: resizedTheme, top: drawY, left: drawX }])
+    .png()
+    .toBuffer();
 }

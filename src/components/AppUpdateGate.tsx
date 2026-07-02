@@ -79,6 +79,11 @@ export default function AppUpdateGate({ children }: Props) {
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('focus', tick);
 
+    const tg = window.Telegram?.WebApp;
+    if (tg && typeof tg.onEvent === 'function') {
+      tg.onEvent('activated', tick);
+    }
+
     return () => {
       window.clearInterval(intervalId);
       document.removeEventListener('visibilitychange', onVisible);

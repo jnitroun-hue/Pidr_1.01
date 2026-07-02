@@ -70,8 +70,9 @@ function rankDisplay(rankRaw: string): string {
   return rankRaw === '10' ? '10' : rankRaw.toUpperCase();
 }
 
+/** Календарный день акции — по Москве (полночь МСК = новая акция) */
 export function getDayTag(date = new Date()): string {
-  return date.toISOString().slice(0, 10);
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Moscow' }).format(date);
 }
 
 export function buildPremiumDailyOffer(userId: number, dayTag = getDayTag()): PremiumDailyOfferSpec {
@@ -187,8 +188,13 @@ export async function buildPremiumDailyOfferWithPreview(
   dayTag = getDayTag()
 ): Promise<PremiumDailyOfferSpec> {
   const spec = buildPremiumDailyOffer(userId, dayTag);
-  const promoImageUrl = await buildPremiumDailyOfferPreviewUrl(userId, spec);
-  return { ...spec, promoImageUrl };
+  try {
+    const promoImageUrl = await buildPremiumDailyOfferPreviewUrl(userId, spec);
+    return { ...spec, promoImageUrl };
+  } catch (error) {
+    console.warn('⚠️ [daily-offer] preview build failed, offer without image:', error);
+    return spec;
+  }
 }
 
 export async function purchasePremiumDailyOffer(
