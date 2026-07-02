@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { PidrCoinAmount } from '@/components/PidrCoinIcon';
 
 const SUITS = [
   { value: 'hearts', label: '♥', color: '#ef4444' },
@@ -325,11 +326,15 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
           <div style={{ display: 'flex', gap: '12px', fontSize: '12px' }}>
             <div>
               <span style={{ color: '#6ee7b7', fontSize: '10px' }}>РАНГ:</span>
-              <span style={{ color: '#10b981', fontWeight: 'bold', marginLeft: '4px' }}>{rankCost}🪙</span>
+              <span style={{ color: '#10b981', fontWeight: 'bold', marginLeft: '4px' }}>
+                <PidrCoinAmount value={rankCost} size={12} />
+              </span>
             </div>
             <div>
               <span style={{ color: '#6ee7b7', fontSize: '10px' }}>МАСТЬ:</span>
-              <span style={{ color: '#10b981', fontWeight: 'bold', marginLeft: '4px' }}>+{suitCost}🪙</span>
+              <span style={{ color: '#10b981', fontWeight: 'bold', marginLeft: '4px' }}>
+                <PidrCoinAmount value={`+${suitCost}`} size={12} />
+              </span>
             </div>
           </div>
         </div>
@@ -345,9 +350,7 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
           alignItems: 'center'
         }}>
           <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#6ee7b7' }}>ИТОГО:</span>
-          <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#10b981', textShadow: '0 0 8px rgba(16, 185, 129, 0.5)' }}>
-            {currentCost} 🪙
-          </span>
+          <PidrCoinAmount value={currentCost} size={18} amountClassName="text-lg font-bold text-emerald-400" />
         </div>
       </div>
 

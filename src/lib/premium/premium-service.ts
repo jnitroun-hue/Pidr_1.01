@@ -40,8 +40,10 @@ export function isPremiumActiveFromUser(user: {
   is_premium?: boolean | null;
   premium_expires_at?: string | null;
 }): boolean {
-  if (!user.premium_expires_at) return false;
-  return new Date(user.premium_expires_at).getTime() > Date.now();
+  if (user.premium_expires_at) {
+    return new Date(user.premium_expires_at).getTime() > Date.now();
+  }
+  return user.is_premium === true;
 }
 
 /** Активный Premium: подписка в БД → синхронизация в _pidr_users → дата окончания */

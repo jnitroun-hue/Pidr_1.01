@@ -5,6 +5,7 @@ import { requireAuth, getUserIdFromDatabase } from '../../../../lib/auth-utils';
 import { resolveAuthMethod } from '@/lib/user/resolve-auth-method';
 import { normalizeUserStats } from '@/lib/user/normalize-user-stats';
 import { syncPremiumFlag } from '../../../../lib/premium/premium-service';
+import { shouldSyncPlatformPhoto } from '@/lib/user/avatar-policy';
 
 // ✅ Явная конфигурация runtime для Next.js 15
 export const runtime = 'nodejs';
@@ -51,8 +52,8 @@ export async function GET(req: NextRequest) {
 
     if (authSource === 'telegram' && dbUserId) {
       const patch: Record<string, string> = {};
-      if (telegramPhoto && telegramPhoto.startsWith('http') && telegramPhoto !== user.avatar_url) {
-        patch.avatar_url = telegramPhoto;
+      if (shouldSyncPlatformPhoto(user.avatar_url, telegramPhoto)) {
+        patch.avatar_url = telegramPhoto!;
       }
       if (!user.auth_method || user.auth_method === 'web') {
         patch.auth_method = 'telegram';

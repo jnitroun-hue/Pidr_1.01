@@ -13,7 +13,9 @@ import { useLanguage } from '../../components/LanguageSwitcher';
 import { useTranslations } from '../../lib/i18n/translations';
 import { avatarFrames, getRarityColor, getRarityName } from '../../data/avatar-frames';
 import TonWalletConnect from '../../components/TonWalletConnect';
+import PidrCoinIcon, { PidrCoinAmount } from '@/components/PidrCoinIcon';
 import { getApiHeaders } from '@/lib/api-headers';
+import { patchHomeSessionPhoto } from '@/lib/user/home-session-cache';
 import { parseJsonResponse } from '@/lib/api/parse-json-response';
 import { appAlert, appConfirm } from '@/lib/app-notice';
 import { fetchPremiumStatus, isPremiumUsable } from '@/lib/premium/refresh-premium';
@@ -1233,6 +1235,7 @@ export default function ProfilePage() {
             method: 'POST',
             credentials: 'include',
             headers: {
+              ...getApiHeaders(),
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
@@ -1240,20 +1243,22 @@ export default function ProfilePage() {
             })
           });
           
-          if (response.ok) {
-            const updateResult = await response.json();
-            if (updateResult.success) {
-              console.log('✅ Аватар сохранен в БД');
-              // Обновляем локальное состояние
-              setUser((prev: any) => prev ? { ...prev, avatar_url: result } : null);
-            } else {
-              console.error('❌ Ошибка сохранения аватара:', updateResult.message);
-            }
+          const updateResult = await response.json().catch(() => null);
+
+          if (response.ok && updateResult?.success) {
+            const savedUrl = updateResult.data?.avatar_url || result;
+            console.log('✅ Аватар сохранен в БД');
+            setAvatarUrl(savedUrl);
+            setUser((prev: any) => prev ? { ...prev, avatar_url: savedUrl } : null);
+            patchHomeSessionPhoto(savedUrl);
           } else {
-            console.error('❌ Ошибка API при сохранении аватара:', response.status);
+            const message = updateResult?.message || `Ошибка сервера (${response.status})`;
+            console.error('❌ Ошибка сохранения аватара:', message);
+            alert(`Не удалось сохранить аватар: ${message}`);
           }
         } catch (error) {
           console.error('❌ Ошибка сохранения аватара:', error);
+          alert('Не удалось сохранить аватар. Проверьте соединение и попробуйте снова.');
         }
       };
       reader.readAsDataURL(file);
@@ -1431,9 +1436,13 @@ export default function ProfilePage() {
               borderRadius: '8px',
               fontWeight: '600',
               color: '#1f2937',
-              fontSize: '14px'
+              fontSize: '14px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
             }}>
-              💰 {(user?.coins || 0).toLocaleString()}
+              <PidrCoinIcon size={20} spinSlow alt="" />
+              {(user?.coins || 0).toLocaleString()}
             </div>
 
             {/* Кнопки: Друзья, Аватар и Админ панель (если админ) */}
@@ -2210,9 +2219,21 @@ export default function ProfilePage() {
                             padding: '8px 16px',
                             borderRadius: '12px',
                             fontSize: '0.8rem',
-                            fontWeight: '600'
+                            fontWeight: '600',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6,
                           }}>
-                            {user && user.coins >= frame.price ? `💰 КУПИТЬ ${frame.price.toLocaleString()}` : `🔒 ${frame.price.toLocaleString()} монет`}
+                            {user && user.coins >= frame.price ? (
+                              <>
+                                <PidrCoinIcon size={14} alt="" />
+                                КУПИТЬ {frame.price.toLocaleString('ru-RU')}
+                              </>
+                            ) : (
+                              <>
+                                🔒 <PidrCoinAmount value={frame.price} size={14} showLabel />
+                              </>
+                            )}
                           </div>
                         )}
                       </div>
@@ -2246,8 +2267,9 @@ export default function ProfilePage() {
                       <p style={{ color: '#94a3b8', fontSize: '0.9rem', margin: '0 0 8px 0' }}>
                         {bonus.description}
                       </p>
-                      <div style={{ color: '#fbbf24', fontSize: '0.9rem', fontWeight: '600' }}>
-                        💰 {bonus.reward}
+                      <div style={{ color: '#fbbf24', fontSize: '0.9rem', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                        <PidrCoinIcon size={18} alt="" />
+                        {bonus.reward}
                       </div>
                       
                       {bonus.id === 'daily' && bonus.available && (

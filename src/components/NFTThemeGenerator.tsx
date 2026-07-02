@@ -12,6 +12,7 @@ import { openNftCardModal } from '@/lib/nft/open-card-modal';
 import { generateThemeCardImageDataUrl } from '@/lib/nft/generate-theme-card-client';
 import type { NftThemeKey } from '@/lib/nft/theme-config';
 import { GRAM, formatGramAmount } from '@/lib/crypto/gram-brand';
+import { PidrCoinAmount } from '@/components/PidrCoinIcon';
 
 interface NFTThemeGeneratorProps {
   userCoins: number;
@@ -748,8 +749,8 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
                 textAlign: 'center'
               }}>
                 <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '4px' }}>Ваш баланс:</p>
-                <p style={{ color: '#fbbf24', fontSize: '24px', fontWeight: 'bold' }}>
-                  💰 {userCoins.toLocaleString()}
+                <p style={{ color: '#fbbf24', fontSize: '24px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  <PidrCoinAmount value={userCoins} size={24} />
                 </p>
               </div>
             </motion.div>

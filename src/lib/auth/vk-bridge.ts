@@ -3,6 +3,11 @@
  * Документация: https://dev.vk.com/bridge/overview
  */
 
+import {
+  captureReferralFromCurrentUrl,
+  getPendingReferralFromClient,
+} from '@/lib/referral/pending-referral-client';
+
 declare global {
   interface VKBridgeApi {
     send(method: string, params?: Record<string, unknown>): Promise<unknown>;
@@ -161,9 +166,13 @@ export async function loginWithVKMiniApp(): Promise<{
     avatar_url?: string;
   };
   token?: string;
+  isNewUser?: boolean;
   message?: string;
 }> {
   try {
+    captureReferralFromCurrentUrl();
+    const referralCode = getPendingReferralFromClient();
+
     // Инициализируем VK Bridge
     const initialized = await initVKBridge();
     if (!initialized) {
@@ -195,22 +204,24 @@ export async function loginWithVKMiniApp(): Promise<{
     const response = await fetch('/api/auth/vk-miniapp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({
         ...launchParams,
         first_name: userInfo.first_name,
         last_name: userInfo.last_name,
-        photo_url: userInfo.photo_200 || userInfo.photo_100
+        photo_url: userInfo.photo_200 || userInfo.photo_100,
+        referralCode,
       })
     });
 
     const data = await response.json();
 
     if (data.success) {
-      // Токен сохраняется в cookies сервером, без клиентского хранилища
       return {
         success: true,
         user: data.user,
-        token: data.token
+        token: data.token,
+        isNewUser: Boolean(data.isNewUser),
       };
     } else {
       return {

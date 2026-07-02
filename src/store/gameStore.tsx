@@ -5,7 +5,7 @@ import { createPlayers, generateAvatar } from '../lib/game/avatars'
 import { getApiHeaders } from '../lib/api-headers'
 import { deckEntriesToNftMap } from '../lib/game/cardAssets'
 import { BOT_TIMING } from '../lib/game/botTiming'
-import { calculateRatingRewards, calculatePlayerPositions } from '../lib/rating/ratingSystem'
+import { calculateRatingRewards, calculatePlayerPositions, isWinningPosition } from '../lib/rating/ratingSystem'
 import { RoomManager } from '../lib/multiplayer/room-manager'
 import type { TelegramWebAppUser } from '../types/telegram-webapp'
 
@@ -83,14 +83,77 @@ interface RoomLobbyPlayer {
   position: number
   isUser?: boolean
   dbUserId?: number | null
+  isPremium?: boolean
 }
 
 interface MultiplayerConfig {
   roomId: string
   roomCode: string
   isHost: boolean
+  isRanked?: boolean
+  matchType?: 'normal' | 'rated'
   players?: MultiplayerPlayerRef[]
   roomPlayers?: RoomLobbyPlayer[]
+}
+
+/** Монеты за место (игровая экономика) + рейтинг из ratingSystem */
+function getPlaceRewards(position: number, totalPlayers: number, isRanked: boolean) {
+  const isLastPlace = position === totalPlayers;
+  let coinsEarned = 30;
+  if (position === 1) coinsEarned = 350;
+  else if (position === 2) coinsEarned = 250;
+  else if (position === 3) coinsEarned = 150;
+  else if (position === 4) coinsEarned = 100;
+  else if (position === 5) coinsEarned = 70;
+  else if (isLastPlace) coinsEarned = 5;
+
+  const rated = calculateRatingRewards(position, totalPlayers, isRanked);
+  return {
+    coinsEarned,
+    ratingChange: rated.ratingChange,
+    isWinner: isWinningPosition(position, totalPlayers),
+  };
+}
+
+async function persistRankedGameToDb(params: {
+  roomId: string;
+  players: Player[];
+  eliminationOrder: string[];
+  isRanked: boolean;
+}) {
+  if (!params.isRanked) return;
+  try {
+    const positions = calculatePlayerPositions(params.players, params.eliminationOrder);
+    const totalPlayers = params.players.length;
+    const winnerEntry = params.players.find((p) => positions[p.id] === 1);
+    const payload = {
+      roomId: params.roomId,
+      winnerId: winnerEntry?.dbUserId ?? winnerEntry?.id ?? '',
+      totalPlayers,
+      gameDurationSeconds: 0,
+      players: params.players
+        .filter((p) => !p.isBot)
+        .map((p) => {
+          const place = positions[p.id] ?? totalPlayers;
+          const rewards = getPlaceRewards(place, totalPlayers, true);
+          return {
+            userId: p.dbUserId ?? p.id,
+            position: place,
+            ratingChange: rewards.ratingChange,
+            coinsChange: rewards.coinsEarned,
+            isWinner: rewards.isWinner,
+          };
+        }),
+    };
+    await fetch('/api/rating/save-game', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', ...getApiHeaders() },
+      body: JSON.stringify(payload),
+    });
+  } catch (e) {
+    console.warn('⚠️ [rating] save-game failed:', e);
+  }
 }
 
 interface RemoteGameState {
@@ -612,7 +675,7 @@ export const useGameStore = create<GameState>()(
       
       // Система рейтинга и результатов
       eliminationOrder: [],
-      isRankedGame: true,
+      isRankedGame: false,
       statsUpdatedThisGame: false, // ✅ Изначально не обновлена
       showVictoryModal: false,
       victoryData: null,
@@ -834,7 +897,9 @@ export const useGameStore = create<GameState>()(
             isBot: roomPlayer ? roomPlayer.isBot : playerInfo.isBot,
             isOnline: roomPlayer ? !roomPlayer.isBot : !playerInfo.isBot,
             isBotSubstitute: false,
-            isPremium: (roomPlayer ? Boolean(roomPlayer.isUser) : !playerInfo.isBot) && userIsPremium,
+            isPremium: roomPlayer
+              ? Boolean(roomPlayer.isPremium) || (Boolean(roomPlayer.isUser) && userIsPremium)
+              : !playerInfo.isBot && userIsPremium,
             difficulty: playerInfo.difficulty,
             dbUserId: roomPlayer?.dbUserId ?? undefined,
             publicUserId: roomPlayer ? String(roomPlayer.id) : undefined,
@@ -881,9 +946,14 @@ export const useGameStore = create<GameState>()(
         // Сбрасываем состояние и начинаем игру
         get().resetTurnState();
         
+        const isRankedGame =
+          mode === 'multiplayer' &&
+          (multiplayerConfig?.isRanked === true || multiplayerConfig?.matchType === 'rated');
+
         set({
           isGameActive: true,
           gameMode: mode,
+          isRankedGame,
           players,
           currentPlayerId: players[firstPlayerIndex].id,
           deck: remainingCards,
@@ -3223,31 +3293,11 @@ export const useGameStore = create<GameState>()(
                   return min + normalized;
                 };
                 
-                // Определяем награды
+                const totalPlayers = get().players.length;
+                const rewards = getPlaceRewards(position, totalPlayers, get().isRankedGame);
                 const isTopThree = position >= 1 && position <= 3;
-                let coinsEarned = 0;
-                let ratingChange = 0;
-                
-                if (position === 1) {
-                  coinsEarned = 350;
-                  ratingChange = 50;
-                } else if (position === 2) {
-                  coinsEarned = 250;
-                  ratingChange = 25;
-                } else if (position === 3) {
-                  coinsEarned = 150;
-                  ratingChange = 10;
-                } else if (position === 4) {
-                  coinsEarned = 100;
-                  ratingChange = 0;
-                } else if (position === 5) {
-                  coinsEarned = 70;
-                  ratingChange = 0;
-                } else if (position >= 6) {
-                  coinsEarned = 30;
-                  ratingChange = 0;
-                }
-                // Для 9-го места (последнего) монеты и рейтинг начисляются в конце игры
+                const coinsEarned = rewards.coinsEarned;
+                const ratingChange = rewards.ratingChange;
                 
                 // ✅ ГЕНЕРИРУЕМ УНИКАЛЬНЫЙ TRACE ID
                 const traceId = `WINNER_${position}_${Date.now()}`;
@@ -3282,11 +3332,13 @@ export const useGameStore = create<GameState>()(
                       amount: coinsEarned,
                       source: `game_finish_place_${position}`,
                       ratingChange: get().isRankedGame ? ratingChange : 0,
-                      updateStats: {
-                        gamesPlayed: true,
-                        wins: isTopThree,
-                        losses: false
-                      },
+                      updateStats: get().isRankedGame
+                        ? {
+                            gamesPlayed: true,
+                            wins: rewards.isWinner,
+                            losses: false,
+                          }
+                        : undefined,
                       traceId: traceId,
                     })
                   }).then(res => res.json())
@@ -3485,36 +3537,17 @@ export const useGameStore = create<GameState>()(
           };
           
           // Формируем результаты
+          const totalPlayers = sortedPlayers.length;
           const results = sortedPlayers.map((player, index) => {
             const place = index + 1;
-            const isLastPlace = place === sortedPlayers.length;
-            const totalCards = player.cards.length + player.penki.length;
-            
-            // ✅ РАСЧЕТ НАГРАД (только для НЕ ботов)
-            let coinsEarned = 0;
-            let ratingChange = 0;
-            
-            const getRewards = (p: number, last: boolean) => {
-              if (p === 1) return { coins: 350, rating: 50 };
-              if (p === 2) return { coins: 250, rating: 25 };
-              if (p === 3) return { coins: 150, rating: 10 };
-              if (p === 4) return { coins: 100, rating: 0 };
-              if (p === 5) return { coins: 70, rating: 0 };
-              if (last) return { coins: 5, rating: -25 };
-              return { coins: 30, rating: 0 };
-            };
+            const rewards = getPlaceRewards(place, totalPlayers, get().isRankedGame);
 
-            const rewards = getRewards(place, isLastPlace);
-            coinsEarned = rewards.coins;
-            ratingChange = rewards.rating;
-            // Боты не получают монеты/рейтинг
-            
             return {
               place,
               name: player.name,
               avatar: player.avatar,
-              coinsEarned,
-              ratingChange,
+              coinsEarned: rewards.coinsEarned,
+              ratingChange: rewards.ratingChange,
               isUser: player.isUser || player.id === currentUserTelegramId
             };
           });
@@ -3558,11 +3591,13 @@ export const useGameStore = create<GameState>()(
                   amount: userResult.coinsEarned,
                   source: 'game_loss',
                   ratingChange: get().isRankedGame ? (userResult.ratingChange || -25) : 0,
-                  updateStats: {
-                    gamesPlayed: true,
-                    wins: false,
-                    losses: true
-                  },
+                  updateStats: get().isRankedGame
+                    ? {
+                        gamesPlayed: true,
+                        wins: false,
+                        losses: true,
+                      }
+                    : undefined,
                   traceId: traceId
                 };
                 
@@ -3627,11 +3662,13 @@ export const useGameStore = create<GameState>()(
                     amount: userResult.coinsEarned,
                     source: `game_finish_place_${userResult.place}`,
                     ratingChange: get().isRankedGame ? (userResult.ratingChange || 0) : 0,
-                    updateStats: {
-                      gamesPlayed: true,
-                      wins: userResult.place >= 1 && userResult.place <= 3,
-                      losses: false
-                    },
+                    updateStats: get().isRankedGame
+                      ? {
+                          gamesPlayed: true,
+                          wins: getPlaceRewards(userResult.place, results.length, true).isWinner,
+                          losses: false,
+                        }
+                      : undefined,
                     traceId,
                   })
                 }).then(res => res.json())
@@ -3652,6 +3689,16 @@ export const useGameStore = create<GameState>()(
           }
           
           // ✅ КРИТИЧНО: Закрываем все старые модалки перед показом финальной!
+          const { isRankedGame, multiplayerData, players: endPlayers, eliminationOrder } = get();
+          if (isRankedGame && multiplayerData?.roomId) {
+            void persistRankedGameToDb({
+              roomId: multiplayerData.roomId,
+              players: endPlayers,
+              eliminationOrder,
+              isRanked: true,
+            });
+          }
+
           set({
             showWinnerModal: false,
             winnerModalData: null,
@@ -4383,7 +4430,9 @@ export const useGameStore = create<GameState>()(
                  isBot: localPlayer.isBot,
                  name: localPlayer.isUser ? localPlayer.name : (remotePlayer.name || localPlayer.name),
                  avatar: localPlayer.isUser ? localPlayer.avatar : (remotePlayer.avatar || localPlayer.avatar),
-                 isPremium: localPlayer.isUser ? localPlayer.isPremium : remotePlayer.isPremium,
+                 isPremium: localPlayer.isUser
+                   ? localPlayer.isPremium || remotePlayer.isPremium
+                   : remotePlayer.isPremium ?? localPlayer.isPremium,
                  cards: Array.isArray(remotePlayer.cards) ? remotePlayer.cards.map((c) => ({ ...c })) : [],
                  penki: Array.isArray(remotePlayer.penki) ? remotePlayer.penki.map((c) => ({ ...c })) : [],
                  isOnline: remotePlayer.isOnline !== undefined ? remotePlayer.isOnline : localPlayer.isOnline,

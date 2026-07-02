@@ -6,8 +6,10 @@
  * Поддержка MEMO для идентификации пользователей
  */
 
+import { Cell } from '@ton/core';
 import { getSupabaseAdmin } from '../supabase';
-import { resolveMasterAddress } from '@/lib/wallets/master-addresses';
+import { resolveMasterAddress, tonAddressForTransfer } from '@/lib/wallets/master-addresses';
+import { coinsFromCrypto, getExchangeRates } from '@/lib/pricing/exchange-rates';
 
 interface TonTransaction {
   hash: string;
@@ -16,6 +18,35 @@ interface TonTransaction {
   value: string; // в nanoton
   comment?: string; // memo
   timestamp: number;
+}
+
+function extractTonComment(inMsg: Record<string, unknown> | null | undefined): string | undefined {
+  if (!inMsg) return undefined;
+
+  const plain = inMsg.message;
+  if (typeof plain === 'string' && plain.trim()) {
+    return plain.trim();
+  }
+
+  const msgData = inMsg.msg_data as Record<string, unknown> | undefined;
+  if (msgData?.text && typeof msgData.text === 'string') {
+    return msgData.text.trim();
+  }
+
+  const body = msgData?.body;
+  if (typeof body === 'string' && body.length > 0) {
+    try {
+      const cell = Cell.fromBase64(body);
+      const slice = cell.beginParse();
+      if (slice.remainingBits >= 32 && slice.loadUint(32) === 0) {
+        return slice.loadStringTail().trim();
+      }
+    } catch {
+      /* not a text-comment payload */
+    }
+  }
+
+  return undefined;
 }
 
 export class TonPaymentService {
@@ -30,8 +61,6 @@ export class TonPaymentService {
                   process.env.TONCENTER_API || 
                   '';
     this.masterAddress = resolveMasterAddress('TON')?.address || '';
-    
-    // ✅ Показываем предупреждения только если переменные действительно отсутствуют
     // И только во время сборки (build time), не в runtime
     const isBuildTime = typeof window === 'undefined' && process.env.NODE_ENV === 'production';
     if (isBuildTime) {
@@ -50,7 +79,8 @@ export class TonPaymentService {
    */
   async getRecentTransactions(limit: number = 100): Promise<TonTransaction[]> {
     try {
-      const url = `${this.apiEndpoint}/getTransactions?address=${this.masterAddress}&limit=${limit}&api_key=${this.apiKey}`;
+      const queryAddress = tonAddressForTransfer(this.masterAddress);
+      const url = `${this.apiEndpoint}/getTransactions?address=${encodeURIComponent(queryAddress)}&limit=${limit}&archival=true${this.apiKey ? `&api_key=${this.apiKey}` : ''}`;
       
       console.log('🔍 Запрашиваем TON транзакции...');
       
@@ -77,12 +107,13 @@ export class TonPaymentService {
       for (const tx of data.result) {
         // Проверяем что это входящая транзакция
         if (tx.in_msg && tx.in_msg.value && tx.in_msg.value !== '0') {
+          const comment = extractTonComment(tx.in_msg as Record<string, unknown>);
           transactions.push({
             hash: tx.transaction_id.hash,
             from: tx.in_msg.source || 'unknown',
             to: tx.in_msg.destination || this.masterAddress,
             value: tx.in_msg.value,
-            comment: tx.in_msg.message || undefined,
+            comment,
             timestamp: parseInt(tx.utime) * 1000 // конвертируем в миллисекунды
           });
         }
@@ -111,16 +142,36 @@ export class TonPaymentService {
    */
   private async findUserByMemo(memo: string): Promise<string | null> {
     try {
-      // ✅ УПРОЩЕНО: Парсим telegram_id из memo формата "deposit_TELEGRAM_ID"
-      if (memo && memo.startsWith('deposit_')) {
-        const userId = memo.replace('deposit_', '');
-        console.log(`✅ Извлечён userId из memo: ${userId}`);
-        return userId;
+      if (!memo || !memo.startsWith('deposit_')) {
+        console.log(`⚠️ Memo не распознан: ${memo}`);
+        return null;
       }
-      
-      console.log(`⚠️ Memo не распознан: ${memo}`);
+
+      const idPart = memo.replace('deposit_', '').trim();
+      if (!idPart) return null;
+
+      const supabase = getSupabaseAdmin();
+
+      const { data: byDbId } = await supabase
+        .from('_pidr_users')
+        .select('id')
+        .eq('id', idPart)
+        .maybeSingle();
+      if (byDbId?.id) {
+        return String(byDbId.id);
+      }
+
+      const { data: byTelegram } = await supabase
+        .from('_pidr_users')
+        .select('id')
+        .eq('telegram_id', idPart)
+        .maybeSingle();
+      if (byTelegram?.id) {
+        return String(byTelegram.id);
+      }
+
+      console.log(`⚠️ Пользователь для memo ${memo} не найден`);
       return null;
-      
     } catch (error) {
       console.error('❌ Ошибка парсинга memo:', error);
       return null;
@@ -197,10 +248,17 @@ export class TonPaymentService {
   }
 
   /**
-   * Конвертировать TON в игровые монеты (1 TON = 1000 монет)
+   * Конвертировать TON/GRAM в игровые монеты по актуальному курсу
    */
-  private tonToCoins(tonAmount: number): number {
-    return Math.floor(tonAmount * 1000); // 1 TON = 1000 монет
+  private async tonToCoins(tonAmount: number): Promise<number> {
+    try {
+      const rates = await getExchangeRates();
+      const coins = coinsFromCrypto('TON', tonAmount, rates);
+      if (coins > 0) return coins;
+    } catch {
+      /* fallback below */
+    }
+    return Math.floor(tonAmount * 1000);
   }
 
   /**
@@ -259,7 +317,7 @@ export class TonPaymentService {
           continue;
         }
 
-        const coinsAmount = this.tonToCoins(tonAmount);
+        const coinsAmount = await this.tonToCoins(tonAmount);
 
         // Обрабатываем платеж
         const processed = await this.processPayment(tx, userId, tonAmount, coinsAmount);

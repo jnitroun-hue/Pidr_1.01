@@ -4,7 +4,7 @@
 import { beginCell, toNano } from '@ton/core';
 import type { TonConnectUI } from '@tonconnect/ui-react';
 import { GRAM } from '@/lib/crypto/gram-brand';
-import { normalizeDepositCoin } from '@/lib/wallets/master-addresses';
+import { normalizeDepositCoin, tonAddressForTransfer } from '@/lib/wallets/master-addresses';
 
 const buildTonCommentPayload = (comment: string) =>
   beginCell().storeUint(0, 32).storeStringTail(comment).endCell().toBoc().toString('base64');
@@ -38,6 +38,7 @@ export async function sendGramViaTonConnect(params: {
   memo: string;
 }): Promise<void> {
   const { tonConnectUI, masterAddress, amount, memo } = params;
+  const transferAddress = tonAddressForTransfer(masterAddress);
 
   if (!tonConnectUI.connected) {
     const tonUi = tonConnectUI as TonConnectUI & { openSingleWalletModal?: (name: string) => Promise<void> };
@@ -52,7 +53,7 @@ export async function sendGramViaTonConnect(params: {
     validUntil: Math.floor(Date.now() / 1000) + 600,
     messages: [
       {
-        address: masterAddress,
+        address: transferAddress,
         amount: toNano(amount).toString(),
         payload: buildTonCommentPayload(memo),
       },
@@ -68,7 +69,8 @@ export function openExternalWalletForDeposit(params: {
   memo?: string | null;
 }): void {
   const coin = normalizeDepositCoin(params.coin);
-  const { masterAddress, amount, memo } = params;
+  const masterAddress = tonAddressForTransfer(params.masterAddress);
+  const { amount, memo } = params;
   const tg = (window as any).Telegram?.WebApp;
 
   if (coin === 'GRAM' || coin === 'TON') {

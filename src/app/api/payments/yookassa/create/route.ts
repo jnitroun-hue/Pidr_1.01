@@ -3,6 +3,7 @@ import { createYooKassaPayment } from '@/lib/payments/yookassa';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 import { supabaseAdmin } from '@/lib/supabase';
 import { assertCanPurchasePremium } from '@/lib/premium/premium-service';
+import { coinsFromRub, getExchangeRates } from '@/lib/pricing/exchange-rates';
 
 // ✅ Явная конфигурация runtime для Next.js 15
 export const runtime = 'nodejs';
@@ -70,7 +71,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const coins = itemType === 'coins' ? Math.round(normalizedAmount * 50) : 0;
+    const rates = await getExchangeRates();
+    const coins = itemType === 'coins' ? coinsFromRub(normalizedAmount, rates) : 0;
     const orderId = `yk_${Date.now()}_${dbUserId}_${Math.random().toString(36).slice(2, 8)}`;
     const finalDescription = itemType === 'coins'
       ? `Пополнение баланса: ${coins.toLocaleString('ru-RU')} монет`
@@ -98,7 +100,10 @@ export async function POST(request: NextRequest) {
         itemId: itemId ? String(itemId) : undefined,
         itemType,
         orderId,
-        coins: coins ? String(coins) : undefined
+        coins: coins ? String(coins) : undefined,
+        coinsPerRub: String(rates.coinsPerRub),
+        usdRub: String(rates.usdRub),
+        ratesUpdatedAt: rates.updatedAt,
       },
       payment_method_data: safePaymentMethod ? {
         type: safePaymentMethod as any

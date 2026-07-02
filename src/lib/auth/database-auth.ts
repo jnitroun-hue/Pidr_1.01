@@ -1,5 +1,6 @@
 import { supabase } from '../supabase';
 import { SessionManager } from './session-manager';
+import { shouldSyncPlatformPhoto } from '@/lib/user/avatar-policy';
 
 /**
  * Сервис авторизации ТОЛЬКО через базу данных
@@ -95,8 +96,8 @@ export class DatabaseAuth {
         if (telegramData.last_name && telegramData.last_name !== user.last_name) {
           updateData.last_name = telegramData.last_name;
         }
-        if (telegramData.photo_url && telegramData.photo_url !== user.avatar_url) {
-          updateData.avatar_url = telegramData.photo_url;
+        if (shouldSyncPlatformPhoto(user.avatar_url, telegramData.photo_url)) {
+          updateData.avatar_url = telegramData.photo_url!;
         }
         if (telegramData.username && telegramData.username !== user.username) {
           updateData.username = telegramData.username;

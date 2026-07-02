@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { appConfirm } from '@/lib/app-notice';
+import PidrCoinIcon, { PidrCoinAmount } from '@/components/PidrCoinIcon';
 
 const SUITS = [
   { value: 'hearts', label: 'Червы', symbol: '♥', color: '#ef4444', gradient: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)' },
@@ -499,8 +500,9 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
         {/* ✅ Информация о ценах */}
         <div className="mb-8 bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border-2 border-amber-500/30">
           <div className="mb-4">
-            <span className="text-xl font-extrabold text-amber-400 block">
-              💰 Система Ценообразования
+            <span className="text-xl font-extrabold text-amber-400 flex items-center gap-2">
+              <PidrCoinIcon size={22} alt="" />
+              Система Ценообразования
             </span>
           </div>
           
@@ -509,10 +511,10 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
             <div className="bg-slate-900/50 rounded-xl p-4">
               <h3 className="text-md font-bold text-amber-300 mb-2">📊 По рангу:</h3>
               <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="flex justify-between"><span className="text-slate-300">2-9:</span><span className="font-bold text-green-400">1,000🪙</span></div>
-                <div className="flex justify-between"><span className="text-slate-300">10-J:</span><span className="font-bold text-blue-400">2,500🪙</span></div>
-                <div className="flex justify-between"><span className="text-slate-300">Q-K:</span><span className="font-bold text-purple-400">5,000🪙</span></div>
-                <div className="flex justify-between"><span className="text-slate-300">A:</span><span className="font-bold text-red-400">8,000🪙</span></div>
+                <div className="flex justify-between items-center"><span className="text-slate-300">2-9:</span><PidrCoinAmount value={1000} size={14} amountClassName="font-bold text-green-400" /></div>
+                <div className="flex justify-between items-center"><span className="text-slate-300">10-J:</span><PidrCoinAmount value={2500} size={14} amountClassName="font-bold text-blue-400" /></div>
+                <div className="flex justify-between items-center"><span className="text-slate-300">Q-K:</span><PidrCoinAmount value={5000} size={14} amountClassName="font-bold text-purple-400" /></div>
+                <div className="flex justify-between items-center"><span className="text-slate-300">A:</span><PidrCoinAmount value={8000} size={14} amountClassName="font-bold text-red-400" /></div>
               </div>
             </div>
 
@@ -520,8 +522,8 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
             <div className="bg-slate-900/50 rounded-xl p-4">
               <h3 className="text-md font-bold text-amber-300 mb-2">🃏 По масти:</h3>
               <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="flex justify-between"><span className="text-slate-300">♥️♦️♣️:</span><span className="font-bold text-green-400">+500🪙</span></div>
-                <div className="flex justify-between"><span className="text-slate-300">♠️:</span><span className="font-bold text-purple-400">+1,000🪙</span></div>
+                <div className="flex justify-between items-center"><span className="text-slate-300">♥️♦️♣️:</span><PidrCoinAmount value="+500" size={14} amountClassName="font-bold text-green-400" /></div>
+                <div className="flex justify-between items-center"><span className="text-slate-300">♠️:</span><PidrCoinAmount value="+1000" size={14} amountClassName="font-bold text-purple-400" /></div>
               </div>
             </div>
 
@@ -529,7 +531,7 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
             <div className="bg-gradient-to-r from-amber-500/20 to-orange-500/20 rounded-xl p-3 border border-amber-500/50">
               <div className="flex justify-between items-center">
                 <span className="text-sm font-bold text-white">Итого:</span>
-                <span className="text-xl font-extrabold text-amber-400">{currentCost}🪙</span>
+                <PidrCoinAmount value={currentCost} size={18} amountClassName="text-xl font-extrabold text-amber-400" />
               </div>
               <p className="text-xs text-slate-400 mt-1">
                 {rankCost} + {suitCost} = {currentCost} монет
@@ -582,7 +584,7 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
                     border: '2px solid rgba(255,255,255,0.3)'
                   }}
                 >
-                  {currentCost} 🪙
+                  <PidrCoinAmount value={currentCost} size={20} />
                 </div>
               )}
             </div>
@@ -635,7 +637,7 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
                     border: '2px solid rgba(255,255,255,0.3)'
                   }}
                 >
-                  {FULL_DECK_COST} 🪙
+                  <PidrCoinAmount value={FULL_DECK_COST} size={20} />
                 </div>
               )}
             </div>
@@ -653,13 +655,7 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
           }}
         >
           <div className="flex items-center justify-center gap-4">
-            <motion.span 
-              className="text-5xl"
-              animate={{ rotate: [0, 5, -5, 0] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-            >
-              🪙
-            </motion.span>
+            <PidrCoinIcon size={48} spinSlow alt="" />
             <div>
               <p 
                 className="text-sm uppercase tracking-widest font-bold mb-1"
@@ -701,8 +697,8 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
               <p className="text-green-300">
                 {generatedCard.rank.toUpperCase()} of {generatedCard.suit}
               </p>
-              <p className="text-amber-400 font-bold mt-2">
-                💰 Стоимость: {currentCost} монет
+              <p className="text-amber-400 font-bold mt-2 flex items-center justify-center gap-2">
+                Стоимость: <PidrCoinAmount value={currentCost} size={16} showLabel />
               </p>
             </div>
           </motion.div>
@@ -748,7 +744,7 @@ export default function NFTCanvasGenerator({ userCoins, onBalanceUpdate }: NFTCa
                 <div 
                   className="absolute -top-2 -right-2 px-2 py-1 rounded-full flex items-center justify-center text-xs font-bold border-2 border-amber-500 bg-amber-600"
                 >
-                  💰
+                  <PidrCoinIcon size={14} alt="" />
                 </div>
               </div>
             ))}

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getYooKassaPaymentStatus, captureYooKassaPayment } from '@/lib/payments/yookassa';
 import { supabaseAdmin } from '@/lib/supabase';
 import { fulfillNftListingPurchase } from '@/lib/marketplace/fulfill-listing';
+import { coinsFromRub, getExchangeRates } from '@/lib/pricing/exchange-rates';
 
 /**
  * POST /api/payments/yookassa/webhook
@@ -130,7 +131,12 @@ async function handlePaymentSucceeded(supabase: any, payment: any) {
     const { data: user } = await userQuery.maybeSingle();
 
     if (user) {
-      const coinsToAdd = Math.floor(amount * 50); // 50 монет за 1 рубль (100 руб = 5000 монет)
+      const metaCoins = parseInt(String(metadata.coins || ''), 10);
+      let coinsToAdd = Number.isFinite(metaCoins) && metaCoins > 0 ? metaCoins : 0;
+      if (!coinsToAdd) {
+        const rates = await getExchangeRates();
+        coinsToAdd = coinsFromRub(amount, rates);
+      }
       const newBalance = (user.coins || 0) + coinsToAdd;
 
       await supabase

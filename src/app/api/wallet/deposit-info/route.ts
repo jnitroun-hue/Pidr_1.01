@@ -3,7 +3,7 @@
  * Master-адреса для пополнения — только с сервера (Vercel env).
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth-utils';
+import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 import {
   buildDepositMemo,
   normalizeDepositCoin,
@@ -30,6 +30,9 @@ export async function GET(req: NextRequest) {
     const url = new URL(req.url);
     const coinParam = url.searchParams.get('coin');
 
+    const { dbUserId } = await getUserIdFromDatabase(auth.userId, auth.environment);
+    const memoUserId = dbUserId ? String(dbUserId) : auth.userId;
+
     if (coinParam) {
       const normalized = normalizeDepositCoin(coinParam);
       const resolved = resolveMasterAddress(coinParam);
@@ -44,7 +47,7 @@ export async function GET(req: NextRequest) {
         );
       }
 
-      const memo = buildDepositMemo(auth.userId, coinParam);
+      const memo = buildDepositMemo(memoUserId, coinParam);
       return noStoreJson({
         success: true,
         coin: resolved.coin,
@@ -63,7 +66,7 @@ export async function GET(req: NextRequest) {
       apiKey: item.apiKey,
       network: item.network,
       address: item.address,
-      memo: buildDepositMemo(auth.userId, item.coin) ?? null,
+      memo: buildDepositMemo(memoUserId, item.coin) ?? null,
       envKey: item.envKey,
       telegramWallet: ['GRAM', 'TON', 'USDT', 'TRX', 'ETH', 'SOL'].includes(item.coin),
     }));

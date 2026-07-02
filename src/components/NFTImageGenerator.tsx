@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { PidrCoinAmount } from '@/components/PidrCoinIcon';
 
 const SUITS = [
   { value: 'hearts', label: '♥', color: '#ef4444' },
@@ -304,8 +305,8 @@ export default function NFTImageGenerator({ userCoins, onBalanceUpdate }: NFTIma
         textAlign: 'center'
       }}>
         <div style={{ fontSize: '0.9rem', color: '#94a3b8', marginBottom: '5px' }}>Итоговая стоимость:</div>
-        <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#fbbf24' }}>
-          💰 {currentCost.toLocaleString()} монет
+        <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#fbbf24', display: 'flex', justifyContent: 'center' }}>
+          <PidrCoinAmount value={currentCost} size={22} showLabel />
         </div>
         <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '5px' }}>
           У вас: {userCoins.toLocaleString()} монет

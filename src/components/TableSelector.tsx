@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { GameTable } from '@/types/tables';
 import { getTableById } from '@/data/tables';
+import PidrCoinIcon from '@/components/PidrCoinIcon';
 // Генерация столов перенесена в отдельный проект pidr_generators
 
 /**
@@ -232,7 +233,10 @@ export default function TableSelector({
                           <div className="text-purple-400">👑 {table.stats.prestige}</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-yellow-400">💰 +{table.stats.winBonus}%</div>
+                          <div className="text-yellow-400 inline-flex items-center justify-center gap-1">
+                            <PidrCoinIcon size={12} alt="" />
+                            +{table.stats.winBonus}%
+                          </div>
                         </div>
                       </div>
                     )}

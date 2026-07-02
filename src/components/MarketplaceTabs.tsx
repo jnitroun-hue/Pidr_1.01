@@ -9,6 +9,7 @@ import { listingHasValidPrice } from '@/lib/marketplace/listing-price';
 import { GRAM } from '@/lib/crypto/gram-brand';
 import { CRYPTO_TOKENS } from '@/lib/crypto/crypto-assets';
 import CryptoIcon from '@/components/CryptoIcon';
+import PidrCoinIcon, { PidrCoinAmount } from '@/components/PidrCoinIcon';
 
 export { SellNftModal as SellModal } from '@/components/SellNftModal';
 
@@ -206,8 +207,7 @@ export function BuyTab({ listings, onBuy, userCoins, getSuitColor, getSuitSymbol
                 justifyContent: 'center',
                 gap: '6px'
               }}>
-                <span style={{ fontSize: '24px' }}>💰</span>
-                {listing.price_coins.toLocaleString()}
+                <PidrCoinAmount value={listing.price_coins} size={22} />
               </div>
             )}
             {listing.price_ton && (
@@ -568,7 +568,10 @@ export function MyNFTsTab({ nfts, onSellClick, onDeleteClick, getSuitColor, getS
                       cursor: 'pointer'
                     }}
                   >
-                    💰 Продать
+                    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                      <PidrCoinIcon size={16} alt="" />
+                      Продать
+                    </span>
                   </button>
                 </div>
                 <button
@@ -715,7 +718,10 @@ export function MyNFTsTab({ nfts, onSellClick, onDeleteClick, getSuitColor, getS
               marginBottom: '4px'
             }}
           >
-            💰 Продать
+            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <PidrCoinIcon size={14} alt="" />
+              Продать
+            </span>
           </motion.button>
           
           {/* Delete Button */}
@@ -787,7 +793,9 @@ function ListingCard({ listing, onCancel, getSuitColor, getSuitSymbol, getRankDi
           </p>
           <div style={{ fontSize: '15px', fontWeight: 'bold', color: '#fbbf24', lineHeight: 1.4 }}>
             {listing.price_coins != null && listing.price_coins > 0 && (
-              <div>💰 {listing.price_coins?.toLocaleString()} монет</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <PidrCoinAmount value={listing.price_coins ?? 0} size={16} showLabel />
+              </div>
             )}
             {listing.price_ton != null && listing.price_ton > 0 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -869,8 +877,12 @@ function SoldCard({ listing, getSuitColor, getSuitSymbol, getRankDisplay }: any)
           <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>
             Покупатель: @{listing.buyer?.username || listing.buyer?.first_name}
           </p>
-          <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#10b981' }}>
-            {listing.price_coins && `✅ Продано за ${listing.price_coins.toLocaleString()} 💰 монет`}
+          <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#10b981', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
+            {listing.price_coins ? (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                ✅ Продано за <PidrCoinAmount value={listing.price_coins} size={16} showLabel />
+              </span>
+            ) : null}
             {listing.price_ton && `✅ Продано за ${listing.price_ton} ${GRAM.symbol}`}
             {listing.price_sol && `✅ Продано за ${listing.price_sol} SOL`}
             {listing.price_rub != null && Number(listing.price_rub) > 0 && `✅ Продано за ${Number(listing.price_rub).toLocaleString('ru-RU')} ₽`}

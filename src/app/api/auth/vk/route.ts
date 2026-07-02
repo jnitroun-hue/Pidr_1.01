@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createSession } from '@/lib/auth/redis-session-manager';
+import {
+  applyPendingReferralForNewUser,
+  clearPendingReferralCookie,
+} from '@/lib/referral/pending-referral-server';
 
 interface VKAccessTokenResponse {
   access_token?: string;
@@ -167,6 +171,13 @@ export async function POST(request: NextRequest) {
         undefined,
     });
 
+    const refResult = await applyPendingReferralForNewUser(request, supabase, {
+      referredUserId: user.id,
+      authMethod: 'vk',
+      isNewUser,
+      explicitReferralCode: typeof body.referralCode === 'string' ? body.referralCode : null,
+    });
+
     const response = NextResponse.json({
       success: true,
       message: 'VK login successful',
@@ -193,6 +204,10 @@ export async function POST(request: NextRequest) {
       maxAge: 30 * 24 * 60 * 60,
       path: '/',
     });
+
+    if (refResult?.success) {
+      clearPendingReferralCookie(response);
+    }
 
     return response;
   } catch (error) {

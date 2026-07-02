@@ -1,21 +1,22 @@
 /**
- * 6 популярных монет Telegram Wallet (как в @wallet).
- * Wallet Pay принимает оплату из кошелька — пользователь сам выбирает монету при подтверждении.
+ * Курсы для Wallet Pay и крипто-пополнения.
+ * Источник истины: src/lib/pricing/exchange-rates.ts (обновление раз в 24 ч).
  */
 import { GRAM } from '@/lib/crypto/gram-brand';
+import { getExchangeRates, coinsFromCrypto, getCryptoUsdPrice } from '@/lib/pricing/exchange-rates';
+import type { ExchangeRateSnapshot } from '@/lib/pricing/types';
 
-/** Игровых монет за 1 единицу крипты */
+/** @deprecated Используйте getExchangeRates() — оставлено для совместимости импортов */
 export const GAME_COINS_PER_CRYPTO: Record<string, number> = {
-  USDT: 150,
-  TON: GRAM.coinsPerGram,
+  USDT: 4999,
+  TON: 1250,
   GRAM: GRAM.coinsPerGram,
-  BTC: 9_000_000,
-  ETH: 375_000,
-  SOL: 30_000,
-  TRX: 45,
+  BTC: 51,
+  ETH: 1428,
+  SOL: 33,
+  TRX: 19996,
 };
 
-/** Порядок как в Telegram Wallet → Popular */
 export const TELEGRAM_WALLET_POPULAR = [
   'USDT',
   'ETH',
@@ -26,28 +27,49 @@ export const TELEGRAM_WALLET_POPULAR = [
 ] as const;
 
 export type TelegramWalletPopularCoin = (typeof TELEGRAM_WALLET_POPULAR)[number];
-
-/** Wallet Pay API: TON, USDT, BTC, USD, EUR */
 export type WalletPayCurrencyCode = 'TON' | 'USDT' | 'BTC' | 'USD' | 'EUR';
 
-/** USD-оценка для монет без прямого currencyCode в Wallet Pay */
-const USD_PER_COIN: Record<string, number> = {
-  ETH: 3500,
-  SOL: 150,
-  TRX: 0.25,
-  USDT: 1,
-  BTC: 100_000,
-  TON: 4,
-  GRAM: 4,
-};
+export async function gameCoinsForDepositAsync(
+  coin: string,
+  amount: number,
+  snapshot?: ExchangeRateSnapshot
+): Promise<number> {
+  const rates = snapshot ?? (await getExchangeRates());
+  return coinsFromCrypto(coin, amount, rates);
+}
 
-export function gameCoinsForDeposit(coin: string, amount: number): number {
-  const key = coin.toUpperCase();
+/** Синхронный расчёт — передайте snapshot с клиента / из API */
+export function gameCoinsForDeposit(
+  coin: string,
+  amount: number,
+  snapshot?: ExchangeRateSnapshot
+): number {
+  if (snapshot) {
+    return coinsFromCrypto(coin, amount, snapshot);
+  }
+  const key = coin.toUpperCase() === 'GRAM' ? 'TON' : coin.toUpperCase();
   const rate = GAME_COINS_PER_CRYPTO[key] ?? GAME_COINS_PER_CRYPTO.USDT;
   return Math.floor(amount * rate);
 }
 
-export function buildWalletPayAmount(coin: string, amount: number): {
+export async function buildWalletPayAmountAsync(
+  coin: string,
+  amount: number,
+  snapshot?: ExchangeRateSnapshot
+): Promise<{
+  currencyCode: WalletPayCurrencyCode;
+  amount: string;
+  autoConversionCurrency?: 'TON' | 'USDT' | 'BTC';
+}> {
+  const rates = snapshot ?? (await getExchangeRates());
+  return buildWalletPayAmount(coin, amount, rates);
+}
+
+export function buildWalletPayAmount(
+  coin: string,
+  amount: number,
+  snapshot?: ExchangeRateSnapshot
+): {
   currencyCode: WalletPayCurrencyCode;
   amount: string;
   autoConversionCurrency?: 'TON' | 'USDT' | 'BTC';
@@ -63,7 +85,10 @@ export function buildWalletPayAmount(coin: string, amount: number): {
     };
   }
 
-  const usd = amount * (USD_PER_COIN[key] ?? 1);
+  const usdPrice = snapshot
+    ? getCryptoUsdPrice(key, snapshot)
+    : (GAME_COINS_PER_CRYPTO[key] ? 4999 / GAME_COINS_PER_CRYPTO[key] : 1);
+  const usd = amount * usdPrice;
   return {
     currencyCode: 'USD',
     amount: Math.max(usd, 1.31).toFixed(2),
@@ -74,4 +99,12 @@ export function walletPayMinAmountHint(coin: string): string {
   const key = coin.toUpperCase();
   if (key === 'BTC') return 'мин. ~$3';
   return 'мин. ~$1.30';
+}
+
+export function getCoinsPerCryptoFromSnapshot(
+  coin: string,
+  snapshot: ExchangeRateSnapshot
+): number {
+  const key = coin.toUpperCase() === 'GRAM' ? 'TON' : coin.toUpperCase();
+  return snapshot.crypto[key]?.coinsPerUnit ?? snapshot.crypto.USDT?.coinsPerUnit ?? 4999;
 }

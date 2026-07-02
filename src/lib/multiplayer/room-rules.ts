@@ -21,6 +21,10 @@ export function matchTypeLabel(type: MatchType): string {
   return type === 'rated' ? 'Рейтинговый' : 'Обычный';
 }
 
+export function isRatedMatchType(raw: unknown): boolean {
+  return normalizeMatchType(raw) === 'rated';
+}
+
 export function canStartRoom(playerCount: number, maxPlayers: number): boolean {
   return playerCount > 0 && playerCount === clampRoomSize(maxPlayers);
 }

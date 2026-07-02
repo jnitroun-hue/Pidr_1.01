@@ -1,5 +1,6 @@
 === VK MINI APP — ПОЛЯ ДЛЯ КОПИРОВАНИЯ ===
 (Иконку 512×512 и скриншоты загрузите отдельно)
+Полная инструкция: docs/vk/VK_MINI_APP_GUIDE.md
 
 --- НАЗВАНИЕ ---
 P.I.D.R. — карточная игра онлайн
@@ -8,10 +9,14 @@ P.I.D.R. — карточная игра онлайн
 Классическая карточная P.I.D.R.: 3 стадии, «Одна карта!», онлайн-комнаты, NFT-коллекция.
 
 --- URL ПРИЛОЖЕНИЯ ---
-https://ВАШ-ДОМЕН.ru/
+https://www.pidr1-01.ru/
 
 --- REDIRECT URI (OAuth) ---
-https://ВАШ-ДОМЕН.ru/auth/vk/callback
+https://www.pidr1-01.ru/auth/vk/callback
+
+--- ЗАПАСНОЙ URL (если домен ещё не готов) ---
+https://pidr-1-01.vercel.app/
+https://pidr-1-01.vercel.app/auth/vk/callback
 
 --- КАТЕГОРИЯ ---
 Игры → Настольные / Карточные
@@ -26,13 +31,19 @@ https://ВАШ-ДОМЕН.ru/auth/vk/callback
 Играть
 
 --- ПОЛИТИКА КОНФИДЕНЦИАЛЬНОСТИ (URL) ---
-https://ВАШ-ДОМЕН.ru/privacy
+https://www.pidr1-01.ru/privacy
 
---- ENV VERCEL ---
-NEXT_PUBLIC_VK_CLIENT_ID=
-VK_CLIENT_SECRET=
+--- ENV VERCEL (Settings → Environment Variables) ---
+NEXT_PUBLIC_VK_CLIENT_ID=          ← ID приложения из dev.vk.com
+VK_CLIENT_SECRET=                  ← Защищённый ключ из dev.vk.com
 NEXT_PUBLIC_VK_GROUP_LINK=https://vk.com/clubXXXXXX
-NEXT_PUBLIC_APP_URL=https://ВАШ-ДОМЕН.ru
+NEXT_PUBLIC_APP_URL=https://www.pidr1-01.ru
+
+--- ССЫЛКА ДЛЯ ТЕСТА МИНИ-ПРИЛОЖЕНИЯ ---
+https://vk.com/appВСТАВЬТЕ_ID_ПРИЛОЖЕНИЯ
+
+--- ИКОНКА ---
+public/img/vk-app-icon-512.png
 
 --- ПРОМО-ВИДЕО ---
-Запись: /promo/pidr-mini-promo.html (18 сек, F11 + Win+G)
+Запись: https://www.pidr1-01.ru/promo/pidr-mini-promo.html (18 сек, F11 + Win+G)

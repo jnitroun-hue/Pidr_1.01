@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { Crown, Gift, Flame, Zap, Sparkles } from 'lucide-react';
 import { PREMIUM_PRICE_RUB, PREMIUM_PRICE_COINS } from '@/lib/premium/constants';
+import { PidrCoinAmount } from '@/components/PidrCoinIcon';
 import { formatCountdownLabel } from '@/lib/premium/countdown';
 import { usePremiumCountdown } from '@/hooks/usePremiumCountdown';
 import { isPremiumUsable } from '@/lib/premium/refresh-premium';
@@ -219,8 +220,8 @@ export default function PremiumPromoBanner({ premium, compact = false, onOpenPur
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ color: '#64748b', fontSize: '10px' }}>или</div>
-          <div style={{ color: '#eab308', fontWeight: 700, fontSize: '13px' }}>
-            {PREMIUM_PRICE_COINS.toLocaleString('ru-RU')} 🪙
+          <div style={{ color: '#eab308', fontWeight: 700, fontSize: '13px', display: 'flex', justifyContent: 'flex-end' }}>
+            <PidrCoinAmount value={PREMIUM_PRICE_COINS} size={16} />
           </div>
         </div>
         <div style={{

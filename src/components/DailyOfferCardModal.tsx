@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import NftThemedCardCanvas from '@/components/NftThemedCardCanvas';
+import { PidrCoinAmount } from '@/components/PidrCoinIcon';
 import type { NftThemeKey } from '@/lib/nft/theme-config';
 import styles from './NFTGallery.module.css';
 
@@ -135,8 +136,8 @@ export default function DailyOfferCardModal({ isOpen, offer, onClose, onBuy }: P
             </div>
 
             <div style={{ textAlign: 'center', marginBottom: 16 }}>
-              <div style={{ color: '#fde047', fontSize: 28, fontWeight: 900 }}>
-                {price.toLocaleString('ru-RU')} 🪙
+              <div style={{ color: '#fde047', fontSize: 28, fontWeight: 900, display: 'flex', justifyContent: 'center' }}>
+                <PidrCoinAmount value={price} size={26} />
               </div>
               <p style={{ color: '#94a3b8', fontSize: 13, margin: '8px 0 0' }}>
                 {offer.canClaim
@@ -165,7 +166,13 @@ export default function DailyOfferCardModal({ isOpen, offer, onClose, onBuy }: P
                 cursor: offer.canClaim ? 'pointer' : 'not-allowed',
               }}
             >
-              {offer.canClaim ? `Купить за ${price.toLocaleString('ru-RU')} 🪙` : 'Уже куплено сегодня'}
+              {offer.canClaim ? (
+                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  Купить за <PidrCoinAmount value={price} size={18} />
+                </span>
+              ) : (
+                'Уже куплено сегодня'
+              )}
             </button>
           </motion.div>
         </motion.div>

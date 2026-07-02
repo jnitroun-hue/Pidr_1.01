@@ -7,6 +7,7 @@ import {
   DAILY_WHEEL_SEGMENT_COLORS,
 } from '@/lib/bonus/daily-wheel';
 import styles from './DailyBonusWheelModal.module.css';
+import PidrCoinIcon, { PidrCoinAmount } from '@/components/PidrCoinIcon';
 
 const WHEEL_SEGMENTS = DAILY_WHEEL_AMOUNTS.map((amount, index) => ({
   amount,
@@ -155,7 +156,9 @@ export default function DailyBonusWheelModal({
                           transform: `rotate(${angle}deg) translate(0, -92px) rotate(-${angle}deg)`,
                         }}
                       >
-                        <span className={styles.segmentCoin}>🪙</span>
+                        <span className={styles.segmentCoin}>
+                          <PidrCoinIcon size={16} alt="" />
+                        </span>
                         <span>{segment.amount}</span>
                       </div>
                     );
@@ -169,7 +172,9 @@ export default function DailyBonusWheelModal({
               <p className={styles.spinningText}>Крутим колесо…</p>
             ) : (
               <div className={styles.result}>
-                <div className={styles.resultAmount}>+{wonAmount.toLocaleString('ru-RU')} 🪙</div>
+                <div className={styles.resultAmount}>
+                  <PidrCoinAmount value={`+${wonAmount}`} size={24} />
+                </div>
                 <div className={styles.resultBalance}>
                   Новый баланс: <strong>{displayBalance.toLocaleString('ru-RU')}</strong>
                 </div>

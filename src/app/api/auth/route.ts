@@ -5,7 +5,10 @@ import { cookies } from 'next/headers';
 import { lightCleanup } from '../../../lib/auto-cleanup';
 import crypto from 'crypto';
 import { hasJwtSecret, requireJwtSecret } from '../../../lib/auth/jwt-secret';
-import { applyReferralForNewUser } from '@/lib/referral/apply-referral';
+import {
+  applyPendingReferralForNewUser,
+  clearPendingReferralCookie,
+} from '@/lib/referral/pending-referral-server';
 import { PENDING_REFERRAL_COOKIE } from '@/lib/referral/constants';
 import { normalizeUserStats } from '@/lib/user/normalize-user-stats';
 
@@ -623,23 +626,14 @@ export async function POST(req: NextRequest) {
         }, { status: 500 });
       }
       
-      // ✅ РЕФЕРАЛ (только для новых пользователей): веб ?ref= или Telegram start_param
-      const cookieReferrer = req.cookies.get(PENDING_REFERRAL_COOKIE)?.value;
-      const effectiveReferrer = referrerId || cookieReferrer;
-
-      if (isNewUser && effectiveReferrer && user?.id) {
-        console.log('🎁 [auth] Применяем реферал для нового пользователя:', effectiveReferrer);
-        try {
-          const refResult = await applyReferralForNewUser(supabaseAdmin, {
-            referredUserId: user.id,
-            referralCode: String(effectiveReferrer),
-            authMethod: 'telegram',
-            grantBonuses: false,
-          });
-          console.log('🎁 [auth] Referral result:', refResult);
-        } catch (error: unknown) {
-          console.error('❌ Ошибка обработки реферальной ссылки:', error);
-        }
+      const refResult = await applyPendingReferralForNewUser(req, supabaseAdmin, {
+        referredUserId: user.id,
+        authMethod: 'telegram',
+        isNewUser,
+        explicitReferralCode: referrerId ? String(referrerId) : null,
+      });
+      if (!refResult?.success && refResult?.error) {
+        console.warn('⚠️ [auth] Referral not applied:', refResult.error);
       }
     }
     
@@ -760,6 +754,10 @@ export async function POST(req: NextRequest) {
     });
     
     response.cookies.set('auth_token', token, cookieSettings);
+
+    if (isNewUser && (referrerId || req.cookies.get(PENDING_REFERRAL_COOKIE)?.value)) {
+      clearPendingReferralCookie(response);
+    }
 
     console.log('✅ JWT токен создан и установлен в cookie');
     console.log('🔑 Токен (первые 50 символов):', token.substring(0, 50) + '...');

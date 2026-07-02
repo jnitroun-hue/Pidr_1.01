@@ -3,6 +3,7 @@
  * Только server-side env — без захардкоженных fallback-адресов.
  */
 
+import { Address } from '@ton/core';
 import { GRAM } from '@/lib/crypto/gram-brand';
 
 export type DepositCoinKey = 'GRAM' | 'TON' | 'ETH' | 'SOL' | 'USDT' | 'TRX' | 'BTC';
@@ -98,12 +99,19 @@ export function normalizeDepositCoin(raw: string | null | undefined): DepositCoi
   return COIN_ALIASES[raw.trim().toUpperCase()] ?? null;
 }
 
-function normalizeTonAddress(address: string): string {
+/** Адрес как в Vercel env — без подмены UQ→EQ */
+export function displayMasterAddress(address: string): string {
+  return address.trim();
+}
+
+/** Для TonConnect / ton:// — валидный friendly-адрес */
+export function tonAddressForTransfer(address: string): string {
   const trimmed = address.trim();
-  if (trimmed.startsWith('UQ')) {
-    return `EQ${trimmed.slice(2)}`;
+  try {
+    return Address.parse(trimmed).toString({ bounceable: true, urlSafe: true });
+  } catch {
+    return trimmed;
   }
-  return trimmed;
 }
 
 function readEnvAddress(keys: string[]): { address: string; envKey: string } | null {
@@ -124,10 +132,7 @@ export function resolveMasterAddress(rawCoin: string): ResolvedMasterAddress | n
   const found = readEnvAddress(ENV_KEYS[coin]);
   if (!found) return null;
 
-  let address = found.address;
-  if (coin === 'GRAM' || coin === 'TON') {
-    address = normalizeTonAddress(address);
-  }
+  let address = displayMasterAddress(found.address);
 
   const apiKey = coin === 'GRAM' ? 'TON' : coin;
 

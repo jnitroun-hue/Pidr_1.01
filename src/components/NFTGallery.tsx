@@ -13,6 +13,7 @@ import WalletQuickConnect from '@/components/WalletQuickConnect';
 import { SellModal } from '@/components/MarketplaceTabs';
 import { getApiHeaders } from '@/lib/api-headers';
 import { appAlert, appConfirm } from '@/lib/app-notice';
+import PidrCoinIcon from '@/components/PidrCoinIcon';
 import { GRAM } from '@/lib/crypto/gram-brand';
 import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
 import {
@@ -546,7 +547,10 @@ export default function NFTGallery() {
                         onClick={() => handleSell(selectedCard)}
                         disabled={selectedCard.is_listed}
                       >
-                        💰 Продать
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                          <PidrCoinIcon size={14} alt="" />
+                          Продать
+                        </span>
                       </button>
                     </div>
                     <button

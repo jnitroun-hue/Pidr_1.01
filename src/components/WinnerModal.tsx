@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, Eye, Home, Crown, Star, Sparkles } from 'lucide-react';
 import { useLanguage } from './LanguageSwitcher';
 import { translateGameText } from '@/lib/i18n/gameRuntimeTranslations';
+import { PidrCoinAmount } from '@/components/PidrCoinIcon';
 
 interface WinnerModalProps {
   playerName: string;
@@ -206,7 +207,7 @@ export default function WinnerModal({
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ color: '#94a3b8', fontSize: '13px' }}>{translateGameText('Награда', language)}</span>
                 <span style={{ color: '#22c55e', fontSize: '16px', fontWeight: '800' }}>
-                  +{coinsEarned} 🪙
+                <PidrCoinAmount value={`+${coinsEarned}`} size={20} />
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

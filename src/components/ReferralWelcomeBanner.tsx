@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { getPendingReferralFromClient } from '@/lib/referral/pending-referral-client';
+import { getPendingReferralFromClient, captureReferralFromCurrentUrl } from '@/lib/referral/pending-referral-client';
+import PidrCoinIcon from '@/components/PidrCoinIcon';
 
 export default function ReferralWelcomeBanner() {
   const [referralCode, setReferralCode] = useState<string | null>(null);
 
   useEffect(() => {
+    captureReferralFromCurrentUrl();
     setReferralCode(getPendingReferralFromClient());
   }, []);
 
@@ -25,10 +27,10 @@ export default function ReferralWelcomeBanner() {
         <div className="referral-welcome-badge">🎁 БОНУС</div>
         <h2 className="referral-welcome-title">Вас пригласили в The Must!</h2>
         <p className="referral-welcome-subtitle">
-          Зарегистрируйтесь — друг получит <strong>+500 монет</strong>, а вы начнёте играть сразу
+          Выберите способ входа: <strong>сайт</strong>, <strong>Telegram</strong> или <strong>VK</strong> — реферал засчитается автоматически
         </p>
         <div className="referral-welcome-coins">
-          <span className="referral-welcome-coin">💰</span>
+          <PidrCoinIcon size={32} spinSlow className="referral-welcome-coin" alt="" />
           <span className="referral-welcome-amount">+500</span>
           <span className="referral-welcome-coin-label">монет рефереру</span>
         </div>
@@ -107,11 +109,11 @@ export default function ReferralWelcomeBanner() {
           border-radius: 14px;
           background: rgba(15, 23, 42, 0.55);
           border: 1px solid rgba(251, 191, 36, 0.55);
+          perspective: 400px;
         }
 
         .referral-welcome-coin {
-          font-size: 1.4rem;
-          animation: referralBounce 1.6s ease-in-out infinite;
+          flex-shrink: 0;
         }
 
         .referral-welcome-amount {

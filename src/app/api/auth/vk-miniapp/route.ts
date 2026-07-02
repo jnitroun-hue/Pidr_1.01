@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createSession } from '@/lib/auth/redis-session-manager';
+import { shouldSyncPlatformPhoto } from '@/lib/user/avatar-policy';
+import {
+  applyPendingReferralForNewUser,
+  clearPendingReferralCookie,
+} from '@/lib/referral/pending-referral-server';
 import * as crypto from 'crypto';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
@@ -95,6 +100,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     let user = existingUser;
+    const isNewUser = !existingUser;
 
     if (!existingUser) {
       // Создаем нового пользователя
@@ -156,8 +162,8 @@ export async function POST(request: NextRequest) {
       if (last_name && last_name !== existingUser.last_name) {
         updateData.last_name = last_name;
       }
-      if (photo_url && photo_url !== existingUser.avatar_url) {
-        updateData.avatar_url = photo_url;
+      if (shouldSyncPlatformPhoto(existingUser.avatar_url, photo_url)) {
+        updateData.avatar_url = photo_url!;
       }
 
       const { data: updatedUser } = await supabase
@@ -198,6 +204,13 @@ export async function POST(request: NextRequest) {
       losses: user.losses || 0
     };
 
+    const refResult = await applyPendingReferralForNewUser(request, supabase, {
+      referredUserId: user.id,
+      authMethod: 'vk',
+      isNewUser,
+      explicitReferralCode: typeof body.referralCode === 'string' ? body.referralCode : null,
+    });
+
     console.log('✅ VK авторизация успешна:', user.username);
 
     const response = NextResponse.json({
@@ -205,7 +218,7 @@ export async function POST(request: NextRequest) {
       message: 'Авторизация через VK успешна',
       user: userData,
       token,
-      isNewUser: !existingUser
+      isNewUser,
     });
 
     // Устанавливаем cookie с токеном
@@ -216,6 +229,10 @@ export async function POST(request: NextRequest) {
       maxAge: 30 * 24 * 60 * 60, // 30 дней
       path: '/'
     });
+
+    if (refResult?.success) {
+      clearPendingReferralCookie(response);
+    }
 
     return response;
 

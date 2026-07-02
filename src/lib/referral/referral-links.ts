@@ -38,11 +38,41 @@ export function normalizeReferralCode(raw: string | null | undefined): string | 
   return code;
 }
 
+/** Telegram WebApp start_param → код реферера */
+export function referralCodeFromTelegramStartParam(
+  startParam: string | null | undefined
+): string | null {
+  if (!startParam) return null;
+
+  if (startParam.startsWith('join_')) {
+    const parts = startParam.replace(/^join_/, '').split('_');
+    const refIdx = parts.indexOf('ref');
+    if (refIdx !== -1 && parts[refIdx + 1]) {
+      return normalizeReferralCode(parts[refIdx + 1]);
+    }
+  }
+
+  if (startParam.startsWith('invite_')) {
+    const parts = startParam.replace(/^invite_/, '').split('_');
+    const refIdx = parts.indexOf('ref');
+    if (refIdx !== -1 && parts[refIdx + 1]) {
+      return normalizeReferralCode(parts[refIdx + 1]);
+    }
+    if (parts[0]) return normalizeReferralCode(parts[0]);
+  }
+
+  if (startParam.startsWith('ref_')) {
+    return normalizeReferralCode(startParam);
+  }
+
+  return normalizeReferralCode(startParam);
+}
+
 /** Текст для шаринга (Telegram / буфер) */
 export function buildReferralShareText(link: string): string {
   return (
     `🎮 Присоединяйся к The Must!\n\n` +
-    `Зарегистрируйся удобным способом (сайт, VK, Google) — реферал засчитается автоматически.\n\n` +
+    `Зарегистрируйся как удобно: сайт, Telegram или VK — реферал засчитается автоматически.\n\n` +
     `${link}`
   );
 }

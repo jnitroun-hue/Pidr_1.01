@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/weekly-rating-prizes",
       "schedule": "0 0 * * 1"
+    },
+    {
+      "path": "/api/cron/update-exchange-rates",
+      "schedule": "0 5 * * *"
     }
   ]
 }

@@ -10,6 +10,20 @@ import Link from 'next/link';
 import { getApiHeaders } from '@/lib/api-headers';
 import { hasAuthTokenCookie } from '@/lib/auth/session-client';
 import ReferralWelcomeBanner from '@/components/ReferralWelcomeBanner';
+import {
+  captureReferralFromCurrentUrl,
+  getPendingReferralFromClient,
+} from '@/lib/referral/pending-referral-client';
+import { applyPendingReferralAfterAuth } from '@/lib/referral/apply-pending-referral-client';
+import { referralCodeFromTelegramStartParam } from '@/lib/referral/referral-links';
+
+function resolveReferrerId(): string | null {
+  if (typeof window === 'undefined') return null;
+  const fromClient = getPendingReferralFromClient();
+  const startParam = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
+  const fromTelegram = referralCodeFromTelegramStartParam(startParam);
+  return fromTelegram || fromClient;
+}
 
 export default function LoginPage() {
   const [credentials, setCredentials] = useState({ 
@@ -27,6 +41,8 @@ export default function LoginPage() {
   const router = useRouter();
 
   useEffect(() => {
+    captureReferralFromCurrentUrl();
+
     // Проверяем сессию через API (без клиентского хранилища)
     const checkSession = async () => {
       if (!hasAuthTokenCookie()) return;
@@ -133,24 +149,27 @@ export default function LoginPage() {
       setError('');
 
       try {
+        const referrerId = resolveReferrerId();
         const response = await fetch('/api/auth', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify({
             type: 'telegram',
-            id: user.id,
+            telegramId: user.id,
             username: user.username,
-            first_name: user.first_name,
-            last_name: user.last_name,
-            photo_url: user.photo_url,
-            initData: initData,
+            firstName: user.first_name,
+            lastName: user.last_name,
+            photoUrl: user.photo_url,
+            referrerId,
+            initData,
           })
         });
 
         const data = await response.json();
 
         if (data.success) {
+          await applyPendingReferralAfterAuth('telegram');
           // Токен сохраняется в cookies сервером, без клиентского хранилища
           window.dispatchEvent(new CustomEvent('coinsUpdated', { 
             detail: { coins: data.user.coins } 
@@ -190,7 +209,10 @@ export default function LoginPage() {
       const result = await loginWithVKMiniApp();
 
       if (result.success && result.user) {
-        window.dispatchEvent(new CustomEvent('coinsUpdated', { 
+        if (result.isNewUser) {
+          await applyPendingReferralAfterAuth('vk');
+        }
+        window.dispatchEvent(new CustomEvent('coinsUpdated', {
           detail: { coins: result.user.coins } 
         }));
 

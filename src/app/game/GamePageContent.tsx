@@ -24,6 +24,7 @@ import { useGameStore } from '@/store/gameStore';
 import { AIPlayer, AIDifficulty } from '@/lib/game/ai-player';
 import GameChat from '@/components/GameChat';
 import GameWallet from '@/components/GameWallet';
+import PidrCoinIcon, { PidrCoinAmount } from '@/components/PidrCoinIcon';
 import { useLanguage } from '../../components/LanguageSwitcher';
 import { useTranslations } from '../../lib/i18n/translations';
 import { useTelegram } from '@/hooks/useTelegram';
@@ -355,7 +356,7 @@ function GamePageContentComponent({
   const tr = (text: string) => translateGameText(text, language);
   
   const { 
-    isGameActive, gameMode, gameStage, turnPhase, stage2TurnPhase,
+    isGameActive, gameMode, gameStage, turnPhase, stage2TurnPhase, isRankedGame,
     players, currentPlayerId, deck, availableTargets,
     selectedHandCard, revealedDeckCard, tableStack, trumpSuit,
     oneCardDeclarations, playersWithOneCard, pendingPenalty,
@@ -1896,6 +1897,7 @@ function GamePageContentComponent({
       username: actualUsername || 'Игрок',
       isPremium: actualPremium,
     });
+    useGameStore.setState({ isRankedGame: false });
     
     // Помечаем, что игра инициализирована
     setTimeout(() => {
@@ -2108,6 +2110,8 @@ function GamePageContentComponent({
             roomId: string;
             roomCode: string;
             isHost: boolean;
+            isRanked?: boolean;
+            matchType?: 'normal' | 'rated';
             roomPlayers?: Array<{
               id: string;
               name: string;
@@ -2115,6 +2119,8 @@ function GamePageContentComponent({
               isBot: boolean;
               position: number;
               isUser?: boolean;
+              isPremium?: boolean;
+              dbUserId?: number | null;
             }>;
           } = {
             roomId: multiplayerData.roomId,
@@ -2135,6 +2141,14 @@ function GamePageContentComponent({
             if (response.ok) {
               const data = await response.json();
               if (data.success && Array.isArray(data.players) && data.players.length > 0) {
+                if (data.isRanked === true || data.matchType === 'rated') {
+                  multiplayerConfig.isRanked = true;
+                  multiplayerConfig.matchType = 'rated';
+                } else {
+                  multiplayerConfig.isRanked = false;
+                  multiplayerConfig.matchType = 'normal';
+                }
+
                 const myIds = new Set(
                   [userData.telegramId, userPlayerId, userData.dbUserId != null ? String(userData.dbUserId) : '']
                     .filter((value) => value != null && String(value).trim() !== '')
@@ -2165,6 +2179,7 @@ function GamePageContentComponent({
                   username?: string;
                   avatar_url?: string | null;
                   is_bot?: boolean;
+                  is_premium?: boolean;
                   position?: number;
                 }) => {
                   const publicId = String(player.user_id);
@@ -2182,6 +2197,7 @@ function GamePageContentComponent({
                     isBot,
                     position: player.position ?? 0,
                     isUser,
+                    isPremium: player.is_premium === true,
                     dbUserId: player.db_user_id ?? null,
                   };
                 });
@@ -2210,6 +2226,7 @@ function GamePageContentComponent({
       }
 
       void startGame('single', playerCount, null, profilePayload).then(() => {
+        useGameStore.setState({ isRankedGame: false });
         setGameInitialized(true);
       });
     }
@@ -2488,7 +2505,7 @@ function GamePageContentComponent({
                 <div className={styles.menuUserInfo}>
                   <div className={styles.menuUserName}>{userData?.username || t.mainMenu.player}</div>
                   <div className={styles.menuUserCoins}>
-                    <div className={styles.coinAnimated}></div>
+                    <PidrCoinIcon size={20} spinSlow alt="" />
                     <span className={styles.menuCoinsValue}>{userData?.coins || 0}</span>
                   </div>
                 </div>
@@ -2500,7 +2517,10 @@ function GamePageContentComponent({
                 👤 {t.mainMenu.gameBurgerProfile}
               </button>
               <button type="button" className={styles.menuItem} onClick={() => setShowWalletModal(true)}>
-                💰 {t.mainMenu.gameBurgerWallet}
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                  <PidrCoinIcon size={16} alt="" />
+                  {t.mainMenu.gameBurgerWallet}
+                </span>
               </button>
               
               <div className={styles.menuDivider}></div>
@@ -4011,7 +4031,7 @@ function GamePageContentComponent({
       {showGameResultsModal && gameResults && (
         <GameResultsModal
           results={gameResults}
-          isRanked={false}
+          isRanked={isRankedGame}
           onPlayAgain={() => {
             // Закрываем модалку
             useGameStore.setState({
@@ -4347,7 +4367,7 @@ function GamePageContentComponent({
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                     <span style={{ color: '#94a3b8', fontSize: '13px' }}>Баланс</span>
-                    <span style={{ color: '#fbbf24', fontSize: '16px', fontWeight: '700' }}>🪙 {userData?.coins || 0}</span>
+                    <PidrCoinAmount value={userData?.coins || 0} size={18} />
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                     <span style={{ color: '#94a3b8', fontSize: '13px' }}>ID</span>

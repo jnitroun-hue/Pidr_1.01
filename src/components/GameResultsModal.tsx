@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Trophy, Medal, Award, Home, RotateCcw, TrendingUp, Coins } from 'lucide-react';
 import { useLanguage } from './LanguageSwitcher';
 import { translateGameText } from '@/lib/i18n/gameRuntimeTranslations';
+import { PidrCoinAmount } from '@/components/PidrCoinIcon';
 
 interface PlayerResult {
   place: number;
@@ -218,7 +219,10 @@ export default function GameResultsModal({
                 fontWeight: '700',
                 color: player.coinsEarned > 0 ? '#22c55e' : player.coinsEarned < 0 ? '#ef4444' : '#94a3b8'
               }}>
-                💰 {player.coinsEarned > 0 ? '+' : ''}{player.coinsEarned}
+                <PidrCoinAmount
+                  value={`${player.coinsEarned > 0 ? '+' : ''}${player.coinsEarned}`}
+                  size={16}
+                />
               </div>
 
               {/* Rating (if ranked) */}

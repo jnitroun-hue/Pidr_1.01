@@ -3,6 +3,8 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Box, Spinner, Text, Alert, VStack } from '@chakra-ui/react';
+import { captureReferralFromCurrentUrl, getPendingReferralFromClient } from '@/lib/referral/pending-referral-client';
+import { applyPendingReferralAfterAuth } from '@/lib/referral/apply-pending-referral-client';
 
 function VKCallbackContent() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
@@ -11,6 +13,8 @@ function VKCallbackContent() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
+    captureReferralFromCurrentUrl();
+
     const handleVKCallback = async () => {
       try {
         const code = searchParams.get('code');
@@ -31,29 +35,27 @@ function VKCallbackContent() {
           return;
         }
 
+        const pendingReferral = getPendingReferralFromClient();
+
         const response = await fetch('/api/auth/vk', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify({
             code,
-            redirect_uri: `${window.location.origin}/auth/vk/callback`
+            redirect_uri: `${window.location.origin}/auth/vk/callback`,
+            referralCode: pendingReferral,
           })
         });
 
         const data = await response.json();
 
         if (data.success) {
-          // Токен сохраняется в cookies сервером, без клиентского хранилища
           setStatus('success');
           setMessage(data.message || 'Успешная авторизация!');
-          
-          // Проверяем реферальный код из cookies
-          const cookies = document.cookie.split(';');
-          const pendingReferralCookie = cookies.find(c => c.trim().startsWith('pending_referral_code='));
-          const pendingReferral = pendingReferralCookie ? pendingReferralCookie.split('=')[1] : null;
-          if (pendingReferral) {
-            await handlePendingReferral(pendingReferral);
+
+          if (data.isNewUser) {
+            await applyPendingReferralAfterAuth('vk');
           }
 
           setTimeout(() => router.push('/'), 2000);
@@ -72,29 +74,6 @@ function VKCallbackContent() {
 
     handleVKCallback();
   }, [searchParams, router]);
-
-  const handlePendingReferral = async (code: string) => {
-    try {
-      const response = await fetch('/api/referral/apply', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          referralCode: decodeURIComponent(code),
-          authMethod: 'vk',
-        }),
-      });
-
-      if (response.ok) {
-        // Удаляем реферальный код из cookies
-        document.cookie = 'pending_referral_code=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-      }
-    } catch (error) {
-      console.error('Error processing pending referral:', error);
-    }
-  };
 
   return (
     <Box 

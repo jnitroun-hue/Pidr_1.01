@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, TrendingUp, DollarSign, Users, Sparkles, ShieldCheck, TimerReset, Percent } from 'lucide-react';
+import { ArrowLeft, TrendingUp, Users, Sparkles, ShieldCheck, TimerReset, Percent } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import NFTMarketplace from '../../components/NFTMarketplace';
 import PremiumPromoBanner from '../../components/PremiumPromoBanner';
@@ -17,6 +17,7 @@ import DailyOfferCardModal from '../../components/DailyOfferCardModal';
 import NftThemedCardCanvas from '../../components/NftThemedCardCanvas';
 import type { NftThemeKey } from '@/lib/nft/theme-config';
 import { GRAM } from '@/lib/crypto/gram-brand';
+import PidrCoinIcon, { PidrCoinAmount } from '../../components/PidrCoinIcon';
 
 interface User {
   telegram_id: number;
@@ -443,8 +444,8 @@ export default function ShopPage() {
                 <p style={{ color: T.textMuted, fontSize: '14px', marginBottom: '4px' }}>
                   @{user.username || user.first_name}
                 </p>
-                <p style={{ color: T.accentGold, fontWeight: 'bold', fontSize: '18px' }}>
-                  💰 {user.coins.toLocaleString()} монет
+                <p style={{ color: T.accentGold, fontWeight: 'bold', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
+                  <PidrCoinAmount value={user.coins} size={22} showLabel />
                 </p>
               </div>
             </div>
@@ -551,7 +552,7 @@ export default function ShopPage() {
                 </h3>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                   <span style={{ color: '#fde047', fontSize: 26, fontWeight: 900 }}>
-                    {(dailyPromo.discountedCoins ?? dailyPromo.priceCoins ?? 0).toLocaleString('ru-RU')} 🪙
+                    <PidrCoinAmount value={dailyPromo.discountedCoins ?? dailyPromo.priceCoins ?? 0} size={24} />
                   </span>
                   {dailyPromo.themeLabel && (
                     <span style={{ color: '#fef08a', fontSize: 12, fontWeight: 800 }}>
@@ -626,9 +627,17 @@ export default function ShopPage() {
                     cursor: canClaimPromo ? 'pointer' : 'not-allowed',
                   }}
                 >
-                  {canClaimPromo
-                    ? `Купить за ${(dailyPromo.discountedCoins ?? dailyPromo.priceCoins ?? 0).toLocaleString('ru-RU')} 🪙`
-                    : 'Уже куплено сегодня'}
+                  {canClaimPromo ? (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                      Купить за{' '}
+                      <PidrCoinAmount
+                        value={dailyPromo.discountedCoins ?? dailyPromo.priceCoins ?? 0}
+                        size={18}
+                      />
+                    </span>
+                  ) : (
+                    'Уже куплено сегодня'
+                  )}
                 </motion.button>
               </div>
             </div>
@@ -652,9 +661,9 @@ export default function ShopPage() {
             color="#10b981"
           />
           <StatCard
-            icon={<DollarSign size={32} />}
+            icon={<PidrCoinIcon size={32} alt="" />}
             label="Средняя цена"
-            value={`${stats.avgPrice.toLocaleString()} 💰`}
+            value={<PidrCoinAmount value={Math.round(stats.avgPrice)} size={22} />}
             color="#fbbf24"
           />
           <StatCard
@@ -767,7 +776,7 @@ function Badge({ icon, label }: { icon: React.ReactNode; label: string }) {
 function StatCard({ icon, label, value, color }: {
   icon: React.ReactNode;
   label: string;
-  value: string | number;
+  value: React.ReactNode;
   color: string;
 }) {
   return (

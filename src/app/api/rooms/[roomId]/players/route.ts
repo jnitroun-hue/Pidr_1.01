@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { syncRoomRedisFromDatabase } from '@/lib/multiplayer/player-state-manager';
 import { isRoomPlayerConnected } from '@/lib/multiplayer/presence';
+import { isPremiumActiveFromUser } from '@/lib/premium/premium-service';
+import { normalizeMatchType } from '@/lib/multiplayer/room-rules';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -28,7 +30,7 @@ export async function GET(
     // ✅ ИСПРАВЛЕНО: Один запрос для получения всей информации о комнате
     const { data: room, error: roomError } = await supabase
       .from('_pidr_rooms')
-      .select('max_players, current_players, status, host_id, game_settings')
+      .select('max_players, current_players, status, host_id, game_settings, match_type, settings')
       .eq('id', roomId)
       .single();
 
@@ -66,11 +68,18 @@ export async function GET(
     const { data: users } = dbUserIds.length > 0
       ? await supabase
           .from('_pidr_users')
-          .select('id, telegram_id, username, avatar_url')
+          .select('id, telegram_id, username, avatar_url, is_premium, premium_expires_at')
           .or(`id.in.(${dbUserIds.join(',')}),telegram_id.in.(${dbUserIds.join(',')})`)
       : { data: [] as Array<{ id: number; telegram_id?: number | string | null; username?: string; avatar_url?: string | null }> };
 
-    type UserRow = { id: number; telegram_id?: number | string | null; username?: string; avatar_url?: string | null };
+    type UserRow = {
+      id: number;
+      telegram_id?: number | string | null;
+      username?: string;
+      avatar_url?: string | null;
+      is_premium?: boolean | null;
+      premium_expires_at?: string | null;
+    };
     const usersMap = new Map<number, UserRow>();
     (users || []).forEach((user: UserRow) => {
       usersMap.set(user.id, user);
@@ -101,6 +110,7 @@ export async function GET(
         db_user_id: isBot ? null : (userData?.id ?? (Number.isFinite(numericUserId) ? numericUserId : null)),
         username: player.username || userData?.username || 'Игрок',
         avatar_url: player.avatar_url || userData?.avatar_url || null,
+        is_premium: isBot ? false : isPremiumActiveFromUser(userData || {}),
         is_host: isHost || player.is_host === true,
         is_bot: isBot,
         is_connected: isRoomPlayerConnected(player),
@@ -152,6 +162,16 @@ export async function GET(
         ? (gameSettings as { gameLaunchAt: number }).gameLaunchAt
         : null;
 
+    const roomSettings =
+      room.settings && typeof room.settings === 'object' && !Array.isArray(room.settings)
+        ? room.settings
+        : {};
+    const matchType = normalizeMatchType(
+      room.match_type ||
+        (roomSettings as { matchType?: string; gameMode?: string }).matchType ||
+        (roomSettings as { gameMode?: string }).gameMode
+    );
+
     const response = NextResponse.json({
       success: true, 
       players: playersWithHost || [], // ✅ ИСПОЛЬЗУЕМ playersWithHost
@@ -159,6 +179,8 @@ export async function GET(
       currentPlayers: players?.length || 0,
       roomStatus: room.status,
       gameLaunchAt,
+      matchType,
+      isRanked: matchType === 'rated',
     });
 
     response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');

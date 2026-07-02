@@ -6,6 +6,7 @@ import { X, Crown, Sparkles, Zap, Flame, Gift, Percent } from 'lucide-react';
 import YooKassaPayment from './YooKassaPayment';
 import { getApiHeaders } from '@/lib/api-headers';
 import { PREMIUM_BENEFITS, PREMIUM_PRICE_COINS, PREMIUM_PRICE_RUB } from '@/lib/premium/constants';
+import { PidrCoinAmount } from '@/components/PidrCoinIcon';
 import type { PremiumStatus } from '@/lib/premium/premium-service';
 
 interface PremiumPurchaseModalProps {
@@ -143,7 +144,11 @@ export default function PremiumPurchaseModal({
                   color: tab === t ? '#7dd3fc' : '#94a3b8',
                 }}
               >
-                {t === 'rub' ? `${PREMIUM_PRICE_RUB} ₽` : `${PREMIUM_PRICE_COINS.toLocaleString('ru-RU')} 🪙`}
+                {t === 'rub' ? (
+                  `${PREMIUM_PRICE_RUB} ₽`
+                ) : (
+                  <PidrCoinAmount value={PREMIUM_PRICE_COINS} size={14} />
+                )}
               </button>
             ))}
           </div>
@@ -174,7 +179,11 @@ export default function PremiumPurchaseModal({
               }}
             >
               <Sparkles size={18} />
-              {loading ? 'Обработка…' : `Купить за ${PREMIUM_PRICE_COINS.toLocaleString('ru-RU')} монет`}
+              {loading ? 'Обработка…' : (
+                <>
+                  Купить за <PidrCoinAmount value={PREMIUM_PRICE_COINS} size={16} />
+                </>
+              )}
             </motion.button>
           )}
             </>

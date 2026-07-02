@@ -1,0 +1,49 @@
+.wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 0;
+}
+
+.img {
+  display: block;
+  border-radius: 50%;
+  object-fit: cover;
+  filter: drop-shadow(0 2px 6px rgba(255, 215, 0, 0.35));
+}
+
+.spin {
+  animation: pidrCoinSpin 2.8s linear infinite;
+  transform-style: preserve-3d;
+}
+
+.spinSlow {
+  animation: pidrCoinSpin 4.5s linear infinite;
+  transform-style: preserve-3d;
+}
+
+@keyframes pidrCoinSpin {
+  0% {
+    transform: rotateY(0deg);
+  }
+  100% {
+    transform: rotateY(360deg);
+  }
+}
+
+.inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  vertical-align: middle;
+}
+
+.inlineAmount {
+  font-weight: 700;
+  color: inherit;
+}
+
+.inlineLabel {
+  opacity: 0.85;
+}

@@ -2,19 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-// Интерфейс пользователя
-interface User {
-  id: string;
-  username: string;
-  firstName?: string;
-  lastName?: string;
-  telegramId?: string;
-  coins: number;
-  rating: number;
-  gamesPlayed: number;
-  gamesWon: number;
-  photoUrl?: string;
-}
 import { useTelegram } from '../hooks/useTelegram';
 import NeonMainMenu from '../components/main_menu_component';
 import CardLoadingScreen from '../components/CardLoadingScreen';
@@ -29,26 +16,32 @@ import {
   captureReferralFromCurrentUrl,
   getPendingReferralFromClient,
 } from '@/lib/referral/pending-referral-client';
+import {
+  readCachedHomeUser,
+  cacheHomeUser,
+  type HomeCachedUser,
+} from '@/lib/user/home-session-cache';
 
-const HOME_SESSION_KEY = 'pidr_home_session';
+type User = HomeCachedUser;
 
-function readCachedHomeUser(): User | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = sessionStorage.getItem(HOME_SESSION_KEY);
-    return raw ? (JSON.parse(raw) as User) : null;
-  } catch {
-    return null;
-  }
+function photoFromApiUser(apiUser: Record<string, unknown>): string {
+  const photo = apiUser.photoUrl ?? apiUser.avatar_url;
+  return typeof photo === 'string' ? photo : '';
 }
 
-function cacheHomeUser(user: User) {
-  if (typeof window === 'undefined') return;
-  try {
-    sessionStorage.setItem(HOME_SESSION_KEY, JSON.stringify(user));
-  } catch {
-    /* ignore */
-  }
+function mapApiUserToHomeUser(apiUser: Record<string, unknown>): User {
+  return {
+    id: String(apiUser.id ?? ''),
+    username: String(apiUser.username ?? ''),
+    firstName: typeof apiUser.firstName === 'string' ? apiUser.firstName : undefined,
+    lastName: typeof apiUser.lastName === 'string' ? apiUser.lastName : undefined,
+    telegramId: apiUser.telegramId != null ? String(apiUser.telegramId) : undefined,
+    coins: Number(apiUser.coins) || 0,
+    rating: Number(apiUser.rating) || 0,
+    gamesPlayed: Number(apiUser.gamesPlayed ?? apiUser.games_played) || 0,
+    gamesWon: Number(apiUser.gamesWon ?? apiUser.wins ?? apiUser.games_won) || 0,
+    photoUrl: photoFromApiUser(apiUser),
+  };
 }
 
 /**
@@ -87,6 +80,24 @@ function HomeWithParams() {
     if (user) cacheHomeUser(user);
   }, [user]);
 
+  const refreshHomeUserInBackground = async () => {
+    try {
+      const sessionResponse = await fetch('/api/auth', {
+        method: 'GET',
+        credentials: 'include',
+        cache: 'no-store',
+        headers: getApiHeaders(),
+      });
+      if (!sessionResponse.ok) return;
+      const sessionData = await sessionResponse.json();
+      if (sessionData.success && sessionData.user) {
+        setUser(mapApiUserToHomeUser(sessionData.user));
+      }
+    } catch {
+      /* фоновое обновление не блокирует UI */
+    }
+  };
+
   useEffect(() => {
     if (initialized.current) {
       console.log('🛡️ Уже инициализировано - пропускаем');
@@ -95,11 +106,12 @@ function HomeWithParams() {
 
     const restored = readCachedHomeUser();
     if (restored || user) {
-      console.log('✅ Сессия главной восстановлена — без экрана загрузки');
+      console.log('✅ Сессия главной восстановлена — фоновое обновление с сервера');
       initialized.current = true;
       setLoading(false);
       setShowMainMenu(true);
       if (restored && !user) setUser(restored);
+      void refreshHomeUserInBackground();
       return;
     }
     
@@ -144,18 +156,7 @@ function HomeWithParams() {
             if (sessionData.success && sessionData.user) {
               console.log('✅ Найдена активная сессия в браузере:', sessionData.user.username);
               
-              const existingUser: User = {
-                id: sessionData.user.id,
-                username: sessionData.user.username,
-                firstName: sessionData.user.firstName || sessionData.user.username,
-                lastName: sessionData.user.lastName || '',
-                telegramId: sessionData.user.telegramId || '',
-                coins: sessionData.user.coins || 1000,
-                rating: sessionData.user.rating || 0,
-                gamesPlayed: sessionData.user.gamesPlayed || 0,
-                gamesWon: sessionData.user.gamesWon || 0,
-                photoUrl: sessionData.user.photoUrl || ''
-              };
+              const existingUser = mapApiUserToHomeUser(sessionData.user);
               
               setUser(existingUser);
               setCheckingAuth(false);
@@ -195,18 +196,7 @@ function HomeWithParams() {
                     const retryData = await retryResponse.json();
                     if (retryData.success && retryData.user) {
                       console.log('✅ [Браузер] Повторная проверка успешна!');
-                      const existingUser: User = {
-                        id: retryData.user.id,
-                        username: retryData.user.username,
-                        firstName: retryData.user.firstName || retryData.user.username,
-                        lastName: retryData.user.lastName || '',
-                        telegramId: retryData.user.telegramId || '',
-                        coins: retryData.user.coins || 1000,
-                        rating: retryData.user.rating || 0,
-                        gamesPlayed: retryData.user.gamesPlayed || 0,
-                        gamesWon: retryData.user.gamesWon || 0,
-                        photoUrl: retryData.user.photoUrl || ''
-                      };
+                      const existingUser = mapApiUserToHomeUser(retryData.user);
                       
                       setUser(existingUser);
                       setCheckingAuth(false);
@@ -337,18 +327,10 @@ function HomeWithParams() {
               if (telegramId && sessionTelegramId === currentTelegramId) {
                 console.log('✅ Активная сессия найдена:', sessionData.user.username);
                 
-                const existingUser: User = {
-                  id: sessionData.user.id,
-                  username: sessionData.user.username,
-                  firstName: sessionData.user.firstName || sessionData.user.username,
-                  lastName: sessionData.user.lastName || '',
+                const existingUser = mapApiUserToHomeUser({
+                  ...sessionData.user,
                   telegramId: sessionData.user.telegramId || telegramId,
-                  coins: sessionData.user.coins || 1000,
-                  rating: sessionData.user.rating || 0,
-                  gamesPlayed: sessionData.user.gamesPlayed || 0,
-                  gamesWon: sessionData.user.gamesWon || 0,
-                  photoUrl: sessionData.user.photoUrl || ''
-                };
+                });
                 
                 setUser(existingUser);
                 initialized.current = true;
@@ -517,18 +499,10 @@ function HomeWithParams() {
         if (data.success && data.user) {
           console.log('✅ Пользователь создан/авторизован:', data.user.username);
           
-          const newUser: User = {
-            id: data.user.id,
-            username: data.user.username,
-            firstName: data.user.firstName || data.user.username,
-            lastName: data.user.lastName || '',
+          const newUser = mapApiUserToHomeUser({
+            ...data.user,
             telegramId: data.user.telegramId || String(telegramUser.id),
-            coins: data.user.coins || 1000,
-            rating: data.user.rating || 0,
-            gamesPlayed: data.user.gamesPlayed || 0,
-            gamesWon: data.user.gamesWon || 0,
-            photoUrl: data.user.photoUrl || ''
-          };
+          });
           
           console.log('👤 Устанавливаем пользователя:', newUser.username);
           setUser(newUser);

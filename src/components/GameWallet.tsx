@@ -28,7 +28,7 @@ import ConnectedWalletsList from './ConnectedWalletsList';
 import WalletQuickConnect from './WalletQuickConnect';
 import DailyBonusWheelModal from './DailyBonusWheelModal';
 import { useTonConnectUI } from '@tonconnect/ui-react';
-import { GRAM, formatGramAmount, formatGramRate, gramDisplayFromApi } from '@/lib/crypto/gram-brand';
+import { GRAM, formatGramAmount, gramDisplayFromApi } from '@/lib/crypto/gram-brand';
 import { depositCryptoOptions, getCryptoToken, cryptoDisplaySymbol } from '@/lib/crypto/crypto-assets';
 import {
   copyDepositDetails,
@@ -38,8 +38,13 @@ import {
   sendGramViaTonConnect,
 } from '@/lib/wallets/telegram-wallet-deposit';
 import { openWalletPayLink, isInsideTelegramMiniApp } from '@/lib/wallets/open-wallet-pay';
-import { gameCoinsForDeposit } from '@/lib/wallets/wallet-pay-currencies';
+import { gameCoinsForDeposit, TELEGRAM_WALLET_POPULAR } from '@/lib/wallets/wallet-pay-currencies';
 import CryptoIcon from './CryptoIcon';
+import CoinTopUpSection from './CoinTopUpSection';
+import PidrCoinIcon, { PidrCoinAmount } from './PidrCoinIcon';
+import { useExchangeRates } from '@/hooks/useExchangeRates';
+import { COINS_PER_USD } from '@/lib/pricing/constants';
+import { coinsFromRub, coinsFromUsd, rubFromUsd, formatRateUpdatedAt } from '@/lib/pricing/exchange-rates';
 
 const walletTypeLabel = (type: string) => {
   const t = type.toLowerCase();
@@ -169,6 +174,9 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
   const reduceMotion = useReducedMotion();
   const shouldOptimizeAnimations = Boolean(reduceMotion) || isMobileViewport;
   const [tonConnectUI] = useTonConnectUI();
+  const { rates, yookassaEnabled, loading: ratesLoading } = useExchangeRates();
+  const coinsPerRub = rates?.coinsPerRub ?? COINS_PER_USD / 80;
+  const usdRubRate = rates?.usdRub ?? 80;
   const selectedCryptoLabel = useMemo(() => cryptoDisplaySymbol(selectedCrypto), [selectedCrypto]);
 
   /** Стабильный ключ пользователя из пропсов (избегаем Infinity loop: новый объект user на каждом рендере родителя). */
@@ -186,12 +194,40 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
     return buildReferralLink(referralCode);
   }, [currentUser?.id, user?.id]);
 
-  /** Telegram Mini App может не передавать `user` в пропсы — единый owner id для списков/адресов API. */
+  const openRubTopUp = useCallback((method: 'bank_card' | 'sberbank' | 'yoo_money' | 'sbp') => {
+    setDepositMethod('rub');
+    setSelectedPayMethod(method);
+    setActiveModal('deposit');
+  }, []);
+
+  const openCryptoTopUp = useCallback((coin: string) => {
+    setDepositMethod('crypto');
+    setSelectedCrypto(coin === 'GRAM' ? 'TON' : coin);
+    setActiveModal('deposit');
+  }, []);
+
+  const rubQuickPresets = useMemo(() => {
+    const vals = ['100', '300', '500', '1000', '2000', '5000'];
+    return vals.map((val) => {
+      const rub = parseFloat(val);
+      const coins = rates ? coinsFromRub(rub, rates) : Math.floor(rub * coinsPerRub);
+      return { val, coins: coins.toLocaleString('ru-RU'), display: `${Number(val).toLocaleString('ru-RU')} ₽` };
+    });
+  }, [rates, coinsPerRub]);
+
+  const usdQuickPresets = useMemo(() => {
+    const vals = ['1', '5', '10', '25', '50', '100'];
+    return vals.map((val) => {
+      const usd = parseFloat(val);
+      const coins = rates ? coinsFromUsd(usd, rates) : Math.floor(usd * COINS_PER_USD);
+      return { val, coins: coins.toLocaleString('ru-RU'), display: `$${val}` };
+    });
+  }, [rates]);
+
+  /** Telegram Mini App может не передавать `user` в пропсы — id из БД для API (не telegram_id). */
   const ownerForWalletApis = useMemo(() => {
     if (propIdentityKey) return propIdentityKey;
-    if (typeof window === 'undefined') return '';
-    const tid = (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id;
-    return tid != null ? String(tid) : '';
+    return '';
   }, [propIdentityKey]);
 
   // ✅ НОВОЕ: Кеш для истории транзакций
@@ -680,7 +716,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
     }
 
     const coin = selectedCrypto.toUpperCase();
-    const gameCoins = gameCoinsForDeposit(coin, amount);
+    const gameCoins = gameCoinsForDeposit(coin, amount, rates ?? undefined);
 
     try {
       setLoading(true);
@@ -732,30 +768,41 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
     }
 
     if (!address) {
-      alert(depositAddressError || 'Адрес пополнения не настроен на сервере');
+      alert(depositAddressError || 'Адрес пополнения не настроен на сервере (MASTER_TON_ADDRESS в Vercel)');
       return;
     }
 
     const coin = selectedCrypto.toUpperCase();
     try {
       setLoading(true);
+      const currentUser = getCurrentUser();
+      const depositMemo = memo || `deposit_${currentUser?.id || ownerForWalletApis || 'user'}`;
 
       if (coin === 'TON') {
-        const currentUser = getCurrentUser();
-        const depositMemo = memo || `deposit_${currentUser?.id || ownerForWalletApis || 'user'}`;
+        const inTelegram = isTelegramWebApp() || isInsideTelegramMiniApp();
+
+        if (inTelegram && !tonConnectUI.connected) {
+          await copyDepositDetails(address, depositMemo);
+          openExternalWalletForDeposit({ coin: 'GRAM', masterAddress: address, amount, memo: depositMemo });
+          alert(`Откроется Telegram Wallet.\n\nОтправьте ${formatGramAmount(amount)} на адрес проекта.\nMemo: ${depositMemo}`);
+          setActiveModal(null);
+          setDepositAmount('');
+          return;
+        }
+
         await sendGramViaTonConnect({
           tonConnectUI,
           masterAddress: address,
           amount,
           memo: depositMemo,
         });
-        alert(`✅ ${formatGramAmount(amount)} отправлено через ${GRAM.walletLabel}. Баланс обновится после подтверждения сети.`);
+        alert(`✅ ${formatGramAmount(amount)} отправлено. Баланс обновится после подтверждения сети.`);
       } else {
         if (isTelegramWebApp()) {
           await copyDepositDetails(address, memo);
           openExternalWalletForDeposit({ coin, masterAddress: address, amount, memo });
           alert(
-            `Адрес и memo скопированы.\n\nОтправьте ${depositCoinLabel(coin)} на ваш master-адрес через Telegram Wallet или внешний кошелёк.`
+            `Адрес и memo скопированы.\n\nОтправьте ${depositCoinLabel(coin)} на адрес проекта через Telegram Wallet.`
           );
         } else {
           openExternalWalletForDeposit({ coin, masterAddress: address, amount, memo });
@@ -781,6 +828,19 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
       return;
     }
     await handleTelegramWalletDepositLegacy();
+  };
+
+  const handleCopyDepositAddress = async () => {
+    if (!selectedDepositAddress) return;
+    try {
+      const text = selectedDepositMemo
+        ? `${selectedDepositAddress}\nMemo: ${selectedDepositMemo}`
+        : selectedDepositAddress;
+      await navigator.clipboard.writeText(text);
+      alert(`Скопировано:\n${text}`);
+    } catch {
+      alert('Не удалось скопировать. Скопируйте адрес вручную.');
+    }
   };
 
   // ✅ Пополнение через подключенный кошелёк (TonConnect/Phantom/MetaMask)
@@ -943,7 +1003,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
         ? `${selectedCryptoLabel} wallet`
         : PAYMENT_METHODS.find((method) => method.id === withdrawMethod)?.name || 'Способ вывода';
 
-      const rubEquivalent = Math.floor(amount / 50);
+      const rubEquivalent = Math.floor(amount / coinsPerRub);
       const description = [
         `Заявка на вывод через ${methodLabel}`,
         `Сумма: ${amount.toLocaleString('ru-RU')} монет`,
@@ -1167,7 +1227,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
     }
     setYookassaLoading(true);
     try {
-      const coins = Math.round(amount * 50); // 100 руб = 5000 монет => 1 руб = 50 монет
+      const coins = rates ? coinsFromRub(amount, rates) : Math.round(amount * coinsPerRub);
       const { getApiHeaders } = await import('@/lib/api-headers');
       const response = await fetch('/api/payments/yookassa/create', {
         method: 'POST',
@@ -1380,7 +1440,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
         
         {/* БАЛАНС ИГРОВЫХ МОНЕТ */}
         <div className="balance-amount">
-          <FaCoins className="coin-icon" />
+          <PidrCoinIcon size={32} spin className="coin-icon" alt="" />
           <span className="amount-text">{balance.toLocaleString()}</span>
           <span className="currency">монет</span>
         </div>
@@ -1471,6 +1531,14 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
               </motion.button>
             </div>
 
+            <CoinTopUpSection
+              rates={rates}
+              yookassaEnabled={yookassaEnabled}
+              loading={ratesLoading || loading}
+              onBuyRub={openRubTopUp}
+              onBuyCrypto={openCryptoTopUp}
+            />
+
             {/* Быстрые действия — реферальная реклама */}
             <div className="quick-actions">
               <h3 className="section-title">Быстрые действия</h3>
@@ -1488,7 +1556,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
                 </div>
                 <h4 className="referral-promo-title">Пригласи друга — получи монеты!</h4>
                 <div className="referral-promo-reward">
-                  <span className="referral-promo-coin">💰</span>
+                  <PidrCoinIcon size={28} spinSlow className="referral-promo-coin" alt="" />
                   <span className="referral-promo-amount">+500</span>
                   <span className="referral-promo-reward-text">за каждого активного друга</span>
                 </div>
@@ -1578,28 +1646,29 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
             exit={{ opacity: 0, x: 20 }}
             transition={{ duration: 0.3 }}
           >
-            <h3 className="section-title">Криптообмен</h3>
+            <h3 className="section-title">Курсы пополнения</h3>
             
             <div className="exchange-rates">
+              {rates && TELEGRAM_WALLET_POPULAR.map((coin) => {
+                const key = coin;
+                const entry = rates.crypto[key];
+                if (!entry) return null;
+                return (
+                  <div key={coin} className="rate-item">
+                    <span>1 {coin} = {entry.coinsPerUnit.toLocaleString('ru-RU')} монет (${entry.usdPrice.toLocaleString('ru-RU')})</span>
+                    <button type="button" className="exchange-button" onClick={() => openCryptoTopUp(coin)}>Пополнить</button>
+                  </div>
+                );
+              })}
               <div className="rate-item">
-                <span>{formatGramRate()}</span>
-                <button className="exchange-button">Обменять</button>
-              </div>
-              
-              <div className="rate-item">
-                <span>1 USDT = 800 монет</span>
-                <button className="exchange-button">Обменять</button>
-              </div>
-              
-              <div className="rate-item">
-                <span>0.001 ETH = 1200 монет</span>
-                <button className="exchange-button">Обменять</button>
+                <span>1 $ = {COINS_PER_USD.toLocaleString('ru-RU')} монет · 1 ₽ ≈ {coinsPerRub.toFixed(1)} монет</span>
+                <button type="button" className="exchange-button" onClick={() => openRubTopUp('bank_card')}>Рубли</button>
               </div>
             </div>
             
             <div className="exchange-info">
-              <p>Минимальная сумма обмена: 100 монет</p>
-              <p>Комиссия: 2% от суммы</p>
+              <p>Курс обновляется раз в 24 ч{rates?.updatedAt ? ` · ${formatRateUpdatedAt(rates.updatedAt)}` : ''}</p>
+              <p>1 $ = {usdRubRate.toFixed(2)} ₽ (ЦБ + CoinGecko)</p>
             </div>
           </motion.div>
         )}
@@ -1690,32 +1759,21 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
                         fontSize: '12px', color: '#ffd700', textAlign: 'center',
                       }}>
                         {currencyMode === 'RUB' 
-                          ? '100 руб. = 5 000 монет  |  1₽ = 50 монет'
-                          : '1$ ≈ 80 руб.  |  1$ = 4 000 монет'}
+                          ? `100 ₽ ≈ ${(rates ? coinsFromRub(100, rates) : Math.floor(100 * coinsPerRub)).toLocaleString('ru-RU')} монет  |  1₽ ≈ ${coinsPerRub.toFixed(1)}`
+                          : `1$ = ${COINS_PER_USD.toLocaleString('ru-RU')} монет  |  $1 ≈ ${usdRubRate.toFixed(2)} ₽`}
                       </div>
 
                       {/* Быстрые суммы */}
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginBottom: '12px' }}>
-                        {(currencyMode === 'RUB' ? [
-                          { val: '100', coins: '5 000', display: '100 ₽' },
-                          { val: '300', coins: '15 000', display: '300 ₽' },
-                          { val: '500', coins: '25 000', display: '500 ₽' },
-                          { val: '1000', coins: '50 000', display: '1 000 ₽' },
-                          { val: '2000', coins: '100 000', display: '2 000 ₽' },
-                          { val: '5000', coins: '250 000', display: '5 000 ₽' },
-                        ] : [
-                          { val: '1', coins: '4 000', display: '$1' },
-                          { val: '5', coins: '20 000', display: '$5' },
-                          { val: '10', coins: '40 000', display: '$10' },
-                          { val: '25', coins: '100 000', display: '$25' },
-                          { val: '50', coins: '200 000', display: '$50' },
-                          { val: '100', coins: '400 000', display: '$100' },
-                        ]).map(p => {
+                        {(currencyMode === 'RUB' ? rubQuickPresets : usdQuickPresets).map(p => {
                           const isActive = currencyMode === 'RUB' ? rubAmount === p.val : usdAmount === p.val;
                           return (
                             <button key={p.val} onClick={() => {
                               if (currencyMode === 'RUB') { setRubAmount(p.val); }
-                              else { setUsdAmount(p.val); setRubAmount(String(Math.round(parseFloat(p.val) * 80))); }
+                              else {
+                                setUsdAmount(p.val);
+                                setRubAmount(p.val ? String(Math.round(parseFloat(p.val) * usdRubRate)) : '');
+                              }
                             }} style={{
                               padding: '10px 4px', borderRadius: '10px', cursor: 'pointer',
                               background: isActive
@@ -1743,7 +1801,14 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
                           onChange={e => {
                             if (currencyMode === 'USD') {
                               setUsdAmount(e.target.value);
-                              setRubAmount(e.target.value ? String(Math.round(parseFloat(e.target.value) * 80)) : '');
+                              const usd = parseFloat(e.target.value);
+                              setRubAmount(
+                                e.target.value && rates
+                                  ? String(Math.round(rubFromUsd(usd, rates)))
+                                  : e.target.value
+                                    ? String(Math.round(usd * usdRubRate))
+                                    : ''
+                              );
                             } else {
                               setRubAmount(e.target.value);
                             }
@@ -1772,10 +1837,16 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
                           border: '1px solid rgba(255,215,0,0.15)',
                           textAlign: 'center', fontSize: '13px', color: '#fbbf24',
                         }}>
-                          Вы получите: <strong style={{ color: '#ffd700', fontSize: '16px' }}>{(parseFloat(rubAmount) * 50).toLocaleString()}</strong> монет
+                          Вы получите:{' '}
+                          <PidrCoinAmount
+                            value={rates ? coinsFromRub(parseFloat(rubAmount), rates) : Math.floor(parseFloat(rubAmount) * coinsPerRub)}
+                            size={18}
+                            showLabel
+                            amountClassName=""
+                          />
                           {currencyMode === 'USD' && usdAmount && (
                             <span style={{ display: 'block', fontSize: '11px', opacity: 0.7, marginTop: '2px' }}>
-                              ≈ {rubAmount} ₽ по курсу 1$ = 80₽
+                              ≈ {rubAmount} ₽ по курсу 1$ = {usdRubRate.toFixed(2)}₽
                             </span>
                           )}
                         </div>
@@ -1921,7 +1992,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
                         background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,215,0,0.1)',
                       }}>
                         <label style={{ display: 'block', fontSize: '11px', color: '#94a3b8', marginBottom: '6px', fontWeight: '600' }}>
-                          Адрес для пополнения ({selectedCryptoLabel}) — ваш кошелёк проекта
+                          Адрес проекта для приёма {selectedCryptoLabel} (из MASTER_TON_ADDRESS)
                         </label>
                         <div className={`address-container hd-address-container ${isGeneratingAddress ? 'hd-generating' : ''}`}>
                           <input
@@ -1934,11 +2005,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
                           <button
                             type="button"
                             className="copy-btn"
-                            onClick={() => {
-                              if (selectedDepositAddress) {
-                                void navigator.clipboard?.writeText(selectedDepositAddress);
-                              }
-                            }}
+                            onClick={() => void handleCopyDepositAddress()}
                             disabled={!selectedDepositAddress || isGeneratingAddress}
                           >
                             {isGeneratingAddress ? <FaDatabase /> : '📋'}
@@ -2042,12 +2109,12 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
                         </div>
                       </div>
 
-                      {/* Telegram Wallet Pay — как Jetton: одно подтверждение */}
+                      {/* Одна кнопка пополнения GRAM / Telegram Wallet */}
                       {(walletPayEnabled && isInsideTelegramMiniApp()) || isTelegramWebApp() || selectedCrypto === 'TON' ? (
                         <button
                           type="button"
                           onClick={() => void handleTelegramWalletDeposit()}
-                          disabled={loading || !depositAmount || parseFloat(depositAmount) <= 0 || (!walletPayEnabled && !selectedDepositAddress)}
+                          disabled={loading || !depositAmount || parseFloat(depositAmount) <= 0 || !selectedDepositAddress}
                           style={{
                             width: '100%', padding: '14px', borderRadius: '12px', marginBottom: '10px',
                             border: '1.5px solid rgba(38,165,228,0.55)',
@@ -2057,8 +2124,10 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
                           }}
                         >
                           {walletPayEnabled && isInsideTelegramMiniApp()
-                            ? `👛 Pay via Wallet · ${selectedCryptoLabel}`
-                            : `📱 Пополнить через Telegram Wallet (${selectedCryptoLabel})`}
+                            ? `👛 Оплатить через Telegram Wallet · ${selectedCryptoLabel}`
+                            : selectedCrypto === 'TON'
+                              ? `💎 Отправить ${GRAM.symbol} через Telegram Wallet`
+                              : `📱 Пополнить через Telegram Wallet (${selectedCryptoLabel})`}
                         </button>
                       ) : null}
                       {walletPayEnabled && isInsideTelegramMiniApp() && depositAmount && parseFloat(depositAmount) > 0 && (
@@ -2068,7 +2137,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
                           fontSize: '12px', color: '#7dd3fc', textAlign: 'center',
                         }}>
                           Зачисление: <strong style={{ color: '#ffd700' }}>
-                            {gameCoinsForDeposit(selectedCrypto, parseFloat(depositAmount)).toLocaleString('ru-RU')} монет
+                            {gameCoinsForDeposit(selectedCrypto, parseFloat(depositAmount), rates ?? undefined).toLocaleString('ru-RU')} монет
                           </strong>
                           <div style={{ fontSize: '10px', color: '#64748b', marginTop: '4px' }}>
                             Оплата любой монетой из Telegram Wallet (USDT, ETH, BTC, GRAM, TRX, SOL)
@@ -2076,8 +2145,8 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
                         </div>
                       )}
 
-                      {/* Кнопка пополнения через подключённый кошелёк */}
-                      {selectedWalletForDeposit ? (
+                      {/* Пополнение через подключённый кошелёк — только для SOL/ETH/USDT/TRX (не дублируем GRAM) */}
+                      {selectedWalletForDeposit && selectedCrypto !== 'TON' ? (
                         <button
                           onClick={() => handleDepositViaWallet()}
                           disabled={loading || !depositAmount || parseFloat(depositAmount) <= 0}
@@ -2301,7 +2370,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
                     </div>
                     <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px' }}>
                       Доступно: {balance.toLocaleString('ru-RU')} монет
-                      {balance > 0 ? ` (≈ ${Math.floor(balance / 50).toLocaleString('ru-RU')} ₽)` : ''}
+                      {balance > 0 ? ` (≈ ${Math.floor(balance / coinsPerRub).toLocaleString('ru-RU')} ₽)` : ''}
                     </div>
                     <div style={{ display: 'flex', gap: '6px' }}>
                       {['25%', '50%', '100%'].map(pct => {
@@ -2342,7 +2411,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
                       </div>
                       <div>
                         {Math.floor(Number(withdrawAmount)).toLocaleString('ru-RU')} монет
-                        {Number(withdrawAmount) > 0 ? ` (≈ ${Math.floor(Number(withdrawAmount) / 50).toLocaleString('ru-RU')} ₽)` : ''}
+                        {Number(withdrawAmount) > 0 ? ` (≈ ${Math.floor(Number(withdrawAmount) / coinsPerRub).toLocaleString('ru-RU')} ₽)` : ''}
                       </div>
                     </div>
                   )}
@@ -2528,12 +2597,11 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
           align-items: center;
           gap: 8px;
           margin-bottom: 8px;
+          perspective: 420px;
         }
 
         .coin-icon {
-          font-size: 18px;
-          color: #3b82f6;
-          filter: drop-shadow(0 0 5px rgba(59, 130, 246, 0.5));
+          flex-shrink: 0;
         }
 
         .amount-text {

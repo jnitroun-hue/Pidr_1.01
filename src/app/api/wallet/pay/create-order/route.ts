@@ -7,9 +7,10 @@ import {
 } from '@/lib/wallets/wallet-pay-api';
 import {
   buildWalletPayAmount,
-  gameCoinsForDeposit,
+  gameCoinsForDepositAsync,
   walletPayMinAmountHint,
 } from '@/lib/wallets/wallet-pay-currencies';
+import { getExchangeRates } from '@/lib/pricing/exchange-rates';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -65,12 +66,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Некорректная сумма' }, { status: 400 });
     }
 
-    const gameCoins = gameCoinsForDeposit(coin, amount);
+    const rates = await getExchangeRates();
+    const gameCoins = await gameCoinsForDepositAsync(coin, amount, rates);
     if (gameCoins <= 0) {
       return NextResponse.json({ success: false, error: 'Слишком маленькая сумма' }, { status: 400 });
     }
 
-    const payAmount = buildWalletPayAmount(coin, amount);
+    const payAmount = buildWalletPayAmount(coin, amount, rates);
     const externalId = `pidr-dep-${dbUserId}-${Date.now()}`;
 
     const result = await createWalletPayOrder({
