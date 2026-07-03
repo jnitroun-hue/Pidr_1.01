@@ -3,7 +3,7 @@
  * Источник истины: src/lib/pricing/exchange-rates.ts (обновление раз в 24 ч).
  */
 import { GRAM } from '@/lib/crypto/gram-brand';
-import { getExchangeRates, coinsFromCrypto, getCryptoUsdPrice } from '@/lib/pricing/exchange-rates';
+import { getExchangeRates, coinsFromCrypto, getCryptoUsdPrice, coinsPerUnitForDeposit } from '@/lib/pricing/exchange-rates';
 import type { ExchangeRateSnapshot } from '@/lib/pricing/types';
 
 /** @deprecated Используйте getExchangeRates() — оставлено для совместимости импортов */
@@ -105,6 +105,5 @@ export function getCoinsPerCryptoFromSnapshot(
   coin: string,
   snapshot: ExchangeRateSnapshot
 ): number {
-  const key = coin.toUpperCase() === 'GRAM' ? 'TON' : coin.toUpperCase();
-  return snapshot.crypto[key]?.coinsPerUnit ?? snapshot.crypto.USDT?.coinsPerUnit ?? 4999;
+  return coinsPerUnitForDeposit(coin, snapshot);
 }

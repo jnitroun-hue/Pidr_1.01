@@ -11,7 +11,7 @@ import RoomInviteModal from '../components/RoomInviteModal';
 import BurgerMenu from '../components/BurgerMenu';
 import { motion } from 'framer-motion';
 import { Menu, X } from 'lucide-react';
-import { getApiHeaders } from '@/lib/api-headers';
+import { getApiHeaders, sanitizeHttpHeaderValue } from '@/lib/api-headers';
 import {
   captureReferralFromCurrentUrl,
   getPendingReferralFromClient,
@@ -313,7 +313,9 @@ function HomeWithParams() {
         
         if (telegramId) {
           headers['x-telegram-id'] = telegramId;
-          headers['x-username'] = telegramUser?.username || telegramUser?.first_name || '';
+          headers['x-username'] = sanitizeHttpHeaderValue(
+            telegramUser?.username || telegramUser?.first_name || ''
+          );
         }
         
         // ✅ УПРОЩЕННАЯ ПРОВЕРКА: Пробуем проверить сессию, но если не работает - сразу авторизуемся

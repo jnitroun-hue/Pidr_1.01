@@ -44,7 +44,7 @@ import CoinTopUpSection from './CoinTopUpSection';
 import PidrCoinIcon, { PidrCoinAmount } from './PidrCoinIcon';
 import { useExchangeRates } from '@/hooks/useExchangeRates';
 import { COINS_PER_USD } from '@/lib/pricing/constants';
-import { coinsFromRub, coinsFromUsd, rubFromUsd, formatRateUpdatedAt } from '@/lib/pricing/exchange-rates';
+import { coinsFromRub, coinsFromUsd, rubFromUsd, formatRateUpdatedAt, formatCryptoDepositRateLine } from '@/lib/pricing/exchange-rates';
 
 const walletTypeLabel = (type: string) => {
   const t = type.toLowerCase();
@@ -174,7 +174,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
   const reduceMotion = useReducedMotion();
   const shouldOptimizeAnimations = Boolean(reduceMotion) || isMobileViewport;
   const [tonConnectUI] = useTonConnectUI();
-  const { rates, yookassaEnabled, loading: ratesLoading } = useExchangeRates();
+  const { rates, yookassaEnabled, loading: ratesLoading, reload: reloadRates } = useExchangeRates();
   const coinsPerRub = rates?.coinsPerRub ?? COINS_PER_USD / 80;
   const usdRubRate = rates?.usdRub ?? 80;
   const selectedCryptoLabel = useMemo(() => cryptoDisplaySymbol(selectedCrypto), [selectedCrypto]);
@@ -198,13 +198,26 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
     setDepositMethod('rub');
     setSelectedPayMethod(method);
     setActiveModal('deposit');
-  }, []);
+    void reloadRates();
+  }, [reloadRates]);
 
   const openCryptoTopUp = useCallback((coin: string) => {
     setDepositMethod('crypto');
     setSelectedCrypto(coin === 'GRAM' ? 'TON' : coin);
     setActiveModal('deposit');
-  }, []);
+    void reloadRates();
+  }, [reloadRates]);
+
+  const selectedCryptoRateLine = useMemo(() => {
+    if (!rates) return null;
+    return formatCryptoDepositRateLine(selectedCrypto, rates);
+  }, [rates, selectedCrypto]);
+
+  const depositGameCoinsPreview = useMemo(() => {
+    const amount = parseFloat(depositAmount);
+    if (!Number.isFinite(amount) || amount <= 0) return 0;
+    return gameCoinsForDeposit(selectedCrypto, amount, rates ?? undefined);
+  }, [depositAmount, selectedCrypto, rates]);
 
   const rubQuickPresets = useMemo(() => {
     const vals = ['100', '300', '500', '1000', '2000', '5000'];
@@ -1653,9 +1666,13 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
                 const key = coin;
                 const entry = rates.crypto[key];
                 if (!entry) return null;
+                const label =
+                  coin === 'USDT'
+                    ? `1 USDT ≈ ${entry.rubPrice.toLocaleString('ru-RU', { maximumFractionDigits: 2 })} ₽ · ${Math.floor(entry.rubPrice * rates.coinsPerRub).toLocaleString('ru-RU')} монет`
+                    : `1 ${coin} = $${entry.usdPrice.toLocaleString('ru-RU')} · ${entry.coinsPerUnit.toLocaleString('ru-RU')} монет`;
                 return (
                   <div key={coin} className="rate-item">
-                    <span>1 {coin} = {entry.coinsPerUnit.toLocaleString('ru-RU')} монет (${entry.usdPrice.toLocaleString('ru-RU')})</span>
+                    <span>{label}</span>
                     <button type="button" className="exchange-button" onClick={() => openCryptoTopUp(coin)}>Пополнить</button>
                   </div>
                 );
@@ -1961,6 +1978,27 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
                         </span>
                       </div>
 
+                      {/* Курс крипты (USDT — ₽, остальные — $) */}
+                      <div style={{
+                        padding: '10px 14px', borderRadius: '10px', marginBottom: '14px',
+                        background: 'linear-gradient(135deg, rgba(255,215,0,0.08) 0%, rgba(6,182,212,0.06) 100%)',
+                        border: '1px solid rgba(255,215,0,0.2)',
+                        fontSize: '12px', color: '#ffd700', textAlign: 'center',
+                      }}>
+                        {ratesLoading
+                          ? '⏳ Загрузка курса...'
+                          : selectedCryptoRateLine
+                            ?? (selectedCrypto === 'USDT'
+                              ? `1 USDT ≈ ${usdRubRate.toFixed(2)} ₽ · ${COINS_PER_USD.toLocaleString('ru-RU')} монет`
+                              : `1 ${selectedCryptoLabel} = $… · курс недоступен`)}
+                        {rates?.updatedAt && (
+                          <div style={{ fontSize: '10px', color: '#64748b', marginTop: '4px' }}>
+                            обновлено {formatRateUpdatedAt(rates.updatedAt)}
+                            {selectedCrypto !== 'USDT' && ` · $1 = ${COINS_PER_USD.toLocaleString('ru-RU')} монет`}
+                          </div>
+                        )}
+                      </div>
+
                       {/* Кошелёк для оплаты */}
                       <div style={{ marginBottom: '14px' }}>
                         <div style={{ fontSize: '12px', fontWeight: '600', color: '#e2e8f0', marginBottom: '8px' }}>
@@ -2109,6 +2147,18 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
                         </div>
                       </div>
 
+                      {depositGameCoinsPreview > 0 && (
+                        <div style={{
+                          padding: '10px', borderRadius: '10px', marginBottom: '12px',
+                          background: 'linear-gradient(135deg, rgba(255,215,0,0.06), rgba(6,182,212,0.04))',
+                          border: '1px solid rgba(255,215,0,0.15)',
+                          textAlign: 'center', fontSize: '13px', color: '#fbbf24',
+                        }}>
+                          Вы получите:{' '}
+                          <PidrCoinAmount value={depositGameCoinsPreview} size={18} showLabel />
+                        </div>
+                      )}
+
                       {/* Одна кнопка пополнения GRAM / Telegram Wallet */}
                       {(walletPayEnabled && isInsideTelegramMiniApp()) || isTelegramWebApp() || selectedCrypto === 'TON' ? (
                         <button
@@ -2137,7 +2187,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
                           fontSize: '12px', color: '#7dd3fc', textAlign: 'center',
                         }}>
                           Зачисление: <strong style={{ color: '#ffd700' }}>
-                            {gameCoinsForDeposit(selectedCrypto, parseFloat(depositAmount), rates ?? undefined).toLocaleString('ru-RU')} монет
+                            {depositGameCoinsPreview.toLocaleString('ru-RU')} монет
                           </strong>
                           <div style={{ fontSize: '10px', color: '#64748b', marginTop: '4px' }}>
                             Оплата любой монетой из Telegram Wallet (USDT, ETH, BTC, GRAM, TRX, SOL)

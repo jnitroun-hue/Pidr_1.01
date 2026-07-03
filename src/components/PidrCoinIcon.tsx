@@ -36,6 +36,7 @@ export default function PidrCoinIcon({
         height={size}
         className={`${styles.img} ${spinClass}`.trim()}
         priority={spin}
+        unoptimized
       />
     </span>
   );

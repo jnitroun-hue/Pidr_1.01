@@ -2,7 +2,7 @@ import React from 'react'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { createPlayers, generateAvatar } from '../lib/game/avatars'
-import { getApiHeaders } from '../lib/api-headers'
+import { getApiHeaders, telegramUsernameHeader } from '../lib/api-headers'
 import { deckEntriesToNftMap } from '../lib/game/cardAssets'
 import { BOT_TIMING } from '../lib/game/botTiming'
 import { calculateRatingRewards, calculatePlayerPositions, isWinningPosition } from '../lib/rating/ratingSystem'
@@ -3326,7 +3326,7 @@ export const useGameStore = create<GameState>()(
                     headers: {
                       ...getApiHeaders(),
                       ...(currentUserTelegramId ? { 'x-telegram-id': currentUserTelegramId } : {}),
-                      ...(telegramUser?.username ? { 'x-username': telegramUser.username } : telegramUser?.first_name ? { 'x-username': telegramUser.first_name } : {})
+                      ...telegramUsernameHeader(telegramUser),
                     },
                     body: JSON.stringify({
                       amount: coinsEarned,
@@ -3624,7 +3624,7 @@ export const useGameStore = create<GameState>()(
                 headers: {
                   ...getApiHeaders(),
                   ...(currentUserTelegramId ? { 'x-telegram-id': currentUserTelegramId } : {}),
-                  ...(telegramUser?.username ? { 'x-username': telegramUser.username } : telegramUser?.first_name ? { 'x-username': telegramUser.first_name } : {})
+                  ...telegramUsernameHeader(telegramUser),
                 },
                 body: JSON.stringify(requestBody)
               })
@@ -3656,7 +3656,7 @@ export const useGameStore = create<GameState>()(
                   headers: {
                     ...getApiHeaders(),
                     ...(currentUserTelegramId ? { 'x-telegram-id': currentUserTelegramId } : {}),
-                    ...(telegramUser?.username ? { 'x-username': telegramUser.username } : telegramUser?.first_name ? { 'x-username': telegramUser.first_name } : {})
+                    ...telegramUsernameHeader(telegramUser),
                   },
                   body: JSON.stringify({
                     amount: userResult.coinsEarned,

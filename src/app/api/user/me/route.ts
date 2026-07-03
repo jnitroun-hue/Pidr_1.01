@@ -6,6 +6,7 @@ import { resolveAuthMethod } from '@/lib/user/resolve-auth-method';
 import { normalizeUserStats } from '@/lib/user/normalize-user-stats';
 import { syncPremiumFlag } from '../../../../lib/premium/premium-service';
 import { shouldSyncPlatformPhoto } from '@/lib/user/avatar-policy';
+import { decodeHttpHeaderValue } from '@/lib/api-headers';
 
 // ✅ Явная конфигурация runtime для Next.js 15
 export const runtime = 'nodejs';
@@ -48,7 +49,7 @@ export async function GET(req: NextRequest) {
 
     const authSource = req.headers.get('x-auth-source');
     const telegramPhoto = req.headers.get('x-telegram-photo');
-    const telegramFirstName = req.headers.get('x-telegram-first-name');
+    const telegramFirstName = decodeHttpHeaderValue(req.headers.get('x-telegram-first-name'));
 
     if (authSource === 'telegram' && dbUserId) {
       const patch: Record<string, string> = {};

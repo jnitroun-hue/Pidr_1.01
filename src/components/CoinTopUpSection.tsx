@@ -6,7 +6,7 @@ import { FaCreditCard } from 'react-icons/fa';
 import { SiVisa, SiMastercard, SiBitcoin, SiEthereum, SiSolana } from 'react-icons/si';
 import type { ExchangeRateSnapshot } from '@/lib/pricing/types';
 import { COINS_PER_USD } from '@/lib/pricing/constants';
-import { coinsFromRub, formatRateUpdatedAt } from '@/lib/pricing/exchange-rates';
+import { coinsFromRub, formatRateUpdatedAt, formatCryptoDepositRateLine, coinsPerUnitForDeposit } from '@/lib/pricing/exchange-rates';
 import { TELEGRAM_WALLET_POPULAR } from '@/lib/wallets/wallet-pay-currencies';
 import { getCryptoToken } from '@/lib/crypto/crypto-assets';
 import CryptoIcon from '@/components/CryptoIcon';
@@ -108,14 +108,22 @@ export default function CoinTopUpSection({
           <span>Криптовалюта</span>
         </div>
         <p className={styles.blockHint}>
-          1 USDT ≈ <PidrCoinAmount value={rates?.crypto.USDT?.coinsPerUnit ?? COINS_PER_USD} size={16} /> · $1 ={' '}
-          <PidrCoinAmount value={sample1Usd} size={16} />
+          {rates ? (
+            <>
+              {formatCryptoDepositRateLine('USDT', rates)} · $1 ={' '}
+              <PidrCoinAmount value={sample1Usd} size={16} />
+            </>
+          ) : (
+            <>
+              1 USDT ≈ <PidrCoinAmount value={COINS_PER_USD} size={16} /> · $1 ={' '}
+              <PidrCoinAmount value={sample1Usd} size={16} />
+            </>
+          )}
         </p>
         <div className={styles.cryptoGrid}>
           {TELEGRAM_WALLET_POPULAR.map((coin) => {
             const meta = getCryptoToken(coin);
-            const entry = rates?.crypto[coin];
-            const perUnit = entry?.coinsPerUnit ?? COINS_PER_USD;
+            const perUnit = rates ? coinsPerUnitForDeposit(coin, rates) : COINS_PER_USD;
             return (
               <motion.button
                 key={coin}
@@ -135,7 +143,8 @@ export default function CoinTopUpSection({
           })}
         </div>
         <p className={styles.cryptoNote}>
-          <SiEthereum size={12} /> ETH · <SiSolana size={12} /> SOL · TON · TRX — курс обновляется раз в 24 ч
+          <SiEthereum size={12} /> ETH · <SiSolana size={12} /> SOL — курс в $ · USDT — в ₽
+          {rates?.updatedAt ? ` · ${formatRateUpdatedAt(rates.updatedAt)}` : ''}
         </p>
       </div>
     </section>

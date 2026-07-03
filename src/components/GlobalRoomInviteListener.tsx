@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { getApiHeaders } from '@/lib/api-headers';
 import RoomInviteModal from './RoomInviteModal';
 
 interface InviteInfo {
@@ -36,11 +37,7 @@ export default function GlobalRoomInviteListener() {
 
         const response = await fetch('/api/friends/invites', {
           method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-telegram-id': user.id.toString(),
-            'x-username': user.username || user.first_name || 'User'
-          },
+          headers: getApiHeaders(),
           cache: 'no-store'
         });
 

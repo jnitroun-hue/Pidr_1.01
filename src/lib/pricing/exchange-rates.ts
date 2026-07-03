@@ -30,7 +30,8 @@ function normalizeCoinKey(coin: string): string {
 function buildSnapshot(
   usdRub: number,
   usdPrices: Record<string, number>,
-  source: string
+  source: string,
+  options?: { tetherRub?: number }
 ): ExchangeRateSnapshot {
   const safeUsdRub = usdRub > 0 ? usdRub : ANCHOR_USD_RUB;
   const coinsPerRub = COINS_PER_USD / safeUsdRub;
@@ -38,12 +39,19 @@ function buildSnapshot(
 
   for (const [symbol, usdPrice] of Object.entries(usdPrices)) {
     const safeUsd = usdPrice > 0 ? usdPrice : 1;
+    const rubPrice =
+      symbol === 'USDT' && options?.tetherRub && options.tetherRub > 0
+        ? options.tetherRub
+        : safeUsd * safeUsdRub;
+    const coinsPerUnit =
+      symbol === 'USDT'
+        ? Math.floor(rubPrice * coinsPerRub)
+        : Math.floor(safeUsd * COINS_PER_USD);
     const entry: CryptoRateEntry = {
       symbol,
       usdPrice: safeUsd,
-      rubPrice: safeUsd * safeUsdRub,
-      // 1 монета крипты = X USD → X * COINS_PER_USD игровых монет
-      coinsPerUnit: Math.floor(safeUsd * COINS_PER_USD),
+      rubPrice,
+      coinsPerUnit,
     };
     crypto[symbol] = entry;
     if (symbol === 'TON') {
@@ -80,7 +88,11 @@ async function fetchCbrUsdRub(): Promise<number | null> {
   }
 }
 
-async function fetchCoinGeckoPrices(): Promise<{ usdRub: number; usdPrices: Record<string, number> } | null> {
+async function fetchCoinGeckoPrices(): Promise<{
+  usdRub: number;
+  usdPrices: Record<string, number>;
+  tetherRub?: number;
+} | null> {
   const ids = [...new Set(Object.values(CRYPTO_COINGECKO_IDS))].join(',');
   try {
     const res = await fetch(
@@ -111,7 +123,11 @@ async function fetchCoinGeckoPrices(): Promise<{ usdRub: number; usdPrices: Reco
     }
 
     if (Object.keys(usdPrices).length === 0) return null;
-    return { usdRub: usdRub ?? ANCHOR_USD_RUB, usdPrices };
+    return {
+      usdRub: usdRub ?? ANCHOR_USD_RUB,
+      usdPrices,
+      tetherRub: tetherRub && tetherRub > 0 ? tetherRub : undefined,
+    };
   } catch {
     return null;
   }
@@ -123,7 +139,9 @@ export async function refreshExchangeRates(): Promise<ExchangeRateSnapshot> {
 
   if (gecko) {
     const usdRub = cbrUsdRub ?? gecko.usdRub;
-    const snapshot = buildSnapshot(usdRub, gecko.usdPrices, cbrUsdRub ? 'coingecko+cbr' : 'coingecko');
+    const snapshot = buildSnapshot(usdRub, gecko.usdPrices, cbrUsdRub ? 'coingecko+cbr' : 'coingecko', {
+      tetherRub: gecko.tetherRub,
+    });
     await saveRatesToRedis(snapshot);
     return snapshot;
   }
@@ -185,8 +203,39 @@ export function coinsFromCrypto(
   if (!Number.isFinite(amount) || amount <= 0) return 0;
   const key = normalizeCoinKey(coin);
   const entry = snapshot.crypto[key] ?? snapshot.crypto.USDT;
-  const usdPerUnit = entry?.usdPrice ?? 1;
-  return Math.floor(amount * usdPerUnit * snapshot.coinsPerUsd);
+  if (!entry) return Math.floor(amount * snapshot.coinsPerUsd);
+  if (key === 'USDT') {
+    return Math.floor(amount * entry.rubPrice * snapshot.coinsPerRub);
+  }
+  return Math.floor(amount * entry.usdPrice * snapshot.coinsPerUsd);
+}
+
+/** Игровых монет за 1 единицу крипты (USDT — по ₽, остальное — по $) */
+export function coinsPerUnitForDeposit(coin: string, snapshot: ExchangeRateSnapshot): number {
+  const key = normalizeCoinKey(coin);
+  const entry = snapshot.crypto[key] ?? snapshot.crypto.USDT;
+  if (!entry) return snapshot.coinsPerUsd;
+  if (key === 'USDT') {
+    return Math.floor(entry.rubPrice * snapshot.coinsPerRub);
+  }
+  return entry.coinsPerUnit;
+}
+
+function formatUsdPrice(usd: number): string {
+  const maxFrac = usd < 10 ? 4 : usd < 1000 ? 2 : 0;
+  return usd.toLocaleString('ru-RU', { maximumFractionDigits: maxFrac });
+}
+
+/** Строка курса для UI пополнения: USDT в ₽, остальные в $ */
+export function formatCryptoDepositRateLine(coin: string, snapshot: ExchangeRateSnapshot): string {
+  const key = normalizeCoinKey(coin);
+  const entry = snapshot.crypto[key];
+  if (!entry) return '';
+  const coins = coinsPerUnitForDeposit(coin, snapshot);
+  if (key === 'USDT') {
+    return `1 USDT ≈ ${entry.rubPrice.toLocaleString('ru-RU', { maximumFractionDigits: 2 })} ₽ · ${coins.toLocaleString('ru-RU')} монет`;
+  }
+  return `1 ${key} = $${formatUsdPrice(entry.usdPrice)} · ${coins.toLocaleString('ru-RU')} монет`;
 }
 
 export function getCryptoUsdPrice(coin: string, snapshot: ExchangeRateSnapshot): number {

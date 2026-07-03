@@ -782,11 +782,7 @@ function GamePageContentComponent({
           const response = await fetch('/api/user/me', {
             method: 'GET',
             credentials: 'include',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-telegram-id': telegramId,
-              'x-username': username
-            }
+            headers: getApiHeaders(),
           });
           
           if (response.ok) {
@@ -939,11 +935,7 @@ function GamePageContentComponent({
           const response = await fetch('/api/user/me', {
             method: 'GET',
             credentials: 'include',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-telegram-id': telegramId,
-              'x-username': username
-            }
+            headers: getApiHeaders(),
           });
           
           if (response.ok) {
@@ -990,11 +982,7 @@ function GamePageContentComponent({
           const response = await fetch('/api/user/me', {
             method: 'GET',
             credentials: 'include',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-telegram-id': telegramId,
-              'x-username': username
-            }
+            headers: getApiHeaders(),
           });
           
           if (response.ok) {
