@@ -15,5 +15,5 @@ export const CRYPTO_COINGECKO_IDS: Record<string, string> = {
   GRAM: 'the-open-network',
 };
 
-export const PRICING_REDIS_KEY = 'pricing:exchange_rates_v1';
+export const PRICING_REDIS_KEY = 'pricing:exchange_rates_v2';
 export const PRICING_TTL_SECONDS = 24 * 60 * 60;

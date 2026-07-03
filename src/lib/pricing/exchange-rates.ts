@@ -42,7 +42,8 @@ function buildSnapshot(
       symbol,
       usdPrice: safeUsd,
       rubPrice: safeUsd * safeUsdRub,
-      coinsPerUnit: Math.floor(COINS_PER_USD / safeUsd),
+      // 1 монета крипты = X USD → X * COINS_PER_USD игровых монет
+      coinsPerUnit: Math.floor(safeUsd * COINS_PER_USD),
     };
     crypto[symbol] = entry;
     if (symbol === 'TON') {
@@ -184,8 +185,8 @@ export function coinsFromCrypto(
   if (!Number.isFinite(amount) || amount <= 0) return 0;
   const key = normalizeCoinKey(coin);
   const entry = snapshot.crypto[key] ?? snapshot.crypto.USDT;
-  const rate = entry?.coinsPerUnit ?? Math.floor(COINS_PER_USD);
-  return Math.floor(amount * rate);
+  const usdPerUnit = entry?.usdPrice ?? 1;
+  return Math.floor(amount * usdPerUnit * snapshot.coinsPerUsd);
 }
 
 export function getCryptoUsdPrice(coin: string, snapshot: ExchangeRateSnapshot): number {
