@@ -19,6 +19,7 @@ import {
 import {
   readCachedHomeUser,
   cacheHomeUser,
+  clearHomeSessionCache,
   type HomeCachedUser,
 } from '@/lib/user/home-session-cache';
 
@@ -80,7 +81,7 @@ function HomeWithParams() {
     if (user) cacheHomeUser(user);
   }, [user]);
 
-  const refreshHomeUserInBackground = async () => {
+  const refreshHomeUserInBackground = async (): Promise<boolean> => {
     try {
       const sessionResponse = await fetch('/api/auth', {
         method: 'GET',
@@ -88,13 +89,28 @@ function HomeWithParams() {
         cache: 'no-store',
         headers: getApiHeaders(),
       });
-      if (!sessionResponse.ok) return;
+
+      if (!sessionResponse.ok) {
+        if (sessionResponse.status === 401 || sessionResponse.status === 403) {
+          clearHomeSessionCache();
+          setUser(null);
+          setShowMainMenu(false);
+        }
+        return false;
+      }
+
       const sessionData = await sessionResponse.json();
       if (sessionData.success && sessionData.user) {
         setUser(mapApiUserToHomeUser(sessionData.user));
+        return true;
       }
+
+      clearHomeSessionCache();
+      setUser(null);
+      setShowMainMenu(false);
+      return false;
     } catch {
-      /* фоновое обновление не блокирует UI */
+      return false;
     }
   };
 
@@ -104,15 +120,12 @@ function HomeWithParams() {
       return;
     }
 
+    // Кэш — только для быстрого первого кадра; серверную сессию всегда проверяем ниже
     const restored = readCachedHomeUser();
-    if (restored || user) {
-      console.log('✅ Сессия главной восстановлена — фоновое обновление с сервера');
-      initialized.current = true;
+    if (restored && !user) {
+      setUser(restored);
       setLoading(false);
       setShowMainMenu(true);
-      if (restored && !user) setUser(restored);
-      void refreshHomeUserInBackground();
-      return;
     }
     
     console.log('🎮 P.I.D.R. GAME - АВТОМАТИЧЕСКАЯ АВТОРИЗАЦИЯ');
@@ -238,26 +251,21 @@ function HomeWithParams() {
           }
         }
         
-        // ✅ ИСПРАВЛЕНО: Проверяем, есть ли уже пользователь перед редиректом
-        // Если пользователь уже загружен (например, из pendingAuth) - не редиректим
-        if (!user) {
-          const authPath = pendingReferral ? '/auth/register' : '/auth/login';
-          console.log(
-            pendingReferral
-              ? `🎁 Реферальная ссылка (${pendingReferral}) — редирект на регистрацию`
-              : '📝 Нет активной сессии — редирект на страницу входа'
-          );
-          setCheckingAuth(false);
-          setIsBrowser(true);
-          initialized.current = true;
-          router.push(authPath);
-        } else {
-          console.log('✅ Пользователь уже загружен, не редиректим на логин');
-          setCheckingAuth(false);
-          initialized.current = true;
-          setLoading(false);
-          setShowMainMenu(true);
-        }
+        // Нет активной сессии — очищаем устаревший кэш и ведём на вход
+        clearHomeSessionCache();
+        setUser(null);
+        setShowMainMenu(false);
+
+        const authPath = pendingReferral ? '/auth/register' : '/auth/login';
+        console.log(
+          pendingReferral
+            ? `🎁 Реферальная ссылка (${pendingReferral}) — редирект на регистрацию`
+            : '📝 Нет активной сессии — редирект на страницу входа'
+        );
+        setCheckingAuth(false);
+        setIsBrowser(true);
+        initialized.current = true;
+        router.push(authPath);
       };
       
       checkAuth();
@@ -567,7 +575,9 @@ function HomeWithParams() {
         credentials: 'include',
         headers: getApiHeaders(),
       });
+      clearHomeSessionCache();
       setUser(null);
+      setShowMainMenu(false);
       console.log('👋 Выход выполнен');
     } catch (error: unknown) {
       console.error('❌ Ошибка выхода:', error);
