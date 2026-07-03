@@ -1,7 +1,9 @@
 /**
  * Единая сборка лицевой стороны NFT-карты (сервер + клиент).
- * Масти — SVG-path, не Unicode (работает в sharp/librsvg на Vercel).
+ * Все 13 рангов × 4 масти — canvas на сервере и в браузере.
  */
+
+import { normalizeRankToken, normalizeSuitToken } from '@/lib/game/cardAssets';
 
 export const CARD_FACE = {
   width: 300,
@@ -23,13 +25,34 @@ export type CardFaceSpec = {
 
 export function displayRank(rankRaw: string, rankNormalized: string): string {
   if (rankRaw === '10' || rankNormalized === '10') return '10';
+
   const map: Record<string, string> = {
     jack: 'J',
     queen: 'Q',
     king: 'K',
     ace: 'A',
+    j: 'J',
+    q: 'Q',
+    k: 'K',
+    a: 'A',
   };
-  return map[rankNormalized] ?? rankRaw.toUpperCase();
+
+  const fromNorm = map[String(rankNormalized).toLowerCase()];
+  if (fromNorm) return fromNorm;
+
+  const fromRaw = map[String(rankRaw).toLowerCase()];
+  if (fromRaw) return fromRaw;
+
+  const num = parseInt(String(rankRaw), 10);
+  if (!Number.isNaN(num) && num >= 2 && num <= 9) return String(num);
+
+  return String(rankRaw).toUpperCase();
+}
+
+function resolveSuitKey(suit: string): keyof typeof SUIT_PATHS {
+  const normalized = normalizeSuitToken(suit) || suit.toLowerCase();
+  if (normalized in SUIT_PATHS) return normalized as keyof typeof SUIT_PATHS;
+  return 'spades';
 }
 
 export function suitColor(suit: string): string {
@@ -174,9 +197,10 @@ export function drawCardFaceCanvas(
   themeImage?: CanvasImageSource | null
 ) {
   const { width, height, border, cornerMargin, art, themeBadge } = CARD_FACE;
-  const rank = displayRank(spec.rankRaw, spec.rankNormalized);
-  const color = suitColor(spec.suit);
-  const suit = spec.suit in SUIT_PATHS ? spec.suit : 'spades';
+  const rankNorm = normalizeRankToken(spec.rankNormalized || spec.rankRaw) || spec.rankNormalized;
+  const rank = displayRank(spec.rankRaw, rankNorm);
+  const color = suitColor(resolveSuitKey(spec.suit));
+  const suit = resolveSuitKey(spec.suit);
 
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, width, height);

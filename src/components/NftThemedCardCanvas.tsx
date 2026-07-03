@@ -209,7 +209,7 @@ export default function NftThemedCardCanvas({
     };
   }, [cacheKey, suitNorm, rankNorm, themeKey, validThemeId]);
 
-  /** Клиентский canvas — всегда корректные Q/♠; серверный PNG только запасной */
+  /** Клиентский canvas — все ранги/масти; серверный PNG только запасной */
   const imgSrc = clientUrl || composedUrl || null;
 
 
