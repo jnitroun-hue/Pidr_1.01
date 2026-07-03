@@ -51,6 +51,52 @@ export function getNftRankDisplay(rank: string): string {
   return map[rank] ?? rank?.toUpperCase?.() ?? rank;
 }
 
+/** Русское название ранга для витрины и акций */
+export function getNftRankLabelRu(rank: string): string {
+  const key = String(rank ?? '').toLowerCase();
+  const map: Record<string, string> = {
+    a: 'Туз',
+    ace: 'Туз',
+    k: 'Король',
+    king: 'Король',
+    q: 'Дама',
+    queen: 'Дама',
+    j: 'Валет',
+    jack: 'Валет',
+  };
+  if (map[key]) return map[key];
+  if (key === '10' || rank === '10') return '10';
+  const num = parseInt(key, 10);
+  if (!Number.isNaN(num) && num >= 2 && num <= 9) return String(num);
+  return getNftRankDisplay(rank);
+}
+
+/** Родительный падеж масти: «дама пик», «семёрка червей» */
+export function getNftSuitLabelRu(suit: string): string {
+  const map: Record<string, string> = {
+    hearts: 'червей',
+    diamonds: 'бубен',
+    clubs: 'треф',
+    spades: 'пик',
+  };
+  return map[suit?.toLowerCase()] ?? suit;
+}
+
+/** Человекочитаемое имя карты: «Дама ♠ пик» */
+export function formatNftCardNameRu(rank: string, suit: string): string {
+  const rankLabel = getNftRankLabelRu(rank);
+  const suitSymbol = getNftSuitSymbol(suit);
+  const suitLabel = getNftSuitLabelRu(suit);
+  return `${rankLabel} ${suitSymbol} ${suitLabel}`;
+}
+
+/** Заголовок лота / акции: «Дама ♠ пик · Покемон» */
+export function formatNftCardTitleRu(rank: string, suit: string, themeLabel?: string): string {
+  const base = formatNftCardNameRu(rank, suit);
+  const theme = themeLabel?.trim();
+  return theme ? `${base} · ${theme}` : base;
+}
+
 export function getNftRarityLabel(rarity: string): string {
   const labels: Record<string, string> = {
     pokemon: '⚡ Покемон',

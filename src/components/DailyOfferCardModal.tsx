@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import NftThemedCardCanvas from '@/components/NftThemedCardCanvas';
 import { PidrCoinAmount } from '@/components/PidrCoinIcon';
+import { formatNftCardTitleRu } from '@/lib/nft/card-display';
 import type { NftThemeKey } from '@/lib/nft/theme-config';
 import styles from './NFTGallery.module.css';
 
@@ -47,6 +48,10 @@ export default function DailyOfferCardModal({ isOpen, offer, onClose, onBuy }: P
   if (typeof document === 'undefined') return null;
 
   const price = offer?.discountedCoins ?? offer?.priceCoins ?? 0;
+  const displayTitle =
+    offer?.suit && offer?.rank
+      ? formatNftCardTitleRu(offer.rank, offer.suit, offer.themeLabel)
+      : offer?.cardTitle ?? '';
 
   return createPortal(
     <AnimatePresence>
@@ -87,26 +92,9 @@ export default function DailyOfferCardModal({ isOpen, offer, onClose, onBuy }: P
               >
                 Premium · акция дня
               </div>
-              <h2 style={{ color: '#fff7ed', margin: '8px 0 4px', fontSize: 22, fontWeight: 800 }}>
-                {offer.cardTitle}
+              <h2 style={{ color: '#fff7ed', margin: '8px 0 4px', fontSize: 22, fontWeight: 800, lineHeight: 1.35 }}>
+                {displayTitle}
               </h2>
-              {offer.themeLabel && (
-                <span
-                  style={{
-                    display: 'inline-block',
-                    marginTop: 4,
-                    padding: '4px 12px',
-                    borderRadius: 999,
-                    background: 'rgba(251, 191, 36, 0.12)',
-                    border: '1px solid rgba(251, 191, 36, 0.35)',
-                    color: '#fde68a',
-                    fontSize: 11,
-                    fontWeight: 800,
-                  }}
-                >
-                  {offer.themeLabel}
-                </span>
-              )}
             </div>
 
             <div
@@ -130,7 +118,7 @@ export default function DailyOfferCardModal({ isOpen, offer, onClose, onBuy }: P
                   fallbackImageUrl={offer.promoImageUrl}
                   width={280}
                   height={392}
-                  alt={offer.cardTitle}
+                  alt={displayTitle}
                 />
               </motion.div>
             </div>

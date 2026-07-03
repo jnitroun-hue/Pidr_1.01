@@ -18,6 +18,7 @@ import NftThemedCardCanvas from '../../components/NftThemedCardCanvas';
 import type { NftThemeKey } from '@/lib/nft/theme-config';
 import { GRAM } from '@/lib/crypto/gram-brand';
 import PidrCoinIcon, { PidrCoinAmount } from '../../components/PidrCoinIcon';
+import { formatNftCardTitleRu } from '@/lib/nft/card-display';
 
 interface User {
   telegram_id: number;
@@ -280,6 +281,11 @@ export default function ShopPage() {
     }
   };
 
+  const dailyOfferTitle = (promo: PromoCard) =>
+    promo.suit && promo.rank
+      ? formatNftCardTitleRu(promo.rank, promo.suit, promo.themeLabel)
+      : promo.cardTitle;
+
   const handleClaimPromo = async () => {
     if (!dailyPromo) return;
     if (!canClaimPromo) {
@@ -300,7 +306,7 @@ export default function ShopPage() {
     }
 
     if (!(await appConfirm(
-      `Купить карту акции дня за ${coinPrice.toLocaleString('ru-RU')} монет?\n\n${dailyPromo.cardTitle}`,
+      `Купить карту акции дня за ${coinPrice.toLocaleString('ru-RU')} монет?\n\n${dailyOfferTitle(dailyPromo)}`,
       { confirmText: 'Купить', type: 'info' }
     ))) {
       return;
@@ -547,18 +553,17 @@ export default function ShopPage() {
                 <div style={{ color: '#fed7aa', fontSize: 12, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
                   Premium · акция дня · 1/24ч
                 </div>
-                <h3 style={{ color: '#fff7ed', margin: '8px 0 6px', fontSize: 22 }}>
-                  {dailyPromo.cardTitle}
+                <h3 style={{ color: '#fff7ed', margin: '8px 0 6px', fontSize: 22, lineHeight: 1.35 }}>
+                  {dailyOfferTitle(dailyPromo)}
                 </h3>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                   <span style={{ color: '#fde047', fontSize: 26, fontWeight: 900 }}>
-                    <PidrCoinAmount value={dailyPromo.discountedCoins ?? dailyPromo.priceCoins ?? 0} size={24} />
+                    <PidrCoinAmount
+                      value={dailyPromo.discountedCoins ?? dailyPromo.priceCoins ?? 0}
+                      size={24}
+                      showLabel
+                    />
                   </span>
-                  {dailyPromo.themeLabel && (
-                    <span style={{ color: '#fef08a', fontSize: 12, fontWeight: 800 }}>
-                      {dailyPromo.themeLabel}
-                    </span>
-                  )}
                 </div>
                 <p style={{ color: '#fed7aa', margin: '8px 0 0', fontSize: 12 }}>
                   Случайная карта · 1 000–5 000 монет · сразу в коллекцию
@@ -595,7 +600,7 @@ export default function ShopPage() {
                       fallbackImageUrl={dailyPromo.promoImageUrl}
                       width={140}
                       height={196}
-                      alt={dailyPromo.cardTitle}
+                      alt={dailyOfferTitle(dailyPromo)}
                       style={{
                         border: '2px solid rgba(251,146,60,0.65)',
                         boxShadow: '0 8px 24px rgba(249,115,22,0.35)',

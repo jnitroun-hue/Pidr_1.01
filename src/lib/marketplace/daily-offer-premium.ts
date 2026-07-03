@@ -11,6 +11,7 @@ import {
   COMPOSE_VERSION,
 } from '@/lib/nft/compose-theme-card';
 import { normalizeRankToken, normalizeSuitToken } from '@/lib/game/cardAssets';
+import { formatNftCardTitleRu } from '@/lib/nft/card-display';
 import { supabaseAdmin } from '@/lib/supabase';
 import { NFT_CARDS_TABLE, NFT_STORAGE_BUCKET } from '@/lib/nft/constants';
 
@@ -51,25 +52,6 @@ function normalizeRank(rank: string): string {
   return rank.toLowerCase();
 }
 
-function suitDisplay(suit: string): string {
-  const map: Record<string, string> = {
-    hearts: 'H',
-    diamonds: 'D',
-    clubs: 'C',
-    spades: 'S',
-  };
-  return map[suit] ?? suit.slice(0, 1).toUpperCase();
-}
-
-function rankDisplay(rankRaw: string): string {
-  const r = rankRaw.toLowerCase();
-  if (r === 'jack' || r === 'j') return 'J';
-  if (r === 'queen' || r === 'q') return 'Q';
-  if (r === 'king' || r === 'k') return 'K';
-  if (r === 'ace' || r === 'a') return 'A';
-  return rankRaw === '10' ? '10' : rankRaw.toUpperCase();
-}
-
 /** Календарный день акции — по Москве (полночь МСК = новая акция) */
 export function getDayTag(date = new Date()): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Moscow' }).format(date);
@@ -95,7 +77,7 @@ export function buildPremiumDailyOffer(userId: number, dayTag = getDayTag()): Pr
     themeLabel,
     seed,
     promoImageUrl: '',
-    cardTitle: `${rankDisplay(rankRaw)}${suitDisplay(suit)} · ${themeLabel}`,
+    cardTitle: formatNftCardTitleRu(rankRaw, suit, themeLabel),
   };
 }
 
