@@ -13,7 +13,8 @@ export const CARD_FACE = {
   rankFontSize: 48,
   suitIconSize: 32,
   art: { top: 68, left: 22, size: 256 },
-  themeBadge: { top: 378, height: 26 },
+  /** Внутри арта, по центру — не заходит на нижние углы с рангом */
+  themeBadge: { top: 300, height: 22, left: 85, width: 130 },
 } as const;
 
 export type CardFaceSpec = {
@@ -101,8 +102,8 @@ export function buildCardFaceSvg(spec: CardFaceSpec): string {
 
   const badgeBlock = themeLabel
     ? `
-      <rect x="50" y="${themeBadge.top}" width="200" height="${themeBadge.height}" rx="13" fill="#fef3c7" stroke="#fcd34d" stroke-width="1"/>
-      <text x="150" y="${themeBadge.top + 18}" font-family="Helvetica, Arial, sans-serif" font-size="11" font-weight="700" fill="#92400e" text-anchor="middle" letter-spacing="0.08em">${themeLabel}</text>
+      <rect x="${themeBadge.left}" y="${themeBadge.top}" width="${themeBadge.width}" height="${themeBadge.height}" rx="11" fill="#fef3c7" stroke="#fcd34d" stroke-width="1"/>
+      <text x="${themeBadge.left + themeBadge.width / 2}" y="${themeBadge.top + 15}" font-family="Helvetica, Arial, sans-serif" font-size="10" font-weight="700" fill="#92400e" text-anchor="middle" letter-spacing="0.06em">${themeLabel}</text>
     `
     : '';
 
@@ -241,11 +242,11 @@ export function drawCardFaceCanvas(
 
   if (spec.themeLabel) {
     const label = spec.themeLabel.toUpperCase();
-    const bx = 50;
+    const bx = themeBadge.left;
     const by = themeBadge.top;
-    const bw = 200;
+    const bw = themeBadge.width;
     const bh = themeBadge.height;
-    const r = 13;
+    const r = 11;
     ctx.fillStyle = '#fef3c7';
     ctx.strokeStyle = '#fcd34d';
     ctx.lineWidth = 1;
@@ -263,9 +264,9 @@ export function drawCardFaceCanvas(
     ctx.fill();
     ctx.stroke();
     ctx.fillStyle = '#92400e';
-    ctx.font = '700 11px Helvetica, Arial, sans-serif';
+    ctx.font = '700 10px Helvetica, Arial, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(label, width / 2, by + 18);
+    ctx.fillText(label, bx + bw / 2, by + 15);
     ctx.textAlign = 'start';
   }
 }

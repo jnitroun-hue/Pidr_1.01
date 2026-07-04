@@ -8,6 +8,7 @@
 | VK Mini App | [vk/VK_MINI_APP_GUIDE.md](./vk/VK_MINI_APP_GUIDE.md) |
 | Поля для копирования VK | [vk/COPY_PASTE_FIELDS.txt](./vk/COPY_PASTE_FIELDS.txt) |
 | ЮKassa (оплата ₽) | [payments/YOOKASSA_SETUP.md](./payments/YOOKASSA_SETUP.md) |
+| Свой мем-коин + привязка `pidr-coin.png` | [crypto/PIDR_MEME_COIN_GUIDE.md](./crypto/PIDR_MEME_COIN_GUIDE.md) |
 
 **Ваши адреса (пример):**
 - Vercel: `https://pidr-1-01.vercel.app`
