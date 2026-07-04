@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseAdmin } from '@/lib/supabase';
+import { formatRoomHostForInvite, resolveRoomHost } from '@/lib/multiplayer/room-host';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+export const dynamic = 'force-dynamic';
 
-// GET /api/rooms/invite-info?roomId=xxx&roomCode=xxx
+/** GET /api/rooms/invite-info?roomId=xxx&roomCode=xxx */
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -12,51 +12,64 @@ export async function GET(req: NextRequest) {
     const roomCode = searchParams.get('roomCode');
 
     if (!roomId || !roomCode) {
-      return NextResponse.json({
-        success: false,
-        message: 'Room ID и Room Code обязательны'
-      }, { status: 400 });
+      return NextResponse.json(
+        { success: false, message: 'Room ID и Room Code обязательны' },
+        { status: 400 }
+      );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = getSupabaseAdmin();
+    if (!supabase) {
+      return NextResponse.json({ success: false, message: 'Database error' }, { status: 500 });
+    }
 
-    // Получаем информацию о комнате
+    const roomIdNum = parseInt(roomId, 10);
+    if (Number.isNaN(roomIdNum)) {
+      return NextResponse.json({ success: false, message: 'Некорректный roomId' }, { status: 400 });
+    }
+
     const { data: room, error: roomError } = await supabase
       .from('_pidr_rooms')
       .select('id, room_code, name, host_id, status, max_players, current_players')
-      .eq('id', roomId)
+      .eq('id', roomIdNum)
       .eq('room_code', roomCode.toUpperCase())
-      .single();
+      .maybeSingle();
 
     if (roomError || !room) {
-      console.error('❌ Комната не найдена:', roomError);
-      return NextResponse.json({
-        success: false,
-        message: 'Комната не найдена'
-      }, { status: 404 });
+      return NextResponse.json({ success: false, message: 'Комната не найдена' }, { status: 404 });
     }
 
-    // Проверяем статус комнаты
     if (room.status !== 'waiting') {
-      return NextResponse.json({
-        success: false,
-        message: 'Игра уже началась или комната закрыта'
-      }, { status: 400 });
+      return NextResponse.json(
+        { success: false, message: 'Игра уже началась или комната закрыта' },
+        { status: 400 }
+      );
     }
 
-    // Получаем информацию о хосте
-    const { data: host, error: hostError } = await supabase
-      .from('_pidr_users')
-      .select('telegram_id, username, first_name, avatar_url, status')
-      .eq('telegram_id', room.host_id)
-      .single();
+    const host = await resolveRoomHost(supabase, room.id, room.host_id);
 
-    if (hostError || !host) {
-      console.error('❌ Хост не найден:', hostError);
+    if (!host) {
+      console.warn(`⚠️ [invite-info] Хост не найден для комнаты ${room.id}, host_id=${room.host_id}`);
       return NextResponse.json({
-        success: false,
-        message: 'Хост не найден'
-      }, { status: 404 });
+        success: true,
+        room: {
+          id: room.id,
+          roomCode: room.room_code,
+          name: room.name,
+          status: room.status,
+          maxPlayers: room.max_players,
+          currentPlayers: room.current_players,
+        },
+        host: {
+          telegramId: 0,
+          username: 'host',
+          firstName: 'Хост комнаты',
+          avatarUrl: null,
+          status: 'online',
+          isOnline: true,
+        },
+        hostFallback: true,
+      });
     }
 
     return NextResponse.json({
@@ -67,23 +80,13 @@ export async function GET(req: NextRequest) {
         name: room.name,
         status: room.status,
         maxPlayers: room.max_players,
-        currentPlayers: room.current_players
+        currentPlayers: room.current_players,
       },
-      host: {
-        telegramId: host.telegram_id,
-        username: host.username,
-        firstName: host.first_name,
-        avatarUrl: host.avatar_url,
-        status: host.status
-      }
+      host: formatRoomHostForInvite(host),
     });
-
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Неизвестная ошибка';
     console.error('❌ Ошибка получения информации о приглашении:', error);
-    return NextResponse.json({
-      success: false,
-      message: 'Ошибка сервера: ' + (error?.message || 'Неизвестная ошибка')
-    }, { status: 500 });
+    return NextResponse.json({ success: false, message: `Ошибка сервера: ${message}` }, { status: 500 });
   }
 }
-

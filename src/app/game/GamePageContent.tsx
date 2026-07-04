@@ -1080,15 +1080,87 @@ function GamePageContentComponent({
 
   // Realtime-синхронизация мультиплеера (подписка после перехода из лобби в игру)
   useEffect(() => {
-    if (!isMultiplayer || !multiplayerData?.roomId || !isGameActive) return;
+    if (!isMultiplayer || !multiplayerData?.roomId) return;
 
-    const { initMultiplayerRealtime, cleanupMultiplayerRealtime } = useGameStore.getState();
-    initMultiplayerRealtime();
+    const store = useGameStore.getState();
+    if (
+      !store.multiplayerData ||
+      store.multiplayerData.roomId !== multiplayerData.roomId
+    ) {
+      useGameStore.setState({
+        multiplayerData: {
+          roomId: multiplayerData.roomId,
+          roomCode: multiplayerData.roomCode,
+          isHost: multiplayerData.isHost,
+          connectedPlayers: store.multiplayerData?.connectedPlayers ?? [],
+        },
+      });
+    }
+
+    store.initMultiplayerRealtime();
+  }, [isMultiplayer, multiplayerData?.roomId, multiplayerData?.roomCode, multiplayerData?.isHost]);
+
+  useEffect(() => {
+    if (!isMultiplayer || !multiplayerData?.roomId || !isGameActive) return;
+    useGameStore.getState().activateMultiplayerGameSync();
 
     return () => {
-      cleanupMultiplayerRealtime();
+      useGameStore.getState().cleanupMultiplayerRealtime();
     };
   }, [isMultiplayer, multiplayerData?.roomId, isGameActive]);
+
+  // Хост: резервный опрос HTTP-ходов (если Realtime broadcast потерялся)
+  useEffect(() => {
+    if (!isMultiplayer || !multiplayerData?.isHost || !isGameActive || !multiplayerData.roomId) return;
+
+    let cancelled = false;
+    const pollMoves = async () => {
+      try {
+        const response = await fetch(`/api/rooms/${multiplayerData.roomId}/game-move`, {
+          method: 'GET',
+          credentials: 'include',
+          headers: getApiHeaders(),
+          cache: 'no-store',
+        });
+        if (!response.ok || cancelled) return;
+        const data = await response.json();
+        if (!data.success || !Array.isArray(data.moves) || data.moves.length === 0) return;
+        const { applyRemoteMove } = useGameStore.getState();
+        data.moves.forEach((move: Record<string, unknown>) => {
+          applyRemoteMove(move as Parameters<typeof applyRemoteMove>[0]);
+        });
+      } catch {
+        /* ignore */
+      }
+    };
+
+    void pollMoves();
+    const interval = setInterval(pollMoves, 400);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [isMultiplayer, multiplayerData?.isHost, multiplayerData?.roomId, isGameActive]);
+
+  // Гость: на своём ходу периодически просим полный sync у хоста
+  useEffect(() => {
+    if (!isMultiplayer || multiplayerData?.isHost || !isGameActive || !multiplayerData?.roomId) return;
+
+    let cancelled = false;
+    const tick = () => {
+      if (cancelled) return;
+      const state = useGameStore.getState();
+      const me = state.players.find((p) => p.isUser);
+      if (!me || state.currentPlayerId !== me.id) return;
+      state.requestMultiplayerStateSync();
+    };
+
+    const interval = setInterval(tick, 2500);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [isMultiplayer, multiplayerData?.isHost, multiplayerData?.roomId, isGameActive, currentPlayerId, userPlayerId]);
 
   // Пульс «я в игре» + мгновенный Realtime-presence
   const presenceLastSeenRef = useRef<Map<string, number>>(new Map());

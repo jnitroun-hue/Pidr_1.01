@@ -22,14 +22,16 @@ function GamePageInner() {
   const mode = searchParams.get('mode');
   const roomId = searchParams.get('roomId');
   const roomCode = searchParams.get('roomCode');
+  const isHostParam = searchParams.get('isHost');
   const isMultiplayer = mode === 'multiplayer' && Boolean(roomId && roomCode);
+  const isHostFromUrl = isHostParam === '1' || isHostParam === 'true';
 
   return (
     <GamePageContent
       isMultiplayer={isMultiplayer}
       multiplayerData={
         isMultiplayer
-          ? { roomId: roomId!, roomCode: roomCode!, isHost: false }
+          ? { roomId: roomId!, roomCode: roomCode!, isHost: isHostFromUrl }
           : undefined
       }
     />

@@ -4,8 +4,8 @@ export const GAME_HEARTBEAT_INTERVAL_MS = 1_000;
 /** Локальная проверка «пропал ли игрок» */
 export const PRESENCE_STALE_CHECK_MS = 350;
 
-/** Нет пульса ~2.8 с → offline (≈2 пропущенных heartbeat) */
-export const MULTIPLAYER_PRESENCE_TIMEOUT_MS = 2_800;
+/** Нет пульса ~8 с → offline (веб-клиент грузится дольше мини-аппа) */
+export const MULTIPLAYER_PRESENCE_TIMEOUT_MS = 8_000;
 
 /** Резервный опрос API (если Realtime мигнул) */
 export const PRESENCE_API_POLL_MS = 1_500;

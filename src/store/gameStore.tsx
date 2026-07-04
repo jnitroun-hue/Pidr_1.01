@@ -268,11 +268,21 @@ function findRemotePlayer(remotePlayers: Player[], local: Player): Player | unde
 }
 
 function shouldDeferHumanMoveToHost(state: GameState, playerId?: string | null): boolean {
-  if (!state.multiplayerData || state.multiplayerData.isHost) return false
-  const id = playerId ?? state.currentPlayerId
-  if (!id) return false
-  const player = state.players.find((p) => p.id === id)
-  return Boolean(player?.isUser)
+  if (!state.multiplayerData || state.multiplayerData.isHost) return false;
+  const id = playerId ?? state.currentPlayerId;
+  if (!id) return false;
+  const player = state.players.find((p) => p.id === id);
+  if (!player) return false;
+  return !isAutomatedPlayer(player);
+}
+
+function resolveMovePlayerId(state: GameState, movePlayerId?: string): string | null {
+  if (!movePlayerId) return state.currentPlayerId;
+  const key = String(movePlayerId);
+  const direct = state.players.find((p) => p.id === key);
+  if (direct) return direct.id;
+  const matched = state.players.find((p) => matchRemotePlayerId(p, key));
+  return matched?.id ?? key;
 }
 
 interface GameState {
@@ -428,9 +438,9 @@ interface GameState {
   revealDeckCard: () => boolean
   canPlaceCardOnSelf: (deckCard: Card, playerTopCard: Card) => boolean  
   placeCardOnSelfByRules: (opts?: { fromRemote?: boolean }) => void
-  takeCardNotByRules: () => void // Положить карту поверх своих карт (если нет ходов)
+  takeCardNotByRules: (opts?: { fromRemote?: boolean }) => void // Положить карту поверх своих карт (если нет ходов)
   resetTurnState: () => void
-  onDeckClick: () => void
+  onDeckClick: (opts?: { fromRemote?: boolean }) => void
   findAvailableTargetsForDeckCard: (deckCard: Card) => number[]
   
   // Методы для 2-й стадии (P.I.D.R. правила)
@@ -471,6 +481,8 @@ interface GameState {
   
   // Мультиплеер методы
   initMultiplayerRealtime: () => void
+  activateMultiplayerGameSync: () => void
+  requestMultiplayerStateSync: () => void
   cleanupMultiplayerRealtime: () => void
   applyMultiplayerPresence: (
     updates: Array<{ playerId: string; isOnline: boolean }>,
@@ -1811,6 +1823,9 @@ export const useGameStore = create<GameState>()(
             playerId: currentPlayerId,
             targetId: targetPlayerId,
           });
+          if (!currentPlayer.isBot) {
+            get().showNotification('Ход отправлен хосту…', 'info', 1500);
+          }
           return;
         }
         
@@ -2257,9 +2272,14 @@ export const useGameStore = create<GameState>()(
       },
       
       // Обработка клика по колоде
-      onDeckClick: () => {
+      onDeckClick: (opts?: { fromRemote?: boolean }) => {
         const { turnPhase, currentPlayerId, players, revealedDeckCard } = get();
         if (turnPhase !== 'showing_deck_hint' || !currentPlayerId) return;
+
+        if (!opts?.fromRemote && shouldDeferHumanMoveToHost(get(), currentPlayerId)) {
+          void get().sendPlayerMove({ type: 'deck_click', playerId: currentPlayerId });
+          return;
+        }
         
         // Открываем карту из колоды (ВОЗВРАЩАЕМ СТАРУЮ ЛОГИКУ)
         if (!get().revealDeckCard()) {
@@ -2505,9 +2525,14 @@ export const useGameStore = create<GameState>()(
        },
        
              // Положить карту поверх своих карт (завершение хода)
-      takeCardNotByRules: () => {
+      takeCardNotByRules: (opts?: { fromRemote?: boolean }) => {
         const { players, currentPlayerId, revealedDeckCard, deck } = get();
         if (!currentPlayerId || !revealedDeckCard) return;
+
+        if (!opts?.fromRemote && shouldDeferHumanMoveToHost(get(), currentPlayerId)) {
+          void get().sendPlayerMove({ type: 'take_not_by_rules', playerId: currentPlayerId });
+          return;
+        }
         
         const currentPlayer = players.find(p => p.id === currentPlayerId);
         if (!currentPlayer) return;
@@ -4253,7 +4278,8 @@ export const useGameStore = create<GameState>()(
             let isBotSubstitute = player.isBotSubstitute ?? false;
 
             if (authoritative && !player.isUser) {
-              isBotSubstitute = !isOnline;
+              // Реальных людей не заменяем ботом из-за кратковременного offline (медленный веб-клиент)
+              isBotSubstitute = player.isBot ? !isOnline : false;
             } else if (!authoritative) {
               isBotSubstitute = player.isBotSubstitute ?? false;
             }
@@ -4288,7 +4314,7 @@ export const useGameStore = create<GameState>()(
 
         initMultiplayerRealtime: () => {
           const { multiplayerData, isGameActive } = get();
-          if (!multiplayerData?.roomId || !isGameActive || multiplayerRealtimeActive) return;
+          if (!multiplayerData?.roomId || multiplayerRealtimeActive) return;
 
           const manager = getMultiplayerRoomManager();
           const roomId = multiplayerData.roomId;
@@ -4332,12 +4358,12 @@ export const useGameStore = create<GameState>()(
             },
           });
 
-          if (multiplayerData.isHost) {
+          if (isGameActive && multiplayerData.isHost) {
             multiplayerStoreUnsub = useGameStore.subscribe(() => {
               scheduleHostMultiplayerState();
             });
             publishHostMultiplayerState();
-          } else {
+          } else if (isGameActive) {
             setTimeout(() => {
               getMultiplayerRoomManager().requestGameStateSync(roomId);
             }, 150);
@@ -4345,6 +4371,32 @@ export const useGameStore = create<GameState>()(
 
           multiplayerRealtimeActive = true;
           console.log('📡 [Multiplayer] Realtime подключён для комнаты', roomId);
+        },
+
+        activateMultiplayerGameSync: () => {
+          const { multiplayerData, isGameActive } = get();
+          if (!multiplayerData?.roomId || !isGameActive || !multiplayerRealtimeActive) return;
+
+          if (multiplayerData.isHost) {
+            if (!multiplayerStoreUnsub) {
+              multiplayerStoreUnsub = useGameStore.subscribe(() => {
+                scheduleHostMultiplayerState();
+              });
+            }
+            publishHostMultiplayerState();
+            return;
+          }
+
+          getMultiplayerRoomManager().requestGameStateSync(multiplayerData.roomId);
+        },
+
+        requestMultiplayerStateSync: () => {
+          const { multiplayerData } = get();
+          if (!multiplayerData?.roomId) return;
+          if (!multiplayerRealtimeActive) {
+            get().initMultiplayerRealtime();
+          }
+          getMultiplayerRoomManager().requestGameStateSync(multiplayerData.roomId);
         },
 
         cleanupMultiplayerRealtime: () => {
@@ -4461,17 +4513,28 @@ export const useGameStore = create<GameState>()(
           }
            
            console.log(`🌐 [Multiplayer] Отправляем ход игрока:`, moveData);
+
+          const payload = {
+            ...moveData,
+            timestamp: Date.now(),
+          };
            
           try {
             const manager = getMultiplayerRoomManager();
-            await manager.broadcastMove(multiplayerData.roomId, {
-              type: moveData.type,
-              playerId: moveData.playerId,
-              cardId: moveData.cardId,
-              targetId: moveData.targetId,
-              contributorId: moveData.contributorId,
-              timestamp: Date.now()
-            });
+            await manager.broadcastMove(multiplayerData.roomId, payload);
+
+            try {
+              const headers = new Headers(getApiHeaders() as HeadersInit);
+              headers.set('Content-Type', 'application/json');
+              await fetch(`/api/rooms/${multiplayerData.roomId}/game-move`, {
+                method: 'POST',
+                credentials: 'include',
+                headers,
+                body: JSON.stringify(payload),
+              });
+            } catch {
+              /* HTTP fallback optional */
+            }
 
             if (multiplayerData.isHost) {
               flushHostMultiplayerState();
@@ -4487,44 +4550,67 @@ export const useGameStore = create<GameState>()(
            const { multiplayerData } = get();
            if (!multiplayerData?.isHost) return;
 
-           const localUser = get().players.find((p) => p.isUser);
-           if (localUser && moveData.playerId === localUser.id) return;
+           const state = get();
+           const localUser = state.players.find((p) => p.isUser);
+           const resolvedPlayerId = resolveMovePlayerId(state, moveData.playerId);
+           if (localUser && resolvedPlayerId && localUser.id === resolvedPlayerId) return;
            
            try {
-             if (moveData.playerId && moveData.type !== 'make_move') {
+             if (resolvedPlayerId && moveData.type !== 'make_move') {
                const { currentPlayerId } = get();
-               if (currentPlayerId !== moveData.playerId) {
-                 set({ currentPlayerId: String(moveData.playerId) });
+               if (currentPlayerId !== resolvedPlayerId) {
+                 set({ currentPlayerId: resolvedPlayerId });
                }
              }
 
              switch (moveData.type) {
+               case 'deck_click':
+                 if (resolvedPlayerId) {
+                   if (get().currentPlayerId !== resolvedPlayerId) {
+                     set({ currentPlayerId: resolvedPlayerId });
+                   }
+                   get().onDeckClick({ fromRemote: true });
+                 }
+                 break;
+
+               case 'take_not_by_rules':
+                 if (resolvedPlayerId) {
+                   if (get().currentPlayerId !== resolvedPlayerId) {
+                     set({ currentPlayerId: resolvedPlayerId });
+                   }
+                   get().takeCardNotByRules({ fromRemote: true });
+                 }
+                 break;
+
                case 'make_move':
-                 if (moveData.targetId === 'initiate_move' && moveData.playerId) {
-                   if (get().currentPlayerId !== moveData.playerId) {
-                     set({ currentPlayerId: String(moveData.playerId) });
+                 if (moveData.targetId === 'initiate_move' && resolvedPlayerId) {
+                   if (get().currentPlayerId !== resolvedPlayerId) {
+                     set({ currentPlayerId: resolvedPlayerId });
                    }
                    get().makeMove('initiate_move', { fromRemote: true });
                    break;
                  }
-                 if (moveData.targetId && moveData.playerId) {
-                   if (get().currentPlayerId !== moveData.playerId) {
-                     set({ currentPlayerId: String(moveData.playerId) });
+                 if (moveData.targetId && resolvedPlayerId) {
+                   if (get().currentPlayerId !== resolvedPlayerId) {
+                     set({ currentPlayerId: resolvedPlayerId });
                    }
                    get().makeMove(String(moveData.targetId), { fromRemote: true });
                  }
                  break;
 
                case 'place_on_self':
-                 if (moveData.playerId) {
+                 if (resolvedPlayerId) {
+                   if (get().currentPlayerId !== resolvedPlayerId) {
+                     set({ currentPlayerId: resolvedPlayerId });
+                   }
                    get().placeCardOnSelfByRules({ fromRemote: true });
                  }
                  break;
 
                case 'card_played':
-                 if (moveData.cardId && moveData.playerId) {
+                 if (moveData.cardId && resolvedPlayerId) {
                   const { players, gameStage } = get();
-                  const player = players.find(p => p.id === moveData.playerId);
+                  const player = players.find(p => p.id === resolvedPlayerId);
                   
                   if (!player) return;
                   
@@ -4541,17 +4627,17 @@ export const useGameStore = create<GameState>()(
                  break;
                  
                case 'card_taken':
-                 if (moveData.playerId) {
+                 if (resolvedPlayerId) {
                   const { gameStage } = get();
                   
                   if (gameStage === 2 || gameStage === 3) {
                     const { currentPlayerId } = get();
-                    if (currentPlayerId === moveData.playerId) {
+                    if (currentPlayerId === resolvedPlayerId) {
                       get().takeTableCards();
                     }
                   } else {
                     const { currentPlayerId } = get();
-                    if (currentPlayerId === moveData.playerId) {
+                    if (currentPlayerId === resolvedPlayerId) {
                       get().drawCardFromDeck();
                     }
                   }

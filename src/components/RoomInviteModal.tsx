@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Users, Crown, CheckCircle, XCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -11,6 +11,8 @@ interface RoomInviteModalProps {
   roomCode: string;
   onClose: () => void;
   onJoin: () => void;
+  prefillRoom?: RoomInfo;
+  prefillHost?: HostInfo;
 }
 
 interface RoomInfo {
@@ -28,6 +30,12 @@ interface HostInfo {
   firstName: string;
   avatarUrl?: string;
   status: string;
+  isOnline?: boolean;
+}
+
+function hostCanJoin(host: HostInfo): boolean {
+  if (host.isOnline === true) return true;
+  return ['online', 'in_room', 'playing'].includes(host.status);
 }
 
 export default function RoomInviteModal({
@@ -35,39 +43,63 @@ export default function RoomInviteModal({
   roomId,
   roomCode,
   onClose,
-  onJoin
+  onJoin,
+  prefillRoom,
+  prefillHost,
 }: RoomInviteModalProps) {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [roomInfo, setRoomInfo] = useState<RoomInfo | null>(null);
-  const [hostInfo, setHostInfo] = useState<HostInfo | null>(null);
+  const [loading, setLoading] = useState(!prefillRoom || !prefillHost);
+  const [roomInfo, setRoomInfo] = useState<RoomInfo | null>(prefillRoom ?? null);
+  const [hostInfo, setHostInfo] = useState<HostInfo | null>(prefillHost ?? null);
   const [error, setError] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
+  const prefillAppliedRef = useRef(false);
 
   useEffect(() => {
-    if (isOpen && roomId && roomCode) {
-      loadRoomInfo();
+    if (!isOpen || !roomId || !roomCode) {
+      prefillAppliedRef.current = false;
+      return;
     }
+
+    const hasPrefill = Boolean(prefillRoom && prefillHost);
+    if (hasPrefill && !prefillAppliedRef.current) {
+      setRoomInfo(prefillRoom!);
+      setHostInfo(prefillHost!);
+      setLoading(false);
+      setError(null);
+      prefillAppliedRef.current = true;
+    }
+
+    void loadRoomInfo(hasPrefill);
+    // prefill применяем один раз при открытии; roomId/roomCode достаточно для refresh
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, roomId, roomCode]);
 
-  const loadRoomInfo = async () => {
+  const loadRoomInfo = async (hasPrefill: boolean) => {
     try {
-      setLoading(true);
-      setError(null);
+      if (!hasPrefill) {
+        setLoading(true);
+        setError(null);
+      }
 
       const response = await fetch(`/api/rooms/invite-info?roomId=${roomId}&roomCode=${roomCode}`);
       const data = await response.json();
 
       if (!data.success) {
-        setError(data.message || 'Ошибка загрузки информации о комнате');
+        if (!hasPrefill) {
+          setError(data.message || 'Ошибка загрузки информации о комнате');
+        }
         return;
       }
 
       setRoomInfo(data.room);
       setHostInfo(data.host);
-    } catch (err: any) {
+      setError(null);
+    } catch (err: unknown) {
       console.error('❌ Ошибка загрузки информации о комнате:', err);
-      setError('Не удалось загрузить информацию о комнате');
+      if (!hasPrefill) {
+        setError('Не удалось загрузить информацию о комнате');
+      }
     } finally {
       setLoading(false);
     }
@@ -89,6 +121,8 @@ export default function RoomInviteModal({
       setJoining(false);
     }
   };
+
+  const canJoin = hostInfo ? hostCanJoin(hostInfo) : false;
 
   if (!isOpen) return null;
 
@@ -286,7 +320,7 @@ export default function RoomInviteModal({
                       @{hostInfo.username}
                     </div>
                   </div>
-                  {hostInfo.status === 'online' ? (
+                  {canJoin ? (
                     <div style={{
                       padding: '6px 12px',
                       background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
@@ -305,7 +339,7 @@ export default function RoomInviteModal({
                         background: '#ffffff',
                         animation: 'pulse 2s ease-in-out infinite'
                       }}></div>
-                      Онлайн
+                      {hostInfo.status === 'in_room' ? 'В комнате' : hostInfo.status === 'playing' ? 'В игре' : 'Онлайн'}
                     </div>
                   ) : (
                     <div style={{
@@ -347,12 +381,12 @@ export default function RoomInviteModal({
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <motion.button
                   onClick={handleJoin}
-                  disabled={joining || hostInfo.status !== 'online'}
-                  whileHover={!joining && hostInfo.status === 'online' ? { scale: 1.02 } : {}}
-                  whileTap={!joining && hostInfo.status === 'online' ? { scale: 0.98 } : {}}
+                  disabled={joining || !canJoin}
+                  whileHover={!joining && canJoin ? { scale: 1.02 } : {}}
+                  whileTap={!joining && canJoin ? { scale: 0.98 } : {}}
                   style={{
                     padding: '16px 24px',
-                    background: hostInfo.status === 'online'
+                    background: canJoin
                       ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
                       : 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)',
                     border: 'none',
@@ -360,8 +394,8 @@ export default function RoomInviteModal({
                     color: '#ffffff',
                     fontSize: '16px',
                     fontWeight: '700',
-                    cursor: hostInfo.status === 'online' && !joining ? 'pointer' : 'not-allowed',
-                    opacity: hostInfo.status === 'online' && !joining ? 1 : 0.6,
+                    cursor: canJoin && !joining ? 'pointer' : 'not-allowed',
+                    opacity: canJoin && !joining ? 1 : 0.6,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -407,7 +441,7 @@ export default function RoomInviteModal({
                 </motion.button>
               </div>
 
-              {hostInfo.status !== 'online' && (
+              {!canJoin && (
                 <div style={{
                   marginTop: '16px',
                   padding: '12px',
