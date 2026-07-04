@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
-import { friendLinkId, resolveFriendUser, ensureMutualFriendship } from '@/lib/friends/friend-links';
+import { resolveFriendUser, sendFriendRequest } from '@/lib/friends/friend-links';
 
 /**
  * POST /api/friends/add
  * friend_id — id пользователя из БД (или legacy telegram_id)
- * Сразу взаимная дружба (как при реферале).
+ * Отправляет запрос в друзья; взаимная дружба только после принятия.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -55,26 +55,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const ownerKey = friendLinkId(dbUserId);
-    const friendKey = friendLinkId(friendUser.id);
+    const result = await sendFriendRequest(supabase, dbUserId, friendUser.id);
 
-    const { data: existing } = await supabase
-      .from('_pidr_friends')
-      .select('id, status')
-      .eq('user_id', ownerKey)
-      .eq('friend_id', friendKey)
-      .maybeSingle();
-
-    if (existing?.status === 'accepted') {
+    if (result === 'already_friends') {
       return NextResponse.json(
         { success: false, error: 'Уже в друзьях' },
         { status: 400 }
       );
     }
 
-    await ensureMutualFriendship(supabase, dbUserId, friendUser.id);
+    if (result === 'already_sent') {
+      return NextResponse.json({
+        success: true,
+        status: 'pending',
+        message: 'Запрос уже отправлен — ждём ответа',
+      });
+    }
 
-    return NextResponse.json({ success: true, message: 'Друг добавлен!' });
+    if (result === 'accepted') {
+      return NextResponse.json({
+        success: true,
+        status: 'accepted',
+        message: 'Запрос принят — вы теперь друзья!',
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+      status: 'pending',
+      message: 'Приглашение в друзья отправлено',
+    });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('❌ Ошибка API /api/friends/add:', error);

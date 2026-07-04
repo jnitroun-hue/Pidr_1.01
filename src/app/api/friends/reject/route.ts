@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
-import { friendLinkId, friendLinkIdsForUser, ensureMutualFriendship } from '@/lib/friends/friend-links';
+import { friendLinkId, friendLinkIdsForUser } from '@/lib/friends/friend-links';
 
 /**
- * POST /api/friends/accept
- * friend_id — id из БД отправителя запроса
+ * POST /api/friends/reject
+ * Отклонить входящий запрос в друзья
  */
 export async function POST(request: NextRequest) {
   try {
     const supabase = getSupabaseAdmin();
-
     if (!supabase) {
       return NextResponse.json(
         { success: false, error: 'Database connection error' },
@@ -43,12 +42,11 @@ export async function POST(request: NextRequest) {
     }
 
     const myKeys = friendLinkIdsForUser(dbUserId, dbUser.telegram_id);
-    const myCanonical = friendLinkId(dbUserId);
     const fromKey = friendLinkId(friendIdRaw);
 
     const { data: pendingRequest, error: checkError } = await supabase
       .from('_pidr_friends')
-      .select('id, status, user_id, friend_id')
+      .select('id')
       .eq('user_id', fromKey)
       .in('friend_id', myKeys)
       .eq('status', 'pending')
@@ -61,43 +59,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { error: updateError } = await supabase
+    const { error: deleteError } = await supabase
       .from('_pidr_friends')
-      .update({ status: 'accepted' })
+      .delete()
       .eq('id', pendingRequest.id);
 
-    if (updateError) {
+    if (deleteError) {
       return NextResponse.json(
-        { success: false, error: 'Ошибка принятия запроса' },
+        { success: false, error: 'Не удалось отклонить запрос' },
         { status: 500 }
       );
     }
 
-    const fromUserId = parseInt(fromKey, 10);
-    if (!Number.isNaN(fromUserId)) {
-      await ensureMutualFriendship(supabase, dbUserId, fromUserId);
-    } else {
-      const { data: existingReverse } = await supabase
-        .from('_pidr_friends')
-        .select('id')
-        .eq('user_id', myCanonical)
-        .eq('friend_id', fromKey)
-        .maybeSingle();
-
-      if (!existingReverse) {
-        await supabase.from('_pidr_friends').insert({
-          user_id: myCanonical,
-          friend_id: fromKey,
-          status: 'accepted',
-          created_at: new Date().toISOString(),
-        });
-      }
-    }
-
-    return NextResponse.json({ success: true, message: 'Запрос принят!' });
+    return NextResponse.json({ success: true, message: 'Запрос отклонён' });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('❌ Ошибка API /api/friends/accept:', error);
+    console.error('❌ Ошибка API /api/friends/reject:', error);
     return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }

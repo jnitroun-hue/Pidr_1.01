@@ -336,6 +336,37 @@
   background: linear-gradient(135deg, #3b82f6, #2563eb);
 }
 
+.iconBtnAccept {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+}
+
+.iconBtnReject {
+  background: linear-gradient(135deg, #64748b, #475569);
+}
+
+.pendingPill {
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+  background: rgba(245, 158, 11, 0.12);
+  color: #fcd34d;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  text-align: center;
+}
+
+.requestsBanner {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: rgba(245, 158, 11, 0.08);
+  color: #fde68a;
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .empty {
   text-align: center;
   padding: 48px 20px;

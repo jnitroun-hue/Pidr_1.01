@@ -135,6 +135,65 @@ export function formatFriendForApi(u: FriendUserRow) {
   };
 }
 
+/** Отправить запрос в друзья (односторонний pending) */
+export async function sendFriendRequest(
+  supabase: SupabaseClient,
+  fromUserId: number,
+  toUserId: number
+): Promise<'sent' | 'accepted' | 'already_friends' | 'already_sent'> {
+  if (fromUserId === toUserId) return 'already_friends';
+
+  const fromKey = friendLinkId(fromUserId);
+  const toKey = friendLinkId(toUserId);
+
+  const { data: acceptedRows } = await supabase
+    .from('_pidr_friends')
+    .select('id, status, user_id, friend_id')
+    .eq('status', 'accepted')
+    .or(
+      `and(user_id.eq.${fromKey},friend_id.eq.${toKey}),and(user_id.eq.${toKey},friend_id.eq.${fromKey})`
+    )
+    .limit(1);
+
+  if (acceptedRows && acceptedRows.length > 0) {
+    return 'already_friends';
+  }
+
+  const { data: incomingFromThem } = await supabase
+    .from('_pidr_friends')
+    .select('id')
+    .eq('user_id', toKey)
+    .eq('friend_id', fromKey)
+    .eq('status', 'pending')
+    .maybeSingle();
+
+  if (incomingFromThem) {
+    await ensureMutualFriendship(supabase, fromUserId, toUserId);
+    return 'accepted';
+  }
+
+  const { data: myPending } = await supabase
+    .from('_pidr_friends')
+    .select('id')
+    .eq('user_id', fromKey)
+    .eq('friend_id', toKey)
+    .eq('status', 'pending')
+    .maybeSingle();
+
+  if (myPending) {
+    return 'already_sent';
+  }
+
+  await supabase.from('_pidr_friends').insert({
+    user_id: fromKey,
+    friend_id: toKey,
+    status: 'pending',
+    created_at: new Date().toISOString(),
+  });
+
+  return 'sent';
+}
+
 /** Взаимная дружба «accepted» по id из БД */
 export async function ensureMutualFriendship(
   supabase: SupabaseClient,

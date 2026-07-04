@@ -15,6 +15,8 @@ import {
   Copy,
   Gamepad2,
   Target,
+  Check,
+  X as XIcon,
 } from 'lucide-react';
 import PageLoadingScreen from '@/components/PageLoadingScreen';
 import { fetchWithAuth } from '@/lib/api-headers';
@@ -52,6 +54,9 @@ export default function FriendsPage() {
   const [referralInviteUrl, setReferralInviteUrl] = useState('');
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [invitingId, setInvitingId] = useState<number | null>(null);
+  const [incomingRequests, setIncomingRequests] = useState<Friend[]>([]);
+  const [outgoingPendingIds, setOutgoingPendingIds] = useState<Set<number>>(new Set());
+  const [actingOnId, setActingOnId] = useState<number | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -60,6 +65,26 @@ export default function FriendsPage() {
     if (roomId && roomCode) {
       setInviteRoomId(roomId);
       setInviteRoomCode(roomCode);
+    }
+  }, []);
+
+  const loadFriendRequests = useCallback(async () => {
+    try {
+      const response = await fetchWithAuth('/api/friends/requests', {
+        method: 'GET',
+        cache: 'no-store',
+      });
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          setIncomingRequests(result.incoming || []);
+          setOutgoingPendingIds(
+            new Set((result.outgoing || []).map((u: Friend) => u.id))
+          );
+        }
+      }
+    } catch (error) {
+      console.error('❌ Ошибка загрузки запросов:', error);
     }
   }, []);
 
@@ -107,9 +132,13 @@ export default function FriendsPage() {
   useEffect(() => {
     void loadFriends();
     void loadReferralLink();
-    const interval = setInterval(() => void loadFriends(), 30000);
+    void loadFriendRequests();
+    const interval = setInterval(() => {
+      void loadFriends();
+      void loadFriendRequests();
+    }, 30000);
     return () => clearInterval(interval);
-  }, [loadFriends, loadReferralLink]);
+  }, [loadFriends, loadReferralLink, loadFriendRequests]);
 
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
@@ -142,15 +171,68 @@ export default function FriendsPage() {
       });
       const result = await response.json();
       if (response.ok && result.success) {
-        await appAlert('Друг добавлен в список!', { title: 'Готово', type: 'success' });
-        await loadFriends();
+        if (result.status === 'accepted') {
+          await appAlert('Вы приняли встречный запрос — теперь вы друзья!', {
+            title: 'Готово',
+            type: 'success',
+          });
+          await loadFriends();
+        } else {
+          await appAlert(result.message || 'Приглашение отправлено — ждём ответа', {
+            title: 'Запрос отправлен',
+            type: 'success',
+          });
+        }
+        await loadFriendRequests();
         setSearchQuery('');
         setSearchResults([]);
       } else {
-        await appAlert(result.error || 'Не удалось добавить', { title: 'Ошибка', type: 'error' });
+        await appAlert(result.error || 'Не удалось отправить запрос', { title: 'Ошибка', type: 'error' });
       }
     } catch {
-      await appAlert('Ошибка при добавлении друга', { title: 'Ошибка', type: 'error' });
+      await appAlert('Ошибка при отправке запроса', { title: 'Ошибка', type: 'error' });
+    }
+  };
+
+  const handleAcceptFriend = async (friendDbId: number) => {
+    try {
+      setActingOnId(friendDbId);
+      const response = await fetchWithAuth('/api/friends/accept', {
+        method: 'POST',
+        body: JSON.stringify({ friend_id: friendDbId }),
+      });
+      const result = await response.json();
+      if (response.ok && result.success) {
+        await appAlert('Запрос принят!', { title: 'Друзья', type: 'success' });
+        await loadFriends();
+        await loadFriendRequests();
+      } else {
+        await appAlert(result.error || 'Не удалось принять', { title: 'Ошибка', type: 'error' });
+      }
+    } catch {
+      await appAlert('Ошибка при принятии', { title: 'Ошибка', type: 'error' });
+    } finally {
+      setActingOnId(null);
+    }
+  };
+
+  const handleRejectFriend = async (friendDbId: number) => {
+    try {
+      setActingOnId(friendDbId);
+      const response = await fetchWithAuth('/api/friends/reject', {
+        method: 'POST',
+        body: JSON.stringify({ friend_id: friendDbId }),
+      });
+      const result = await response.json();
+      if (response.ok && result.success) {
+        await loadFriendRequests();
+      } else {
+        await appAlert(result.error || 'Не удалось отклонить', { title: 'Ошибка', type: 'error' });
+      }
+    } catch {
+      await appAlert('Ошибка при отклонении', { title: 'Ошибка', type: 'error' });
+    } finally {
+      setActingOnId(null);
     }
   };
 
@@ -282,6 +364,27 @@ export default function FriendsPage() {
         <div className={styles.referralBox}>Реферал: {referralInviteUrl}</div>
       )}
 
+      {incomingRequests.length > 0 && (
+        <section className={styles.section}>
+          <div className={styles.requestsBanner}>
+            📩 У вас {incomingRequests.length} запрос(ов) в друзья — примите или отклоните
+          </div>
+          <h2 className={styles.sectionTitle}>Входящие запросы · {incomingRequests.length}</h2>
+          <div className={styles.cardList}>
+            {incomingRequests.map((user) => (
+              <PersonCard
+                key={`req-${user.id}`}
+                person={user}
+                incomingRequest
+                acting={actingOnId === user.id}
+                onAccept={() => void handleAcceptFriend(user.id)}
+                onReject={() => void handleRejectFriend(user.id)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
       {searchQuery.length >= 1 && (
         <section className={styles.section}>
           <h2 className={styles.sectionTitle}>🔍 Поиск · {searchResults.length}</h2>
@@ -296,6 +399,7 @@ export default function FriendsPage() {
                   key={user.id}
                   person={user}
                   alreadyFriend={friendIds.has(user.id)}
+                  requestSent={outgoingPendingIds.has(user.id)}
                   inviteRoomMode={Boolean(inviteRoomId && inviteRoomCode)}
                   inviting={invitingId === user.id}
                   onAdd={() => void handleAddFriend(user.id)}
@@ -374,16 +478,26 @@ export default function FriendsPage() {
 function PersonCard({
   person,
   alreadyFriend,
+  requestSent,
+  incomingRequest,
+  acting,
   inviteRoomMode,
   inviting,
   onAdd,
+  onAccept,
+  onReject,
   onInviteRoom,
 }: {
   person: Friend;
   alreadyFriend?: boolean;
+  requestSent?: boolean;
+  incomingRequest?: boolean;
+  acting?: boolean;
   inviteRoomMode?: boolean;
   inviting?: boolean;
   onAdd?: () => void;
+  onAccept?: () => void;
+  onReject?: () => void;
   onInviteRoom?: () => void;
 }) {
   const presenceClass =
@@ -455,15 +569,42 @@ function PersonCard({
           </button>
         )}
 
-        {!alreadyFriend && onAdd && (
+        {incomingRequest && onAccept && onReject && (
+          <>
+            <button
+              type="button"
+              className={`${styles.iconBtn} ${styles.iconBtnAccept}`}
+              disabled={acting}
+              title="Принять"
+              onClick={onAccept}
+            >
+              <Check size={18} />
+            </button>
+            <button
+              type="button"
+              className={`${styles.iconBtn} ${styles.iconBtnReject}`}
+              disabled={acting}
+              title="Отклонить"
+              onClick={onReject}
+            >
+              <XIcon size={18} />
+            </button>
+          </>
+        )}
+
+        {!alreadyFriend && !requestSent && !incomingRequest && onAdd && (
           <button
             type="button"
             className={`${styles.iconBtn} ${styles.iconBtnAdd}`}
-            title="Добавить в друзья"
+            title="Отправить запрос в друзья"
             onClick={onAdd}
           >
             <UserPlus size={18} />
           </button>
+        )}
+
+        {requestSent && !alreadyFriend && (
+          <span className={styles.pendingPill}>Ожидает</span>
         )}
       </div>
     </motion.div>
