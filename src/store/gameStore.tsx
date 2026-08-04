@@ -562,6 +562,11 @@ let lastRemoteSyncSeq = 0;
 let hostSyncSeq = 0;
 const pendingBotAskTargets = new Set<string>();
 
+/** Ослабление «одна карта» у ботов — только после того, как кто-то уже выбыл */
+function hasAnyPlayerExited(players: Player[]): boolean {
+  return players.some(p => p.isWinner);
+}
+
 function publishHostMultiplayerState(): void {
   const snap = useGameStore.getState();
   if (!snap.isGameActive || !snap.multiplayerData?.isHost || !multiplayerRealtimeActive) return;
@@ -3769,16 +3774,21 @@ export const useGameStore = create<GameState>()(
               
               const hasAlreadyDeclared = oneCardDeclarations[player.id];
               
-              // Боты объявляют быстро (0.6–1.4с), чтобы успеть ДО вопроса «сколько карт?»
-              if (!hasAlreadyDeclared && player.isBot && !player.isWinner) {
-                const delay = 600 + Math.random() * 800;
-                console.log(`🤖 [checkOneCardStatus] Бот ${player.name} объявит "одна карта!" через ${Math.round(delay)}мс`);
+              // До выхода игрока — обычные 4–8.5с. После выхода — боты объявляют быстрее.
+              if (!hasAlreadyDeclared && player.isBot) {
+                const softBotOneCard = hasAnyPlayerExited(players);
+                const delay = softBotOneCard
+                  ? 600 + Math.random() * 800
+                  : 4000 + Math.random() * 4500;
+                console.log(
+                  `🤖 [checkOneCardStatus] Бот ${player.name} объявит "одна карта!" через ${Math.round(delay)}мс` +
+                    (softBotOneCard ? ' (режим после выхода игрока)' : '')
+                );
                 setTimeout(() => {
                   const currentState = get();
                   const currentPlayer = currentState.players.find(p => p.id === player.id);
                   if (
                     currentPlayer &&
-                    !currentPlayer.isWinner &&
                     currentPlayer.cards.length === 1 &&
                     !currentState.oneCardDeclarations[player.id]
                   ) {
@@ -3880,25 +3890,10 @@ export const useGameStore = create<GameState>()(
           // Отображаем над спрашивающим и в чате
           get().onPlayerActionDisplay?.(askerPlayerId, asker.name, '❓ Сколько карт?', 'info');
           
-          const activePlayers = players.filter(
-            p => !p.isWinner && (p.cards.length > 0 || p.penki.length > 0)
-          );
-          const anyHumanActive = activePlayers.some(p => !p.isBot);
-          // Когда люди уже вышли — боты не устраивают бесконечный штрафной пинг-понг
-          if (!anyHumanActive) {
-            activePlayers.forEach(p => {
-              if (p.cards.length === 1 && !oneCardDeclarations[p.id]) {
-                get().declareOneCard(p.id);
-              }
-            });
-            get().showNotification(`ℹ️ У ${target.name}: ${targetTotalCards} карт`, 'info', 2500);
-            return;
-          }
-
+          // Штрафуются только те, у кого сейчас 1 карта и не объявили (выбывшие с 0 карт сюда не попадают)
           const forgetfulPlayers = players.filter(p =>
             p.cards.length === 1 &&
-            !oneCardDeclarations[p.id] &&
-            !p.isWinner
+            !oneCardDeclarations[p.id]
           );
 
           if (forgetfulPlayers.length > 0) {
@@ -3944,17 +3939,11 @@ export const useGameStore = create<GameState>()(
            const forgetfulPlayers = players.filter(p => targetIds.includes(p.id));
            if (forgetfulPlayers.length === 0) return;
            
-           const activeLeft = players.filter(
-             p => !p.isWinner && (p.cards.length > 0 || p.penki.length > 0)
-           ).length;
+           const softBotOneCard = hasAnyPlayerExited(players);
 
-           // Только активные не-штрафники; выбывшие не участвуют
+           // Выбывшие тоже участвуют, если у них ещё есть карты (например до полного выхода)
            const contributorsNeeded = players
-             .filter(p =>
-               !targetIds.includes(p.id) &&
-               !p.isWinner &&
-               p.cards.length > 0
-             )
+             .filter(p => !targetIds.includes(p.id) && p.cards.length > 0)
              .map(p => p.id);
            
            if (contributorsNeeded.length === 0) {
@@ -4014,9 +4003,10 @@ export const useGameStore = create<GameState>()(
                  if (!currentPlayer) return;
                  
                  const openCards = currentPlayer.cards.filter(c => c.open);
-                 // При малом числе активных — максимум 1 карта, иначе боты зацикливают штрафы
-                 const dumpCap = activeLeft <= 3 ? 1 : Math.min(2, targetIds.length);
-                 const cardsToGive = Math.min(openCards.length, dumpCap);
+                 // После выхода игрока боты скидывают максимум 1 карту — иначе вечный пинг-понг
+                 const cardsToGive = softBotOneCard
+                   ? Math.min(openCards.length, 1)
+                   : Math.min(openCards.length, targetIds.length);
                  
                  // ✅ НОВАЯ ЛОГИКА: Бот выбирает худшие карты и распределяет их по штрафникам
                  const sortedWorstCards = openCards
@@ -4723,35 +4713,36 @@ export const useGameStore = create<GameState>()(
           return Math.max(700, Math.min(2000, delay));
          },
          
-         // Планирует вопрос бота "сколько карт?" — всегда ПОСЛЕ окна объявления ботов
+         // Планирует вопрос бота "сколько карт?"
+         // Обычная игра — быстрый ask. После выхода игрока — даём ботам успеть объявить.
          scheduleBotAskHowManyCards: (targetPlayerId: string) => {
            const { players, oneCardDeclarations, pendingPenalty, isGamePaused } = get();
            if (pendingPenalty || isGamePaused) return;
 
            const target = players.find(p => p.id === targetPlayerId);
-           if (!target || target.isWinner) return;
-
-           const activePlayers = players.filter(
-             p => !p.isWinner && (p.cards.length > 0 || p.penki.length > 0)
-           );
-           if (!activePlayers.some(p => !p.isBot)) {
-             // Только боты — не спрашиваем, пусть доигрывают/открывают пеньки
-             if (target.cards.length === 1 && !oneCardDeclarations[targetPlayerId]) {
-               get().declareOneCard(targetPlayerId);
-             }
-             return;
-           }
+           if (!target) return;
 
            const openCards = target.cards.filter(c => c.open);
-           if (openCards.length !== 1) return;
-           if (oneCardDeclarations[targetPlayerId]) return;
+           if (openCards.length !== 1) {
+             console.log(`🤖 [scheduleBotAskHowManyCards] У ${target.name} ${openCards.length} открытых карт, не 1 - отменяем`);
+             return;
+           }
+           if (oneCardDeclarations[targetPlayerId]) {
+             console.log(`🤖 [scheduleBotAskHowManyCards] ${target.name} уже объявил "одну карту", ботам спрашивать не нужно`);
+             return;
+           }
 
            if (pendingBotAskTargets.has(targetPlayerId)) return;
            pendingBotAskTargets.add(targetPlayerId);
 
-           // Боты объявляют за ~0.6–1.4с → спрашиваем не раньше ~2.8с
-           const delay = 2800 + Math.random() * 1200;
-           console.log(`🤖 [scheduleBotAskHowManyCards] Вопрос к ${target.name} через ${Math.round(delay)}ms`);
+           const softBotOneCard = hasAnyPlayerExited(players);
+           const delay = softBotOneCard
+             ? 2800 + Math.random() * 1200
+             : get().calculateAdaptiveDelay();
+           console.log(
+             `🤖 [scheduleBotAskHowManyCards] Вопрос к ${target.name} через ${Math.round(delay)}ms` +
+               (softBotOneCard ? ' (режим после выхода игрока)' : '')
+           );
 
            setTimeout(() => {
              pendingBotAskTargets.delete(targetPlayerId);
@@ -4763,14 +4754,8 @@ export const useGameStore = create<GameState>()(
              if (currentPenalty) return;
              if (currentDeclarations[targetPlayerId]) return;
 
-             const stillActive = currentPlayers.filter(
-               p => !p.isWinner && (p.cards.length > 0 || p.penki.length > 0)
-             );
-             if (!stillActive.some(p => !p.isBot)) return;
-
-             const botPlayers = currentPlayers.filter(
-               p => p.isBot && !p.isWinner && p.id !== targetPlayerId && p.cards.length > 0
-             );
+             // Выбывшие тоже могут спрашивать «сколько карт?»
+             const botPlayers = currentPlayers.filter(p => p.isBot && p.id !== targetPlayerId);
              if (botPlayers.length === 0) return;
 
              const randomBot = botPlayers[Math.floor(Math.random() * botPlayers.length)];
