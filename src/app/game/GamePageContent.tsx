@@ -3191,12 +3191,27 @@ function GamePageContentComponent({
                         const cardsToRender = opponentClosedStack
                           ? playerCards.slice(-getOpponentStackDisplayCount(playerCards.length, gameStage))
                           : playerCards;
+                        // 1-я стадия: карты открыты — нужен больший peek, чтобы нижние не «наползали» на верхнюю.
+                        const stage1OpenStack = gameStage === 1 && !opponentClosedStack;
                         const opponentFan = computeCardFanLayout({
                           cardWidth: layoutMetrics.opponentCardWidth,
                           cardCount: Math.max(cardsToRender.length, 1),
-                          maxFanWidth: layoutMetrics.opponentMaxFanWidth,
-                          minPeekPx: opponentClosedStack ? 4 : 10,
-                          maxPeekPx: opponentClosedStack ? 7 : Math.round(layoutMetrics.opponentCardWidth * 0.38),
+                          maxFanWidth: Math.max(
+                            layoutMetrics.opponentMaxFanWidth,
+                            stage1OpenStack
+                              ? Math.round(layoutMetrics.opponentCardWidth * Math.min(cardsToRender.length, 3) * 0.72)
+                              : layoutMetrics.opponentMaxFanWidth
+                          ),
+                          minPeekPx: opponentClosedStack
+                            ? 4
+                            : stage1OpenStack
+                              ? Math.max(14, Math.round(layoutMetrics.opponentCardWidth * 0.45))
+                              : 10,
+                          maxPeekPx: opponentClosedStack
+                            ? 7
+                            : stage1OpenStack
+                              ? Math.round(layoutMetrics.opponentCardWidth * 0.58)
+                              : Math.round(layoutMetrics.opponentCardWidth * 0.38),
                         });
 
                         return (
@@ -3204,9 +3219,12 @@ function GamePageContentComponent({
                         className={styles.activeCardContainer}
                         style={{
                           width: opponentFan.totalWidthPx,
-                          maxWidth: layoutMetrics.opponentMaxFanWidth,
+                          maxWidth: stage1OpenStack
+                            ? Math.max(layoutMetrics.opponentMaxFanWidth, opponentFan.totalWidthPx)
+                            : layoutMetrics.opponentMaxFanWidth,
                           position: 'relative',
                           margin: '0 auto',
+                          isolation: 'isolate',
                         }}
                       >
                         {cardsToRender.map((card: LegacyCardLike, cardIndex: number) => {
@@ -3251,7 +3269,9 @@ function GamePageContentComponent({
                           
                           // Верхняя карта должна быть последней добавленной для любого игрока.
                           const isTopCard = cardIndex === cardsToRender.length - 1;
-                          const showOpen = isHumanPlayer || (gameStage === 1 && isTopCard);
+                          // 1-я стадия: ВСЯ стопка открыта (пеньки в player.penki — отдельно и строго закрыты).
+                          // Со 2-й стадии у соперников карты закрыты; у себя — всегда открыты.
+                          const showOpen = isHumanPlayer || gameStage === 1;
                           const isMyTurn = player.id === currentPlayerId;
                           const canPlaceDeckOnSelfHere = isHumanPlayer && isTopCard && canPlaceDeckOnSelf;
                           const canMakeMove = gameStage === 1 && isMyTurn && isHumanPlayer && canPickStage1Target && availableTargets.length > 0;
@@ -3290,32 +3310,39 @@ function GamePageContentComponent({
                           const isOpponentCard = !isHumanPlayer;
                           const isStage2 = gameStage >= 2;
                           const overlap = cardIndex > 0 ? `-${opponentFan.marginLeftPx}px` : '0';
-                          const cardStackZIndex = cardIndex + 1;
+                          // Верхняя (только что положенная) карта всегда выше нижних — без перехвата hover'ом.
+                          const cardStackZIndex = isTopCard ? 80 + cardIndex : cardIndex + 1;
+                          const canInteractCard = isTopCard && (shouldHighlight || isAvailableTarget || canPlaceDeckOnSelfHere);
                           
                           const cardId = typeof card === 'string' ? undefined : card.id;
                           return (
                             <div 
                               key={cardId || `${player.id}-${cardImage}-${cardIndex}-${showOpen ? 'open' : 'closed'}`} 
-                              className={styles.cardOnPenki} 
+                              className={`${styles.cardOnPenki}${isTopCard ? ` ${styles.cardOnPenkiTop}` : ` ${styles.cardOnPenkiUnder}`}`} 
                               style={{
                                 width: layoutMetrics.opponentCardWidth,
                                 height: layoutMetrics.opponentCardHeight,
                                 flexShrink: 0,
                                 marginLeft: overlap,
                                 zIndex: cardStackZIndex,
-                                cursor: (shouldHighlight || isAvailableTarget || canPlaceDeckOnSelfHere) ? 'pointer' : 'default',
+                                cursor: canInteractCard ? 'pointer' : 'default',
                                 position: 'relative',
-                                transform: isStage2 && isOpponentCard ? `translateY(${cardIndex * 1}px)` : 'none',
-                                transition: 'all 0.2s ease',
+                                transform: isStage2 && isOpponentCard
+                                  ? `translateY(${cardIndex * 1}px)`
+                                  : stage1OpenStack && !isTopCard
+                                    ? `translateY(${(cardsToRender.length - 1 - cardIndex) * 1}px)`
+                                    : 'none',
+                                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
                                 boxShadow: canPlaceDeckOnSelfHere
                                   ? '0 0 16px rgba(34, 197, 94, 0.75), 0 0 0 2px rgba(34, 197, 94, 0.85)'
                                   : undefined,
+                                pointerEvents: isTopCard ? 'auto' : 'none',
                               }}
                               onClick={() => {
-                                if (gameStage === 1) {
+                                if (gameStage === 1 && isTopCard) {
                                   if (canPlaceDeckOnSelfHere) {
                                     placeCardOnSelfByRules();
-                                  } else if (shouldHighlight && isTopCard) {
+                                  } else if (shouldHighlight) {
                                     console.log(`🎴 [1-я стадия] Клик по своей карте, инициируем выбор цели`);
                                     makeMove('initiate_move');
                                   } else if (isAvailableTarget) {
@@ -3325,12 +3352,14 @@ function GamePageContentComponent({
                                 }
                               }}
                               onMouseEnter={(e) => {
-                                if (isAvailableTarget || canPlaceDeckOnSelfHere) {
+                                if (canInteractCard) {
                                   e.currentTarget.style.transform = 'scale(1.05)';
                                 }
                               }}
                               onMouseLeave={(e) => {
-                                e.currentTarget.style.transform = 'scale(1)';
+                                if (canInteractCard) {
+                                  e.currentTarget.style.transform = 'none';
+                                }
                               }}
                             >
                               {/* ✅ ИСПРАВЛЕНО: NFT карты для ВСЕХ игроков (не только главного) */}
@@ -3406,11 +3435,25 @@ function GamePageContentComponent({
                                   alt={showOpen ? cardImage : 'Card'}
                                   width={60}
                                   height={90}
+                                  onError={(e) => {
+                                    const target = e.currentTarget;
+                                    if (showOpen) {
+                                      const fallbackSrc = getCardAssetSrc({ rank: cardRank, suit: cardSuit });
+                                      if (fallbackSrc && target.src !== fallbackSrc) {
+                                        target.src = fallbackSrc;
+                                        return;
+                                      }
+                                    }
+                                    const backSrc = getCardAssetSrc({ faceDown: true });
+                                    if (target.src !== backSrc) {
+                                      target.src = backSrc;
+                                    }
+                                  }}
                                   style={{
                                     width: '100%',
                                     height: '100%',
                                     borderRadius: 'inherit',
-                                    background: '#ffffff',
+                                    background: showOpen ? '#ffffff' : 'transparent',
                                     opacity: 1,
                                     filter: shouldHighlight || isAvailableTarget ? 'brightness(1.2)' : 'none',
                                     visibility: 'visible',
@@ -3439,7 +3482,7 @@ function GamePageContentComponent({
                                   zIndex: 10,
                                 }}></div>
                               )}
-                              {isAvailableTarget && (
+                              {isAvailableTarget && isTopCard && (
                                 <div style={{
                                   position: 'absolute',
                                   inset: '-2px',

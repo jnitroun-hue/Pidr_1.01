@@ -1798,7 +1798,16 @@
 
 .cardOnPenki:hover {
   transform: translateY(-3px) scale(1.05);
-  z-index: 20 !important;
+}
+
+/* Только верхняя карта стопки может подниматься — нижние не перекрывают положенную */
+.cardOnPenkiTop:hover {
+  z-index: 90 !important;
+}
+
+.cardOnPenkiUnder:hover {
+  z-index: inherit !important;
+  transform: none;
 }
 
 .cardOnPenki img {
