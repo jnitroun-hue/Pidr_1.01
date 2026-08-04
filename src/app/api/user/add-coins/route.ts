@@ -147,6 +147,24 @@ export async function POST(req: NextRequest) {
         updateData.losses = (userData.losses || 0) + 1;
         console.log(`💀 [${traceId || 'NO_TRACE'}] Поражений: ${userData.losses || 0} → ${updateData.losses}`);
       }
+
+      const gameMode = typeof updateStats.gameMode === 'string' ? updateStats.gameMode : '';
+      if (gameMode === 'bot') {
+        updateData.bot_games_played = (Number(userData.bot_games_played) || 0) + 1;
+        if (updateStats.wins) {
+          updateData.bot_wins = (Number(userData.bot_wins) || 0) + 1;
+        }
+      } else if (gameMode === 'online' || gameMode === 'ranked') {
+        updateData.online_games_played = (Number(userData.online_games_played) || 0) + 1;
+        if (updateStats.wins) {
+          updateData.online_wins = (Number(userData.online_wins) || 0) + 1;
+        }
+      }
+
+      const place = Number(updateStats.place);
+      if (place === 1) updateData.first_places = (Number(userData.first_places) || 0) + 1;
+      if (place === 2) updateData.second_places = (Number(userData.second_places) || 0) + 1;
+      if (place === 3) updateData.third_places = (Number(userData.third_places) || 0) + 1;
       
       console.log(`📊 [${traceId || 'NO_TRACE'}] [Add Coins] ИТОГОВЫЕ значения для записи:`, updateData);
     }
@@ -163,10 +181,27 @@ export async function POST(req: NextRequest) {
       console.log(`📈 [${traceId || 'NO_TRACE'}] Рейтинг: ${currentRating} → ${updateData.rating} (${effectiveRatingChange > 0 ? '+' : ''}${effectiveRatingChange})`);
     }
     
-      // Обновляем баланс и статистику в БД
+      // Сначала core-поля (монеты + базовая статистика), затем опциональные колонки мест/режимов
+      const coreKeys = [
+        'coins',
+        'games_played',
+        'total_games',
+        'total_games_played',
+        'games_won',
+        'wins',
+        'losses',
+        'rating',
+      ] as const;
+      const coreUpdate: Record<string, number> = {};
+      const extraUpdate: Record<string, number> = {};
+      for (const [key, value] of Object.entries(updateData)) {
+        if ((coreKeys as readonly string[]).includes(key)) coreUpdate[key] = value;
+        else extraUpdate[key] = value;
+      }
+
       const { error: updateError } = await supabaseAdmin
         .from('_pidr_users')
-        .update(updateData)
+        .update(coreUpdate)
         .eq('id', dbUserId);
     
       if (updateError) {
@@ -175,6 +210,17 @@ export async function POST(req: NextRequest) {
           { success: false, error: 'Ошибка обновления баланса' },
           { status: 500 }
         );
+      }
+
+      if (Object.keys(extraUpdate).length > 0) {
+        const { error: extraError } = await supabaseAdmin
+          .from('_pidr_users')
+          .update(extraUpdate)
+          .eq('id', dbUserId);
+        if (extraError) {
+          // Колонок может ещё не быть в проде — не валим начисление монет
+          console.warn('⚠️ [Add Coins] Опциональная статистика не записана:', extraError.message, extraUpdate);
+        }
       }
 
       // История транзакций: записываем каждое начисление/списание для прозрачности наград

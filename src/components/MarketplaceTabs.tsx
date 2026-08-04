@@ -10,6 +10,7 @@ import { GRAM } from '@/lib/crypto/gram-brand';
 import { CRYPTO_TOKENS } from '@/lib/crypto/crypto-assets';
 import CryptoIcon from '@/components/CryptoIcon';
 import PidrCoinIcon, { PidrCoinAmount } from '@/components/PidrCoinIcon';
+import NftCardFace from '@/components/NftCardFace';
 
 export { SellNftModal as SellModal } from '@/components/SellNftModal';
 
@@ -502,14 +503,13 @@ export function MyNFTsTab({ nfts, onSellClick, onDeleteClick, getSuitColor, getS
                 maxWidth: '200px',
                 margin: '0 auto 15px'
               }}>
-                <img
-                  src={selectedNFT.image_url}
+                <NftCardFace
+                  suit={selectedNFT.suit}
+                  rank={selectedNFT.rank}
+                  imageUrl={selectedNFT.image_url}
+                  rarity={selectedNFT.rarity}
+                  metadata={selectedNFT.metadata}
                   alt={`${selectedNFT.rank} ${getSuitSymbol(selectedNFT.suit)}`}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'contain'
-                  }}
                 />
               </div>
 
@@ -634,57 +634,14 @@ export function MyNFTsTab({ nfts, onSellClick, onDeleteClick, getSuitColor, getS
             border: '1px solid rgba(255,255,255,0.1)',
             pointerEvents: 'none'
           }}>
-            {nft.image_url ? (
-              <img
-                src={nft.image_url}
-                alt={`${nft.rank} of ${nft.suit}`}
-                loading="lazy"
-                style={{ 
-                  width: '100%', 
-                  height: '100%', 
-                  objectFit: 'contain',
-                  display: 'block'
-                }}
-                onError={(e) => {
-                  // Fallback на масть и ранг
-                  e.currentTarget.style.display = 'none';
-                  const parent = e.currentTarget.parentElement;
-                  if (parent) {
-                    parent.innerHTML = `
-                      <div style="
-                        width: 100%; 
-                        height: 100%; 
-                        display: flex; 
-                        flex-direction: column;
-                        align-items: center; 
-                        justify-content: center;
-                        color: ${getSuitColor(nft.suit)};
-                        font-size: 32px;
-                        font-weight: bold;
-                      ">
-                        <div>${getSuitSymbol(nft.suit)}</div>
-                        <div style="font-size: 20px;">${getRankDisplay(nft.rank)}</div>
-                      </div>
-                    `;
-                  }
-                }}
-              />
-            ) : (
-              <div style={{
-                width: '100%',
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: getSuitColor(nft.suit),
-                fontSize: '32px',
-                fontWeight: 'bold'
-              }}>
-                <div>{getSuitSymbol(nft.suit)}</div>
-                <div style={{ fontSize: '20px' }}>{getRankDisplay(nft.rank)}</div>
-              </div>
-            )}
+            <NftCardFace
+              suit={nft.suit}
+              rank={nft.rank}
+              imageUrl={nft.image_url}
+              rarity={nft.rarity}
+              metadata={nft.metadata}
+              alt={`${nft.rank} of ${nft.suit}`}
+            />
           </div>
 
           {/* Rank and Suit Info */}

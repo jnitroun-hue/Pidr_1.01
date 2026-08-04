@@ -93,22 +93,17 @@ export async function GET(req: NextRequest) {
       .eq('id', dbUserId);
 
     const stats = normalizeUserStats(user);
+    const botGames = Number(user.bot_games_played) || 0;
+    const botWins = Number(user.bot_wins) || 0;
+    const onlineGames = Number(user.online_games_played) || Math.max(0, stats.gamesPlayed - botGames);
+    const onlineWins = Number(user.online_wins) || Math.max(0, stats.wins - botWins);
     console.log(`📊 [API /user/me] Пользователь ${userId}: games=${stats.gamesPlayed}, wins=${stats.wins}`);
-
-    // ✅ ЛОГИРОВАНИЕ: Проверяем что приходит из БД
-    console.log(`📊 [API /user/me] Данные из БД:`, {
-      id: user.id,
-      username: user.username,
-      first_name: user.first_name,
-      email: user.email,
-      telegram_id: user.telegram_id
-    });
 
     return noStoreJson({
       success: true,
       user: {
         id: user.id,
-        username: user.username, // ✅ Возвращаем username как есть из БД
+        username: user.username,
         firstName: user.first_name,
         lastName: user.last_name,
         avatar_url: user.avatar_url,
@@ -122,6 +117,16 @@ export async function GET(req: NextRequest) {
         games_won: stats.wins,
         wins: stats.wins,
         losses: stats.losses,
+        winRate: stats.winRate,
+        botGamesPlayed: botGames,
+        botWins,
+        botWinRate: botGames > 0 ? Math.round((botWins / botGames) * 100) : 0,
+        onlineGamesPlayed: onlineGames,
+        onlineWins,
+        onlineWinRate: onlineGames > 0 ? Math.round((onlineWins / onlineGames) * 100) : 0,
+        firstPlaces: Number(user.first_places) || 0,
+        secondPlaces: Number(user.second_places) || 0,
+        thirdPlaces: Number(user.third_places) || 0,
         best_win_streak: user.best_win_streak || 0,
         status: user.status,
         created_at: user.created_at,

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react';
 import { GRAM } from '@/lib/crypto/gram-brand';
+import RulesMiniTutorial from '@/components/RulesMiniTutorial';
 
 export default function RulesPage() {
   const router = useRouter();
@@ -289,6 +290,8 @@ export default function RulesPage() {
           ))}
               </div>
 
+        <RulesMiniTutorial />
+
         {/* Кнопка "Начать играть" */}
         <motion.button
           initial={{ y: 20, opacity: 0 }}
@@ -298,7 +301,7 @@ export default function RulesPage() {
           whileTap={{ scale: 0.98 }}
           onClick={() => router.push('/')}
           style={{
-            marginTop: '40px',
+            marginTop: '16px',
             width: '100%',
             background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
             color: 'white',

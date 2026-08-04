@@ -16,6 +16,12 @@ CREATE TABLE IF NOT EXISTS _pidr_users (
     games_played INTEGER DEFAULT 0,
     games_won INTEGER DEFAULT 0,
     bot_games_played INTEGER DEFAULT 0,
+    bot_wins INTEGER DEFAULT 0,
+    online_games_played INTEGER DEFAULT 0,
+    online_wins INTEGER DEFAULT 0,
+    first_places INTEGER DEFAULT 0,
+    second_places INTEGER DEFAULT 0,
+    third_places INTEGER DEFAULT 0,
     avatar_url TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP

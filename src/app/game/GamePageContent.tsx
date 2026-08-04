@@ -2698,41 +2698,10 @@ function GamePageContentComponent({
                               height: `${layoutMetrics.centerCardHeight}px`,
                               borderRadius: '6px',
                               display: 'block',
-                              objectFit: 'cover'
+                              objectFit: 'contain',
+                              background: '#fff',
                             }}
                           />
-                          {/* ✅ ОВЕРЛЕЙ РАНГА И МАСТИ ДЛЯ NFT НА СТОЛЕ */}
-                          {tableCardRank && tableCardSuit && (() => {
-                            // ✅ ИСПРАВЛЕНО: Правильное форматирование ранга (поддержка чисел и строк)
-                            const formatRank = (rank: string | number): string => {
-                              const rankStr = String(rank).toLowerCase();
-                              const rankNum = typeof rank === 'number' ? rank : parseInt(rankStr, 10);
-                              
-                              if (rankNum === 11 || rankStr === 'jack' || rankStr === 'j') return 'J';
-                              if (rankNum === 12 || rankStr === 'queen' || rankStr === 'q') return 'Q';
-                              if (rankNum === 13 || rankStr === 'king' || rankStr === 'k') return 'K';
-                              if (rankNum === 14 || rankStr === 'ace' || rankStr === 'a') return 'A';
-                              if (rankNum >= 2 && rankNum <= 10) return String(rankNum);
-                              return rankStr.toUpperCase(); // Для NFT карт с нестандартными рангами
-                            };
-                            
-                            return (
-                              <div style={{
-                                position: 'absolute',
-                                top: '4px',
-                                left: '6px',
-                                fontSize: '14px',
-                                fontWeight: 'bold',
-                                color: tableCardSuit === 'hearts' || tableCardSuit === 'diamonds' ? '#dc2626' : '#1f2937',
-                                textShadow: '0 0 3px white, 0 0 3px white, 0 0 3px white',
-                                lineHeight: '1',
-                                pointerEvents: 'none'
-                              }}>
-                                <div>{formatRank(tableCardRank)}</div>
-                                <div>{tableCardSuit === 'hearts' ? '♥' : tableCardSuit === 'diamonds' ? '♦' : tableCardSuit === 'clubs' ? '♣' : tableCardSuit === 'spades' ? '♠' : ''}</div>
-                              </div>
-                            );
-                          })()}
                         </div>
                       ) : (
                         <img
@@ -2877,39 +2846,6 @@ function GamePageContentComponent({
                         }}
                       />
                     )}
-                    {/* ✅ ОВЕРЛЕЙ РАНГА И МАСТИ ДЛЯ NFT КАРТЫ ИЗ КОЛОДЫ */}
-                    {isNftUrl && deckCardRank && deckCardSuit && (() => {
-                      // ✅ ИСПРАВЛЕНО: Правильное форматирование ранга
-                      const formatRank = (rank: string | number | undefined): string => {
-                        if (!rank) return '';
-                        const rankStr = String(rank).toLowerCase();
-                        const rankNum = typeof rank === 'number' ? rank : parseInt(rankStr, 10);
-                        
-                        if (rankNum === 11 || rankStr === 'jack' || rankStr === 'j') return 'J';
-                        if (rankNum === 12 || rankStr === 'queen' || rankStr === 'q') return 'Q';
-                        if (rankNum === 13 || rankStr === 'king' || rankStr === 'k') return 'K';
-                        if (rankNum === 14 || rankStr === 'ace' || rankStr === 'a') return 'A';
-                        if (rankNum >= 2 && rankNum <= 10) return String(rankNum);
-                        return rankStr.toUpperCase();
-                      };
-                      
-                      return (
-                        <div style={{
-                          position: 'absolute',
-                          top: '4px',
-                          left: '5px',
-                          fontSize: '11px',
-                          fontWeight: 'bold',
-                          color: deckCardSuit === 'hearts' || deckCardSuit === 'diamonds' ? '#dc2626' : '#1f2937',
-                          textShadow: '0 0 3px white, 0 0 3px white, 0 1px 2px white',
-                        lineHeight: '1.1',
-                        pointerEvents: 'none'
-                      }}>
-                        <div>{formatRank(deckCardRank)}</div>
-                        <div>{deckCardSuit === 'hearts' ? '♥' : deckCardSuit === 'diamonds' ? '♦' : deckCardSuit === 'clubs' ? '♣' : deckCardSuit === 'spades' ? '♠' : ''}</div>
-                      </div>
-                      );
-                    })()}
                     {turnPhase === 'waiting_deck_action' && (availableTargets.length > 0 || canPlaceDeckOnSelf) && (
                       <div style={{
                         position: 'absolute',
@@ -3395,39 +3331,6 @@ function GamePageContentComponent({
                                     objectFit: 'contain',
                                   }}
                                 />
-                                  {/* ✅ ОВЕРЛЕЙ РАНГА И МАСТИ НА NFT КАРТЕ */}
-                                  {(() => {
-                                    // ✅ ИСПРАВЛЕНО: Правильное форматирование ранга (поддержка чисел и строк)
-                                    const formatRank = (rank: string | number | undefined): string => {
-                                      if (!rank) return '';
-                                      const rankStr = String(rank).toLowerCase();
-                                      const rankNum = typeof rank === 'number' ? rank : parseInt(rankStr, 10);
-                                      
-                                      if (rankNum === 11 || rankStr === 'jack' || rankStr === 'j') return 'J';
-                                      if (rankNum === 12 || rankStr === 'queen' || rankStr === 'q') return 'Q';
-                                      if (rankNum === 13 || rankStr === 'king' || rankStr === 'k') return 'K';
-                                      if (rankNum === 14 || rankStr === 'ace' || rankStr === 'a') return 'A';
-                                      if (rankNum >= 2 && rankNum <= 10) return String(rankNum);
-                                      return rankStr.toUpperCase(); // Для NFT карт с нестандартными рангами
-                                    };
-                                    
-                                    return (
-                                      <div style={{
-                                        position: 'absolute',
-                                        top: '1px',
-                                        left: '2px',
-                                        fontSize: '8px',
-                                        fontWeight: 'bold',
-                                        color: cardSuit === 'hearts' || cardSuit === 'diamonds' ? '#dc2626' : '#1f2937',
-                                        textShadow: '0 0 2px white, 0 0 2px white',
-                                        lineHeight: '1',
-                                        pointerEvents: 'none'
-                                      }}>
-                                        <div>{formatRank(cardRank)}</div>
-                                        <div>{cardSuit === 'hearts' ? '♥' : cardSuit === 'diamonds' ? '♦' : cardSuit === 'clubs' ? '♣' : cardSuit === 'spades' ? '♠' : ''}</div>
-                                      </div>
-                                    );
-                                  })()}
                                 </div>
                               ) : (
                                 <img
@@ -3975,38 +3878,6 @@ function GamePageContentComponent({
                         objectFit: 'contain', // ✅ ИСПРАВЛЕНО: contain вместо cover - карта не обрезается
                       }}
                     />
-                      {/* ✅ ОВЕРЛЕЙ РАНГА И МАСТИ НА NFT КАРТЕ */}
-                      <div style={{
-                        position: 'absolute',
-                        top: '2px',
-                        left: '3px',
-                        fontSize: '10px',
-                        fontWeight: 'bold',
-                        color: cardSuit === 'hearts' || cardSuit === 'diamonds' ? '#dc2626' : '#1f2937',
-                        textShadow: '0 0 2px white, 0 0 2px white',
-                        lineHeight: '1',
-                        pointerEvents: 'none',
-                        transform: isSelected ? 'translateY(-20px)' : 'none',
-                        transition: 'transform 0.3s ease'
-                      }}>
-                                    <div>{(() => {
-                                      // ✅ ИСПРАВЛЕНО: Правильное форматирование ранга
-                                      const formatRank = (rank: string | number | undefined): string => {
-                                        if (!rank) return '';
-                                        const rankStr = String(rank).toLowerCase();
-                                        const rankNum = typeof rank === 'number' ? rank : parseInt(rankStr, 10);
-                                        
-                                        if (rankNum === 11 || rankStr === 'jack' || rankStr === 'j') return 'J';
-                                        if (rankNum === 12 || rankStr === 'queen' || rankStr === 'q') return 'Q';
-                                        if (rankNum === 13 || rankStr === 'king' || rankStr === 'k') return 'K';
-                                        if (rankNum === 14 || rankStr === 'ace' || rankStr === 'a') return 'A';
-                                        if (rankNum >= 2 && rankNum <= 10) return String(rankNum);
-                                        return rankStr.toUpperCase();
-                                      };
-                                      return formatRank(cardRank);
-                                    })()}</div>
-                        <div>{cardSuit === 'hearts' ? '♥' : cardSuit === 'diamonds' ? '♦' : cardSuit === 'clubs' ? '♣' : cardSuit === 'spades' ? '♠' : ''}</div>
-                      </div>
                     </div>
                   ) : null}
                   <img

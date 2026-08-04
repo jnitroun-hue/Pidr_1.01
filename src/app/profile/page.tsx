@@ -23,6 +23,7 @@ import { buildReferralLink, buildReferralShareText } from '@/lib/referral/referr
 import UserAvatarBadge from '@/components/UserAvatarBadge';
 import AuthMethodBadge from '@/components/AuthMethodBadge';
 import AddToDeckModal from '@/components/AddToDeckModal';
+import NftCardFace from '@/components/NftCardFace';
 import type { AuthMethod } from '@/lib/user/resolve-auth-method';
 
 // Компонент таймера для бонусов
@@ -113,6 +114,15 @@ export default function ProfilePage() {
     wins: 0,
     losses: 0,
     winRate: 0,
+    botGamesPlayed: 0,
+    botWins: 0,
+    botWinRate: 0,
+    onlineGamesPlayed: 0,
+    onlineWins: 0,
+    onlineWinRate: 0,
+    firstPlaces: 0,
+    secondPlaces: 0,
+    thirdPlaces: 0,
     achievements: [
       { id: 1, name: t.profile.firstWin, description: t.profile.firstWinDesc, unlocked: false, icon: Trophy },
       { id: 2, name: t.profile.veteran, description: t.profile.veteranDesc, unlocked: false, icon: Medal },
@@ -120,6 +130,7 @@ export default function ProfilePage() {
       { id: 4, name: t.profile.legend, description: t.profile.legendDesc, unlocked: false, icon: Star }
     ]
   });
+  const [statsTab, setStatsTab] = useState<'online' | 'bots'>('online');
 
   const [user, setUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
@@ -202,23 +213,34 @@ export default function ProfilePage() {
           setIsAdmin(userData.is_admin || false);
           setAvatarUrl(userData.avatar_url || '😎');
           
-          // Обновляем статистику
           setStats(prev => ({
             ...prev,
-            rating: userData.rating || 0,
-            gamesPlayed: userData.gamesPlayed || 0,
-            wins: userData.wins || 0,
-            losses: userData.losses || 0,
-            winRate: userData.gamesPlayed > 0 
-              ? Math.round(((userData.wins || 0) / userData.gamesPlayed) * 100)
-              : 0
+            rating: result.user.rating || 0,
+            gamesPlayed: result.user.gamesPlayed || 0,
+            wins: result.user.wins || 0,
+            losses: result.user.losses || 0,
+            winRate: result.user.winRate
+              ?? (result.user.gamesPlayed > 0
+                ? Math.round(((result.user.wins || 0) / result.user.gamesPlayed) * 100)
+                : 0),
+            botGamesPlayed: result.user.botGamesPlayed || 0,
+            botWins: result.user.botWins || 0,
+            botWinRate: result.user.botWinRate || 0,
+            onlineGamesPlayed: result.user.onlineGamesPlayed || 0,
+            onlineWins: result.user.onlineWins || 0,
+            onlineWinRate: result.user.onlineWinRate || 0,
+            firstPlaces: result.user.firstPlaces || 0,
+            secondPlaces: result.user.secondPlaces || 0,
+            thirdPlaces: result.user.thirdPlaces || 0,
           }));
           
           console.log('✅ Статистика и баланс обновлены из БД:', {
             coins: actualCoins,
-            rating: userData.rating,
-            gamesPlayed: userData.gamesPlayed,
-            wins: userData.wins
+            rating: result.user.rating,
+            gamesPlayed: result.user.gamesPlayed,
+            wins: result.user.wins,
+            botGames: result.user.botGamesPlayed,
+            onlineGames: result.user.onlineGamesPlayed,
           });
 
           try {
@@ -1665,7 +1687,7 @@ export default function ProfilePage() {
           onOpenPurchase={() => setShowPremiumModal(true)}
         />
 
-        {/* СТАТИСТИКА — всегда видна inline */}
+        {/* СТАТИСТИКА — онлайн / боты */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -1683,51 +1705,107 @@ export default function ProfilePage() {
           }}>
             📊 Статистика
           </h3>
+
+          <div style={{
+            display: 'flex',
+            gap: '8px',
+            marginBottom: '12px',
+            background: 'rgba(15, 23, 42, 0.65)',
+            borderRadius: '12px',
+            padding: '4px',
+            border: '1px solid rgba(148, 163, 184, 0.15)',
+          }}>
+            {([
+              { id: 'online' as const, label: 'Онлайн' },
+              { id: 'bots' as const, label: 'С ботами' },
+            ]).map(tab => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setStatsTab(tab.id)}
+                style={{
+                  flex: 1,
+                  border: 'none',
+                  borderRadius: '10px',
+                  padding: '10px 8px',
+                  cursor: 'pointer',
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  color: statsTab === tab.id ? '#f8fafc' : '#94a3b8',
+                  background: statsTab === tab.id
+                    ? 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)'
+                    : 'transparent',
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
           <div style={{
             display: 'grid',
             gridTemplateColumns: '1fr 1fr',
             gap: '10px',
           }}>
-            <div style={{
-              background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%)',
-              border: '1px solid rgba(99, 102, 241, 0.25)',
-              borderRadius: '12px',
-              padding: '14px',
-              textAlign: 'center'
-            }}>
-              <div style={{ color: '#6366f1', fontSize: '22px', fontWeight: '800' }}>{stats.rating}</div>
-              <div style={{ color: '#64748b', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '4px' }}>Рейтинг</div>
-            </div>
-            <div style={{
-              background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%)',
-              border: '1px solid rgba(59, 130, 246, 0.25)',
-              borderRadius: '12px',
-              padding: '14px',
-              textAlign: 'center'
-            }}>
-              <div style={{ color: '#3b82f6', fontSize: '22px', fontWeight: '800' }}>{stats.gamesPlayed}</div>
-              <div style={{ color: '#64748b', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '4px' }}>Игр</div>
-            </div>
-            <div style={{
-              background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%)',
-              border: '1px solid rgba(34, 197, 94, 0.25)',
-              borderRadius: '12px',
-              padding: '14px',
-              textAlign: 'center'
-            }}>
-              <div style={{ color: '#22c55e', fontSize: '22px', fontWeight: '800' }}>{stats.wins}</div>
-              <div style={{ color: '#64748b', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '4px' }}>Побед</div>
-            </div>
-            <div style={{
-              background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%)',
-              border: '1px solid rgba(239, 68, 68, 0.25)',
-              borderRadius: '12px',
-              padding: '14px',
-              textAlign: 'center'
-            }}>
-              <div style={{ color: '#ef4444', fontSize: '22px', fontWeight: '800' }}>{stats.winRate}%</div>
-              <div style={{ color: '#64748b', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '4px' }}>Винрейт</div>
-            </div>
+            {(statsTab === 'online'
+              ? [
+                  { value: stats.rating, label: 'Рейтинг', color: '#6366f1', border: 'rgba(99, 102, 241, 0.25)' },
+                  { value: stats.onlineGamesPlayed, label: 'Игр онлайн', color: '#3b82f6', border: 'rgba(59, 130, 246, 0.25)' },
+                  { value: stats.onlineWins, label: 'Побед', color: '#22c55e', border: 'rgba(34, 197, 94, 0.25)' },
+                  { value: `${stats.onlineWinRate}%`, label: 'Винрейт', color: '#f59e0b', border: 'rgba(245, 158, 11, 0.25)' },
+                ]
+              : [
+                  { value: stats.botGamesPlayed, label: 'Игр с ботами', color: '#38bdf8', border: 'rgba(56, 189, 248, 0.25)' },
+                  { value: stats.botWins, label: 'Побед', color: '#22c55e', border: 'rgba(34, 197, 94, 0.25)' },
+                  { value: `${stats.botWinRate}%`, label: 'Винрейт', color: '#f59e0b', border: 'rgba(245, 158, 11, 0.25)' },
+                  { value: stats.gamesPlayed, label: 'Всего игр', color: '#a78bfa', border: 'rgba(167, 139, 250, 0.25)' },
+                ]
+            ).map((cell) => (
+              <div
+                key={cell.label}
+                style={{
+                  background: 'linear-gradient(160deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.92) 100%)',
+                  border: `1px solid ${cell.border}`,
+                  borderRadius: '14px',
+                  padding: '14px 12px',
+                  textAlign: 'center',
+                  boxShadow: '0 8px 20px rgba(0,0,0,0.2)',
+                }}
+              >
+                <div style={{ color: cell.color, fontSize: '22px', fontWeight: 800 }}>{cell.value}</div>
+                <div style={{ color: '#64748b', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', marginTop: '4px' }}>
+                  {cell.label}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{
+            marginTop: '10px',
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr 1fr',
+            gap: '8px',
+          }}>
+            {[
+              { icon: '🥇', value: stats.firstPlaces, label: '1 место', color: '#fbbf24' },
+              { icon: '🥈', value: stats.secondPlaces, label: '2 место', color: '#cbd5e1' },
+              { icon: '🥉', value: stats.thirdPlaces, label: '3 место', color: '#fdba74' },
+            ].map((podium) => (
+              <div
+                key={podium.label}
+                style={{
+                  background: 'rgba(15, 23, 42, 0.75)',
+                  border: '1px solid rgba(148, 163, 184, 0.12)',
+                  borderRadius: '12px',
+                  padding: '10px 6px',
+                  textAlign: 'center',
+                }}
+              >
+                <div style={{ fontSize: '16px' }}>{podium.icon}</div>
+                <div style={{ color: podium.color, fontSize: '18px', fontWeight: 800 }}>{podium.value}</div>
+                <div style={{ color: '#64748b', fontSize: '10px', fontWeight: 600 }}>{podium.label}</div>
+              </div>
+            ))}
           </div>
         </motion.div>
 
@@ -2409,20 +2487,23 @@ export default function ProfilePage() {
                             overflow: 'hidden'
                           }}
                         >
-                          {/* ИЗОБРАЖЕНИЕ КАРТЫ */}
-                          {nftCard.image_url && (
-                            <img
-                              src={nftCard.image_url}
+                          <div style={{
+                            width: '100%',
+                            height: '180px',
+                            borderRadius: '8px',
+                            marginBottom: '10px',
+                            overflow: 'hidden',
+                            background: '#fff',
+                          }}>
+                            <NftCardFace
+                              suit={nftCard.suit}
+                              rank={nftCard.rank}
+                              imageUrl={nftCard.image_url}
+                              rarity={nftCard.rarity}
+                              metadata={nftCard.metadata}
                               alt={`${nftCard.rank} of ${nftCard.suit}`}
-                              style={{
-                                width: '100%',
-                                height: '180px',
-                                objectFit: 'cover',
-                                borderRadius: '8px',
-                                marginBottom: '10px'
-                              }}
                             />
-                          )}
+                          </div>
 
                           {/* ИНФОРМАЦИЯ О КАРТЕ */}
                           <div style={{

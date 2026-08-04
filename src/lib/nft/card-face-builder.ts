@@ -115,7 +115,8 @@ export function buildCardFaceSvg(spec: CardFaceSpec): string {
       <g transform="translate(${cornerMargin},${cornerMargin})">
         ${cornerGroupSvg(rank, suit, color, CARD_FACE.suitIconSize)}
       </g>
-      <g transform="translate(${width - cornerMargin},${height - cornerMargin}) rotate(180)">
+      <!-- Без rotate(180): 6 и 9 при повороте выглядят как друг друг -->
+      <g transform="translate(${width - cornerMargin - 36},${height - cornerMargin - 72})">
         ${cornerGroupSvg(rank, suit, color, CARD_FACE.suitIconSize)}
       </g>
       ${badgeBlock}
@@ -226,19 +227,21 @@ export function drawCardFaceCanvas(
     ctx.fillRect(art.left, art.top, art.size, art.size);
   }
 
-  const drawCorner = (originX: number, originY: number, rotate180: boolean) => {
+  // Углы без rotate(180): иначе 6↔9 и часть мастей читаются вверх ногами / как другой ранг.
+  const drawCorner = (originX: number, originY: number) => {
     ctx.save();
     ctx.translate(originX, originY);
-    if (rotate180) ctx.rotate(Math.PI);
     ctx.fillStyle = color;
     ctx.font = `800 ${CARD_FACE.rankFontSize}px Helvetica, Arial, sans-serif`;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
     ctx.fillText(rank, 0, 42);
     drawSuitIconCanvas(ctx, suit, 0, 52, CARD_FACE.suitIconSize, color);
     ctx.restore();
   };
 
-  drawCorner(cornerMargin, cornerMargin, false);
-  drawCorner(width - cornerMargin, height - cornerMargin, true);
+  drawCorner(cornerMargin, cornerMargin);
+  drawCorner(width - cornerMargin - 36, height - cornerMargin - 72);
 
   if (spec.themeLabel) {
     const label = spec.themeLabel.toUpperCase();
