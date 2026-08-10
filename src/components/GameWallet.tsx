@@ -22,7 +22,6 @@ import {
   FaMoneyBillWave
 } from 'react-icons/fa';
 import { SiVisa, SiMastercard } from 'react-icons/si';
-import { buildReferralLink, buildReferralShareText } from '@/lib/referral/referral-links';
 import styles from './GameWallet.module.css';
 import ConnectedWalletsList from './ConnectedWalletsList';
 import WalletQuickConnect from './WalletQuickConnect';
@@ -83,6 +82,17 @@ interface Transaction {
   description: string;
   created_at: string;
   balance_after: number;
+}
+
+interface PendingDeposit {
+  id: string;
+  memo: string;
+  destination: string;
+  amountNano: string;
+  status: 'pending' | 'submitted' | 'ambiguous' | 'credited' | 'cancelled' | 'expired';
+  expiresAt: string;
+  txHash?: string | null;
+  coinsCredited?: number | null;
 }
 
 interface GameWalletProps {
@@ -150,6 +160,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
   const [depositAddressError, setDepositAddressError] = useState('');
   const [walletPayEnabled, setWalletPayEnabled] = useState(false);
   const [isMonitoringPayments, setIsMonitoringPayments] = useState(false);
+  const [pendingDeposit, setPendingDeposit] = useState<PendingDeposit | null>(null);
   const [bonusAvailable, setBonusAvailable] = useState(true); // Состояние доступности бонуса
   const [dailyBonusModal, setDailyBonusModal] = useState<{
     open: boolean;
@@ -188,11 +199,6 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
         : '';
 
   const currentUser = useMemo(() => getCurrentUser(), [user]);
-  const referralInviteUrl = useMemo(() => {
-    const referralCode = currentUser?.id || user?.id;
-    if (!referralCode) return buildReferralLink('player');
-    return buildReferralLink(referralCode);
-  }, [currentUser?.id, user?.id]);
 
   const openRubTopUp = useCallback((method: 'bank_card' | 'sberbank' | 'yoo_money' | 'sbp') => {
     setDepositMethod('rub');
@@ -275,6 +281,23 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
     loadMasterAddresses();
     loadCryptoBalances();
     checkBonusStatus(); // Проверяем статус бонуса
+    fetch('/api/wallet/deposit-intents', { credentials: 'include', cache: 'no-store' })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success && data.intent) {
+          setPendingDeposit({
+            id: data.intent.id,
+            memo: data.intent.memo,
+            destination: data.intent.destination,
+            amountNano: String(data.intent.expected_amount_nano),
+            status: data.intent.status,
+            expiresAt: data.intent.expires_at,
+            txHash: data.intent.tx_hash,
+            coinsCredited: data.intent.coins_credited,
+          });
+        }
+      })
+      .catch(() => {});
 
     // Запрашиваем разрешение на уведомления
     if (window.Notification && Notification.permission === 'default') {
@@ -334,13 +357,17 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
         const response = await fetch('/api/wallet/check-payments', {
           method: 'POST',
           credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json'
-          }
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ intentId: pendingDeposit?.id }),
         });
 
         if (response.ok) {
           const result = await response.json();
+          if (result.intent?.status === 'credited') {
+            setPendingDeposit(null);
+            await loadUserData();
+            await loadTransactions();
+          }
           if (result.success && result.newPayments && result.newPayments.length > 0) {
             console.log('🎉 Автоматически найдены новые платежи:', result.newPayments);
 
@@ -367,7 +394,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
     }, 90000);
 
     return () => clearInterval(interval);
-  }, [ownerForWalletApis]);
+  }, [ownerForWalletApis, pendingDeposit?.id]);
 
   useEffect(() => {
     if (!isInsideTelegramMiniApp()) return;
@@ -721,6 +748,81 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
     }
   };
 
+  const normalizeIntent = (raw: any): PendingDeposit | null => {
+    if (!raw?.id) return null;
+    return {
+      id: raw.id,
+      memo: raw.memo || '',
+      destination: raw.destination || '',
+      amountNano: String(raw.amountNano ?? raw.expected_amount_nano ?? '0'),
+      status: raw.status,
+      expiresAt: raw.expiresAt ?? raw.expires_at,
+      txHash: raw.txHash ?? raw.tx_hash,
+      coinsCredited: raw.coinsCredited ?? raw.coins_credited,
+    };
+  };
+
+  const createTonDepositIntent = async (amount: number): Promise<PendingDeposit> => {
+    const headers = (await import('@/lib/api-headers')).getApiHeaders();
+    const response = await fetch('/api/wallet/deposit-intents', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify({ coin: 'TON', amount }),
+    });
+    const data = await response.json();
+    const intent = normalizeIntent(data.intent);
+    if (!response.ok || !data.success || !intent) {
+      throw new Error(data.message || 'Не удалось подготовить безопасное пополнение');
+    }
+    setPendingDeposit(intent);
+    return intent;
+  };
+
+  const updateTonDepositIntent = async (
+    intent: PendingDeposit,
+    status: 'submitted' | 'ambiguous' | 'cancelled',
+    clientResult?: string
+  ) => {
+    const headers = (await import('@/lib/api-headers')).getApiHeaders();
+    await fetch('/api/wallet/deposit-intents', {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify({ id: intent.id, status, clientResult }),
+    });
+    setPendingDeposit(status === 'cancelled' ? null : { ...intent, status });
+  };
+
+  const reconcilePendingDeposit = async (quiet = false) => {
+    if (!pendingDeposit || isMonitoringPayments) return;
+    setIsMonitoringPayments(true);
+    try {
+      const headers = (await import('@/lib/api-headers')).getApiHeaders();
+      const response = await fetch('/api/wallet/check-payments', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', ...headers },
+        body: JSON.stringify({ intentId: pendingDeposit.id }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.message || 'Проверка временно недоступна');
+      const reconciled = normalizeIntent(result.intent);
+      if (reconciled?.status === 'credited') {
+        setPendingDeposit(null);
+        await Promise.all([loadUserData(), loadTransactions()]);
+        if (!quiet) alert(`✅ Оплата подтверждена. Зачислено ${Number(reconciled.coinsCredited || 0).toLocaleString('ru-RU')} монет.`);
+      } else {
+        if (reconciled) setPendingDeposit(reconciled);
+        if (!quiet) alert('Платёж пока не найден в сети. Нажмите «Проверить оплату» через минуту.');
+      }
+    } catch (error) {
+      if (!quiet) alert(error instanceof Error ? error.message : 'Не удалось проверить оплату');
+    } finally {
+      setIsMonitoringPayments(false);
+    }
+  };
+
   const handleWalletPayDeposit = async () => {
     const amount = parseFloat(depositAmount);
     if (!amount || amount <= 0) {
@@ -788,28 +890,46 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
     const coin = selectedCrypto.toUpperCase();
     try {
       setLoading(true);
-      const currentUser = getCurrentUser();
-      const depositMemo = memo || `deposit_${currentUser?.id || ownerForWalletApis || 'user'}`;
 
       if (coin === 'TON') {
+        const intent = await createTonDepositIntent(amount);
         const inTelegram = isTelegramWebApp() || isInsideTelegramMiniApp();
 
         if (inTelegram && !tonConnectUI.connected) {
-          await copyDepositDetails(address, depositMemo);
-          openExternalWalletForDeposit({ coin: 'GRAM', masterAddress: address, amount, memo: depositMemo });
-          alert(`Откроется Telegram Wallet.\n\nОтправьте ${formatGramAmount(amount)} на адрес проекта.\nMemo: ${depositMemo}`);
+          await copyDepositDetails(intent.destination, intent.memo);
+          openExternalWalletForDeposit({
+            coin: 'GRAM',
+            masterAddress: intent.destination,
+            amount,
+            memo: intent.memo,
+          });
+          await updateTonDepositIntent(intent, 'ambiguous', 'telegram-deeplink-opened');
+          alert(`Откроется Telegram Wallet.\n\nПосле отправки вернитесь и нажмите «Проверить оплату».`);
           setActiveModal(null);
           setDepositAmount('');
           return;
         }
 
-        await sendGramViaTonConnect({
+        const outcome = await sendGramViaTonConnect({
           tonConnectUI,
-          masterAddress: address,
+          masterAddress: intent.destination,
           amount,
-          memo: depositMemo,
+          memo: intent.memo,
         });
-        alert(`✅ ${formatGramAmount(amount)} отправлено. Баланс обновится после подтверждения сети.`);
+        await updateTonDepositIntent(
+          intent,
+          outcome.status,
+          outcome.status === 'submitted' ? outcome.clientResult : outcome.message
+        );
+        if (outcome.status === 'cancelled') {
+          alert('Отправка отменена в кошельке. Монеты не списаны.');
+          return;
+        }
+        if (outcome.status === 'ambiguous') {
+          alert('Кошелёк не подтвердил результат, но перевод мог уйти. Платёж сохранён — вернитесь и нажмите «Проверить оплату».');
+        } else {
+          alert(`✅ ${formatGramAmount(amount)} отправлено. Проверяем подтверждение сети.`);
+        }
       } else {
         if (isTelegramWebApp()) {
           await copyDepositDetails(address, memo);
@@ -887,23 +1007,29 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
       }
 
       const masterAddress = masterAddressData.address as string;
-      const currentUser = getCurrentUser();
-      const depositMemo =
-        (masterAddressData.memo as string) ||
-        selectedDepositMemo ||
-        `deposit_${currentUser?.id || user?.id || 'unknown'}`;
       console.log(`📬 MASTER адрес для ${selectedCrypto}:`, masterAddress);
 
       if (walletType === 'ton') {
-        await sendGramViaTonConnect({
+        const intent = await createTonDepositIntent(amount);
+        const outcome = await sendGramViaTonConnect({
           tonConnectUI,
-          masterAddress,
+          masterAddress: intent.destination,
           amount,
-          memo: depositMemo || `deposit_${currentUser?.id || user?.id || 'unknown'}`,
+          memo: intent.memo,
         });
-
+        await updateTonDepositIntent(
+          intent,
+          outcome.status,
+          outcome.status === 'submitted' ? outcome.clientResult : outcome.message
+        );
+        if (outcome.status === 'cancelled') {
+          alert('Отправка отменена в кошельке.');
+          return;
+        }
         alert(
-          `✅ Транзакция отправлена на ${formatGramAmount(amount)}.\n\nПосле подтверждения в сети баланс обновится автоматически.`
+          outcome.status === 'ambiguous'
+            ? 'Результат кошелька неоднозначен. Если TON списались, платёж будет найден по уникальному memo.'
+            : `✅ Транзакция отправлена на ${formatGramAmount(amount)}. Проверяем сеть.`
         );
       } else if (walletType === 'sol' || walletType === 'solana') {
         // Solana - открываем через Phantom
@@ -1164,45 +1290,6 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
     }
   };
 
-  const handleInviteFriend = async () => {
-    try {
-      // ✅ УНИВЕРСАЛЬНО: Получаем пользователя из всех платформ
-      const currentUser = getCurrentUser();
-      if (!currentUser || !currentUser.id) {
-        alert('Пользователь не найден');
-        return;
-      }
-      
-      const inviteUrl = buildReferralLink(currentUser.id);
-      
-      // Если мы в Telegram WebApp, используем Telegram Share API
-      if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
-        const tg = window.Telegram.WebApp;
-        const inviteText = buildReferralShareText(inviteUrl);
-        
-        if (typeof tg.openTelegramLink === 'function') {
-          tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(inviteUrl)}&text=${encodeURIComponent(inviteText)}`);
-        } else {
-          // Fallback для старых версий Telegram
-          window.open(`https://t.me/share/url?url=${encodeURIComponent(inviteUrl)}&text=${encodeURIComponent(inviteText)}`, '_blank');
-        }
-      } else {
-        // Fallback - копируем в буфер обмена
-        if (navigator.clipboard) {
-          await navigator.clipboard.writeText(inviteUrl);
-          alert(`Реферальная ссылка скопирована в буфер обмена!\n\n${inviteUrl}\n\nПоделитесь ей с друзьями и получите +500 монет за каждого!`);
-        } else {
-          // Показываем ссылку для ручного копирования
-          prompt('Скопируйте эту ссылку и поделитесь с друзьями:', inviteUrl);
-        }
-      }
-      
-    } catch (error) {
-      console.error('Ошибка создания приглашения:', error);
-      alert('Ошибка создания приглашения: ' + (error as Error).message);
-    }
-  };
-
   // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Проверяем статус бонуса через API
   const checkBonusStatus = async () => {
     try {
@@ -1398,20 +1485,24 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
 
   return (
     <div className={styles['game-wallet-container']}>
-      {/* Баланс - главная карточка */}
       <motion.div 
         className={styles['balance-card']}
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <div className="balance-header">
-          <FaWallet className="balance-icon" />
-          <span className="balance-title">Игровой кошелек</span>
+        <div className={styles['balance-header']}>
+          <div>
+            <span className={styles['balance-eyebrow']}>ИГРОВОЙ КОШЕЛЁК</span>
+            <div className={styles['wallet-id']}>
+              #{ownerForWalletApis ? String(ownerForWalletApis).slice(-8) : 'XXXXXXXX'}
+            </div>
+          </div>
           <button 
-            className="crypto-burger-btn"
+            className={styles['crypto-burger-btn']}
             onClick={() => setIsCryptoMenuOpen(!isCryptoMenuOpen)}
             title="Криптовалютные балансы"
+            aria-expanded={isCryptoMenuOpen}
           >
             <FaBars />
           </button>
@@ -1421,21 +1512,21 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
         <AnimatePresence>
           {isCryptoMenuOpen && (
             <motion.div 
-              className="crypto-menu"
+              className={styles['crypto-menu']}
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.3 }}
             >
-              <div className="crypto-menu-header">💰 Реальные балансы</div>
-              <div className="crypto-list">
+              <div className={styles['crypto-menu-header']}>Баланс подключённых сетей</div>
+              <div className={styles['crypto-list']}>
                 {['TON', 'ETH', 'USDT', 'BTC', 'SOL'].map((crypto) => (
-                  <div key={crypto} className="crypto-item">
+                  <div key={crypto} className={styles['crypto-item']}>
                     <CryptoIcon src={getCryptoToken(crypto).icon} size={20} alt={crypto} />
-                    <span className="crypto-name">{gramDisplayFromApi(crypto)}</span>
-                    <span className="crypto-balance">{formatCryptoBalance(crypto)}</span>
+                    <span className={styles['crypto-name']}>{gramDisplayFromApi(crypto)}</span>
+                    <span className={styles['crypto-balance']}>{formatCryptoBalance(crypto)}</span>
                     <button 
-                      className="crypto-action-btn"
+                      className={styles['crypto-action-btn']}
                       onClick={() => {
                         setSelectedCrypto(crypto);
                         setActiveModal('deposit');
@@ -1452,16 +1543,28 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
         </AnimatePresence>
         
         {/* БАЛАНС ИГРОВЫХ МОНЕТ */}
-        <div className="balance-amount">
-          <PidrCoinIcon size={32} spin className="coin-icon" alt="" />
-          <span className="amount-text">{balance.toLocaleString()}</span>
-          <span className="currency">монет</span>
-        </div>
-        
-        <div className="wallet-id">
-          <span>ID кошелька: #{ownerForWalletApis ? String(ownerForWalletApis).slice(-8) : 'XXXXXXXX'}</span>
+        <div className={styles['balance-amount']}>
+          <PidrCoinIcon size={38} className={styles['coin-icon']} alt="" />
+          <div>
+            <div className={styles['amount-text']}>{balance.toLocaleString('ru-RU')}</div>
+            <div className={styles['currency']}>доступно игровых монет</div>
+          </div>
         </div>
       </motion.div>
+
+      {pendingDeposit && (
+        <div className={styles['pending-payment']} role="status">
+          <div className={styles['pending-copy']}>
+            <strong>Проверяем оплату TON</strong>
+            <span>
+              {(Number(pendingDeposit.amountNano) / 1_000_000_000).toLocaleString('ru-RU')} TON · перевод сохранён
+            </span>
+          </div>
+          <button type="button" onClick={() => void reconcilePendingDeposit()} disabled={isMonitoringPayments}>
+            {isMonitoringPayments ? 'Проверяем…' : 'Проверить оплату'}
+          </button>
+        </div>
+      )}
 
       {/* Навигационные вкладки */}
       <motion.div 
@@ -1475,6 +1578,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
           className={`${styles['tab-button']} ${activeTab === 'main' ? styles['active'] : ''}`}
         >
           <FaWallet />
+          <span>Главная</span>
         </button>
         
         <button
@@ -1520,7 +1624,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
               </motion.button>
 
               <motion.button
-                className="action-button withdraw"
+                className={`${styles['action-button']} ${styles['withdraw']}`}
                 whileHover={shouldOptimizeAnimations ? undefined : { scale: 1.02, y: -2 }}
                 whileTap={shouldOptimizeAnimations ? undefined : { scale: 0.98 }}
                 onClick={() => setActiveModal('withdraw')}
@@ -1532,7 +1636,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
               </motion.button>
 
               <motion.button
-                className="action-button monitor"
+                className={`${styles['action-button']} ${styles['history-action']}`}
                 whileHover={shouldOptimizeAnimations ? undefined : { scale: 1.02, y: -2 }}
                 whileTap={shouldOptimizeAnimations ? undefined : { scale: 0.98 }}
                 onClick={() => setActiveTab('history')}
@@ -1552,51 +1656,6 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
               onBuyCrypto={openCryptoTopUp}
             />
 
-            {/* Быстрые действия — реферальная реклама */}
-            <div className="quick-actions">
-              <h3 className="section-title">Быстрые действия</h3>
-
-              <motion.div
-                className="referral-promo-card"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                whileHover={shouldOptimizeAnimations ? undefined : { scale: 1.01 }}
-              >
-                <div className="referral-promo-shimmer" aria-hidden />
-                <div className="referral-promo-header">
-                  <span className="referral-promo-tag">🔥 АКЦИЯ</span>
-                  <FaTrophy className="referral-promo-trophy" />
-                </div>
-                <h4 className="referral-promo-title">Пригласи друга — получи монеты!</h4>
-                <div className="referral-promo-reward">
-                  <PidrCoinIcon size={28} spinSlow className="referral-promo-coin" alt="" />
-                  <span className="referral-promo-amount">+500</span>
-                  <span className="referral-promo-reward-text">за каждого активного друга</span>
-                </div>
-                <p className="referral-promo-desc">
-                  Отправь ссылку другу — он регистрируется любым способом, бонус начислится автоматически
-                </p>
-                <div className="referral-promo-link-box">
-                  <span className="referral-promo-link">{referralInviteUrl}</span>
-                  <motion.button
-                    type="button"
-                    className="referral-promo-copy"
-                    whileTap={shouldOptimizeAnimations ? undefined : { scale: 0.96 }}
-                    onClick={async () => {
-                      try {
-                        await navigator.clipboard.writeText(referralInviteUrl);
-                        alert('✅ Ссылка скопирована!\n\nПоделитесь с друзьями — +500 монет за каждого активного игрока!');
-                      } catch {
-                        alert(`Реферальная ссылка:\n\n${referralInviteUrl}`);
-                      }
-                    }}
-                    disabled={loading}
-                  >
-                    📋 Копировать
-                  </motion.button>
-                </div>
-              </motion.div>
-            </div>
           </motion.div>
         )}
 
@@ -2843,162 +2902,6 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
           position: relative;
           text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
           font-weight: 900;
-        }
-
-        .quick-actions {
-          background: rgba(15, 23, 42, 0.6);
-          border-radius: 16px;
-          padding: 20px;
-          backdrop-filter: blur(10px);
-        }
-
-        .referral-promo-card {
-          position: relative;
-          overflow: hidden;
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-          padding: 22px 18px;
-          border-radius: 18px;
-          border: 2px solid #fbbf24;
-          background: linear-gradient(135deg, #1d4ed8 0%, #7c3aed 50%, #db2777 100%);
-          box-shadow:
-            0 0 36px rgba(251, 191, 36, 0.28),
-            0 10px 28px rgba(0, 0, 0, 0.35);
-        }
-
-        .referral-promo-shimmer {
-          position: absolute;
-          inset: -50%;
-          background: conic-gradient(from 0deg, transparent, rgba(255, 255, 255, 0.12), transparent 30%);
-          animation: referralShimmer 4s linear infinite;
-          pointer-events: none;
-        }
-
-        .referral-promo-header {
-          position: relative;
-          z-index: 1;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-        }
-
-        .referral-promo-tag {
-          padding: 5px 12px;
-          border-radius: 999px;
-          background: linear-gradient(90deg, #fde047, #f59e0b);
-          color: #1e1b4b;
-          font-size: 11px;
-          font-weight: 900;
-          letter-spacing: 0.06em;
-        }
-
-        .referral-promo-trophy {
-          font-size: 28px;
-          color: #fde047;
-          filter: drop-shadow(0 0 10px rgba(253, 224, 71, 0.65));
-          animation: referralTrophyPulse 2s ease-in-out infinite;
-        }
-
-        .referral-promo-title {
-          position: relative;
-          z-index: 1;
-          margin: 0;
-          color: #fff;
-          font-size: 1.25rem;
-          font-weight: 900;
-          text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-        }
-
-        .referral-promo-reward {
-          position: relative;
-          z-index: 1;
-          display: flex;
-          align-items: baseline;
-          flex-wrap: wrap;
-          gap: 8px;
-        }
-
-        .referral-promo-coin {
-          font-size: 1.5rem;
-          animation: referralCoinBounce 1.5s ease-in-out infinite;
-        }
-
-        .referral-promo-amount {
-          color: #fde047;
-          font-size: 2rem;
-          font-weight: 900;
-          line-height: 1;
-          text-shadow: 0 0 20px rgba(253, 224, 71, 0.7);
-        }
-
-        .referral-promo-reward-text {
-          color: rgba(255, 255, 255, 0.92);
-          font-size: 0.9rem;
-          font-weight: 600;
-        }
-
-        .referral-promo-desc {
-          position: relative;
-          z-index: 1;
-          margin: 0;
-          color: rgba(255, 255, 255, 0.88);
-          font-size: 0.85rem;
-          line-height: 1.45;
-        }
-
-        .referral-promo-link-box {
-          position: relative;
-          z-index: 1;
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          padding: 12px 14px;
-          border-radius: 12px;
-          background: rgba(15, 23, 42, 0.72);
-          border: 1px solid rgba(251, 191, 36, 0.45);
-        }
-
-        .referral-promo-link {
-          flex: 1;
-          font-family: monospace;
-          font-size: 12px;
-          color: #93c5fd;
-          word-break: break-all;
-          line-height: 1.4;
-        }
-
-        .referral-promo-copy {
-          flex-shrink: 0;
-          padding: 10px 14px;
-          border: 2px solid #fde047;
-          border-radius: 10px;
-          background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
-          color: #fff;
-          font-size: 12px;
-          font-weight: 800;
-          cursor: pointer;
-          white-space: nowrap;
-          box-shadow: 0 4px 16px rgba(37, 99, 235, 0.45);
-        }
-
-        .referral-promo-copy:disabled {
-          opacity: 0.55;
-          cursor: not-allowed;
-        }
-
-        @keyframes referralShimmer {
-          to { transform: rotate(360deg); }
-        }
-
-        @keyframes referralTrophyPulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.12); }
-        }
-
-        @keyframes referralCoinBounce {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-5px); }
         }
 
         .section-title {

@@ -30,35 +30,60 @@ export async function copyDepositDetails(address: string, memo?: string | null):
   await navigator.clipboard.writeText(text);
 }
 
+export type TonSendOutcome =
+  | { status: 'submitted'; clientResult?: string }
+  | { status: 'cancelled'; message: string }
+  | { status: 'ambiguous'; message: string };
+
+export function classifyTonConnectError(error: unknown): Exclude<TonSendOutcome, { status: 'submitted' }> {
+  const message = error instanceof Error ? error.message : String(error);
+  const code =
+    typeof error === 'object' && error !== null && 'code' in error
+      ? String((error as { code?: unknown }).code || '')
+      : '';
+  if (/reject|cancel|declin|user.?denied|user.?reject/i.test(`${code} ${message}`)) {
+    return { status: 'cancelled', message };
+  }
+  return { status: 'ambiguous', message };
+}
+
 /** Gram / TON — нативная отправка через TonConnect → Telegram Wallet */
 export async function sendGramViaTonConnect(params: {
   tonConnectUI: TonConnectUI;
   masterAddress: string;
   amount: number;
   memo: string;
-}): Promise<void> {
+}): Promise<TonSendOutcome> {
   const { tonConnectUI, masterAddress, amount, memo } = params;
   const transferAddress = tonAddressForTransfer(masterAddress);
 
-  if (!tonConnectUI.connected) {
-    const tonUi = tonConnectUI as TonConnectUI & { openSingleWalletModal?: (name: string) => Promise<void> };
-    if (typeof tonUi.openSingleWalletModal === 'function') {
-      await tonUi.openSingleWalletModal('telegram-wallet');
-    } else {
-      await tonConnectUI.openModal();
+  try {
+    if (!tonConnectUI.connected) {
+      const tonUi = tonConnectUI as TonConnectUI & { openSingleWalletModal?: (name: string) => Promise<void> };
+      if (typeof tonUi.openSingleWalletModal === 'function') {
+        await tonUi.openSingleWalletModal('telegram-wallet');
+      } else {
+        await tonConnectUI.openModal();
+      }
     }
-  }
 
-  await tonConnectUI.sendTransaction({
-    validUntil: Math.floor(Date.now() / 1000) + 600,
-    messages: [
-      {
-        address: transferAddress,
-        amount: toNano(amount).toString(),
-        payload: buildTonCommentPayload(memo),
-      },
-    ],
-  });
+    const result = await tonConnectUI.sendTransaction({
+      validUntil: Math.floor(Date.now() / 1000) + 600,
+      messages: [
+        {
+          address: transferAddress,
+          amount: toNano(amount).toString(),
+          payload: buildTonCommentPayload(memo),
+        },
+      ],
+    });
+    return {
+      status: 'submitted',
+      clientResult: result && typeof result === 'object' && 'boc' in result ? String(result.boc) : undefined,
+    };
+  } catch (error) {
+    return classifyTonConnectError(error);
+  }
 }
 
 /** Deeplink / открытие кошелька для остальных монет в Telegram */

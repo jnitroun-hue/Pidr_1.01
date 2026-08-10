@@ -1,6 +1,7 @@
 import { Ratelimit } from "@upstash/ratelimit";
 import { NextRequest } from 'next/server';
 import { getRedis } from './redis/init';
+import { getRedisType } from './redis/client';
 
 // Получаем Redis клиент через универсальную инициализацию
 const redis = getRedis();
@@ -8,10 +9,10 @@ const redis = getRedis();
 // Создаем rate limiter только если Redis доступен
 let ratelimit: Ratelimit | null = null;
 
-if (redis) {
+if (redis && getRedisType() === 'upstash') {
   try {
     ratelimit = new Ratelimit({
-      redis: redis,
+      redis: redis as any,
       limiter: Ratelimit.slidingWindow(10, "10 s"), // 10 запросов в 10 секунд
       analytics: true,
     });

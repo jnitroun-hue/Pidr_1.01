@@ -16,6 +16,7 @@ NEW_TABLES_DEPLOY.sql
 *DEPLOY*.sql
 !scripts/sql/marketplace-seller-payment.sql
 !scripts/sql/bonus-claims.sql
+!scripts/sql/ton-deposit-intents.sql
 
 # testing
 /coverage

@@ -11,13 +11,32 @@ import { getSupabaseAdmin } from '../supabase';
 import { resolveMasterAddress, tonAddressForTransfer } from '@/lib/wallets/master-addresses';
 import { coinsFromCrypto, getExchangeRates } from '@/lib/pricing/exchange-rates';
 
-interface TonTransaction {
+export interface TonTransaction {
   hash: string;
   from: string;
   to: string;
   value: string; // в nanoton
   comment?: string; // memo
   timestamp: number;
+}
+
+type DepositIntent = {
+  id: string;
+  user_id: string | number;
+  destination: string;
+  expected_amount_nano: string | number;
+  memo: string;
+  status: string;
+  created_at: string;
+  expires_at: string;
+};
+
+function sameTonAddress(left: string, right: string): boolean {
+  try {
+    return tonAddressForTransfer(left) === tonAddressForTransfer(right);
+  } catch {
+    return left.trim() === right.trim();
+  }
 }
 
 function extractTonComment(inMsg: Record<string, unknown> | null | undefined): string | undefined {
@@ -203,43 +222,31 @@ export class TonPaymentService {
    * Сохранить транзакцию в БД и зачислить монеты
    * ✅ ИСПРАВЛЕНО: Используем _pidr_crypto_transactions
    */
-  private async processPayment(tx: TonTransaction, userId: string, tonAmount: number, coinsAmount: number): Promise<boolean> {
+  private async processPayment(
+    tx: TonTransaction,
+    userId: string,
+    tonAmount: number,
+    coinsAmount: number,
+    intentId: string | null = null
+  ): Promise<boolean> {
     try {
       const supabase = getSupabaseAdmin();
-
-      // 1. Сохраняем транзакцию в _pidr_crypto_transactions
-      const { error: txError } = await supabase
-        .from('_pidr_crypto_transactions')
-        .insert({
-          user_id: parseInt(userId) || 0,
-          crypto_type: 'TON',
-          transaction_hash: tx.hash,
-          wallet_address: tx.from,
-          amount: tonAmount,
-          purpose: `Deposit: ${coinsAmount} coins`,
-          status: 'completed',
-          created_at: new Date(tx.timestamp).toISOString()
-        });
-
-      if (txError) {
-        console.error('❌ Ошибка сохранения транзакции:', txError);
-        return false;
-      }
-
-      // 2. Зачисляем монеты пользователю
-      const { error: updateError } = await supabase.rpc('increment_user_balance', {
+      const { data, error } = await supabase.rpc('credit_verified_ton_deposit', {
+        p_intent_id: intentId,
         p_user_id: userId,
-        p_amount: coinsAmount
+        p_tx_hash: tx.hash,
+        p_from_address: tx.from,
+        p_destination: tonAddressForTransfer(tx.to),
+        p_amount_nano: tx.value,
+        p_coins: coinsAmount,
+        p_chain_timestamp: new Date(tx.timestamp).toISOString(),
       });
-
-      if (updateError) {
-        console.error('❌ Ошибка зачисления монет:', updateError);
+      if (error) {
+        console.error('❌ Атомарное зачисление TON не выполнено:', error);
         return false;
       }
-
-      console.log(`✅ Пользователю ${userId} зачислено ${coinsAmount} монет (${tonAmount} TON)`);
-      
-      return true;
+      const result = Array.isArray(data) ? data[0] : data;
+      return Boolean(result?.credited);
       
     } catch (error: any) {
       console.error('❌ Ошибка обработки платежа:', error);
@@ -285,6 +292,26 @@ export class TonPaymentService {
         return { success: true, processed: 0, newPayments: [] };
       }
 
+      const supabase = getSupabaseAdmin();
+      const now = new Date().toISOString();
+      await supabase
+        .from('_pidr_deposit_intents')
+        .update({ status: 'expired', updated_at: now })
+        .in('status', ['pending', 'submitted', 'ambiguous'])
+        .lt('expires_at', now);
+      const { data: intentRows, error: intentError } = await supabase
+        .from('_pidr_deposit_intents')
+        .select('id, user_id, destination, expected_amount_nano, memo, status, created_at, expires_at')
+        .in('status', ['pending', 'submitted', 'ambiguous'])
+        .gte('expires_at', now)
+        .order('created_at', { ascending: false })
+        .limit(500);
+      if (intentError) {
+        console.warn('[TON] Deposit intents unavailable; legacy memo reconciliation remains active:', intentError.message);
+      }
+      const intents = (intentRows || []) as DepositIntent[];
+      const intentsByMemo = new Map(intents.map((intent) => [intent.memo, intent]));
+
       const newPayments = [];
       let processedCount = 0;
 
@@ -301,8 +328,20 @@ export class TonPaymentService {
           continue;
         }
 
-        // Ищем пользователя по MEMO
-        const userId = await this.findUserByMemo(tx.comment);
+        const intent = intentsByMemo.get(tx.comment);
+        if (
+          intent &&
+          (!sameTonAddress(tx.to, intent.destination) ||
+            BigInt(tx.value) !== BigInt(intent.expected_amount_nano) ||
+            tx.timestamp < new Date(intent.created_at).getTime() - 120_000 ||
+            tx.timestamp > new Date(intent.expires_at).getTime())
+        ) {
+          console.warn(`[TON] Транзакция ${tx.hash} не совпала с параметрами intent ${intent.id}`);
+          continue;
+        }
+
+        // Уникальный intent имеет приоритет; старые deposit_<userId> остаются совместимыми.
+        const userId = intent ? String(intent.user_id) : await this.findUserByMemo(tx.comment);
         if (!userId) {
           console.log(`⚠️ Пользователь для memo ${tx.comment} не найден`);
           continue;
@@ -320,7 +359,7 @@ export class TonPaymentService {
         const coinsAmount = await this.tonToCoins(tonAmount);
 
         // Обрабатываем платеж
-        const processed = await this.processPayment(tx, userId, tonAmount, coinsAmount);
+        const processed = await this.processPayment(tx, userId, tonAmount, coinsAmount, intent?.id || null);
         
         if (processed) {
           processedCount++;

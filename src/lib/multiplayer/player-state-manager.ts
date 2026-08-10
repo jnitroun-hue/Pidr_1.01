@@ -15,17 +15,16 @@
  * - Правильное управление счетчиками
  */
 
-import { getRedis, isRedisAvailable } from '../redis/init';
+import { getRedis, isRedisAvailable, type RedisLike } from '../redis/init';
 import { supabaseAdmin as supabase } from '../supabase';
 import { getRedisUserId } from './public-user-id';
 import { idsEqual, isRoomHostUser } from './room-host';
-import type { Redis } from '@upstash/redis';
 
 /** Нет активности в комнате → автоматически выходим из membership */
 export const STALE_ROOM_MEMBERSHIP_MS = 2 * 60 * 1000;
 
 // Получаем Redis клиент через универсальную инициализацию
-const redis: Redis | null = getRedis();
+const redis: RedisLike | null = getRedis();
 
 /** Sentinel: Redis выключен — блокировки считаем успешными (режим DB-only на serverless). */
 export const NO_REDIS_LOCK_SENTINEL = '__no_redis_lock__';

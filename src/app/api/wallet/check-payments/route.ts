@@ -18,6 +18,7 @@ export async function POST(req: NextRequest) {
   const userId = dbUserId ? String(dbUserId) : auth.userId;
 
   try {
+    const body = (await req.json().catch(() => ({}))) as { intentId?: string };
     const tonMaster = resolveMasterAddress('GRAM') ?? resolveMasterAddress('TON');
     if (!tonMaster?.address) {
       return NextResponse.json({
@@ -29,6 +30,16 @@ export async function POST(req: NextRequest) {
 
     const result = await tonPaymentService.checkAndProcessPayments();
     const userPayments = result.newPayments.filter((p) => p.userId === userId);
+    let intent = null;
+    if (body.intentId) {
+      const { data } = await supabaseAdmin
+        .from('_pidr_deposit_intents')
+        .select('id, status, tx_hash, coins_credited, credited_at, expires_at')
+        .eq('id', body.intentId)
+        .eq('user_id', userId)
+        .maybeSingle();
+      intent = data;
+    }
 
     let newBalance: number | null = null;
     if (userPayments.length > 0) {
@@ -52,6 +63,7 @@ export async function POST(req: NextRequest) {
         coin: 'TON',
       })),
       newBalance,
+      intent,
       configuredAddress: tonMaster.address,
       envKey: tonMaster.envKey,
     });
