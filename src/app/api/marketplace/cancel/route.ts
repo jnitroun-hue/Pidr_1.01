@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
+import { invalidateMarketplaceListCache } from '@/lib/marketplace/listing-cache';
 
 /**
  * POST /api/marketplace/cancel
@@ -99,6 +100,7 @@ export async function POST(request: NextRequest) {
     }
     
     console.log('✅ [Marketplace Cancel] Лот отменён');
+    await invalidateMarketplaceListCache();
     
     return NextResponse.json({
       success: true,

@@ -14,6 +14,7 @@ import {
   type SellCrypto,
 } from '@/lib/marketplace/payment-meta';
 import { GRAM } from '@/lib/crypto/gram-brand';
+import NftCardFace from '@/components/NftCardFace';
 import styles from './SellNftModal.module.css';
 
 export interface SellNftCard {
@@ -22,6 +23,7 @@ export interface SellNftCard {
   rank: string;
   rarity: string;
   image_url: string;
+  metadata?: Record<string, unknown> | null;
 }
 
 interface HelperFunctions {
@@ -151,9 +153,14 @@ export function SellNftModal({
 
         <div className={styles.preview}>
           <div className={styles.cardImg} style={{ borderColor: suitColor }}>
-            {nft.image_url ? (
-              <img src={nft.image_url} alt="" loading="lazy" />
-            ) : null}
+            <NftCardFace
+              suit={nft.suit}
+              rank={nft.rank}
+              rarity={nft.rarity}
+              metadata={nft.metadata}
+              imageUrl={nft.image_url}
+              alt={`${getRankDisplay(nft.rank)} ${getSuitSymbol(nft.suit)}`}
+            />
           </div>
           <div>
             <div style={{ fontSize: 17, fontWeight: 800, color: suitColor }}>
@@ -220,7 +227,8 @@ export function SellNftModal({
                 </button>
               </div>
               <p className={styles.hint}>
-                Адрес увидит только покупатель при оплате — он сможет скопировать его одним нажатием.
+                Сеть: <strong>{sellCrypto === 'GRAM' ? 'TON' : 'Solana'}</strong>. Адрес хранится
+                приватно и не показывается в карточке лота; он доступен покупателю только на шаге оплаты.
               </p>
             </div>
           </>

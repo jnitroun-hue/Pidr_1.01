@@ -3,6 +3,8 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
+import NftCardFace from '@/components/NftCardFace';
+import { formatNftCardNameRu } from '@/lib/nft/card-display';
 import styles from './AddToDeckModal.module.css';
 
 export interface DeckPickerCard {
@@ -11,6 +13,7 @@ export interface DeckPickerCard {
   suit?: string;
   image_url?: string;
   rarity?: string;
+  metadata?: Record<string, unknown> | null;
 }
 
 interface AddToDeckModalProps {
@@ -78,6 +81,10 @@ export default function AddToDeckModal({
           {cards.map((card) => {
             const key = String(card.id);
             const isSelected = selectedIds.includes(key);
+            const cardName =
+              card.rank && card.suit
+                ? formatNftCardNameRu(card.rank, card.suit)
+                : 'NFT-карта';
             return (
               <button
                 key={key}
@@ -86,15 +93,22 @@ export default function AddToDeckModal({
                 onClick={() => onToggle(card.id)}
                 disabled={isSubmitting}
               >
-                {card.image_url ? (
-                  <img src={card.image_url} alt={`${card.rank} ${card.suit}`} className={styles.cardImg} />
-                ) : (
-                  <div className={styles.cardPlaceholder}>?</div>
-                )}
-                <span className={styles.cardLabel}>
-                  {isSelected ? '✓ ' : ''}
-                  {card.rank} {card.suit}
-                </span>
+                <div className={styles.cardFace}>
+                  {card.rank && card.suit ? (
+                    <NftCardFace
+                      rank={card.rank}
+                      suit={card.suit}
+                      rarity={card.rarity}
+                      metadata={card.metadata}
+                      imageUrl={card.image_url}
+                      alt={cardName}
+                    />
+                  ) : (
+                    <div className={styles.cardPlaceholder}>?</div>
+                  )}
+                  {isSelected && <span className={styles.selectedBadge}>✓</span>}
+                </div>
+                <span className={styles.cardLabel} title={cardName}>{cardName}</span>
               </button>
             );
           })}

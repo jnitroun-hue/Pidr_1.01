@@ -42,7 +42,10 @@ const secrets = {
   BOT_USERNAME: 'your_bot_username',
   NEXT_PUBLIC_TELEGRAM_BOT_USERNAME: 'your_bot_username',
   NEXT_PUBLIC_TELEGRAM_CHANNEL_LINK: 'https://t.me/your_channel',
+  TELEGRAM_BONUS_CHANNEL_ID: '@your_channel',
   NEXT_PUBLIC_VK_GROUP_LINK: 'https://vk.com/your_group',
+  VK_BONUS_GROUP_ID: 'your_numeric_group_id',
+  VK_SERVICE_TOKEN: 'your_vk_service_token',
 
   // === APP URLs ===
   NEXT_PUBLIC_APP_URL: 'https://your-app.vercel.app',

@@ -60,6 +60,27 @@ export function suitColor(suit: string): string {
   return suit === 'hearts' || suit === 'diamonds' ? '#dc2626' : '#0f172a';
 }
 
+function fallbackArtPalette(themeLabel?: string): {
+  background: string;
+  accent: string;
+  secondary: string;
+} {
+  const label = String(themeLabel || '').toLowerCase();
+  if (label.includes('легендар') || label.includes('legendary')) {
+    return { background: '#451a03', accent: '#fbbf24', secondary: '#f97316' };
+  }
+  if (label.includes('хеллоу') || label.includes('halloween')) {
+    return { background: '#2e1065', accent: '#fb923c', secondary: '#a855f7' };
+  }
+  if (label.includes('звезд') || label.includes('star')) {
+    return { background: '#020617', accent: '#60a5fa', secondary: '#a78bfa' };
+  }
+  if (label.includes('покемон') || label.includes('pokemon')) {
+    return { background: '#172554', accent: '#facc15', secondary: '#ef4444' };
+  }
+  return { background: '#0f172a', accent: '#e2e8f0', secondary: '#64748b' };
+}
+
 /** Path data in 24×24 viewBox — масштабируется без шрифтов */
 const SUIT_PATHS: Record<string, string> = {
   hearts:
@@ -96,9 +117,22 @@ function cornerGroupSvg(rank: string, suit: string, color: string, suitSize: num
 export function buildCardFaceSvg(spec: CardFaceSpec): string {
   const rank = displayRank(spec.rankRaw, spec.rankNormalized);
   const color = suitColor(spec.suit);
-  const suit = spec.suit in SUIT_PATHS ? spec.suit : 'spades';
+  const suit = resolveSuitKey(spec.suit);
   const { width, height, border, cornerMargin, art, themeBadge } = CARD_FACE;
   const themeLabel = spec.themeLabel ? escapeXml(spec.themeLabel.toUpperCase()) : '';
+  const palette = fallbackArtPalette(spec.themeLabel);
+  const fallbackArtwork = spec.themeLabel
+    ? `
+      <rect x="${art.left}" y="${art.top}" width="${art.size}" height="${art.size}" rx="8" fill="${palette.background}"/>
+      <circle cx="${art.left + art.size / 2}" cy="${art.top + art.size / 2}" r="104" fill="${palette.secondary}" opacity="0.24"/>
+      <circle cx="${art.left + art.size / 2}" cy="${art.top + art.size / 2}" r="78" fill="none" stroke="${palette.accent}" stroke-width="4" opacity="0.8"/>
+      ${suitPathSvg(suit, art.left + 72, art.top + 72, 112, palette.accent)}
+      <circle cx="${art.left + 34}" cy="${art.top + 34}" r="5" fill="${palette.accent}"/>
+      <circle cx="${art.left + art.size - 34}" cy="${art.top + 34}" r="5" fill="${palette.accent}"/>
+      <circle cx="${art.left + 34}" cy="${art.top + art.size - 34}" r="5" fill="${palette.accent}"/>
+      <circle cx="${art.left + art.size - 34}" cy="${art.top + art.size - 34}" r="5" fill="${palette.accent}"/>
+    `
+    : '';
 
   const badgeBlock = themeLabel
     ? `
@@ -112,6 +146,7 @@ export function buildCardFaceSvg(spec: CardFaceSpec): string {
       <rect width="${width}" height="${height}" fill="#ffffff"/>
       <rect x="${border / 2}" y="${border / 2}" width="${width - border}" height="${height - border}" rx="10" fill="none" stroke="#0f172a" stroke-width="${border}"/>
       <rect x="${art.left}" y="${art.top}" width="${art.size}" height="${art.size}" rx="8" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+      ${fallbackArtwork}
       <g transform="translate(${cornerMargin},${cornerMargin})">
         ${cornerGroupSvg(rank, suit, color, CARD_FACE.suitIconSize)}
       </g>
@@ -223,8 +258,41 @@ export function drawCardFaceCanvas(
     const drawY = art.top + (art.size - drawH) / 2;
     ctx.drawImage(img, drawX, drawY, drawW, drawH);
   } else {
-    ctx.fillStyle = '#f1f5f9';
+    const palette = fallbackArtPalette(spec.themeLabel);
+    ctx.fillStyle = spec.themeLabel ? palette.background : '#f1f5f9';
     ctx.fillRect(art.left, art.top, art.size, art.size);
+    if (spec.themeLabel) {
+      const centerX = art.left + art.size / 2;
+      const centerY = art.top + art.size / 2;
+
+      ctx.globalAlpha = 0.24;
+      ctx.fillStyle = palette.secondary;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 104, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      ctx.strokeStyle = palette.accent;
+      ctx.lineWidth = 4;
+      ctx.globalAlpha = 0.8;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 78, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+
+      drawSuitIconCanvas(ctx, suit, art.left + 72, art.top + 72, 112, palette.accent);
+      ctx.fillStyle = palette.accent;
+      for (const [x, y] of [
+        [art.left + 34, art.top + 34],
+        [art.left + art.size - 34, art.top + 34],
+        [art.left + 34, art.top + art.size - 34],
+        [art.left + art.size - 34, art.top + art.size - 34],
+      ]) {
+        ctx.beginPath();
+        ctx.arc(x, y, 5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
   }
 
   // Углы без rotate(180): иначе 6↔9 и часть мастей читаются вверх ногами / как другой ранг.

@@ -66,6 +66,20 @@ CREATE TABLE IF NOT EXISTS _pidr_coin_transactions (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Однократные и ежедневные бонусы (источник истины для защиты от повторных начислений)
+CREATE TABLE IF NOT EXISTS _pidr_bonus_claims (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES _pidr_users(id) ON DELETE CASCADE,
+    bonus_key VARCHAR(100) NOT NULL,
+    bonus_type VARCHAR(50) NOT NULL,
+    provider VARCHAR(30),
+    external_subject VARCHAR(255),
+    amount INTEGER NOT NULL CHECK (amount > 0),
+    verification_data JSONB NOT NULL DEFAULT '{}'::jsonb,
+    claimed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (user_id, bonus_key)
+);
+
 -- Статус пользователей
 CREATE TABLE IF NOT EXISTS _pidr_user_status (
     id BIGSERIAL PRIMARY KEY,
@@ -170,6 +184,7 @@ CREATE INDEX IF NOT EXISTS idx_pidr_rooms_status ON _pidr_rooms (status);
 CREATE INDEX IF NOT EXISTS idx_pidr_room_players_room_id ON _pidr_room_players (room_id);
 CREATE INDEX IF NOT EXISTS idx_pidr_room_players_user_id ON _pidr_room_players (user_id);
 CREATE INDEX IF NOT EXISTS idx_pidr_coin_transactions_user_id ON _pidr_coin_transactions (user_id);
+CREATE INDEX IF NOT EXISTS idx_pidr_bonus_claims_user ON _pidr_bonus_claims (user_id, claimed_at DESC);
 CREATE INDEX IF NOT EXISTS idx_pidr_room_invites_to_user ON _pidr_room_invites (to_user_id, status);
 CREATE INDEX IF NOT EXISTS idx_pidr_room_invites_room ON _pidr_room_invites (room_id);
 CREATE INDEX IF NOT EXISTS idx_pidr_user_tables_user_id ON _pidr_user_tables (user_id);
@@ -181,6 +196,7 @@ ALTER TABLE _pidr_users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE _pidr_rooms ENABLE ROW LEVEL SECURITY;
 ALTER TABLE _pidr_room_players ENABLE ROW LEVEL SECURITY;
 ALTER TABLE _pidr_coin_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE _pidr_bonus_claims ENABLE ROW LEVEL SECURITY;
 ALTER TABLE _pidr_user_status ENABLE ROW LEVEL SECURITY;
 ALTER TABLE _pidr_games ENABLE ROW LEVEL SECURITY;
 ALTER TABLE _pidr_game_results ENABLE ROW LEVEL SECURITY;

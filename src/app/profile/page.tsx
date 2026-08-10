@@ -24,57 +24,8 @@ import UserAvatarBadge from '@/components/UserAvatarBadge';
 import AuthMethodBadge from '@/components/AuthMethodBadge';
 import AddToDeckModal from '@/components/AddToDeckModal';
 import NftCardFace from '@/components/NftCardFace';
+import BonusCenter, { type ProfileBonus } from '@/components/BonusCenter';
 import type { AuthMethod } from '@/lib/user/resolve-auth-method';
-
-// Компонент таймера для бонусов
-function BonusCooldownTimer({ bonus, onCooldownEnd }: { bonus: any; onCooldownEnd: () => void }) {
-  const [timeLeft, setTimeLeft] = useState('');
-
-  useEffect(() => {
-    if (!bonus.cooldownUntil) {
-      setTimeLeft('🔒 НЕДОСТУПНО');
-      return;
-    }
-
-    const updateTimer = () => {
-      const now = new Date().getTime();
-      const cooldownTime = new Date(bonus.cooldownUntil).getTime();
-      const difference = cooldownTime - now;
-
-      if (difference <= 0) {
-        setTimeLeft('');
-        onCooldownEnd();
-        return;
-      }
-
-      const hours = Math.floor(difference / (1000 * 60 * 60));
-      const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((difference % (1000 * 60)) / 1000);
-
-      setTimeLeft(`⏰ ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
-    };
-
-    updateTimer();
-    const interval = setInterval(updateTimer, 1000);
-
-    return () => clearInterval(interval);
-  }, [bonus.cooldownUntil, onCooldownEnd]);
-
-  return (
-    <div style={{
-      background: 'rgba(55, 65, 81, 0.6)',
-      border: '1px solid rgba(255, 255, 255, 0.1)',
-      borderRadius: '12px',
-      color: '#94a3b8',
-      padding: '12px 20px',
-      fontWeight: '600',
-      fontSize: '0.9rem',
-      fontFamily: 'monospace'
-    }}>
-      {timeLeft || '🔒 НЕДОСТУПНО'}
-    </div>
-  );
-}
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -265,13 +216,23 @@ export default function ProfilePage() {
           credentials: 'include', // ✅ КРИТИЧНО: Отправляем cookies
           headers: apiHeaders
         });
-        
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success && result.bonuses) {
-            console.log('✅ Бонусы загружены:', result.bonuses);
-            setBonuses(result.bonuses);
-          }
+
+        const result = await response.json();
+        if (response.ok && result.success && result.bonuses) {
+          console.log('✅ Бонусы загружены:', result.bonuses);
+          setBonuses(result.bonuses);
+        } else {
+          setBonuses((current) =>
+            current.map((bonus) => ({
+              ...bonus,
+              available: false,
+              configured:
+                bonus.id === 'telegram_subscribe' || bonus.id === 'vk_subscribe'
+                  ? false
+                  : bonus.configured,
+              note: result.message || 'Бонусы временно недоступны.',
+            }))
+          );
         }
       } catch (error) {
         console.warn('⚠️ Не удалось загрузить бонусы:', error);
@@ -524,20 +485,7 @@ export default function ProfilePage() {
   ];
 
   // Бонусы
-  const [bonuses, setBonuses] = useState<Array<{
-    id: string;
-    name: string;
-    description: string;
-    reward: string;
-    icon: string;
-    available: boolean;
-    cooldown?: null;
-    cooldownUntil?: Date | null;
-    referrals?: number;
-    nextRank?: string;
-    link?: string;
-    note?: string;
-  }>>([
+  const [bonuses, setBonuses] = useState<ProfileBonus[]>([
     {
       id: 'daily',
       name: 'Ежедневный бонус',
@@ -545,7 +493,7 @@ export default function ProfilePage() {
       reward: '50, 75, 100, 125, 150, 175 или 200 монет',
       icon: '📅',
       available: true,
-      cooldown: null,
+      completed: false,
       cooldownUntil: null
     },
     {
@@ -563,9 +511,11 @@ export default function ProfilePage() {
       description: 'Подпишитесь на наш Telegram канал',
       reward: '300 монет',
       icon: '📢',
-      available: true,
-      link: process.env.NEXT_PUBLIC_TELEGRAM_CHANNEL_LINK || 'https://t.me/your_channel',
-      note: 'Подпишитесь на канал и получите бонус!'
+      available: false,
+      completed: false,
+      configured: false,
+      link: null,
+      note: 'Загрузка настроек проверки…'
     },
     {
       id: 'vk_subscribe',
@@ -573,9 +523,11 @@ export default function ProfilePage() {
       description: 'Подпишитесь на наше сообщество ВКонтакте',
       reward: '300 монет',
       icon: '👥',
-      available: true,
-      link: process.env.NEXT_PUBLIC_VK_GROUP_LINK || 'https://vk.com/your_group',
-      note: 'Подпишитесь на сообщество и получите бонус!'
+      available: false,
+      completed: false,
+      configured: false,
+      link: null,
+      note: 'Загрузка настроек проверки…'
     },
     {
       id: 'rank_up',
@@ -587,6 +539,7 @@ export default function ProfilePage() {
       nextRank: 'Серебро'
     }
   ]);
+  const [claimingBonusId, setClaimingBonusId] = useState<string | null>(null);
 
   // ✏️ ОБРАБОТКА ИЗМЕНЕНИЯ ИМЕНИ
   const handleUsernameChange = async (newUsername: string) => {
@@ -659,7 +612,22 @@ export default function ProfilePage() {
     
     // ✅ НОВОЕ: Для бонусов за подписки открываем ссылку
     const bonus = bonuses.find(b => b.id === bonusId);
-    if ((bonusId === 'telegram_subscribe' || bonusId === 'vk_subscribe') && bonus?.link) {
+    const isSocialBonus = bonusId === 'telegram_subscribe' || bonusId === 'vk_subscribe';
+    if (isSocialBonus && bonus?.configured === false) {
+      await appAlert('Проверка этой подписки пока не настроена. Бонус недоступен.', {
+        title: 'Временно недоступно',
+        type: 'warning',
+      });
+      return;
+    }
+    if (isSocialBonus && !bonus?.link) {
+      await appAlert('Официальная ссылка не настроена. Сообщите администратору.', {
+        title: 'Ссылка недоступна',
+        type: 'error',
+      });
+      return;
+    }
+    if (isSocialBonus && bonus?.link) {
       // Открываем ссылку на подписку
       if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.openLink) {
         (window as any).Telegram.WebApp.openLink(bonus.link);
@@ -668,12 +636,13 @@ export default function ProfilePage() {
       }
 
       const shouldContinue = await appConfirm(
-        `Открыл ссылку на ${bonusId === 'telegram_subscribe' ? 'Telegram канал' : 'сообщество ВК'}.\n\nЕсли подписка уже выполнена, нажмите «Подтвердить» для начисления бонуса сейчас.`,
-        { confirmText: 'Подтвердить', cancelText: 'Позже' }
+        `Подпишитесь на ${bonusId === 'telegram_subscribe' ? 'Telegram-канал' : 'сообщество ВКонтакте'}, затем вернитесь и запустите серверную проверку.`,
+        { confirmText: 'Проверить подписку', cancelText: 'Позже' }
       );
       if (!shouldContinue) return;
     }
     
+    setClaimingBonusId(bonusId);
     try {
       console.log('🔑 Отправляем запрос на получение бонуса...');
       
@@ -714,17 +683,18 @@ export default function ProfilePage() {
 
         // ✅ ОБНОВЛЯЕМ СТАТУС БОНУСА
         if (bonusId === 'daily') {
-          const nextBonusTime = new Date(Date.now() + 24 * 60 * 60 * 1000);
+          const tomorrow = new Date();
+          tomorrow.setUTCHours(24, 0, 0, 0);
           setBonuses(prev => prev.map(bonus => 
             bonus.id === bonusId 
-              ? { ...bonus, available: false, cooldownUntil: nextBonusTime }
+              ? { ...bonus, available: false, completed: true, cooldownUntil: tomorrow }
               : bonus
           ));
         } else if (bonusId === 'telegram_subscribe' || bonusId === 'vk_subscribe') {
           // Обновляем статус бонуса за подписку
           setBonuses(prev => prev.map(bonus => 
             bonus.id === bonusId 
-              ? { ...bonus, available: false }
+              ? { ...bonus, available: false, completed: true }
               : bonus
           ));
         }
@@ -742,7 +712,10 @@ export default function ProfilePage() {
             newBalance: newBalance,
           });
         } else {
-          alert(`🎉 ${description}!\nПолучено: ${bonusAmount} монет\nНовый баланс: ${newBalance.toLocaleString()}`);
+          await appAlert(
+            `${description}!\nПолучено: ${bonusAmount} монет\nНовый баланс: ${newBalance.toLocaleString()}`,
+            { title: 'Бонус подтверждён', type: 'success' }
+          );
         }
         
         console.log(`✅ Бонус "${bonusId}" успешно получен через API`);
@@ -753,7 +726,12 @@ export default function ProfilePage() {
       
     } catch (error: any) {
       console.error('❌ Ошибка получения бонуса:', error);
-      alert(`❌ Ошибка: ${error.message || 'Не удалось получить бонус'}`);
+      await appAlert(error.message || 'Не удалось получить бонус', {
+        title: 'Бонус не начислен',
+        type: 'error',
+      });
+    } finally {
+      setClaimingBonusId(null);
     }
   };
 
@@ -1975,10 +1953,11 @@ export default function ProfilePage() {
             style={{
               background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
               borderRadius: '24px',
-              padding: '24px',
-              width: '90vw',
-              maxWidth: '420px',
-              maxHeight: '80vh',
+              padding: showModal === 'bonuses' ? 'clamp(14px, 4vw, 24px)' : '24px',
+              boxSizing: 'border-box',
+              width: showModal === 'bonuses' ? 'min(calc(100vw - 24px), 780px)' : '90vw',
+              maxWidth: showModal === 'bonuses' ? '780px' : '420px',
+              maxHeight: showModal === 'bonuses' ? '88vh' : '80vh',
               overflowY: 'auto',
               border: '1px solid rgba(255, 255, 255, 0.1)',
               boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)'
@@ -2322,109 +2301,11 @@ export default function ProfilePage() {
             )}
 
             {showModal === 'bonuses' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {bonuses.map((bonus) => (
-                  <motion.div
-                    key={bonus.id}
-                    whileHover={{ scale: 1.02 }}
-                    style={{
-                      background: 'linear-gradient(135deg, rgba(71, 85, 105, 0.8) 0%, rgba(51, 65, 85, 0.6) 100%)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      borderRadius: '16px',
-                      padding: '20px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '16px'
-                    }}
-                  >
-                    <div style={{ fontSize: '3rem' }}>{bonus.icon}</div>
-                    <div style={{ flex: 1 }}>
-                      <h4 style={{ color: '#e2e8f0', fontSize: '1.2rem', fontWeight: '600', margin: '0 0 8px 0' }}>
-                        {bonus.name}
-                      </h4>
-                      <p style={{ color: '#94a3b8', fontSize: '0.9rem', margin: '0 0 8px 0' }}>
-                        {bonus.description}
-                      </p>
-                      <div style={{ color: '#fbbf24', fontSize: '0.9rem', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                        <PidrCoinIcon size={18} alt="" />
-                        {bonus.reward}
-                      </div>
-                      
-                      {bonus.id === 'daily' && bonus.available && (
-                        <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginTop: '8px' }}>
-                          ⏰ Следующий бонус через: {bonus.cooldown}
-                        </div>
-                      )}
-                      
-                      {bonus.id === 'referral' && (
-                        <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginTop: '8px' }}>
-                          👥 Приглашено друзей: {bonus.referrals}
-                        </div>
-                      )}
-                      
-                      {bonus.id === 'referral' && bonus.note && (
-                        <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginTop: '8px' }}>
-                          {bonus.note}
-                        </div>
-                      )}
-                      
-                      {bonus.id === 'rank_up' && !bonus.available && (
-                        <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginTop: '8px' }}>
-                          🎯 Следующий ранг: {bonus.nextRank}
-                        </div>
-                      )}
-                      
-                      {(bonus.id === 'telegram_subscribe' || bonus.id === 'vk_subscribe') && bonus.note && (
-                        <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginTop: '8px' }}>
-                          {bonus.note}
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      {bonus.id === 'referral' || bonus.available ? (
-                        <button
-                          onClick={() => handleBonusClick(bonus.id)}
-                          style={{
-                            background: bonus.id === 'referral'
-                              ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.85) 0%, rgba(79, 70, 229, 0.65) 100%)'
-                              : 'linear-gradient(135deg, rgba(34, 197, 94, 0.8) 0%, rgba(22, 163, 74, 0.6) 100%)',
-                            border: bonus.id === 'referral'
-                              ? '1px solid rgba(99, 102, 241, 0.45)'
-                              : '1px solid rgba(34, 197, 94, 0.4)',
-                            borderRadius: '12px',
-                            color: '#fff',
-                            padding: '12px 20px',
-                            cursor: 'pointer',
-                            fontWeight: '600',
-                            fontSize: '0.9rem',
-                            transition: 'all 0.3s ease'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.transform = 'scale(1.05)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.transform = 'scale(1)';
-                          }}
-                        >
-                          {bonus.id === 'daily' ? '🎁 ПОЛУЧИТЬ' : 
-                           bonus.id === 'referral' ? '👥 ПРИГЛАСИТЬ' :
-                           (bonus.id === 'telegram_subscribe' || bonus.id === 'vk_subscribe') ? '🎁 ПОЛУЧИТЬ' :
-                           '🏆 ПОЛУЧИТЬ'}
-                        </button>
-                      ) : (
-                        <BonusCooldownTimer 
-                          bonus={bonus}
-                          onCooldownEnd={() => {
-                            setBonuses(prev => prev.map(b => 
-                              b.id === bonus.id ? { ...b, available: true } : b
-                            ));
-                          }}
-                        />
-                      )}
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
+              <BonusCenter
+                bonuses={bonuses}
+                claimingId={claimingBonusId}
+                onAction={handleBonusClick}
+              />
             )}
 
             {/* 🎴 МОЯ КОЛОДА - МОДАЛКА */}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { invalidateMarketplaceListCache } from '@/lib/marketplace/listing-cache';
 
 /**
  * POST /api/marketplace/buy
@@ -119,6 +120,37 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Реквизиты берём из конкретного лота: продавец подтвердил их при выставлении карты.
+    // Для старых лотов оставляем fallback на подключённый кошелёк продавца.
+    let sellerWalletAddress: string | undefined;
+    if (payment_method === 'crypto' && cryptoCurrency) {
+      const listingNetwork = String(listing.seller_wallet_network || '').toUpperCase();
+      const listingWallet = String(listing.seller_wallet_address || '').trim();
+      if (listingWallet && (!listingNetwork || listingNetwork === cryptoCurrency)) {
+        sellerWalletAddress = listingWallet;
+      } else {
+        const walletType = cryptoCurrency.toLowerCase();
+        const { data: sellerWallet } = await db
+          .from('_pidr_player_wallets')
+          .select('wallet_address')
+          .eq('user_id', sellerId)
+          .or(`wallet_type.eq.${walletType},coin_type.eq.${walletType}`)
+          .eq('is_active', true)
+          .maybeSingle();
+        sellerWalletAddress = sellerWallet?.wallet_address || undefined;
+      }
+
+      if (!sellerWalletAddress) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Для лота не указан адрес ${cryptoCurrency}-кошелька продавца.`,
+          },
+          { status: 400 }
+        );
+      }
+    }
     
     // Получаем баланс покупателя
     const { data: buyer, error: buyerError } = await db
@@ -209,6 +241,7 @@ export async function POST(request: NextRequest) {
           sold_at: new Date().toISOString()
         })
         .eq('id', listing_id);
+      await invalidateMarketplaceListCache();
 
       // 5. Создаем запись транзакции
       await db
@@ -241,6 +274,7 @@ export async function POST(request: NextRequest) {
           updated_at: new Date().toISOString()
         })
         .eq('id', listing_id);
+      await invalidateMarketplaceListCache();
 
       // Создаем запись транзакции со статусом "pending"
       await db
@@ -266,36 +300,8 @@ export async function POST(request: NextRequest) {
     
     // Генерируем payment URL для крипты
     let paymentUrl: string | undefined = undefined;
-    let sellerWalletAddress: string | undefined = undefined;
     
     if (payment_method === 'crypto' && cryptoCurrency) {
-      // ✅ ПОЛУЧАЕМ АДРЕС КОШЕЛЬКА ПРОДАВЦА ИЗ БД
-      // ИСПРАВЛЕНО: Используем _pidr_player_wallets, а не _pidr_hd_wallets!
-      const walletType = cryptoCurrency.toLowerCase(); // 'TON' -> 'ton', 'SOL' -> 'sol'
-      
-      const { data: sellerWallet, error: walletError } = await db
-        .from('_pidr_player_wallets')
-        .select('wallet_address')
-        .eq('user_id', sellerId)
-        .or(`wallet_type.eq.${walletType},coin_type.eq.${walletType}`)
-        .eq('is_active', true)
-        .maybeSingle();
-      
-      if (walletError || !sellerWallet) {
-        console.error('❌ [Marketplace Buy] Кошелек продавца не найден:', walletError);
-        return NextResponse.json(
-          { 
-            success: false, 
-            error: `Продавец не подключил ${cryptoCurrency} кошелек. Оплата невозможна.` 
-          },
-          { status: 400 }
-        );
-      }
-      
-      // ИСПРАВЛЕНО: Используем wallet_address вместо address
-      sellerWalletAddress = sellerWallet.wallet_address;
-      console.log(`💰 [Marketplace Buy] Адрес продавца (${cryptoCurrency}): ${sellerWalletAddress}`);
-      
       if (cryptoCurrency === 'TON') {
         // TON Payment URL (Tonkeeper) - ДЕНЬГИ ИДУТ ПРОДАВЦУ!
         const amountNano = Math.floor(price * 1000000000); // TON в нанотоны

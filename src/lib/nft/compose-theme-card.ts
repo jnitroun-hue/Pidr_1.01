@@ -14,8 +14,8 @@ import {
 } from '@/lib/nft/theme-config';
 
 const REMOTE_FETCH_TIMEOUT_MS = 2500;
-/** v7: canvas на сервере + чёткие пики; сброс битых превью без шрифтов */
-const COMPOSE_VERSION = 8;
+/** v9: themed fallback art + promised daily-offer theme; invalidates blank cached previews. */
+const COMPOSE_VERSION = 9;
 
 export { COMPOSE_VERSION };
 

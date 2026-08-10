@@ -11,6 +11,7 @@ import { CRYPTO_TOKENS } from '@/lib/crypto/crypto-assets';
 import CryptoIcon from '@/components/CryptoIcon';
 import PidrCoinIcon, { PidrCoinAmount } from '@/components/PidrCoinIcon';
 import NftCardFace from '@/components/NftCardFace';
+import styles from './MarketplaceTabs.module.css';
 
 export { SellNftModal as SellModal } from '@/components/SellNftModal';
 
@@ -92,15 +93,11 @@ export function BuyTab({ listings, onBuy, userCoins, getSuitColor, getSuitSymbol
   }
 
   return (
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-      gap: '20px',
-      padding: '10px'
-    }}>
+    <div className={styles.buyGrid}>
       {buyableListings.map((listing, index) => (
         <motion.div
           key={listing.id}
+          className={styles.listingCard}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: index * 0.05 }}
@@ -118,35 +115,15 @@ export function BuyTab({ listings, onBuy, userCoins, getSuitColor, getSuitSymbol
           }}
         >
           {/* Card Image */}
-          <div style={{
-            width: '100%',
-            aspectRatio: '0.7',
-            position: 'relative',
-            borderRadius: '12px',
-            overflow: 'hidden',
-            marginBottom: '12px',
-            background: '#ffffff' // ✅ ИСПРАВЛЕНО: белый фон для карт в маркетплейсе
-          }}>
-            {listing.nft_card.image_url ? (
-              <Image
-                src={listing.nft_card.image_url}
-                alt={`${listing.nft_card.rank} of ${listing.nft_card.suit}`}
-                fill
-                style={{ objectFit: 'contain' }}
-              />
-            ) : (
-              <div style={{
-                width: '100%',
-                height: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '64px',
-                color: getSuitColor(listing.nft_card.suit)
-              }}>
-                {getSuitSymbol(listing.nft_card.suit)}
-              </div>
-            )}
+          <div className={styles.listingFace}>
+            <NftCardFace
+              suit={listing.nft_card.suit}
+              rank={listing.nft_card.rank}
+              rarity={listing.nft_card.rarity}
+              metadata={listing.nft_card.metadata}
+              imageUrl={listing.nft_card.image_url}
+              alt={`${listing.nft_card.rank} of ${listing.nft_card.suit}`}
+            />
           </div>
 
           {/* Card Info */}

@@ -1,386 +1,302 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '../../../lib/supabase';
-import { requireAuth, getUserIdFromDatabase } from '../../../lib/auth-utils';
+import { supabaseAdmin } from '@/lib/supabase';
+import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 import { pickDailyWheelAmount } from '@/lib/bonus/daily-wheel';
+import {
+  socialBonusConfig,
+  verifySocialSubscription,
+  type SocialBonusType,
+} from '@/lib/bonus/social-subscription';
 
-// ✅ Явная конфигурация runtime для Next.js 15
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-interface BonusTransactionRow {
-  id: number;
-  created_at: string;
+interface BonusClaimRow {
+  bonus_key: string;
+  bonus_type: string;
   amount: number;
-  description: string | null;
+  claimed_at: string;
 }
 
-// POST /api/bonus - Получить бонус
+function noStoreJson(body: unknown, init?: ResponseInit) {
+  const response = NextResponse.json(body, init);
+  response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate');
+  response.headers.set('Pragma', 'no-cache');
+  response.headers.set('Expires', '0');
+  return response;
+}
+
+function utcDayKey(date = new Date()) {
+  return date.toISOString().slice(0, 10);
+}
+
+function nextUtcDay(date = new Date()) {
+  return new Date(`${utcDayKey(new Date(date.getTime() + 24 * 60 * 60 * 1000))}T00:00:00.000Z`);
+}
+
+function isDuplicateClaim(error: { code?: string; message?: string } | null) {
+  return error?.code === '23505' || /duplicate|unique/i.test(error?.message || '');
+}
+
+function migrationMissing(error: { code?: string; message?: string } | null) {
+  return (
+    error?.code === 'PGRST202' ||
+    /claim_pidr_bonus|_pidr_bonus_claims|schema cache|does not exist/i.test(error?.message || '')
+  );
+}
+
 export async function POST(req: NextRequest) {
-  console.log('🎁 POST /api/bonus - Получение бонуса...');
-  
   const auth = requireAuth(req);
-  
   if (auth.error || !auth.userId) {
-    console.error('❌ [POST /api/bonus] Ошибка авторизации:', auth.error);
-    return NextResponse.json({ success: false, message: auth.error || 'Требуется авторизация' }, { status: 401 });
+    return noStoreJson(
+      { success: false, message: auth.error || 'Требуется авторизация' },
+      { status: 401 }
+    );
   }
-  
-  const { userId, environment } = auth;
-  console.log(`✅ [POST /api/bonus] Пользователь: ${userId} (${environment})`);
-  
+
   try {
     const { bonusType } = await req.json();
-    
-    if (!bonusType) {
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Не указан тип бонуса' 
-      }, { status: 400 });
+    if (!bonusType || typeof bonusType !== 'string') {
+      return noStoreJson({ success: false, message: 'Не указан тип бонуса' }, { status: 400 });
     }
-    
-    console.log(`🎁 Обработка бонуса "${bonusType}" для пользователя:`, userId);
-    
-    // ✅ УНИВЕРСАЛЬНО: Получаем пользователя из БД
-    const { dbUserId, user } = await getUserIdFromDatabase(userId, environment);
-      
+
+    if (bonusType === 'referral') {
+      return noStoreJson(
+        { success: false, message: 'Реферальные бонусы начисляются автоматически.' },
+        { status: 400 }
+      );
+    }
+    if (bonusType === 'rank_up') {
+      return noStoreJson(
+        { success: false, message: 'Бонус ранга начисляется автоматически после достижения нового ранга.' },
+        { status: 400 }
+      );
+    }
+    if (!['daily', 'telegram_subscribe', 'vk_subscribe'].includes(bonusType)) {
+      return noStoreJson({ success: false, message: 'Неизвестный тип бонуса' }, { status: 400 });
+    }
+
+    const { dbUserId, user } = await getUserIdFromDatabase(auth.userId, auth.environment);
     if (!dbUserId || !user) {
-      console.error(`❌ [POST /api/bonus] Пользователь не найден (${environment}):`, userId);
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Пользователь не найден' 
-      }, { status: 404 });
+      return noStoreJson({ success: false, message: 'Пользователь не найден' }, { status: 404 });
     }
-    
-    console.log('👤 Текущий пользователь:', user.username, 'Баланс:', user.coins);
-    
-    // Рассчитываем размер бонуса
-    let bonusAmount = 0;
-    let bonusDescription = '';
-    
-    switch (bonusType) {
-      case 'daily':
-        // ✅ СТРОГАЯ ПРОВЕРКА ЕЖЕДНЕВНОГО БОНУСА
-        const now = new Date();
-        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
-        
-        console.log(`🔍 Проверяем ежедневный бонус для ${userId} за ${todayStart.toISOString()}`);
-        
-        // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Используем уникальную комбинацию user_id + date для проверки
-        const todayKey = `${userId}_${todayStart.getTime()}`; // Уникальный ключ на день
-        
-        // ✅ ОПТИМИЗАЦИЯ ДЛЯ БЕСПЛАТНОГО ПЛАНА: Один запрос вместо двух
-        const { data: dailyBonuses, error: dailyError } = await supabaseAdmin
-          .from('_pidr_coin_transactions')
-          .select('id, created_at, amount, description')
-          .eq('user_id', dbUserId)
-          .eq('transaction_type', 'bonus')
-          .gte('created_at', todayStart.toISOString())
-          .lt('created_at', todayEnd.toISOString())
-          .order('created_at', { ascending: false })
-          .limit(5); // Получаем несколько для проверки
-        
-        if (dailyError) {
-          console.error('❌ Ошибка проверки ежедневного бонуса:', dailyError);
-        }
-        
-        // ✅ Проверяем по дате создания И по описанию в одном результате
-        const lastBonus = (dailyBonuses as BonusTransactionRow[] | null)?.find((bonus) => {
-          const bonusDate = new Date(bonus.created_at);
-          const isToday = bonusDate.toDateString() === todayStart.toDateString();
-          const hasTodayInDescription = bonus.description?.includes(todayStart.toDateString());
-          return isToday || hasTodayInDescription;
-        });
-        
-        if (lastBonus) {
-          const nextBonusTime = new Date(todayEnd.getTime());
-          const hoursLeft = Math.ceil((nextBonusTime.getTime() - now.getTime()) / (1000 * 60 * 60));
-          
-          console.log(`⏰ Ежедневный бонус уже получен сегодня в ${lastBonus.created_at}`);
-          console.log(`📝 Найденная транзакция:`, lastBonus);
-          return NextResponse.json({ 
-            success: false, 
-            message: `Ежедневный бонус уже получен! Следующий через ${hoursLeft} ч.`,
-            data: { 
-              cooldownUntil: nextBonusTime,
-              hoursLeft,
-              lastBonusAmount: lastBonus.amount,
-              lastBonusTime: lastBonus.created_at
-            }
-          }, { status: 400 });
-        }
-        
-        bonusAmount = pickDailyWheelAmount();
-        bonusDescription = `Ежедневный бонус ${todayStart.toDateString()}`; // Добавляем дату в описание
-        console.log(`✅ Ежедневный бонус доступен: ${bonusAmount} монет`);
-        break;
-        
-      case 'referral':
-        // ❌ РЕФЕРАЛЫ НЕ ДОЛЖНЫ ВЫДАВАТЬСЯ НАПРЯМУЮ ЧЕРЕЗ ЭТОТ API
-        // Рефералы обрабатываются автоматически через stored procedure
-        console.log('❌ Попытка получить реферальный бонус напрямую');
-        return NextResponse.json({ 
-          success: false, 
-          message: 'Реферальные бонусы начисляются автоматически при выполнении условий' 
-        }, { status: 400 });
-        break;
-        
-      case 'rank_up':
-        bonusAmount = Math.floor(Math.random() * 1500) + 500; // 500-2000 монет
-        bonusDescription = 'Бонус за повышение ранга';
-        break;
-        
-      case 'telegram_subscribe':
-        // ✅ БОНУС ЗА ПОДПИСКУ В TELEGRAM
-        // Проверяем, получал ли пользователь уже этот бонус
-        const { data: telegramBonusCheck } = await supabaseAdmin
-          .from('_pidr_coin_transactions')
-          .select('id')
-          .eq('user_id', dbUserId)
-          .eq('transaction_type', 'bonus')
-          .eq('description', 'Бонус за подписку в Telegram')
-          .limit(1);
-        
-        if (telegramBonusCheck && telegramBonusCheck.length > 0) {
-          return NextResponse.json({ 
-            success: false, 
-            message: 'Бонус за подписку в Telegram уже получен!' 
-          }, { status: 400 });
-        }
-        
-        bonusAmount = 300; // 300 монет за подписку
-        bonusDescription = 'Бонус за подписку в Telegram';
-        console.log(`✅ Бонус за подписку в Telegram доступен: ${bonusAmount} монет`);
-        break;
-        
-      case 'vk_subscribe':
-        // ✅ БОНУС ЗА ПОДПИСКУ В ВК
-        // Проверяем, получал ли пользователь уже этот бонус
-        const { data: vkBonusCheck } = await supabaseAdmin
-          .from('_pidr_coin_transactions')
-          .select('id')
-          .eq('user_id', dbUserId)
-          .eq('transaction_type', 'bonus')
-          .eq('description', 'Бонус за подписку в ВК')
-          .limit(1);
-        
-        if (vkBonusCheck && vkBonusCheck.length > 0) {
-          return NextResponse.json({ 
-            success: false, 
-            message: 'Бонус за подписку в ВК уже получен!' 
-          }, { status: 400 });
-        }
-        
-        bonusAmount = 300; // 300 монет за подписку
-        bonusDescription = 'Бонус за подписку в ВК';
-        console.log(`✅ Бонус за подписку в ВК доступен: ${bonusAmount} монет`);
-        break;
-        
-      default:
-        return NextResponse.json({ 
-          success: false, 
-          message: 'Неизвестный тип бонуса' 
-        }, { status: 400 });
-    }
-    
-    console.log(`💰 Размер бонуса: ${bonusAmount} монет`);
-    
-    // Начинаем транзакцию в Supabase
-    const newBalance = user.coins + bonusAmount;
-    
-    // 1. Обновляем баланс пользователя
-    const { error: updateError } = await supabaseAdmin
-      .from('_pidr_users')
-      .update({ 
-        coins: newBalance,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', dbUserId);
-      
-    if (updateError) {
-      console.error('❌ Ошибка обновления баланса:', updateError);
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Ошибка обновления баланса' 
-      }, { status: 500 });
-    }
-    
-    // 2. Записываем транзакцию для истории
-    // ✅ ИСПРАВЛЕНО: Используем _pidr_coin_transactions и dbUserId (id из БД)
-    const { error: transactionError } = await supabaseAdmin
-      .from('_pidr_coin_transactions')
-      .insert({
-        user_id: dbUserId,
-        transaction_type: 'bonus',
-        amount: bonusAmount,
-        description: bonusDescription,
-        balance_before: user.coins,
-        balance_after: newBalance,
-        created_at: new Date().toISOString()
-      });
-      
-    if (transactionError) {
-      console.warn('⚠️ Ошибка записи транзакции (не критично):', transactionError);
-      // Не прерываем процесс, если запись транзакции не удалась
-    }
-    
-    console.log(`✅ Бонус "${bonusType}" успешно начислен пользователю ${user.username}`);
-    console.log(`💰 Новый баланс: ${user.coins} → ${newBalance} (+${bonusAmount})`);
-    
-    return NextResponse.json({ 
-      success: true, 
-      message: `${bonusDescription}: +${bonusAmount} монет!`,
-      data: {
-        bonusAmount,
-        newBalance,
-        oldBalance: user.coins,
-        bonusType,
-        description: bonusDescription
+
+    let amount: number;
+    let bonusKey: string;
+    let description: string;
+    let provider: string | null = null;
+    let externalSubject: string | null = null;
+    let verificationData: Record<string, unknown> = {};
+
+    if (bonusType === 'daily') {
+      const day = utcDayKey();
+      amount = pickDailyWheelAmount();
+      bonusKey = `daily:${day}`;
+      description = `Ежедневный бонус ${day}`;
+      verificationData = { day, source: 'server_daily_wheel' };
+    } else {
+      const socialType = bonusType as SocialBonusType;
+      const verification = await verifySocialSubscription(socialType, user);
+      if (!verification.configured) {
+        return noStoreJson(
+          { success: false, code: 'BONUS_NOT_CONFIGURED', message: verification.error },
+          { status: 503 }
+        );
       }
+      if (!verification.ok) {
+        return noStoreJson(
+          { success: false, code: 'SUBSCRIPTION_NOT_FOUND', message: verification.error },
+          { status: 403 }
+        );
+      }
+
+      amount = 300;
+      bonusKey = socialType;
+      provider = verification.provider;
+      externalSubject = verification.subjectId || null;
+      verificationData = verification.details || {};
+      description =
+        socialType === 'telegram_subscribe'
+          ? 'Бонус за подписку в Telegram'
+          : 'Бонус за подписку в ВК';
+    }
+
+    const { data, error } = await supabaseAdmin.rpc('claim_pidr_bonus', {
+      p_user_id: dbUserId,
+      p_bonus_key: bonusKey,
+      p_bonus_type: bonusType,
+      p_amount: amount,
+      p_description: description,
+      p_provider: provider,
+      p_external_subject: externalSubject,
+      p_verification_data: verificationData,
     });
-    
-  } catch (error: unknown) {
-    console.error('❌ Критическая ошибка API бонусов:', error);
-    const message = error instanceof Error ? error.message : 'Неизвестная ошибка';
-    return NextResponse.json({ 
-      success: false, 
-      message: `Внутренняя ошибка сервера: ${message}` 
-    }, { status: 500 });
+
+    if (error) {
+      if (isDuplicateClaim(error)) {
+        const daily = bonusType === 'daily';
+        return noStoreJson(
+          {
+            success: false,
+            code: 'BONUS_ALREADY_CLAIMED',
+            message: daily ? 'Ежедневный бонус уже получен сегодня.' : 'Этот бонус уже получен.',
+            data: daily ? { cooldownUntil: nextUtcDay() } : undefined,
+          },
+          { status: 409 }
+        );
+      }
+      if (migrationMissing(error)) {
+        return noStoreJson(
+          {
+            success: false,
+            code: 'BONUS_DB_MIGRATION_REQUIRED',
+            message: 'Таблица безопасных бонусов ещё не установлена.',
+            hint: 'Выполните scripts/sql/bonus-claims.sql в Supabase SQL Editor.',
+          },
+          { status: 503 }
+        );
+      }
+      console.error('❌ [Bonus claim]', error);
+      return noStoreJson({ success: false, message: 'Не удалось начислить бонус' }, { status: 500 });
+    }
+
+    const result = Array.isArray(data) ? data[0] : data;
+    const newBalance = Number(result?.new_balance);
+    return noStoreJson({
+      success: true,
+      message: `${description}: +${amount} монет`,
+      data: {
+        bonusAmount: amount,
+        newBalance,
+        oldBalance: newBalance - amount,
+        bonusType,
+        description,
+        claimId: result?.claim_id,
+      },
+    });
+  } catch (error) {
+    console.error('❌ [POST /api/bonus]', error);
+    return noStoreJson(
+      { success: false, message: error instanceof Error ? error.message : 'Ошибка сервера' },
+      { status: 500 }
+    );
   }
 }
 
-// GET /api/bonus - Получить доступные бонусы
 export async function GET(req: NextRequest) {
-  console.log('🎁 GET /api/bonus - Получение списка доступных бонусов...');
-  
   const auth = requireAuth(req);
-  
   if (auth.error || !auth.userId) {
-    console.error('❌ [GET /api/bonus] Ошибка авторизации:', auth.error);
-    return NextResponse.json({ success: false, message: auth.error || 'Требуется авторизация' }, { status: 401 });
-  }
-  
-  const { userId, environment } = auth;
-  console.log(`✅ [GET /api/bonus] Пользователь: ${userId} (${environment})`);
-  
-  try {
-    // ✅ УНИВЕРСАЛЬНО: Получаем пользователя из БД
-    const { dbUserId, user: userData } = await getUserIdFromDatabase(userId, environment);
-    
-    if (!dbUserId || !userData) {
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Пользователь не найден' 
-      }, { status: 404 });
-    }
-    
-    // Получаем информацию о последних бонусах пользователя
-    // ✅ ИСПРАВЛЕНО: Используем _pidr_coin_transactions и dbUserId
-    const { data: recentBonuses } = await supabaseAdmin
-      .from('_pidr_coin_transactions')
-      .select('transaction_type, created_at, description')
-      .eq('user_id', dbUserId)
-      .eq('transaction_type', 'bonus')
-      .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // За последние 24 часа
-      .order('created_at', { ascending: false });
-    
-    // Проверяем доступность бонусов
-    const today = new Date().toDateString();
-    // ✅ ИСПРАВЛЕНО: Проверяем по description вместо bonus_type
-    const dailyBonusToday = (recentBonuses as BonusTransactionRow[] | null)?.find((b) => 
-      b.description?.includes('Ежедневный бонус') && 
-      new Date(b.created_at).toDateString() === today
+    return noStoreJson(
+      { success: false, message: auth.error || 'Требуется авторизация' },
+      { status: 401 }
     );
-    
-    // Проверяем бонусы за подписки
-    const { data: telegramSubscribeCheck } = await supabaseAdmin
-      .from('_pidr_coin_transactions')
-      .select('id')
-      .eq('user_id', dbUserId)
-      .eq('transaction_type', 'bonus')
-      .eq('description', 'Бонус за подписку в Telegram')
-      .limit(1);
-    
-    const { data: vkSubscribeCheck } = await supabaseAdmin
-      .from('_pidr_coin_transactions')
-      .select('id')
-      .eq('user_id', dbUserId)
-      .eq('transaction_type', 'bonus')
-      .eq('description', 'Бонус за подписку в ВК')
-      .limit(1);
+  }
 
-    let referralCount = 0;
-    const { count: refCount, error: refCountError } = await supabaseAdmin
+  try {
+    const { dbUserId } = await getUserIdFromDatabase(auth.userId, auth.environment);
+    if (!dbUserId) {
+      return noStoreJson({ success: false, message: 'Пользователь не найден' }, { status: 404 });
+    }
+
+    const { data: claims, error: claimsError } = await supabaseAdmin
+      .from('_pidr_bonus_claims')
+      .select('bonus_key, bonus_type, amount, claimed_at')
+      .eq('user_id', dbUserId)
+      .order('claimed_at', { ascending: false });
+
+    if (claimsError) {
+      return noStoreJson(
+        {
+          success: false,
+          code: 'BONUS_DB_MIGRATION_REQUIRED',
+          message: 'Хранилище бонусов не настроено.',
+          hint: 'Выполните scripts/sql/bonus-claims.sql в Supabase SQL Editor.',
+        },
+        { status: 503 }
+      );
+    }
+
+    const rows = (claims || []) as BonusClaimRow[];
+    const dailyKey = `daily:${utcDayKey()}`;
+    const dailyClaim = rows.find((claim) => claim.bonus_key === dailyKey);
+    const telegramClaim = rows.find((claim) => claim.bonus_key === 'telegram_subscribe');
+    const vkClaim = rows.find((claim) => claim.bonus_key === 'vk_subscribe');
+    const telegramConfig = socialBonusConfig('telegram_subscribe');
+    const vkConfig = socialBonusConfig('vk_subscribe');
+
+    const { count: referralCount } = await supabaseAdmin
       .from('_pidr_referrals')
       .select('id', { count: 'exact', head: true })
       .eq('referrer_user_id', dbUserId);
-    if (!refCountError && refCount != null) {
-      referralCount = refCount;
-    }
-    
-    const availableBonuses = [
-      {
-        id: 'daily',
-        name: 'Ежедневный бонус',
-        description: 'Получайте монеты каждый день',
-        reward: '50, 75, 100, 125, 150, 175 или 200 монет',
-        icon: '📅',
-        available: !dailyBonusToday,
-        cooldownUntil: dailyBonusToday ? 
-          new Date(new Date(dailyBonusToday.created_at).getTime() + 24 * 60 * 60 * 1000) : null
-      },
-      {
-        id: 'referral',
-        name: 'Реферальная система',
-        description: 'Приглашайте друзей и получайте бонусы',
-        reward: '500 монет за активного друга',
-        icon: '👥',
-        available: true,
-        referrals: referralCount,
-        note: 'Бонус начисляется автоматически, когда приглашённый друг получит первый ежедневный бонус'
-      },
-      {
-        id: 'telegram_subscribe',
-        name: 'Подписка в Telegram',
-        description: 'Подпишитесь на наш Telegram канал',
-        reward: '300 монет',
-        icon: '📢',
-        available: !telegramSubscribeCheck || telegramSubscribeCheck.length === 0,
-        link: process.env.NEXT_PUBLIC_TELEGRAM_CHANNEL_LINK || 'https://t.me/your_channel', // TODO: Заменить на реальную ссылку
-        note: 'Подпишитесь на канал и получите бонус!'
-      },
-      {
-        id: 'vk_subscribe',
-        name: 'Подписка в ВК',
-        description: 'Подпишитесь на наше сообщество ВКонтакте',
-        reward: '300 монет',
-        icon: '👥',
-        available: !vkSubscribeCheck || vkSubscribeCheck.length === 0,
-        link: process.env.NEXT_PUBLIC_VK_GROUP_LINK || 'https://vk.com/your_group', // TODO: Заменить на реальную ссылку
-        note: 'Подпишитесь на сообщество и получите бонус!'
-      },
-      {
-        id: 'rank_up',
-        name: 'Повышение ранга',
-        description: 'Бонусы за достижение новых рангов',
-        reward: '500-2000 монет',
-        icon: '🏆',
-        available: false, // TODO: проверить ранг пользователя
-        nextRank: 'Серебро'
-      }
-    ];
-    
-    return NextResponse.json({ 
-      success: true, 
-      bonuses: availableBonuses 
+
+    return noStoreJson({
+      success: true,
+      bonuses: [
+        {
+          id: 'daily',
+          name: 'Ежедневный бонус',
+          description: 'Возвращайтесь каждый день и открывайте случайную награду',
+          reward: '50, 75, 100, 125, 150, 175 или 200 монет',
+          icon: '📅',
+          available: !dailyClaim,
+          completed: Boolean(dailyClaim),
+          cooldownUntil: dailyClaim ? nextUtcDay() : null,
+        },
+        {
+          id: 'referral',
+          name: 'Пригласить друга',
+          description: 'Получайте награду за активных приглашённых игроков',
+          reward: '500 монет за активного друга',
+          icon: '👥',
+          available: true,
+          completed: false,
+          referrals: referralCount || 0,
+          note: 'Начисляется автоматически после первого ежедневного бонуса друга.',
+        },
+        {
+          id: 'telegram_subscribe',
+          name: 'Telegram-канал',
+          description: 'Подпишитесь на официальный канал и подтвердите подписку',
+          reward: '300 монет',
+          icon: '✈️',
+          available: telegramConfig.configured && !telegramClaim,
+          completed: Boolean(telegramClaim),
+          configured: telegramConfig.configured,
+          link: telegramConfig.link,
+          note: telegramConfig.configured
+            ? 'Сервер проверит подписку через Telegram Bot API.'
+            : 'Проверка временно недоступна: канал не настроен.',
+        },
+        {
+          id: 'vk_subscribe',
+          name: 'Сообщество ВКонтакте',
+          description: 'Вступите в официальное сообщество и подтвердите подписку',
+          reward: '300 монет',
+          icon: 'VK',
+          available: vkConfig.configured && !vkClaim,
+          completed: Boolean(vkClaim),
+          configured: vkConfig.configured,
+          link: vkConfig.link,
+          note: vkConfig.configured
+            ? 'Сервер проверит участие через VK API.'
+            : 'Проверка временно недоступна: группа не настроена.',
+        },
+        {
+          id: 'rank_up',
+          name: 'Награда за ранг',
+          description: 'Начисляется автоматически за достижение нового ранга',
+          reward: '500–2000 монет',
+          icon: '🏆',
+          available: false,
+          completed: false,
+          nextRank: 'Серебро',
+          note: 'Ручное получение отключено для защиты от повторных начислений.',
+        },
+      ],
     });
-    
-  } catch (error: unknown) {
-    console.error('❌ Ошибка получения бонусов:', error);
-    return NextResponse.json({ 
-      success: false, 
-      message: 'Ошибка получения бонусов' 
-    }, { status: 500 });
+  } catch (error) {
+    console.error('❌ [GET /api/bonus]', error);
+    return noStoreJson({ success: false, message: 'Ошибка получения бонусов' }, { status: 500 });
   }
 }

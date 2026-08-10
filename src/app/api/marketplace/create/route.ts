@@ -8,6 +8,8 @@ import { NFT_CARDS_TABLE, NFT_MARKETPLACE_TABLE } from '@/lib/nft/constants';
 import { GRAM } from '@/lib/crypto/gram-brand';
 import { listingHasValidPrice } from '@/lib/marketplace/listing-price';
 import { isYooKassaConfigured } from '@/lib/payments/yookassa-config';
+import { isValidWallet } from '@/lib/marketplace/payment-meta';
+import { invalidateMarketplaceListCache } from '@/lib/marketplace/listing-cache';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -89,10 +91,42 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (priceRubNum !== null && !Number.isNaN(priceRubNum) && priceRubNum > 0) {
-      if (price_coins || price_ton || price_sol) {
+    const wantsTon = Boolean(price_ton && Number(price_ton) > 0);
+    const wantsSol = Boolean(price_sol && Number(price_sol) > 0);
+    const positivePriceCount = [
+      Boolean(price_coins && Number(price_coins) > 0),
+      wantsTon,
+      wantsSol,
+      Boolean(priceRubNum !== null && !Number.isNaN(priceRubNum) && priceRubNum > 0),
+    ].filter(Boolean).length;
+    if (positivePriceCount !== 1) {
+      return NextResponse.json(
+        { success: false, error: 'Для одного лота укажите только один тип цены' },
+        { status: 400 }
+      );
+    }
+
+    const walletAddress = String(seller_wallet_address || '').trim();
+    if (wantsTon || wantsSol) {
+      const expectedNetwork = wantsTon ? 'TON' : 'SOL';
+      if (!walletAddress) {
         return NextResponse.json(
-          { success: false, error: 'Для одного лота укажите только один тип цены' },
+          { success: false, error: `Укажите адрес ${expectedNetwork}-кошелька для получения оплаты` },
+          { status: 400 }
+        );
+      }
+      if (
+        (wantsTon && !isValidWallet('GRAM', walletAddress)) ||
+        (wantsSol && !isValidWallet('SOL', walletAddress))
+      ) {
+        return NextResponse.json(
+          { success: false, error: `Некорректный адрес кошелька сети ${expectedNetwork}` },
+          { status: 400 }
+        );
+      }
+      if (seller_wallet_network && String(seller_wallet_network).toUpperCase() !== expectedNetwork) {
+        return NextResponse.json(
+          { success: false, error: `Адрес должен соответствовать выбранной сети ${expectedNetwork}` },
           { status: 400 }
         );
       }
@@ -178,18 +212,14 @@ export async function POST(request: NextRequest) {
       insertRow.price_ton = Number(price_ton);
       insertRow.price_coins = null;
       insertRow.price_sol = null;
-      if (seller_wallet_address && String(seller_wallet_address).trim()) {
-        insertRow.seller_wallet_address = String(seller_wallet_address).trim();
-        insertRow.seller_wallet_network = seller_wallet_network === 'SOL' ? 'SOL' : 'TON';
-      }
+      insertRow.seller_wallet_address = walletAddress;
+      insertRow.seller_wallet_network = 'TON';
     } else if (price_sol && Number(price_sol) > 0) {
       insertRow.price_sol = Number(price_sol);
       insertRow.price_coins = null;
       insertRow.price_ton = null;
-      if (seller_wallet_address && String(seller_wallet_address).trim()) {
-        insertRow.seller_wallet_address = String(seller_wallet_address).trim();
-        insertRow.seller_wallet_network = 'SOL';
-      }
+      insertRow.seller_wallet_address = walletAddress;
+      insertRow.seller_wallet_network = 'SOL';
     }
 
     let { data: listing, error: insertError } = await db
@@ -200,12 +230,12 @@ export async function POST(request: NextRequest) {
 
     if (insertError && isSchemaCompatError(String(insertError.message || ''))) {
       const wantsRub = priceRubNum !== null && !Number.isNaN(priceRubNum) && priceRubNum > 0;
-      if (wantsRub) {
+      if (wantsRub || wantsTon || wantsSol) {
         return NextResponse.json(
           {
             success: false,
-            error: 'Колонки для оплаты в рублях не найдены в БД',
-            hint: 'Выполните в Supabase SQL Editor: supabase/migrations/0007_marketplace_rub.sql и 0010_marketplace_seller_payment.sql',
+            error: 'Колонки платёжных реквизитов продавца не найдены в БД',
+            hint: 'Выполните scripts/sql/marketplace-seller-payment.sql в Supabase SQL Editor.',
           },
           { status: 500 }
         );
@@ -255,6 +285,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    await invalidateMarketplaceListCache();
     return NextResponse.json({ success: true, listing });
   } catch (error: unknown) {
     console.error('❌ [Marketplace Create]', error);

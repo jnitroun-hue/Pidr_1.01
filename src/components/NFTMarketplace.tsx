@@ -364,6 +364,36 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
     }
   };
 
+  const loadPrivatePaymentDetails = async (listing: Listing): Promise<Listing | null> => {
+    try {
+      const response = await fetch('/api/marketplace/payment-details', {
+        method: 'POST',
+        credentials: 'include',
+        cache: 'no-store',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getApiHeaders(),
+        },
+        body: JSON.stringify({ listing_id: listing.id }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        await appAlert(data.error || 'Не удалось получить реквизиты продавца', {
+          title: 'Реквизиты недоступны',
+          type: 'error',
+        });
+        return null;
+      }
+      return { ...listing, ...(data.details || {}) };
+    } catch {
+      await appAlert('Не удалось безопасно загрузить реквизиты продавца', {
+        title: 'Ошибка сети',
+        type: 'error',
+      });
+      return null;
+    }
+  };
+
   const handleBuyNFT = async (listing: Listing) => {
     if (!listingHasPrice(listing)) {
       await appAlert('У продавца не указана цена — лот некорректен. Попросите выставить заново.', {
@@ -416,14 +446,17 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
         await appAlert('Ошибка при покупке', { title: 'Ошибка', type: 'error' });
       }
     } else if (listing.price_ton || listing.price_sol) {
-      if (listing.seller_wallet_address?.trim()) {
-        setPaymentModal({ listing, mode: 'crypto' });
-        return;
-      }
-      setCheckoutModal({ listing, variant: 'crypto' });
+      // Адрес не приходит в публичном списке. Сервер возьмёт приватные реквизиты лота
+      // только после авторизованного начала покупки.
+      await executeCryptoPurchase(listing);
     } else if (listing.price_rub && Number(listing.price_rub) > 0) {
-      if (isFiatP2P(listing)) {
-        setPaymentModal({ listing, mode: 'fiat_p2p' });
+      const isP2pMethod =
+        listing.fiat_payment_method === 'sbp' || listing.fiat_payment_method === 'sberbank';
+      if (isP2pMethod) {
+        const privateListing = await loadPrivatePaymentDetails(listing);
+        if (privateListing && isFiatP2P(privateListing)) {
+          setPaymentModal({ listing: privateListing, mode: 'fiat_p2p' });
+        }
         return;
       }
       setCheckoutModal({ listing, variant: 'rub' });
@@ -738,6 +771,7 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
             rank: sellModal.sellCard.rank,
             rarity: sellModal.sellCard.rarity,
             image_url: sellModal.sellCard.image_url,
+            metadata: sellModal.sellCard.metadata,
           }}
           sellPrice={sellModal.sellPrice}
           setSellPrice={sellModal.setSellPrice}

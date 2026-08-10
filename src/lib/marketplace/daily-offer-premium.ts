@@ -6,8 +6,8 @@ import {
   type ThemeAssetPick,
 } from '@/lib/nft/theme-config';
 import {
-  composeSeededThemeCardBuffer,
   composeSvgOnlyCardBuffer,
+  composeThemeCardBuffer,
   COMPOSE_VERSION,
 } from '@/lib/nft/compose-theme-card';
 import { normalizeRankToken, normalizeSuitToken } from '@/lib/game/cardAssets';
@@ -110,17 +110,17 @@ async function uploadDailyOfferCardBuffer(
 
 /** Собирает PNG карты: всегда canvas v3 (не кэш v1/v2 sharp) */
 async function resolveDailyOfferCardBuffer(
-  userId: number,
   spec: PremiumDailyOfferSpec
 ): Promise<{ buffer: Buffer; themePick: ThemeAssetPick }> {
   try {
-    const composed = await composeSeededThemeCardBuffer({
+    const buffer = await composeThemeCardBuffer({
       suit: spec.suit,
       rankRaw: spec.rankRaw,
       rankNormalized: spec.rankNormalized,
-      seed: spec.seed,
+      theme: spec.themePick.theme,
+      themeId: spec.themePick.themeId,
     });
-    return { buffer: composed.buffer, themePick: composed.pick };
+    return { buffer, themePick: spec.themePick };
   } catch (error) {
     console.warn('⚠️ [daily-offer] themed compose failed, SVG fallback:', error);
   }
@@ -142,7 +142,7 @@ export async function buildPremiumDailyOfferPreviewUrl(
   const storagePath = getDailyOfferPreviewStoragePath(userId, spec);
 
   try {
-    const { buffer } = await resolveDailyOfferCardBuffer(userId, spec);
+    const { buffer } = await resolveDailyOfferCardBuffer(spec);
     const publicUrl = await uploadDailyOfferCardBuffer(storagePath, buffer);
     if (publicUrl) return publicUrl;
   } catch (error) {
@@ -196,7 +196,7 @@ export async function purchasePremiumDailyOffer(
     );
   }
 
-  const { buffer, themePick } = await resolveDailyOfferCardBuffer(userId, spec);
+  const { buffer, themePick } = await resolveDailyOfferCardBuffer(spec);
   const storagePath = getDailyOfferCardStoragePath(userId, spec);
   const imageUrl =
     (await uploadDailyOfferCardBuffer(storagePath, buffer)) ||

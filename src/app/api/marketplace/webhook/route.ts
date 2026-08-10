@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { invalidateMarketplaceListCache } from '@/lib/marketplace/listing-cache';
 
 // 🔔 WEBHOOK ДЛЯ ПОДТВЕРЖДЕНИЯ ОПЛАТЫ ЧЕРЕЗ TELEGRAM
 
@@ -95,6 +96,8 @@ export async function POST(request: NextRequest) {
 
       if (updateError) {
         console.error('❌ [PAYMENT] Ошибка обновления лота:', updateError);
+      } else {
+        await invalidateMarketplaceListCache();
       }
 
       console.log(`✅ [PAYMENT] NFT ${listing.nft_card_id} передан покупателю ${buyerId}`);

@@ -8,6 +8,7 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 import { verifyTonIncomingPayment } from '@/lib/nft/ton-payment-verify';
 import { GRAM } from '@/lib/crypto/gram-brand';
+import { invalidateMarketplaceListCache } from '@/lib/marketplace/listing-cache';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -83,18 +84,22 @@ export async function POST(request: NextRequest) {
     const memo =
       paymentId || `NFT_${listing_id}_from_${buyerId}`;
 
-    const walletType = cryptoCurrency.toLowerCase();
-    const { data: sellerWallet } = await db
-      .from('_pidr_player_wallets')
-      .select('wallet_address')
-      .eq('user_id', listing.seller_user_id)
-      .or(`wallet_type.eq.${walletType},coin_type.eq.${walletType}`)
-      .eq('is_active', true)
-      .maybeSingle();
+    let sellerWalletAddress = String(listing.seller_wallet_address || '').trim();
+    if (!sellerWalletAddress) {
+      const walletType = cryptoCurrency.toLowerCase();
+      const { data: sellerWallet } = await db
+        .from('_pidr_player_wallets')
+        .select('wallet_address')
+        .eq('user_id', listing.seller_user_id)
+        .or(`wallet_type.eq.${walletType},coin_type.eq.${walletType}`)
+        .eq('is_active', true)
+        .maybeSingle();
+      sellerWalletAddress = sellerWallet?.wallet_address || '';
+    }
 
-    if (!sellerWallet?.wallet_address) {
+    if (!sellerWalletAddress) {
       return NextResponse.json(
-        { success: false, error: 'Кошелёк продавца не подключён' },
+        { success: false, error: 'В лоте не указан кошелёк продавца' },
         { status: 400 }
       );
     }
@@ -107,7 +112,7 @@ export async function POST(request: NextRequest) {
     }
 
     const verify = await verifyTonIncomingPayment({
-      toAddress: sellerWallet.wallet_address,
+      toAddress: sellerWalletAddress,
       minAmountTon: price * 0.99,
       commentContains: memo,
       txHash: transactionHash,
@@ -175,12 +180,13 @@ export async function POST(request: NextRequest) {
       crypto_type: 'TON',
       transaction_hash: verify.txHash || null,
       payment_id: memo,
-      wallet_address: sellerWallet.wallet_address,
+      wallet_address: sellerWalletAddress,
       amount: verify.amountTon ?? price,
       purpose: `Marketplace buy listing #${listing_id}`,
       status: 'completed',
       metadata: { listing_id, seller_user_id: listing.seller_user_id },
     });
+    await invalidateMarketplaceListCache();
 
     return NextResponse.json({
       success: true,

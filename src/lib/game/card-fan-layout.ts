@@ -14,24 +14,41 @@ export interface FanLayoutResult {
   /** margin-left для карты с index > 0 */
   marginLeftPx: number;
   totalWidthPx: number;
+  /** true, когда пришлось сжать видимую полоску, чтобы строго остаться в лимите */
+  compressed: boolean;
 }
 
-/** Профессиональный веер: все карты влезают в maxFanWidth, ранг всегда читаем */
+/**
+ * Профессиональный веер:
+ * - никогда не выходит за maxFanWidth;
+ * - последняя (верхняя) карта остаётся видна полностью;
+ * - при большом числе карт нижние сжимаются до аккуратных полосок.
+ */
 export function computeCardFanLayout(input: FanLayoutInput): FanLayoutResult {
   const { cardWidth, cardCount, maxFanWidth } = input;
   const minPeek = input.minPeekPx ?? Math.max(14, Math.round(cardWidth * 0.28));
   const maxPeek = input.maxPeekPx ?? Math.round(cardWidth * 0.52);
 
   if (cardCount <= 1) {
-    return { stepPx: cardWidth, marginLeftPx: 0, totalWidthPx: cardWidth };
+    return { stepPx: cardWidth, marginLeftPx: 0, totalWidthPx: cardWidth, compressed: false };
   }
 
-  const fitPeek = (maxFanWidth - cardWidth) / (cardCount - 1);
-  const stepPx = Math.max(minPeek, Math.min(maxPeek, fitPeek));
-  const marginLeftPx = Math.max(0, Math.round(cardWidth - stepPx));
-  const totalWidthPx = Math.round(cardWidth + (cardCount - 1) * stepPx);
+  const safeMaxWidth = Math.max(cardWidth, maxFanWidth);
+  const fitPeek = Math.max(1, (safeMaxWidth - cardWidth) / (cardCount - 1));
+  const stepPx = Math.max(1, Math.min(maxPeek, fitPeek));
+  const roundedStep = Math.max(1, Math.floor(stepPx * 100) / 100);
+  const marginLeftPx = Math.max(0, cardWidth - roundedStep);
+  const totalWidthPx = Math.min(
+    safeMaxWidth,
+    Math.round((cardWidth + (cardCount - 1) * roundedStep) * 100) / 100
+  );
 
-  return { stepPx, marginLeftPx, totalWidthPx };
+  return {
+    stepPx: roundedStep,
+    marginLeftPx,
+    totalWidthPx,
+    compressed: fitPeek < minPeek,
+  };
 }
 
 /** Сколько рубашек показывать у соперника (остальное — бейдж с числом) */

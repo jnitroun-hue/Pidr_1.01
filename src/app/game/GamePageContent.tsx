@@ -3127,26 +3127,22 @@ function GamePageContentComponent({
                         const cardsToRender = opponentClosedStack
                           ? playerCards.slice(-getOpponentStackDisplayCount(playerCards.length, gameStage))
                           : playerCards;
-                        // 1-я стадия: карты открыты — нужен больший peek, чтобы нижние не «наползали» на верхнюю.
+                        // В 1-й стадии все карты открыты, но веер строго ограничен шириной места игрока.
+                        // Нижние карты остаются видимыми полосками, верхняя карта — полностью.
                         const stage1OpenStack = gameStage === 1 && !opponentClosedStack;
                         const opponentFan = computeCardFanLayout({
                           cardWidth: layoutMetrics.opponentCardWidth,
                           cardCount: Math.max(cardsToRender.length, 1),
-                          maxFanWidth: Math.max(
-                            layoutMetrics.opponentMaxFanWidth,
-                            stage1OpenStack
-                              ? Math.round(layoutMetrics.opponentCardWidth * Math.min(cardsToRender.length, 3) * 0.72)
-                              : layoutMetrics.opponentMaxFanWidth
-                          ),
+                          maxFanWidth: layoutMetrics.opponentMaxFanWidth,
                           minPeekPx: opponentClosedStack
                             ? 4
                             : stage1OpenStack
-                              ? Math.max(14, Math.round(layoutMetrics.opponentCardWidth * 0.45))
+                              ? Math.max(7, Math.round(layoutMetrics.opponentCardWidth * 0.28))
                               : 10,
                           maxPeekPx: opponentClosedStack
                             ? 7
                             : stage1OpenStack
-                              ? Math.round(layoutMetrics.opponentCardWidth * 0.58)
+                              ? Math.round(layoutMetrics.opponentCardWidth * 0.42)
                               : Math.round(layoutMetrics.opponentCardWidth * 0.38),
                         });
 
@@ -3155,12 +3151,11 @@ function GamePageContentComponent({
                         className={styles.activeCardContainer}
                         style={{
                           width: opponentFan.totalWidthPx,
-                          maxWidth: stage1OpenStack
-                            ? Math.max(layoutMetrics.opponentMaxFanWidth, opponentFan.totalWidthPx)
-                            : layoutMetrics.opponentMaxFanWidth,
+                          maxWidth: layoutMetrics.opponentMaxFanWidth,
                           position: 'relative',
                           margin: '0 auto',
                           isolation: 'isolate',
+                          overflow: 'visible',
                         }}
                       >
                         {cardsToRender.map((card: LegacyCardLike, cardIndex: number) => {
@@ -3265,12 +3260,12 @@ function GamePageContentComponent({
                                 position: 'relative',
                                 transform: isStage2 && isOpponentCard
                                   ? `translateY(${cardIndex * 1}px)`
-                                  : stage1OpenStack && !isTopCard
-                                    ? `translateY(${(cardsToRender.length - 1 - cardIndex) * 1}px)`
-                                    : 'none',
+                                  : 'none',
                                 transition: 'transform 0.2s ease, box-shadow 0.2s ease',
                                 boxShadow: canPlaceDeckOnSelfHere
                                   ? '0 0 16px rgba(34, 197, 94, 0.75), 0 0 0 2px rgba(34, 197, 94, 0.85)'
+                                  : stage1OpenStack && isTopCard
+                                    ? '0 3px 10px rgba(0, 0, 0, 0.42), 0 0 0 1px rgba(255,255,255,0.45)'
                                   : undefined,
                                 pointerEvents: isTopCard ? 'auto' : 'none',
                               }}

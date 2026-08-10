@@ -17,6 +17,7 @@ export interface SellableNftCard {
   rank: string;
   rarity: string;
   image_url: string;
+  metadata?: Record<string, unknown> | null;
 }
 
 export function useNftSellModal(onListed?: () => void) {

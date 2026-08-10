@@ -1,7 +1,7 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Gamepad2, Users, Info, BookOpen, Coins, Settings, Wallet, Trophy, Store, User, Shield } from 'lucide-react'
+import { X, Gamepad2, Users, BookOpen, Coins, Settings, Wallet, Trophy, Store, User, Shield } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect, useMemo } from 'react'
 import { useLanguage } from './LanguageSwitcher'
@@ -153,16 +153,6 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
       gradient: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)'
     },
     {
-      icon: <Info size={24} />,
-      label: t.mainMenu.aboutGame,
-      emoji: 'ℹ️',
-      onClick: () => {
-        navigateSafely('/welcome')
-        onClose()
-      },
-      gradient: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)'
-    },
-    {
       icon: <BookOpen size={24} />,
       label: t.mainMenu.rules,
       emoji: '📖',
@@ -177,7 +167,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
       label: t.mainMenu.earnNft,
       emoji: '💰',
       onClick: () => {
-        navigateSafely('/nft-collection')
+        navigateSafely('/earn-nft')
         onClose()
       },
       gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'

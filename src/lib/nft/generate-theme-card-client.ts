@@ -81,14 +81,18 @@ async function loadThemeImage(theme: NftThemeKey, themeId: number): Promise<HTML
   throw lastError ?? new Error(`Theme asset not found: ${theme}/${themeId}`);
 }
 
-/** Мгновенная карта без загрузки темы — для первого кадра на главной */
-export function generateHeroCardFastDataUrl(suit: string, rank: string): string {
+/** Мгновенный безопасный preview; для темы содержит заметный центральный арт-заполнитель. */
+export function generateHeroCardFastDataUrl(
+  suit: string,
+  rank: string,
+  theme?: NftThemeKey
+): string {
   const canvas = document.createElement('canvas');
   canvas.width = CARD_FACE.width;
   canvas.height = CARD_FACE.height;
   const ctx = canvas.getContext('2d');
   if (!ctx) return '';
-  drawCardFaceCanvas(ctx, toSpec(suit, rank));
+  drawCardFaceCanvas(ctx, toSpec(suit, rank, theme));
   return canvas.toDataURL('image/png');
 }
 

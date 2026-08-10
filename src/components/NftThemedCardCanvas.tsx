@@ -96,6 +96,13 @@ function isComposedCardUrl(url?: string | null): boolean {
 
   if (!url) return false;
 
+  const dailyOfferVersion = url.match(/daily-offer\/v(\d+)\//i);
+  if (dailyOfferVersion && Number(dailyOfferVersion[1]) < 9) {
+    // Старые PNG могли быть закэшированы без центрального арта.
+    // Metadata-driven client canvas ниже восстановит тему без миграции БД.
+    return false;
+  }
+
   return /daily-offer|base-cards|\/cards\/|_of_(clubs|diamonds|hearts|spades)/i.test(url);
 
 }
@@ -190,10 +197,14 @@ export default function NftThemedCardCanvas({
 
   const [clientUrl, setClientUrl] = useState('');
 
-
+  const [composedFailed, setComposedFailed] = useState(false);
 
   useEffect(() => {
-    const fastPreview = generateHeroCardFastDataUrl(suitNorm, rankNorm);
+    setComposedFailed(false);
+  }, [composedUrl]);
+
+  useEffect(() => {
+    const fastPreview = generateHeroCardFastDataUrl(suitNorm, rankNorm, themeKey ?? undefined);
     setClientUrl(fastPreview);
 
     if (!themeKey || !validThemeId) return;
@@ -209,8 +220,11 @@ export default function NftThemedCardCanvas({
     };
   }, [cacheKey, suitNorm, rankNorm, themeKey, validThemeId]);
 
-  /** Клиентский canvas — все ранги/масти; серверный PNG только запасной */
-  const imgSrc = clientUrl || composedUrl || null;
+  /**
+   * Составленный сервером PNG уже содержит арт и углы. Он является источником
+   * истины для акции дня и купленной NFT; клиентский canvas страхует битый URL.
+   */
+  const imgSrc = composedUrl && !composedFailed ? composedUrl : clientUrl || null;
 
 
 
@@ -281,6 +295,10 @@ export default function NftThemedCardCanvas({
           style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
 
           draggable={false}
+
+          onError={() => {
+            if (composedUrl && imgSrc === composedUrl) setComposedFailed(true);
+          }}
 
         />
 

@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { listingHasValidPrice } from '@/lib/marketplace/listing-price';
+import {
+  getMarketplaceCacheVersion,
+  marketplaceListCacheKey,
+  readMarketplaceListCache,
+  writeMarketplaceListCache,
+} from '@/lib/marketplace/listing-cache';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -34,6 +40,27 @@ export async function GET(request: NextRequest) {
     const rarity = searchParams.get('rarity');
     const limit = parseInt(searchParams.get('limit') || '50', 10);
     const offset = parseInt(searchParams.get('offset') || '0', 10);
+
+    const cacheVersion = await getMarketplaceCacheVersion();
+    const cacheKey = marketplaceListCacheKey(cacheVersion, {
+      sort,
+      filter,
+      suit,
+      rarity,
+      limit,
+      offset,
+    });
+    const cached = await readMarketplaceListCache<{
+      listings: unknown[];
+      total: number;
+      limit: number;
+      offset: number;
+    }>(cacheKey);
+    if (cached) {
+      const response = NextResponse.json({ success: true, ...cached, cache: 'hit' });
+      response.headers.set('Cache-Control', 'public, max-age=0, s-maxage=30, stale-while-revalidate=60');
+      return response;
+    }
     
     console.log('📋 [Marketplace List] Параметры:', { sort, filter, suit, rarity, limit, offset });
     
@@ -76,7 +103,18 @@ export async function GET(request: NextRequest) {
     let query = db
       .from('_pidr_nft_marketplace')
       .select(`
-        *,
+        id,
+        nft_card_id,
+        seller_user_id,
+        price_coins,
+        price_ton,
+        price_sol,
+        price_rub,
+        fiat_payment_method,
+        crypto_currency,
+        status,
+        created_at,
+        views_count,
         nft_card:_pidr_nft_cards(
           id,
           suit,
@@ -202,19 +240,18 @@ export async function GET(request: NextRequest) {
     }
     
     console.log(`✅ [Marketplace List] Найдено ${filteredData.length} лотов`);
-    
-    const response = NextResponse.json({
-      success: true,
+
+    // В публичный магазин никогда не попадают адреса кошельков, телефоны и QR продавца.
+    const publicPayload = {
       listings: filteredData,
       total: filteredData.length,
       limit,
-      offset
-    });
-    
-    // ✅ УСТАНАВЛИВАЕМ ЗАГОЛОВКИ ДЛЯ ОТКЛЮЧЕНИЯ КЭШИРОВАНИЯ
-    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-    response.headers.set('Pragma', 'no-cache');
-    response.headers.set('Expires', '0');
+      offset,
+    };
+    await writeMarketplaceListCache(cacheKey, publicPayload);
+
+    const response = NextResponse.json({ success: true, ...publicPayload, cache: 'miss' });
+    response.headers.set('Cache-Control', 'public, max-age=0, s-maxage=30, stale-while-revalidate=60');
     
     return response;
     
