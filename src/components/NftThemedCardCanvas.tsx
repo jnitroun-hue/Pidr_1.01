@@ -97,13 +97,13 @@ function isComposedCardUrl(url?: string | null): boolean {
   if (!url) return false;
 
   const dailyOfferVersion = url.match(/daily-offer\/v(\d+)\//i);
-  if (dailyOfferVersion && Number(dailyOfferVersion[1]) < 9) {
+  if (dailyOfferVersion && Number(dailyOfferVersion[1]) < 10) {
     // Старые PNG могли быть закэшированы без центрального арта.
     // Metadata-driven client canvas ниже восстановит тему без миграции БД.
     return false;
   }
 
-  return /daily-offer|base-cards|\/cards\/|_of_(clubs|diamonds|hearts|spades)/i.test(url);
+  return /daily-offer\/v(?:9|[1-9]\d+)|base-cards|_of_(clubs|diamonds|hearts|spades)/i.test(url);
 
 }
 
@@ -124,6 +124,9 @@ type Props = NftCardRenderSpec & {
   onClick?: () => void;
 
   alt?: string;
+
+  /** Добавить угол только для сырого арта, который ещё не является готовой картой. */
+  ensureReadableCorners?: boolean;
 
 };
 
@@ -165,6 +168,8 @@ export default function NftThemedCardCanvas({
 
   alt,
 
+  ensureReadableCorners = false,
+
 }: Props) {
 
   const { suitNorm, rankNorm } = useMemo(() => normalizeForCanvas(rank, suit), [rank, suit]);
@@ -183,6 +188,11 @@ export default function NftThemedCardCanvas({
 
   );
 
+  const rawArtworkUrl =
+    fallbackImageUrl && !composedUrl && !/daily-offer\/v\d+\//i.test(fallbackImageUrl)
+      ? fallbackImageUrl
+      : null;
+
 
 
   const cacheKey = useMemo(
@@ -199,9 +209,12 @@ export default function NftThemedCardCanvas({
 
   const [composedFailed, setComposedFailed] = useState(false);
 
+  const [rawArtworkFailed, setRawArtworkFailed] = useState(false);
+
   useEffect(() => {
     setComposedFailed(false);
-  }, [composedUrl]);
+    setRawArtworkFailed(false);
+  }, [fallbackImageUrl]);
 
   useEffect(() => {
     const fastPreview = generateHeroCardFastDataUrl(suitNorm, rankNorm, themeKey ?? undefined);
@@ -224,7 +237,13 @@ export default function NftThemedCardCanvas({
    * Составленный сервером PNG уже содержит арт и углы. Он является источником
    * истины для акции дня и купленной NFT; клиентский canvas страхует битый URL.
    */
-  const imgSrc = composedUrl && !composedFailed ? composedUrl : clientUrl || null;
+  const imgSrc =
+    composedUrl && !composedFailed
+      ? composedUrl
+      : rawArtworkUrl && !rawArtworkFailed
+        ? rawArtworkUrl
+        : clientUrl || null;
+  const showCornerFallback = ensureReadableCorners && Boolean(rawArtworkUrl && imgSrc === rawArtworkUrl);
 
 
 
@@ -237,6 +256,10 @@ export default function NftThemedCardCanvas({
       onClick={onClick}
 
       style={{
+
+        position: 'relative',
+
+        containerType: 'inline-size',
 
         width: fluid ? '100%' : width,
 
@@ -298,6 +321,7 @@ export default function NftThemedCardCanvas({
 
           onError={() => {
             if (composedUrl && imgSrc === composedUrl) setComposedFailed(true);
+            if (rawArtworkUrl && imgSrc === rawArtworkUrl) setRawArtworkFailed(true);
           }}
 
         />
@@ -335,6 +359,36 @@ export default function NftThemedCardCanvas({
         </div>
 
       )}
+      {showCornerFallback && (
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            top: '4%',
+            left: '4%',
+            zIndex: 2,
+            minWidth: '25%',
+            padding: '3% 3.5%',
+            borderRadius: 6,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 0,
+            color: suitNorm === 'hearts' || suitNorm === 'diamonds' ? '#dc2626' : '#111827',
+            background: 'rgba(255, 255, 255, 0.94)',
+            border: '1px solid rgba(15, 23, 42, 0.16)',
+            boxShadow: '0 1px 5px rgba(15, 23, 42, 0.28)',
+            fontFamily: 'Arial, sans-serif',
+            fontWeight: 900,
+            lineHeight: 0.82,
+            pointerEvents: 'none',
+          }}
+        >
+          <span style={{ fontSize: 'clamp(10px, 24cqw, 34px)' }}>{getRankLabel(rankNorm)}</span>
+          <span style={{ fontSize: 'clamp(10px, 22cqw, 32px)' }}>{getSuitSymbol(suitNorm)}</span>
+        </div>
+      )}
 
     </div>
 
@@ -360,6 +414,16 @@ function getRankLabel(rankNorm: string): string {
 
   return map[rankNorm] ?? rankNorm.toUpperCase();
 
+}
+
+function getSuitSymbol(suitNorm: string): string {
+  const map: Record<string, string> = {
+    clubs: '♣',
+    diamonds: '♦',
+    hearts: '♥',
+    spades: '♠',
+  };
+  return map[suitNorm] ?? suitNorm.slice(0, 1).toUpperCase();
 }
 
 

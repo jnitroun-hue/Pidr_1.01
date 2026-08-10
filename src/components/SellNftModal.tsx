@@ -15,6 +15,8 @@ import {
 } from '@/lib/marketplace/payment-meta';
 import { GRAM } from '@/lib/crypto/gram-brand';
 import NftCardFace from '@/components/NftCardFace';
+import { useLanguage } from '@/components/LanguageSwitcher';
+import { formatNftCardName, getNftRarityLabel } from '@/lib/nft/card-display';
 import styles from './SellNftModal.module.css';
 
 export interface SellNftCard {
@@ -55,14 +57,6 @@ export interface SellNftModalProps extends HelperFunctions {
   onConfirm: () => void;
 }
 
-function rarityLabel(rarity: string): string {
-  if (rarity === 'pokemon') return 'Pokémon';
-  if (rarity === 'halloween') return 'Halloween';
-  if (rarity === 'starwars') return 'Star Wars';
-  if (rarity === 'legendary') return 'Legendary';
-  return rarity;
-}
-
 export function SellNftModal({
   nft,
   sellPrice,
@@ -85,11 +79,11 @@ export function SellNftModal({
   onClose,
   onConfirm,
   getSuitColor,
-  getSuitSymbol,
-  getRankDisplay,
 }: SellNftModalProps) {
+  const { language } = useLanguage();
   const fileRef = useRef<HTMLInputElement>(null);
   const suitColor = getSuitColor(nft.suit);
+  const cardName = formatNftCardName(nft.rank, nft.suit, language);
 
   const priceStep =
     sellCategory === 'coins' ? '1' : sellCategory === 'fiat' ? '0.01' : '0.001';
@@ -159,14 +153,14 @@ export function SellNftModal({
               rarity={nft.rarity}
               metadata={nft.metadata}
               imageUrl={nft.image_url}
-              alt={`${getRankDisplay(nft.rank)} ${getSuitSymbol(nft.suit)}`}
+              alt={cardName}
             />
           </div>
           <div>
             <div style={{ fontSize: 17, fontWeight: 800, color: suitColor }}>
-              {getRankDisplay(nft.rank)} {getSuitSymbol(nft.suit)}
+              {cardName}
             </div>
-            <div style={{ color: T.textMuted, fontSize: 13, marginTop: 4 }}>{rarityLabel(nft.rarity)}</div>
+            <div style={{ color: T.textMuted, fontSize: 13, marginTop: 4 }}>{getNftRarityLabel(nft.rarity)}</div>
             <div style={{ color: T.textMuted, fontSize: 11, marginTop: 8 }}>
               Укажите цену и реквизиты для оплаты
             </div>

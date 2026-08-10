@@ -68,7 +68,7 @@ export async function GET(req: NextRequest) {
     // Форматируем транзакции для фронтенда
     const formattedTransactions = (transactions || []).map((tx: any) => ({
       id: tx.id,
-      type: tx.type,
+      type: tx.type || tx.transaction_type,
       amount: tx.amount,
       cryptoAmount: tx.crypto_amount,
       cryptoCurrency: tx.crypto_currency,
@@ -77,7 +77,9 @@ export async function GET(req: NextRequest) {
       status: tx.status,
       description: tx.description,
       createdAt: tx.created_at,
-      updatedAt: tx.updated_at
+      updatedAt: tx.updated_at,
+      balanceBefore: tx.balance_before,
+      balanceAfter: tx.balance_after,
     }));
 
     console.log(`✅ Найдено ${formattedTransactions.length} транзакций`);

@@ -44,6 +44,7 @@ import PidrCoinIcon, { PidrCoinAmount } from './PidrCoinIcon';
 import { useExchangeRates } from '@/hooks/useExchangeRates';
 import { COINS_PER_USD } from '@/lib/pricing/constants';
 import { coinsFromRub, coinsFromUsd, rubFromUsd, formatRateUpdatedAt, formatCryptoDepositRateLine } from '@/lib/pricing/exchange-rates';
+import WalletFlowModal from './WalletFlowModal';
 
 const walletTypeLabel = (type: string) => {
   const t = type.toLowerCase();
@@ -279,7 +280,6 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
     lastTransactionsUpdate.current = Date.now();
     
     loadMasterAddresses();
-    loadCryptoBalances();
     checkBonusStatus(); // Проверяем статус бонуса
     fetch('/api/wallet/deposit-intents', { credentials: 'include', cache: 'no-store' })
       .then((response) => response.json())
@@ -330,17 +330,10 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
       lastTransactionsUpdate.current = Date.now();
     };
 
-    const handleWalletUpdate = () => {
-      console.log('👛 Кошельки обновлены - перезагружаем балансы');
-      loadCryptoBalances();
-    };
-
     window.addEventListener('transaction-created', handleNewTransaction);
-    window.addEventListener('wallet-updated', handleWalletUpdate);
     
     return () => {
       window.removeEventListener('transaction-created', handleNewTransaction);
-      window.removeEventListener('wallet-updated', handleWalletUpdate);
     };
   }, []);
 
@@ -635,25 +628,15 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
       if (response.ok) {
         const result = await response.json();
         if (result.success && result.transactions) {
-          // Преобразуем транзакции в нужный формат
           const formattedTransactions = result.transactions
-            .filter((tx: any) => 
-              // ✅ ТОЛЬКО ПОКУПКИ И ГЕНЕРАЦИИ!
-              tx.type === 'nft_purchase' || 
-              tx.type === 'nft_generation' || 
-              tx.type === 'shop_purchase' ||
-              tx.type === 'item_purchase' ||
-              tx.description?.includes('Покупка') ||
-              tx.description?.includes('Генерация')
-            )
-            .slice(0, 10) // ✅ ТОЛЬКО 10 ПОСЛЕДНИХ!
+            .slice(0, 50)
             .map((tx: any) => ({
               id: tx.id,
               amount: tx.amount,
-              type: tx.type,
+              type: tx.type || tx.transaction_type || 'purchase',
               description: tx.description,
-              created_at: tx.createdAt,
-              balance_after: tx.amount // Приблизительно
+              created_at: tx.createdAt || tx.created_at,
+              balance_after: tx.balanceAfter ?? tx.balance_after ?? 0,
             }));
 
           setTransactions(formattedTransactions);
@@ -1120,72 +1103,36 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
 
     try {
       setLoading(true);
-      
-      // ✅ УНИВЕРСАЛЬНО: Получаем пользователя из всех платформ
-      const currentUser = getCurrentUser();
-      if (!currentUser || !currentUser.id) {
-        alert('Пользователь не найден');
-        return;
-      }
-
       const selectedWithdrawMethod = withdrawMethod === 'crypto'
-        ? `crypto:${selectedCrypto}`
+        ? 'crypto'
         : withdrawMethod;
-
       const payoutTarget = withdrawMethod === 'crypto' ? withdrawAddress.trim() : withdrawRecipient.trim();
       if (!payoutTarget) {
         alert(withdrawMethod === 'crypto' ? 'Введите адрес кошелька' : 'Введите реквизиты для вывода');
         return;
       }
-
-      const methodLabel = withdrawMethod === 'crypto'
-        ? `${selectedCryptoLabel} wallet`
-        : PAYMENT_METHODS.find((method) => method.id === withdrawMethod)?.name || 'Способ вывода';
-
-      const rubEquivalent = Math.floor(amount / coinsPerRub);
-      const description = [
-        `Заявка на вывод через ${methodLabel}`,
-        `Сумма: ${amount.toLocaleString('ru-RU')} монет`,
-        rubEquivalent > 0 ? `(≈ ${rubEquivalent.toLocaleString('ru-RU')} ₽)` : '',
-        `Реквизиты: ${payoutTarget}`,
-        `Канал: ${selectedWithdrawMethod}`
-      ].filter(Boolean).join(' | ');
-      
-      // Создаем транзакцию через API
-      const response = await fetch('/api/pidr-db', {
+      const headers = (await import('@/lib/api-headers')).getApiHeaders();
+      const response = await fetch('/api/wallet/withdrawals', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', ...headers },
         body: JSON.stringify({
-          action: 'create_transaction',
-          userId: currentUser.id,
-          amount: -amount, // Отрицательное значение для вывода
-          transactionType: 'withdrawal',
-          description
-        })
+          amount,
+          method: selectedWithdrawMethod,
+          asset: withdrawMethod === 'crypto' ? selectedCrypto : undefined,
+          destination: payoutTarget,
+        }),
       });
-
       const result = await response.json();
-      
-      if (result.success) {
-        const newBalance = result.newBalance;
-        setBalance(newBalance);
-        setWithdrawAmount('');
-        setWithdrawAddress('');
-        setWithdrawRecipient('');
-        setActiveModal(null);
-        
-        // ✅ ИСПРАВЛЕНО: НЕ сохраняем в браузере, баланс уже в БД
-        
-        onBalanceUpdate?.(newBalance);
-        
-        // Перезагружаем транзакции
-        loadTransactions();
-        
-        alert(`Заявка на вывод создана: ${amount.toLocaleString('ru-RU')} монет через ${methodLabel}.`);
-      } else {
-        throw new Error(result.error || 'Ошибка вывода');
-      }
-      
+      if (!response.ok || !result.success) throw new Error(result.message || 'Ошибка вывода');
+      const newBalance = Number(result.newBalance);
+      setBalance(newBalance);
+      setWithdrawAmount('');
+      setWithdrawAddress('');
+      setWithdrawRecipient('');
+      onBalanceUpdate?.(newBalance);
+      await loadTransactions();
+      alert(`Заявка ${String(result.requestId).slice(0, 8)} создана. Средства зарезервированы до обработки.`);
     } catch (error) {
       console.error('Ошибка вывода:', error);
       alert('Ошибка вывода средств: ' + (error as Error).message);
@@ -1518,20 +1465,22 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.3 }}
             >
-              <div className={styles['crypto-menu-header']}>Баланс подключённых сетей</div>
+              <div className={styles['crypto-menu-header']}>Сети пополнения проекта</div>
               <div className={styles['crypto-list']}>
-                {['TON', 'ETH', 'USDT', 'BTC', 'SOL'].map((crypto) => (
+                {['TON', 'USDT', 'BTC', 'ETH', 'TRX', 'SOL'].map((crypto) => (
                   <div key={crypto} className={styles['crypto-item']}>
                     <CryptoIcon src={getCryptoToken(crypto).icon} size={20} alt={crypto} />
                     <span className={styles['crypto-name']}>{gramDisplayFromApi(crypto)}</span>
-                    <span className={styles['crypto-balance']}>{formatCryptoBalance(crypto)}</span>
+                    <span className={styles['crypto-balance']}>
+                      {masterAddresses.some((address) => address.coin === crypto) ? 'адрес настроен' : 'недоступно'}
+                    </span>
                     <button 
                       className={styles['crypto-action-btn']}
                       onClick={() => {
-                        setSelectedCrypto(crypto);
-                        setActiveModal('deposit');
+                        openCryptoTopUp(crypto);
                         setIsCryptoMenuOpen(false);
                       }}
+                      disabled={!masterAddresses.some((address) => address.coin === crypto)}
                     >
                       Пополнить
                     </button>
@@ -1751,8 +1700,57 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
       </AnimatePresence>
 
       {/* Модальные окна */}
+      {activeModal && (activeModal === 'deposit' || activeModal === 'withdraw') && (
+        <WalletFlowModal
+          type={activeModal}
+          loading={loading || yookassaLoading}
+          balance={balance}
+          coinsPerRub={coinsPerRub}
+          selectedCrypto={selectedCrypto}
+          setSelectedCrypto={setSelectedCrypto}
+          depositMethod={depositMethod}
+          setDepositMethod={setDepositMethod}
+          depositAmount={depositAmount}
+          setDepositAmount={setDepositAmount}
+          depositCoins={depositGameCoinsPreview}
+          rateLine={selectedCryptoRateLine}
+          rateUpdatedAt={rates?.updatedAt ? formatRateUpdatedAt(rates.updatedAt) : undefined}
+          depositAddress={selectedDepositAddress}
+          depositMemo={selectedDepositMemo}
+          depositAddressError={depositAddressError}
+          walletPayEnabled={walletPayEnabled}
+          inTelegram={isTelegramWebApp() || isInsideTelegramMiniApp()}
+          onCryptoDeposit={() => void handleTelegramWalletDeposit()}
+          onCopyDeposit={() => void handleCopyDepositAddress()}
+          onOpenExternal={() => {
+            const amount = Number(depositAmount);
+            if (!selectedDepositAddress || !Number.isFinite(amount) || amount <= 0) return;
+            openExternalWalletForDeposit({
+              coin: selectedCrypto,
+              masterAddress: selectedDepositAddress,
+              amount,
+              memo: selectedDepositMemo,
+            });
+          }}
+          rubAmount={rubAmount}
+          setRubAmount={setRubAmount}
+          onRubDeposit={() => void handleRubPayment()}
+          withdrawMethod={withdrawMethod}
+          setWithdrawMethod={setWithdrawMethod}
+          withdrawDestination={withdrawMethod === 'crypto' ? withdrawAddress : withdrawRecipient}
+          setWithdrawDestination={withdrawMethod === 'crypto' ? setWithdrawAddress : setWithdrawRecipient}
+          withdrawAmount={withdrawAmount}
+          setWithdrawAmount={setWithdrawAmount}
+          onWithdraw={handleWithdraw}
+          onBalanceChange={(newBalance) => {
+            setBalance(newBalance);
+            onBalanceUpdate?.(newBalance);
+          }}
+          onClose={() => setActiveModal(null)}
+        />
+      )}
       <AnimatePresence>
-        {activeModal && (
+        {activeModal && false && (
           <motion.div
             className="modal-overlay"
             initial={shouldOptimizeAnimations ? false : { opacity: 0 }}
@@ -1835,7 +1833,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
                         fontSize: '12px', color: '#ffd700', textAlign: 'center',
                       }}>
                         {currencyMode === 'RUB' 
-                          ? `100 ₽ ≈ ${(rates ? coinsFromRub(100, rates) : Math.floor(100 * coinsPerRub)).toLocaleString('ru-RU')} монет  |  1₽ ≈ ${coinsPerRub.toFixed(1)}`
+                          ? `100 ₽ ≈ ${(rates ? coinsFromRub(100, rates!) : Math.floor(100 * coinsPerRub)).toLocaleString('ru-RU')} монет  |  1₽ ≈ ${coinsPerRub.toFixed(1)}`
                           : `1$ = ${COINS_PER_USD.toLocaleString('ru-RU')} монет  |  $1 ≈ ${usdRubRate.toFixed(2)} ₽`}
                       </div>
 
@@ -1915,7 +1913,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
                         }}>
                           Вы получите:{' '}
                           <PidrCoinAmount
-                            value={rates ? coinsFromRub(parseFloat(rubAmount), rates) : Math.floor(parseFloat(rubAmount) * coinsPerRub)}
+                            value={rates ? coinsFromRub(parseFloat(rubAmount), rates!) : Math.floor(parseFloat(rubAmount) * coinsPerRub)}
                             size={18}
                             showLabel
                             amountClassName=""
@@ -2052,7 +2050,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
                               : `1 ${selectedCryptoLabel} = $… · курс недоступен`)}
                         {rates?.updatedAt && (
                           <div style={{ fontSize: '10px', color: '#64748b', marginTop: '4px' }}>
-                            обновлено {formatRateUpdatedAt(rates.updatedAt)}
+                            обновлено {formatRateUpdatedAt(rates!.updatedAt)}
                             {selectedCrypto !== 'USDT' && ` · $1 = ${COINS_PER_USD.toLocaleString('ru-RU')} монет`}
                           </div>
                         )}

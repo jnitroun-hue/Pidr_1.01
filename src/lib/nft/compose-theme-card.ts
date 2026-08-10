@@ -14,8 +14,8 @@ import {
 } from '@/lib/nft/theme-config';
 
 const REMOTE_FETCH_TIMEOUT_MS = 2500;
-/** v9: themed fallback art + promised daily-offer theme; invalidates blank cached previews. */
-const COMPOSE_VERSION = 9;
+/** v10: larger, unambiguous rank/suit corners; invalidates legacy daily previews. */
+const COMPOSE_VERSION = 10;
 
 export { COMPOSE_VERSION };
 

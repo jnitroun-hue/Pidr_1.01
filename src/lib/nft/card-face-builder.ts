@@ -9,10 +9,10 @@ export const CARD_FACE = {
   width: 300,
   height: 420,
   border: 6,
-  cornerMargin: 16,
-  rankFontSize: 48,
-  suitIconSize: 32,
-  art: { top: 68, left: 22, size: 256 },
+  cornerMargin: 14,
+  rankFontSize: 54,
+  suitIconSize: 36,
+  art: { top: 78, left: 24, size: 252 },
   /** Внутри арта, по центру — не заходит на нижние углы с рангом */
   themeBadge: { top: 300, height: 22, left: 85, width: 130 },
 } as const;
@@ -147,12 +147,15 @@ export function buildCardFaceSvg(spec: CardFaceSpec): string {
       <rect x="${border / 2}" y="${border / 2}" width="${width - border}" height="${height - border}" rx="10" fill="none" stroke="#0f172a" stroke-width="${border}"/>
       <rect x="${art.left}" y="${art.top}" width="${art.size}" height="${art.size}" rx="8" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
       ${fallbackArtwork}
+      <rect x="9" y="9" width="74" height="100" rx="10" fill="#ffffff" fill-opacity="0.94" stroke="#cbd5e1" stroke-width="1"/>
+      <rect x="${width - 83}" y="${height - 109}" width="74" height="100" rx="10" fill="#ffffff" fill-opacity="0.94" stroke="#cbd5e1" stroke-width="1"/>
       <g transform="translate(${cornerMargin},${cornerMargin})">
         ${cornerGroupSvg(rank, suit, color, CARD_FACE.suitIconSize)}
       </g>
       <!-- Без rotate(180): 6 и 9 при повороте выглядят как друг друг -->
-      <g transform="translate(${width - cornerMargin - 36},${height - cornerMargin - 72})">
-        ${cornerGroupSvg(rank, suit, color, CARD_FACE.suitIconSize)}
+      <g transform="translate(${width - cornerMargin},${height - cornerMargin - 78})">
+        <text x="0" y="42" font-family="Helvetica, Arial, sans-serif" font-size="${CARD_FACE.rankFontSize}" font-weight="800" fill="${color}" text-anchor="end">${escapeXml(rank)}</text>
+        ${suitPathSvg(suit, -CARD_FACE.suitIconSize, 52, CARD_FACE.suitIconSize, color)}
       </g>
       ${badgeBlock}
     </svg>`;
@@ -295,21 +298,37 @@ export function drawCardFaceCanvas(
     }
   }
 
+  // Контрастная подложка сохраняет ранг и масть читаемыми поверх любого арта.
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.94)';
+  ctx.strokeStyle = '#cbd5e1';
+  ctx.lineWidth = 1;
+  ctx.fillRect(9, 9, 74, 100);
+  ctx.strokeRect(9, 9, 74, 100);
+  ctx.fillRect(width - 83, height - 109, 74, 100);
+  ctx.strokeRect(width - 83, height - 109, 74, 100);
+
   // Углы без rotate(180): иначе 6↔9 и часть мастей читаются вверх ногами / как другой ранг.
-  const drawCorner = (originX: number, originY: number) => {
+  const drawCorner = (originX: number, originY: number, align: CanvasTextAlign = 'left') => {
     ctx.save();
     ctx.translate(originX, originY);
     ctx.fillStyle = color;
     ctx.font = `800 ${CARD_FACE.rankFontSize}px Helvetica, Arial, sans-serif`;
-    ctx.textAlign = 'left';
+    ctx.textAlign = align;
     ctx.textBaseline = 'alphabetic';
     ctx.fillText(rank, 0, 42);
-    drawSuitIconCanvas(ctx, suit, 0, 52, CARD_FACE.suitIconSize, color);
+    drawSuitIconCanvas(
+      ctx,
+      suit,
+      align === 'right' ? -CARD_FACE.suitIconSize : 0,
+      52,
+      CARD_FACE.suitIconSize,
+      color
+    );
     ctx.restore();
   };
 
   drawCorner(cornerMargin, cornerMargin);
-  drawCorner(width - cornerMargin - 36, height - cornerMargin - 72);
+  drawCorner(width - cornerMargin, height - cornerMargin - 78, 'right');
 
   if (spec.themeLabel) {
     const label = spec.themeLabel.toUpperCase();

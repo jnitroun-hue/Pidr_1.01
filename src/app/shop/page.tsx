@@ -14,11 +14,12 @@ import { appConfirm, appAlert } from '@/lib/app-notice';
 import { fetchPremiumStatus, isPremiumUsable } from '@/lib/premium/refresh-premium';
 import { parseJsonResponse } from '@/lib/api/parse-json-response';
 import DailyOfferCardModal from '../../components/DailyOfferCardModal';
-import NftThemedCardCanvas from '../../components/NftThemedCardCanvas';
+import NftCardFace from '../../components/NftCardFace';
 import type { NftThemeKey } from '@/lib/nft/theme-config';
 import { GRAM } from '@/lib/crypto/gram-brand';
 import PidrCoinIcon, { PidrCoinAmount } from '../../components/PidrCoinIcon';
-import { formatNftCardTitleRu } from '@/lib/nft/card-display';
+import { formatNftCardTitle } from '@/lib/nft/card-display';
+import { useLanguage } from '@/components/LanguageSwitcher';
 
 interface User {
   telegram_id: number;
@@ -60,6 +61,7 @@ interface PromoCard {
 
 export default function ShopPage() {
   const router = useRouter();
+  const { language } = useLanguage();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [listings, setListings] = useState<Listing[]>([]);
@@ -283,7 +285,7 @@ export default function ShopPage() {
 
   const dailyOfferTitle = (promo: PromoCard) =>
     promo.suit && promo.rank
-      ? formatNftCardTitleRu(promo.rank, promo.suit, promo.themeLabel)
+      ? formatNftCardTitle(promo.rank, promo.suit, promo.themeLabel, language)
       : promo.cardTitle;
 
   const handleClaimPromo = async () => {
@@ -591,17 +593,21 @@ export default function ShopPage() {
                       }
                     }}
                   >
-                    <NftThemedCardCanvas
+                    <NftCardFace
                       suit={dailyPromo.suit}
                       rank={dailyPromo.rank}
-                      theme={dailyPromo.theme}
-                      themeId={dailyPromo.themeId}
+                      rarity={dailyPromo.theme}
+                      metadata={{
+                        theme: dailyPromo.theme,
+                        theme_id: dailyPromo.themeId,
+                        theme_label: dailyPromo.themeLabel,
+                      }}
                       themeLabel={dailyPromo.themeLabel}
-                      fallbackImageUrl={dailyPromo.promoImageUrl}
-                      width={140}
-                      height={196}
+                      imageUrl={dailyPromo.promoImageUrl}
                       alt={dailyOfferTitle(dailyPromo)}
                       style={{
+                        width: 140,
+                        height: 196,
                         border: '2px solid rgba(251,146,60,0.65)',
                         boxShadow: '0 8px 24px rgba(249,115,22,0.35)',
                       }}

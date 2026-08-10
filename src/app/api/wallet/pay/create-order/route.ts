@@ -15,6 +15,8 @@ import { getExchangeRates } from '@/lib/pricing/exchange-rates';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+const WALLET_PAY_NATIVE_CURRENCIES = new Set(['TON', 'USDT', 'BTC']);
+
 function buildReturnUrl(): string {
   const bot = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || process.env.TELEGRAM_BOT_USERNAME;
   const app = process.env.NEXT_PUBLIC_TELEGRAM_MINIAPP_NAME || 'start';
@@ -61,6 +63,17 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const coin = String(body.coin || 'USDT').toUpperCase();
+    if (!WALLET_PAY_NATIVE_CURRENCIES.has(coin)) {
+      return NextResponse.json(
+        {
+          success: false,
+          code: 'NATIVE_ASSET_UNSUPPORTED',
+          error: `${coin} нельзя выдать за нативную оплату через Telegram Wallet. Используйте кошелёк сети и адрес проекта.`,
+          fallback: true,
+        },
+        { status: 400 }
+      );
+    }
     const amount = parseFloat(String(body.amount));
     if (!Number.isFinite(amount) || amount <= 0) {
       return NextResponse.json({ success: false, error: 'Некорректная сумма' }, { status: 400 });
@@ -108,8 +121,16 @@ export async function POST(request: NextRequest) {
       pay_link: result.payLink,
     });
 
-    if (insertError && insertError.code !== '42P01') {
-      console.warn('⚠️ [wallet/pay] order insert:', insertError.message);
+    if (insertError) {
+      console.error('❌ [wallet/pay] durable order insert:', insertError.message);
+      return NextResponse.json(
+        {
+          success: false,
+          code: 'ORDER_STORAGE_UNAVAILABLE',
+          error: 'Платёж не открыт: защищённое хранилище заказов не готово. Примените wallet-pay-security.sql.',
+        },
+        { status: 503 }
+      );
     }
 
     return NextResponse.json({

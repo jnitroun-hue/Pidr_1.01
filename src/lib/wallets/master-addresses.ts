@@ -87,10 +87,10 @@ const ENV_KEYS: Record<DepositCoinKey, string[]> = {
 const NETWORK_LABELS: Record<DepositCoinKey, string> = {
   GRAM: GRAM.networkLabel,
   TON: GRAM.networkLabel,
-  ETH: 'Ethereum (ERC-20)',
-  SOL: 'Solana (SPL)',
+  ETH: 'Ethereum (native ETH)',
+  SOL: 'Solana (native SOL)',
   USDT: 'Tron (TRC-20)',
-  TRX: 'Tron (TRC-20)',
+  TRX: 'Tron (native TRX)',
   BTC: 'Bitcoin',
 };
 
@@ -142,7 +142,7 @@ export function resolveMasterAddress(rawCoin: string): ResolvedMasterAddress | n
     network: NETWORK_LABELS[coin],
     address,
     envKey: found.envKey,
-    memoHint: coin === 'GRAM' || coin === 'TON' ? 'deposit_{userId}' : undefined,
+    memoHint: coin === 'GRAM' || coin === 'TON' ? 'deposit_{intentId}' : undefined,
   };
 }
 
@@ -168,12 +168,8 @@ export function buildDepositMemo(userId: string, rawCoin: string): string | unde
   if (coin === 'GRAM' || coin === 'TON') {
     return `deposit_${userId}`;
   }
-  if (coin === 'TRX' || coin === 'USDT') {
-    return `pidr_${userId}`;
-  }
-  if (coin === 'SOL' || coin === 'ETH') {
-    return `deposit_${userId}`;
-  }
+  // Direct deposits on other chains are not credited until a chain-specific
+  // verifier and an idempotent crediting intent are deployed.
   return undefined;
 }
 

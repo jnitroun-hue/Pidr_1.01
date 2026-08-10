@@ -16,6 +16,7 @@ type Props = {
   style?: CSSProperties;
   className?: string;
   alt?: string;
+  ensureReadableCorners?: boolean;
 };
 
 /**
@@ -32,6 +33,7 @@ export default function NftCardFace({
   style,
   className,
   alt,
+  ensureReadableCorners = true,
 }: Props) {
   const themeInfo = resolveThemeFromMetadata(metadata, rarity);
 
@@ -48,6 +50,7 @@ export default function NftCardFace({
         }
         fallbackImageUrl={imageUrl ?? null}
         fluid
+        ensureReadableCorners={ensureReadableCorners}
         className={className}
         style={{ width: '100%', height: '100%', boxShadow: 'none', borderRadius: 6, ...style }}
         alt={alt || `${rank} of ${suit}`}

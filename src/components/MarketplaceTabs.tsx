@@ -1,8 +1,7 @@
 'use client'
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Image from 'next/image';
-import { ShoppingBag, X, TrendingUp, Calendar } from 'lucide-react';
+import { ShoppingBag, X } from 'lucide-react';
 import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
 import { fiatMethodLabel } from '@/lib/marketplace/payment-meta';
 import { listingHasValidPrice } from '@/lib/marketplace/listing-price';
@@ -11,6 +10,11 @@ import { CRYPTO_TOKENS } from '@/lib/crypto/crypto-assets';
 import CryptoIcon from '@/components/CryptoIcon';
 import PidrCoinIcon, { PidrCoinAmount } from '@/components/PidrCoinIcon';
 import NftCardFace from '@/components/NftCardFace';
+import { useLanguage } from '@/components/LanguageSwitcher';
+import {
+  formatNftCardName,
+  getNftRarityLabel,
+} from '@/lib/nft/card-display';
 import styles from './MarketplaceTabs.module.css';
 
 export { SellNftModal as SellModal } from '@/components/SellNftModal';
@@ -75,7 +79,8 @@ interface BuyTabProps extends HelperFunctions {
   userCoins: number;
 }
 
-export function BuyTab({ listings, onBuy, userCoins, getSuitColor, getSuitSymbol, getRankDisplay }: BuyTabProps) {
+export function BuyTab({ listings, onBuy, userCoins, getSuitColor }: BuyTabProps) {
+  const { language } = useLanguage();
   const buyableListings = listings.filter(listingHasPrice);
 
   if (buyableListings.length === 0) {
@@ -122,7 +127,7 @@ export function BuyTab({ listings, onBuy, userCoins, getSuitColor, getSuitSymbol
               rarity={listing.nft_card.rarity}
               metadata={listing.nft_card.metadata}
               imageUrl={listing.nft_card.image_url}
-              alt={`${listing.nft_card.rank} of ${listing.nft_card.suit}`}
+              alt={formatNftCardName(listing.nft_card.rank, listing.nft_card.suit, language)}
             />
           </div>
 
@@ -134,10 +139,10 @@ export function BuyTab({ listings, onBuy, userCoins, getSuitColor, getSuitSymbol
               color: getSuitColor(listing.nft_card.suit),
               marginBottom: '4px'
             }}>
-              {getRankDisplay(listing.nft_card.rank)} {getSuitSymbol(listing.nft_card.suit)}
+              {formatNftCardName(listing.nft_card.rank, listing.nft_card.suit, language)}
             </h4>
             <p style={{ fontSize: '14px', color: '#94a3b8' }}>
-              {listing.nft_card.rarity === 'pokemon' ? '🔥 Pokémon' : '⭐ Simple'}
+              {getNftRarityLabel(listing.nft_card.rarity)}
             </p>
           </div>
 
@@ -376,6 +381,7 @@ interface MyNFTsTabProps extends HelperFunctions {
 
 export function MyNFTsTab({ nfts, onSellClick, onDeleteClick, getSuitColor, getSuitSymbol, getRankDisplay }: MyNFTsTabProps) {
   const [selectedNFT, setSelectedNFT] = useState<NFTCard | null>(null);
+  const { language } = useLanguage();
 
   if (nfts.length === 0) {
     return (
@@ -486,7 +492,7 @@ export function MyNFTsTab({ nfts, onSellClick, onDeleteClick, getSuitColor, getS
                   imageUrl={selectedNFT.image_url}
                   rarity={selectedNFT.rarity}
                   metadata={selectedNFT.metadata}
-                  alt={`${selectedNFT.rank} ${getSuitSymbol(selectedNFT.suit)}`}
+                  alt={formatNftCardName(selectedNFT.rank, selectedNFT.suit, language)}
                 />
               </div>
 
@@ -509,7 +515,7 @@ export function MyNFTsTab({ nfts, onSellClick, onDeleteClick, getSuitColor, getS
                   }}>
                     {getSuitSymbol(selectedNFT.suit)}
                   </span>
-                  <span>{getRankDisplay(selectedNFT.rank)}</span>
+                  <span>{formatNftCardName(selectedNFT.rank, selectedNFT.suit, language)}</span>
                 </h2>
                 <p style={{
                   color: getSuitColor(selectedNFT.suit),
@@ -617,7 +623,7 @@ export function MyNFTsTab({ nfts, onSellClick, onDeleteClick, getSuitColor, getS
               imageUrl={nft.image_url}
               rarity={nft.rarity}
               metadata={nft.metadata}
-              alt={`${nft.rank} of ${nft.suit}`}
+              alt={formatNftCardName(nft.rank, nft.suit, language)}
             />
           </div>
 
@@ -628,7 +634,7 @@ export function MyNFTsTab({ nfts, onSellClick, onDeleteClick, getSuitColor, getS
             color: getSuitColor(nft.suit),
             marginBottom: '6px'
           }}>
-            {getRankDisplay(nft.rank)} {getSuitSymbol(nft.suit)}
+            {formatNftCardName(nft.rank, nft.suit, language)}
           </div>
 
           {/* Sell Button */}
@@ -690,42 +696,34 @@ export function MyNFTsTab({ nfts, onSellClick, onDeleteClick, getSuitColor, getS
 // ====================================================================
 // Helper Components
 // ====================================================================
-function ListingCard({ listing, onCancel, getSuitColor, getSuitSymbol, getRankDisplay }: any) {
+function ListingCard({ listing, onCancel, getSuitColor }: any) {
+  const { language } = useLanguage();
+  const cardName = formatNftCardName(listing.nft_card.rank, listing.nft_card.suit, language);
+
   return (
-    <div style={{
-      background: 'rgba(30, 41, 59, 0.8)',
-      borderRadius: '16px',
-      border: `2px solid ${getSuitColor(listing.nft_card.suit)}40`,
-      padding: '16px'
-    }}>
-      {/* Compact card display */}
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
-        <div style={{
-          width: '80px',
-          height: '112px',
-          position: 'relative',
-          borderRadius: '8px',
-          overflow: 'hidden',
-          background: '#ffffff', // ✅ ИСПРАВЛЕНО: белый фон для карт в маркетплейсе
-          flexShrink: 0
-        }}>
-          {listing.nft_card.image_url ? (
-            <Image
-              src={listing.nft_card.image_url}
-              alt={`${listing.nft_card.rank} of ${listing.nft_card.suit}`}
-              fill
-              style={{ objectFit: 'contain' }}
-            />
-          ) : null}
+    <div
+      className={styles.sellListingCard}
+      style={{ borderColor: `${getSuitColor(listing.nft_card.suit)}66` }}
+    >
+      <div className={styles.sellListingBody}>
+        <div className={styles.sellListingFace}>
+          <NftCardFace
+            suit={listing.nft_card.suit}
+            rank={listing.nft_card.rank}
+            rarity={listing.nft_card.rarity}
+            metadata={listing.nft_card.metadata}
+            imageUrl={listing.nft_card.image_url}
+            alt={cardName}
+          />
         </div>
-        <div style={{ flex: 1 }}>
-          <h4 style={{ color: getSuitColor(listing.nft_card.suit), fontWeight: 'bold', marginBottom: '4px' }}>
-            {getRankDisplay(listing.nft_card.rank)} {getSuitSymbol(listing.nft_card.suit)}
+        <div className={styles.sellListingInfo}>
+          <h4 style={{ color: getSuitColor(listing.nft_card.suit) }}>
+            {cardName}
           </h4>
-          <p style={{ fontSize: '14px', color: '#94a3b8', marginBottom: '8px' }}>
-            {listing.nft_card.rarity === 'pokemon' ? '🔥 Pokémon' : '⭐ Simple'}
+          <p className={styles.rarityLabel}>
+            {getNftRarityLabel(listing.nft_card.rarity)}
           </p>
-          <div style={{ fontSize: '15px', fontWeight: 'bold', color: '#fbbf24', lineHeight: 1.4 }}>
+          <div className={styles.sellListingPrice}>
             {listing.price_coins != null && listing.price_coins > 0 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <PidrCoinAmount value={listing.price_coins ?? 0} size={16} showLabel />
@@ -776,7 +774,10 @@ function ListingCard({ listing, onCancel, getSuitColor, getSuitSymbol, getRankDi
   );
 }
 
-function SoldCard({ listing, getSuitColor, getSuitSymbol, getRankDisplay }: any) {
+function SoldCard({ listing, getSuitColor }: any) {
+  const { language } = useLanguage();
+  const cardName = formatNftCardName(listing.nft_card.rank, listing.nft_card.suit, language);
+
   return (
     <div style={{
       background: 'rgba(16, 185, 129, 0.1)',
@@ -795,18 +796,18 @@ function SoldCard({ listing, getSuitColor, getSuitSymbol, getRankDisplay }: any)
           background: '#ffffff', // ✅ ИСПРАВЛЕНО: белый фон для карт в маркетплейсе
           flexShrink: 0
         }}>
-          {listing.nft_card.image_url ? (
-            <Image
-              src={listing.nft_card.image_url}
-              alt={`${listing.nft_card.rank} of ${listing.nft_card.suit}`}
-              fill
-              style={{ objectFit: 'contain' }}
-            />
-          ) : null}
+          <NftCardFace
+            suit={listing.nft_card.suit}
+            rank={listing.nft_card.rank}
+            rarity={listing.nft_card.rarity}
+            metadata={listing.nft_card.metadata}
+            imageUrl={listing.nft_card.image_url}
+            alt={cardName}
+          />
         </div>
         <div style={{ flex: 1 }}>
           <h4 style={{ color: getSuitColor(listing.nft_card.suit), fontWeight: 'bold', marginBottom: '4px' }}>
-            {getRankDisplay(listing.nft_card.rank)} {getSuitSymbol(listing.nft_card.suit)}
+            {cardName}
           </h4>
           <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>
             Покупатель: @{listing.buyer?.username || listing.buyer?.first_name}

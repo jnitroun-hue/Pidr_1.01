@@ -54,6 +54,7 @@ import {
 } from '@/lib/chat/chat-blocks';
 import { appConfirm } from '@/lib/app-notice';
 import type { TelegramWebAppUser } from '@/types/telegram-webapp';
+import NftCardFace from '@/components/NftCardFace';
 
 interface PlayerProfile {
   id: string;
@@ -1335,6 +1336,86 @@ function GamePageContentComponent({
       onDeckClick: !!onDeckClick
     });
   }, [selectHandCard, playSelectedCard, takeTableCards, makeMove, onDeckClick]);
+
+  const leaveInFlightRef = useRef(false);
+  const requestLeaveGame = useCallback(async (source: 'guard-pop' | 'direct') => {
+    if (leaveInFlightRef.current || typeof window === 'undefined') return;
+
+    const confirmed = await appConfirm(
+      language === 'ru' ? 'Выйти из игры?' : 'Leave the game?',
+      {
+        destructive: true,
+        confirmText: t.game.leaveGame || (language === 'ru' ? 'Выйти' : 'Leave'),
+        cancelText: language === 'ru' ? 'Отмена' : 'Cancel',
+      }
+    );
+
+    if (!confirmed) {
+      // popstate уже снял защитную запись; восстанавливаем ровно одну запись
+      // с тем же URL, не меняя состояние игры и адрес страницы.
+      if (source === 'guard-pop' && window.location.pathname === '/game') {
+        window.history.pushState(
+          { ...window.history.state, __pidrActiveGameGuard: true },
+          '',
+          window.location.href
+        );
+      }
+      return;
+    }
+
+    leaveInFlightRef.current = true;
+    try {
+      if (isMultiplayer && multiplayerData?.roomId) {
+        await fetch(`/api/rooms/${multiplayerData.roomId}/leave`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: getApiHeaders(),
+          keepalive: true,
+        });
+      }
+    } catch (error) {
+      console.warn('⚠️ Не удалось уведомить комнату о выходе:', error);
+    } finally {
+      endGame();
+      if (source === 'guard-pop') {
+        window.history.back();
+      } else if (window.history.length > 2) {
+        // Пропускаем добавленную защитную запись и исходную запись /game.
+        window.history.go(-2);
+      } else {
+        window.location.assign('/');
+      }
+    }
+  }, [endGame, isMultiplayer, language, multiplayerData?.roomId, t.game.leaveGame]);
+
+  useEffect(() => {
+    if (!isGameActive || typeof window === 'undefined') return;
+
+    if (!window.history.state?.__pidrActiveGameGuard) {
+      window.history.pushState(
+        { ...window.history.state, __pidrActiveGameGuard: true },
+        '',
+        window.location.href
+      );
+    }
+
+    const handlePopState = () => {
+      if (leaveInFlightRef.current || window.location.pathname !== '/game') return;
+      void requestLeaveGame('guard-pop');
+    };
+    const handleAppBack = (event: Event) => {
+      event.preventDefault();
+      void requestLeaveGame('direct');
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('pidr:back-request', handleAppBack);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('pidr:back-request', handleAppBack);
+    };
+  }, [isGameActive, requestLeaveGame]);
+
   const [dealt, setDealt] = useState(false);
   const [gameInitialized, setGameInitialized] = useState(false);
 
@@ -1540,7 +1621,7 @@ function GamePageContentComponent({
 
     if (screenInfo.isLandscape && vh <= 500) {
       return {
-        ...base(58, 34, Math.min(vw * 0.88, 520), 72),
+        ...base(58, 42, Math.min(vw * 0.88, 520), 82),
         centerCardWidth: 50,
         centerCardHeight: 75,
         revealedCardWidth: 38,
@@ -1553,7 +1634,7 @@ function GamePageContentComponent({
 
     if (screenInfo.isVerySmallMobile) {
       return {
-        ...base(54, 32, Math.min(vw * 0.94, 360), 68),
+        ...base(58, 44, Math.min(vw * 0.94, 360), 80),
         centerCardWidth: 48,
         centerCardHeight: 72,
         revealedCardWidth: 36,
@@ -1566,7 +1647,7 @@ function GamePageContentComponent({
 
     if (screenInfo.isSmallMobile) {
       return {
-        ...base(62, 36, Math.min(vw * 0.92, 400), 74),
+        ...base(66, 50, Math.min(vw * 0.92, 400), 88),
         centerCardWidth: 54,
         centerCardHeight: 81,
         revealedCardWidth: 38,
@@ -1578,7 +1659,7 @@ function GamePageContentComponent({
     }
 
     return {
-      ...base(68, 38, Math.min(vw * 0.92, 420), 80),
+      ...base(72, 54, Math.min(vw * 0.92, 420), 96),
       centerCardWidth: 60,
       centerCardHeight: 90,
       revealedCardWidth: 42,
@@ -2585,17 +2666,10 @@ function GamePageContentComponent({
               
               <div className={styles.menuDivider}></div>
               
-              <button type="button" className={styles.menuItem} onClick={() => typeof window !== 'undefined' && window.history.back()}>
+              <button type="button" className={styles.menuItem} onClick={() => void requestLeaveGame('direct')}>
                 🏠 {t.game.home}
               </button>
-              <button type="button" className={styles.menuItem} onClick={() => {
-                void appConfirm(t.game.confirmQuitGame, { destructive: true, confirmText: t.game.leaveGame || 'Выйти' }).then((confirmed) => {
-                  if (confirmed) {
-                    endGame();
-                    typeof window !== 'undefined' && window.history.back();
-                  }
-                });
-              }}>
+              <button type="button" className={styles.menuItem} onClick={() => void requestLeaveGame('direct')}>
                 🚪 {t.game.leaveGame}
               </button>
             </div>
@@ -2690,17 +2764,13 @@ function GamePageContentComponent({
                       {/* ✅ ИСПРАВЛЕНО: Для NFT используем img, для обычных - Image */}
                       {isNftUrl ? (
                         <div style={{ position: 'relative', width: `${layoutMetrics.centerCardWidth}px`, height: `${layoutMetrics.centerCardHeight}px` }}>
-                          <img
-                            src={tableCardSrc}
+                          <NftCardFace
+                            rank={tableCardRank}
+                            suit={tableCardSuit}
+                            imageUrl={tableCardSrc}
+                            ensureReadableCorners
                             alt={`Card ${idx + 1}`}
-                            style={{ 
-                              width: `${layoutMetrics.centerCardWidth}px`,
-                              height: `${layoutMetrics.centerCardHeight}px`,
-                              borderRadius: '6px',
-                              display: 'block',
-                              objectFit: 'contain',
-                              background: '#fff',
-                            }}
+                            style={{ borderRadius: 6 }}
                           />
                         </div>
                       ) : (
@@ -2814,8 +2884,11 @@ function GamePageContentComponent({
                     {/* ✅ ИСПРАВЛЕНО: Для NFT используем img, для обычных - Image */}
                     {/* ✅ УВЕЛИЧЕНО В 1.5 РАЗА: 36x54 → 54x81 */}
                     {isNftUrl ? (
-                      <img
-                        src={cardSrc}
+                      <NftCardFace
+                        rank={deckCardRank}
+                        suit={deckCardSuit}
+                        imageUrl={cardSrc}
+                        ensureReadableCorners
                         alt="Current Card"
                         style={{ 
                           width: `${layoutMetrics.revealedCardWidth}px`,
@@ -2825,7 +2898,6 @@ function GamePageContentComponent({
                           filter: 'none',
                           visibility: 'visible',
                           display: 'block',
-                          objectFit: 'contain'
                         }}
                       />
                     ) : (
@@ -3130,10 +3202,23 @@ function GamePageContentComponent({
                         // В 1-й стадии все карты открыты, но веер строго ограничен шириной места игрока.
                         // Нижние карты остаются видимыми полосками, верхняя карта — полностью.
                         const stage1OpenStack = gameStage === 1 && !opponentClosedStack;
+                        const mobileStage1MaxSpan = (() => {
+                          if (!stage1OpenStack || !screenInfo.isMobile) {
+                            return layoutMetrics.opponentMaxFanWidth;
+                          }
+                          const denseTable = players.length >= 6;
+                          if (position.side === 'left' || position.side === 'right') {
+                            return layoutMetrics.opponentCardWidth + (denseTable ? 22 : 32);
+                          }
+                          if (position.side === 'top') {
+                            return layoutMetrics.opponentCardWidth + (denseTable ? 30 : 42);
+                          }
+                          return layoutMetrics.opponentMaxFanWidth;
+                        })();
                         const opponentFan = computeCardFanLayout({
                           cardWidth: layoutMetrics.opponentCardWidth,
                           cardCount: Math.max(cardsToRender.length, 1),
-                          maxFanWidth: layoutMetrics.opponentMaxFanWidth,
+                          maxFanWidth: Math.min(layoutMetrics.opponentMaxFanWidth, mobileStage1MaxSpan),
                           minPeekPx: opponentClosedStack
                             ? 4
                             : stage1OpenStack
@@ -3154,6 +3239,9 @@ function GamePageContentComponent({
                           maxWidth: layoutMetrics.opponentMaxFanWidth,
                           position: 'relative',
                           margin: '0 auto',
+                          transform: position.side === 'right'
+                            ? `translateX(-${Math.max(0, opponentFan.totalWidthPx - layoutMetrics.opponentCardWidth)}px)`
+                            : undefined,
                           isolation: 'isolate',
                           overflow: 'visible',
                         }}
@@ -3296,18 +3384,12 @@ function GamePageContentComponent({
                               {/* ✅ ИСПРАВЛЕНО: NFT карты для ВСЕХ игроков (не только главного) */}
                               {nftImageUrl && showOpen ? (
                                 <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-                                <img
-                                  src={nftImageUrl}
+                                <NftCardFace
+                                  rank={String(cardRank)}
+                                  suit={cardSuit}
+                                  imageUrl={nftImageUrl}
+                                  ensureReadableCorners
                                   alt={cardImage}
-                                  onError={(e) => {
-                                    console.log('❌ NFT не загрузилась, показываем стандартную:', cardImage);
-                                    const target = e.currentTarget;
-                                    if (!cardImage.startsWith('http')) {
-                                      target.src = getCardAssetSrc({ image: cardImage, rank: cardRank, suit: cardSuit });
-                                    } else {
-                                      target.src = getCardAssetSrc({ rank: cardRank, suit: cardSuit });
-                                    }
-                                  }}
                                   style={{ 
                                     width: '100%',
                                     height: '100%',
@@ -3323,7 +3405,6 @@ function GamePageContentComponent({
                                       ? '0 0 12px rgba(59, 130, 246, 0.8)'
                                       : 'none',
                                     transition: 'all 0.3s ease',
-                                    objectFit: 'contain',
                                   }}
                                 />
                                 </div>
@@ -3846,18 +3927,12 @@ function GamePageContentComponent({
                       <>
                   {nftImageUrl ? (
                     <div style={{ position: 'relative', width: `${layoutMetrics.handCardWidth}px`, height: `${layoutMetrics.handCardHeight}px` }}>
-                    <img
-                      src={nftImageUrl}
+                    <NftCardFace
+                      rank={String(cardRank)}
+                      suit={cardSuit}
+                      imageUrl={nftImageUrl}
+                      ensureReadableCorners
                       alt={cardImage}
-                      onError={(e) => {
-                        console.log('❌ NFT изображение не загрузилось, показываем обычную карту');
-                        e.currentTarget.style.display = 'none';
-                        const fallbackImg = e.currentTarget.nextSibling as HTMLImageElement;
-                        if (fallbackImg) {
-                          fallbackImg.src = standardHandCardSrc;
-                          fallbackImg.style.display = 'block';
-                        }
-                      }}
                       style={{ 
                         width: `${layoutMetrics.handCardWidth}px`,
                         height: `${layoutMetrics.handCardHeight}px`,
@@ -3870,7 +3945,6 @@ function GamePageContentComponent({
                         transform: isSelected ? 'translateY(-20px) scale(1.1)' : 'none',
                         transition: 'all 0.3s ease',
                         boxShadow: canPlay ? '0 0 20px rgba(40, 167, 69, 0.6), 0 0 40px rgba(40, 167, 69, 0.3)' : 'none',
-                        objectFit: 'contain', // ✅ ИСПРАВЛЕНО: contain вместо cover - карта не обрезается
                       }}
                     />
                     </div>

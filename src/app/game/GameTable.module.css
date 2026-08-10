@@ -3516,8 +3516,6 @@
 }
 
 .cardOnPenki {
-  width: var(--opponent-card-width) !important;
-  height: var(--opponent-card-height) !important;
   border-radius: var(--opponent-card-radius) !important;
 }
 

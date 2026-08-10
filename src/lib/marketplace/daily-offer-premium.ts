@@ -11,7 +11,7 @@ import {
   COMPOSE_VERSION,
 } from '@/lib/nft/compose-theme-card';
 import { normalizeRankToken, normalizeSuitToken } from '@/lib/game/cardAssets';
-import { formatNftCardTitleRu } from '@/lib/nft/card-display';
+import { formatNftCardTitle } from '@/lib/nft/card-display';
 import { supabaseAdmin } from '@/lib/supabase';
 import { NFT_CARDS_TABLE, NFT_STORAGE_BUCKET } from '@/lib/nft/constants';
 
@@ -77,7 +77,7 @@ export function buildPremiumDailyOffer(userId: number, dayTag = getDayTag()): Pr
     themeLabel,
     seed,
     promoImageUrl: '',
-    cardTitle: formatNftCardTitleRu(rankRaw, suit, themeLabel),
+    cardTitle: formatNftCardTitle(rankRaw, suit, themeLabel),
   };
 }
 

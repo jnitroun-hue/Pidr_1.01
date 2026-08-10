@@ -89,73 +89,26 @@ async function processWalletPayOrder(params: {
     return;
   }
 
-  let userId: number | null = parsed.userId ?? null;
-  let gameCoins = parsed.gameCoins ?? 0;
-  let coin = parsed.coin ?? 'USDT';
-  let cryptoAmount = parsed.cryptoAmount ?? 0;
-
-  if (orderRow) {
-    userId = userId ?? orderRow.user_id;
-    gameCoins = gameCoins || Number(orderRow.game_coins);
-    coin = coin || orderRow.coin;
-    cryptoAmount = cryptoAmount || Number(orderRow.crypto_amount);
-  }
-
-  if (!userId || gameCoins <= 0) {
-    console.error('❌ [wallet/pay/webhook] cannot resolve deposit order', externalId);
+  if (!orderRow) {
+    console.error('❌ [wallet/pay/webhook] rejecting unknown deposit order', externalId);
     return;
   }
-
-  const { data: user, error: userError } = await supabaseAdmin
-    .from('_pidr_users')
-    .select('id, coins')
-    .eq('id', userId)
-    .single();
-
-  if (userError || !user) {
-    console.error('❌ [wallet/pay/webhook] user not found', userId);
+  if (!['TON', 'USDT', 'BTC'].includes(String(orderRow.coin || '').toUpperCase())) {
+    console.error('❌ [wallet/pay/webhook] unsupported stored coin', orderRow.coin);
     return;
   }
-
-  const currentCoins = Number(user.coins || 0);
-  const newBalance = currentCoins + gameCoins;
-
-  await supabaseAdmin
-    .from('_pidr_users')
-    .update({ coins: newBalance, updated_at: new Date().toISOString() })
-    .eq('id', userId);
-
-  await supabaseAdmin.from('_pidr_coin_transactions').insert({
-    user_id: userId,
-    amount: gameCoins,
-    transaction_type: 'deposit',
-    description: `Telegram Wallet Pay: ${cryptoAmount} ${coin}`,
-    balance_before: currentCoins,
-    balance_after: newBalance,
-  });
-
-  await supabaseAdmin.from('_pidr_crypto_transactions').insert({
-    user_id: userId,
-    coin_type: coin.toLowerCase(),
-    amount: cryptoAmount,
-    transaction_type: 'deposit',
-    status: 'completed',
-    tx_hash: eventId || externalId,
-    metadata: { source: 'wallet_pay', externalId },
-  });
-
-  if (orderRow) {
-    await supabaseAdmin
-      .from('_pidr_wallet_pay_orders')
-      .update({
-        status: 'paid',
-        paid_at: new Date().toISOString(),
-        webhook_event_id: eventId || null,
-      })
-      .eq('external_id', externalId);
+  const { data: creditResult, error: creditError } = await supabaseAdmin.rpc(
+    'credit_verified_wallet_pay_order',
+    {
+      p_external_id: externalId,
+      p_event_id: eventId || '',
+    }
+  );
+  if (creditError) {
+    throw new Error(`Atomic Wallet Pay credit failed: ${creditError.message}`);
   }
-
-  console.log(`✅ [wallet/pay/webhook] +${gameCoins} coins for user ${userId}`);
+  const result = Array.isArray(creditResult) ? creditResult[0] : creditResult;
+  console.log(`✅ [wallet/pay/webhook] deposit ${externalId}: credited=${Boolean(result?.credited)}`);
 }
 
 /** POST /api/wallet/pay/webhook */

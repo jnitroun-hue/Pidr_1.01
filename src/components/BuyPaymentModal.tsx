@@ -7,6 +7,8 @@ import { X, Copy, Check, Smartphone, QrCode, Wallet } from 'lucide-react';
 import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
 import { CRYPTO_OPTIONS, fiatMethodLabel } from '@/lib/marketplace/payment-meta';
 import { gramDisplayFromApi } from '@/lib/crypto/gram-brand';
+import { useLanguage } from '@/components/LanguageSwitcher';
+import { formatNftCardName } from '@/lib/nft/card-display';
 import styles from './BuyPaymentModal.module.css';
 
 export interface BuyPaymentListing {
@@ -40,9 +42,8 @@ export function BuyPaymentModal({
   mode,
   onClose,
   onProceed,
-  getRankDisplay = (r) => r,
-  getSuitSymbol = (s) => s,
 }: BuyPaymentModalProps) {
+  const { language } = useLanguage();
   const [copied, setCopied] = useState<string | null>(null);
 
   const copyText = useCallback(async (text: string, key: string) => {
@@ -79,7 +80,7 @@ export function BuyPaymentModal({
 
         {listing.nft_card && (
           <div className={styles.cardLine}>
-            {getRankDisplay(listing.nft_card.rank)} {getSuitSymbol(listing.nft_card.suit)}
+            {formatNftCardName(listing.nft_card.rank, listing.nft_card.suit, language)}
           </div>
         )}
 

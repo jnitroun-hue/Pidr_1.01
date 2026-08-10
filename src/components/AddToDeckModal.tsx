@@ -4,7 +4,8 @@ import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import NftCardFace from '@/components/NftCardFace';
-import { formatNftCardNameRu } from '@/lib/nft/card-display';
+import { formatNftCardName } from '@/lib/nft/card-display';
+import { useLanguage } from '@/components/LanguageSwitcher';
 import styles from './AddToDeckModal.module.css';
 
 export interface DeckPickerCard {
@@ -33,6 +34,7 @@ export default function AddToDeckModal({
   onConfirm,
   onClose,
 }: AddToDeckModalProps) {
+  const { language } = useLanguage();
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !isSubmitting) onClose();
@@ -83,7 +85,7 @@ export default function AddToDeckModal({
             const isSelected = selectedIds.includes(key);
             const cardName =
               card.rank && card.suit
-                ? formatNftCardNameRu(card.rank, card.suit)
+                ? formatNftCardName(card.rank, card.suit, language)
                 : 'NFT-карта';
             return (
               <button

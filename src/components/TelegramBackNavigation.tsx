@@ -26,6 +26,9 @@ export default function TelegramBackNavigation() {
     if (typeof window === 'undefined' || navigatingRef.current) return;
     if (isRootPath(pathnameRef.current)) return;
 
+    const requestEvent = new CustomEvent('pidr:back-request', { cancelable: true });
+    if (!window.dispatchEvent(requestEvent)) return;
+
     navigatingRef.current = true;
     const before = pathnameRef.current;
 

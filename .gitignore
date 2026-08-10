@@ -17,6 +17,8 @@ NEW_TABLES_DEPLOY.sql
 !scripts/sql/marketplace-seller-payment.sql
 !scripts/sql/bonus-claims.sql
 !scripts/sql/ton-deposit-intents.sql
+!scripts/sql/wallet-withdrawals.sql
+!scripts/sql/wallet-pay-security.sql
 
 # testing
 /coverage

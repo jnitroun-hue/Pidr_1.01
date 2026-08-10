@@ -5,6 +5,8 @@ import { createPortal } from 'react-dom';
 import { X, Wallet, CreditCard, Zap } from 'lucide-react';
 import { type FiatMethod } from '@/lib/marketplace/payment-meta';
 import { gramDisplayFromApi } from '@/lib/crypto/gram-brand';
+import { useLanguage } from '@/components/LanguageSwitcher';
+import { formatNftCardName } from '@/lib/nft/card-display';
 import styles from './BuyPaymentModal.module.css';
 
 export interface CheckoutListing {
@@ -38,9 +40,8 @@ export function MarketplaceCheckoutModal({
   loading = false,
   onClose,
   onPay,
-  getRankDisplay = (r) => r,
-  getSuitSymbol = (s) => s,
 }: MarketplaceCheckoutModalProps) {
+  const { language } = useLanguage();
   const [selected, setSelected] = useState<CheckoutMethod>(
     variant === 'rub' ? 'sbp' : walletPayEnabled ? 'wallet_pay' : 'crypto_wallet'
   );
@@ -70,7 +71,7 @@ export function MarketplaceCheckoutModal({
 
         {listing.nft_card && (
           <div className={styles.cardLine}>
-            {getRankDisplay(listing.nft_card.rank)} {getSuitSymbol(listing.nft_card.suit)}
+            {formatNftCardName(listing.nft_card.rank, listing.nft_card.suit, language)}
           </div>
         )}
 

@@ -24,6 +24,7 @@ import UserAvatarBadge from '@/components/UserAvatarBadge';
 import AuthMethodBadge from '@/components/AuthMethodBadge';
 import AddToDeckModal from '@/components/AddToDeckModal';
 import NftCardFace from '@/components/NftCardFace';
+import { formatNftCardName, getNftRarityLabel } from '@/lib/nft/card-display';
 import BonusCenter, { type ProfileBonus } from '@/components/BonusCenter';
 import type { AuthMethod } from '@/lib/user/resolve-auth-method';
 
@@ -2346,13 +2347,7 @@ export default function ProfilePage() {
                     {deckCards.map((card: any) => {
                       const nftCard = card.nft_card || card;
                       const suitColor = (nftCard.suit === 'hearts' || nftCard.suit === 'diamonds') ? '#ef4444' : '#1e293b';
-                      const suitSymbols: { [key: string]: string } = {
-                        'hearts': '♥',
-                        'diamonds': '♦',
-                        'clubs': '♣',
-                        'spades': '♠'
-                      };
-                      const suitSymbol = suitSymbols[nftCard.suit] || '?';
+                      const cardName = formatNftCardName(nftCard.rank, nftCard.suit, language);
 
                       return (
                         <motion.div
@@ -2382,7 +2377,7 @@ export default function ProfilePage() {
                               imageUrl={nftCard.image_url}
                               rarity={nftCard.rarity}
                               metadata={nftCard.metadata}
-                              alt={`${nftCard.rank} of ${nftCard.suit}`}
+                              alt={cardName}
                             />
                           </div>
 
@@ -2398,7 +2393,7 @@ export default function ProfilePage() {
                               fontSize: '1.2rem',
                               fontWeight: 'bold'
                             }}>
-                              {nftCard?.rank || '?'}{suitSymbol}
+                              {cardName}
                             </span>
                             <span style={{
                               background: 'rgba(139, 92, 246, 0.2)',
@@ -2408,7 +2403,7 @@ export default function ProfilePage() {
                               fontSize: '0.7rem',
                               textTransform: 'uppercase'
                             }}>
-                              {nftCard.rarity || 'Common'}
+                              {getNftRarityLabel(nftCard.rarity || 'common')}
                             </span>
                           </div>
 

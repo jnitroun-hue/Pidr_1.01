@@ -9,6 +9,17 @@ export interface CryptoTokenMeta {
   apiKey: string;
 }
 
+export type DepositCapability = {
+  network: string;
+  eta: string;
+  walletPay: boolean;
+  tonConnect: boolean;
+  externalWallet?: 'tronlink' | 'phantom' | 'metamask' | 'bitcoin';
+  verifiedCredit: boolean;
+  availability: 'available' | 'address-only' | 'unavailable';
+  warning?: string;
+};
+
 export interface WalletAppMeta {
   id: string;
   label: string;
@@ -142,37 +153,78 @@ export const WALLET_APPS: Record<string, WalletAppMeta> = {
 /** Порядок как в Telegram Wallet → «Популярные» */
 export const DEPOSIT_CRYPTO_ORDER = ['USDT', 'ETH', 'BTC', 'TON', 'TRX', 'SOL'] as const;
 
+export const DEPOSIT_CAPABILITIES: Record<(typeof DEPOSIT_CRYPTO_ORDER)[number], DepositCapability> = {
+  TON: {
+    network: GRAM.networkLabel,
+    eta: '~5–30 сек',
+    walletPay: true,
+    tonConnect: true,
+    verifiedCredit: true,
+    availability: 'available',
+  },
+  USDT: {
+    network: 'Tron (TRC-20)',
+    eta: '~1–3 мин',
+    walletPay: true,
+    tonConnect: false,
+    externalWallet: 'tronlink',
+    verifiedCredit: true,
+    availability: 'available',
+  },
+  BTC: {
+    network: 'Bitcoin',
+    eta: '10–60 мин',
+    walletPay: true,
+    tonConnect: false,
+    externalWallet: 'bitcoin',
+    verifiedCredit: true,
+    availability: 'available',
+  },
+  ETH: {
+    network: 'Ethereum',
+    eta: '2–15 мин',
+    walletPay: false,
+    tonConnect: false,
+    externalWallet: 'metamask',
+    verifiedCredit: false,
+    availability: 'address-only',
+    warning: 'Автоматическая проверка Ethereum-переводов пока не включена. Не отправляйте средства без подтверждения поддержки.',
+  },
+  TRX: {
+    network: 'Tron (native TRX)',
+    eta: '~1–3 мин',
+    walletPay: false,
+    tonConnect: false,
+    externalWallet: 'tronlink',
+    verifiedCredit: false,
+    availability: 'address-only',
+    warning: 'TON Connect и Telegram Wallet не отправляют native TRX. Доступен только адрес Tron/TronLink; автоматическое зачисление TRX пока выключено.',
+  },
+  SOL: {
+    network: 'Solana (native SOL)',
+    eta: '~30 сек',
+    walletPay: false,
+    tonConnect: false,
+    externalWallet: 'phantom',
+    verifiedCredit: false,
+    availability: 'address-only',
+    warning: 'TON Connect и Telegram Wallet не отправляют native SOL. Доступен только адрес Solana/Phantom; автоматическое зачисление SOL пока выключено.',
+  },
+};
+
 export function depositCryptoOptions() {
   return DEPOSIT_CRYPTO_ORDER.map((apiKey) => {
     const token = getCryptoToken(apiKey);
+    const capability = DEPOSIT_CAPABILITIES[apiKey];
     return {
       id: token.apiKey,
       icon: token.icon,
       name: token.symbol,
       color: token.color,
-      net:
-        apiKey === 'TON'
-          ? GRAM.networkLabel
-          : apiKey === 'ETH'
-            ? 'Ethereum'
-            : apiKey === 'SOL'
-              ? 'Solana (SPL)'
-              : apiKey === 'BTC'
-                ? 'Bitcoin'
-                : apiKey === 'USDT'
-                  ? 'Tron (TRC-20) / ERC-20'
-                  : apiKey === 'TRX'
-                    ? 'Tron (TRC-20)'
-                    : 'Ethereum',
-      eta:
-        apiKey === 'TON'
-          ? '~5 сек'
-          : apiKey === 'SOL'
-            ? '~30 сек'
-            : apiKey === 'TRX' || apiKey === 'USDT'
-              ? '~1 мин'
-              : '2-15 мин',
-      telegramWallet: true,
+      net: capability.network,
+      eta: capability.eta,
+      telegramWallet: capability.walletPay || capability.tonConnect,
+      capability,
     };
   });
 }

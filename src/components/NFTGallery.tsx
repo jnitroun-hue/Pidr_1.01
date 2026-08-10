@@ -17,15 +17,16 @@ import PidrCoinIcon from '@/components/PidrCoinIcon';
 import { GRAM } from '@/lib/crypto/gram-brand';
 import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
 import {
-  getNftRankDisplay,
   getNftRarityLabel,
+  getNftRankDisplay,
   getNftSuitColor,
-  getNftSuitAbbrev,
-  formatNftRankSuit,
+  getNftSuitSymbol,
+  formatNftCardName,
 } from '@/lib/nft/card-display';
 import { useNftSellModal } from '@/hooks/useNftSellModal';
 import { NFT_OPEN_CARD_MODAL_EVENT, type NftCardModalPayload } from '@/lib/nft/open-card-modal';
-import NftThemedCardCanvas, { resolveThemeFromMetadata } from '@/components/NftThemedCardCanvas';
+import NftCardFace from '@/components/NftCardFace';
+import { useLanguage } from '@/components/LanguageSwitcher';
 import styles from './NFTGallery.module.css';
 
 interface NFTCard {
@@ -42,6 +43,7 @@ interface NFTCard {
 }
 
 export default function NFTGallery() {
+  const { language } = useLanguage();
   const [collection, setCollection] = useState<NFTCard[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCard, setSelectedCard] = useState<NFTCard | null>(null);
@@ -57,57 +59,18 @@ export default function NFTGallery() {
 
   const getSuitColor = getNftSuitColor;
   const getRarityLabel = getNftRarityLabel;
-  const getRankDisplay = getNftRankDisplay;
-
-  const renderCardVisual = (card: NFTCard, width: number, height: number, onClick?: () => void) => {
-    const themeInfo = resolveThemeFromMetadata(card.metadata, card.rarity);
-
-    if (themeInfo) {
-      return (
-        <NftThemedCardCanvas
-          suit={card.suit}
-          rank={card.rank}
-          theme={themeInfo.theme}
-          themeId={themeInfo.themeId}
-          themeLabel={getRarityLabel(card.rarity)}
-          fallbackImageUrl={card.image_url}
-          width={width}
-          height={height}
-          fluid
-          onClick={onClick}
-          style={{ boxShadow: 'none', borderRadius: 8, ...(onClick ? {} : { width: '100%', height: '100%' }) }}
-        />
-      );
-    }
-    if (card.image_url) {
-      return (
-        <img
-          src={card.image_url}
-          alt={`${card.rank} of ${card.suit}`}
-          loading="lazy"
-          decoding="async"
-          style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
-          onClick={onClick}
-        />
-      );
-    }
+  const renderCardVisual = (card: NFTCard, _width: number, _height: number, _onClick?: () => void) => {
     return (
-      <div
-        style={{
-          width: '100%',
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: getSuitColor(card.suit),
-          fontSize: '24px',
-          fontWeight: 'bold',
-        }}
-      >
-        <div>{getNftSuitAbbrev(card.suit)}</div>
-        <div style={{ fontSize: '16px', marginTop: '4px' }}>{getRankDisplay(card.rank)}</div>
-      </div>
+      <NftCardFace
+        suit={card.suit}
+        rank={card.rank}
+        rarity={card.rarity}
+        metadata={card.metadata}
+        imageUrl={card.image_url}
+        themeLabel={getRarityLabel(card.rarity)}
+        alt={formatNftCardName(card.rank, card.suit, language)}
+        style={{ borderRadius: 8 }}
+      />
     );
   };
 
@@ -273,12 +236,13 @@ export default function NFTGallery() {
       rank: card.rank,
       rarity: card.rarity,
       image_url: card.image_url,
+      metadata: card.metadata,
     });
   };
 
   const handleDelete = async (card: NFTCard) => {
     const confirmed = await appConfirm(
-      `Удалить карту навсегда?\n\n${formatNftRankSuit(card.rank, card.suit)}\n${getRarityLabel(card.rarity)}\n\nЭто действие необратимо.`,
+      `Удалить карту навсегда?\n\n${formatNftCardName(card.rank, card.suit, language)}\n${getRarityLabel(card.rarity)}\n\nЭто действие необратимо.`,
       { destructive: true, confirmText: 'Удалить', cancelText: 'Отмена', type: 'warning' }
     );
     if (!confirmed) return;
@@ -463,7 +427,7 @@ export default function NFTGallery() {
                 color: suitColor,
                 marginBottom: '6px'
               }}>
-                {formatNftRankSuit(card.rank, card.suit)}
+                {formatNftCardName(card.rank, card.suit, language)}
               </div>
             </motion.div>
           );
@@ -516,7 +480,7 @@ export default function NFTGallery() {
                   <div className={styles.cardTitle}>
                     <div className={styles.rankRow}>
                       <span className={styles.rankText} style={{ color: getSuitColor(selectedCard.suit) }}>
-                        {formatNftRankSuit(selectedCard.rank, selectedCard.suit)}
+                        {formatNftCardName(selectedCard.rank, selectedCard.suit, language)}
                       </span>
                     </div>
                     <span className={styles.rarityPill} style={{ color: getSuitColor(selectedCard.suit) }}>
@@ -595,7 +559,7 @@ export default function NFTGallery() {
                   <p className={styles.replaceText}>
                     У вас уже есть{' '}
                     <strong>
-                      {formatNftRankSuit(duplicateInfo.newCard.rank, duplicateInfo.newCard.suit)}
+                      {formatNftCardName(duplicateInfo.newCard.rank, duplicateInfo.newCard.suit, language)}
                     </strong>{' '}
                     в колоде. Заменить на новую?
                   </p>
@@ -649,6 +613,7 @@ export default function NFTGallery() {
             rank: sellModal.sellCard.rank,
             rarity: sellModal.sellCard.rarity,
             image_url: sellModal.sellCard.image_url,
+            metadata: sellModal.sellCard.metadata,
           }}
           sellPrice={sellModal.sellPrice}
           setSellPrice={sellModal.setSellPrice}
@@ -670,8 +635,8 @@ export default function NFTGallery() {
           onClose={sellModal.closeSellModal}
           onConfirm={() => void sellModal.submitSell()}
           getSuitColor={getSuitColor}
-          getSuitSymbol={getNftSuitAbbrev}
-          getRankDisplay={getRankDisplay}
+          getSuitSymbol={getNftSuitSymbol}
+          getRankDisplay={getNftRankDisplay}
         />
       )}
     </div>

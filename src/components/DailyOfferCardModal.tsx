@@ -4,9 +4,10 @@ import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
-import NftThemedCardCanvas from '@/components/NftThemedCardCanvas';
+import NftCardFace from '@/components/NftCardFace';
 import { PidrCoinAmount } from '@/components/PidrCoinIcon';
-import { formatNftCardTitleRu } from '@/lib/nft/card-display';
+import { formatNftCardTitle } from '@/lib/nft/card-display';
+import { useLanguage } from '@/components/LanguageSwitcher';
 import type { NftThemeKey } from '@/lib/nft/theme-config';
 import styles from './NFTGallery.module.css';
 
@@ -32,6 +33,7 @@ type Props = {
 };
 
 export default function DailyOfferCardModal({ isOpen, offer, onClose, onBuy }: Props) {
+  const { language } = useLanguage();
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e: KeyboardEvent) => {
@@ -50,7 +52,7 @@ export default function DailyOfferCardModal({ isOpen, offer, onClose, onBuy }: P
   const price = offer?.discountedCoins ?? offer?.priceCoins ?? 0;
   const displayTitle =
     offer?.suit && offer?.rank
-      ? formatNftCardTitleRu(offer.rank, offer.suit, offer.themeLabel)
+      ? formatNftCardTitle(offer.rank, offer.suit, offer.themeLabel, language)
       : offer?.cardTitle ?? '';
 
   return createPortal(
@@ -109,16 +111,19 @@ export default function DailyOfferCardModal({ isOpen, offer, onClose, onBuy }: P
                 animate={{ scale: 1 }}
                 transition={{ delay: 0.05, type: 'spring', stiffness: 280, damping: 22 }}
               >
-                <NftThemedCardCanvas
+                <NftCardFace
                   suit={offer.suit}
                   rank={offer.rank}
-                  theme={offer.theme}
-                  themeId={offer.themeId}
+                  rarity={offer.theme}
+                  metadata={{
+                    theme: offer.theme,
+                    theme_id: offer.themeId,
+                    theme_label: offer.themeLabel,
+                  }}
                   themeLabel={offer.themeLabel}
-                  fallbackImageUrl={offer.promoImageUrl}
-                  width={280}
-                  height={392}
+                  imageUrl={offer.promoImageUrl}
                   alt={displayTitle}
+                  style={{ width: 280, height: 392, borderRadius: 12 }}
                 />
               </motion.div>
             </div>

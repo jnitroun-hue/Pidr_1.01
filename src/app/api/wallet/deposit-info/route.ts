@@ -10,6 +10,7 @@ import {
   resolveAllMasterAddresses,
   resolveMasterAddress,
 } from '@/lib/wallets/master-addresses';
+import { DEPOSIT_CAPABILITIES } from '@/lib/crypto/crypto-assets';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -56,7 +57,14 @@ export async function GET(req: NextRequest) {
         address: resolved.address,
         memo: memo ?? null,
         envKey: resolved.envKey,
-        telegramWallet: ['GRAM', 'TON', 'USDT', 'TRX', 'ETH', 'SOL'].includes(resolved.coin),
+        telegramWallet:
+          resolved.coin === 'GRAM' ||
+          resolved.coin === 'TON' ||
+          Boolean(DEPOSIT_CAPABILITIES[resolved.coin as keyof typeof DEPOSIT_CAPABILITIES]?.walletPay),
+        verifiedCredit:
+          resolved.coin === 'GRAM' ||
+          resolved.coin === 'TON' ||
+          Boolean(DEPOSIT_CAPABILITIES[resolved.coin as keyof typeof DEPOSIT_CAPABILITIES]?.verifiedCredit),
       });
     }
 
@@ -68,7 +76,14 @@ export async function GET(req: NextRequest) {
       address: item.address,
       memo: buildDepositMemo(memoUserId, item.coin) ?? null,
       envKey: item.envKey,
-      telegramWallet: ['GRAM', 'TON', 'USDT', 'TRX', 'ETH', 'SOL'].includes(item.coin),
+      telegramWallet:
+        item.coin === 'GRAM' ||
+        item.coin === 'TON' ||
+        Boolean(DEPOSIT_CAPABILITIES[item.coin as keyof typeof DEPOSIT_CAPABILITIES]?.walletPay),
+      verifiedCredit:
+        item.coin === 'GRAM' ||
+        item.coin === 'TON' ||
+        Boolean(DEPOSIT_CAPABILITIES[item.coin as keyof typeof DEPOSIT_CAPABILITIES]?.verifiedCredit),
     }));
 
     return noStoreJson({
