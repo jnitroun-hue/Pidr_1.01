@@ -13,6 +13,7 @@ const publicPaths: string[] = [
   '/game',       // Игра (single player работает без авторизации)
   '/rules',      // Правила
   '/shop',       // Магазин
+  '/shop/premium', // Premium Shop
   '/friends',    // Друзья
   '/rating',     // Рейтинг
   '/settings',   // Настройки

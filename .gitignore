@@ -19,6 +19,7 @@ NEW_TABLES_DEPLOY.sql
 !scripts/sql/ton-deposit-intents.sql
 !scripts/sql/wallet-withdrawals.sql
 !scripts/sql/wallet-pay-security.sql
+!scripts/sql/user-menu-theme.sql
 
 # testing
 /coverage

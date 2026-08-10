@@ -12,6 +12,7 @@ export interface Translations {
     play: string;
     wallet: string;
     shop: string;
+    premiumShop: string;
     rating: string;
     friends: string;
     settings: string;
@@ -354,6 +355,7 @@ export const translations: Record<Language, Translations> = {
       play: 'ИГРАТЬ',
       wallet: 'Кошелек',
       shop: 'МАГАЗИН',
+      premiumShop: 'PREMIUM SHOP',
       rating: 'Рейтинг',
       friends: 'Друзья',
       settings: 'Настройки',
@@ -679,6 +681,7 @@ export const translations: Record<Language, Translations> = {
       play: 'PLAY',
       wallet: 'Wallet',
       shop: 'SHOP',
+      premiumShop: 'PREMIUM SHOP',
       rating: 'Rating',
       friends: 'Friends',
       settings: 'Settings',

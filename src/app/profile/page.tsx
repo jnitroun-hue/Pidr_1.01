@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Trophy, Medal, Users, User, Star, Award, Target, Camera, Upload, Wallet, Palette, Sparkles, Gift, Frame, LogOut, Shield } from 'lucide-react';
+import { ArrowLeft, Trophy, Medal, Users, User, Star, Award, Target, Wallet, Sparkles, Gift, Frame, LogOut, Shield } from 'lucide-react';
 import GameWallet from '../../components/GameWallet';
 import DailyBonusWheelModal from '../../components/DailyBonusWheelModal';
 import PremiumPromoBanner from '../../components/PremiumPromoBanner';
@@ -27,6 +27,8 @@ import NftCardFace from '@/components/NftCardFace';
 import { formatNftCardName, getNftRarityLabel } from '@/lib/nft/card-display';
 import BonusCenter, { type ProfileBonus } from '@/components/BonusCenter';
 import type { AuthMethod } from '@/lib/user/resolve-auth-method';
+import AvatarGeneratorModal from '@/components/AvatarGeneratorModal';
+import MenuThemePicker from '@/components/MenuThemePicker';
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -88,6 +90,7 @@ export default function ProfilePage() {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [premium, setPremium] = useState<PremiumStatus | null>(null);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [showAvatarGenerator, setShowAvatarGenerator] = useState(false);
   const [showPremiumSuccess, setShowPremiumSuccess] = useState(false);
   const [premiumSuccessData, setPremiumSuccessData] = useState<PremiumStatus | null>(null);
 
@@ -1207,63 +1210,10 @@ export default function ProfilePage() {
     }
   };
 
-  const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      // Проверяем размер файла (максимум 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        alert('Файл слишком большой. Максимальный размер: 5MB');
-        return;
-      }
-      
-      // Проверяем тип файла
-      if (!file.type.startsWith('image/')) {
-        alert('Пожалуйста, выберите изображение');
-        return;
-      }
-
-      // Создаем URL для предварительного просмотра
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const result = e.target?.result as string;
-        setAvatarUrl(result);
-        
-        try {
-          // Сохраняем аватар в Supabase БД через API
-          console.log('💾 Сохраняем аватар в БД...');
-          
-          const response = await fetch('/api/user/avatar', {
-            method: 'POST',
-            credentials: 'include',
-            headers: {
-              ...getApiHeaders(),
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              avatar_url: result
-            })
-          });
-          
-          const updateResult = await response.json().catch(() => null);
-
-          if (response.ok && updateResult?.success) {
-            const savedUrl = updateResult.data?.avatar_url || result;
-            console.log('✅ Аватар сохранен в БД');
-            setAvatarUrl(savedUrl);
-            setUser((prev: any) => prev ? { ...prev, avatar_url: savedUrl } : null);
-            patchHomeSessionPhoto(savedUrl);
-          } else {
-            const message = updateResult?.message || `Ошибка сервера (${response.status})`;
-            console.error('❌ Ошибка сохранения аватара:', message);
-            alert(`Не удалось сохранить аватар: ${message}`);
-          }
-        } catch (error) {
-          console.error('❌ Ошибка сохранения аватара:', error);
-          alert('Не удалось сохранить аватар. Проверьте соединение и попробуйте снова.');
-        }
-      };
-      reader.readAsDataURL(file);
-    }
+  const handleAvatarSelected = (savedUrl: string) => {
+    setAvatarUrl(savedUrl);
+    setUser((prev: any) => (prev ? { ...prev, avatar_url: savedUrl } : null));
+    patchHomeSessionPhoto(savedUrl);
   };
 
   // Данные пользователя загружаются через useEffect выше
@@ -1476,20 +1426,14 @@ export default function ProfilePage() {
                 ДРУЗЬЯ
               </motion.button>
 
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleAvatarChange}
-                style={{ display: 'none' }}
-                id="avatar-upload"
-              />
-              <motion.label
-                htmlFor="avatar-upload"
+              <motion.button
+                type="button"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
+                onClick={() => setShowAvatarGenerator(true)}
                 style={{
-                  background: 'rgba(34, 197, 94, 0.2)',
-                  border: '2px solid rgba(34, 197, 94, 0.3)',
+                  background: 'rgba(56, 189, 248, 0.18)',
+                  border: '2px solid rgba(56, 189, 248, 0.35)',
                   borderRadius: '10px',
                   padding: '8px',
                   cursor: 'pointer',
@@ -1497,14 +1441,14 @@ export default function ProfilePage() {
                   flexDirection: 'column',
                   alignItems: 'center',
                   gap: '4px',
-                  color: '#4ade80',
+                  color: '#7dd3fc',
                   fontWeight: '600',
                   fontSize: '11px'
                 }}
               >
-                <Camera size={20} />
+                <Sparkles size={20} />
                 АВАТАР
-              </motion.label>
+              </motion.button>
 
               {isAdmin && (
                 <motion.button
@@ -1665,6 +1609,31 @@ export default function ProfilePage() {
           premium={premium}
           onOpenPurchase={() => setShowPremiumModal(true)}
         />
+
+        <motion.button
+          type="button"
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.99 }}
+          onClick={() => router.push('/shop/premium')}
+          style={{
+            width: '100%',
+            marginBottom: 16,
+            borderRadius: 16,
+            padding: '14px 16px',
+            border: '1px solid rgba(56,189,248,0.4)',
+            background: 'linear-gradient(120deg, rgba(14,165,233,0.16), rgba(15,23,42,0.92))',
+            color: '#e0f2fe',
+            fontWeight: 800,
+            cursor: 'pointer',
+            textAlign: 'left',
+          }}
+        >
+          {language === 'en' ? 'Open Premium Shop →' : 'Открыть Premium Shop →'}
+        </motion.button>
+
+        <div style={{ marginBottom: 16 }}>
+          <MenuThemePicker compact />
+        </div>
 
         {/* СТАТИСТИКА — онлайн / боты */}
         <motion.div 
@@ -2588,6 +2557,12 @@ export default function ProfilePage() {
         open={showPremiumSuccess}
         onClose={() => setShowPremiumSuccess(false)}
         premium={premiumSuccessData}
+      />
+
+      <AvatarGeneratorModal
+        open={showAvatarGenerator}
+        onClose={() => setShowAvatarGenerator(false)}
+        onSelected={handleAvatarSelected}
       />
 
     </div>

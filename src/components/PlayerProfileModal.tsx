@@ -146,7 +146,10 @@ export default function PlayerProfileModal({
               }}
             >
               {player.avatar &&
-              (player.avatar.startsWith('http') || player.avatar.startsWith('data:')) ? (
+              (player.avatar.startsWith('http') ||
+                player.avatar.startsWith('data:') ||
+                player.avatar.startsWith('/avatars/') ||
+                player.avatar.startsWith('/img/')) ? (
                 <img
                   src={player.avatar}
                   alt={player.name}

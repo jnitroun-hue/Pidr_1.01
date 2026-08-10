@@ -21,7 +21,13 @@ export default function UserAvatarBadge({
 }: UserAvatarBadgeProps) {
   const label = username || '?';
   const initial = label.trim().charAt(0).toUpperCase() || '?';
-  const hasImage = Boolean(avatarUrl && (avatarUrl.startsWith('http') || avatarUrl.startsWith('data:')));
+  const hasImage = Boolean(
+    avatarUrl &&
+      (avatarUrl.startsWith('http') ||
+        avatarUrl.startsWith('data:') ||
+        avatarUrl.startsWith('/avatars/') ||
+        avatarUrl.startsWith('/img/'))
+  );
   const emojiAvatar = Boolean(avatarUrl && !hasImage && avatarUrl.length <= 8 && !avatarUrl.includes('/'));
 
   return (

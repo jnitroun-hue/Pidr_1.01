@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS _pidr_users (
     second_places INTEGER DEFAULT 0,
     third_places INTEGER DEFAULT 0,
     avatar_url TEXT,
+    menu_theme VARCHAR(40) DEFAULT 'slate',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

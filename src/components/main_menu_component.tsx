@@ -1,12 +1,12 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Play, User, Book, Store, Users, Image, LogIn, UserPlus } from 'lucide-react'
+import { Play, User, Book, Store, Users, Image, LogIn, UserPlus, Crown } from 'lucide-react'
 import { useGameStore } from '../store/gameStore'
 import { useTelegram } from '../hooks/useTelegram'
 import { useWalletStore } from '../store/walletStore'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import LanguageSwitcher, { useLanguage } from './LanguageSwitcher'
 import { useTranslations } from '../lib/i18n/translations'
 import OnlineIndicator from './OnlineIndicator'
@@ -14,6 +14,18 @@ import CardDealerHero from './CardDealerHero'
 import { GRAM } from '@/lib/crypto/gram-brand'
 import { CRYPTO_TOKENS } from '@/lib/crypto/crypto-assets'
 import CryptoIcon from './CryptoIcon'
+import { getApiHeaders } from '@/lib/api-headers'
+import { parseJsonResponse } from '@/lib/api/parse-json-response'
+import {
+  DEFAULT_MENU_THEME,
+  isMenuThemeId,
+  type MenuThemeId,
+} from '@/lib/ui/menuThemes'
+import {
+  menuThemeStyleVars,
+  readStoredMenuTheme,
+  storeMenuTheme,
+} from '@/lib/ui/menu-theme-client'
 
 const tokens = [
   { name: GRAM.name, symbol: GRAM.symbol, color: GRAM.color, icon: CRYPTO_TOKENS.GRAM.icon },
@@ -31,6 +43,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
   const { hapticFeedback } = useTelegram()
   const router = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [menuThemeId, setMenuThemeId] = useState<MenuThemeId>(DEFAULT_MENU_THEME)
   const { language } = useLanguage()
   const t = useTranslations(language)
   const { 
@@ -40,6 +53,50 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
     connectTonWallet, connectSolanaWallet, connectEthereumWallet,
     disconnectTonWallet, disconnectSolanaWallet, disconnectEthereumWallet
   } = useWalletStore()
+
+  useEffect(() => {
+    setMenuThemeId(readStoredMenuTheme())
+  }, [])
+
+  useEffect(() => {
+    const onTheme = (event: Event) => {
+      const detail = (event as CustomEvent<{ themeId?: string }>).detail
+      if (isMenuThemeId(detail?.themeId)) {
+        setMenuThemeId(detail.themeId)
+        storeMenuTheme(detail.themeId)
+      }
+    }
+    window.addEventListener('pidr-menu-theme', onTheme as EventListener)
+    return () => window.removeEventListener('pidr-menu-theme', onTheme as EventListener)
+  }, [])
+
+  useEffect(() => {
+    if (!user) return
+    let cancelled = false
+    const loadTheme = async () => {
+      try {
+        const res = await fetch('/api/user/menu-theme', {
+          credentials: 'include',
+          headers: getApiHeaders(),
+          cache: 'no-store',
+        })
+        const parsed = await parseJsonResponse<{ success?: boolean; themeId?: string }>(res)
+        if (cancelled) return
+        if (parsed.data?.success && isMenuThemeId(parsed.data.themeId)) {
+          setMenuThemeId(parsed.data.themeId)
+          storeMenuTheme(parsed.data.themeId)
+        }
+      } catch {
+        /* keep cached theme */
+      }
+    }
+    void loadTheme()
+    return () => {
+      cancelled = true
+    }
+  }, [user])
+
+  const themeVars = menuThemeStyleVars(menuThemeId)
 
   const navigateSafely = (path: string) => {
     if (typeof window === 'undefined') return
@@ -131,6 +188,15 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
       }
     },
     {
+      icon: <Crown size={32} />,
+      emoji: '👑',
+      label: t.mainMenu.premiumShop,
+      onClick: () => {
+        hapticFeedback('medium');
+        navigateSafely('/shop/premium');
+      }
+    },
+    {
       icon: <Image size={32} />,
       emoji: '🎴',
       label: t.mainMenu.nftCollection,
@@ -188,12 +254,17 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
   ];
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)',
-      padding: '20px',
-      paddingTop: '80px'
-    }}>
+    <div
+      className={`main-menu-root menu-theme-${menuThemeId}`}
+      style={{
+        ...themeVars,
+        minHeight: '100vh',
+        background: 'var(--menu-bg-accent), var(--menu-bg)',
+        padding: '20px',
+        paddingTop: '80px',
+        transition: 'background 0.35s ease',
+      }}
+    >
       {/* Автоматическое обновление онлайн статуса — глобально в Providers */}
       
       {/* Выбор языка */}
@@ -240,7 +311,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
         >
           <CardDealerHero />
           <p style={{
-            color: '#94a3b8',
+            color: 'var(--menu-text-muted)',
             fontSize: '16px',
             marginTop: '4px'
           }}>
@@ -248,7 +319,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
           </p>
         </motion.div>
 
-        {/* 5 кнопок вертикально */}
+        {/* Кнопки меню */}
         <div style={{
           display: 'flex',
           flexDirection: 'column',
@@ -268,8 +339,8 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
               }}
               style={{
                 width: '100%',
-                background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
-                border: '2px solid rgba(99, 102, 241, 0.3)',
+                background: 'var(--menu-card-bg)',
+                border: '2px solid var(--menu-card-border)',
                 borderRadius: '16px',
                 padding: '20px',
                 cursor: 'pointer',
@@ -277,7 +348,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
                 alignItems: 'center',
                 gap: '15px',
                 transition: 'all 0.3s ease',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+                boxShadow: 'var(--menu-shadow)'
               }}
             >
               <div style={{
@@ -287,7 +358,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
                 {button.emoji}
               </div>
               <h3 style={{
-                color: '#f1f5f9',
+                color: 'var(--menu-text)',
                 fontSize: '20px',
                 fontWeight: '700',
                 margin: 0,
@@ -296,7 +367,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
               }}>
                 {button.label}
               </h3>
-              <div style={{ color: '#6366f1' }}>
+              <div style={{ color: 'var(--menu-accent)' }}>
                 {button.icon}
               </div>
             </motion.button>
@@ -310,15 +381,15 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
           transition={{ delay: 0.6 }}
           style={{
             marginTop: '40px',
-            background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
-            border: '2px solid rgba(99, 102, 241, 0.3)',
+            background: 'var(--menu-card-bg)',
+            border: '2px solid var(--menu-wallet-border)',
             borderRadius: '16px',
             padding: '20px',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+            boxShadow: 'var(--menu-shadow)'
           }}
         >
           <div style={{
-            color: '#94a3b8',
+            color: 'var(--menu-text-muted)',
             fontSize: '14px',
             fontWeight: '600',
             marginBottom: '15px',

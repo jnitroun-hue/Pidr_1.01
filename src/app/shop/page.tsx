@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, TrendingUp, Users, Sparkles, ShieldCheck, TimerReset, Percent } from 'lucide-react';
+import { ArrowLeft, TrendingUp, Users, Sparkles, ShieldCheck, TimerReset, Percent, Crown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import NFTMarketplace from '../../components/NFTMarketplace';
 import PremiumPromoBanner from '../../components/PremiumPromoBanner';
@@ -503,6 +503,79 @@ export default function ShopPage() {
           compact
           onOpenPurchase={() => setShowPremiumModal(true)}
         />
+
+        {/* Dedicated Premium Shop entry — full section, not a tiny banner */}
+        <motion.button
+          type="button"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.99 }}
+          onClick={() => {
+            try {
+              router.push('/shop/premium');
+            } catch {
+              window.location.href = '/shop/premium';
+            }
+          }}
+          style={{
+            width: '100%',
+            textAlign: 'left',
+            borderRadius: 20,
+            padding: '18px 16px',
+            marginBottom: 18,
+            cursor: 'pointer',
+            border: '1px solid rgba(56,189,248,0.5)',
+            background: `
+              linear-gradient(120deg, rgba(14,165,233,0.2) 0%, rgba(99,102,241,0.14) 45%, rgba(15,23,42,0.94) 100%)
+            `,
+            boxShadow: '0 16px 40px rgba(14,165,233,0.12)',
+            display: 'block',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+            <div
+              style={{
+                width: 52,
+                height: 52,
+                borderRadius: 16,
+                background: 'linear-gradient(135deg, #0ea5e9, #6366f1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <Crown size={26} color="#fff" />
+            </div>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <div style={{ color: '#7dd3fc', fontWeight: 900, fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                Premium Shop
+              </div>
+              <div style={{ color: '#f8fafc', fontWeight: 900, fontSize: 'clamp(1.15rem, 4vw, 1.45rem)', marginTop: 4 }}>
+                {language === 'en' ? 'Open premium player zone' : 'Открыть зону Premium-игрока'}
+              </div>
+              <div style={{ color: '#94a3b8', fontSize: 13, marginTop: 6, lineHeight: 1.45 }}>
+                {language === 'en'
+                  ? 'Daily deal, free roll, menu themes and exclusive perks'
+                  : 'Акция дня, free roll, темы меню и эксклюзивные бонусы'}
+              </div>
+            </div>
+            <div
+              style={{
+                padding: '10px 14px',
+                borderRadius: 12,
+                background: 'rgba(56,189,248,0.18)',
+                color: '#e0f2fe',
+                fontWeight: 800,
+                fontSize: 13,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {language === 'en' ? 'Enter →' : 'Войти →'}
+            </div>
+          </div>
+        </motion.button>
 
         {/* Daily promo — Premium: случайная карта 1000–5000 монет */}
         {(dailyPromo || dailyPromoRequiresPremium || isPremiumUsable(premium)) && (

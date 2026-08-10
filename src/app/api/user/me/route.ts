@@ -73,7 +73,7 @@ export async function GET(req: NextRequest) {
 
     const { data: freshUser } = await supabaseAdmin
       .from('_pidr_users')
-      .select('is_premium, premium_expires_at')
+      .select('is_premium, premium_expires_at, menu_theme')
       .eq('id', dbUserId)
       .single();
 
@@ -81,6 +81,10 @@ export async function GET(req: NextRequest) {
     const isPremiumFlag =
       freshUser?.is_premium ??
       (premiumExpiresAt ? new Date(premiumExpiresAt).getTime() > Date.now() : false);
+    const menuTheme =
+      (freshUser as { menu_theme?: string | null } | null)?.menu_theme ??
+      (user as { menu_theme?: string | null }).menu_theme ??
+      'slate';
 
     // Обновляем last_seen
     // ✅ ИСПРАВЛЕНО: Используем supabaseAdmin для обхода RLS
@@ -133,6 +137,7 @@ export async function GET(req: NextRequest) {
         is_admin: user.is_admin || false,
         is_premium: isPremiumFlag,
         premium_expires_at: premiumExpiresAt,
+        menu_theme: menuTheme,
       }
     });
   } catch (error: unknown) {
