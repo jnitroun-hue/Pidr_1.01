@@ -84,14 +84,14 @@ const THEMES = {
   },
   unique: {
     name: 'Уникальные',
-    blurb: 'Живые карты: GIF Мелстроя внутри рамки, как стикер в Telegram.',
+    blurb: 'Живые карты: 12 GIF Мелстроя внутри рамки, как стикер в Telegram.',
     icon: '✨',
     color: '#e879f9',
     gradient: 'linear-gradient(135deg, #e879f9 0%, #22d3ee 100%)',
     singleCost: 15000,
     deckCost: 400000,
     cryptoCost: { ton: 0.8, sol: 8, eth: 0.0003 },
-    total: 2,
+    total: 12,
     folder: 'unique',
     prefix: 'uniq_',
   }

@@ -27,7 +27,7 @@ export const NFT_THEME_CONFIG = {
   },
   unique: {
     name: 'Уникальные',
-    total: 2,
+    total: 12,
     folder: 'unique',
     prefix: 'uniq_',
     animated: true,
