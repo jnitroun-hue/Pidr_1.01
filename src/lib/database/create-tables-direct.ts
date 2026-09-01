@@ -25,6 +25,7 @@ export async function createTablesDirectly(): Promise<{ success: boolean; messag
           games_won INTEGER DEFAULT 0,
           avatar_url TEXT,
           menu_theme VARCHAR(40) DEFAULT 'slate',
+          premium_flame VARCHAR(20) DEFAULT 'gold',
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
@@ -186,6 +187,7 @@ CREATE TABLE IF NOT EXISTS _pidr_users (
     games_won INTEGER DEFAULT 0,
     avatar_url TEXT,
     menu_theme VARCHAR(40) DEFAULT 'slate',
+    premium_flame VARCHAR(20) DEFAULT 'gold',
     is_admin BOOLEAN DEFAULT false,
     is_active BOOLEAN DEFAULT true,
     last_seen TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,

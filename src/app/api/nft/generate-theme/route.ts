@@ -12,20 +12,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 import { NFT_CARDS_TABLE, NFT_STORAGE_BUCKET } from '@/lib/nft/constants';
-import sharp from 'sharp';
-import path from 'path';
-import fs from 'fs';
+import { isNftThemeKey } from '@/lib/nft/theme-config';
+import { NFT_GEN_COIN_COST } from '@/lib/nft/crypto-gen-costs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-// Конфигурация тем
-const THEMES: Record<string, { prefix: string; folder: string; total: number }> = {
-  pokemon: { prefix: '', folder: 'pokemon', total: 52 },
-  halloween: { prefix: 'hel_', folder: 'halloween', total: 10 },
-  starwars: { prefix: 'star_', folder: 'starwars', total: 7 },
-  legendary: { prefix: 'leg_', folder: 'legendary', total: 5 }
-};
 
 export async function POST(request: NextRequest) {
   try {
@@ -49,16 +40,19 @@ export async function POST(request: NextRequest) {
     console.log(`👤 Пользователь: ${userId}`);
     console.log(`🎨 Тема: ${theme}, ID: ${themeId}, Карта: ${rank}${suit}`);
 
+    if (!isNftThemeKey(theme)) {
+      return NextResponse.json({ success: false, error: 'Неизвестная тема' }, { status: 400 });
+    }
+
+    const coinPrice = NFT_GEN_COIN_COST[theme] || { single: 10000, deck: 400000 };
     const costs: Record<string, number> = {
-      random_pokemon: 10000,
-      random_halloween: 5000,
-      random_starwars: 5000,
-      random_legendary: 50000,
-      deck_pokemon: 400000,
-      deck_halloween: 200000,
-      deck_starwars: 200000,
-      deck_legendary: 1000000,
+      [`random_${theme}`]: coinPrice.single,
+      [`deck_${theme}`]: coinPrice.deck,
     };
+    Object.entries(NFT_GEN_COIN_COST).forEach(([key, price]) => {
+      costs[`random_${key}`] = price.single;
+      costs[`deck_${key}`] = price.deck;
+    });
 
     const cost = costs[action] || 10000;
 
@@ -190,96 +184,5 @@ export async function POST(request: NextRequest) {
       success: false,
       error: (error instanceof Error ? error.message : String(error)) || 'Внутренняя ошибка сервера'
     }, { status: 500 });
-  }
-}
-
-/**
- * ✅ ГЕНЕРАЦИЯ КАРТЫ С ПОМОЩЬЮ SHARP НА СЕРВЕРЕ!
- */
-async function generateThemeCardImage(
-  suit: string,
-  rank: string,
-  themeId: number,
-  theme: string
-): Promise<Buffer> {
-  const themeConfig = THEMES[theme];
-  
-  if (!themeConfig) {
-    throw new Error(`Unknown theme: ${theme}`);
-  }
-
-  // Путь к изображению темы в public/
-  const fileName = `${themeConfig.prefix}${themeId}.png`;
-  const imagePath = path.join(process.cwd(), 'public', themeConfig.folder, fileName);
-
-  console.log(`🖼️ Загружаем изображение: ${imagePath}`);
-
-  // Проверяем существование файла
-  if (!fs.existsSync(imagePath)) {
-    console.error(`❌ Файл не найден: ${imagePath}`);
-    throw new Error(`Theme image not found: ${fileName}`);
-  }
-
-  // Определяем цвет масти
-  const suitColor = (suit === 'hearts' || suit === 'diamonds') 
-    ? '#ef4444' 
-    : '#000000';
-
-  // Символ масти
-  const suitSymbol = {
-    hearts: '♥',
-    diamonds: '♦',
-    clubs: '♣',
-    spades: '♠'
-  }[suit] || suit;
-
-  // SVG для текста (ранг и масть)
-  const svgText = `
-    <svg width="300" height="420">
-      <!-- Белый фон -->
-      <rect width="300" height="420" fill="#ffffff"/>
-      
-      <!-- Черная рамка -->
-      <rect x="4" y="4" width="292" height="412" fill="none" stroke="#000000" stroke-width="8"/>
-      
-      <!-- Ранг и масть в верхнем левом углу -->
-      <text x="20" y="50" font-family="Arial" font-size="40" font-weight="bold" fill="${suitColor}">${rank.toUpperCase()}</text>
-      <text x="20" y="90" font-family="Arial" font-size="36" font-weight="bold" fill="${suitColor}">${suitSymbol}</text>
-      
-      <!-- Ранг и масть в нижнем правом углу -->
-      <text x="260" y="400" font-family="Arial" font-size="40" font-weight="bold" fill="${suitColor}" text-anchor="end">${rank.toUpperCase()}</text>
-      <text x="260" y="360" font-family="Arial" font-size="36" font-weight="bold" fill="${suitColor}" text-anchor="end">${suitSymbol}</text>
-    </svg>
-  `;
-
-  try {
-    // Загружаем изображение темы
-    const themeImage = await sharp(imagePath)
-      .resize(200, 200, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 1 } })
-      .toBuffer();
-
-    // Создаем базовый слой с текстом
-    const baseLayer = await sharp(Buffer.from(svgText))
-      .png()
-      .toBuffer();
-
-    // Накладываем изображение темы в центр (X: 50, Y: 110)
-    const finalImage = await sharp(baseLayer)
-      .composite([
-        {
-          input: themeImage,
-          top: 110,
-          left: 50
-        }
-      ])
-      .png()
-      .toBuffer();
-
-    console.log(`✅ Изображение карты создано!`);
-    return finalImage;
-
-  } catch (error: unknown) {
-    console.error(`❌ Ошибка генерации изображения:`, error);
-    throw new Error(`Failed to generate card image: ${error}`);
   }
 }

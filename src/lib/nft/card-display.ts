@@ -147,6 +147,7 @@ export function getNftRarityLabel(rarity: string): string {
     rare: 'Редкая',
     epic: 'Эпическая',
     legendary: '👑 Легендарная',
+    unique: '✨ Уникальная',
   };
   return labels[rarity?.toLowerCase()] || rarity;
 }

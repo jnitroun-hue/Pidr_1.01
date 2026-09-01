@@ -527,6 +527,7 @@ export function MyNFTsTab({ nfts, onSellClick, onDeleteClick, getSuitColor, getS
                   {selectedNFT.rarity === 'pokemon' && '⚡ Покемон'}
                   {selectedNFT.rarity === 'halloween' && '🎃 Хеллоуин'}
                   {selectedNFT.rarity === 'starwars' && '⚔️ Star Wars'}
+                  {selectedNFT.rarity === 'unique' && '✨ Уникальная'}
                   {!['pokemon', 'halloween', 'starwars'].includes(selectedNFT.rarity) && selectedNFT.rarity}
                 </p>
               </div>

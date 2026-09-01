@@ -4,7 +4,7 @@ import path from 'path';
 import { supabaseAdmin } from '@/lib/supabase';
 import { downloadStorageBuffer } from '@/lib/nft/compose-theme-card';
 import { NFT_STORAGE_BUCKET, POKEMON_STORAGE_BUCKET } from '@/lib/nft/constants';
-import { NFT_THEME_CONFIG, getThemeAssetRelativePath, type NftThemeKey } from '@/lib/nft/theme-config';
+import { NFT_THEME_CONFIG, THEME_ASSET_EXTS, getThemeAssetRelativePath, themeAssetFileName, type NftThemeKey } from '@/lib/nft/theme-config';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -23,19 +23,25 @@ export async function GET(
 
   const pick = { theme: theme as NftThemeKey, themeId };
   const cfg = NFT_THEME_CONFIG[pick.theme];
-  const fileName = `${cfg.prefix}${themeId}.png`;
-  const relativePath = getThemeAssetRelativePath(pick);
 
-  const localPath = path.join(process.cwd(), 'public', cfg.folder, fileName);
-  if (fs.existsSync(localPath)) {
-    const buffer = fs.readFileSync(localPath);
-    return new NextResponse(buffer, {
-      headers: {
-        'Content-Type': 'image/png',
-        'Cache-Control': 'public, max-age=86400, immutable',
-      },
-    });
+  for (const ext of THEME_ASSET_EXTS) {
+    const fileName = themeAssetFileName(pick, ext);
+    const localPath = path.join(process.cwd(), 'public', cfg.folder, fileName);
+    if (fs.existsSync(localPath)) {
+      const buffer = fs.readFileSync(localPath);
+      const contentType =
+        ext === 'gif' ? 'image/gif' : ext === 'webp' ? 'image/webp' : 'image/png';
+      return new NextResponse(buffer, {
+        headers: {
+          'Content-Type': contentType,
+          'Cache-Control': 'public, max-age=86400, immutable',
+        },
+      });
+    }
   }
+
+  const fileName = themeAssetFileName(pick);
+  const relativePath = getThemeAssetRelativePath(pick);
 
   const storageCandidates = [
     { bucket: NFT_STORAGE_BUCKET, path: `themes/${relativePath}` },

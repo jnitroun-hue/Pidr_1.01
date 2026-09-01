@@ -94,6 +94,11 @@ const Settings = () => {
     setSettings(newSettings);
     writeCookie(SETTINGS_COOKIE_KEY, JSON.stringify(newSettings));
     applyTheme(newSettings);
+    if (key === 'soundEnabled') {
+      try {
+        localStorage.setItem('pidr_sound_enabled', value ? '1' : '0');
+      } catch { /* ignore */ }
+    }
   };
 
   const resetSettings = () => {

@@ -1,0 +1,3 @@
+Star Wars-style NFT arts (sci-fi, not Disney IP)
+- Kenney Space Shooter ships via GitHub FukuInTheCode/R-TYPE (CC0 Kenney.nl)
+- Backgrounds generated locally

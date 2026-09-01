@@ -9,6 +9,12 @@ import GameResultsModal from '../../components/GameResultsModal';
 import PenaltyDeckModal from '../../components/PenaltyDeckModal';
 import TutorialModal from '../../components/TutorialModal';
 import PremiumAvatarFire from '../../components/PremiumAvatarFire';
+import {
+  PREMIUM_FLAME_CHANGED_EVENT,
+  readStoredFlameColor,
+  resolvePremiumFlame,
+  type PremiumFlameColorId,
+} from '../../lib/premium/flame';
 import { useTutorial } from '../../hooks/useTutorial';
 import styles from './GameTable.module.css';
 // Генераторы перенесены в отдельный проект pidr_generators
@@ -386,6 +392,7 @@ function GamePageContentComponent({
     telegramId?: string;
     dbUserId?: number;
     isPremium?: boolean;
+    flameColor?: PremiumFlameColorId;
   } | null>(() => {
     const tg = getTelegramUser();
     if (!tg) return null;
@@ -407,16 +414,30 @@ function GamePageContentComponent({
         telegramId: profile.telegramId,
         dbUserId: profile.userId,
         isPremium: profile.isPremium,
+        flameColor: profile.isPremium ? readStoredFlameColor() : undefined,
       });
       syncLocalUserProfile({
         username: profile.username,
         avatar: profile.avatar,
         isPremium: profile.isPremium,
+        flameColor: profile.isPremium ? readStoredFlameColor() : undefined,
       });
       if (profile.isPremium) syncLocalUserPremium(true);
     },
     [syncLocalUserProfile, syncLocalUserPremium]
   );
+
+  useEffect(() => {
+    const onFlame = (event: Event) => {
+      const next = resolvePremiumFlame(
+        (event as CustomEvent<{ color?: string }>).detail?.color ?? readStoredFlameColor()
+      );
+      setUserData((prev) => (prev ? { ...prev, flameColor: next } : prev));
+      syncLocalUserProfile({ flameColor: next });
+    };
+    window.addEventListener(PREMIUM_FLAME_CHANGED_EVENT, onFlame);
+    return () => window.removeEventListener(PREMIUM_FLAME_CHANGED_EVENT, onFlame);
+  }, [syncLocalUserProfile]);
 
   // Текущая открытая карта из колоды (для отображения рядом с колодой)
   const [currentCard, setCurrentCard] = useState<string | null>(null);
@@ -2321,6 +2342,7 @@ function GamePageContentComponent({
                   avatar_url?: string | null;
                   is_bot?: boolean;
                   is_premium?: boolean;
+                  premium_flame?: string | null;
                   position?: number;
                 }) => {
                   const publicId = String(player.user_id);
@@ -2339,6 +2361,7 @@ function GamePageContentComponent({
                     position: player.position ?? 0,
                     isUser,
                     isPremium: player.is_premium === true,
+                    flameColor: resolvePremiumFlame(player.premium_flame),
                     dbUserId: player.db_user_id ?? null,
                   };
                 });
@@ -2631,7 +2654,7 @@ function GamePageContentComponent({
               {/* Профиль пользователя */}
               <div className={styles.menuUserProfile}>
                 <div className={styles.menuUserAvatar} style={{ overflow: userData?.isPremium ? 'visible' : 'hidden' }}>
-                  <PremiumAvatarFire size={40} active={!!userData?.isPremium}>
+                  <PremiumAvatarFire size={40} active={!!userData?.isPremium} color={userData?.flameColor}>
                     {userData?.avatar ? (
                       <img
                         src={userData.avatar}
@@ -3152,7 +3175,11 @@ function GamePageContentComponent({
                             }} />
                           </>
                         )}
-                        <PremiumAvatarFire size={28} active={!!player.isPremium}>
+                        <PremiumAvatarFire
+                          size={28}
+                          active={!!player.isPremium}
+                          color={player.isUser ? userData?.flameColor : player.flameColor}
+                        >
                         <img 
                         src={playerAvatars[player.id] || player.avatar || '/img/player-avatar.svg'}
                         alt={player.name}
@@ -3163,10 +3190,8 @@ function GamePageContentComponent({
                             borderRadius: '50%',
                             boxShadow: isCurrentTurn 
                               ? '0 0 15px rgba(34, 197, 94, 1), 0 0 30px rgba(34, 197, 94, 0.6), 0 0 45px rgba(34, 197, 94, 0.3)'
-                              : player.isPremium
-                                ? '0 0 10px rgba(56, 189, 248, 0.8)'
-                                : '0 1px 4px rgba(0, 0, 0, 0.3)',
-                            border: `${isCurrentTurn ? '3px' : '1px'} solid ${isCurrentTurn ? '#22c55e' : player.isPremium ? '#38bdf8' : 'rgba(255, 255, 255, 0.2)'}`,
+                              : '0 1px 4px rgba(0, 0, 0, 0.45)',
+                            border: `${isCurrentTurn ? '3px' : '1px'} solid ${isCurrentTurn ? '#22c55e' : 'rgba(255, 255, 255, 0.28)'}`,
                             transition: 'all 0.3s ease',
                             objectFit: 'cover',
                             position: 'relative',

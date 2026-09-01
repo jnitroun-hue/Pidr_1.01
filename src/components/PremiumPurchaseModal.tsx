@@ -7,6 +7,7 @@ import YooKassaPayment from './YooKassaPayment';
 import { getApiHeaders } from '@/lib/api-headers';
 import { PREMIUM_BENEFITS, PREMIUM_PRICE_COINS, PREMIUM_PRICE_RUB } from '@/lib/premium/constants';
 import { PidrCoinAmount } from '@/components/PidrCoinIcon';
+import PremiumSalePrice from '@/components/PremiumSalePrice';
 import type { PremiumStatus } from '@/lib/premium/premium-service';
 
 interface PremiumPurchaseModalProps {
@@ -88,7 +89,22 @@ export default function PremiumPurchaseModal({
                 <Crown size={22} color="#38bdf8" />
                 <span style={{ color: '#e0f2fe', fontSize: '20px', fontWeight: 800 }}>Premium</span>
               </div>
-              <div style={{ color: '#94a3b8', fontSize: '12px' }}>30 дней · все бонусы</div>
+              <div style={{ color: '#94a3b8', fontSize: '12px' }}>30 дней · акция 299 ₽</div>
+              <div style={{
+                marginTop: 8,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '3px 8px',
+                borderRadius: 999,
+                background: 'rgba(244, 63, 94, 0.18)',
+                color: '#fda4af',
+                fontSize: 10,
+                fontWeight: 800,
+                letterSpacing: '0.06em',
+              }}>
+                АКЦИЯ
+              </div>
             </div>
             <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}>
               <X size={22} />
@@ -145,9 +161,9 @@ export default function PremiumPurchaseModal({
                 }}
               >
                 {t === 'rub' ? (
-                  `${PREMIUM_PRICE_RUB} ₽`
+                  <PremiumSalePrice mode="rub" size="sm" />
                 ) : (
-                  <PidrCoinAmount value={PREMIUM_PRICE_COINS} size={14} />
+                  <PremiumSalePrice mode="coins" size="sm" />
                 )}
               </button>
             ))}

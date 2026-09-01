@@ -26,7 +26,7 @@ interface NFTThemeGeneratorProps {
 }
 
 // Типы тем
-type ThemeType = 'pokemon' | 'halloween' | 'starwars' | 'legendary' | 'deck';
+type ThemeType = 'pokemon' | 'halloween' | 'starwars' | 'legendary' | 'unique' | 'deck';
 
 // Конфигурация тем
 const THEMES = {
@@ -58,36 +58,42 @@ const THEMES = {
   },
   starwars: {
     name: 'Звездные войны',
-    blurb: 'Коллекция Звёздных войн — 7 артов.',
+    blurb: 'Космические корабли и туманности — 19 артов.',
     icon: '⚔️',
     color: '#3b82f6',
     gradient: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
     singleCost: 5000,
     deckCost: 200000,
     cryptoCost: { ton: 0.3, sol: 3, eth: 0.0001 },
-    total: 7,
+    total: 19,
     folder: 'starwars',
     prefix: 'star_'
   },
   legendary: {
     name: 'Легендарная',
-    blurb: 'Самые редкие карты: 5 артов и отдельная цена.',
+    blurb: 'Самые редкие карты: 17 артов и отдельная цена.',
     icon: '👑',
     color: '#a855f7',
     gradient: 'linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)',
-    singleCost: 50000, // ✅ Очень дорого!
-    deckCost: 1000000, // ✅ Миллион!
+    singleCost: 50000,
+    deckCost: 1000000,
     cryptoCost: { ton: 2, sol: 20, eth: 0.001 },
-    total: 5, // ✅ Всего 5 легендарных картинок
+    total: 17,
     folder: 'legendary',
-    prefix: 'leg_', // ✅ Файлы: leg_1.png, leg_2.png, ...
-    rarityWeights: { // ✅ Вероятности выпадения
-      leg_1: 10, // 10%
-      leg_2: 15, // 15%
-      leg_3: 25, // 25%
-      leg_4: 30, // 30%
-      leg_5: 20  // 20%
-    }
+    prefix: 'leg_',
+  },
+  unique: {
+    name: 'Уникальные',
+    blurb: 'Анимированные карты: сейчас PNG-заготовки, позже GIF/WebP в ту же папку.',
+    icon: '✨',
+    color: '#e879f9',
+    gradient: 'linear-gradient(135deg, #e879f9 0%, #22d3ee 100%)',
+    singleCost: 15000,
+    deckCost: 400000,
+    cryptoCost: { ton: 0.8, sol: 8, eth: 0.0003 },
+    total: 12,
+    folder: 'unique',
+    prefix: 'uniq_',
   }
 };
 
@@ -1181,7 +1187,7 @@ function ThemeCard({ theme, themeConfig, selected, onSelect, disabled, isLegenda
       </div>
       <div style={{ color: '#94a3b8', fontSize: 11, lineHeight: 1.4 }}>
         {themeConfig.total} артов
-        {theme === 'legendary' ? ' · rare' : ''}
+        {theme === 'legendary' ? ' · rare' : theme === 'unique' ? ' · gif' : ''}
       </div>
     </button>
   );

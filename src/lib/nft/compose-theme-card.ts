@@ -5,8 +5,10 @@ import { NFT_STORAGE_BUCKET, POKEMON_STORAGE_BUCKET } from '@/lib/nft/constants'
 import { type CardFaceSpec } from '@/lib/nft/card-face-builder';
 import { composeCardBufferServer } from '@/lib/nft/compose-card-server';
 import {
-  getThemeAssetRelativePath,
+  THEME_ASSET_EXTS,
   NFT_THEME_CONFIG,
+  getThemeAssetRelativePath,
+  themeAssetFileName,
   pickRandomThemeAsset,
   pickSeededThemeAsset,
   type NftThemeKey,
@@ -49,13 +51,17 @@ async function fetchRemoteBuffer(url: string): Promise<Buffer | null> {
 
 export async function loadThemeImageBuffer(pick: ThemeAssetPick): Promise<Buffer> {
   const cfg = NFT_THEME_CONFIG[pick.theme];
-  const fileName = `${cfg.prefix}${pick.themeId}.png`;
-  const relativePath = getThemeAssetRelativePath(pick);
 
-  const localPath = path.join(process.cwd(), 'public', cfg.folder, fileName);
-  if (fs.existsSync(localPath)) {
-    return fs.readFileSync(localPath);
+  for (const ext of THEME_ASSET_EXTS) {
+    const fileName = themeAssetFileName(pick, ext);
+    const localPath = path.join(process.cwd(), 'public', cfg.folder, fileName);
+    if (fs.existsSync(localPath)) {
+      return fs.readFileSync(localPath);
+    }
   }
+
+  const relativePath = getThemeAssetRelativePath(pick);
+  const fileName = themeAssetFileName(pick);
 
   const storageCandidates = [
     { bucket: NFT_STORAGE_BUCKET, path: `themes/${relativePath}` },

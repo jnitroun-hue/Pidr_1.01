@@ -4,6 +4,7 @@ import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 import { supabaseAdmin } from '@/lib/supabase';
 import { assertCanPurchasePremium } from '@/lib/premium/premium-service';
 import { coinsFromRub, getExchangeRates } from '@/lib/pricing/exchange-rates';
+import { PREMIUM_PRICE_RUB } from '@/lib/premium/constants';
 
 // ✅ Явная конфигурация runtime для Next.js 15
 export const runtime = 'nodejs';
@@ -35,7 +36,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { amount, description, itemId, itemType = 'coins', paymentMethod, theme, qty } = body;
 
-    const normalizedAmount = Number(amount);
+    let normalizedAmount = Number(amount);
+    if (itemType === 'premium') {
+      normalizedAmount = PREMIUM_PRICE_RUB;
+    }
     const minAmount = itemType === 'nft_generation' ? 1 : 100;
     if (!Number.isFinite(normalizedAmount) || normalizedAmount < minAmount) {
       return NextResponse.json(

@@ -2,8 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Crown, Gift, Flame, Zap, Sparkles } from 'lucide-react';
-import { PREMIUM_PRICE_RUB, PREMIUM_PRICE_COINS } from '@/lib/premium/constants';
-import { PidrCoinAmount } from '@/components/PidrCoinIcon';
+import PremiumSalePrice from '@/components/PremiumSalePrice';
 import { formatCountdownLabel } from '@/lib/premium/countdown';
 import { usePremiumCountdown } from '@/hooks/usePremiumCountdown';
 import { isPremiumUsable } from '@/lib/premium/refresh-premium';
@@ -193,7 +192,7 @@ export default function PremiumPromoBanner({ premium, compact = false, onOpenPur
             </span>
           </div>
           <div style={{ color: '#94a3b8', fontSize: '11px', lineHeight: 1.5, marginBottom: '10px' }}>
-            Рейтинг ×2 · голубое пламя · free roll · скидки до 35%
+            Рейтинг ×2 · живое пламя · free roll · скидки до 35%
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
             <span style={{ fontSize: '10px', padding: '3px 8px', borderRadius: '999px', background: 'rgba(56,189,248,0.15)', color: '#7dd3fc', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -212,17 +211,12 @@ export default function PremiumPromoBanner({ premium, compact = false, onOpenPur
         background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(56,189,248,0.2)',
       }}>
         <div>
-          <div style={{ color: '#64748b', fontSize: '10px' }}>от</div>
-          <div style={{ color: '#fde68a', fontWeight: 800, fontSize: '18px' }}>
-            {PREMIUM_PRICE_RUB} ₽
-            <span style={{ color: '#64748b', fontSize: '11px', fontWeight: 500 }}> / мес</span>
-          </div>
+          <div style={{ color: '#fda4af', fontSize: '10px', fontWeight: 800, letterSpacing: '0.08em' }}>АКЦИЯ</div>
+          <PremiumSalePrice mode="rub" size="md" />
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ color: '#64748b', fontSize: '10px' }}>или</div>
-          <div style={{ color: '#eab308', fontWeight: 700, fontSize: '13px', display: 'flex', justifyContent: 'flex-end' }}>
-            <PidrCoinAmount value={PREMIUM_PRICE_COINS} size={16} />
-          </div>
+          <PremiumSalePrice mode="coins" size="sm" />
         </div>
         <div style={{
           padding: '8px 14px', borderRadius: '10px',

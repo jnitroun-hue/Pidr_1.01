@@ -20,13 +20,15 @@ import PremiumPromoBanner from '@/components/PremiumPromoBanner';
 import PremiumPurchaseModal from '@/components/PremiumPurchaseModal';
 import PremiumSuccessModal from '@/components/PremiumSuccessModal';
 import PremiumFreeRollBanner from '@/components/PremiumFreeRollBanner';
+import PremiumFlamePicker from '@/components/PremiumFlamePicker';
+import PremiumSalePrice from '@/components/PremiumSalePrice';
 import MenuThemePicker from '@/components/MenuThemePicker';
 import DailyOfferCardModal from '@/components/DailyOfferCardModal';
 import NftCardFace from '@/components/NftCardFace';
 import PageLoadingScreen from '@/components/PageLoadingScreen';
 import { PidrCoinAmount } from '@/components/PidrCoinIcon';
 import type { PremiumStatus } from '@/lib/premium/premium-service';
-import { PREMIUM_BENEFITS, PREMIUM_PRICE_COINS, PREMIUM_PRICE_RUB } from '@/lib/premium/constants';
+import { PREMIUM_BENEFITS, PREMIUM_PRICE_RUB } from '@/lib/premium/constants';
 import { fetchPremiumStatus, isPremiumUsable } from '@/lib/premium/refresh-premium';
 import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
 import { getApiHeaders } from '@/lib/api-headers';
@@ -392,8 +394,9 @@ export default function PremiumShopPage() {
                   fontWeight: 700,
                 }}
               >
-                <ShieldCheck size={14} /> {PREMIUM_PRICE_RUB} ₽ / {PREMIUM_PRICE_COINS.toLocaleString('ru-RU')} монет
+                <ShieldCheck size={14} /> Акция: {PREMIUM_PRICE_RUB} ₽
               </div>
+              <PremiumSalePrice mode="both" size="sm" />
               <div
                 style={{
                   display: 'inline-flex',
@@ -644,6 +647,18 @@ export default function PremiumShopPage() {
               storeMenuTheme(themeId);
             }}
           />
+        </section>
+
+        <section
+          style={{
+            marginBottom: 16,
+            borderRadius: 16,
+            padding: 16,
+            background: 'var(--menu-card-bg, rgba(15,23,42,0.7))',
+            border: '1px solid var(--menu-card-border, rgba(148,163,184,0.2))',
+          }}
+        >
+          <PremiumFlamePicker isPremium={premiumActive} />
         </section>
 
         <motion.button

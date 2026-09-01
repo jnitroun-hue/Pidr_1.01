@@ -15,15 +15,22 @@ export const NFT_THEME_CONFIG = {
   },
   starwars: {
     name: 'Звездные войны',
-    total: 7,
+    total: 19,
     folder: 'starwars',
     prefix: 'star_',
   },
   legendary: {
     name: 'Легендарная',
-    total: 5,
+    total: 17,
     folder: 'legendary',
     prefix: 'leg_',
+  },
+  unique: {
+    name: 'Уникальные',
+    total: 12,
+    folder: 'unique',
+    prefix: 'uniq_',
+    animated: true,
   },
 } as const;
 
@@ -37,7 +44,7 @@ export function isNftThemeKey(value: unknown): value is NftThemeKey {
 export function parseNftThemeFromImageUrl(url?: string | null): { theme: NftThemeKey; themeId: number } | null {
   if (!url) return null;
   const file = decodeURIComponent(String(url).split('?')[0].split('/').pop() || '');
-  const match = file.match(/^(pokemon|halloween|starwars|legendary)_([^_]+)_([^_]+)_(\d+)/i);
+  const match = file.match(/^(pokemon|halloween|starwars|legendary|unique)_([^_]+)_([^_]+)_(\d+)/i);
   if (!match) return null;
   const theme = match[1].toLowerCase();
   const themeId = Number(match[4]);
@@ -67,14 +74,21 @@ export function pickSeededThemeAsset(seed: number): ThemeAssetPick {
   return themeAssetPool[idx];
 }
 
-/** Случайная картинка из ВСЕХ тем (74 ассета) */
+/** Случайная картинка из ВСЕХ тем */
 export function pickRandomThemeAsset(): ThemeAssetPick {
   return themeAssetPool[Math.floor(Math.random() * themeAssetPool.length)];
 }
 
-export function getThemeAssetRelativePath(pick: ThemeAssetPick): string {
+export const THEME_ASSET_EXTS = ['gif', 'webp', 'png'] as const;
+
+export function themeAssetFileName(pick: ThemeAssetPick, ext: string = 'png'): string {
   const cfg = NFT_THEME_CONFIG[pick.theme];
-  return `${cfg.folder}/${cfg.prefix}${pick.themeId}.png`;
+  return `${cfg.prefix}${pick.themeId}.${ext}`;
+}
+
+export function getThemeAssetRelativePath(pick: ThemeAssetPick, ext: string = 'png'): string {
+  const cfg = NFT_THEME_CONFIG[pick.theme];
+  return `${cfg.folder}/${themeAssetFileName(pick, ext)}`;
 }
 
 export function getThemeAssetPublicPath(pick: ThemeAssetPick): string {

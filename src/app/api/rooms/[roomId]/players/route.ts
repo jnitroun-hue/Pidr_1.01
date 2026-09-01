@@ -65,12 +65,22 @@ export async function GET(
       })
       .filter((id: number | null): id is number => id != null);
 
-    const { data: users } = dbUserIds.length > 0
-      ? await supabase
+    let users: UserRow[] | null = [];
+    if (dbUserIds.length > 0) {
+      const withFlame = await supabase
+        .from('_pidr_users')
+        .select('id, telegram_id, username, avatar_url, is_premium, premium_expires_at, premium_flame')
+        .or(`id.in.(${dbUserIds.join(',')}),telegram_id.in.(${dbUserIds.join(',')})`);
+      if (withFlame.error) {
+        const fallback = await supabase
           .from('_pidr_users')
           .select('id, telegram_id, username, avatar_url, is_premium, premium_expires_at')
-          .or(`id.in.(${dbUserIds.join(',')}),telegram_id.in.(${dbUserIds.join(',')})`)
-      : { data: [] as Array<{ id: number; telegram_id?: number | string | null; username?: string; avatar_url?: string | null }> };
+          .or(`id.in.(${dbUserIds.join(',')}),telegram_id.in.(${dbUserIds.join(',')})`);
+        users = (fallback.data || []) as UserRow[];
+      } else {
+        users = (withFlame.data || []) as UserRow[];
+      }
+    }
 
     type UserRow = {
       id: number;
@@ -79,6 +89,7 @@ export async function GET(
       avatar_url?: string | null;
       is_premium?: boolean | null;
       premium_expires_at?: string | null;
+      premium_flame?: string | null;
     };
     const usersMap = new Map<number, UserRow>();
     (users || []).forEach((user: UserRow) => {
@@ -111,6 +122,7 @@ export async function GET(
         username: player.username || userData?.username || 'Игрок',
         avatar_url: player.avatar_url || userData?.avatar_url || null,
         is_premium: isBot ? false : isPremiumActiveFromUser(userData || {}),
+        premium_flame: isBot ? null : (userData?.premium_flame || null),
         is_host: isHost || player.is_host === true,
         is_bot: isBot,
         is_connected: isRoomPlayerConnected(player),

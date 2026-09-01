@@ -1,12 +1,19 @@
-import { NFT_THEME_CONFIG, getThemeAssetPublicPath, getThemeAssetRelativePath, type NftThemeKey } from '@/lib/nft/theme-config';
+import { NFT_THEME_CONFIG, THEME_ASSET_EXTS, getThemeAssetPublicPath, getThemeAssetRelativePath, type NftThemeKey } from '@/lib/nft/theme-config';
 import { NFT_STORAGE_BUCKET, POKEMON_STORAGE_BUCKET } from '@/lib/nft/constants';
 
 /** Публичные URL ассета темы — public, Supabase, API-прокси */
 export function getThemeAssetCandidateUrls(theme: NftThemeKey, themeId: number): string[] {
   const cfg = NFT_THEME_CONFIG[theme];
-  const relative = getThemeAssetRelativePath({ theme, themeId });
+  const pick = { theme, themeId };
+  const urls: string[] = [];
+
+  for (const ext of THEME_ASSET_EXTS) {
+    urls.push(`/${getThemeAssetRelativePath(pick, ext)}`);
+  }
+  urls.push(getThemeAssetPublicPath(pick));
+
   const fileName = `${cfg.prefix}${themeId}.png`;
-  const urls: string[] = [getThemeAssetPublicPath({ theme, themeId })];
+  const relative = getThemeAssetRelativePath(pick);
 
   const supabaseBase = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, '');
   if (supabaseBase) {

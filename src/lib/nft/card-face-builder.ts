@@ -75,6 +75,18 @@ type ThemePalette = {
 
 function themePalette(themeLabel?: string): ThemePalette {
   const label = String(themeLabel || '').toLowerCase();
+  if (label.includes('уникал') || label.includes('unique')) {
+    return {
+      stockTop: '#f8fafc',
+      stockBottom: '#e0e7ff',
+      frame: '#1e1b4b',
+      gold: '#e879f9',
+      artTop: '#2e1065',
+      artBottom: '#0f172a',
+      artAccent: '#22d3ee',
+      caption: '#5b21b6',
+    };
+  }
   if (label.includes('легендар') || label.includes('legendary')) {
     return {
       stockTop: '#fffaf0',

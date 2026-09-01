@@ -8,6 +8,8 @@ import { BOT_TIMING } from '../lib/game/botTiming'
 import { calculateRatingRewards, calculatePlayerPositions, isWinningPosition } from '../lib/rating/ratingSystem'
 import { RoomManager } from '../lib/multiplayer/room-manager'
 import type { TelegramWebAppUser } from '../types/telegram-webapp'
+import { playDealSfx, playTakeSfx } from '../lib/audio/game-sfx'
+import { readStoredFlameColor, type PremiumFlameColorId } from '../lib/premium/flame'
 
 export interface Card {
   id: string
@@ -37,7 +39,8 @@ export interface Player {
   isOnline?: boolean
   /** Бот временно играет за отключившегося человека */
   isBotSubstitute?: boolean
-  isPremium?: boolean // Premium — голубое пламя вокруг аватара
+  isPremium?: boolean // Premium — живое пламя вокруг аватара
+  flameColor?: PremiumFlameColorId
   difficulty?: 'easy' | 'medium' | 'hard' // Сложность бота
   isWinner?: boolean // Является ли игрок победителем (для зрителей)
   finishTime?: number // ✅ Время выхода игрока (timestamp) для правильного определения мест
@@ -84,6 +87,7 @@ interface RoomLobbyPlayer {
   isUser?: boolean
   dbUserId?: number | null
   isPremium?: boolean
+  flameColor?: PremiumFlameColorId
 }
 
 interface MultiplayerConfig {
@@ -502,6 +506,7 @@ interface GameState {
     username?: string
     avatar?: string
     isPremium?: boolean
+    flameColor?: PremiumFlameColorId
   }) => void
   
   // Настройки
@@ -918,6 +923,8 @@ export const useGameStore = create<GameState>()(
             isPremium: roomPlayer
               ? Boolean(roomPlayer.isPremium) || (Boolean(roomPlayer.isUser) && userIsPremium)
               : !playerInfo.isBot && userIsPremium,
+            flameColor: roomPlayer?.flameColor
+              || ((roomPlayer ? Boolean(roomPlayer.isUser) : !playerInfo.isBot) ? readStoredFlameColor() : undefined),
             difficulty: playerInfo.difficulty,
             dbUserId: roomPlayer?.dbUserId ?? undefined,
             publicUserId: roomPlayer ? String(roomPlayer.id) : undefined,
@@ -1007,6 +1014,7 @@ export const useGameStore = create<GameState>()(
           } : null
         });
         
+        playDealSfx();
         get().showNotification(`Игра начата! Ходит первым: ${players[firstPlayerIndex].name}`, 'success');
         
         const isNonHostMultiplayer =
@@ -1131,6 +1139,7 @@ export const useGameStore = create<GameState>()(
         }
         
         get().showNotification('Карта взята!', 'info')
+        playTakeSfx()
       },
       
       nextTurn: () => {
@@ -1526,6 +1535,7 @@ export const useGameStore = create<GameState>()(
               name: profile.username?.trim() || p.name,
               avatar: profile.avatar?.trim() || p.avatar,
               isPremium: profile.isPremium ?? p.isPremium,
+              flameColor: profile.flameColor ?? p.flameColor,
             }
           }),
         })
@@ -1534,6 +1544,11 @@ export const useGameStore = create<GameState>()(
       // Настройки
       updateSettings: (newSettings) => {
         const { settings } = get()
+        if (typeof newSettings.soundEnabled === 'boolean' && typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('pidr_sound_enabled', newSettings.soundEnabled ? '1' : '0')
+          } catch { /* ignore */ }
+        }
         set({ settings: { ...settings, ...newSettings } })
       },
       
@@ -1980,6 +1995,7 @@ export const useGameStore = create<GameState>()(
         }
         
         get().showNotification(`${currentPlayer.name} взял карту из колоды (осталось: ${newDeck.length})`, 'info');
+        playTakeSfx();
 
         return true;
       },
@@ -2524,6 +2540,7 @@ export const useGameStore = create<GameState>()(
         }
          
          get().showNotification(`${currentPlayer.name} положил карту на себя по правилам - ходит снова!`, 'success');
+         playTakeSfx();
 
          setTimeout(() => {
            get().processPlayerTurn(currentPlayerId);
@@ -2570,6 +2587,7 @@ export const useGameStore = create<GameState>()(
         }
         
         get().showNotification(`${currentPlayer.name} положил карту поверх своих карт и передает ход`, 'info');
+        playTakeSfx();
         get().resetTurnState();
         
         console.log(`🔄 [takeCardNotByRules] Карта добавлена в руку, ход передается следующему игроку`);

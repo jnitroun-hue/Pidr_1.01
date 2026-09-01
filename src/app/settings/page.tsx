@@ -3,13 +3,15 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Palette, Volume2, User, Check } from 'lucide-react';
+import { ArrowLeft, Palette, Volume2, User, Check, Flame } from 'lucide-react';
 import MenuThemePicker from '@/components/MenuThemePicker';
+import PremiumFlamePicker from '@/components/PremiumFlamePicker';
 import { getApiHeaders } from '@/lib/api-headers';
 import { appAlert } from '@/lib/app-notice';
 import { themedPageShellStyle } from '@/lib/ui/menu-theme-client';
+import { persistSoundEnabled, playTakeSfx, SOUND_ENABLED_KEY } from '@/lib/audio/game-sfx';
 
-const SOUND_KEY = 'pidr_sound_enabled';
+const SOUND_KEY = SOUND_ENABLED_KEY;
 const NOTIFY_KEY = 'pidr_notifications_enabled';
 
 function readFlag(key: string, fallback = true): boolean {
@@ -27,6 +29,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [isPremium, setIsPremium] = useState(false);
   const [username, setUsername] = useState('');
   const [draftName, setDraftName] = useState('');
   const [savingName, setSavingName] = useState(false);
@@ -47,13 +50,15 @@ export default function SettingsPage() {
           setUsername(name);
           setDraftName(name);
         }
+        if (data?.user?.is_premium) setIsPremium(true);
       })
       .catch(() => {});
   }, []);
 
   const persistFlag = (key: string, value: boolean) => {
     try {
-      localStorage.setItem(key, value ? '1' : '0');
+      if (key === SOUND_KEY) persistSoundEnabled(value);
+      else localStorage.setItem(key, value ? '1' : '0');
     } catch {
       /* ignore */
     }
@@ -170,6 +175,19 @@ export default function SettingsPage() {
         <motion.section
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.03 }}
+          style={{ ...cardStyle, marginTop: 14 }}
+        >
+          <h3 style={{ color: 'var(--menu-accent)', fontSize: 13, fontWeight: 800, letterSpacing: '0.12em', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Flame size={16} />
+            PREMIUM ПЛАМЯ
+          </h3>
+          <PremiumFlamePicker isPremium={isPremium} />
+        </motion.section>
+
+        <motion.section
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
           style={{ ...cardStyle, marginTop: 14 }}
         >
@@ -187,6 +205,7 @@ export default function SettingsPage() {
                 const next = !soundEnabled;
                 setSoundEnabled(next);
                 persistFlag(SOUND_KEY, next);
+                if (next) playTakeSfx();
               })}
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>

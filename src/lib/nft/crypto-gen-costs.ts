@@ -11,6 +11,15 @@ export const NFT_GEN_TON_COST: Record<string, number> = {
   halloween: 0.3,
   starwars: 0.3,
   legendary: 2,
+  unique: 0.8,
+};
+
+export const NFT_GEN_COIN_COST: Record<string, { single: number; deck: number }> = {
+  pokemon: { single: 10000, deck: 400000 },
+  halloween: { single: 5000, deck: 200000 },
+  starwars: { single: 5000, deck: 200000 },
+  legendary: { single: 50000, deck: 1000000 },
+  unique: { single: 15000, deck: 400000 },
 };
 
 export const NFT_GEN_MAX_COUNT = 52;
