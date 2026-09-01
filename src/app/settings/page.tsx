@@ -205,7 +205,7 @@ export default function SettingsPage() {
                 const next = !soundEnabled;
                 setSoundEnabled(next);
                 persistFlag(SOUND_KEY, next);
-                if (next) playTakeSfx();
+                if (next) playTakeSfx({ preview: true });
               })}
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>

@@ -37,15 +37,15 @@ export default function PremiumAvatarFire({
 
   const palette = getFlamePalette(resolvePremiumFlame(color));
   const flameId = resolvePremiumFlame(color);
-  const padX = Math.max(28, Math.round(size * 1.15));
-  const padY = Math.max(42, Math.round(size * 1.7));
+  const box = Math.round(size * 2.05);
 
   return (
     <div
       className={styles.wrap}
       style={{
-        width: size + padX,
-        height: size + padY,
+        width: box,
+        height: box,
+        ['--avatar' as string]: `${size}px`,
         ['--flame-hot' as string]: palette.hot,
         ['--flame-mid' as string]: palette.mid,
         ['--flame-core' as string]: palette.core,
@@ -54,15 +54,13 @@ export default function PremiumAvatarFire({
       }}
     >
       <div className={styles.halo} />
-      <div className={`${styles.plume} ${styles.plumeBack}`} aria-hidden>
-        <img src="/fx/premium-flame-a.png" alt="" className={styles.shotA} />
-        <img src="/fx/premium-flame-b.png" alt="" className={styles.shotB} />
+      <div className={styles.wreath} aria-hidden>
+        <img src="/fx/premium-flame-a.png" alt="" className={`${styles.orbit} ${styles.o1} ${styles.shotA}`} />
+        <img src="/fx/premium-flame-b.png" alt="" className={`${styles.orbit} ${styles.o2} ${styles.shotB}`} />
+        <img src="/fx/premium-flame-a.png" alt="" className={`${styles.orbit} ${styles.o3} ${styles.shotB}`} />
+        <img src="/fx/premium-flame-b.png" alt="" className={`${styles.orbit} ${styles.o4} ${styles.shotA}`} />
       </div>
-      <div className={`${styles.plume} ${styles.plumeLeft}`} aria-hidden>
-        <img src="/fx/premium-flame-b.png" alt="" className={styles.shotA} />
-        <img src="/fx/premium-flame-a.png" alt="" className={styles.shotB} />
-      </div>
-      <div className={`${styles.plume} ${styles.plumeRight}`} aria-hidden>
+      <div className={styles.crown} aria-hidden>
         <img src="/fx/premium-flame-a.png" alt="" className={styles.shotA} />
         <img src="/fx/premium-flame-b.png" alt="" className={styles.shotB} />
       </div>

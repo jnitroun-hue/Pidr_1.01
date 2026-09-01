@@ -39,7 +39,7 @@ interface MainMenuProps {
 }
 
 export default function MainMenu({ user, onLogout }: MainMenuProps) {
-  const { startGame, stats } = useGameStore()
+  const { stats } = useGameStore()
   const { hapticFeedback } = useTelegram()
   const router = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -165,8 +165,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
       label: t.mainMenu.play,
       onClick: () => {
         hapticFeedback('medium');
-        startGame('single', 7);
-        setTimeout(() => navigateSafely('/game'), 100);
+        navigateSafely('/game');
       }
     },
     {

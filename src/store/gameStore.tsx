@@ -8,7 +8,7 @@ import { BOT_TIMING } from '../lib/game/botTiming'
 import { calculateRatingRewards, calculatePlayerPositions, isWinningPosition } from '../lib/rating/ratingSystem'
 import { RoomManager } from '../lib/multiplayer/room-manager'
 import type { TelegramWebAppUser } from '../types/telegram-webapp'
-import { playDealSfx, playTakeSfx } from '../lib/audio/game-sfx'
+import { playTakeSfx, disableTableSfx } from '../lib/audio/game-sfx'
 import { readStoredFlameColor, type PremiumFlameColorId } from '../lib/premium/flame'
 
 export interface Card {
@@ -1013,8 +1013,7 @@ export const useGameStore = create<GameState>()(
             connectedPlayers: multiplayerConfig.players?.map((p) => p.id) || []
           } : null
         });
-        
-        playDealSfx();
+
         get().showNotification(`Игра начата! Ходит первым: ${players[firstPlayerIndex].name}`, 'success');
         
         const isNonHostMultiplayer =
@@ -1067,6 +1066,7 @@ export const useGameStore = create<GameState>()(
         set({
           isGameActive: false
         });
+        disableTableSfx();
         
         get().showNotification('Игра завершена', 'info', 3000);
       },
@@ -1115,7 +1115,8 @@ export const useGameStore = create<GameState>()(
       },
       
       drawCard: () => {
-        const { players, currentPlayerId, deck } = get()
+        const { players, currentPlayerId, deck, isGameActive } = get()
+        if (!isGameActive) return
         const currentPlayer = players.find(p => p.id === currentPlayerId)
         
         if (!currentPlayer || deck.length === 0) return // Нельзя брать карты из пустой колоды
@@ -1144,7 +1145,8 @@ export const useGameStore = create<GameState>()(
       
       nextTurn: () => {
         try {
-          const { players, currentPlayerId, gameStage, isGamePaused, multiplayerData } = get()
+          const { players, currentPlayerId, gameStage, isGamePaused, multiplayerData, isGameActive } = get()
+          if (!isGameActive) return;
           if (multiplayerData && !multiplayerData.isHost) return;
           if (isGamePaused) {
             console.log(`⏸️ [nextTurn] Игра на паузе (штраф/модалка), передача хода отложена`);
@@ -1275,6 +1277,7 @@ export const useGameStore = create<GameState>()(
       },
       
       resetGame: () => {
+        disableTableSfx();
         set({
           isGameActive: false,
           players: [],
@@ -1947,7 +1950,8 @@ export const useGameStore = create<GameState>()(
       
       // Взятие карты из колоды
       drawCardFromDeck: () => {
-        const { deck, players, currentPlayerId, gameStage, nftDeckCards } = get();
+        const { deck, players, currentPlayerId, gameStage, nftDeckCards, isGameActive } = get();
+        if (!isGameActive) return false;
         if (deck.length === 0 || !currentPlayerId) return false; // Нельзя брать карты из пустой колоды
         
         const currentPlayer = players.find(p => p.id === currentPlayerId);
@@ -2129,7 +2133,8 @@ export const useGameStore = create<GameState>()(
       
       // Обработка хода игрока (НОВАЯ логика)
       processPlayerTurn: (playerId: string) => {
-        const { gameStage, players, skipHandAnalysis, deck, stage2TurnPhase, currentPlayerId, isGamePaused, multiplayerData } = get();
+        const { gameStage, players, skipHandAnalysis, deck, stage2TurnPhase, currentPlayerId, isGamePaused, multiplayerData, isGameActive } = get();
+        if (!isGameActive) return;
         const currentPlayer = players.find(p => p.id === playerId);
         
         if (multiplayerData && !multiplayerData.isHost && currentPlayer && isAutomatedPlayer(currentPlayer)) {
@@ -2295,7 +2300,8 @@ export const useGameStore = create<GameState>()(
       
       // Обработка клика по колоде
       onDeckClick: (opts?: { fromRemote?: boolean }) => {
-        const { turnPhase, currentPlayerId, players, revealedDeckCard } = get();
+        const { turnPhase, currentPlayerId, players, revealedDeckCard, isGameActive } = get();
+        if (!isGameActive) return;
         if (turnPhase !== 'showing_deck_hint' || !currentPlayerId) return;
 
         if (!opts?.fromRemote && shouldDeferHumanMoveToHost(get(), currentPlayerId)) {
@@ -2486,7 +2492,8 @@ export const useGameStore = create<GameState>()(
       },
        
        placeCardOnSelfByRules: (opts?: { fromRemote?: boolean }) => {
-         const { players, currentPlayerId, revealedDeckCard, deck, turnPhase } = get();
+         const { players, currentPlayerId, revealedDeckCard, deck, turnPhase, isGameActive } = get();
+         if (!isGameActive) return;
          if (!currentPlayerId || !revealedDeckCard) return;
          if (turnPhase !== 'waiting_deck_action') return;
 
@@ -2549,7 +2556,8 @@ export const useGameStore = create<GameState>()(
        
              // Положить карту поверх своих карт (завершение хода)
       takeCardNotByRules: (opts?: { fromRemote?: boolean }) => {
-        const { players, currentPlayerId, revealedDeckCard, deck } = get();
+        const { players, currentPlayerId, revealedDeckCard, deck, isGameActive } = get();
+        if (!isGameActive) return;
         if (!currentPlayerId || !revealedDeckCard) return;
 
         if (!opts?.fromRemote && shouldDeferHumanMoveToHost(get(), currentPlayerId)) {
@@ -2999,9 +3007,9 @@ export const useGameStore = create<GameState>()(
          // Взять НИЖНЮЮ карту со стола (ПРАВИЛА P.I.D.R.)
          takeTableCards: () => {
           console.log('🎴 [takeTableCards] ВЫЗВАНА ФУНКЦИЯ!');
-           const { currentPlayerId, players, tableStack, roundFinisher, currentRoundInitiator, multiplayerData, isGamePaused } = get();
+           const { currentPlayerId, players, tableStack, roundFinisher, currentRoundInitiator, multiplayerData, isGamePaused, isGameActive } = get();
 
-          if (isGamePaused) {
+          if (!isGameActive || isGamePaused) {
             console.log('⏸️ [takeTableCards] Игра на паузе, взятие карты со стола заблокировано');
             return;
           }

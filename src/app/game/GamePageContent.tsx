@@ -59,6 +59,7 @@ import {
   type ChatBlocksState,
 } from '@/lib/chat/chat-blocks';
 import { appConfirm } from '@/lib/app-notice';
+import { enableTableSfx, disableTableSfx, playDealSfx } from '@/lib/audio/game-sfx';
 import type { TelegramWebAppUser } from '@/types/telegram-webapp';
 import NftCardFace from '@/components/NftCardFace';
 
@@ -1385,6 +1386,7 @@ function GamePageContentComponent({
     }
 
     leaveInFlightRef.current = true;
+    disableTableSfx();
     try {
       if (isMultiplayer && multiplayerData?.roomId) {
         await fetch(`/api/rooms/${multiplayerData.roomId}/leave`, {
@@ -1815,6 +1817,10 @@ function GamePageContentComponent({
     // Задержка перед ходом ИИ для реалистичности
     const makeAIMove = async () => {
       try {
+        if (!useGameStore.getState().isGameActive) {
+          aiProcessingRef.current = null;
+          return;
+        }
         // ПРОВЕРКА: Убеждаемся что все нужные данные есть
         if (!currentTurnPlayer || (!currentTurnPlayer.isBot && !currentTurnPlayer.isBotSubstitute) || !players.length) {
           aiProcessingRef.current = null;
@@ -1902,6 +1908,11 @@ function GamePageContentComponent({
                     const firstCard = currentTurnPlayer.cards[0];
                     selectHandCard(firstCard);
                     setTimeout(() => {
+                      const currentState = useGameStore.getState();
+                      if (!currentState.isGameActive || currentState.currentPlayerId !== currentPlayerId) {
+                        aiProcessingRef.current = null;
+                        return;
+                      }
                       try {
                         playSelectedCard();
                       } catch (error: unknown) {
@@ -2026,12 +2037,22 @@ function GamePageContentComponent({
     }
   }, [generatedTableImage, isGeneratingTable]);
 
+  // Звуки только пока стол на экране — не на лоадере и не после выхода
+  useEffect(() => {
+    if (isLoadingUserData || !isGameActive) {
+      disableTableSfx();
+      return;
+    }
+    enableTableSfx();
+    return () => disableTableSfx();
+  }, [isLoadingUserData, isGameActive]);
+
   // Эффект для автоматической раздачи карт при старте игры
   useEffect(() => {
-    if (isGameActive && !dealt) {
-      setDealt(true);
-    }
-  }, [isGameActive, dealt]);
+    if (isLoadingUserData || !isGameActive || players.length === 0 || dealt) return;
+    setDealt(true);
+    playDealSfx();
+  }, [isLoadingUserData, isGameActive, players.length, dealt]);
 
   // Запуск игры
   const handleStartGame = async () => {

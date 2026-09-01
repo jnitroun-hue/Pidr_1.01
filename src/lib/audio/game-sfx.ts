@@ -24,6 +24,8 @@ let dealAudio: HTMLAudioElement | null = null;
 let takePool: HTMLAudioElement[] = [];
 let unlocked = false;
 let lastTakeAt = 0;
+/** Звуки только пока открыта партия на столе — не на лоадере и не после выхода. */
+let tableSfxLive = false;
 
 function readFlag(fallback = true): boolean {
   if (typeof window === 'undefined') return fallback;
@@ -98,8 +100,8 @@ export function unlockGameAudio(): void {
   tryUnlock(take);
 }
 
-function playEl(el: HTMLAudioElement | null): void {
-  if (!el) return;
+function playEl(el: HTMLAudioElement | null, force = false): void {
+  if (!el || (!force && !tableSfxLive)) return;
   try {
     el.currentTime = 0;
     const p = el.play();
@@ -109,19 +111,42 @@ function playEl(el: HTMLAudioElement | null): void {
   }
 }
 
+export function stopAllGameSfx(): void {
+  const halt = (el: HTMLAudioElement | null) => {
+    if (!el) return;
+    try {
+      el.pause();
+      el.currentTime = 0;
+    } catch {
+      /* ignore */
+    }
+  };
+  halt(dealAudio);
+  takePool.forEach(halt);
+}
+
+export function enableTableSfx(): void {
+  tableSfxLive = true;
+}
+
+export function disableTableSfx(): void {
+  tableSfxLive = false;
+  stopAllGameSfx();
+}
+
 export function playDealSfx(): void {
-  if (typeof window === 'undefined' || !isSoundEnabled()) return;
-  unlockGameAudio();
+  if (typeof window === 'undefined' || !isSoundEnabled() || !tableSfxLive) return;
   playEl(ensureDeal());
 }
 
-export function playTakeSfx(): void {
+export function playTakeSfx(opts?: { preview?: boolean }): void {
   if (typeof window === 'undefined' || !isSoundEnabled()) return;
+  const preview = opts?.preview === true;
+  if (!preview && !tableSfxLive) return;
   const now = Date.now();
-  if (now - lastTakeAt < 80) return;
+  if (!preview && now - lastTakeAt < 80) return;
   lastTakeAt = now;
-  unlockGameAudio();
-  playEl(nextTake());
+  playEl(nextTake(), preview);
 }
 
 if (typeof window !== 'undefined') {
