@@ -207,7 +207,7 @@ export default function GameChat({
                       <div className={styles.msgAuthor}>{msg.playerName}</div>
                     )}
                     <div className={`${styles.msgBubble} ${isMe ? styles.msgBubbleMe : styles.msgBubbleOther}`}>
-                      {msg.text}
+                      <span className={styles.msgText}>{msg.text}</span>
                       <span className={styles.msgTime}>{formatTime(msg.timestamp)}</span>
                     </div>
                   </motion.div>

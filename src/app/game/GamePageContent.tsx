@@ -3095,26 +3095,25 @@ function GamePageContentComponent({
                       transition: 'background 1s linear',
                     }} />
                   )}
+                  {/* Сообщение чата над местом игрока — не внутри узкого аватара */}
+                  {playerMessages[player.id] && !blockedGamePlayerIdSet.has(player.id) && (() => {
+                    const msg = playerMessages[player.id];
+                    const isChatBubble = msg.source === 'chat';
+                    const isEmojiBubble = isChatBubble && isEmojiOnlyChatText(msg.text);
+                    return (
+                    <div className={[
+                      styles.avatarBubble,
+                      getBubbleToneClass(msg.type),
+                      isChatBubble ? styles.avatarBubbleChat : styles.avatarBubbleAction,
+                      isEmojiBubble ? styles.avatarBubbleChatEmoji : '',
+                    ].filter(Boolean).join(' ')}>
+                      {msg.text}
+                      <div className={styles.avatarBubbleArrow} />
+                    </div>
+                    );
+                  })()}
                   {/* ✅ АВАТАР СВЕРХУ, КАРТЫ СНИЗУ ДЛЯ ВСЕХ ИГРОКОВ */}
-                    <div className={styles.avatarWrap} style={{ order: 1, overflow: player.isPremium ? 'visible' : undefined }}>
-                      {/* Сообщение над игроком (как в чате) */}
-                      {playerMessages[player.id] && !blockedGamePlayerIdSet.has(player.id) && (() => {
-                        const msg = playerMessages[player.id];
-                        const isChatBubble = msg.source === 'chat';
-                        const isEmojiBubble = isChatBubble && isEmojiOnlyChatText(msg.text);
-                        return (
-                        <div className={[
-                          styles.avatarBubble,
-                          getBubbleToneClass(msg.type),
-                          isChatBubble ? styles.avatarBubbleChat : styles.avatarBubbleAction,
-                          isEmojiBubble ? styles.avatarBubbleChatEmoji : '',
-                        ].filter(Boolean).join(' ')}>
-                          {msg.text}
-                          <div className={styles.avatarBubbleArrow} />
-                        </div>
-                        );
-                      })()}
-                      
+                    <div className={styles.avatarWrap} style={{ order: 1, overflow: player.isPremium ? 'visible' : undefined }}> 
                       {/* ✅ ТОЛЬКО АВАТАР ВО ВЕСЬ КОНТЕЙНЕР - ПРИ КЛИКЕ МОДАЛКА */}
                       <div 
                         className={`${styles.avatarContainer} ${isStage1Target ? styles.avatarTargetable : ''}`}

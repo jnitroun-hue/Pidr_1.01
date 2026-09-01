@@ -45,6 +45,16 @@
   /* Анимации */
   --transition-fast: 0.2s ease;
   --transition-normal: 0.3s ease;
+  --menu-bg: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+  --menu-bg-accent: radial-gradient(circle at 80% 10%, rgba(99,102,241,0.18), transparent 42%);
+  --menu-card-bg: linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);
+  --menu-card-border: rgba(99, 102, 241, 0.35);
+  --menu-text: #f1f5f9;
+  --menu-text-muted: #94a3b8;
+  --menu-accent: #6366f1;
+  --menu-accent-soft: rgba(99, 102, 241, 0.22);
+  --menu-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --menu-wallet-border: rgba(99, 102, 241, 0.35);
 }
 
 .dark {
@@ -64,8 +74,9 @@ body {
   margin: 0;
   padding: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  background: var(--background-color);
-  color: var(--text-color);
+  background: var(--menu-bg-accent), var(--menu-bg);
+  background-color: var(--background-color);
+  color: var(--menu-text);
   line-height: 1.6;
   padding-bottom: 70px;
 }
@@ -73,6 +84,7 @@ body {
 .app-root {
   min-height: 100vh;
   min-height: 100dvh;
+  background: var(--menu-bg-accent), var(--menu-bg);
 }
 
 /* Telegram Mini App — на десктопе/web растягиваем на весь iframe */
@@ -81,7 +93,7 @@ html.telegram-mini-app body {
   width: 100%;
   height: var(--app-viewport-height, 100dvh);
   min-height: var(--app-viewport-height, 100dvh);
-  background: var(--background-color, #0f172a);
+  background: var(--menu-bg-accent), var(--menu-bg);
   overflow-x: hidden;
 }
 
@@ -911,28 +923,27 @@ input:focus, textarea:focus, select:focus {
   }
 }
 
+.themed-page {
+  min-height: 100vh;
+  background: var(--menu-bg-accent), var(--menu-bg);
+  color: var(--menu-text);
+  transition: background 0.35s ease, color 0.25s ease;
+}
+
 .main-menu-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 30%, #0f172a 60%, #064e3b 100%);
+  background: var(--menu-bg-accent), var(--menu-bg);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
   position: relative;
   overflow: hidden;
+  color: var(--menu-text);
 }
 
 .main-menu-container::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: radial-gradient(circle at 20% 20%, rgba(34, 197, 94, 0.08) 0%, transparent 50%),
-              radial-gradient(circle at 80% 60%, rgba(255, 215, 0, 0.05) 0%, transparent 50%),
-              radial-gradient(circle at 40% 80%, rgba(59, 130, 246, 0.06) 0%, transparent 50%);
-  pointer-events: none;
+  content: none;
 }
 
 .main-menu-inner {
@@ -950,10 +961,10 @@ input:focus, textarea:focus, select:focus {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: rgba(15, 23, 42, 0.95);
+  background: var(--menu-card-bg);
   backdrop-filter: blur(10px);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-  border-bottom: 1px solid rgba(34, 197, 94, 0.2);
+  box-shadow: var(--menu-shadow);
+  border-bottom: 1px solid var(--menu-card-border);
   padding: 16px 0 12px 0;
   position: sticky;
   top: 0;
@@ -961,10 +972,10 @@ input:focus, textarea:focus, select:focus {
 }
 
 .menu-title {
-  color: #ffd700;
-  font-size: 2rem;
+  color: var(--menu-accent);
+  font-size: 1.45rem;
   font-weight: 800;
-  letter-spacing: 2px;
+  letter-spacing: 1.4px;
   flex: 1;
   text-align: center;
 }

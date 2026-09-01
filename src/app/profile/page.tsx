@@ -22,6 +22,7 @@ import { fetchPremiumStatus, isPremiumUsable } from '@/lib/premium/refresh-premi
 import { buildReferralLink, buildReferralShareText } from '@/lib/referral/referral-links';
 import UserAvatarBadge from '@/components/UserAvatarBadge';
 import AuthMethodBadge from '@/components/AuthMethodBadge';
+import { themedPageShellStyle } from '@/lib/ui/menu-theme-client';
 import AddToDeckModal from '@/components/AddToDeckModal';
 import NftCardFace from '@/components/NftCardFace';
 import { formatNftCardName, getNftRarityLabel } from '@/lib/nft/card-display';
@@ -1248,13 +1249,11 @@ export default function ProfilePage() {
   }, []);
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)',
+    <div style={themedPageShellStyle({
       padding: '20px',
       paddingTop: '80px',
-      paddingBottom: '40px'
-    }}>
+      paddingBottom: '40px',
+    })}>
       {/* Кнопка назад */}
       <motion.button
         initial={{ x: -20, opacity: 0 }}

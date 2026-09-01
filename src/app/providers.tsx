@@ -12,6 +12,7 @@ import { LanguageProvider } from '../components/LanguageSwitcher'
 import AppNoticeHost from '../components/AppNoticeHost'
 import TelegramBackNavigation from '../components/TelegramBackNavigation'
 import { initTelegramMiniApp, isTelegramMiniAppClient } from '../lib/telegram/init-mini-app'
+import MenuThemeRoot from '../components/MenuThemeRoot'
 
 // Add global augmentation for Window to include Telegram
 declare global {
@@ -44,12 +45,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
         root.style.setProperty('--tg-theme-button-text-color', tg.themeParams.button_text_color || '#ffffff')
       }
 
-      // Настройка цветов игры
-      root.style.setProperty('--game-bg', tg.themeParams?.bg_color || '#0f172a')
-      root.style.setProperty('--background-color', tg.themeParams?.bg_color || '#0f172a')
+      // Цвета стола/фона задаёт выбранная тема оформления (MenuThemeRoot).
       root.style.setProperty('--card-bg', '#ffffff')
       root.style.setProperty('--text-color', tg.themeParams?.text_color || '#e2e8f0')
-      root.style.setProperty('--accent-color', '#22c55e')
     } else {
       // Fallback для разработки без Telegram
       root.style.setProperty('--tg-theme-bg-color', '#0f172a')
@@ -58,11 +56,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
       root.style.setProperty('--tg-theme-link-color', '#22c55e')
       root.style.setProperty('--tg-theme-button-color', '#22c55e')
       root.style.setProperty('--tg-theme-button-text-color', '#ffffff')
-      root.style.setProperty('--game-bg', '#0f172a')
-      root.style.setProperty('--background-color', '#0f172a')
       root.style.setProperty('--card-bg', '#ffffff')
       root.style.setProperty('--text-color', '#e2e8f0')
-      root.style.setProperty('--accent-color', '#22c55e')
     }
   }, [])
 
@@ -72,6 +67,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <TelegramProvider>
           <ThemeProvider>
             <TonConnectProvider>
+              <MenuThemeRoot />
               <OnlineHeartbeat />
               <TelegramBackNavigation />
               {children}

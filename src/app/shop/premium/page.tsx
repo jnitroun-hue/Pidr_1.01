@@ -35,7 +35,7 @@ import { appAlert, appConfirm } from '@/lib/app-notice';
 import { formatNftCardTitle } from '@/lib/nft/card-display';
 import type { NftThemeKey } from '@/lib/nft/theme-config';
 import { useLanguage } from '@/components/LanguageSwitcher';
-import { storeMenuTheme } from '@/lib/ui/menu-theme-client';
+import { storeMenuTheme, themedPageShellStyle } from '@/lib/ui/menu-theme-client';
 import type { MenuThemeId } from '@/lib/ui/menuThemes';
 
 interface PromoCard {
@@ -245,17 +245,10 @@ export default function PremiumShopPage() {
 
   return (
     <div
-      style={{
-        minHeight: '100vh',
-        background: `
-          radial-gradient(circle at 12% 8%, rgba(56,189,248,0.22) 0%, transparent 36%),
-          radial-gradient(circle at 88% 0%, rgba(245,197,24,0.18) 0%, transparent 34%),
-          radial-gradient(circle at 50% 100%, rgba(99,102,241,0.16) 0%, transparent 40%),
-          linear-gradient(170deg, #050b14 0%, #0b1220 55%, #0a1628 100%)
-        `,
+      style={themedPageShellStyle({
         padding: '16px',
         paddingBottom: 110,
-      }}
+      })}
     >
       <div style={{ maxWidth: 920, margin: '0 auto' }}>
         <div
@@ -643,8 +636,8 @@ export default function PremiumShopPage() {
         </div>
 
         <section style={{ marginBottom: 16 }}>
-          <h2 style={{ color: '#e2e8f0', fontSize: 18, fontWeight: 900, margin: '0 0 12px' }}>
-            {language === 'en' ? 'Main menu themes' : 'Темы главного меню'}
+          <h2 style={{ color: 'var(--menu-text)', fontSize: 18, fontWeight: 900, margin: '0 0 12px' }}>
+            {language === 'en' ? 'App theme' : 'Тема оформления'}
           </h2>
           <MenuThemePicker
             onThemeApplied={(themeId: MenuThemeId) => {

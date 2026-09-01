@@ -9,6 +9,7 @@ import PremiumPurchaseModal from '../../components/PremiumPurchaseModal';
 import PremiumSuccessModal from '../../components/PremiumSuccessModal';
 import type { PremiumStatus } from '@/lib/premium/premium-service';
 import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
+import { themedPageShellStyle } from '@/lib/ui/menu-theme-client';
 import PageLoadingScreen from '@/components/PageLoadingScreen';
 import { appConfirm, appAlert } from '@/lib/app-notice';
 import { fetchPremiumStatus, isPremiumUsable } from '@/lib/premium/refresh-premium';
@@ -383,16 +384,10 @@ export default function ShopPage() {
   }
 
   return (
-      <div style={{
-        minHeight: '100vh',
-        background: `
-          radial-gradient(circle at 10% 20%, rgba(56,189,248,0.14) 0%, transparent 38%),
-          radial-gradient(circle at 90% 10%, rgba(245,197,24,0.16) 0%, transparent 36%),
-          linear-gradient(165deg, ${T.bgDeep} 0%, ${T.bgMain} 55%, #0d1219 100%)
-        `,
+      <div style={themedPageShellStyle({
         padding: '20px',
-        paddingBottom: '100px'
-      }}>
+        paddingBottom: '100px',
+      })}>
         <div style={{
           maxWidth: '1400px',
           margin: '0 auto'

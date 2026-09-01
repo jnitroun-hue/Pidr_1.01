@@ -13,6 +13,7 @@ import PageLoadingScreen from '@/components/PageLoadingScreen';
 import UserAvatarBadge from '@/components/UserAvatarBadge';
 import AuthMethodBadge from '@/components/AuthMethodBadge';
 import type { AuthMethod } from '@/lib/user/resolve-auth-method';
+import { themedPageShellStyle } from '@/lib/ui/menu-theme-client';
 
 interface UserData {
   id: number;
@@ -91,12 +92,9 @@ export default function RatingPage() {
     : 0;
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0a0f1a 0%, #0d1520 50%, #0a1628 100%)',
-      color: '#e2e8f0',
+    <div style={themedPageShellStyle({
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    }}>
+    })}>
       {/* Хедер */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',

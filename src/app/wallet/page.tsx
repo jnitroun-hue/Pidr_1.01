@@ -16,6 +16,7 @@ import PageLoadingScreen from '@/components/PageLoadingScreen';
 import { GRAM } from '@/lib/crypto/gram-brand';
 import CryptoIcon from '@/components/CryptoIcon';
 import { getCryptoToken } from '@/lib/crypto/crypto-assets';
+import { themedPageShellStyle } from '@/lib/ui/menu-theme-client';
 
 // ─── Типы ───────────────────────────────────────────────────────────────────
 interface Transaction {
@@ -134,7 +135,7 @@ export default function WalletPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.18),_transparent_35%),linear-gradient(180deg,_#050816_0%,_#0b1220_45%,_#09111d_100%)] pb-16">
+    <div className="pb-16" style={themedPageShellStyle()}>
       <div className="max-w-md mx-auto px-4 pt-4">
         <motion.div
           initial={{ opacity: 0, y: -12 }}

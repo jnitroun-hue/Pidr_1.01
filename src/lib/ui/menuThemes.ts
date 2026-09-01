@@ -87,8 +87,8 @@ export const MENU_THEMES: Record<MenuThemeId, MenuThemeTokens> = {
   },
   gold: {
     id: 'gold',
-    labelRu: 'Золото',
-    labelEn: 'Gold',
+    labelRu: 'Премиум золото',
+    labelEn: 'Premium Gold',
     premium: true,
     vars: {
       '--menu-bg': 'linear-gradient(150deg, #1c1408 0%, #3b2a0c 45%, #1a1208 100%)',

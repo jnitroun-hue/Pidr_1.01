@@ -8,6 +8,7 @@ import PremiumFreeRollBanner from '../../components/PremiumFreeRollBanner'
 import { useTelegram } from '../../hooks/useTelegram'
 import { getApiHeaders } from '@/lib/api-headers'
 import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme'
+import { themedPageShellStyle } from '@/lib/ui/menu-theme-client'
 
 export default function NFTCollectionPage() {
   const router = useRouter()
@@ -56,7 +57,8 @@ export default function NFTCollectionPage() {
           minHeight: '100vh',
           display: 'grid',
           placeItems: 'center',
-          background: `linear-gradient(160deg, ${T.bgDeep} 0%, ${T.bgMain} 100%)`,
+          ...themedPageShellStyle(),
+          background: 'var(--menu-bg-accent), var(--menu-bg)',
           color: T.textMuted,
           fontSize: '14px',
         }}
@@ -67,12 +69,10 @@ export default function NFTCollectionPage() {
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: `linear-gradient(160deg, ${T.bgDeep} 0%, ${T.bgMain} 40%, #0e1520 100%)`,
+    <div style={themedPageShellStyle({
       padding: '20px',
-      paddingTop: '80px'
-    }}>
+      paddingTop: '80px',
+    })}>
       {/* Кнопка назад */}
       <button
         onClick={() => {
@@ -120,16 +120,25 @@ export default function NFTCollectionPage() {
           boxShadow: T.shadowCard,
         }}>
           <h2 style={{
-            color: T.accentGold,
+            color: 'var(--menu-accent)',
             fontSize: 'clamp(1rem, 4vw, 1.35rem)',
             fontWeight: 800,
-            marginBottom: '16px',
+            marginBottom: '8px',
             textAlign: 'center',
             letterSpacing: '0.06em',
             textTransform: 'uppercase',
-          }}          >
-            Генератор NFT
+          }}>
+            Генерация NFT-карт
           </h2>
+          <p style={{
+            color: 'var(--menu-text-muted)',
+            fontSize: 13,
+            lineHeight: 1.5,
+            textAlign: 'center',
+            marginBottom: 16,
+          }}>
+            Выберите коллекцию рисунков, затем одну карту или всю колоду. Тема интерфейса меняется в Настройках — здесь только арты для карт.
+          </p>
           <PremiumFreeRollBanner />
           <NFTThemeGenerator
             userCoins={userCoins} 

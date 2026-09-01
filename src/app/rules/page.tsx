@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react';
 import { GRAM } from '@/lib/crypto/gram-brand';
 import RulesMiniTutorial from '@/components/RulesMiniTutorial';
+import { themedPageShellStyle } from '@/lib/ui/menu-theme-client';
 
 export default function RulesPage() {
   const router = useRouter();
@@ -81,12 +82,10 @@ export default function RulesPage() {
   ];
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)',
+    <div style={themedPageShellStyle({
       padding: '20px',
-      paddingTop: '80px'
-    }}>
+      paddingTop: '80px',
+    })}>
       {/* Кнопка назад */}
       <motion.button
         initial={{ x: -20, opacity: 0 }}

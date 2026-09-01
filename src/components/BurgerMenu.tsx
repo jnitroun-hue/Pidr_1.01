@@ -275,21 +275,22 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
               bottom: 0,
               width: '320px',
               maxWidth: '85vw',
-              background: 'linear-gradient(145deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.98) 100%)',
+              background: 'var(--menu-card-bg)',
               backdropFilter: 'blur(20px)',
-              borderRight: side === 'left' ? '2px solid rgba(99, 102, 241, 0.3)' : 'none',
-              borderLeft: side === 'right' ? '2px solid rgba(99, 102, 241, 0.3)' : 'none',
-              boxShadow: '0 0 40px rgba(99, 102, 241, 0.3)',
+              borderRight: side === 'left' ? '2px solid var(--menu-card-border)' : 'none',
+              borderLeft: side === 'right' ? '2px solid var(--menu-card-border)' : 'none',
+              boxShadow: 'var(--menu-shadow)',
               zIndex: 9999,
               display: 'flex',
               flexDirection: 'column',
-              overflowY: 'auto'
+              overflowY: 'auto',
+              color: 'var(--menu-text)',
             }}
           >
             {/* Header */}
             <div style={{
               padding: '24px',
-              borderBottom: '1px solid rgba(99, 102, 241, 0.2)',
+              borderBottom: '1px solid var(--menu-card-border)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between'
@@ -297,10 +298,8 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
               <h2 style={{
                 fontSize: '24px',
                 fontWeight: '900',
-                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text'
+                color: 'var(--menu-accent)',
+                margin: 0,
               }}>
                 {side === 'left' ? t.mainMenu.burgerMenuTitle : t.mainMenu.burgerAccountTitle}
               </h2>
@@ -309,12 +308,12 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
                 whileTap={{ scale: 0.9 }}
                 onClick={onClose}
                 style={{
-                  background: 'rgba(99, 102, 241, 0.2)',
-                  border: '1px solid rgba(99, 102, 241, 0.3)',
+                  background: 'var(--menu-accent-soft)',
+                  border: '1px solid var(--menu-card-border)',
                   borderRadius: '12px',
                   padding: '8px',
                   cursor: 'pointer',
-                  color: '#ffffff',
+                  color: 'var(--menu-text)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center'
@@ -343,8 +342,8 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
                     whileTap={{ scale: 0.98 }}
                     onClick={item.onClick}
                     style={{
-                      background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.8) 100%)',
-                      border: '2px solid rgba(99, 102, 241, 0.3)',
+                      background: 'var(--menu-accent-soft)',
+                      border: '1px solid var(--menu-card-border)',
                       borderRadius: '16px',
                       padding: '16px',
                       cursor: 'pointer',
@@ -356,11 +355,11 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
                       overflow: 'hidden'
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.6)'
-                      e.currentTarget.style.boxShadow = '0 4px 20px rgba(99, 102, 241, 0.3)'
+                      e.currentTarget.style.borderColor = 'var(--menu-accent)'
+                      e.currentTarget.style.boxShadow = 'var(--menu-shadow)'
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.3)'
+                      e.currentTarget.style.borderColor = 'var(--menu-card-border)'
                       e.currentTarget.style.boxShadow = 'none'
                     }}
                   >
@@ -390,7 +389,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
                     
                     {/* Label */}
                     <span style={{
-                      color: '#ffffff',
+                      color: 'var(--menu-text)',
                       fontSize: '16px',
                       fontWeight: '600',
                       zIndex: 1,
@@ -405,7 +404,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
                       initial={{ x: 0 }}
                       whileHover={{ x: side === 'left' ? 5 : -5 }}
                       style={{
-                        color: '#6366f1',
+                        color: 'var(--menu-accent)',
                         zIndex: 1
                       }}
                     >
@@ -417,7 +416,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
                 <div style={{
                   padding: '40px 20px',
                   textAlign: 'center',
-                  color: '#94a3b8'
+                  color: 'var(--menu-text-muted)'
                 }}>
                   <p>{t.mainMenu.signInMenuHint}</p>
                 </div>
@@ -428,8 +427,8 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
             {showAccountFooter && (
               <div style={{
                 padding: '20px',
-                borderTop: '1px solid rgba(99, 102, 241, 0.2)',
-                background: 'rgba(99, 102, 241, 0.05)'
+                borderTop: '1px solid var(--menu-card-border)',
+                background: 'var(--menu-accent-soft)'
               }}>
                 <div style={{
                   display: 'flex',
@@ -441,7 +440,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
                     width: '48px',
                     height: '48px',
                     borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                    background: 'var(--menu-accent)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -454,10 +453,10 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
                     )}
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ color: '#ffffff', fontWeight: '600', fontSize: '14px' }}>
+                    <div style={{ color: 'var(--menu-text)', fontWeight: '600', fontSize: '14px' }}>
                       {effectiveUser.username || t.mainMenu.player}
                     </div>
-                    <div style={{ color: '#94a3b8', fontSize: '12px' }}>
+                    <div style={{ color: 'var(--menu-text-muted)', fontSize: '12px' }}>
                       {(effectiveUser.coins || 0).toLocaleString(language === 'en' ? 'en-US' : 'ru-RU')} {t.profile.coins}
                     </div>
                   </div>

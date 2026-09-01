@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Sparkles, Ghost, Swords, Zap } from 'lucide-react';
+import { X, Sparkles } from 'lucide-react';
 import { useTonConnectUI, useTonAddress } from '@tonconnect/ui-react';
 import { beginCell, toNano } from '@ton/core';
 import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
@@ -33,6 +33,7 @@ type ThemeType = 'pokemon' | 'halloween' | 'starwars' | 'legendary' | 'deck';
 const THEMES = {
   pokemon: {
     name: 'Покемон',
+    blurb: 'Полная колода 52 карт с покемонами на лицевой стороне.',
     icon: '⚡',
     color: '#fbbf24',
     gradient: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
@@ -45,6 +46,7 @@ const THEMES = {
   },
   halloween: {
     name: 'Хеллоуин',
+    blurb: 'Хеллоуинские иллюстрации — 10 уникальных артов.',
     icon: '🎃',
     color: '#f97316',
     gradient: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
@@ -57,6 +59,7 @@ const THEMES = {
   },
   starwars: {
     name: 'Звездные войны',
+    blurb: 'Коллекция Звёздных войн — 7 артов.',
     icon: '⚔️',
     color: '#3b82f6',
     gradient: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
@@ -69,6 +72,7 @@ const THEMES = {
   },
   legendary: {
     name: 'Легендарная',
+    blurb: 'Самые редкие карты: 5 артов и отдельная цена.',
     icon: '👑',
     color: '#a855f7',
     gradient: 'linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)',
@@ -94,6 +98,7 @@ const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'j', 'q', 'k', 'a']
 export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThemeGeneratorProps) {
   const [showModal, setShowModal] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [focusTheme, setFocusTheme] = useState<keyof typeof THEMES>('pokemon');
   const [selectedTheme, setSelectedTheme] = useState<ThemeType | null>(null);
   const [genProgress, setGenProgress] = useState(0);
   const [genTotal, setGenTotal] = useState(0);
@@ -609,9 +614,8 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
           textTransform: 'uppercase',
         }}
       >
-        <Sparkles size={24} />
-        ГЕНЕРАТОР NFT КАРТ
-        <Sparkles size={24} />
+        <Sparkles size={22} />
+        Создать NFT-карту
       </motion.button>
 
       {/* МОДАЛЬНОЕ ОКНО */}
@@ -652,11 +656,16 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
               }}
             >
               {/* ЗАГОЛОВОК */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                <h2 style={{ fontSize: isCompactLayout ? '22px' : '28px', fontWeight: 800, color: T.accentGold, display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <Sparkles size={32} />
-                  Выберите тему
-                </h2>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '18px', gap: 12 }}>
+                <div>
+                  <h2 style={{ fontSize: isCompactLayout ? '20px' : '24px', fontWeight: 800, color: T.accentGold, display: 'flex', alignItems: 'center', gap: '10px', margin: 0 }}>
+                    <Sparkles size={24} />
+                    Генерация карт
+                  </h2>
+                  <p style={{ color: T.textMuted, fontSize: 13, lineHeight: 1.5, margin: '8px 0 0' }}>
+                    Это коллекции рисунков для карт, не тема приложения. Сначала выберите набор, затем одну карту или всю колоду.
+                  </p>
+                </div>
                 <button
                   onClick={() => setShowModal(false)}
                   disabled={generating}
@@ -677,60 +686,116 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
                 </button>
               </div>
 
-              {/* СЕТКА ТЕМАТИЧЕСКИХ КНОПОК */}
+              {/* ШАГ 1: КОЛЛЕКЦИЯ */}
+              <div style={{ color: T.textMuted, fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8 }}>
+                1. Коллекция артов
+              </div>
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: isCompactLayout ? '1fr' : 'repeat(2, minmax(0, 1fr))',
-                  gap: '16px',
-                  marginBottom: '24px'
+                  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                  gap: '10px',
+                  marginBottom: '16px'
                 }}
               >
-                {/* ПОКЕМОН */}
-                <ThemeCard
-                  theme="pokemon"
-                  themeConfig={THEMES.pokemon}
-                  generating={generating && selectedTheme === 'pokemon'}
-                  onGenerateSingle={() => handleGenerateSingle('pokemon')}
-                  onGenerateDeck={() => handleGenerateDeck('pokemon')}
-                  onCryptoClick={() => { setCryptoTheme('pokemon'); setShowCryptoModal(true); }}
-                  disabled={generating}
-                />
-
-                {/* ХЕЛЛОУИН */}
-                <ThemeCard
-                  theme="halloween"
-                  themeConfig={THEMES.halloween}
-                  generating={generating && selectedTheme === 'halloween'}
-                  onGenerateSingle={() => handleGenerateSingle('halloween')}
-                  onGenerateDeck={() => handleGenerateDeck('halloween')}
-                  onCryptoClick={() => { setCryptoTheme('halloween'); setShowCryptoModal(true); }}
-                  disabled={generating}
-                />
-
-                {/* ЗВЕЗДНЫЕ ВОЙНЫ */}
-                <ThemeCard
-                  theme="starwars"
-                  themeConfig={THEMES.starwars}
-                  generating={generating && selectedTheme === 'starwars'}
-                  onGenerateSingle={() => handleGenerateSingle('starwars')}
-                  onGenerateDeck={() => handleGenerateDeck('starwars')}
-                  onCryptoClick={() => { setCryptoTheme('starwars'); setShowCryptoModal(true); }}
-                  disabled={generating}
-                />
-
-                {/* ЛЕГЕНДАРНАЯ 👑 */}
-                <ThemeCard
-                  theme="legendary"
-                  themeConfig={THEMES.legendary}
-                  generating={generating && selectedTheme === 'legendary'}
-                  onGenerateSingle={() => handleGenerateSingle('legendary')}
-                  onGenerateDeck={() => handleGenerateDeck('legendary')}
-                  onCryptoClick={() => { setCryptoTheme('legendary'); setShowCryptoModal(true); }}
-                  disabled={generating}
-                  isLegendary={true}
-                />
+                {(Object.keys(THEMES) as Array<keyof typeof THEMES>).map((themeKey) => (
+                  <ThemeCard
+                    key={themeKey}
+                    theme={themeKey}
+                    themeConfig={THEMES[themeKey]}
+                    selected={focusTheme === themeKey}
+                    onSelect={() => setFocusTheme(themeKey)}
+                    disabled={generating}
+                    isLegendary={themeKey === 'legendary'}
+                  />
+                ))}
               </div>
+
+              {(() => {
+                const cfg = THEMES[focusTheme];
+                const singleCostLabel = cfg.singleCost.toLocaleString('ru-RU');
+                const deckCostLabel = cfg.deckCost.toLocaleString('ru-RU');
+                const busy = generating;
+                return (
+                  <div style={{
+                    borderRadius: 16,
+                    padding: 16,
+                    marginBottom: 16,
+                    background: 'rgba(0,0,0,0.22)',
+                    border: `1px solid ${cfg.color}44`,
+                  }}>
+                    <div style={{ color: T.textMuted, fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 6 }}>
+                      2. Что создать
+                    </div>
+                    <div style={{ color: '#f8fafc', fontWeight: 800, fontSize: 16, marginBottom: 4 }}>{cfg.name}</div>
+                    <p style={{ color: T.textMuted, fontSize: 13, lineHeight: 1.5, margin: '0 0 12px' }}>{cfg.blurb}</p>
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 12, color: T.textMuted }}>{cfg.total} артов в наборе</span>
+                      <span style={{ fontSize: 12, color: T.textMuted }}>·</span>
+                      <span style={{ fontSize: 12, color: T.textMuted }}>Оплата: монеты или крипта</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <motion.button
+                        whileHover={{ scale: busy ? 1 : 1.01 }}
+                        whileTap={{ scale: busy ? 1 : 0.99 }}
+                        disabled={busy}
+                        onClick={() => handleGenerateSingle(focusTheme)}
+                        style={{
+                          padding: '12px 14px',
+                          borderRadius: 12,
+                          border: `1px solid ${cfg.color}88`,
+                          background: cfg.gradient,
+                          color: '#0f172a',
+                          fontWeight: 800,
+                          fontSize: 14,
+                          cursor: busy ? 'wait' : 'pointer',
+                          opacity: busy ? 0.65 : 1,
+                        }}
+                      >
+                        {busy && selectedTheme === focusTheme ? 'Создаём карту…' : `Одна случайная карта · ${singleCostLabel} монет`}
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: busy ? 1 : 1.01 }}
+                        whileTap={{ scale: busy ? 1 : 0.99 }}
+                        disabled={busy}
+                        onClick={() => handleGenerateDeck(focusTheme)}
+                        style={{
+                          padding: '12px 14px',
+                          borderRadius: 12,
+                          border: `1px solid ${cfg.color}55`,
+                          background: 'rgba(15,23,42,0.7)',
+                          color: '#f8fafc',
+                          fontWeight: 800,
+                          fontSize: 14,
+                          cursor: busy ? 'wait' : 'pointer',
+                          opacity: busy ? 0.65 : 1,
+                        }}
+                      >
+                        {busy && selectedTheme === focusTheme ? 'Создаём колоду…' : `Полная колода · ${deckCostLabel} монет`}
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: busy ? 1 : 1.01 }}
+                        whileTap={{ scale: busy ? 1 : 0.99 }}
+                        disabled={busy}
+                        onClick={() => { setCryptoTheme(focusTheme); setShowCryptoModal(true); }}
+                        style={{
+                          padding: '11px 14px',
+                          borderRadius: 12,
+                          border: '1px solid rgba(16,185,129,0.4)',
+                          background: 'rgba(16,185,129,0.12)',
+                          color: '#6ee7b7',
+                          fontWeight: 800,
+                          fontSize: 13,
+                          cursor: busy ? 'wait' : 'pointer',
+                          opacity: busy ? 0.65 : 1,
+                        }}
+                      >
+                        Оплатить карту криптой (GRAM / USDT / SOL / TRX)
+                      </motion.button>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* ПРОГРЕСС-БАР ГЕНЕРАЦИИ */}
               {generating && genTotal > 0 && (
@@ -1057,253 +1122,53 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
 interface ThemeCardProps {
   theme: keyof typeof THEMES;
   themeConfig: typeof THEMES[keyof typeof THEMES];
-  generating: boolean;
-  onGenerateSingle: () => void;
-  onGenerateDeck: () => void;
+  selected: boolean;
+  onSelect: () => void;
   disabled: boolean;
   isLegendary?: boolean;
-  onCryptoClick: () => void;
 }
 
-function ThemeCard({ theme, themeConfig, generating, onGenerateSingle, onGenerateDeck, disabled, isLegendary, onCryptoClick }: ThemeCardProps) {
-  const singleCostLabel = themeConfig.singleCost.toLocaleString('ru-RU');
-  const deckCostLabel = themeConfig.deckCost.toLocaleString('ru-RU');
-  const totalLabel = `${themeConfig.total} арт${themeConfig.total > 1 ? 'ов' : ''}`;
-
-  const actionButtonStyle = (background: string, accent: string) => ({
-    padding: '10px 12px',
-    borderRadius: '12px',
-    border: `1px solid ${accent}`,
-    background,
-    color: '#ffffff',
-    fontWeight: 'bold' as const,
-    fontSize: '12px',
-    cursor: disabled ? 'not-allowed' : 'pointer',
-    opacity: disabled ? 0.6 : 1,
-    position: 'relative' as const,
-    zIndex: 2,
-    boxShadow: disabled ? 'none' : `0 8px 20px ${accent.replace('0.55', '0.18')}`,
-    transition: 'all 0.25s ease'
-  });
-
+function ThemeCard({ theme, themeConfig, selected, onSelect, disabled, isLegendary }: ThemeCardProps) {
   return (
-    <div style={{
-      position: 'relative',
-      background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.96) 0%, rgba(17, 24, 39, 0.94) 100%)',
-      borderRadius: '22px',
-      border: `1.5px solid ${themeConfig.color}55`,
-      padding: '18px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '12px',
-      overflow: 'hidden',
-      minHeight: '100%',
-      boxShadow: `0 18px 40px rgba(2, 6, 23, 0.55), inset 0 1px 0 rgba(255,255,255,0.05), 0 0 0 1px ${themeConfig.color}12`
-    }}>
-      <div style={{
-        position: 'absolute',
-        inset: 0,
-        background: `radial-gradient(circle at top, ${themeConfig.color}22 0%, transparent 50%)`,
-        pointerEvents: 'none'
-      }} />
-
-      {/* 🔥 АНИМАЦИЯ ОГНЯ ДЛЯ ЛЕГЕНДАРНОЙ */}
+    <button
+      type="button"
+      onClick={onSelect}
+      disabled={disabled}
+      style={{
+        position: 'relative',
+        textAlign: 'left',
+        background: selected
+          ? `linear-gradient(180deg, ${themeConfig.color}22 0%, rgba(15, 23, 42, 0.94) 100%)`
+          : 'rgba(15, 23, 42, 0.88)',
+        borderRadius: 16,
+        border: selected ? `1.5px solid ${themeConfig.color}` : `1px solid ${themeConfig.color}33`,
+        padding: '12px 12px 14px',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        overflow: 'hidden',
+        boxShadow: selected ? `0 0 0 1px ${themeConfig.color}55, 0 10px 24px rgba(0,0,0,0.35)` : 'none',
+        opacity: disabled ? 0.65 : 1,
+      }}
+    >
       {isLegendary && (
-        <>
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: '4px',
-            background: 'linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #ff7f00, #ff0000)',
-            backgroundSize: '200% 100%',
-            animation: 'fireMove 2s linear infinite',
-            filter: 'blur(2px)',
-            zIndex: 1
-          }} />
-          <div style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: '4px',
-            background: 'linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #ff7f00, #ff0000)',
-            backgroundSize: '200% 100%',
-            animation: 'fireMove 2s linear infinite',
-            filter: 'blur(2px)',
-            zIndex: 1
-          }} />
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            bottom: 0,
-            width: '4px',
-            background: 'linear-gradient(180deg, #ff0000, #ff7f00, #ffff00, #ff7f00, #ff0000)',
-            backgroundSize: '100% 200%',
-            animation: 'fireMove 2s linear infinite',
-            filter: 'blur(2px)',
-            zIndex: 1
-          }} />
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            right: 0,
-            bottom: 0,
-            width: '4px',
-            background: 'linear-gradient(180deg, #ff0000, #ff7f00, #ffff00, #ff7f00, #ff0000)',
-            backgroundSize: '100% 200%',
-            animation: 'fireMove 2s linear infinite',
-            filter: 'blur(2px)',
-            zIndex: 1
-          }} />
-          <style>{`
-            @keyframes fireMove {
-              0% { background-position: 0% 0%; }
-              100% { background-position: 200% 0%; }
-            }
-          `}</style>
-        </>
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 2,
+          background: 'linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #ff7f00, #ff0000)',
+        }} />
       )}
-
-      <div style={{
-        position: 'relative',
-        zIndex: 2,
-        borderRadius: '18px',
-        padding: '14px',
-        background: `linear-gradient(135deg, ${themeConfig.color}20 0%, rgba(15, 23, 42, 0.35) 100%)`,
-        border: `1px solid ${themeConfig.color}35`
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', marginBottom: '12px' }}>
-          <div>
-            <div style={{ fontSize: '34px', lineHeight: 1, marginBottom: '6px' }}>{themeConfig.icon}</div>
-            <h3 style={{ fontSize: '17px', fontWeight: 'bold', color: '#f8fafc', margin: 0 }}>
-              {themeConfig.name}
-            </h3>
-          </div>
-          <div style={{
-            padding: '6px 10px',
-            borderRadius: '999px',
-            background: 'rgba(15, 23, 42, 0.75)',
-            color: themeConfig.color,
-            fontSize: '11px',
-            fontWeight: 800,
-            border: `1px solid ${themeConfig.color}40`
-          }}>
-            {theme === 'legendary' ? 'PREMIUM' : 'THEME'}
-          </div>
-        </div>
-
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-          gap: '8px'
-        }}>
-          <div style={{
-            borderRadius: '12px',
-            padding: '10px',
-            background: 'rgba(15, 23, 42, 0.68)',
-            border: '1px solid rgba(148, 163, 184, 0.16)'
-          }}>
-            <div style={{ color: '#94a3b8', fontSize: '10px', fontWeight: 700, marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              Карта
-            </div>
-            <div style={{ color: '#f8fafc', fontSize: '13px', fontWeight: 800 }}>{singleCostLabel}</div>
-            <div style={{ color: '#64748b', fontSize: '10px', marginTop: '2px' }}>монет</div>
-          </div>
-
-          <div style={{
-            borderRadius: '12px',
-            padding: '10px',
-            background: 'rgba(15, 23, 42, 0.68)',
-            border: '1px solid rgba(148, 163, 184, 0.16)'
-          }}>
-            <div style={{ color: '#94a3b8', fontSize: '10px', fontWeight: 700, marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              Колода
-            </div>
-            <div style={{ color: '#f8fafc', fontSize: '13px', fontWeight: 800 }}>{deckCostLabel}</div>
-            <div style={{ color: '#64748b', fontSize: '10px', marginTop: '2px' }}>монет</div>
-          </div>
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+        <span style={{ fontSize: 22, lineHeight: 1 }}>{themeConfig.icon}</span>
+        <span style={{ color: '#f8fafc', fontWeight: 800, fontSize: 14 }}>{themeConfig.name}</span>
       </div>
-
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        gap: '8px',
-        position: 'relative',
-        zIndex: 2
-      }}>
-        <div style={{
-          flex: 1,
-          borderRadius: '12px',
-          padding: '8px 10px',
-          background: 'rgba(255,255,255,0.03)',
-          border: '1px solid rgba(148, 163, 184, 0.12)'
-        }}>
-          <div style={{ color: '#94a3b8', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            Набор
-          </div>
-          <div style={{ color: '#e2e8f0', fontSize: '12px', fontWeight: 700, marginTop: '4px' }}>
-            {totalLabel}
-          </div>
-        </div>
-        <div style={{
-          flex: 1,
-          borderRadius: '12px',
-          padding: '8px 10px',
-          background: 'rgba(255,255,255,0.03)',
-          border: '1px solid rgba(148, 163, 184, 0.12)'
-        }}>
-          <div style={{ color: '#94a3b8', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            Оплата
-          </div>
-          <div style={{ color: '#e2e8f0', fontSize: '12px', fontWeight: 700, marginTop: '4px' }}>
-            Монеты / YooKassa
-          </div>
-        </div>
+      <div style={{ color: '#94a3b8', fontSize: 11, lineHeight: 1.4 }}>
+        {themeConfig.total} артов
+        {theme === 'legendary' ? ' · rare' : ''}
       </div>
-
-      <motion.button
-        whileHover={{ scale: disabled ? 1 : 1.03 }}
-        whileTap={{ scale: disabled ? 1 : 0.97 }}
-        onClick={onGenerateSingle}
-        disabled={disabled}
-        style={actionButtonStyle(
-          generating ? 'linear-gradient(135deg, #475569 0%, #334155 100%)' : themeConfig.gradient,
-          `${themeConfig.color}88`
-        )}
-      >
-        {generating ? '⏳' : `🎴 Карта (${singleCostLabel} монет)`}
-      </motion.button>
-
-      <motion.button
-        whileHover={{ scale: disabled ? 1 : 1.03 }}
-        whileTap={{ scale: disabled ? 1 : 0.97 }}
-        onClick={onGenerateDeck}
-        disabled={disabled}
-        style={actionButtonStyle(
-          generating ? 'linear-gradient(135deg, #475569 0%, #334155 100%)' : `linear-gradient(135deg, rgba(15,23,42,0.82) 0%, ${themeConfig.color}b3 100%)`,
-          `${themeConfig.color}88`
-        )}
-      >
-        {generating ? '⏳' : `🃏 Колода (${deckCostLabel} монет)`}
-      </motion.button>
-
-      <motion.button
-        whileHover={{ scale: disabled ? 1 : 1.03 }}
-        whileTap={{ scale: disabled ? 1 : 0.97 }}
-        onClick={onCryptoClick}
-        disabled={disabled}
-        style={actionButtonStyle(
-          'linear-gradient(135deg, rgba(16,185,129,0.24) 0%, rgba(14,165,233,0.24) 100%)',
-          'rgba(16, 185, 129, 0.55)'
-        )}
-      >
-        💳 / 💎 ОПЛАТА
-      </motion.button>
-    </div>
+    </button>
   );
 }
+
 

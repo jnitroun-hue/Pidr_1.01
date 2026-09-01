@@ -7,6 +7,7 @@ import { getApiHeaders } from '@/lib/api-headers';
 import { parseJsonResponse } from '@/lib/api/parse-json-response';
 import { appAlert } from '@/lib/app-notice';
 import { useLanguage } from '@/components/LanguageSwitcher';
+import { applyMenuThemeToDocument } from '@/lib/ui/menu-theme-client';
 import type { MenuThemeId } from '@/lib/ui/menuThemes';
 
 interface ThemeOption {
@@ -92,6 +93,7 @@ export default function MenuThemePicker({ compact = false, onThemeApplied }: Men
 
       const applied = parsed.data.themeId || 'slate';
       setThemeId(applied);
+      applyMenuThemeToDocument(applied);
       onThemeApplied?.(applied);
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('pidr-menu-theme', { detail: { themeId: applied } }));
@@ -115,35 +117,37 @@ export default function MenuThemePicker({ compact = false, onThemeApplied }: Men
   return (
     <div
       style={{
-        borderRadius: compact ? 16 : 20,
-        padding: compact ? 14 : 18,
-        background: 'linear-gradient(145deg, rgba(15,23,42,0.92), rgba(30,41,59,0.88))',
-        border: '1px solid rgba(148,163,184,0.22)',
+        borderRadius: compact ? 0 : 20,
+        padding: compact ? 0 : 18,
+        background: compact ? 'transparent' : 'var(--menu-card-bg)',
+        border: compact ? 'none' : '1px solid var(--menu-card-border)',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 12,
-              background: 'linear-gradient(135deg, #6366f1, #38bdf8)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Palette size={20} color="#fff" />
-          </div>
-          <div>
-            <div style={{ color: '#f1f5f9', fontWeight: 800, fontSize: compact ? 15 : 17 }}>
-              {language === 'en' ? 'Main menu themes' : 'Темы главного меню'}
+          {!compact && (
+            <div
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 12,
+                background: 'var(--menu-accent-soft)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Palette size={20} color="var(--menu-accent)" />
             </div>
-            <div style={{ color: '#94a3b8', fontSize: 12, marginTop: 2 }}>
+          )}
+          <div>
+            <div style={{ color: 'var(--menu-text)', fontWeight: 800, fontSize: compact ? 15 : 17 }}>
+              {language === 'en' ? 'App theme' : 'Тема оформления'}
+            </div>
+            <div style={{ color: 'var(--menu-text-muted)', fontSize: 12, marginTop: 2 }}>
               {isPremium
-                ? (language === 'en' ? 'Premium: all themes + random' : 'Premium: все темы + генерация')
-                : (language === 'en' ? 'Free themes available · Premium unlocks more' : 'Бесплатные темы · Premium открывает больше')}
+                ? (language === 'en' ? 'Applies to every screen, including the burger menu' : 'Действует на всех экранах, включая бургер-меню')
+                : (language === 'en' ? 'Free themes everywhere · Premium unlocks Gold and more' : 'Бесплатные темы везде · Premium открывает золото и другие')}
             </div>
           </div>
         </div>
