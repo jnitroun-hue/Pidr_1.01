@@ -13,6 +13,13 @@ import { generateThemeCardImageDataUrl } from '@/lib/nft/generate-theme-card-cli
 import type { NftThemeKey } from '@/lib/nft/theme-config';
 import { GRAM, formatGramAmount } from '@/lib/crypto/gram-brand';
 import { PidrCoinAmount } from '@/components/PidrCoinIcon';
+import { NFT_GEN_TON_COST } from '@/lib/nft/crypto-gen-costs';
+import { cryptoAmountFromUsd, getCryptoUsdPrice } from '@/lib/pricing/exchange-rates';
+import type { ExchangeRateSnapshot } from '@/lib/pricing/types';
+import {
+  copyDepositDetails,
+  openExternalWalletForDeposit,
+} from '@/lib/wallets/telegram-wallet-deposit';
 
 interface NFTThemeGeneratorProps {
   userCoins: number;
@@ -97,6 +104,7 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
   const [tonConnectUI] = useTonConnectUI();
   const userTonAddress = useTonAddress();
   const [isCompactLayout, setIsCompactLayout] = useState(false);
+  const [rateSnapshot, setRateSnapshot] = useState<ExchangeRateSnapshot | null>(null);
 
   useEffect(() => {
     const updateLayout = () => {
@@ -107,6 +115,29 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
     window.addEventListener('resize', updateLayout);
     return () => window.removeEventListener('resize', updateLayout);
   }, []);
+
+  useEffect(() => {
+    if (!showCryptoModal) return;
+    fetch('/api/wallet/rates', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.crypto) setRateSnapshot(data as ExchangeRateSnapshot);
+      })
+      .catch(() => {});
+  }, [showCryptoModal]);
+
+  const genAmountFor = (coin: 'GRAM' | 'SOL' | 'TRX' | 'USDT') => {
+    const theme = cryptoTheme ? NFT_GEN_TON_COST[cryptoTheme] ?? 0.3 : 0.3;
+    if (coin === 'GRAM') return theme;
+    const fallbackUsd: Record<string, number> = { SOL: 150, USDT: 1, TRX: 0.25, TON: 4 };
+    const tonUsd = rateSnapshot ? getCryptoUsdPrice('TON', rateSnapshot) : fallbackUsd.TON;
+    const unitUsd = rateSnapshot ? getCryptoUsdPrice(coin, rateSnapshot) : fallbackUsd[coin];
+    const usd = theme * tonUsd;
+    if (rateSnapshot) return cryptoAmountFromUsd(coin, usd, rateSnapshot);
+    const raw = unitUsd > 0 ? usd / unitUsd : 0;
+    if (coin === 'USDT' || coin === 'TRX') return Math.ceil(raw * 100) / 100;
+    return Math.ceil(raw * 10000) / 10000;
+  };
 
   const formatCoins = (amount: number) => amount.toLocaleString('ru-RU');
   const getRubEquivalent = (amount: number) => Math.ceil(amount / 50);
@@ -155,17 +186,13 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
   const buildTonCommentPayload = (comment: string) =>
     beginCell().storeUint(0, 32).storeStringTail(comment).endCell().toBoc().toString('base64');
 
-  /** Оплата TON → генерация одной карты (TonConnect или Telegram Wallet) */
-  const handleTonPayForGeneration = async (kind: 'single' | 'deck') => {
+  /** Оплата GRAM / SOL / TRX / USDT → генерация одной карты */
+  const handleCryptoPayForGeneration = async (coin: 'GRAM' | 'SOL' | 'TRX' | 'USDT') => {
     if (!cryptoTheme || generating) return;
-    if (kind === 'deck') {
-      alert(`Полная колода за ${GRAM.symbol}: пополните монеты через кошелёк или купите колоду за монеты.`);
-      return;
-    }
 
     const theme = cryptoTheme;
     const themeConfig = THEMES[theme];
-    const costTon = themeConfig.cryptoCost.ton;
+    const amount = genAmountFor(coin);
 
     setGenerating(true);
     setGenStatus('Подготовка карты...');
@@ -184,17 +211,16 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
       const paymentId = `nftgen_${uid}_${theme}_${Date.now()}`;
       const sinceUnix = Math.floor(Date.now() / 1000) - 60;
 
-      const payInfoRes = await fetch('/api/wallet/ton/payment-info', {
-        method: 'GET',
-        credentials: 'include',
-        headers: getApiHeaders(),
-      });
+      const payInfoRes = await fetch(
+        `/api/wallet/deposit-info?coin=${encodeURIComponent(coin === 'GRAM' ? 'TON' : coin)}`,
+        { method: 'GET', credentials: 'include', headers: getApiHeaders() }
+      );
       const payInfo = await payInfoRes.json();
-      if (!payInfoRes.ok || !payInfo.success) {
-        throw new Error(payInfo.message || `${GRAM.symbol} не настроен на сервере (MASTER_TON_ADDRESS)`);
+      if (!payInfoRes.ok || !payInfo.success || !payInfo.address) {
+        throw new Error(payInfo.message || `${coin} не настроен на сервере`);
       }
 
-      const receiverAddress = payInfo.data.address;
+      const receiverAddress = payInfo.address;
       const randomSuit = SUITS[Math.floor(Math.random() * SUITS.length)];
       const randomRank = RANKS[Math.floor(Math.random() * RANKS.length)];
       const randomId = Math.floor(Math.random() * themeConfig.total) + 1;
@@ -202,34 +228,46 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
       setGenStatus('Генерация изображения...');
       const imageData = await generateThemeCardImage(randomSuit, randomRank, randomId, theme);
 
-      setGenStatus(`Оплата ${formatGramAmount(costTon)}...`);
+      setGenStatus(`Оплата ${amount} ${coin}...`);
 
       let txHash: string | undefined;
 
-      if (tonConnectUI.connected) {
-        const result = await tonConnectUI.sendTransaction({
-          validUntil: Math.floor(Date.now() / 1000) + 600,
-          messages: [
-            {
-              address: receiverAddress,
-              amount: toNano(costTon).toString(),
-              payload: buildTonCommentPayload(paymentId),
-            },
-          ],
-        });
-        txHash = result.boc;
-      } else if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp) {
-        const amountNano = Math.floor(costTon * 1_000_000_000);
-        const tonUrl = `ton://transfer/${receiverAddress}?amount=${amountNano}&text=${encodeURIComponent(paymentId)}`;
-        (window as any).Telegram.WebApp.openTelegramLink(tonUrl);
+      if (coin === 'GRAM') {
+        if (tonConnectUI.connected) {
+          await tonConnectUI.sendTransaction({
+            validUntil: Math.floor(Date.now() / 1000) + 600,
+            messages: [
+              {
+                address: receiverAddress,
+                amount: toNano(amount).toString(),
+                payload: buildTonCommentPayload(paymentId),
+              },
+            ],
+          });
+        } else if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp) {
+          const amountNano = Math.floor(amount * 1_000_000_000);
+          const tonUrl = `ton://transfer/${receiverAddress}?amount=${amountNano}&text=${encodeURIComponent(paymentId)}`;
+          (window as any).Telegram.WebApp.openTelegramLink(tonUrl);
+        } else {
+          throw new Error(`Подключите ${GRAM.walletLabel} (${GRAM.connectProduct}) или откройте приложение в Telegram`);
+        }
       } else {
-        throw new Error(`Подключите ${GRAM.walletLabel} (${GRAM.connectProduct}) или откройте приложение в Telegram`);
+        await copyDepositDetails(receiverAddress, paymentId);
+        openExternalWalletForDeposit({
+          coin,
+          masterAddress: receiverAddress,
+          amount,
+          memo: paymentId,
+        });
+        alert(
+          `Отправьте ${amount} ${coin} на адрес проекта.\nMemo: ${paymentId}\n\nАдрес скопирован. После перевода вернитесь — проверка начнётся автоматически.`
+        );
       }
 
-      setGenStatus(`Проверка оплаты в сети ${GRAM.networkLabel}...`);
+      setGenStatus(`Проверка оплаты ${coin}...`);
       setShowCryptoModal(false);
 
-      const maxAttempts = 15;
+      const maxAttempts = coin === 'GRAM' ? 15 : 24;
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
         await new Promise((r) => setTimeout(r, 4000));
 
@@ -244,10 +282,10 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
             imageData,
             themeId: randomId,
             action: `random_${theme}`,
-            crypto: 'TON',
+            crypto: coin,
             paymentId,
             transactionHash: txHash,
-            expectedAmountTon: costTon,
+            expectedAmount: amount,
             sinceUnix,
           }),
         });
@@ -276,7 +314,7 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
         }
       }
 
-      throw new Error('Платёж не подтвердился за 60 секунд. Подождите и обновите коллекцию.');
+      throw new Error('Платёж не подтвердился. Если перевод уже ушёл, подождите и обновите коллекцию.');
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);
       if (!msg.includes('User rejects') && !msg.includes('Rejected')) {
@@ -923,63 +961,71 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
               <div style={{
                 borderRadius: '18px',
                 padding: '18px',
-                marginBottom: '24px',
+                marginBottom: '16px',
                 background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(8, 145, 178, 0.1) 100%)',
                 border: '1px solid rgba(16, 185, 129, 0.2)'
               }}>
                 <div style={{ color: '#ffffff', fontSize: '16px', fontWeight: 'bold', marginBottom: '6px' }}>
-                  Крипта и другие способы
+                  Оплатить генерацию криптой
                 </div>
                 <p style={{ color: '#94a3b8', fontSize: '13px', lineHeight: 1.5, marginBottom: '12px' }}>
-                  Для {GRAM.symbol} и других криптовалют открой кошелёк, пополни баланс и затем вернись к генерации.
-                  Там уже доступны депозит и вывод в едином интерфейсе.
+                  Одна карта. После подтверждения сети карта сразу попадает в коллекцию.
                 </p>
-                <motion.button
-                  whileHover={{ scale: 1.01 }}
-                  whileTap={{ scale: 0.99 }}
-                  onClick={openWalletForCryptoTopup}
-                  style={{
-                    width: '100%',
-                    padding: '14px 16px',
-                    borderRadius: '14px',
-                    border: '1px solid rgba(16, 185, 129, 0.35)',
-                    background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.22) 0%, rgba(8, 145, 178, 0.22) 100%)',
-                    color: '#ffffff',
-                    fontSize: '15px',
-                    fontWeight: 'bold',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Открыть кошелёк
-                </motion.button>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  {([
+                    { coin: 'GRAM' as const, label: formatGramAmount(genAmountFor('GRAM')) },
+                    { coin: 'USDT' as const, label: `${genAmountFor('USDT')} USDT` },
+                    { coin: 'SOL' as const, label: `${genAmountFor('SOL')} SOL` },
+                    { coin: 'TRX' as const, label: `${genAmountFor('TRX')} TRX` },
+                  ]).map((opt) => (
+                    <motion.button
+                      key={opt.coin}
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
+                      disabled={generating}
+                      onClick={() => handleCryptoPayForGeneration(opt.coin)}
+                      style={{
+                        padding: '12px 10px',
+                        borderRadius: '12px',
+                        border: '1px solid rgba(16, 185, 129, 0.35)',
+                        background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.22) 0%, rgba(8, 145, 178, 0.22) 100%)',
+                        color: '#ffffff',
+                        fontSize: '13px',
+                        fontWeight: 'bold',
+                        cursor: generating ? 'wait' : 'pointer',
+                        opacity: generating ? 0.7 : 1,
+                      }}
+                    >
+                      {opt.label}
+                    </motion.button>
+                  ))}
+                </div>
+                {!userTonAddress && (
+                  <p style={{ color: '#94a3b8', fontSize: '12px', textAlign: 'center', marginTop: '10px' }}>
+                    {GRAM.symbol}: подключите кошелёк в коллекции или используйте Telegram Wallet
+                  </p>
+                )}
               </div>
 
               <motion.button
                 whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.99 }}
-                disabled={generating}
-                onClick={() => handleTonPayForGeneration('single')}
+                onClick={openWalletForCryptoTopup}
                 style={{
                   width: '100%',
-                  padding: '14px 16px',
+                  padding: '12px 16px',
                   borderRadius: '14px',
-                  border: '1px solid rgba(59, 130, 246, 0.45)',
-                  background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.25) 0%, rgba(99, 102, 241, 0.2) 100%)',
-                  color: '#ffffff',
-                  fontSize: '15px',
+                  border: '1px solid rgba(148, 163, 184, 0.25)',
+                  background: 'rgba(15, 23, 42, 0.7)',
+                  color: '#cbd5e1',
+                  fontSize: '14px',
                   fontWeight: 'bold',
-                  cursor: generating ? 'wait' : 'pointer',
-                  opacity: generating ? 0.7 : 1,
+                  cursor: 'pointer',
                   marginBottom: '12px',
                 }}
               >
-                💎 Оплатить {formatGramAmount(THEMES[cryptoTheme].cryptoCost.ton)} (одна карта)
+                Открыть кошелёк (пополнение монет)
               </motion.button>
-              {!userTonAddress && (
-                <p style={{ color: '#94a3b8', fontSize: '12px', textAlign: 'center', marginBottom: '16px' }}>
-                  Подключите {GRAM.symbol} в коллекции или используйте Telegram Wallet
-                </p>
-              )}
 
               <motion.button
                 whileHover={{ scale: 1.02 }}

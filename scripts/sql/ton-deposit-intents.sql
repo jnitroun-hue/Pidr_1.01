@@ -72,9 +72,7 @@ begin
 
     if not found
       or v_intent.user_id <> p_user_id
-      or v_intent.destination <> p_destination
-      or v_intent.expected_amount_nano <> p_amount_nano
-      or v_intent.status not in ('pending', 'submitted', 'ambiguous') then
+      or v_intent.status not in ('pending', 'submitted', 'ambiguous', 'expired') then
       raise exception 'deposit intent mismatch';
     end if;
   end if;
@@ -99,7 +97,7 @@ begin
   insert into public._pidr_coin_transactions (
     user_id, amount, transaction_type, description, balance_before, balance_after, created_at
   ) values (
-    p_user_id, p_coins, 'deposit', 'Пополнение TON', v_before, v_after, p_chain_timestamp
+    p_user_id, p_coins, 'deposit', 'Пополнение GRAM', v_before, v_after, p_chain_timestamp
   );
 
   if p_intent_id is not null then

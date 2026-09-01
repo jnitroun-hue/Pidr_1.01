@@ -97,13 +97,11 @@ function isComposedCardUrl(url?: string | null): boolean {
   if (!url) return false;
 
   const dailyOfferVersion = url.match(/daily-offer\/v(\d+)\//i);
-  if (dailyOfferVersion && Number(dailyOfferVersion[1]) < 10) {
-    // Старые PNG могли быть закэшированы без центрального арта.
-    // Metadata-driven client canvas ниже восстановит тему без миграции БД.
+  if (dailyOfferVersion && Number(dailyOfferVersion[1]) < 11) {
     return false;
   }
 
-  return /daily-offer\/v(?:9|[1-9]\d+)|base-cards|_of_(clubs|diamonds|hearts|spades)/i.test(url);
+  return /daily-offer\/v(?:1[1-9]|[2-9]\d)|base-cards|_of_(clubs|diamonds|hearts|spades)/i.test(url);
 
 }
 
@@ -136,7 +134,7 @@ type Props = NftCardRenderSpec & {
 
  * NFT-карта: сначала серверный PNG (акция дня), иначе клиентская сборка
 
- * (белый фон + PNG темы с прозрачностью + ранг/масть).
+ * (классическое лицо карты + арт темы + ранг/масть без квадратов).
 
  */
 
@@ -180,24 +178,24 @@ export default function NftThemedCardCanvas({
 
 
 
-  const composedUrl = useMemo(
-
-    () => (isComposedCardUrl(fallbackImageUrl) ? fallbackImageUrl : null),
-
-    [fallbackImageUrl]
-
-  );
+  const composedUrl = useMemo(() => {
+    // Тема + themeId → всегда собираем актуальное лицо карты, даже если в storage лежит старый PNG с квадратами.
+    if (themeKey && validThemeId) return null;
+    return isComposedCardUrl(fallbackImageUrl) ? fallbackImageUrl : null;
+  }, [fallbackImageUrl, themeKey, validThemeId]);
 
   const rawArtworkUrl =
-    fallbackImageUrl && !composedUrl && !/daily-offer\/v\d+\//i.test(fallbackImageUrl)
-      ? fallbackImageUrl
-      : null;
+    themeKey && validThemeId
+      ? null
+      : fallbackImageUrl && !composedUrl && !/daily-offer\/v\d+\//i.test(fallbackImageUrl)
+        ? fallbackImageUrl
+        : null;
 
 
 
   const cacheKey = useMemo(
 
-    () => `${suitNorm}|${rankNorm}|${themeKey ?? ''}|${validThemeId ?? ''}|${themeLabel ?? ''}`,
+    () => `${suitNorm}|${rankNorm}|${themeKey ?? ''}|${validThemeId ?? ''}|${themeLabel ?? ''}|v11`,
 
     [suitNorm, rankNorm, themeKey, validThemeId, themeLabel]
 
@@ -364,29 +362,22 @@ export default function NftThemedCardCanvas({
           aria-hidden
           style={{
             position: 'absolute',
-            top: '4%',
-            left: '4%',
+            top: '5%',
+            left: '5.5%',
             zIndex: 2,
-            minWidth: '25%',
-            padding: '3% 3.5%',
-            borderRadius: 6,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            justifyContent: 'center',
-            gap: 0,
-            color: suitNorm === 'hearts' || suitNorm === 'diamonds' ? '#dc2626' : '#111827',
-            background: 'rgba(255, 255, 255, 0.94)',
-            border: '1px solid rgba(15, 23, 42, 0.16)',
-            boxShadow: '0 1px 5px rgba(15, 23, 42, 0.28)',
-            fontFamily: 'Arial, sans-serif',
-            fontWeight: 900,
-            lineHeight: 0.82,
+            color: suitNorm === 'hearts' || suitNorm === 'diamonds' ? '#b42318' : '#141414',
+            fontFamily: 'Georgia, "Times New Roman", serif',
+            fontWeight: 700,
+            lineHeight: 0.92,
+            textShadow: '0 0 4px rgba(255,248,240,0.95), 0 1px 0 rgba(255,255,255,0.8)',
             pointerEvents: 'none',
           }}
         >
-          <span style={{ fontSize: 'clamp(10px, 24cqw, 34px)' }}>{getRankLabel(rankNorm)}</span>
-          <span style={{ fontSize: 'clamp(10px, 22cqw, 32px)' }}>{getSuitSymbol(suitNorm)}</span>
+          <span style={{ fontSize: 'clamp(12px, 11cqw, 22px)' }}>{getRankLabel(rankNorm)}</span>
+          <span style={{ fontSize: 'clamp(10px, 8cqw, 16px)' }}>{getSuitSymbol(suitNorm)}</span>
         </div>
       )}
 

@@ -751,7 +751,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json', ...headers },
-      body: JSON.stringify({ coin: 'TON', amount }),
+      body: JSON.stringify({ coin: selectedCrypto.toUpperCase() === 'GRAM' ? 'GRAM' : 'TON', amount }),
     });
     const data = await response.json();
     const intent = normalizeIntent(data.intent);
@@ -791,10 +791,15 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
       const result = await response.json();
       if (!response.ok || !result.success) throw new Error(result.message || 'Проверка временно недоступна');
       const reconciled = normalizeIntent(result.intent);
-      if (reconciled?.status === 'credited') {
+      const creditedNow =
+        reconciled?.status === 'credited' || (Array.isArray(result.newPayments) && result.newPayments.length > 0);
+      if (creditedNow) {
         setPendingDeposit(null);
         await Promise.all([loadUserData(), loadTransactions()]);
-        if (!quiet) alert(`✅ Оплата подтверждена. Зачислено ${Number(reconciled.coinsCredited || 0).toLocaleString('ru-RU')} монет.`);
+        const coins =
+          Number(reconciled?.coinsCredited || 0) ||
+          result.newPayments.reduce((sum: number, p: { amount?: number }) => sum + Number(p.amount || 0), 0);
+        if (!quiet) alert(`✅ Оплата подтверждена. Зачислено ${coins.toLocaleString('ru-RU')} монет.`);
       } else {
         if (reconciled) setPendingDeposit(reconciled);
         if (!quiet) alert('Платёж пока не найден в сети. Нажмите «Проверить оплату» через минуту.');
@@ -874,7 +879,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
     try {
       setLoading(true);
 
-      if (coin === 'TON') {
+      if (coin === 'TON' || coin === 'GRAM') {
         const intent = await createTonDepositIntent(amount);
         const inTelegram = isTelegramWebApp() || isInsideTelegramMiniApp();
 
@@ -1504,9 +1509,9 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
       {pendingDeposit && (
         <div className={styles['pending-payment']} role="status">
           <div className={styles['pending-copy']}>
-            <strong>Проверяем оплату TON</strong>
+            <strong>Проверяем оплату {GRAM.symbol}</strong>
             <span>
-              {(Number(pendingDeposit.amountNano) / 1_000_000_000).toLocaleString('ru-RU')} TON · перевод сохранён
+              {(Number(pendingDeposit.amountNano) / 1_000_000_000).toLocaleString('ru-RU')} {GRAM.symbol} · перевод сохранён
             </span>
           </div>
           <button type="button" onClick={() => void reconcilePendingDeposit()} disabled={isMonitoringPayments}>

@@ -243,6 +243,24 @@ export function getCryptoUsdPrice(coin: string, snapshot: ExchangeRateSnapshot):
   return snapshot.crypto[key]?.usdPrice ?? snapshot.crypto.USDT?.usdPrice ?? 1;
 }
 
+/** Сколько единиц крипты нужно, чтобы покрыть `usd` долларов */
+export function cryptoAmountFromUsd(
+  coin: string,
+  usd: number,
+  snapshot: ExchangeRateSnapshot
+): number {
+  if (!Number.isFinite(usd) || usd <= 0) return 0;
+  const unit = getCryptoUsdPrice(coin, snapshot);
+  if (unit <= 0) return 0;
+  const raw = usd / unit;
+  const key = coin.toUpperCase();
+  if (key === 'USDT') return Math.ceil(raw * 100) / 100;
+  if (key === 'TRX') return Math.ceil(raw * 100) / 100;
+  if (key === 'SOL') return Math.ceil(raw * 10000) / 10000;
+  if (key === 'TON' || key === 'GRAM') return Math.ceil(raw * 1000) / 1000;
+  return Math.ceil(raw * 10000) / 10000;
+}
+
 export function rubFromUsd(usd: number, snapshot: ExchangeRateSnapshot): number {
   return Math.round(usd * snapshot.usdRub * 100) / 100;
 }

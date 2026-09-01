@@ -96,7 +96,7 @@ export function generateHeroCardFastDataUrl(
   return canvas.toDataURL('image/png');
 }
 
-/** Клиентская сборка лицевой стороны NFT-карты (белая основа для всех тем) */
+/** Клиентская сборка лицевой стороны NFT-карты (классическое лицо + арт темы) */
 export function generateThemeCardImageDataUrl(
   suit: string,
   rank: string,

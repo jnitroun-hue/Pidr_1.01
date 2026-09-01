@@ -39,17 +39,37 @@ function sameTonAddress(left: string, right: string): boolean {
   }
 }
 
+function normalizeComment(raw: string | undefined | null): string | undefined {
+  if (!raw) return undefined;
+  let text = raw.trim();
+  if (!text) return undefined;
+  try {
+    text = decodeURIComponent(text.replace(/\+/g, ' ')).trim();
+  } catch {
+    /* keep raw */
+  }
+  return text || undefined;
+}
+
 function extractTonComment(inMsg: Record<string, unknown> | null | undefined): string | undefined {
   if (!inMsg) return undefined;
 
-  const plain = inMsg.message;
-  if (typeof plain === 'string' && plain.trim()) {
-    return plain.trim();
-  }
+  const candidates: unknown[] = [
+    inMsg.message,
+    inMsg.comment,
+    inMsg.memo,
+  ];
 
   const msgData = inMsg.msg_data as Record<string, unknown> | undefined;
-  if (msgData?.text && typeof msgData.text === 'string') {
-    return msgData.text.trim();
+  if (msgData) {
+    candidates.push(msgData.text, msgData.comment, msgData.message);
+  }
+
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string') {
+      const text = normalizeComment(candidate);
+      if (text) return text;
+    }
   }
 
   const body = msgData?.body;
@@ -57,8 +77,11 @@ function extractTonComment(inMsg: Record<string, unknown> | null | undefined): s
     try {
       const cell = Cell.fromBase64(body);
       const slice = cell.beginParse();
-      if (slice.remainingBits >= 32 && slice.loadUint(32) === 0) {
-        return slice.loadStringTail().trim();
+      if (slice.remainingBits >= 32) {
+        const op = slice.loadUint(32);
+        if (op === 0 && slice.remainingBits >= 8) {
+          return normalizeComment(slice.loadStringTail());
+        }
       }
     } catch {
       /* not a text-comment payload */
@@ -67,6 +90,26 @@ function extractTonComment(inMsg: Record<string, unknown> | null | undefined): s
 
   return undefined;
 }
+
+function nanoClose(actual: bigint, expected: bigint): boolean {
+  if (actual === expected) return true;
+  const delta = actual > expected ? actual - expected : expected - actual;
+  const pct = expected / BigInt(50); // 2%
+  const floor = BigInt(30_000_000); // 0.03 TON
+  const allowance = pct > floor ? pct : floor;
+  return delta <= allowance;
+}
+
+function intentWindow(intent: DepositIntent, txTs: number): boolean {
+  const created = new Date(intent.created_at).getTime() - 180_000;
+  const expires = new Date(intent.expires_at).getTime() + 60_000;
+  return txTs >= created && txTs <= expires;
+}
+
+export type TonReconcileOptions = {
+  preferUserId?: string;
+  intentId?: string;
+};
 
 export class TonPaymentService {
   private apiKey: string;
@@ -99,41 +142,58 @@ export class TonPaymentService {
   async getRecentTransactions(limit: number = 100): Promise<TonTransaction[]> {
     try {
       const queryAddress = tonAddressForTransfer(this.masterAddress);
-      const url = `${this.apiEndpoint}/getTransactions?address=${encodeURIComponent(queryAddress)}&limit=${limit}&archival=true${this.apiKey ? `&api_key=${this.apiKey}` : ''}`;
-      
-      console.log('🔍 Запрашиваем TON транзакции...');
-      
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
+      const keyQ = this.apiKey ? `&api_key=${this.apiKey}` : '';
+      const urls = [
+        `${this.apiEndpoint}/getTransactions?address=${encodeURIComponent(queryAddress)}&limit=${limit}&archival=true${keyQ}`,
+        `${this.apiEndpoint}/getTransactions?address=${encodeURIComponent(queryAddress)}&limit=${limit}${keyQ}`,
+      ];
 
-      if (!response.ok) {
-        throw new Error(`TonCenter API error: ${response.status}`);
+      console.log('🔍 Запрашиваем TON транзакции...');
+
+      let data: { ok?: boolean; result?: unknown; error?: string } | null = null;
+      let lastError: Error | null = null;
+      for (const url of urls) {
+        try {
+          const response = await fetch(url, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+          });
+          if (!response.ok) {
+            lastError = new Error(`TonCenter API error: ${response.status}`);
+            continue;
+          }
+          data = await response.json();
+          if (data?.ok && Array.isArray(data.result)) break;
+          lastError = new Error(typeof data?.error === 'string' ? data.error : 'Invalid TonCenter response');
+          data = null;
+        } catch (err) {
+          lastError = err instanceof Error ? err : new Error(String(err));
+        }
       }
 
-      const data = await response.json();
-      
-      if (!data.ok || !data.result) {
-        throw new Error('Invalid TonCenter response');
+      if (!data?.ok || !Array.isArray(data.result)) {
+        throw lastError || new Error('Invalid TonCenter response');
       }
 
       // Парсим транзакции
       const transactions: TonTransaction[] = [];
       
-      for (const tx of data.result) {
-        // Проверяем что это входящая транзакция
+      const rows = data.result as Array<{
+        in_msg?: { value?: string; source?: string; destination?: string } & Record<string, unknown>;
+        transaction_id?: { hash?: string };
+        utime?: number | string;
+      }>;
+
+      for (const tx of rows) {
         if (tx.in_msg && tx.in_msg.value && tx.in_msg.value !== '0') {
           const comment = extractTonComment(tx.in_msg as Record<string, unknown>);
           transactions.push({
-            hash: tx.transaction_id.hash,
+            hash: tx.transaction_id?.hash || '',
             from: tx.in_msg.source || 'unknown',
             to: tx.in_msg.destination || this.masterAddress,
-            value: tx.in_msg.value,
+            value: String(tx.in_msg.value),
             comment,
-            timestamp: parseInt(tx.utime) * 1000 // конвертируем в миллисекунды
+            timestamp: parseInt(String(tx.utime), 10) * 1000
           });
         }
       }
@@ -219,36 +279,71 @@ export class TonPaymentService {
   }
 
   /**
-   * Сохранить транзакцию в БД и зачислить монеты
-   * ✅ ИСПРАВЛЕНО: Используем _pidr_crypto_transactions
+   * Сохранить транзакцию в БД и зачислить монеты.
+   * Сначала пробуем привязать intent (если сумма/адрес совпали), иначе зачисляем без intent
+   * и помечаем его credited — так не теряем перевод, если Telegram Wallet не приложил memo
+   * или RPC сравнивает адрес в другом формате.
    */
   private async processPayment(
     tx: TonTransaction,
     userId: string,
     tonAmount: number,
     coinsAmount: number,
-    intentId: string | null = null
+    intent: DepositIntent | null = null
   ): Promise<boolean> {
     try {
       const supabase = getSupabaseAdmin();
-      const { data, error } = await supabase.rpc('credit_verified_ton_deposit', {
-        p_intent_id: intentId,
-        p_user_id: userId,
-        p_tx_hash: tx.hash,
-        p_from_address: tx.from,
-        p_destination: tonAddressForTransfer(tx.to),
-        p_amount_nano: tx.value,
-        p_coins: coinsAmount,
-        p_chain_timestamp: new Date(tx.timestamp).toISOString(),
-      });
-      if (error) {
-        console.error('❌ Атомарное зачисление TON не выполнено:', error);
-        return false;
+      const destination = intent?.destination || tonAddressForTransfer(tx.to);
+      const tryCredit = async (intentId: string | null) => {
+        const { data, error } = await supabase.rpc('credit_verified_ton_deposit', {
+          p_intent_id: intentId,
+          p_user_id: userId,
+          p_tx_hash: tx.hash,
+          p_from_address: tx.from,
+          p_destination: destination,
+          p_amount_nano: tx.value,
+          p_coins: coinsAmount,
+          p_chain_timestamp: new Date(tx.timestamp).toISOString(),
+        });
+        if (error) {
+          console.error('❌ Атомарное зачисление TON не выполнено:', error.message || error);
+          return false;
+        }
+        const result = Array.isArray(data) ? data[0] : data;
+        return Boolean(result?.credited);
+      };
+
+      const amountMatches =
+        intent != null && nanoClose(BigInt(tx.value), BigInt(intent.expected_amount_nano));
+      const destMatches = intent != null && sameTonAddress(tx.to, intent.destination);
+
+      let credited = false;
+      if (intent && amountMatches && destMatches) {
+        credited = await tryCredit(intent.id);
       }
-      const result = Array.isArray(data) ? data[0] : data;
-      return Boolean(result?.credited);
-      
-    } catch (error: any) {
+      if (!credited) {
+        credited = await tryCredit(null);
+        if (credited && intent) {
+          const { error: markError } = await supabase
+            .from('_pidr_deposit_intents')
+            .update({
+              status: 'credited',
+              tx_hash: tx.hash,
+              actual_amount_nano: tx.value,
+              coins_credited: coinsAmount,
+              credited_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', intent.id)
+            .in('status', ['pending', 'submitted', 'ambiguous', 'expired']);
+          if (markError) {
+            console.warn('[TON] Intent не помечен credited:', markError.message);
+          }
+        }
+      }
+
+      return credited;
+    } catch (error: unknown) {
       console.error('❌ Ошибка обработки платежа:', error);
       return false;
     }
@@ -268,12 +363,61 @@ export class TonPaymentService {
     return Math.floor(tonAmount * 1000);
   }
 
+  private matchIntentToTx(
+    tx: TonTransaction,
+    intents: DepositIntent[],
+    usedIntentIds: Set<string>,
+    options?: TonReconcileOptions
+  ): DepositIntent | null {
+    const comment = normalizeComment(tx.comment);
+    if (comment) {
+      const byMemo = intents.find((intent) => intent.memo === comment && !usedIntentIds.has(intent.id));
+      if (byMemo && sameTonAddress(tx.to, byMemo.destination) && intentWindow(byMemo, tx.timestamp)) {
+        return byMemo;
+      }
+    }
+
+    const candidates = intents.filter((intent) => {
+      if (usedIntentIds.has(intent.id)) return false;
+      if (!sameTonAddress(tx.to, intent.destination)) return false;
+      if (!intentWindow(intent, tx.timestamp)) return false;
+      try {
+        return nanoClose(BigInt(tx.value), BigInt(intent.expected_amount_nano));
+      } catch {
+        return false;
+      }
+    });
+
+    if (candidates.length === 0) return null;
+
+    if (options?.intentId) {
+      const preferred = candidates.find((intent) => intent.id === options.intentId);
+      if (preferred) return preferred;
+    }
+
+    if (options?.preferUserId) {
+      const mine = candidates.filter((intent) => String(intent.user_id) === options.preferUserId);
+      if (mine.length === 1) return mine[0];
+      if (mine.length > 1) {
+        return mine.sort(
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )[0];
+      }
+    }
+
+    if (candidates.length === 1) return candidates[0];
+    return candidates.sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )[0];
+  }
+
   /**
    * ОСНОВНАЯ ФУНКЦИЯ: Проверить и обработать новые платежи
    */
-  async checkAndProcessPayments(): Promise<{
+  async checkAndProcessPayments(options?: TonReconcileOptions): Promise<{
     success: boolean;
     processed: number;
+    error?: string;
     newPayments: Array<{
       userId: string;
       amount: number;
@@ -282,13 +426,12 @@ export class TonPaymentService {
     }>;
   }> {
     try {
-      console.log('🔍 Начинаем проверку новых TON платежей...');
-      
-      // Получаем последние 100 транзакций
+      console.log('🔍 Начинаем проверку новых TON/GRAM платежей...');
+
       const transactions = await this.getRecentTransactions(100);
-      
+
       if (transactions.length === 0) {
-        console.log('ℹ️ Новых транзакций не найдено');
+        console.log('ℹ️ Входящих транзакций не найдено');
         return { success: true, processed: 0, newPayments: [] };
       }
 
@@ -310,82 +453,73 @@ export class TonPaymentService {
         console.warn('[TON] Deposit intents unavailable; legacy memo reconciliation remains active:', intentError.message);
       }
       const intents = (intentRows || []) as DepositIntent[];
-      const intentsByMemo = new Map(intents.map((intent) => [intent.memo, intent]));
+
+      if (options?.intentId) {
+        const already = intents.some((intent) => intent.id === options.intentId);
+        if (!already) {
+          const { data: specific } = await supabase
+            .from('_pidr_deposit_intents')
+            .select('id, user_id, destination, expected_amount_nano, memo, status, created_at, expires_at')
+            .eq('id', options.intentId)
+            .in('status', ['pending', 'submitted', 'ambiguous', 'expired'])
+            .maybeSingle();
+          if (specific) intents.unshift(specific as DepositIntent);
+        }
+      }
+      const usedIntentIds = new Set<string>();
 
       const newPayments = [];
       let processedCount = 0;
 
       for (const tx of transactions) {
-        // Проверяем была ли уже обработана
+        if (!tx.hash) continue;
         const alreadyProcessed = await this.isTransactionProcessed(tx.hash);
-        if (alreadyProcessed) {
-          continue;
-        }
+        if (alreadyProcessed) continue;
 
-        // Проверяем есть ли MEMO (comment)
-        if (!tx.comment) {
-          console.log(`⚠️ Транзакция ${tx.hash} без MEMO - пропускаем`);
-          continue;
-        }
-
-        const intent = intentsByMemo.get(tx.comment);
-        if (
-          intent &&
-          (!sameTonAddress(tx.to, intent.destination) ||
-            BigInt(tx.value) !== BigInt(intent.expected_amount_nano) ||
-            tx.timestamp < new Date(intent.created_at).getTime() - 120_000 ||
-            tx.timestamp > new Date(intent.expires_at).getTime())
-        ) {
-          console.warn(`[TON] Транзакция ${tx.hash} не совпала с параметрами intent ${intent.id}`);
-          continue;
-        }
-
-        // Уникальный intent имеет приоритет; старые deposit_<userId> остаются совместимыми.
-        const userId = intent ? String(intent.user_id) : await this.findUserByMemo(tx.comment);
-        if (!userId) {
-          console.log(`⚠️ Пользователь для memo ${tx.comment} не найден`);
-          continue;
-        }
-
-        // Конвертируем сумму
         const tonAmount = this.nanotonToTon(tx.value);
-        
-        // Минимальная сумма 0.1 TON
-        if (tonAmount < 0.1) {
-          console.log(`⚠️ Сумма ${tonAmount} TON меньше минимальной (0.1 TON)`);
+        if (tonAmount < 0.1) continue;
+
+        const matchedIntent = this.matchIntentToTx(tx, intents, usedIntentIds, options);
+        const userId = matchedIntent
+          ? String(matchedIntent.user_id)
+          : await this.findUserByMemo(tx.comment || '');
+
+        if (!userId) {
+          if (tx.comment) {
+            console.log(`⚠️ Пользователь для memo ${tx.comment} не найден`);
+          }
           continue;
         }
 
         const coinsAmount = await this.tonToCoins(tonAmount);
+        const processed = await this.processPayment(tx, userId, tonAmount, coinsAmount, matchedIntent);
 
-        // Обрабатываем платеж
-        const processed = await this.processPayment(tx, userId, tonAmount, coinsAmount, intent?.id || null);
-        
         if (processed) {
+          if (matchedIntent) usedIntentIds.add(matchedIntent.id);
           processedCount++;
           newPayments.push({
             userId,
             amount: coinsAmount,
             tonAmount,
-            txHash: tx.hash
+            txHash: tx.hash,
           });
         }
       }
 
       console.log(`✅ Обработано ${processedCount} новых платежей`);
-      
+
       return {
         success: true,
         processed: processedCount,
-        newPayments
+        newPayments,
       };
-      
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('❌ Ошибка проверки платежей:', error);
       return {
         success: false,
         processed: 0,
-        newPayments: []
+        newPayments: [],
+        error: error instanceof Error ? error.message : 'Ошибка проверки платежей',
       };
     }
   }

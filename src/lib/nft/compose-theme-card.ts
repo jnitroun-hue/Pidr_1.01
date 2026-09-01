@@ -14,8 +14,8 @@ import {
 } from '@/lib/nft/theme-config';
 
 const REMOTE_FETCH_TIMEOUT_MS = 2500;
-/** v10: larger, unambiguous rank/suit corners; invalidates legacy daily previews. */
-const COMPOSE_VERSION = 10;
+/** v11: classic playing-card face without boxed rank/suit corners. */
+const COMPOSE_VERSION = 11;
 
 export { COMPOSE_VERSION };
 

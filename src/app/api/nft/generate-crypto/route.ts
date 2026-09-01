@@ -1,26 +1,23 @@
 /**
  * POST /api/nft/generate-crypto
- * Generate NFT card after verified TON payment (TonConnect or memo on master wallet).
+ * Generate NFT card after verified crypto payment (GRAM/SOL/TRX/USDT).
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { GRAM } from '@/lib/crypto/gram-brand';
 import { supabaseAdmin } from '@/lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
-import {
-  verifyTonIncomingPayment,
-  getMasterAddress,
-} from '@/lib/nft/ton-payment-verify';
+import { verifyGenerationCryptoPayment } from '@/lib/wallets/incoming-crypto-verify';
+import { NFT_GEN_TON_COST, normalizeGenCrypto, isTonFamily } from '@/lib/nft/crypto-gen-costs';
+import { cryptoAmountFromUsd, getCryptoUsdPrice, getExchangeRates } from '@/lib/pricing/exchange-rates';
+import { resolveMasterAddress } from '@/lib/wallets/master-addresses';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const CRYPTO_COSTS: Record<string, number> = {
-  pokemon: 0.5,
-  halloween: 0.3,
-  starwars: 0.3,
-  legendary: 2,
-};
+function cryptoLabel(coin: string): string {
+  return isTonFamily(coin) ? GRAM.symbol : coin.toUpperCase();
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -42,16 +39,18 @@ export async function POST(request: NextRequest) {
       imageData,
       themeId,
       action,
-      crypto = 'TON',
+      crypto = 'GRAM',
       paymentId,
       transactionHash,
       expectedAmountTon,
+      expectedAmount,
       sinceUnix,
     } = body;
 
-    if (crypto !== 'TON') {
+    const coin = normalizeGenCrypto(crypto);
+    if (!coin) {
       return NextResponse.json(
-        { success: false, error: `Сейчас поддерживается только оплата ${GRAM.symbol}` },
+        { success: false, error: 'Оплата генерации: GRAM, SOL, TRX или USDT' },
         { status: 400 }
       );
     }
@@ -63,24 +62,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const minTon =
-      typeof expectedAmountTon === 'number'
-        ? expectedAmountTon
-        : CRYPTO_COSTS[theme] ?? 0.3;
+    const baseTon = NFT_GEN_TON_COST[theme] ?? 0.3;
+    const rates = await getExchangeRates();
+    const usd = baseTon * getCryptoUsdPrice('TON', rates);
+    const computedAmount = isTonFamily(coin)
+      ? baseTon
+      : cryptoAmountFromUsd(coin, usd, rates);
+    const minAmount =
+      typeof expectedAmount === 'number' && expectedAmount > 0
+        ? expectedAmount
+        : typeof expectedAmountTon === 'number' && expectedAmountTon > 0 && isTonFamily(coin)
+          ? expectedAmountTon
+          : computedAmount;
 
-    const masterAddress = getMasterAddress();
-    if (!masterAddress) {
+    const master = isTonFamily(coin)
+      ? resolveMasterAddress('GRAM') ?? resolveMasterAddress('TON')
+      : resolveMasterAddress(coin);
+    if (!master?.address) {
       return NextResponse.json(
         {
           success: false,
-          code: 'TON_NOT_CONFIGURED',
-          error: 'На сервере не задан MASTER_TON_ADDRESS',
+          code: 'CRYPTO_NOT_CONFIGURED',
+          error: `На сервере не задан адрес для ${cryptoLabel(coin)}`,
         },
         { status: 503 }
       );
     }
 
-    // Idempotency: already processed this payment_id
     const { data: existingPay } = await supabaseAdmin
       .from('_pidr_crypto_transactions')
       .select('id, metadata')
@@ -102,9 +110,9 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const verify = await verifyTonIncomingPayment({
-      toAddress: masterAddress,
-      minAmountTon: minTon * 0.99,
+    const verify = await verifyGenerationCryptoPayment({
+      coin,
+      minAmount,
       commentContains: paymentId,
       txHash: transactionHash,
       sinceUnix: sinceUnix || Math.floor(Date.now() / 1000) - 1200,
@@ -115,7 +123,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           code: 'PAYMENT_PENDING',
-          error: verify.error || `Платёж ещё не подтверждён в сети ${GRAM.networkLabel}`,
+          error: verify.error || `Платёж ещё не подтверждён (${cryptoLabel(coin)})`,
         },
         { status: 402 }
       );
@@ -167,20 +175,20 @@ export async function POST(request: NextRequest) {
 
     await supabaseAdmin.from('_pidr_crypto_transactions').insert({
       user_id: userId,
-      crypto_type: 'TON',
+      crypto_type: isTonFamily(coin) ? 'TON' : coin,
       transaction_hash: verify.txHash || transactionHash || null,
       payment_id: paymentId,
       wallet_address: verify.from || null,
-      amount: verify.amountTon ?? minTon,
+      amount: verify.amountTon ?? minAmount,
       purpose: `NFT Generation: ${theme} ${rank}${suit}`,
       status: 'completed',
-      metadata: { nft_card_id: generateData.nft?.id, theme, paymentId },
+      metadata: { nft_card_id: generateData.nft?.id, theme, paymentId, coin },
       created_at: new Date().toISOString(),
     });
 
     return NextResponse.json({
       success: true,
-      message: `Карта создана после оплаты ${GRAM.symbol}`,
+      message: `Карта создана после оплаты ${cryptoLabel(coin)}`,
       nft: generateData.nft,
     });
   } catch (error: unknown) {

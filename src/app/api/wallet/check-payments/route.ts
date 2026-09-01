@@ -28,7 +28,20 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const result = await tonPaymentService.checkAndProcessPayments();
+    const result = await tonPaymentService.checkAndProcessPayments({
+      preferUserId: userId,
+      intentId: body.intentId,
+    });
+    if (!result.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: result.error || 'Не удалось проверить сеть TON. Повторите через минуту.',
+          newPayments: [],
+        },
+        { status: 502 }
+      );
+    }
     const userPayments = result.newPayments.filter((p) => p.userId === userId);
     let intent = null;
     if (body.intentId) {
@@ -42,7 +55,7 @@ export async function POST(req: NextRequest) {
     }
 
     let newBalance: number | null = null;
-    if (userPayments.length > 0) {
+    if (userPayments.length > 0 || intent?.status === 'credited') {
       const { data: userRow } = await supabaseAdmin
         .from('_pidr_users')
         .select('coins')
@@ -60,7 +73,7 @@ export async function POST(req: NextRequest) {
         amount: p.amount,
         tonAmount: p.tonAmount,
         txHash: p.txHash,
-        coin: 'TON',
+        coin: 'GRAM',
       })),
       newBalance,
       intent,
