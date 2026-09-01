@@ -183,6 +183,21 @@ async function handlePaymentSucceeded(supabase: any, payment: any) {
     }
 
     console.log(`✅ nft_listing: лот ${listingId} продан пользователю ${buyerDbUserId}`);
+  } else if (itemType === 'nft_generation') {
+    const numericUserId = parseInt(String(userId), 10);
+    const theme = String(metadata.theme || '');
+    const qty = Number(metadata.qty || metadata.count || 1);
+    if (!Number.isNaN(numericUserId) && theme) {
+      try {
+        const { fulfillPaidNftGeneration } = await import('@/lib/nft/fulfill-paid-generation');
+        const result = await fulfillPaidNftGeneration({ userId: numericUserId, theme, count: qty });
+        metadata.generationFulfilled = true;
+        metadata.generationCount = result.created;
+        console.log(`🎴 nft_generation: создано ${result.created} карт для ${numericUserId}`);
+      } catch (err) {
+        console.error('❌ nft_generation webhook:', err);
+      }
+    }
   } else if (itemType === 'premium') {
     const numericUserId = parseInt(String(userId), 10);
     let userQuery = supabase.from('_pidr_users').select('id');
@@ -216,6 +231,7 @@ async function handlePaymentSucceeded(supabase: any, payment: any) {
     .from('_pidr_payments')
     .update({
       status: 'succeeded',
+      metadata,
       updated_at: new Date().toISOString()
     })
     .eq('payment_id', payment.id);

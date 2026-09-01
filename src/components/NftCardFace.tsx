@@ -33,9 +33,9 @@ export default function NftCardFace({
   style,
   className,
   alt,
-  ensureReadableCorners = true,
+  ensureReadableCorners = false,
 }: Props) {
-  const themeInfo = resolveThemeFromMetadata(metadata, rarity);
+  const themeInfo = resolveThemeFromMetadata(metadata, rarity, imageUrl);
 
   if (themeInfo || imageUrl) {
     return (

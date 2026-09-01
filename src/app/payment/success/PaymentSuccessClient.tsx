@@ -49,12 +49,39 @@ export default function PaymentSuccessClient({ orderId, paymentId }: { orderId?:
           } else if (isPremium) {
             sessionStorage.setItem('show_premium_success', '1');
           }
+
+          if (itemType === 'nft_generation' && !data.payment?.generationFulfilled) {
+            setState({ status: 'pending', itemType, message: 'Оплата прошла. Собираем карты в коллекцию…' });
+            const fulfill = await fetch('/api/nft/fulfill-generation', {
+              method: 'POST',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ paymentId: data.payment?.id, orderId }),
+            });
+            const fulfillData = await fulfill.json();
+            if (cancelled) return;
+            if (fulfill.ok && fulfillData.success) {
+              setState({
+                status: 'succeeded',
+                itemType,
+                message: `Готово: ${fulfillData.created || data.payment?.qty || ''} карт в коллекции.`,
+              });
+              return;
+            }
+            if (fulfillData.code === 'PAYMENT_PENDING') {
+              setState({ status: 'pending', itemType, message: 'Ждём подтверждение оплаты, затем выпустим карты.' });
+              return;
+            }
+          }
+
           setState({
             status: 'succeeded',
             itemType,
             message: isPremium
               ? 'Premium активирован! Все бонусы уже работают.'
-              : 'Оплата прошла. Монеты будут начислены webhook-обработчиком.',
+              : itemType === 'nft_generation'
+                ? 'Генерация оплачена. Карты уже в коллекции.'
+                : 'Оплата прошла. Монеты будут начислены webhook-обработчиком.',
           });
         } else if (status === 'canceled') {
           setState({ status: 'canceled', message: 'Платеж отменен или не завершен.', itemType });
@@ -78,6 +105,7 @@ export default function PaymentSuccessClient({ orderId, paymentId }: { orderId?:
     };
   }, [orderId, paymentId]);
 
+  const isGenSuccess = state.status === 'succeeded' && state.itemType === 'nft_generation';
   const isPremiumSuccess = state.status === 'succeeded' && state.itemType === 'premium';
   const accent = state.status === 'succeeded'
     ? isPremiumSuccess ? '#38bdf8' : '#22c55e'
@@ -148,6 +176,28 @@ export default function PaymentSuccessClient({ orderId, paymentId }: { orderId?:
                 textDecoration: 'none'
               }}>
                 В магазин
+              </Link>
+            </>
+          ) : isGenSuccess ? (
+            <>
+              <Link href="/nft-collection" style={{
+                padding: '12px 18px',
+                borderRadius: 12,
+                background: 'linear-gradient(135deg, #fbbf24, #f59e0b)',
+                color: '#0f172a',
+                fontWeight: 800,
+                textDecoration: 'none'
+              }}>
+                Открыть коллекцию
+              </Link>
+              <Link href="/" style={{
+                padding: '12px 18px',
+                borderRadius: 12,
+                border: '1px solid rgba(148,163,184,0.35)',
+                color: '#cbd5e1',
+                textDecoration: 'none'
+              }}>
+                На главную
               </Link>
             </>
           ) : (

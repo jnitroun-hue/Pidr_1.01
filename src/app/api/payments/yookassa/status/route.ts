@@ -57,12 +57,13 @@ export async function GET(request: NextRequest) {
     const { dbUserId } = await getUserIdFromDatabase(auth.userId, auth.environment);
     const { data: localPayment } = await supabaseAdmin
       .from('_pidr_payments')
-      .select('item_type')
+      .select('item_type, metadata')
       .eq('payment_id', paymentId)
       .eq('user_id', dbUserId || 0)
       .maybeSingle();
 
     const itemType = localPayment?.item_type || payment.metadata?.itemType || 'coins';
+    const metadata = (localPayment?.metadata || payment.metadata || {}) as Record<string, unknown>;
 
     let premium = null;
     if (payment.status === 'succeeded' && itemType === 'premium' && dbUserId) {
@@ -92,6 +93,9 @@ export async function GET(request: NextRequest) {
         description: payment.description,
         createdAt: payment.created_at,
         itemType,
+        theme: metadata.theme,
+        qty: metadata.qty,
+        generationFulfilled: Boolean(metadata.generationFulfilled),
       },
       premium,
     });

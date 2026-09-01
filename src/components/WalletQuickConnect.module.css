@@ -2,9 +2,10 @@
   margin-bottom: 16px;
   padding: 20px;
   border-radius: 20px;
-  border: 1px solid rgba(56, 189, 248, 0.18);
-  background: linear-gradient(160deg, rgba(15, 23, 42, 0.92) 0%, rgba(30, 41, 59, 0.75) 100%);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--menu-card-border);
+  background: var(--menu-card-bg);
+  box-shadow: var(--menu-shadow);
+  color: var(--menu-text);
 }
 
 .rootEmbedded {
@@ -29,7 +30,7 @@
   font-weight: 800;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: rgba(125, 211, 252, 0.75);
+  color: var(--menu-accent);
   margin: 0 0 4px;
 }
 
@@ -37,14 +38,14 @@
   margin: 0;
   font-size: 17px;
   font-weight: 800;
-  color: #f8fafc;
+  color: var(--menu-text);
 }
 
 .subtitle {
   margin: 6px 0 0;
   font-size: 13px;
   line-height: 1.45;
-  color: #94a3b8;
+  color: var(--menu-text-muted);
 }
 
 .headerIcon {
@@ -54,9 +55,9 @@
   display: grid;
   place-items: center;
   border-radius: 14px;
-  border: 1px solid rgba(56, 189, 248, 0.22);
-  background: rgba(56, 189, 248, 0.1);
-  color: #7dd3fc;
+  border: 1px solid var(--menu-card-border);
+  background: var(--menu-accent-soft);
+  color: var(--menu-accent);
 }
 
 .grid {
@@ -73,11 +74,11 @@
 
 .walletBtn {
   width: 100%;
-  min-height: 88px;
+  min-height: 72px;
   padding: 14px 16px;
   border-radius: 16px;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  background: linear-gradient(145deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.82) 100%);
+  border: 1px solid var(--menu-card-border);
+  background: var(--menu-accent-soft);
   cursor: pointer;
   text-align: left;
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
@@ -114,13 +115,13 @@
 .walletLabel {
   font-size: 14px;
   font-weight: 800;
-  color: #f8fafc;
+  color: var(--menu-text);
   margin-bottom: 4px;
 }
 
 .walletType {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--menu-text-muted);
   font-weight: 600;
 }
 

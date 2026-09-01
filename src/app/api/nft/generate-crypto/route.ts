@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
       expectedAmountTon,
       expectedAmount,
       sinceUnix,
+      cards,
     } = body;
 
     const coin = normalizeGenCrypto(crypto);
@@ -55,14 +56,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!theme || !suit || !rank || !imageData || !paymentId) {
+    const cardBatch: Array<{ suit: string; rank: string; imageData: string; themeId?: number }> =
+      Array.isArray(cards) && cards.length > 0
+        ? cards
+        : [{ suit, rank, imageData, themeId }];
+
+    if (!theme || !paymentId || cardBatch.some((c) => !c.suit || !c.rank || !c.imageData)) {
       return NextResponse.json(
-        { success: false, error: 'theme, suit, rank, imageData и paymentId обязательны' },
+        { success: false, error: 'theme, paymentId и данные карт обязательны' },
         { status: 400 }
       );
     }
 
-    const baseTon = NFT_GEN_TON_COST[theme] ?? 0.3;
+    const baseTon = (NFT_GEN_TON_COST[theme] ?? 0.3) * cardBatch.length;
     const rates = await getExchangeRates();
     const usd = baseTon * getCryptoUsdPrice('TON', rates);
     const computedAmount = isTonFamily(coin)
@@ -144,33 +150,37 @@ export async function POST(request: NextRequest) {
     }
 
     const origin = request.nextUrl.origin;
-    const generateResponse = await fetch(`${origin}/api/nft/generate-theme`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        cookie: request.headers.get('cookie') || '',
-        authorization: request.headers.get('authorization') || '',
-        'x-telegram-id': request.headers.get('x-telegram-id') || '',
-        'x-vk-id': request.headers.get('x-vk-id') || '',
-        'x-auth-source': request.headers.get('x-auth-source') || '',
-      },
-      body: JSON.stringify({
-        suit,
-        rank,
-        imageData,
-        theme,
-        themeId,
-        action: action || `random_${theme}`,
-        skipCoinDeduction: true,
-      }),
-    });
+    const created = [];
+    for (const card of cardBatch) {
+      const generateResponse = await fetch(`${origin}/api/nft/generate-theme`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          cookie: request.headers.get('cookie') || '',
+          authorization: request.headers.get('authorization') || '',
+          'x-telegram-id': request.headers.get('x-telegram-id') || '',
+          'x-vk-id': request.headers.get('x-vk-id') || '',
+          'x-auth-source': request.headers.get('x-auth-source') || '',
+        },
+        body: JSON.stringify({
+          suit: card.suit,
+          rank: card.rank,
+          imageData: card.imageData,
+          theme,
+          themeId: card.themeId,
+          action: action || `random_${theme}`,
+          skipCoinDeduction: true,
+        }),
+      });
 
-    const generateData = await generateResponse.json();
-    if (!generateResponse.ok || !generateData.success) {
-      return NextResponse.json(
-        { success: false, error: generateData.error || 'Ошибка сохранения карты' },
-        { status: 500 }
-      );
+      const generateData = await generateResponse.json();
+      if (!generateResponse.ok || !generateData.success) {
+        return NextResponse.json(
+          { success: false, error: generateData.error || 'Ошибка сохранения карты' },
+          { status: 500 }
+        );
+      }
+      created.push(generateData.nft);
     }
 
     await supabaseAdmin.from('_pidr_crypto_transactions').insert({
@@ -180,16 +190,27 @@ export async function POST(request: NextRequest) {
       payment_id: paymentId,
       wallet_address: verify.from || null,
       amount: verify.amountTon ?? minAmount,
-      purpose: `NFT Generation: ${theme} ${rank}${suit}`,
+      purpose: `NFT Generation: ${theme} x${created.length}`,
       status: 'completed',
-      metadata: { nft_card_id: generateData.nft?.id, theme, paymentId, coin },
+      metadata: {
+        nft_card_id: created[0]?.id,
+        nft_card_ids: created.map((nft) => nft?.id).filter(Boolean),
+        theme,
+        paymentId,
+        coin,
+        count: created.length,
+      },
       created_at: new Date().toISOString(),
     });
 
     return NextResponse.json({
       success: true,
-      message: `Карта создана после оплаты ${cryptoLabel(coin)}`,
-      nft: generateData.nft,
+      message: created.length > 1
+        ? `Создано ${created.length} карт после оплаты ${cryptoLabel(coin)}`
+        : `Карта создана после оплаты ${cryptoLabel(coin)}`,
+      nft: created[0],
+      nfts: created,
+      created: created.length,
     });
   } catch (error: unknown) {
     console.error('❌ [generate-crypto]', error);

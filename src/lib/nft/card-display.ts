@@ -96,7 +96,7 @@ const CARD_NAMES = {
   },
 } as const;
 
-/** Единое локализованное имя карты: «Валет треф» / “Jack of clubs”. */
+/** Единое имя карты: «Валет ♣» / “Jack ♣”. */
 export function formatNftCardName(
   rank: string,
   suit: string,
@@ -108,13 +108,10 @@ export function formatNftCardName(
   const rankLabel =
     dictionary.ranks[rankKey as keyof typeof dictionary.ranks] ??
     getNftRankDisplay(rank);
-  const suitLabel =
-    dictionary.suits[suitKey as keyof typeof dictionary.suits] ??
-    String(suit ?? '');
 
   return language === 'en'
-    ? `${rankLabel} of ${suitLabel}`
-    : `${rankLabel} ${suitLabel}`;
+    ? `${rankLabel} ${getNftSuitSymbol(suitKey)}`
+    : `${rankLabel} ${getNftSuitSymbol(suitKey)}`;
 }
 
 /** @deprecated Используйте formatNftCardName с выбранным языком. */
@@ -122,7 +119,7 @@ export function formatNftCardNameRu(rank: string, suit: string): string {
   return formatNftCardName(rank, suit, 'ru');
 }
 
-/** Заголовок лота / акции: «Дама пик · Покемон». */
+/** Заголовок лота / акции: «Дама ♠ · Покемон». */
 export function formatNftCardTitle(
   rank: string,
   suit: string,

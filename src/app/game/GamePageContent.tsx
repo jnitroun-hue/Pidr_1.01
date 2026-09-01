@@ -2768,7 +2768,7 @@ function GamePageContentComponent({
                             rank={tableCardRank}
                             suit={tableCardSuit}
                             imageUrl={tableCardSrc}
-                            ensureReadableCorners
+                            ensureReadableCorners={false}
                             alt={`Card ${idx + 1}`}
                             style={{ borderRadius: 6 }}
                           />
@@ -2888,7 +2888,7 @@ function GamePageContentComponent({
                         rank={deckCardRank}
                         suit={deckCardSuit}
                         imageUrl={cardSrc}
-                        ensureReadableCorners
+                        ensureReadableCorners={false}
                         alt="Current Card"
                         style={{ 
                           width: `${layoutMetrics.revealedCardWidth}px`,
@@ -3387,7 +3387,7 @@ function GamePageContentComponent({
                                   rank={String(cardRank)}
                                   suit={cardSuit}
                                   imageUrl={nftImageUrl}
-                                  ensureReadableCorners
+                                  ensureReadableCorners={false}
                                   alt={cardImage}
                                   style={{ 
                                     width: '100%',
@@ -3930,7 +3930,7 @@ function GamePageContentComponent({
                       rank={String(cardRank)}
                       suit={cardSuit}
                       imageUrl={nftImageUrl}
-                      ensureReadableCorners
+                      ensureReadableCorners={false}
                       alt={cardImage}
                       style={{ 
                         width: `${layoutMetrics.handCardWidth}px`,

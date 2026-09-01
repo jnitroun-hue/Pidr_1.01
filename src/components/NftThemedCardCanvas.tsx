@@ -14,7 +14,7 @@ import {
 
 import { normalizeRankToken, normalizeSuitToken } from '@/lib/game/cardAssets';
 
-import { NFT_THEME_CONFIG, type NftThemeKey } from '@/lib/nft/theme-config';
+import { NFT_THEME_CONFIG, parseNftThemeFromImageUrl, type NftThemeKey } from '@/lib/nft/theme-config';
 
 
 
@@ -37,43 +37,30 @@ export type NftCardRenderSpec = {
 
 
 export function resolveThemeFromMetadata(
-
   metadata?: Record<string, unknown> | null,
-
-  rarity?: string | null
-
+  rarity?: string | null,
+  imageUrl?: string | null
 ): { theme: NftThemeKey; themeId: number } | null {
-
   if (metadata) {
-
     const theme = (metadata.theme ?? metadata.nft_theme) as string | undefined;
-
     const themeId = Number(metadata.theme_id ?? metadata.themeId);
-
     if (theme && theme in NFT_THEME_CONFIG && Number.isFinite(themeId) && themeId >= 1) {
-
       return { theme: theme as NftThemeKey, themeId };
-
     }
-
   }
 
+  const fromUrl = parseNftThemeFromImageUrl(imageUrl);
+  if (fromUrl) return fromUrl;
+
   if (rarity && rarity in NFT_THEME_CONFIG) {
-
     const themeId = Number(metadata?.theme_id ?? metadata?.themeId ?? 1);
-
     return {
-
       theme: rarity as NftThemeKey,
-
       themeId: Number.isFinite(themeId) && themeId >= 1 ? themeId : 1,
-
     };
-
   }
 
   return null;
-
 }
 
 
@@ -172,9 +159,9 @@ export default function NftThemedCardCanvas({
 
   const { suitNorm, rankNorm } = useMemo(() => normalizeForCanvas(rank, suit), [rank, suit]);
 
-  const themeKey = theme && theme in NFT_THEME_CONFIG ? (theme as NftThemeKey) : null;
-
-  const validThemeId = themeId != null && themeId > 0 ? themeId : null;
+  const parsedFromUrl = parseNftThemeFromImageUrl(fallbackImageUrl);
+  const themeKey = (theme && theme in NFT_THEME_CONFIG ? (theme as NftThemeKey) : null) || parsedFromUrl?.theme || null;
+  const validThemeId = (themeId != null && themeId > 0 ? themeId : null) || parsedFromUrl?.themeId || null;
 
 
 

@@ -3,23 +3,22 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles } from 'lucide-react';
-import { useTonConnectUI, useTonAddress } from '@tonconnect/ui-react';
-import { beginCell, toNano } from '@ton/core';
+import { useTonConnectUI } from '@tonconnect/ui-react';
 import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
 import { getApiHeaders } from '@/lib/api-headers';
 import { appConfirm } from '@/lib/app-notice';
 import { openNftCardModal } from '@/lib/nft/open-card-modal';
 import { generateThemeCardImageDataUrl } from '@/lib/nft/generate-theme-card-client';
 import type { NftThemeKey } from '@/lib/nft/theme-config';
+import type { ExchangeRateSnapshot } from '@/lib/pricing/types';
 import { GRAM, formatGramAmount } from '@/lib/crypto/gram-brand';
 import { PidrCoinAmount } from '@/components/PidrCoinIcon';
-import { NFT_GEN_TON_COST } from '@/lib/nft/crypto-gen-costs';
-import { cryptoAmountFromUsd, getCryptoUsdPrice } from '@/lib/pricing/exchange-rates';
-import type { ExchangeRateSnapshot } from '@/lib/pricing/types';
 import {
   copyDepositDetails,
   openExternalWalletForDeposit,
+  sendGramViaTonConnect,
 } from '@/lib/wallets/telegram-wallet-deposit';
+import { nftGenCryptoAmount, nftGenRub, NFT_GEN_MAX_COUNT, NFT_GEN_TON_COST } from '@/lib/nft/crypto-gen-costs';
 
 interface NFTThemeGeneratorProps {
   userCoins: number;
@@ -105,9 +104,9 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
   const [genStatus, setGenStatus] = useState('');
   const [showCryptoModal, setShowCryptoModal] = useState(false);
   const [cryptoTheme, setCryptoTheme] = useState<keyof typeof THEMES | null>(null);
+  const [genQty, setGenQty] = useState(1);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'bank_card' | 'sberbank' | 'yoo_money' | 'sbp'>('bank_card');
   const [tonConnectUI] = useTonConnectUI();
-  const userTonAddress = useTonAddress();
   const [isCompactLayout, setIsCompactLayout] = useState(false);
   const [rateSnapshot, setRateSnapshot] = useState<ExchangeRateSnapshot | null>(null);
 
@@ -122,38 +121,35 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
   }, []);
 
   useEffect(() => {
-    if (!showCryptoModal) return;
+    if (!showCryptoModal && !showModal) return;
     fetch('/api/wallet/rates', { cache: 'no-store' })
       .then((r) => r.json())
       .then((data) => {
         if (data?.crypto) setRateSnapshot(data as ExchangeRateSnapshot);
       })
       .catch(() => {});
-  }, [showCryptoModal]);
+  }, [showCryptoModal, showModal]);
 
-  const genAmountFor = (coin: 'GRAM' | 'SOL' | 'TRX' | 'USDT') => {
-    const theme = cryptoTheme ? NFT_GEN_TON_COST[cryptoTheme] ?? 0.3 : 0.3;
-    if (coin === 'GRAM') return theme;
-    const fallbackUsd: Record<string, number> = { SOL: 150, USDT: 1, TRX: 0.25, TON: 4 };
-    const tonUsd = rateSnapshot ? getCryptoUsdPrice('TON', rateSnapshot) : fallbackUsd.TON;
-    const unitUsd = rateSnapshot ? getCryptoUsdPrice(coin, rateSnapshot) : fallbackUsd[coin];
-    const usd = theme * tonUsd;
-    if (rateSnapshot) return cryptoAmountFromUsd(coin, usd, rateSnapshot);
-    const raw = unitUsd > 0 ? usd / unitUsd : 0;
-    if (coin === 'USDT' || coin === 'TRX') return Math.ceil(raw * 100) / 100;
-    return Math.ceil(raw * 10000) / 10000;
+  const genAmountFor = (coin: 'GRAM' | 'SOL' | 'TRX' | 'USDT', qty = genQty) => {
+    const theme = cryptoTheme || focusTheme;
+    return nftGenCryptoAmount(theme, coin, qty, rateSnapshot);
   };
 
-  const formatCoins = (amount: number) => amount.toLocaleString('ru-RU');
-  const getRubEquivalent = (amount: number) => Math.ceil(amount / 50);
+  const rubForQty = (qty: number, themeKey: keyof typeof THEMES = cryptoTheme || focusTheme) => {
+    if (!rateSnapshot) {
+      const grams = NFT_GEN_TON_COST[themeKey] ?? 0.3;
+      return Math.max(1, Math.ceil(grams * 4 * 80 * qty));
+    }
+    return nftGenRub(themeKey, qty, rateSnapshot);
+  };
 
   const handleCardTopup = async (kind: 'single' | 'deck') => {
     if (!cryptoTheme) return;
 
     const themeConfig = THEMES[cryptoTheme];
-    const targetCoins = kind === 'single' ? themeConfig.singleCost : themeConfig.deckCost;
-    const amountRub = getRubEquivalent(targetCoins);
-    const targetLabel = kind === 'single' ? 'карты' : 'колоды';
+    const qty = kind === 'deck' ? 52 : Math.max(1, genQty);
+    const amountRub = rubForQty(qty, cryptoTheme);
+    const label = qty === 1 ? '1 карты' : `${qty} карт`;
 
     try {
       const response = await fetch('/api/payments/yookassa/create', {
@@ -162,9 +158,11 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
         headers: getApiHeaders(),
         body: JSON.stringify({
           amount: amountRub,
-          description: `Пополнение для генерации ${targetLabel} ${themeConfig.name}: ${formatCoins(targetCoins)} монет`,
-          itemType: 'coins',
-          itemId: `nft-theme-${cryptoTheme}-${kind}`,
+          description: `Генерация ${label} · ${themeConfig.name}`,
+          itemType: 'nft_generation',
+          itemId: `nft-gen-${cryptoTheme}-${qty}`,
+          theme: cryptoTheme,
+          qty,
           paymentMethod: selectedPaymentMethod
         })
       });
@@ -182,25 +180,19 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
     }
   };
 
-  const openWalletForCryptoTopup = () => {
-    if (typeof window !== 'undefined') {
-      window.location.href = '/wallet';
-    }
-  };
-
-  const buildTonCommentPayload = (comment: string) =>
-    beginCell().storeUint(0, 32).storeStringTail(comment).endCell().toBoc().toString('base64');
-
-  /** Оплата GRAM / SOL / TRX / USDT → генерация одной карты */
+  /** Оплата GRAM / SOL / TRX / USDT → сразу генерация карт */
   const handleCryptoPayForGeneration = async (coin: 'GRAM' | 'SOL' | 'TRX' | 'USDT') => {
     if (!cryptoTheme || generating) return;
 
     const theme = cryptoTheme;
     const themeConfig = THEMES[theme];
-    const amount = genAmountFor(coin);
+    const qty = Math.min(NFT_GEN_MAX_COUNT, Math.max(1, genQty));
+    const amount = genAmountFor(coin, qty);
 
     setGenerating(true);
-    setGenStatus('Подготовка карты...');
+    setGenTotal(qty);
+    setGenProgress(0);
+    setGenStatus('Подготовка карт...');
 
     try {
       const meRes = await fetch('/api/user/me', {
@@ -213,7 +205,7 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
       const uid = meData.user?.id ?? meData.user?.telegram_id;
       if (!uid) throw new Error('Не удалось определить пользователя');
 
-      const paymentId = `nftgen_${uid}_${theme}_${Date.now()}`;
+      const paymentId = `nftgen_${uid}_${theme}_${qty}_${Date.now()}`;
       const sinceUnix = Math.floor(Date.now() / 1000) - 60;
 
       const payInfoRes = await fetch(
@@ -226,36 +218,32 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
       }
 
       const receiverAddress = payInfo.address;
-      const randomSuit = SUITS[Math.floor(Math.random() * SUITS.length)];
-      const randomRank = RANKS[Math.floor(Math.random() * RANKS.length)];
-      const randomId = Math.floor(Math.random() * themeConfig.total) + 1;
+      const prepared: Array<{ suit: string; rank: string; imageData: string; themeId: number }> = [];
+      for (let i = 0; i < qty; i += 1) {
+        const randomSuit = SUITS[Math.floor(Math.random() * SUITS.length)];
+        const randomRank = RANKS[Math.floor(Math.random() * RANKS.length)];
+        const randomId = Math.floor(Math.random() * themeConfig.total) + 1;
+        setGenStatus(`Рисунок ${i + 1} из ${qty}...`);
+        setGenProgress(i);
+        const imageData = await generateThemeCardImage(randomSuit, randomRank, randomId, theme);
+        prepared.push({ suit: randomSuit, rank: randomRank, imageData, themeId: randomId });
+      }
 
-      setGenStatus('Генерация изображения...');
-      const imageData = await generateThemeCardImage(randomSuit, randomRank, randomId, theme);
-
-      setGenStatus(`Оплата ${amount} ${coin}...`);
+      setGenStatus(`Оплата ${amount} ${coin === 'GRAM' ? GRAM.symbol : coin}...`);
 
       let txHash: string | undefined;
 
       if (coin === 'GRAM') {
-        if (tonConnectUI.connected) {
-          await tonConnectUI.sendTransaction({
-            validUntil: Math.floor(Date.now() / 1000) + 600,
-            messages: [
-              {
-                address: receiverAddress,
-                amount: toNano(amount).toString(),
-                payload: buildTonCommentPayload(paymentId),
-              },
-            ],
-          });
-        } else if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp) {
-          const amountNano = Math.floor(amount * 1_000_000_000);
-          const tonUrl = `ton://transfer/${receiverAddress}?amount=${amountNano}&text=${encodeURIComponent(paymentId)}`;
-          (window as any).Telegram.WebApp.openTelegramLink(tonUrl);
-        } else {
-          throw new Error(`Подключите ${GRAM.walletLabel} (${GRAM.connectProduct}) или откройте приложение в Telegram`);
+        const outcome = await sendGramViaTonConnect({
+          tonConnectUI,
+          masterAddress: receiverAddress,
+          amount,
+          memo: paymentId,
+        });
+        if (outcome.status === 'cancelled') {
+          throw new Error('Оплата отменена в Telegram Wallet');
         }
+        txHash = outcome.status === 'submitted' ? outcome.clientResult : undefined;
       } else {
         await copyDepositDetails(receiverAddress, paymentId);
         openExternalWalletForDeposit({
@@ -265,13 +253,14 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
           memo: paymentId,
         });
         alert(
-          `Отправьте ${amount} ${coin} на адрес проекта.\nMemo: ${paymentId}\n\nАдрес скопирован. После перевода вернитесь — проверка начнётся автоматически.`
+          `Отправьте ${amount} ${coin} на адрес проекта.\nMemo: ${paymentId}\n\nПосле перевода вернитесь — карты появятся в коллекции.`
         );
       }
 
-      setGenStatus(`Проверка оплаты ${coin}...`);
+      setGenStatus(`Проверка оплаты и выпуск карт...`);
       setShowCryptoModal(false);
 
+      const first = prepared[0]!;
       const maxAttempts = coin === 'GRAM' ? 15 : 24;
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
         await new Promise((r) => setTimeout(r, 4000));
@@ -282,10 +271,11 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
           headers: getApiHeaders(),
           body: JSON.stringify({
             theme,
-            suit: randomSuit,
-            rank: randomRank,
-            imageData,
-            themeId: randomId,
+            suit: first.suit,
+            rank: first.rank,
+            imageData: first.imageData,
+            themeId: first.themeId,
+            cards: prepared,
             action: `random_${theme}`,
             crypto: coin,
             paymentId,
@@ -299,14 +289,15 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
         if (genRes.ok && genData.success) {
           window.dispatchEvent(new CustomEvent('nft-collection-updated'));
           window.dispatchEvent(new CustomEvent('nft-deck-updated'));
-          if (genData.nft) {
+          const shown = genData.nft || genData.nfts?.[0];
+          if (shown) {
             openNftCardModal({
-              id: genData.nft.id,
-              rank: genData.nft.rank,
-              suit: genData.nft.suit,
-              rarity: genData.nft.rarity ?? theme,
-              image_url: genData.nft.image_url,
-              metadata: { theme, theme_id: randomId },
+              id: shown.id,
+              rank: shown.rank,
+              suit: shown.suit,
+              rarity: shown.rarity ?? theme,
+              image_url: shown.image_url,
+              metadata: { theme, theme_id: first.themeId },
             });
           }
           setCryptoTheme(null);
@@ -319,10 +310,10 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
         }
       }
 
-      throw new Error('Платёж не подтвердился. Если перевод уже ушёл, подождите и обновите коллекцию.');
+      throw new Error('Платёж не подтвердился. Если перевод уже ушёл, подождите и откройте коллекцию.');
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);
-      if (!msg.includes('User rejects') && !msg.includes('Rejected')) {
+      if (!msg.includes('User rejects') && !msg.includes('Rejected') && !msg.includes('отменена')) {
         alert(`❌ ${msg}`);
       }
     } finally {
@@ -777,7 +768,7 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
                         whileHover={{ scale: busy ? 1 : 1.01 }}
                         whileTap={{ scale: busy ? 1 : 0.99 }}
                         disabled={busy}
-                        onClick={() => { setCryptoTheme(focusTheme); setShowCryptoModal(true); }}
+                        onClick={() => { setCryptoTheme(focusTheme); setGenQty(1); setShowCryptoModal(true); }}
                         style={{
                           padding: '11px 14px',
                           borderRadius: 12,
@@ -790,7 +781,7 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
                           opacity: busy ? 0.65 : 1,
                         }}
                       >
-                        Оплатить карту криптой (GRAM / USDT / SOL / TRX)
+                        Оплатить генерацию рублями или криптой
                       </motion.button>
                     </div>
                   </div>
@@ -915,31 +906,75 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
                   {THEMES[cryptoTheme].name}
                 </p>
                 <p style={{ color: '#94a3b8', fontSize: '14px', lineHeight: 1.5 }}>
-                  Генерация выполняется за игровые монеты.
-                  <br />
-                  Здесь можно быстро пополнить баланс под карту или колоду.
+                  Оплачиваете сразу генерацию. Карты появятся в коллекции — монеты не начисляются.
+                  Цена в рублях считается по курсу {GRAM.symbol}.
                 </p>
+              </div>
+
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 12,
+                marginBottom: 16,
+                padding: '12px 14px',
+                borderRadius: 14,
+                background: 'rgba(15,23,42,0.7)',
+                border: '1px solid rgba(148,163,184,0.18)',
+              }}>
+                <div>
+                  <div style={{ color: '#f8fafc', fontWeight: 800, fontSize: 14 }}>Сколько карт</div>
+                  <div style={{ color: '#94a3b8', fontSize: 12, marginTop: 2 }}>Цена пересчитывается сразу</div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() => setGenQty((n) => Math.max(1, n - 1))}
+                    style={{ width: 36, height: 36, borderRadius: 10, border: '1px solid rgba(148,163,184,0.3)', background: 'rgba(0,0,0,0.25)', color: '#fff', fontSize: 20, cursor: 'pointer' }}
+                  >−</button>
+                  <input
+                    type="number"
+                    min={1}
+                    max={NFT_GEN_MAX_COUNT}
+                    value={genQty}
+                    onChange={(e) => setGenQty(Math.min(NFT_GEN_MAX_COUNT, Math.max(1, Number(e.target.value) || 1)))}
+                    style={{
+                      width: 56,
+                      textAlign: 'center',
+                      borderRadius: 10,
+                      border: '1px solid rgba(251,191,36,0.4)',
+                      background: 'rgba(0,0,0,0.3)',
+                      color: '#fbbf24',
+                      fontWeight: 800,
+                      fontSize: 16,
+                      padding: '8px 4px',
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setGenQty((n) => Math.min(NFT_GEN_MAX_COUNT, n + 1))}
+                    style={{ width: 36, height: 36, borderRadius: 10, border: '1px solid rgba(148,163,184,0.3)', background: 'rgba(0,0,0,0.25)', color: '#fff', fontSize: 20, cursor: 'pointer' }}
+                  >+</button>
+                </div>
               </div>
 
               <div style={{
                 display: 'grid',
                 gap: '12px',
-                marginBottom: '24px'
+                marginBottom: '16px'
               }}>
                 {([
                   {
-                    key: 'single',
-                    title: 'Одна карта',
-                    coins: THEMES[cryptoTheme].singleCost,
-                    rubles: getRubEquivalent(THEMES[cryptoTheme].singleCost)
+                    key: 'single' as const,
+                    title: genQty === 1 ? 'Генерация карты' : `Генерация ${genQty} карт`,
+                    qty: genQty,
                   },
                   {
-                    key: 'deck',
-                    title: 'Полная колода',
-                    coins: THEMES[cryptoTheme].deckCost,
-                    rubles: getRubEquivalent(THEMES[cryptoTheme].deckCost)
+                    key: 'deck' as const,
+                    title: 'Полная колода (52)',
+                    qty: 52,
                   }
-                ] as const).map((option) => (
+                ]).map((option) => (
                   <div
                     key={option.key}
                     style={{
@@ -953,15 +988,15 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
                       <div>
                         <div style={{ color: '#ffffff', fontSize: '17px', fontWeight: 'bold' }}>{option.title}</div>
                         <div style={{ color: '#94a3b8', fontSize: '13px', marginTop: '4px' }}>
-                          {formatCoins(option.coins)} монет
+                          {formatGramAmount(genAmountFor('GRAM', option.qty))} · сразу в коллекцию
                         </div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
                         <div style={{ color: '#fbbf24', fontSize: '18px', fontWeight: 'bold' }}>
-                          {option.rubles.toLocaleString('ru-RU')} ₽
+                          {rubForQty(option.qty).toLocaleString('ru-RU')} ₽
                         </div>
                         <div style={{ color: '#64748b', fontSize: '12px' }}>
-                          через ЮKassa
+                          по курсу {GRAM.symbol}
                         </div>
                       </div>
                     </div>
@@ -969,7 +1004,10 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
                     <motion.button
                       whileHover={{ scale: 1.01 }}
                       whileTap={{ scale: 0.99 }}
-                      onClick={() => handleCardTopup(option.key)}
+                      onClick={() => {
+                        if (option.key === 'deck') setGenQty(52);
+                        void handleCardTopup(option.key);
+                      }}
                       style={{
                         width: '100%',
                         padding: '14px 16px',
@@ -982,7 +1020,7 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
                         cursor: 'pointer'
                       }}
                     >
-                      Оплатить и получить {formatCoins(option.coins)} монет
+                      Оплатить генерацию · {rubForQty(option.qty).toLocaleString('ru-RU')} ₽
                     </motion.button>
                   </div>
                 ))}
@@ -1034,7 +1072,7 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
                   Оплатить генерацию криптой
                 </div>
                 <p style={{ color: '#94a3b8', fontSize: '13px', lineHeight: 1.5, marginBottom: '12px' }}>
-                  Одна карта. После подтверждения сети карта сразу попадает в коллекцию.
+                  {genQty} {genQty === 1 ? 'карта' : 'карт'}. GRAM открывает Telegram Wallet, как в профиле. После сети карты сразу в коллекции.
                 </p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                   {([
@@ -1065,32 +1103,10 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
                     </motion.button>
                   ))}
                 </div>
-                {!userTonAddress && (
-                  <p style={{ color: '#94a3b8', fontSize: '12px', textAlign: 'center', marginTop: '10px' }}>
-                    {GRAM.symbol}: подключите кошелёк в коллекции или используйте Telegram Wallet
-                  </p>
-                )}
+                <p style={{ color: '#94a3b8', fontSize: '12px', textAlign: 'center', marginTop: '10px' }}>
+                  {GRAM.symbol}: откроется Telegram Wallet для подтверждения перевода.
+                </p>
               </div>
-
-              <motion.button
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
-                onClick={openWalletForCryptoTopup}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  borderRadius: '14px',
-                  border: '1px solid rgba(148, 163, 184, 0.25)',
-                  background: 'rgba(15, 23, 42, 0.7)',
-                  color: '#cbd5e1',
-                  fontSize: '14px',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  marginBottom: '12px',
-                }}
-              >
-                Открыть кошелёк (пополнение монет)
-              </motion.button>
 
               <motion.button
                 whileHover={{ scale: 1.02 }}

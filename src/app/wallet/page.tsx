@@ -140,7 +140,11 @@ export default function WalletPage() {
         <motion.div
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="sticky top-0 z-20 mb-4 rounded-2xl border border-white/10 bg-[#0b1220]/85 px-4 py-3 backdrop-blur-xl"
+          className="sticky top-0 z-20 mb-4 rounded-2xl px-4 py-3 backdrop-blur-xl"
+          style={{
+            border: '1px solid var(--menu-card-border)',
+            background: 'var(--menu-card-bg)',
+          }}
         >
           <div className="flex items-center justify-between gap-3">
             <button
@@ -152,10 +156,10 @@ export default function WalletPage() {
               <span>{t.common.back}</span>
             </button>
             <div className="text-center">
-              <p className="text-[11px] uppercase tracking-[0.28em] text-cyan-300/70">{t.wallet.pageEyebrow}</p>
-              <h1 className="text-lg font-black text-white">{t.wallet.pageTitle}</h1>
+              <p className="text-[11px] uppercase tracking-[0.28em]" style={{ color: 'var(--menu-accent)' }}>{t.wallet.pageEyebrow}</p>
+              <h1 className="text-lg font-black" style={{ color: 'var(--menu-text)' }}>{t.wallet.pageTitle}</h1>
             </div>
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-400/10 text-cyan-300">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ border: '1px solid var(--menu-card-border)', background: 'var(--menu-accent-soft)', color: 'var(--menu-accent)' }}>
               <FaWallet />
             </div>
           </div>

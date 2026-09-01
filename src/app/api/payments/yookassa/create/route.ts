@@ -17,7 +17,7 @@ export const dynamic = 'force-dynamic';
  *   amount: number, // Сумма в рублях
  *   description: string,
  *   itemId?: string,
- *   itemType?: 'coins' | 'premium' | 'item',
+ *   itemType?: 'coins' | 'premium' | 'item' | 'nft_generation',
  *   paymentMethod?: 'bank_card' | 'sberbank' | 'yoo_money' | 'sbp'
  * }
  */
@@ -33,17 +33,18 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { amount, description, itemId, itemType = 'coins', paymentMethod } = body;
+    const { amount, description, itemId, itemType = 'coins', paymentMethod, theme, qty } = body;
 
     const normalizedAmount = Number(amount);
-    if (!Number.isFinite(normalizedAmount) || normalizedAmount < 100) {
+    const minAmount = itemType === 'nft_generation' ? 1 : 100;
+    if (!Number.isFinite(normalizedAmount) || normalizedAmount < minAmount) {
       return NextResponse.json(
-        { success: false, message: 'Минимальная сумма пополнения: 100 ₽' },
+        { success: false, message: `Минимальная сумма: ${minAmount} ₽` },
         { status: 400 }
       );
     }
 
-    if (!['coins', 'premium', 'item'].includes(itemType)) {
+    if (!['coins', 'premium', 'item', 'nft_generation'].includes(itemType)) {
       return NextResponse.json(
         { success: false, message: 'Некорректный тип покупки' },
         { status: 400 }
@@ -74,9 +75,12 @@ export async function POST(request: NextRequest) {
     const rates = await getExchangeRates();
     const coins = itemType === 'coins' ? coinsFromRub(normalizedAmount, rates) : 0;
     const orderId = `yk_${Date.now()}_${dbUserId}_${Math.random().toString(36).slice(2, 8)}`;
-    const finalDescription = itemType === 'coins'
-      ? `Пополнение баланса: ${coins.toLocaleString('ru-RU')} монет`
-      : String(description || 'Покупка в P.I.D.R.');
+    const genQty = Math.min(52, Math.max(1, Number(qty) || 1));
+    const finalDescription = itemType === 'nft_generation'
+      ? String(description || `Генерация ${genQty} NFT`)
+      : itemType === 'coins'
+        ? `Пополнение баланса: ${coins.toLocaleString('ru-RU')} монет`
+        : String(description || 'Покупка в P.I.D.R.');
 
     // Формируем URL для возврата после оплаты
     const returnUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/payment/success?order_id=${encodeURIComponent(orderId)}`;
@@ -100,6 +104,8 @@ export async function POST(request: NextRequest) {
         itemId: itemId ? String(itemId) : undefined,
         itemType,
         orderId,
+        theme: itemType === 'nft_generation' ? String(theme || '') : undefined,
+        qty: itemType === 'nft_generation' ? String(genQty) : undefined,
         coins: coins ? String(coins) : undefined,
         coinsPerRub: String(rates.coinsPerRub),
         usdRub: String(rates.usdRub),

@@ -29,6 +29,22 @@ export const NFT_THEME_CONFIG = {
 
 export type NftThemeKey = keyof typeof NFT_THEME_CONFIG;
 
+export function isNftThemeKey(value: unknown): value is NftThemeKey {
+  return typeof value === 'string' && value in NFT_THEME_CONFIG;
+}
+
+/** Достаёт тему из имени файла storage: pokemon_10_hearts_3_….png */
+export function parseNftThemeFromImageUrl(url?: string | null): { theme: NftThemeKey; themeId: number } | null {
+  if (!url) return null;
+  const file = decodeURIComponent(String(url).split('?')[0].split('/').pop() || '');
+  const match = file.match(/^(pokemon|halloween|starwars|legendary)_([^_]+)_([^_]+)_(\d+)/i);
+  if (!match) return null;
+  const theme = match[1].toLowerCase();
+  const themeId = Number(match[4]);
+  if (!isNftThemeKey(theme) || !Number.isFinite(themeId) || themeId < 1) return null;
+  return { theme, themeId };
+}
+
 export interface ThemeAssetPick {
   theme: NftThemeKey;
   themeId: number;
