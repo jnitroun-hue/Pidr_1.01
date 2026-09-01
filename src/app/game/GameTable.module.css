@@ -496,14 +496,14 @@
   
   .handCards {
     bottom: 8px;
-    max-height: 100px;
+    max-height: 160px;
     padding: 3px;
   }
   
   /* .tableCenter удален - используем .rectangularTable */
   
   .tableCardsContainer {
-    transform: scale(0.8);
+    transform: scale(1);
   }
   
   .tableLabel {
@@ -561,7 +561,7 @@
   
   .handCards {
     bottom: 10px;
-    max-height: 120px;
+    max-height: 180px;
     padding: 5px;
   }
   
@@ -572,11 +572,11 @@
   /* .tableCenter удален - используем .rectangularTable */
   
   .deckStack {
-    transform: scale(0.85);
+    transform: scale(1);
   }
   
   .revealedCardContainer {
-    transform: scale(0.85);
+    transform: scale(1);
   }
   
   .tableCardsContainer {
@@ -645,15 +645,15 @@
   
   .handCards {
     bottom: 20px;
-    max-height: 160px;
+    max-height: 240px;
   }
   
   .deckStack {
-    transform: scale(0.95);
+    transform: scale(1);
   }
   
   .revealedCardContainer {
-    transform: scale(0.95);
+    transform: scale(1);
   }
 }
 
@@ -726,8 +726,8 @@
   /* Увеличиваем размер колоды для тача */
   .deckStack {
     padding: 4px;
-    min-width: 48px;
-    min-height: 68px;
+    min-width: 72px;
+    min-height: 102px;
   }
 }
 
@@ -796,8 +796,8 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 60px;
-  height: 90px;
+  width: 90px;
+  height: 135px;
   background: transparent;
   border: none;
   border-radius: 20px;
@@ -819,8 +819,8 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 60px;
-  height: 90px;
+  width: 90px;
+  height: 135px;
   background: transparent;
   border: 2px dashed #ef4444;
   border-radius: 20px;
@@ -1919,8 +1919,8 @@
   }
   
   .cardOnPenki {
-    width: 60px; /* Увеличено в 1.5 раза */
-    height: 87px; /* Увеличено в 1.5 раза */
+    width: 90px; /* 60 * 1.5 */
+    height: 130px; /* 87 * 1.5 */
   }
   
   .penkiRow {
@@ -1942,15 +1942,15 @@
     padding: 5px 8px; /* Уменьшен с 8px 12px */
     min-height: 80px; /* Уменьшен с 120px (120/1.5 = 80) */
     border-radius: 7px; /* Уменьшен с 10px */
-    width: 60%; /* Уменьшен с 90% (90/1.5 = 60) */
-    max-width: 267px; /* Уменьшен с 400px (400/1.5 ≈ 267) */
+    width: 90%;
+    max-width: 400px;
     bottom: 35px; /* ✅ ПОДНЯТО с 8px */
     transform: translateX(-50%); /* Убран scale */
   }
   
   .handCard {
-    width: 82px; /* Увеличено в 1.5 раза */
-    height: 120px; /* Увеличено в 1.5 раза */
+    width: 123px;
+    height: 180px;
   }
   
   .handTitle {
@@ -1982,8 +1982,8 @@
   }
   
   .cardOnPenki {
-    width: 52px; /* Увеличено в 1.5 раза */
-    height: 75px; /* Увеличено в 1.5 раза */
+    width: 78px;
+    height: 112px;
   }
   
   .penkiRow {
@@ -1997,16 +1997,16 @@
   }
   
   .handCard {
-    width: 67px; /* Увеличено в 1.5 раза */
-    height: 97px; /* Увеличено в 1.5 раза */
+    width: 100px;
+    height: 146px;
   }
   
   .playerHand {
-    padding: 3px 5px; /* Уменьшен с 5px 8px */
-    min-height: 58px; /* Уменьшен с 87px (87/1.5 ≈ 58) */
-    width: 63%; /* Уменьшен с 95% (95/1.5 ≈ 63) */
-    bottom: 30px; /* ✅ ПОДНЯТО с 5px */
-    transform: translateX(-50%); /* Убран scale */
+    padding: 3px 5px;
+    min-height: 87px;
+    width: 95%;
+    bottom: 30px;
+    transform: translateX(-50%);
   }
   
   .handTitle {
@@ -2123,16 +2123,16 @@
   }
   
   .playerHand {
-    max-height: 50px; /* Уменьшен с 75px (75/1.5 = 50) */
-    width: 57%; /* Уменьшен с 85% (85/1.5 ≈ 57) */
-    padding: 4px 8px; /* Уменьшен с 6px 12px */
-    bottom: 25px; /* ✅ ПОДНЯТО с 3px */
-    transform: translateX(-50%); /* Убран scale */
+    max-height: 140px;
+    width: 85%;
+    padding: 4px 8px;
+    bottom: 25px;
+    transform: translateX(-50%);
   }
   
   .handCard {
-    width: 52px;
-    height: 78px;
+    width: 78px;
+    height: 117px;
   }
   
   .gameHeader {
@@ -3285,8 +3285,8 @@
   
   /* Компактные карты */
   .cardOnPenki {
-    width: 50px !important;
-    height: 72px !important;
+    width: 75px !important;
+    height: 108px !important;
   }
   
   /* Компактные аватары */
@@ -3306,19 +3306,19 @@
   
   /* Рука игрока снизу - компактная */
   .playerHand {
-    bottom: 35px !important; /* ✅ ПОДНЯТО с 8px */
+    bottom: 35px !important;
     padding: 8px 12px !important;
-    min-height: 90px !important;
-    max-width: 70% !important;
+    min-height: 135px !important;
+    max-width: 85% !important;
   }
   
   .handCard {
-    width: 60px !important;
-    height: 90px !important;
+    width: 90px !important;
+    height: 135px !important;
   }
   
   .handCards {
-    min-height: 95px !important;
+    min-height: 140px !important;
   }
   
   /* Компактный заголовок */
@@ -3442,22 +3442,22 @@
   --name-font: 9px;
 
   --cards-gap: 2px;
-  --opponent-card-width: 36px;
-  --opponent-card-height: 53px;
-  --opponent-card-radius: 4px;
+  --opponent-card-width: 54px;
+  --opponent-card-height: 80px;
+  --opponent-card-radius: 6px;
 
-  --deck-card-width: 38px;
-  --deck-card-height: 57px;
-  --deck-count-size: 24px;
-  --deck-count-font: 11px;
+  --deck-card-width: 57px;
+  --deck-card-height: 86px;
+  --deck-count-size: 28px;
+  --deck-count-font: 12px;
 
-  --player-hand-width: min(92vw, 430px);
+  --player-hand-width: min(92vw, 480px);
   --player-hand-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
   --player-hand-padding-y: 8px;
   --player-hand-padding-x: 10px;
-  --player-hand-min-height: 108px;
-  --hand-card-width: 60px;
-  --hand-card-height: 90px;
+  --player-hand-min-height: 162px;
+  --hand-card-width: 90px;
+  --hand-card-height: 135px;
 }
 
 .rectangularTable {
@@ -3570,20 +3570,20 @@
     --name-font: 10px;
 
     --cards-gap: 3px;
-    --opponent-card-width: 40px;
-    --opponent-card-height: 58px;
-    --deck-card-width: 42px;
-    --deck-card-height: 63px;
-    --deck-count-size: 26px;
-    --deck-count-font: 12px;
+    --opponent-card-width: 60px;
+    --opponent-card-height: 87px;
+    --deck-card-width: 63px;
+    --deck-card-height: 95px;
+    --deck-count-size: 30px;
+    --deck-count-font: 13px;
 
-    --player-hand-width: min(84vw, 500px);
+    --player-hand-width: min(84vw, 540px);
     --player-hand-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
     --player-hand-padding-y: 10px;
     --player-hand-padding-x: 12px;
-    --player-hand-min-height: 120px;
-    --hand-card-width: 68px;
-    --hand-card-height: 102px;
+    --player-hand-min-height: 180px;
+    --hand-card-width: 102px;
+    --hand-card-height: 153px;
   }
 }
 
@@ -3616,21 +3616,21 @@
     --name-font: 11px;
 
     --cards-gap: 3px;
-    --opponent-card-width: 46px;
-    --opponent-card-height: 67px;
-    --opponent-card-radius: 7px;
-    --deck-card-width: 48px;
-    --deck-card-height: 72px;
-    --deck-count-size: 30px;
-    --deck-count-font: 13px;
+    --opponent-card-width: 69px;
+    --opponent-card-height: 101px;
+    --opponent-card-radius: 8px;
+    --deck-card-width: 72px;
+    --deck-card-height: 108px;
+    --deck-count-size: 34px;
+    --deck-count-font: 14px;
 
-    --player-hand-width: min(78vw, 700px);
+    --player-hand-width: min(78vw, 760px);
     --player-hand-bottom: 26px;
     --player-hand-padding-y: 12px;
     --player-hand-padding-x: 16px;
-    --player-hand-min-height: 138px;
-    --hand-card-width: 82px;
-    --hand-card-height: 122px;
+    --player-hand-min-height: 207px;
+    --hand-card-width: 123px;
+    --hand-card-height: 183px;
   }
 }
 
@@ -3663,21 +3663,21 @@
     --name-font: 12px;
 
     --cards-gap: 4px;
-    --opponent-card-width: 52px;
-    --opponent-card-height: 76px;
-    --opponent-card-radius: 8px;
-    --deck-card-width: 54px;
-    --deck-card-height: 80px;
-    --deck-count-size: 32px;
-    --deck-count-font: 14px;
+    --opponent-card-width: 78px;
+    --opponent-card-height: 114px;
+    --opponent-card-radius: 10px;
+    --deck-card-width: 81px;
+    --deck-card-height: 120px;
+    --deck-count-size: 36px;
+    --deck-count-font: 15px;
 
-    --player-hand-width: min(72vw, 860px);
+    --player-hand-width: min(72vw, 920px);
     --player-hand-bottom: 32px;
     --player-hand-padding-y: 14px;
     --player-hand-padding-x: 18px;
-    --player-hand-min-height: 150px;
-    --hand-card-width: 92px;
-    --hand-card-height: 136px;
+    --player-hand-min-height: 225px;
+    --hand-card-width: 138px;
+    --hand-card-height: 204px;
   }
 }
 
@@ -3701,20 +3701,20 @@
     --avatar-size: 24px;
     --name-font: 8px;
 
-    --opponent-card-width: 30px;
-    --opponent-card-height: 44px;
-    --deck-card-width: 38px;
-    --deck-card-height: 56px;
-    --deck-count-size: 22px;
-    --deck-count-font: 10px;
+    --opponent-card-width: 45px;
+    --opponent-card-height: 66px;
+    --deck-card-width: 57px;
+    --deck-card-height: 84px;
+    --deck-count-size: 26px;
+    --deck-count-font: 11px;
 
-    --player-hand-width: min(72vw, 520px);
+    --player-hand-width: min(72vw, 560px);
     --player-hand-bottom: 10px;
     --player-hand-padding-y: 6px;
     --player-hand-padding-x: 10px;
-    --player-hand-min-height: 92px;
-    --hand-card-width: 56px;
-    --hand-card-height: 84px;
+    --player-hand-min-height: 138px;
+    --hand-card-width: 84px;
+    --hand-card-height: 126px;
   }
 }
 

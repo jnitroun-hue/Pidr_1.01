@@ -15,19 +15,19 @@ export const NFT_THEME_CONFIG = {
   },
   starwars: {
     name: 'Звездные войны',
-    total: 19,
+    total: 7,
     folder: 'starwars',
     prefix: 'star_',
   },
   legendary: {
     name: 'Легендарная',
-    total: 17,
+    total: 5,
     folder: 'legendary',
     prefix: 'leg_',
   },
   unique: {
     name: 'Уникальные',
-    total: 12,
+    total: 2,
     folder: 'unique',
     prefix: 'uniq_',
     animated: true,
@@ -38,6 +38,10 @@ export type NftThemeKey = keyof typeof NFT_THEME_CONFIG;
 
 export function isNftThemeKey(value: unknown): value is NftThemeKey {
   return typeof value === 'string' && value in NFT_THEME_CONFIG;
+}
+
+export function isAnimatedNftTheme(theme: NftThemeKey): boolean {
+  return Boolean((NFT_THEME_CONFIG[theme] as { animated?: boolean }).animated);
 }
 
 /** Достаёт тему из имени файла storage: pokemon_10_hearts_3_….png */

@@ -14,7 +14,8 @@ import {
 
 import { normalizeRankToken, normalizeSuitToken } from '@/lib/game/cardAssets';
 
-import { NFT_THEME_CONFIG, parseNftThemeFromImageUrl, type NftThemeKey } from '@/lib/nft/theme-config';
+import { NFT_THEME_CONFIG, isAnimatedNftTheme, parseNftThemeFromImageUrl, type NftThemeKey } from '@/lib/nft/theme-config';
+import UniqueLivingCard from '@/components/UniqueLivingCard';
 
 
 
@@ -206,6 +207,7 @@ export default function NftThemedCardCanvas({
     setClientUrl(fastPreview);
 
     if (!themeKey || !validThemeId) return;
+    if (isAnimatedNftTheme(themeKey)) return;
 
     let cancelled = false;
 
@@ -222,6 +224,24 @@ export default function NftThemedCardCanvas({
    * Составленный сервером PNG уже содержит арт и углы. Он является источником
    * истины для акции дня и купленной NFT; клиентский canvas страхует битый URL.
    */
+  if (themeKey && validThemeId && isAnimatedNftTheme(themeKey)) {
+    return (
+      <UniqueLivingCard
+        suit={suitNorm}
+        rank={rankNorm}
+        theme={themeKey}
+        themeId={validThemeId}
+        width={width}
+        height={height}
+        fluid={fluid}
+        className={className}
+        style={style}
+        onClick={onClick}
+        alt={alt}
+      />
+    );
+  }
+
   const imgSrc =
     composedUrl && !composedFailed
       ? composedUrl

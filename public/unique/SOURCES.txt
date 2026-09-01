@@ -1,4 +1,0 @@
-Unique / animated-ready NFT arts
-- Icons: Twitter Twemoji SVG from GitHub twitter/twemoji (CC-BY 4.0)
-- Drop uniq_N.gif or uniq_N.webp here later — generator prefers gif/webp over png
-- Now: PNG so you can generate cards immediately

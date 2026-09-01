@@ -1591,110 +1591,113 @@ function GamePageContentComponent({
   const layoutMetrics = useMemo(() => {
     const vw = screenInfo.viewportWidth || 390;
     const vh = screenInfo.viewportHeight || 844;
+    const CARD_SCALE = 1.5;
+    const px = (n: number) => Math.round(n * CARD_SCALE);
 
     const base = (handW: number, oppW: number, handFanMax: number, oppFanMax: number) => ({
-      handCardWidth: handW,
-      handCardHeight: playingCardHeight(handW),
+      handCardWidth: px(handW),
+      handCardHeight: playingCardHeight(px(handW)),
+      // Веер руки ограничен шириной экрана — не масштабируем за край вьюпорта.
       handMaxFanWidth: handFanMax,
-      opponentCardWidth: oppW,
-      opponentCardHeight: playingCardHeight(oppW),
-      opponentMaxFanWidth: oppFanMax,
+      opponentCardWidth: px(oppW),
+      opponentCardHeight: playingCardHeight(px(oppW)),
+      opponentMaxFanWidth: px(oppFanMax),
     });
 
     if (vw >= 1400) {
       return {
         ...base(92, 54, Math.min(vw * 0.55, 820), 118),
-        centerCardWidth: 82,
-        centerCardHeight: 120,
-        revealedCardWidth: 58,
-        revealedCardHeight: 86,
-        tableStackOffset: 28,
-        tableStackMinWidth: 260,
-        tableStackMinHeight: 146,
+        centerCardWidth: px(82),
+        centerCardHeight: playingCardHeight(px(82)),
+        revealedCardWidth: px(58),
+        revealedCardHeight: playingCardHeight(px(58)),
+        tableStackOffset: px(28),
+        tableStackMinWidth: px(260),
+        tableStackMinHeight: px(146),
       };
     }
 
     if (vw >= 1024) {
       return {
         ...base(86, 50, Math.min(vw * 0.58, 760), 110),
-        centerCardWidth: 76,
-        centerCardHeight: 114,
-        revealedCardWidth: 54,
-        revealedCardHeight: 81,
-        tableStackOffset: 26,
-        tableStackMinWidth: 238,
-        tableStackMinHeight: 136,
+        centerCardWidth: px(76),
+        centerCardHeight: playingCardHeight(px(76)),
+        revealedCardWidth: px(54),
+        revealedCardHeight: playingCardHeight(px(54)),
+        tableStackOffset: px(26),
+        tableStackMinWidth: px(238),
+        tableStackMinHeight: px(136),
       };
     }
 
     if (vw >= 769) {
       return {
         ...base(78, 46, Math.min(vw * 0.62, 680), 102),
-        centerCardWidth: 68,
-        centerCardHeight: 102,
-        revealedCardWidth: 48,
-        revealedCardHeight: 72,
-        tableStackOffset: 22,
-        tableStackMinWidth: 214,
-        tableStackMinHeight: 124,
+        centerCardWidth: px(68),
+        centerCardHeight: playingCardHeight(px(68)),
+        revealedCardWidth: px(48),
+        revealedCardHeight: playingCardHeight(px(48)),
+        tableStackOffset: px(22),
+        tableStackMinWidth: px(214),
+        tableStackMinHeight: px(124),
       };
     }
 
     if (screenInfo.isLandscape && vh <= 500) {
       return {
         ...base(58, 42, Math.min(vw * 0.88, 520), 82),
-        centerCardWidth: 50,
-        centerCardHeight: 75,
-        revealedCardWidth: 38,
-        revealedCardHeight: 57,
-        tableStackOffset: 16,
-        tableStackMinWidth: 170,
-        tableStackMinHeight: 92,
+        centerCardWidth: px(50),
+        centerCardHeight: playingCardHeight(px(50)),
+        revealedCardWidth: px(38),
+        revealedCardHeight: playingCardHeight(px(38)),
+        tableStackOffset: px(16),
+        tableStackMinWidth: px(170),
+        tableStackMinHeight: px(92),
       };
     }
 
     if (screenInfo.isVerySmallMobile) {
       return {
         ...base(58, 44, Math.min(vw * 0.94, 360), 80),
-        centerCardWidth: 48,
-        centerCardHeight: 72,
-        revealedCardWidth: 36,
-        revealedCardHeight: 54,
-        tableStackOffset: 15,
-        tableStackMinWidth: 162,
-        tableStackMinHeight: 88,
+        centerCardWidth: px(48),
+        centerCardHeight: playingCardHeight(px(48)),
+        revealedCardWidth: px(36),
+        revealedCardHeight: playingCardHeight(px(36)),
+        tableStackOffset: px(15),
+        tableStackMinWidth: px(162),
+        tableStackMinHeight: px(88),
       };
     }
 
     if (screenInfo.isSmallMobile) {
       return {
         ...base(66, 50, Math.min(vw * 0.92, 400), 88),
-        centerCardWidth: 54,
-        centerCardHeight: 81,
-        revealedCardWidth: 38,
-        revealedCardHeight: 57,
-        tableStackOffset: 18,
-        tableStackMinWidth: 176,
-        tableStackMinHeight: 96,
+        centerCardWidth: px(54),
+        centerCardHeight: playingCardHeight(px(54)),
+        revealedCardWidth: px(38),
+        revealedCardHeight: playingCardHeight(px(38)),
+        tableStackOffset: px(18),
+        tableStackMinWidth: px(176),
+        tableStackMinHeight: px(96),
       };
     }
 
     return {
       ...base(72, 54, Math.min(vw * 0.92, 420), 96),
-      centerCardWidth: 60,
-      centerCardHeight: 90,
-      revealedCardWidth: 42,
-      revealedCardHeight: 63,
-      tableStackOffset: 20,
-      tableStackMinWidth: 192,
-      tableStackMinHeight: 104,
+      centerCardWidth: px(60),
+      centerCardHeight: playingCardHeight(px(60)),
+      revealedCardWidth: px(42),
+      revealedCardHeight: playingCardHeight(px(42)),
+      tableStackOffset: px(20),
+      tableStackMinWidth: px(192),
+      tableStackMinHeight: px(104),
     };
   }, [screenInfo]);
 
   const myHandFan = useMemo(() => {
     const count = myPlayer?.cards.length ?? 0;
     if (!count) return null;
-    const minPeek = (screenInfo.viewportWidth || 390) >= 769 ? 24 : 18;
+    const minPeek = (screenInfo.viewportWidth || 390) >= 769 ? 36 : 27;
     return computeCardFanLayout({
       cardWidth: layoutMetrics.handCardWidth,
       cardCount: count,
@@ -3035,12 +3038,12 @@ function GamePageContentComponent({
                   <img
                     src={getCardAssetSrc({ faceDown: true })}
                     alt="Deck"
-                    width={36}
-                    height={54}
+                    width={54}
+                    height={81}
                     className={styles.deckCard}
                     style={{
-                      width: '36px',
-                      height: '54px',
+                      width: '54px',
+                      height: '81px',
                       opacity: 1,
                       filter: 'none',
                       visibility: 'visible',
