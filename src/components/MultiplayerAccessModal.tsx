@@ -36,7 +36,7 @@ export default function MultiplayerAccessModal({
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0, 0, 0, 0.85)',
+          background: 'rgba(0, 0, 0, 0.78)',
           zIndex: 9999,
           backdropFilter: 'blur(4px)'
         }}
@@ -50,21 +50,22 @@ export default function MultiplayerAccessModal({
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
         style={{
           position: 'fixed',
-          top: '10%',
-          left: '10%',
-          right: '10%',
-          bottom: '10%',
-          width: '80%',
-          maxWidth: 'none',
+          top: '12px',
+          left: '12px',
+          right: '12px',
+          bottom: '12px',
+          width: 'auto',
+          maxWidth: '560px',
           height: 'auto',
-          maxHeight: '80vh',
-          margin: '0',
-          background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%)',
-          borderRadius: '24px',
-          border: '4px solid rgba(239, 68, 68, 0.6)',
-          boxShadow: '0 25px 80px rgba(0, 0, 0, 0.6), 0 0 50px rgba(239, 68, 68, 0.4)',
+          maxHeight: 'calc(var(--app-viewport-height, 100dvh) - 24px)',
+          margin: 'auto',
+          background: 'var(--menu-card-bg)',
+          color: 'var(--menu-text)',
+          borderRadius: '20px',
+          border: '2px solid rgba(239, 68, 68, 0.55)',
+          boxShadow: 'var(--menu-shadow), 0 0 32px rgba(239, 68, 68, 0.18)',
           zIndex: 10000,
-          padding: '40px',
+          padding: 'clamp(18px, 5vw, 32px)',
           overflowY: 'auto',
           display: 'flex',
           flexDirection: 'column',
@@ -136,7 +137,7 @@ export default function MultiplayerAccessModal({
 
         {/* Контент */}
         <div style={{
-          color: '#e2e8f0',
+          color: 'var(--menu-text)',
           fontSize: 'clamp(16px, 2.5vw, 20px)',
           lineHeight: '1.8',
           marginBottom: '32px',
@@ -170,13 +171,13 @@ export default function MultiplayerAccessModal({
             </div>
             <div style={{
               fontSize: '14px',
-              color: '#cbd5e1'
+              color: 'var(--menu-text-muted)'
             }}>
               Осталось сыграть: <strong style={{ color: '#ef4444' }}>{remaining} {remaining === 1 ? 'игра' : remaining < 5 ? 'игры' : 'игр'}</strong>
             </div>
           </div>
 
-          <p style={{ marginBottom: '20px', fontSize: '14px', color: '#94a3b8' }}>
+          <p style={{ marginBottom: '20px', fontSize: '14px', color: 'var(--menu-text-muted)' }}>
             В первых {requiredGames} играх с ботами вы получите подробные подсказки и объяснения всех правил игры. После прохождения обучения вы сможете играть онлайн!
           </p>
         </div>
@@ -195,14 +196,14 @@ export default function MultiplayerAccessModal({
             style={{
               width: '100%',
               padding: '20px 32px',
-              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-              color: 'white',
+              background: 'var(--menu-accent)',
+              color: '#111827',
               border: 'none',
               borderRadius: '16px',
               fontSize: 'clamp(18px, 3vw, 22px)',
               fontWeight: '700',
               cursor: 'pointer',
-              boxShadow: '0 10px 30px rgba(99, 102, 241, 0.5)',
+              boxShadow: 'var(--menu-shadow)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -223,9 +224,9 @@ export default function MultiplayerAccessModal({
             style={{
               width: '100%',
               padding: '14px 24px',
-              background: 'rgba(100, 116, 139, 0.2)',
-              color: '#cbd5e1',
-              border: '2px solid rgba(100, 116, 139, 0.3)',
+              background: 'var(--menu-accent-soft)',
+              color: 'var(--menu-text)',
+              border: '1px solid var(--menu-card-border)',
               borderRadius: '12px',
               fontSize: '16px',
               fontWeight: '600',

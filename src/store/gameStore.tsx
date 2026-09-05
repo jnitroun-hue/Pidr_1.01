@@ -3,7 +3,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { createPlayers, generateAvatar } from '../lib/game/avatars'
 import { getApiHeaders, telegramUsernameHeader } from '../lib/api-headers'
-import { deckEntriesToNftMap } from '../lib/game/cardAssets'
+import { deckEntriesToNftMap, type NftDeckVisualMap } from '../lib/game/cardAssets'
 import { BOT_TIMING } from '../lib/game/botTiming'
 import { calculateRatingRewards, calculatePlayerPositions, isWinningPosition } from '../lib/rating/ratingSystem'
 import { RoomManager } from '../lib/multiplayer/room-manager'
@@ -101,7 +101,7 @@ interface MultiplayerConfig {
 }
 
 /** Монеты за место (игровая экономика) + рейтинг из ratingSystem */
-function getPlaceRewards(position: number, totalPlayers: number, isRanked: boolean) {
+export function getPlaceRewards(position: number, totalPlayers: number, isRanked: boolean) {
   const isLastPlace = position === totalPlayers;
   let coinsEarned = 30;
   if (position === 1) coinsEarned = 350;
@@ -299,7 +299,7 @@ interface GameState {
   playedCards: Card[]
   lastPlayedCard: Card | null
   // ✅ NFT КАРТЫ ИЗ КОЛОДЫ (для замены обычных карт)
-  nftDeckCards: Record<string, string> // { "jack_of_diamonds": "https://..." }
+  nftDeckCards: NftDeckVisualMap
   
   // НОВАЯ МЕХАНИКА: Стопка штрафных карт
   penaltyDeck: PenaltyCard[]
@@ -417,7 +417,7 @@ interface GameState {
   drawCard: () => void
   nextTurn: () => void
   resetGame: () => void
-  setNftDeckCards: (map: Record<string, string>) => void
+  setNftDeckCards: (map: NftDeckVisualMap) => void
   updatePlayerRewards: (experience: number, coins: number, ratingChange?: number) => Promise<void>
   
   // Методы для P.I.D.R игры
@@ -810,8 +810,6 @@ export const useGameStore = create<GameState>()(
         let userAvatar = userInfo?.avatar || '';
         let userName = userInfo?.username || 'Игрок';
         let userIsPremium = userInfo?.isPremium === true;
-        const nftDeckCards: Record<string, string> = {};
-
         // Фоновое обновление имени/аватара (не блокирует раздачу)
         void fetch('/api/auth', {
           method: 'GET',
@@ -984,7 +982,9 @@ export const useGameStore = create<GameState>()(
           deck: remainingCards,
           playedCards: [],
           lastPlayedCard: null,
-          nftDeckCards: nftDeckCards, // ✅ СОХРАНЯЕМ NFT КАРТЫ
+          // Не очищаем уже загруженные визуалы: это исключает старые карты и
+          // пустой fallback во время повторного фонового запроса колоды.
+          nftDeckCards: get().nftDeckCards,
           gameStage: 1,
           // Сбрасываем данные второй стадии
           lastDrawnCard: null,
@@ -1036,7 +1036,7 @@ export const useGameStore = create<GameState>()(
             if (deckResult?.success && deckResult.deck) {
               const map = deckEntriesToNftMap(deckResult.deck);
               if (Object.keys(map).length > 0) {
-                set({ nftDeckCards: map });
+                set({ nftDeckCards: { ...get().nftDeckCards, ...map } });
                 console.log(`✅ [startGame] NFT колода подгружена: ${Object.keys(map).length} карт`);
               }
             }
@@ -1285,7 +1285,6 @@ export const useGameStore = create<GameState>()(
           deck: [...DEFAULT_CARDS],
           playedCards: [],
           lastPlayedCard: null,
-          nftDeckCards: {}, // ✅ Сбрасываем NFT карты
           selectedCard: null,
           penaltyDeck: []
         })
@@ -1966,7 +1965,8 @@ export const useGameStore = create<GameState>()(
         // ✅ ПРОВЕРЯЕМ ЕСТЬ ЛИ NFT ВЕРСИЯ (только для игрока!)
         const originalImage = drawnCard.image || '';
         const nftKey = get().getNFTKey(originalImage);
-        const nftImageUrl = !currentPlayer.isBot && nftKey && nftDeckCards[nftKey] ? nftDeckCards[nftKey] : null;
+        const nftImageUrl =
+          !currentPlayer.isBot && nftKey ? nftDeckCards[nftKey]?.imageUrl ?? null : null;
         
         // Добавляем ранг и масть к карте
         drawnCard.rank = get().getCardRank(originalImage);
@@ -2463,7 +2463,10 @@ export const useGameStore = create<GameState>()(
          const currentPlayer = currentPlayerId ? players.find(p => p.id === currentPlayerId) : null;
          const originalImage = topCard.image || '';
          const nftKey = get().getNFTKey(originalImage);
-         const nftImageUrl = currentPlayer && !currentPlayer.isBot && nftKey && nftDeckCards[nftKey] ? nftDeckCards[nftKey] : null;
+         const nftImageUrl =
+           currentPlayer && !currentPlayer.isBot && nftKey
+             ? nftDeckCards[nftKey]?.imageUrl ?? null
+             : null;
          
          topCard.rank = get().getCardRank(originalImage);
          topCard.suit = get().getCardSuit(originalImage);

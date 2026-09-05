@@ -1,10 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Trophy, Medal, Award, Home, RotateCcw, TrendingUp, Coins } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import {
+  Award,
+  Crown,
+  Home,
+  Medal,
+  RotateCcw,
+  TrendingDown,
+  TrendingUp,
+  Trophy,
+  UserRound,
+} from 'lucide-react';
 import { useLanguage } from './LanguageSwitcher';
 import { translateGameText } from '@/lib/i18n/gameRuntimeTranslations';
 import { PidrCoinAmount } from '@/components/PidrCoinIcon';
+import styles from './GameResultsModal.module.css';
 
 interface PlayerResult {
   place: number;
@@ -22,303 +33,223 @@ interface GameResultsModalProps {
   onMainMenu: () => void;
 }
 
-export default function GameResultsModal({ 
-  results, 
-  isRanked, 
-  onPlayAgain, 
-  onMainMenu 
+const podiumIcon = {
+  1: Crown,
+  2: Medal,
+  3: Award,
+} as const;
+
+export default function GameResultsModal({
+  results,
+  isRanked,
+  onPlayAgain,
+  onMainMenu,
 }: GameResultsModalProps) {
   const { language } = useLanguage();
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    // Анимация появления
-    setTimeout(() => setIsVisible(true), 100);
+    const timer = window.setTimeout(() => setIsVisible(true), 100);
+    return () => window.clearTimeout(timer);
   }, []);
 
-  const getMedalText = (place: number) => {
-    return `${place}`;
-  };
+  const userResult = results.find((player) => player.isUser);
+  const topThree = results.filter((player) => player.place <= 3);
+  const remainingResults = results.filter((player) => player.place > 3);
 
-  const getPlaceColor = (place: number) => {
-    switch (place) {
-      case 1: return 'from-yellow-400 to-amber-600';
-      case 2: return 'from-gray-300 to-gray-500';
-      case 3: return 'from-orange-400 to-orange-600';
-      default: return 'from-blue-500 to-indigo-600';
-    }
+  const getPodiumClass = (place: number) => {
+    if (place === 1) return styles.firstPlace;
+    if (place === 2) return styles.secondPlace;
+    return styles.thirdPlace;
   };
 
   return (
-    <div 
-      className={`transition-all duration-500 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: 'rgba(0, 0, 0, 0.75)',
-        backdropFilter: 'blur(10px)',
-        zIndex: 99999,
-        pointerEvents: 'auto'
-      }}
+    <div
+      className={`${styles.overlay} ${isVisible ? styles.visible : ''}`}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="game-results-title"
     >
-      <div 
-        className={`transform transition-all duration-700 ${
-          isVisible ? 'scale-100' : 'scale-75'
-        }`}
-        style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: 'min(85vw, 600px)', // ✅ УВЕЛИЧЕНО: 85% ширины, максимум 600px!
-          maxWidth: '600px', // ✅ УВЕЛИЧЕНО: 500px → 600px!
-          maxHeight: 'min(85vh, 85dvh)', // ✅ УВЕЛИЧЕНО: 60% → 85% высоты!
-          overflowY: 'auto',
-          background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%)',
-          borderRadius: '20px',
-          border: '2px solid rgba(99, 102, 241, 0.4)',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 40px rgba(99, 102, 241, 0.3)',
-          display: 'flex',
-          flexDirection: 'column'
-        }}
-      >
-        {/* Header */}
-        <div 
-          className="px-8 py-6 border-b border-slate-700/50"
-          style={{
-            background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%)',
-            flexShrink: 0
-          }}
-        >
-          <div className="flex items-center justify-center">
-            <h2 
-              className="text-2xl font-black text-white"
-              style={{
-                textShadow: '0 4px 12px rgba(99, 102, 241, 0.4)',
-                textAlign: 'center'
-              }}
-            >
+      <section className={styles.modal}>
+        <header className={styles.header}>
+          <div className={styles.titleIcon} aria-hidden="true">
+            <Trophy size={22} strokeWidth={2.2} />
+          </div>
+          <div className={styles.heading}>
+            <h2 id="game-results-title" className={styles.title}>
               {translateGameText('Результаты игры', language)}
             </h2>
+            {isRanked && (
+              <div className={styles.mode}>
+                <TrendingUp size={14} aria-hidden="true" />
+                {translateGameText('Рейтинговая игра', language)}
+              </div>
+            )}
           </div>
-          {isRanked && (
-            <div className="mt-3 flex items-center justify-center gap-2 text-sm text-amber-400">
-              <TrendingUp size={16} />
-              <span className="font-semibold">{translateGameText('Рейтинговая игра', language)}</span>
-            </div>
+        </header>
+
+        <div className={styles.scrollArea}>
+          {userResult && (
+            <section className={styles.userSummary}>
+              <div className={styles.userIdentity}>
+                <div className={styles.avatarLarge}>
+                  {userResult.avatar ? (
+                    <img src={userResult.avatar} alt="" />
+                  ) : (
+                    <UserRound size={28} aria-hidden="true" />
+                  )}
+                </div>
+                <div className={styles.userName}>
+                  <span className={styles.youBadge}>{translateGameText('ВЫ', language)}</span>
+                  <strong>{userResult.name}</strong>
+                </div>
+              </div>
+              <div className={styles.summaryStats}>
+                <div className={styles.summaryStat}>
+                  <span>{translateGameText('Место', language)}</span>
+                  <strong>#{userResult.place}</strong>
+                </div>
+                <div className={styles.summaryStat}>
+                  <span>{translateGameText('Награда', language)}</span>
+                  <strong className={userResult.coinsEarned < 0 ? styles.negative : styles.positive}>
+                    <PidrCoinAmount
+                      value={`${userResult.coinsEarned > 0 ? '+' : ''}${userResult.coinsEarned}`}
+                      size={19}
+                    />
+                  </strong>
+                </div>
+                {isRanked && userResult.ratingChange !== undefined && (
+                  <div className={styles.summaryStat}>
+                    <span>{translateGameText('Рейтинг', language)}</span>
+                    <strong className={userResult.ratingChange < 0 ? styles.negative : styles.positive}>
+                      {userResult.ratingChange < 0 ? (
+                        <TrendingDown size={17} aria-hidden="true" />
+                      ) : (
+                        <TrendingUp size={17} aria-hidden="true" />
+                      )}
+                      {userResult.ratingChange > 0 ? '+' : ''}
+                      {userResult.ratingChange}
+                    </strong>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
+          {topThree.length > 0 && (
+            <section className={styles.podium} aria-label={translateGameText('Результаты игры', language)}>
+              {topThree.map((player, index) => {
+                const PlaceIcon = podiumIcon[player.place as keyof typeof podiumIcon] ?? Medal;
+                return (
+                  <article
+                    key={index}
+                    className={`${styles.podiumCard} ${getPodiumClass(player.place)} ${
+                      player.isUser ? styles.currentUser : ''
+                    }`}
+                  >
+                    <div className={styles.podiumRank}>
+                      <PlaceIcon size={18} aria-hidden="true" />
+                      <span>#{player.place}</span>
+                    </div>
+                    <div className={styles.avatar}>
+                      {player.avatar ? (
+                        <img src={player.avatar} alt="" />
+                      ) : (
+                        <UserRound size={22} aria-hidden="true" />
+                      )}
+                    </div>
+                    <div className={styles.playerInfo}>
+                      <strong>{player.name}</strong>
+                      <span>
+                        {translateGameText(
+                          player.place === results.length ? 'Проигравший' : `${player.place}-е место`,
+                          language,
+                        )}
+                      </span>
+                    </div>
+                    <div className={`${styles.reward} ${player.coinsEarned < 0 ? styles.negative : ''}`}>
+                      <PidrCoinAmount
+                        value={`${player.coinsEarned > 0 ? '+' : ''}${player.coinsEarned}`}
+                        size={16}
+                      />
+                    </div>
+                    {isRanked && player.ratingChange !== undefined && (
+                      <div className={`${styles.rating} ${player.ratingChange < 0 ? styles.negative : ''}`}>
+                        {player.ratingChange < 0 ? (
+                          <TrendingDown size={14} aria-hidden="true" />
+                        ) : (
+                          <TrendingUp size={14} aria-hidden="true" />
+                        )}
+                        {player.ratingChange > 0 ? '+' : ''}
+                        {player.ratingChange}
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
+            </section>
+          )}
+
+          {remainingResults.length > 0 && (
+            <section className={styles.remainingList}>
+              <div className={styles.listHeader}>
+                <span>{translateGameText('Место', language)}</span>
+                <span>{translateGameText('Награда', language)}</span>
+              </div>
+              {remainingResults.map((player, index) => (
+                <article
+                  key={index}
+                  className={`${styles.resultRow} ${player.isUser ? styles.currentUser : ''}`}
+                >
+                  <span className={styles.rowPlace}>{player.place}</span>
+                  <div className={styles.avatarSmall}>
+                    {player.avatar ? (
+                      <img src={player.avatar} alt="" />
+                    ) : (
+                      <UserRound size={17} aria-hidden="true" />
+                    )}
+                  </div>
+                  <div className={styles.rowName}>
+                    <strong>{player.name}</strong>
+                    {player.isUser && <span>{translateGameText('ВЫ', language)}</span>}
+                  </div>
+                  <div className={`${styles.reward} ${player.coinsEarned < 0 ? styles.negative : ''}`}>
+                    <PidrCoinAmount
+                      value={`${player.coinsEarned > 0 ? '+' : ''}${player.coinsEarned}`}
+                      size={15}
+                    />
+                  </div>
+                  {isRanked && player.ratingChange !== undefined && (
+                    <div className={`${styles.rating} ${player.ratingChange < 0 ? styles.negative : ''}`}>
+                      {player.ratingChange > 0 ? '+' : ''}
+                      {player.ratingChange}
+                    </div>
+                  )}
+                </article>
+              ))}
+            </section>
           )}
         </div>
 
-        {/* Results Table - КОМПАКТНАЯ */}
-        <div className="px-6 py-4 space-y-2" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
-          {results.map((player, index) => (
-            <div
-              key={index}
-              className="relative transform transition-all duration-300"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '12px',
-                background: player.isUser 
-                  ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.1) 100%)'
-                  : 'linear-gradient(135deg, rgba(51, 65, 85, 0.6) 0%, rgba(30, 41, 59, 0.4) 100%)',
-                border: player.isUser ? '2px solid rgba(59, 130, 246, 0.5)' : '1px solid rgba(99, 102, 241, 0.2)',
-                borderRadius: '12px',
-                boxShadow: player.isUser 
-                  ? '0 4px 12px rgba(59, 130, 246, 0.3)' 
-                  : '0 2px 8px rgba(0, 0, 0, 0.3)',
-                animationDelay: `${index * 100}ms`,
-                animation: 'slideInRight 0.5s ease-out forwards',
-                opacity: 0
-              }}
-            >
-              {/* Medal/Place - МАЛЕНЬКИЙ */}
-              <div 
-                style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: player.place === 1 
-                    ? 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)'
-                    : player.place === 2
-                    ? 'linear-gradient(135deg, #d1d5db 0%, #9ca3af 100%)'
-                    : player.place === 3
-                    ? 'linear-gradient(135deg, #fb923c 0%, #f97316 100%)'
-                    : player.place === results.length
-                    ? 'linear-gradient(135deg, #DC143C 0%, #8B0000 100%)'
-                    : 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
-                  fontSize: '16px',
-                  fontWeight: '900',
-                  color: '#fff',
-                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
-                }}
-              >
-                {player.place}
-              </div>
-
-              {/* Avatar - МАЛЕНЬКИЙ */}
-              {player.avatar && (
-                <img 
-                  src={player.avatar} 
-                  alt={player.name}
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '50%',
-                    objectFit: 'cover',
-                    border: '2px solid rgba(255, 255, 255, 0.2)',
-                    filter: player.place === results.length ? 'grayscale(0.5)' : 'none'
-                  }}
-                />
-              )}
-
-              {/* Name */}
-              <div style={{ flex: 1 }}>
-                <div style={{
-                  fontSize: '15px',
-                  fontWeight: '700',
-                  color: '#fff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px'
-                }}>
-                  {player.name}
-                  {player.isUser && (
-                    <span style={{
-                      fontSize: '10px',
-                      padding: '2px 6px',
-                      background: '#3b82f6',
-                      borderRadius: '4px',
-                      fontWeight: '700'
-                    }}>
-                      {translateGameText('ВЫ', language)}
-                    </span>
-                  )}
-                </div>
-                <div style={{
-                  fontSize: '11px',
-                  color: 'rgba(255, 255, 255, 0.5)'
-                }}>
-                  {translateGameText(player.place === results.length ? 'Проигравший' : `${player.place}-е место`, language)}
-                </div>
-              </div>
-
-              {/* Coins - КОМПАКТНО */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                fontSize: '14px',
-                fontWeight: '700',
-                color: player.coinsEarned > 0 ? '#22c55e' : player.coinsEarned < 0 ? '#ef4444' : '#94a3b8'
-              }}>
-                <PidrCoinAmount
-                  value={`${player.coinsEarned > 0 ? '+' : ''}${player.coinsEarned}`}
-                  size={16}
-                />
-              </div>
-
-              {/* Rating (if ranked) */}
-              {isRanked && player.ratingChange !== undefined && (
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  fontSize: '13px',
-                  fontWeight: '700',
-                  color: player.ratingChange >= 0 ? '#22c55e' : '#ef4444'
-                }}>
-                  📈 {player.ratingChange > 0 ? '+' : ''}{player.ratingChange}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Buttons - друг напротив друга, профессионально */}
-        <div 
-          className="px-6 py-4 border-t border-slate-700/50 flex flex-row items-center justify-between gap-4"
-          style={{
-            background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.3) 100%)',
-            flexShrink: 0
-          }}
-        >
+        <footer className={styles.actions}>
           <button
             onClick={onPlayAgain}
-            className="flex-1 transform transition-all duration-200 hover:scale-105 active:scale-95"
-            style={{
-              padding: '14px 24px',
-              borderRadius: '16px',
-              border: '2px solid rgba(16, 185, 129, 0.3)',
-              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.1) 100%)',
-              color: '#10b981',
-              fontSize: '15px',
-              fontWeight: '700',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)'
-            }}
+            className={`${styles.actionButton} ${styles.primaryAction}`}
+            type="button"
           >
-            <RotateCcw size={20} strokeWidth={2.5} />
+            <RotateCcw size={18} strokeWidth={2.3} aria-hidden="true" />
             {translateGameText('Заново', language)}
           </button>
-
           <button
             onClick={onMainMenu}
-            className="flex-1 transform transition-all duration-200 hover:scale-105 active:scale-95"
-            style={{
-              padding: '14px 24px',
-              borderRadius: '16px',
-              border: '2px solid rgba(99, 102, 241, 0.3)',
-              background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(79, 70, 229, 0.1) 100%)',
-              color: '#6366f1',
-              fontSize: '15px',
-              fontWeight: '700',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(99, 102, 241, 0.2)'
-            }}
+            className={`${styles.actionButton} ${styles.secondaryAction}`}
+            type="button"
           >
-            <Home size={20} strokeWidth={2.5} />
+            <Home size={18} strokeWidth={2.3} aria-hidden="true" />
             {translateGameText('В меню', language)}
           </button>
-        </div>
-      </div>
-
-      <style jsx>{`
-        @keyframes float {
-          0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0; }
-          10% { opacity: 0.6; }
-          90% { opacity: 0.6; }
-          100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
-        }
-        @keyframes slideInRight {
-          from {
-            opacity: 0;
-            transform: translateX(30px);
-          }
-          to {
-            opacity: 1;
-            transform: translateX(0);
-          }
-        }
-        .animate-float {
-          animation: float linear infinite;
-        }
-      `}</style>
+        </footer>
+      </section>
     </div>
   );
 }

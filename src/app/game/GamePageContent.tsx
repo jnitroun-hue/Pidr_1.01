@@ -26,15 +26,20 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { WifiOff } from 'lucide-react';
 import React from 'react';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
-import { useGameStore } from '@/store/gameStore';
+import { getPlaceRewards, useGameStore } from '@/store/gameStore';
 import { AIPlayer, AIDifficulty } from '@/lib/game/ai-player';
 import GameChat from '@/components/GameChat';
-import GameWallet from '@/components/GameWallet';
-import PidrCoinIcon, { PidrCoinAmount } from '@/components/PidrCoinIcon';
+import GameSettingsModal from '@/components/GameSettingsModal';
+import PidrCoinIcon from '@/components/PidrCoinIcon';
 import { useLanguage } from '../../components/LanguageSwitcher';
 import { useTranslations } from '../../lib/i18n/translations';
 import { useTelegram } from '@/hooks/useTelegram';
-import { getCardAssetSrc, deckEntriesToNftMap, buildNftDeckKey } from '@/lib/game/cardAssets';
+import {
+  getCardAssetSrc,
+  deckEntriesToNftMap,
+  resolveNftDeckVisual,
+  type NftDeckVisual,
+} from '@/lib/game/cardAssets';
 import {
   GAME_HEARTBEAT_INTERVAL_MS,
   PRESENCE_API_POLL_MS,
@@ -78,6 +83,15 @@ interface PlayerProfile {
   losses?: number;
   winRate?: number;
   bestStreak?: number;
+  coins?: number;
+  isPremium?: boolean;
+  onlineGamesPlayed?: number;
+  onlineWins?: number;
+  botGamesPlayed?: number;
+  botWins?: number;
+  firstPlaces?: number;
+  secondPlaces?: number;
+  thirdPlaces?: number;
   status?: string;
   joinedDate?: string;
   isChatBlocked?: boolean;
@@ -382,7 +396,7 @@ function GamePageContentComponent({
     drawCard, makeMove, onDeckClick, placeCardOnSelfByRules,
     selectHandCard, playSelectedCard, takeTableCards, showNotification,
     declareOneCard, askHowManyCards, contributePenaltyCard, cancelPenalty,
-    togglePenaltyDeckModal, nextTurn, getNFTKey
+    togglePenaltyDeckModal, nextTurn
   } = useGameStore();
 
   // ИСПРАВЛЕНО: Получаем данные пользователя из Supabase БД
@@ -446,8 +460,8 @@ function GamePageContentComponent({
   // Модальное окно профиля игрока
   const [selectedPlayerProfile, setSelectedPlayerProfile] = useState<PlayerProfile | null>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [showWalletModal, setShowWalletModal] = useState(false);
-  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [burgerMenuOpen, setBurgerMenuOpen] = useState(false);
   const [chatBlocks, setChatBlocks] = useState<ChatBlocksState>({
     blockedUserIds: new Set(),
     blockedPlayerKeys: new Set(),
@@ -461,24 +475,6 @@ function GamePageContentComponent({
   const userPlayer = players.find(p => p.isUser);
   const userPlayerId = userPlayer?.id || null;
 
-  const gameWalletUserMemo = useMemo(
-    () =>
-      userData
-        ? {
-            id: String(userData.telegramId || userPlayerId || ''),
-            username: userData.username || 'Игрок',
-            firstName: userData.username || 'Игрок',
-            coins: userData.coins || 0,
-            rating: 0,
-          }
-        : undefined,
-    [userData?.telegramId, userData?.username, userData?.coins, userPlayerId]
-  );
-
-  const handleGameWalletBalance = useCallback((newBalance: number) => {
-    setUserData(prev => (prev ? { ...prev, coins: newBalance } : prev));
-  }, []);
-  
   const { 
     currentStep, 
     isTutorialPaused, 
@@ -488,6 +484,10 @@ function GamePageContentComponent({
     totalSteps,
     currentStepIndex,
   } = useTutorial(gameStage, isTutorialGame, tutorialGameNumber, isUserTurn, currentPlayerId, userPlayerId, players, deck.length, playersWithOneCard, pendingPenalty, penaltyDeck, oneCardDeclarations);
+  const tutorialPausedRef = useRef(isTutorialPaused);
+  useEffect(() => {
+    tutorialPausedRef.current = isTutorialPaused;
+  }, [isTutorialPaused]);
   const showTutorialFieldHints = false;
 
   // ✅ Загружаем количество игр ПЕРЕД началом игры
@@ -606,12 +606,21 @@ function GamePageContentComponent({
             isUser: true,
             isSelf: true,
             dbUserId: profile.userId,
-            level: 1,
-            rating: 0,
-            gamesPlayed: 0,
-            wins: 0,
-            winRate: 0,
-            bestStreak: 0,
+            rating: profile.rating,
+            gamesPlayed: profile.gamesPlayed,
+            wins: profile.wins,
+            losses: profile.losses,
+            winRate: profile.winRate,
+            bestStreak: profile.bestWinStreak,
+            coins: profile.coins,
+            isPremium: profile.isPremium,
+            onlineGamesPlayed: profile.onlineGamesPlayed,
+            onlineWins: profile.onlineWins,
+            botGamesPlayed: profile.botGamesPlayed,
+            botWins: profile.botWins,
+            firstPlaces: profile.firstPlaces,
+            secondPlaces: profile.secondPlaces,
+            thirdPlaces: profile.thirdPlaces,
             status: profile.isPremium ? '💎 Premium' : '🟢 Online',
             joinedDate: 'Недавно',
             canAddFriend: false,
@@ -630,12 +639,14 @@ function GamePageContentComponent({
         isUser: true,
         isSelf: true,
         dbUserId: userData?.dbUserId,
-        level: 1,
         rating: 0,
         gamesPlayed: 0,
         wins: 0,
+        losses: 0,
         winRate: 0,
         bestStreak: 0,
+        coins: userData?.coins || 0,
+        isPremium: userData?.isPremium,
         status: '🟢 Online',
         joinedDate: 'Сегодня',
         canAddFriend: false,
@@ -652,6 +663,7 @@ function GamePageContentComponent({
         isBot: true,
         isUser: false,
         isSelf: false,
+        isPremium: player.isPremium,
         level: Math.floor(Math.random() * 50) + 1,
         rating: Math.floor(Math.random() * 2000) + 500,
         gamesPlayed: Math.floor(Math.random() * 500) + 50,
@@ -703,6 +715,7 @@ function GamePageContentComponent({
       isBot: false,
       isUser: false,
       isSelf: false,
+      isPremium: player.isPremium,
       dbUserId: player.dbUserId,
       level: 1,
       rating,
@@ -796,12 +809,6 @@ function GamePageContentComponent({
     if (player.isUser) {
       const syncUserProfile = async () => {
         try {
-          const telegramUser = getTelegramUser();
-          const telegramId = telegramUser?.id?.toString() || '';
-          const username = telegramUser?.username || telegramUser?.first_name || '';
-          
-          if (!telegramId) return;
-          
           const response = await fetch('/api/user/me', {
             method: 'GET',
             credentials: 'include',
@@ -819,9 +826,18 @@ function GamePageContentComponent({
                 rating: result.user.rating || prev.rating || 0,
                 gamesPlayed: result.user.games_played || result.user.gamesPlayed || prev.gamesPlayed || 0,
                 wins: result.user.games_won || result.user.gamesWon || prev.wins || 0,
-                winRate: result.user.games_played && result.user.games_won 
-                  ? Math.round((result.user.games_won / result.user.games_played) * 100)
-                  : prev.winRate || 0
+                losses: result.user.losses ?? prev.losses ?? 0,
+                winRate: result.user.winRate ?? prev.winRate ?? 0,
+                coins: result.user.coins ?? prev.coins ?? 0,
+                isPremium: result.user.is_premium ?? prev.isPremium,
+                onlineGamesPlayed: result.user.onlineGamesPlayed ?? 0,
+                onlineWins: result.user.onlineWins ?? 0,
+                botGamesPlayed: result.user.botGamesPlayed ?? 0,
+                botWins: result.user.botWins ?? 0,
+                firstPlaces: result.user.firstPlaces ?? 0,
+                secondPlaces: result.user.secondPlaces ?? 0,
+                thirdPlaces: result.user.thirdPlaces ?? 0,
+                bestStreak: result.user.best_win_streak ?? 0,
               } : null);
             }
           }
@@ -949,12 +965,6 @@ function GamePageContentComponent({
     if (isProfileModalOpen && selectedPlayerProfile?.isUser) {
       const syncProfileData = async () => {
         try {
-          const telegramUser = getTelegramUser();
-          const telegramId = telegramUser?.id?.toString() || '';
-          const username = telegramUser?.username || telegramUser?.first_name || '';
-          
-          if (!telegramId) return;
-          
           const response = await fetch('/api/user/me', {
             method: 'GET',
             credentials: 'include',
@@ -972,9 +982,18 @@ function GamePageContentComponent({
                 rating: result.user.rating || prev.rating || 0,
                 gamesPlayed: result.user.games_played || result.user.gamesPlayed || prev.gamesPlayed || 0,
                 wins: result.user.games_won || result.user.gamesWon || prev.wins || 0,
-                winRate: result.user.games_played && result.user.games_won 
-                  ? Math.round((result.user.games_won / result.user.games_played) * 100)
-                  : prev.winRate || 0
+                losses: result.user.losses ?? prev.losses ?? 0,
+                winRate: result.user.winRate ?? prev.winRate ?? 0,
+                coins: result.user.coins ?? prev.coins ?? 0,
+                isPremium: result.user.is_premium ?? prev.isPremium,
+                onlineGamesPlayed: result.user.onlineGamesPlayed ?? 0,
+                onlineWins: result.user.onlineWins ?? 0,
+                botGamesPlayed: result.user.botGamesPlayed ?? 0,
+                botWins: result.user.botWins ?? 0,
+                firstPlaces: result.user.firstPlaces ?? 0,
+                secondPlaces: result.user.secondPlaces ?? 0,
+                thirdPlaces: result.user.thirdPlaces ?? 0,
+                bestStreak: result.user.best_win_streak ?? 0,
               } : null);
             }
           }
@@ -1054,7 +1073,7 @@ function GamePageContentComponent({
             const nftMap = deckEntriesToNftMap(result.deck);
             if (Object.keys(nftMap).length > 0) {
               patchStoreNftDeck(nftMap);
-              preloadNftCardUrls(Object.values(nftMap));
+              preloadNftCardUrls(Object.values(nftMap).map((entry) => entry.imageUrl));
             }
           }
         }
@@ -1817,7 +1836,7 @@ function GamePageContentComponent({
     // Задержка перед ходом ИИ для реалистичности
     const makeAIMove = async () => {
       try {
-        if (!useGameStore.getState().isGameActive) {
+        if (!useGameStore.getState().isGameActive || tutorialPausedRef.current) {
           aiProcessingRef.current = null;
           return;
         }
@@ -1840,6 +1859,12 @@ function GamePageContentComponent({
         };
         
         const decision = await ai.makeDecisionWithDelay(gameState);
+        // Модалка могла открыться, пока ИИ «думал». Решение нельзя применять
+        // до явного нажатия пользователем кнопки «Поехали».
+        if (tutorialPausedRef.current || !useGameStore.getState().isGameActive) {
+          aiProcessingRef.current = null;
+          return;
+        }
       
         // Выполняем решение ИИ с учетом стадии игры
         if (gameStage === 1) {
@@ -1882,7 +1907,7 @@ function GamePageContentComponent({
                   setTimeout(() => {
                     // ✅ ЗАЩИТА: Проверяем что игра все еще активна и ход не изменился
                     const currentState = useGameStore.getState();
-                    if (!currentState.isGameActive || currentState.currentPlayerId !== currentPlayerId) {
+                    if (tutorialPausedRef.current || !currentState.isGameActive || currentState.currentPlayerId !== currentPlayerId) {
                       console.warn(`⚠️ [AI] Игра изменилась, отменяем ход бота`);
                       aiProcessingRef.current = null;
                       return;
@@ -1909,7 +1934,7 @@ function GamePageContentComponent({
                     selectHandCard(firstCard);
                     setTimeout(() => {
                       const currentState = useGameStore.getState();
-                      if (!currentState.isGameActive || currentState.currentPlayerId !== currentPlayerId) {
+                      if (tutorialPausedRef.current || !currentState.isGameActive || currentState.currentPlayerId !== currentPlayerId) {
                         aiProcessingRef.current = null;
                         return;
                       }
@@ -2666,8 +2691,14 @@ function GamePageContentComponent({
       {/* БУРГЕР МЕНЮ */}
       {players.length > 0 && (
         <div className={styles.gameControls}>
-          <div className={styles.burgerMenu}>
-            <button className={styles.burgerButton}>
+          <div className={`${styles.burgerMenu} ${burgerMenuOpen ? styles.burgerMenuOpen : ''}`}>
+            <button
+              type="button"
+              className={styles.burgerButton}
+              aria-label="Меню игры"
+              aria-expanded={burgerMenuOpen}
+              onClick={() => setBurgerMenuOpen((open) => !open)}
+            >
               <div className={styles.burgerLines}>
                 <span></span>
                 <span></span>
@@ -2677,7 +2708,14 @@ function GamePageContentComponent({
             <div className={styles.burgerDropdown}>
               {/* Профиль пользователя */}
               <div className={styles.menuUserProfile}>
-                <div className={styles.menuUserAvatar} style={{ overflow: userData?.isPremium ? 'visible' : 'hidden' }}>
+                <div
+                  className={styles.menuUserAvatar}
+                  style={
+                    userData?.isPremium
+                      ? { width: 82, height: 82, overflow: 'visible', background: 'transparent', boxShadow: 'none' }
+                      : undefined
+                  }
+                >
                   <PremiumAvatarFire size={40} active={!!userData?.isPremium} color={userData?.flameColor}>
                     {userData?.avatar ? (
                       <img
@@ -2701,14 +2739,25 @@ function GamePageContentComponent({
               
               <div className={styles.menuDivider}></div>
 
-              <button type="button" className={styles.menuItem} onClick={() => setShowProfileModal(true)}>
+              <button
+                type="button"
+                className={styles.menuItem}
+                onClick={() => {
+                  setBurgerMenuOpen(false);
+                  if (userPlayer) void handlePlayerClick(userPlayer);
+                }}
+              >
                 👤 {t.mainMenu.gameBurgerProfile}
               </button>
-              <button type="button" className={styles.menuItem} onClick={() => setShowWalletModal(true)}>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                  <PidrCoinIcon size={16} alt="" />
-                  {t.mainMenu.gameBurgerWallet}
-                </span>
+              <button
+                type="button"
+                className={styles.menuItem}
+                onClick={() => {
+                  setBurgerMenuOpen(false);
+                  setShowSettingsModal(true);
+                }}
+              >
+                ⚙️ {t.mainMenu.gameBurgerSettings}
               </button>
               
               <div className={styles.menuDivider}></div>
@@ -2785,9 +2834,16 @@ function GamePageContentComponent({
                   const tableCardRank = String(card.rank || '').toLowerCase();
                   const tableCardSuit = String(card.suit || '').toLowerCase();
                   const isNftUrl = cardImg.startsWith('http://') || cardImg.startsWith('https://');
-                  const tableCardSrc = isNftUrl
-                    ? cardImg
-                    : getCardAssetSrc({ image: cardImg, rank: tableCardRank, suit: tableCardSuit });
+                  const slotVisual = resolveNftDeckVisual(
+                    storeNftDeckCards,
+                    tableCardRank,
+                    tableCardSuit
+                  );
+                  const tableNftVisual: NftDeckVisual | null =
+                    slotVisual ?? (isNftUrl ? { imageUrl: cardImg } : null);
+                  const tableCardSrc =
+                    tableNftVisual?.imageUrl ??
+                    getCardAssetSrc({ image: cardImg, rank: tableCardRank, suit: tableCardSuit });
                   
                   return (
                     <div 
@@ -2809,12 +2865,14 @@ function GamePageContentComponent({
                       }}
                     >
                       {/* ✅ ИСПРАВЛЕНО: Для NFT используем img, для обычных - Image */}
-                      {isNftUrl ? (
+                      {tableNftVisual ? (
                         <div style={{ position: 'relative', width: `${layoutMetrics.centerCardWidth}px`, height: `${layoutMetrics.centerCardHeight}px` }}>
                           <NftCardFace
                             rank={tableCardRank}
                             suit={tableCardSuit}
                             imageUrl={tableCardSrc}
+                            metadata={tableNftVisual.metadata}
+                            rarity={tableNftVisual.rarity}
                             ensureReadableCorners={false}
                             alt={`Card ${idx + 1}`}
                             style={{ borderRadius: 6 }}
@@ -2887,9 +2945,16 @@ function GamePageContentComponent({
                     deckCardRank = String(revealedDeckCard.rank || '').toLowerCase();
                     deckCardSuit = String(revealedDeckCard.suit || '').toLowerCase();
                   }
-                  const cardSrc = isNftUrl
-                    ? currentCard
-                    : getCardAssetSrc({ image: currentCard, rank: deckCardRank, suit: deckCardSuit });
+                  const slotVisual = resolveNftDeckVisual(
+                    storeNftDeckCards,
+                    deckCardRank,
+                    deckCardSuit
+                  );
+                  const deckNftVisual: NftDeckVisual | null =
+                    slotVisual ?? (isNftUrl ? { imageUrl: currentCard } : null);
+                  const cardSrc =
+                    deckNftVisual?.imageUrl ??
+                    getCardAssetSrc({ image: currentCard, rank: deckCardRank, suit: deckCardSuit });
                   
                   return (
                   <div 
@@ -2930,11 +2995,13 @@ function GamePageContentComponent({
                   >
                     {/* ✅ ИСПРАВЛЕНО: Для NFT используем img, для обычных - Image */}
                     {/* ✅ УВЕЛИЧЕНО В 1.5 РАЗА: 36x54 → 54x81 */}
-                    {isNftUrl ? (
+                    {deckNftVisual ? (
                       <NftCardFace
                         rank={deckCardRank}
                         suit={deckCardSuit}
                         imageUrl={cardSrc}
+                        metadata={deckNftVisual.metadata}
+                        rarity={deckNftVisual.rarity}
                         ensureReadableCorners={false}
                         alt="Current Card"
                         style={{ 
@@ -3324,15 +3391,20 @@ function GamePageContentComponent({
                           }
                           
                           // ✅ ИСПРАВЛЕНО: NFT карты для ВСЕХ игроков (не только главного)
-                          let nftImageUrl: string | null = null;
+                          let nftVisual: NftDeckVisual | null = null;
                           // ✅ НОВОЕ: Проверяем NFT для всех игроков, если cardImage уже URL
                           if (isCardAlreadyNftUrl) {
-                            nftImageUrl = cardImage; // ✅ cardImage уже является NFT URL!
+                            nftVisual =
+                              resolveNftDeckVisual(storeNftDeckCards, cardRank, cardSuit) ??
+                              { imageUrl: cardImage };
                           } else if (cardRank && cardSuit) {
-                            // ✅ ИСПРАВЛЕНО: Ищем NFT для всех игроков по ключу
-                            const nftKey = getNFTKey?.(cardImage) || buildNftDeckKey(cardRank, cardSuit);
-                            nftImageUrl = storeNftDeckCards?.[nftKey] || null;
+                            nftVisual = resolveNftDeckVisual(
+                              storeNftDeckCards,
+                              cardRank,
+                              cardSuit
+                            );
                           }
+                          const nftImageUrl = nftVisual?.imageUrl ?? null;
                           
                           // Верхняя карта должна быть последней добавленной для любого игрока.
                           const isTopCard = cardIndex === cardsToRender.length - 1;
@@ -3436,6 +3508,8 @@ function GamePageContentComponent({
                                   rank={String(cardRank)}
                                   suit={cardSuit}
                                   imageUrl={nftImageUrl}
+                                  metadata={nftVisual?.metadata}
+                                  rarity={nftVisual?.rarity}
                                   ensureReadableCorners={false}
                                   alt={cardImage}
                                   style={{ 
@@ -3845,13 +3919,15 @@ function GamePageContentComponent({
               
               // ✅ ИСПРАВЛЕНО: Если cardImage уже URL - используем его как NFT
               // Иначе ищем NFT по ключу
-              let nftImageUrl: string | null = null;
+              let nftVisual: NftDeckVisual | null = null;
               if (isCardImageUrl) {
-                nftImageUrl = cardImage; // ✅ cardImage уже является NFT URL!
+                nftVisual =
+                  resolveNftDeckVisual(storeNftDeckCards, cardRank, cardSuit) ??
+                  { imageUrl: cardImage };
               } else {
-                const nftKey = getNFTKey?.(cardImage) || buildNftDeckKey(cardRank, cardSuit);
-                nftImageUrl = storeNftDeckCards?.[nftKey] || null;
+                nftVisual = resolveNftDeckVisual(storeNftDeckCards, cardRank, cardSuit);
               }
+              const nftImageUrl = nftVisual?.imageUrl ?? null;
               
               const cardId = typeof card === 'string' ? undefined : card.id;
               const isTopHandCard = index === myPlayer.cards.length - 1;
@@ -3979,6 +4055,8 @@ function GamePageContentComponent({
                       rank={String(cardRank)}
                       suit={cardSuit}
                       imageUrl={nftImageUrl}
+                      metadata={nftVisual?.metadata}
+                      rarity={nftVisual?.rarity}
                       ensureReadableCorners={false}
                       alt={cardImage}
                       style={{ 
@@ -4063,8 +4141,8 @@ function GamePageContentComponent({
           place={winnerModalData.place}
           avatar={winnerModalData.avatar}
           isCurrentUser={winnerModalData.isCurrentUser}
-          coinsEarned={winnerModalData.place === 1 ? 350 : winnerModalData.place === 2 ? 250 : winnerModalData.place === 3 ? 150 : winnerModalData.place === 4 ? 100 : winnerModalData.place === 5 ? 70 : 30}
-          ratingChange={winnerModalData.place === 1 ? 50 : winnerModalData.place === 2 ? 25 : winnerModalData.place === 3 ? 10 : 0}
+          coinsEarned={getPlaceRewards(winnerModalData.place, players.length, isRankedGame).coinsEarned}
+          ratingChange={getPlaceRewards(winnerModalData.place, players.length, isRankedGame).ratingChange}
           isBotGame={!isMultiplayer}
           onClose={() => {
             useGameStore.setState({
@@ -4390,145 +4468,15 @@ function GamePageContentComponent({
         />
       )}
 
-      {/* 👤 МОДАЛКА ПРОФИЛЯ (из бургер-меню) */}
-      <AnimatePresence>
-        {showProfileModal && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowProfileModal(false)}
-              style={{
-                position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
-                zIndex: 8000, backdropFilter: 'blur(6px)',
-              }}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              style={{
-                position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                zIndex: 8001, padding: '16px', pointerEvents: 'none',
-              }}
-            >
-              <div
-                onClick={(e) => e.stopPropagation()}
-                style={{
-                  width: 'min(400px, 92vw)',
-                  maxHeight: '80vh',
-                  overflowY: 'auto',
-                  background: 'linear-gradient(145deg, rgba(30,41,59,0.98), rgba(15,23,42,0.99))',
-                  borderRadius: '24px',
-                  border: '2px solid rgba(99,102,241,0.3)',
-                  boxShadow: '0 25px 60px rgba(0,0,0,0.5), 0 0 40px rgba(99,102,241,0.15)',
-                  padding: '28px',
-                  pointerEvents: 'auto',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                  <h2 style={{ color: '#e2e8f0', fontSize: '20px', fontWeight: '800', margin: 0 }}>👤 Профиль</h2>
-                  <button onClick={() => setShowProfileModal(false)} style={{
-                    background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)',
-                    borderRadius: '10px', padding: '6px 10px', cursor: 'pointer', color: '#f87171', fontSize: '14px',
-                  }}>✕</button>
-                </div>
-                <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-                  <div style={{
-                    width: '80px', height: '80px', borderRadius: '50%', margin: '0 auto 12px',
-                    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    border: '3px solid rgba(99,102,241,0.4)',
-                    boxShadow: '0 4px 20px rgba(99,102,241,0.3)',
-                    overflow: 'hidden',
-                  }}>
-                    {userData?.avatar ? (
-                      <img src={userData.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      <span style={{ fontSize: '36px' }}>👤</span>
-                    )}
-                  </div>
-                  <div style={{ color: '#e2e8f0', fontSize: '18px', fontWeight: '700' }}>{userData?.username || 'Игрок'}</div>
-                </div>
-                <div style={{
-                  background: 'rgba(15,23,42,0.5)', borderRadius: '16px',
-                  padding: '16px', border: '1px solid rgba(51,65,85,0.3)',
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                    <span style={{ color: '#94a3b8', fontSize: '13px' }}>Баланс</span>
-                    <PidrCoinAmount value={userData?.coins || 0} size={18} />
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                    <span style={{ color: '#94a3b8', fontSize: '13px' }}>ID</span>
-                    <span style={{ color: '#64748b', fontSize: '12px', fontFamily: 'monospace' }}>{userData?.telegramId || userPlayerId || '—'}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: '#94a3b8', fontSize: '13px' }}>Стадия</span>
-                    <span style={{ color: '#a5b4fc', fontSize: '14px', fontWeight: '600' }}>
-                      {gameStage === 1 ? '1-я стадия' : gameStage === 2 ? '2-я стадия' : '3-я стадия (пеньки)'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
-      {/* 💰 МОДАЛКА КОШЕЛЬКА (из бургер-меню) */}
-      <AnimatePresence>
-        {showWalletModal && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowWalletModal(false)}
-              style={{
-                position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
-                zIndex: 8000, backdropFilter: 'blur(6px)',
-              }}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              style={{
-                position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                zIndex: 8001, padding: '12px', pointerEvents: 'none',
-              }}
-            >
-              <div
-                onClick={(e) => e.stopPropagation()}
-                style={{
-                  width: 'min(440px, 95vw)',
-                  maxHeight: '85vh',
-                  overflowY: 'auto',
-                  background: 'linear-gradient(145deg, rgba(30,41,59,0.98), rgba(15,23,42,0.99))',
-                  borderRadius: '24px',
-                  border: '2px solid rgba(251,191,36,0.3)',
-                  boxShadow: '0 25px 60px rgba(0,0,0,0.5), 0 0 40px rgba(251,191,36,0.1)',
-                  pointerEvents: 'auto',
-                  position: 'relative',
-                }}
-              >
-                <button onClick={() => setShowWalletModal(false)} style={{
-                  position: 'absolute', top: '14px', right: '14px', zIndex: 10,
-                  background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)',
-                  borderRadius: '10px', padding: '6px 10px', cursor: 'pointer', color: '#f87171', fontSize: '14px',
-                }}>✕</button>
-                <GameWallet
-                  user={gameWalletUserMemo}
-                  onBalanceUpdate={handleGameWalletBalance}
-                />
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+      <GameSettingsModal
+        isOpen={showSettingsModal}
+        isPremium={!!userData?.isPremium}
+        onClose={() => setShowSettingsModal(false)}
+        onFlameChanged={(flameColor) => {
+          setUserData((prev) => (prev ? { ...prev, flameColor } : prev));
+          syncLocalUserProfile({ flameColor });
+        }}
+      />
     </div>
   );
 }

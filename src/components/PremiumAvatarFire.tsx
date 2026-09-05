@@ -37,7 +37,7 @@ export default function PremiumAvatarFire({
 
   const palette = getFlamePalette(resolvePremiumFlame(color));
   const flameId = resolvePremiumFlame(color);
-  const box = Math.round(size * 2.05);
+  const box = Math.round(size * 2.15);
 
   return (
     <div
@@ -53,16 +53,16 @@ export default function PremiumAvatarFire({
         ['--flame-filter' as string]: HUE[flameId] ?? HUE.gold,
       }}
     >
-      <div className={styles.halo} />
+      <div className={styles.heat} aria-hidden />
       <div className={styles.wreath} aria-hidden>
-        <img src="/fx/premium-flame-a.png" alt="" className={`${styles.orbit} ${styles.o1} ${styles.shotA}`} />
-        <img src="/fx/premium-flame-b.png" alt="" className={`${styles.orbit} ${styles.o2} ${styles.shotB}`} />
-        <img src="/fx/premium-flame-a.png" alt="" className={`${styles.orbit} ${styles.o3} ${styles.shotB}`} />
-        <img src="/fx/premium-flame-b.png" alt="" className={`${styles.orbit} ${styles.o4} ${styles.shotA}`} />
+        <img src="/fx/premium-flame-a.png" alt="" className={`${styles.tongue} ${styles.leftOuter}`} />
+        <img src="/fx/premium-flame-b.png" alt="" className={`${styles.tongue} ${styles.leftInner}`} />
+        <img src="/fx/premium-flame-a.png" alt="" className={`${styles.tongue} ${styles.rightInner}`} />
+        <img src="/fx/premium-flame-b.png" alt="" className={`${styles.tongue} ${styles.rightOuter}`} />
       </div>
       <div className={styles.crown} aria-hidden>
-        <img src="/fx/premium-flame-a.png" alt="" className={styles.shotA} />
-        <img src="/fx/premium-flame-b.png" alt="" className={styles.shotB} />
+        <img src="/fx/premium-flame-a.png" alt="" className={styles.crownTall} />
+        <img src="/fx/premium-flame-b.png" alt="" className={styles.crownWide} />
       </div>
       <div className={styles.core} style={{ width: size, height: size }}>
         {children}

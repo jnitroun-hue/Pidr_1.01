@@ -36,6 +36,23 @@ export const NFT_THEME_CONFIG = {
 
 export type NftThemeKey = keyof typeof NFT_THEME_CONFIG;
 
+/** GIF с необработанным chroma-key фоном не показываем и больше не выдаём. */
+export const EXCLUDED_THEME_ASSET_IDS: Partial<Record<NftThemeKey, readonly number[]>> = {
+  unique: [4, 5, 9, 11],
+};
+
+const UNIQUE_REPLACEMENTS: Record<number, number> = {
+  4: 6,
+  5: 7,
+  9: 10,
+  11: 12,
+};
+
+export function normalizeThemeAssetId(theme: NftThemeKey, themeId: number): number {
+  if (theme === 'unique') return UNIQUE_REPLACEMENTS[themeId] ?? themeId;
+  return themeId;
+}
+
 export function isNftThemeKey(value: unknown): value is NftThemeKey {
   return typeof value === 'string' && value in NFT_THEME_CONFIG;
 }
@@ -66,6 +83,7 @@ const themeAssetPool: ThemeAssetPick[] = (() => {
   for (const theme of Object.keys(NFT_THEME_CONFIG) as NftThemeKey[]) {
     const cfg = NFT_THEME_CONFIG[theme];
     for (let id = 1; id <= cfg.total; id += 1) {
+      if (EXCLUDED_THEME_ASSET_IDS[theme]?.includes(id)) continue;
       pool.push({ theme, themeId: id });
     }
   }
@@ -87,7 +105,7 @@ export const THEME_ASSET_EXTS = ['gif', 'webp', 'png'] as const;
 
 export function themeAssetFileName(pick: ThemeAssetPick, ext: string = 'png'): string {
   const cfg = NFT_THEME_CONFIG[pick.theme];
-  return `${cfg.prefix}${pick.themeId}.${ext}`;
+  return `${cfg.prefix}${normalizeThemeAssetId(pick.theme, pick.themeId)}.${ext}`;
 }
 
 export function getThemeAssetRelativePath(pick: ThemeAssetPick, ext: string = 'png'): string {

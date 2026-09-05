@@ -11,6 +11,44 @@ const exactRuToEn: Record<string, string> = {
   'Обратите внимание на подсвеченный элемент': 'Look at the highlighted element',
   'Далее': 'Next',
   'Понятно': 'Got it',
+  'Поехали': "Let's go",
+  'Игра на паузе': 'Game paused',
+  'Смотрите короткие примеры и повторяйте действия на столе. Пока окно открыто, боты и таймер ждут вас.':
+    'Watch the short examples and repeat the actions at the table. Bots and the timer wait while this lesson is open.',
+  'Две закрытые карты — ваши пеньки. Они откроются только после колоды, когда обычная рука опустеет.':
+    'The two face-down cards are your stumps. They open only after the deck ends and your regular hand is empty.',
+  'Зелёная подсветка показывает, чей сейчас ход. Первым начинает игрок с самой старшей открытой картой.':
+    'The green highlight shows the active player. The highest open card takes the first turn.',
+  'Положите свою верхнюю карту на карту соперника, если она старше ровно на один ранг. Масть сейчас не важна.':
+    'Place your top card on an opponent only when it is exactly one rank higher. Suit does not matter yet.',
+  'Найдите карту соперника на один ранг младше. Подходящей цели нет — нажмите колоду.':
+    'Find an opponent card exactly one rank lower. If there is no target, tap the deck.',
+  'Карта из колоды сразу проверяется по правилу +1. Если цели нет, она остаётся у вас.':
+    'A drawn card is checked by the +1 rule immediately. If there is no target, it stays with you.',
+  'Обычная рука пуста, но колода ещё есть. Нажмите колоду и продолжайте игру.':
+    'Your regular hand is empty but the deck remains. Tap the deck to continue.',
+  'Бот положил карту на один ранг старше поверх вашей. Теперь именно она считается верхней.':
+    'A bot placed a card exactly one rank higher on yours. That card is now on top.',
+  'После хода каждого игрока очередь начинается заново. Следите за зелёной подсветкой.':
+    'After every player acts, the turn cycle starts again. Follow the green highlight.',
+  'Колода закончилась: теперь карты идут на общий стол. Последняя непиковая масть становится козырем.':
+    'The deck is empty: cards now go to the shared table. The last non-spade suit becomes trump.',
+  'Старшая карта той же масти бьёт младшую. Козырь бьёт некозырную карту, но не пику.':
+    'A higher card of the same suit beats a lower one. Trump beats a non-trump card, but never a spade.',
+  'Выберите подходящую карту в своей руке и положите её в подсвеченную центральную область.':
+    'Select a valid card in your hand and place it in the highlighted center area.',
+  'Сначала нажмите карту в руке, затем отправьте её на стол. Если побить нечем — используйте «Взять».':
+    'Tap a card in your hand, then send it to the table. If nothing can beat the card, use Take.',
+  'Если побить верхнюю карту нельзя, нажмите «Взять»: к вам перейдёт нижняя карта стопки.':
+    'If you cannot beat the top card, tap Take. You receive the bottom card of the stack.',
+  'Осталась одна карта — сразу объявите «Одна карта!», иначе соперник сможет назначить штраф.':
+    'When one card remains, declare One Card immediately or an opponent can penalize you.',
+  'Если соперник забыл объявить последнюю карту, нажмите «Сколько карт?» и примените штраф.':
+    'If an opponent forgot to declare their last card, tap How many cards? to apply the penalty.',
+  'При одной карте обязательно нажмите «Одна карта!». Это защищает вас от штрафа.':
+    'With one card left, always tap One Card! It protects you from a penalty.',
+  'Обычная рука закончилась — пеньки открываются. Доиграйте их по правилам второй стадии.':
+    'Your regular hand is empty, so the stumps open. Play them using the Stage 2 rules.',
   'Результаты игры': 'Game Results',
   'Рейтинговая игра': 'Ranked Game',
   'ВЫ': 'YOU',

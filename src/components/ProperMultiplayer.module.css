@@ -1,11 +1,9 @@
-/* 🔥 КРУТОЙ ДИЗАЙН МУЛЬТИПЛЕЕРА The Must! */
-
 .container {
   min-height: 100vh;
   min-height: var(--app-viewport-height, 100dvh);
   width: 100%;
-  background: var(--menu-bg-accent, linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)), var(--menu-bg, #0f172a);
-  color: var(--menu-text, #e2e8f0);
+  background: var(--menu-bg-accent), var(--menu-bg);
+  color: var(--menu-text);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   overflow-x: hidden;
   overflow-y: auto;
@@ -19,10 +17,10 @@
   text-align: center;
   margin-bottom: 32px;
   padding: 28px 24px;
-  background: var(--menu-card-bg, linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%));
+  background: var(--menu-card-bg);
   border-radius: 20px;
-  border: 1px solid color-mix(in srgb, var(--menu-accent, #6366f1) 35%, transparent);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--menu-card-border);
+  box-shadow: var(--menu-shadow);
 }
 
 .headerContent {
@@ -37,33 +35,30 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: var(--menu-accent-soft);
+  border: 1px solid var(--menu-card-border);
   border-radius: 12px;
   padding: 12px 16px;
-  color: white;
+  color: var(--menu-text);
   font-weight: 500;
   transition: all 0.3s ease;
   cursor: pointer;
 }
 
 .backButton:hover {
-  background: rgba(255, 255, 255, 0.15);
+  border-color: var(--menu-accent);
   transform: translateY(-2px);
 }
 
 .title {
   font-size: 32px;
   font-weight: 700;
-  background: linear-gradient(135deg, var(--menu-accent, #6366f1) 0%, color-mix(in srgb, var(--menu-accent, #8b5cf6) 70%, #ec4899) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--menu-accent);
   margin-bottom: 10px;
 }
 
 .subtitle {
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--menu-text-muted);
   font-size: 16px;
 }
 
@@ -106,6 +101,16 @@
   color: #fca5a5;
 }
 
+.info {
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  border-radius: 12px;
+  background: rgba(34, 197, 94, 0.12);
+  color: #4ade80;
+  text-align: center;
+}
+
 /* ЛОББИ */
 .lobby {
   display: flex;
@@ -120,12 +125,12 @@
 }
 
 .roomsList {
-  background: linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);
+  background: var(--menu-card-bg);
   border-radius: 20px;
-  border: 1px solid rgba(99, 102, 241, 0.2);
+  border: 1px solid var(--menu-card-border);
   overflow: visible;
   padding: 20px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--menu-shadow);
 }
 
 .sectionTitle {
@@ -133,6 +138,7 @@
   font-weight: 600;
   margin-bottom: 20px;
   text-align: center;
+  color: var(--menu-text);
 }
 
 /* Заголовок с кнопками обновления и очистки */
@@ -150,54 +156,43 @@
 
 
 .refresh {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
-  color: white !important;
-  border: none !important;
-  padding: 8px 16px !important;
-  font-size: 14px !important;
-  border-radius: 8px !important;
-  cursor: pointer !important;
-  transition: all 0.3s ease !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 6px !important;
+  background: var(--menu-accent-soft);
+  color: var(--menu-accent);
+  border: 1px solid var(--menu-card-border);
+  padding: 10px 14px;
+  font-size: 14px;
+  border-radius: 12px;
+  min-width: 0;
 }
 
 .refresh:hover:not(:disabled) {
-  background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
-  transform: translateY(-1px) !important;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4) !important;
+  border-color: var(--menu-accent);
+  transform: translateY(-1px);
+  box-shadow: var(--menu-shadow);
 }
 
 .refresh:disabled {
-  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%) !important;
-  cursor: not-allowed !important;
-  transform: none !important;
+  cursor: not-allowed;
+  transform: none;
 }
 
 
 .loading {
   text-align: center;
   padding: 40px;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--menu-text-muted);
 }
 
 .empty {
   text-align: center;
   padding: 60px 20px;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--menu-text-muted);
 }
 
 .rooms {
   display: flex;
   flex-direction: column;
   gap: 16px;
-}
-
-.roomsHeader {
-  padding: 25px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.02);
 }
 
 .roomsTitle {
@@ -219,8 +214,8 @@
 
 /* КАРТОЧКА КОМНАТЫ */
 .roomCard {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--menu-accent-soft);
+  border: 1px solid var(--menu-card-border);
   border-radius: 16px;
   padding: 20px;
   transition: all 0.3s ease;
@@ -239,18 +234,18 @@
 .roomName {
   font-size: 18px;
   font-weight: 600;
-  color: white;
+  color: var(--menu-text);
   margin-bottom: 8px;
 }
 
 .roomDetails {
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--menu-text-muted);
   font-size: 14px;
   margin-bottom: 4px;
 }
 
 .roomCode {
-  color: #00d4ff;
+  color: var(--menu-accent);
   font-family: monospace;
   font-weight: bold;
   font-size: 12px;
@@ -263,14 +258,13 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, #00d4ff, #5865f2, #00d4ff);
+  background: var(--menu-accent);
   opacity: 0;
   transition: opacity 0.3s ease;
 }
 
 .roomCard:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: var(--menu-accent);
   transform: translateY(-2px);
 }
 
@@ -288,7 +282,7 @@
 .roomName {
   font-size: 18px;
   font-weight: 600;
-  color: white;
+  color: var(--menu-text);
 }
 
 .roomStatus {
@@ -372,29 +366,28 @@
 }
 
 .primary {
-  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-  color: white;
-  box-shadow: 0 8px 25px rgba(99, 102, 241, 0.35);
+  background: var(--menu-accent);
+  color: #111827;
+  box-shadow: var(--menu-shadow);
 }
 
 .primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
   transform: translateY(-3px);
-  box-shadow: 0 12px 35px rgba(99, 102, 241, 0.45);
+  filter: brightness(1.08);
+  box-shadow: var(--menu-shadow);
 }
 
 .secondary {
-  background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
-  color: #e2e8f0;
-  border: 1px solid rgba(99, 102, 241, 0.35);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
+  background: var(--menu-card-bg);
+  color: var(--menu-text);
+  border: 1px solid var(--menu-card-border);
+  box-shadow: var(--menu-shadow);
 }
 
 .secondary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #475569 0%, #334155 100%);
-  border-color: rgba(99, 102, 241, 0.55);
+  border-color: var(--menu-accent);
   transform: translateY(-3px);
-  box-shadow: 0 12px 35px rgba(99, 102, 241, 0.2);
+  box-shadow: var(--menu-shadow);
 }
 
 .join {
@@ -438,9 +431,9 @@
 .form {
   max-width: 500px;
   margin: 0 auto;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--menu-card-bg);
   border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--menu-card-border);
   padding: 24px 20px;
   padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
 }
@@ -450,7 +443,7 @@
   font-weight: 600;
   text-align: center;
   margin-bottom: 30px;
-  color: white;
+  color: var(--menu-text);
 }
 
 .field {
@@ -459,7 +452,7 @@
 
 .label {
   display: block;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--menu-text);
   font-weight: 500;
   margin-bottom: 8px;
 }
@@ -473,8 +466,8 @@
 }
 
 .playerCard {
-  background: rgba(255, 255, 255, 0.08);
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  background: var(--menu-card-bg);
+  border: 2px solid var(--menu-card-border);
   border-radius: 16px;
   padding: 16px 12px;
   cursor: pointer;
@@ -491,14 +484,14 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, #00d4ff, #5865f2);
+  background: var(--menu-accent);
   opacity: 0;
   transition: opacity 0.3s ease;
 }
 
 .playerCard:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(0, 212, 255, 0.5);
+  background: var(--menu-accent-soft);
+  border-color: var(--menu-accent);
   transform: translateY(-2px);
 }
 
@@ -507,9 +500,9 @@
 }
 
 .playerCard.selected {
-  background: rgba(0, 212, 255, 0.2);
-  border-color: #00d4ff;
-  box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+  background: var(--menu-accent-soft);
+  border-color: var(--menu-accent);
+  box-shadow: 0 0 0 2px var(--menu-accent), var(--menu-shadow);
 }
 
 .playerCard.selected::before {
@@ -519,36 +512,35 @@
 .cardNumber {
   font-size: 24px;
   font-weight: 700;
-  color: white;
+  color: var(--menu-text);
   margin-bottom: 4px;
 }
 
 .cardLabel {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--menu-text-muted);
   font-weight: 500;
 }
 
 .input, .select {
   width: 100%;
   padding: 12px 16px;
-  background: rgba(30, 30, 50, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: var(--menu-card-bg);
+  border: 1px solid var(--menu-card-border);
   border-radius: 12px;
-  color: white;
+  color: var(--menu-text);
   font-size: 16px;
   transition: all 0.3s ease;
 }
 
 .input:focus, .select:focus {
   outline: none;
-  border-color: #00d4ff;
-  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
-  background: rgba(30, 30, 50, 0.9);
+  border-color: var(--menu-accent);
+  box-shadow: 0 0 0 3px var(--menu-accent-soft);
 }
 
 .input::placeholder {
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--menu-text-muted);
 }
 
 .select option {
@@ -574,7 +566,7 @@
 .checkbox input[type="checkbox"] {
   width: 18px;
   height: 18px;
-  accent-color: #00d4ff;
+  accent-color: var(--menu-accent);
 }
 
 .formActions {
@@ -591,8 +583,52 @@
 
 @media (max-width: 768px) {
   .container {
+    padding: 12px;
+    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .header {
+    margin-bottom: 20px;
+    padding: 18px 14px;
+  }
+
+  .backButton {
+    min-height: 44px;
+    padding: 10px 14px;
+  }
+
+  .title {
+    font-size: clamp(26px, 8vw, 32px);
+  }
+
+  .actions {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .actions .button {
+    width: 100%;
+    min-height: 50px;
+  }
+
+  .roomsList {
+    padding: 14px;
+  }
+
+  .roomsHeader {
+    gap: 12px;
+  }
+
+  .roomCard {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 16px;
     padding: 16px;
-    padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .roomCard .join {
+    width: 100%;
+    min-height: 46px;
   }
 
   .form {
@@ -605,11 +641,7 @@
     z-index: 5;
     margin-top: 20px;
     padding: 12px 0 calc(8px + env(safe-area-inset-bottom, 0px));
-    background: linear-gradient(
-      to top,
-      rgba(15, 23, 42, 0.98) 70%,
-      rgba(15, 23, 42, 0)
-    );
+    background: var(--menu-card-bg);
   }
 
   .playerCards {
@@ -655,16 +687,16 @@
   width: 44px;
   height: 44px;
   border-radius: 14px;
-  border: 1px solid rgba(99, 102, 241, 0.35);
-  background: rgba(30, 41, 59, 0.85);
-  color: #e2e8f0;
+  border: 1px solid var(--menu-card-border);
+  background: var(--menu-card-bg);
+  color: var(--menu-text);
   font-size: 20px;
   cursor: pointer;
   transition: background 0.2s ease, transform 0.2s ease;
 }
 
 .createBack:hover:not(:disabled) {
-  background: rgba(51, 65, 85, 0.95);
+  border-color: var(--menu-accent);
   transform: translateY(-1px);
 }
 
@@ -672,22 +704,22 @@
   margin: 0 0 6px;
   font-size: clamp(22px, 4vw, 28px);
   font-weight: 700;
-  color: #f8fafc;
+  color: var(--menu-text);
 }
 
 .createHint {
   margin: 0;
   font-size: 14px;
-  color: rgba(226, 232, 240, 0.65);
+  color: var(--menu-text-muted);
   line-height: 1.4;
 }
 
 .createCard {
-  background: linear-gradient(160deg, rgba(30, 41, 59, 0.96) 0%, rgba(15, 23, 42, 0.98) 100%);
-  border: 1px solid rgba(99, 102, 241, 0.28);
+  background: var(--menu-card-bg);
+  border: 1px solid var(--menu-card-border);
   border-radius: 20px;
   padding: 20px 18px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--menu-shadow);
 }
 
 .modeCards {
@@ -703,23 +735,23 @@
   gap: 4px;
   padding: 14px 14px 12px;
   border-radius: 16px;
-  border: 2px solid rgba(148, 163, 184, 0.25);
-  background: rgba(15, 23, 42, 0.55);
-  color: #e2e8f0;
+  border: 2px solid var(--menu-card-border);
+  background: var(--menu-card-bg);
+  color: var(--menu-text);
   cursor: pointer;
   transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
   text-align: left;
 }
 
 .modeCard:hover {
-  border-color: rgba(99, 102, 241, 0.55);
-  background: rgba(30, 41, 59, 0.75);
+  border-color: var(--menu-accent);
+  background: var(--menu-accent-soft);
 }
 
 .modeCardActive {
-  border-color: #6366f1;
-  background: rgba(99, 102, 241, 0.18);
-  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.35), 0 8px 24px rgba(99, 102, 241, 0.2);
+  border-color: var(--menu-accent);
+  background: var(--menu-accent-soft);
+  box-shadow: 0 0 0 1px var(--menu-accent), var(--menu-shadow);
 }
 
 .modeCardTitle {
@@ -729,7 +761,7 @@
 
 .modeCardDesc {
   font-size: 12px;
-  color: rgba(226, 232, 240, 0.62);
+  color: var(--menu-text-muted);
 }
 
 .codeInput {
@@ -773,10 +805,28 @@
 
   .playerCard {
     padding: 12px 8px;
+    min-height: 64px;
   }
 
   .cardNumber {
     font-size: 20px;
+  }
+
+  .createFooter {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 6px);
+    padding: 6px;
+    border: 1px solid var(--menu-card-border);
+    border-radius: 16px;
+    background: var(--menu-card-bg);
+    box-shadow: var(--menu-shadow);
+  }
+
+  .activeRoomBannerActions {
+    flex-direction: column;
+  }
+
+  .activeRoomBannerActions .button {
+    width: 100%;
   }
 }
 
@@ -803,9 +853,9 @@
   margin-bottom: 20px;
   padding: 18px;
   border-radius: 16px;
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.12) 0%, rgba(15, 23, 42, 0.95) 100%);
+  background: var(--menu-card-bg);
   border: 1px solid rgba(34, 197, 94, 0.35);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--menu-shadow);
 }
 
 .activeRoomBannerTitle {
@@ -817,20 +867,20 @@
 }
 
 .activeRoomBannerName {
-  color: #f8fafc;
+  color: var(--menu-text);
   font-size: 20px;
   font-weight: 800;
   margin-top: 4px;
 }
 
 .activeRoomBannerMeta {
-  color: #94a3b8;
+  color: var(--menu-text-muted);
   font-size: 13px;
   margin-top: 6px;
 }
 
 .activeRoomBannerHint {
-  color: #64748b;
+  color: var(--menu-text-muted);
   font-size: 12px;
   margin: 8px 0 0;
 }

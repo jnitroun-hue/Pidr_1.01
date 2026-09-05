@@ -1,0 +1,248 @@
+.stage {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  min-height: 178px;
+  max-height: 250px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--menu-card-border) 82%, transparent);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(34, 197, 94, 0.2), transparent 46%),
+    linear-gradient(145deg, #071b14, #04100d);
+  box-shadow: inset 0 0 45px rgba(0, 0, 0, 0.6);
+}
+
+.table {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.card {
+  width: 42px;
+  height: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 5px;
+  border: 2px solid rgba(255, 255, 255, 0.82);
+  border-radius: 7px;
+  background: linear-gradient(145deg, #fff, #e5e7eb);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+  font-family: Georgia, serif;
+  line-height: 1;
+}
+
+.card b { font-size: 16px; }
+.card span { margin-top: 2px; font-size: 15px; }
+.red { color: #dc2626; }
+.black { color: #111827; }
+
+.seat {
+  position: absolute;
+  width: 47px;
+  height: 47px;
+  display: grid;
+  place-items: center;
+  border: 2px solid rgba(255, 255, 255, 0.38);
+  border-radius: 50%;
+  background: #1e293b;
+  color: #f8fafc;
+  font-size: 11px;
+  font-weight: 850;
+  box-shadow: 0 0 18px rgba(34, 197, 94, 0.28);
+}
+
+.bottom { bottom: 10px; left: calc(50% - 23px); border-color: #4ade80; }
+.left { left: 15px; top: calc(50% - 23px); }
+.right { right: 15px; top: calc(50% - 23px); }
+
+.turnRing {
+  position: absolute;
+  inset: 21% 34%;
+  border: 2px dashed #4ade80;
+  border-radius: 50%;
+}
+
+.deck,
+.dealt,
+.cardBack {
+  width: 42px;
+  height: 60px;
+  border: 2px solid #cbd5e1;
+  border-radius: 7px;
+  background:
+    repeating-linear-gradient(45deg, #312e81 0 4px, #1e1b4b 4px 8px);
+  box-shadow: 0 7px 18px rgba(0, 0, 0, 0.36);
+}
+
+.deck {
+  position: absolute;
+  left: calc(50% - 21px);
+  top: 24px;
+}
+
+.dealt {
+  position: absolute;
+  left: calc(50% - 21px);
+  top: 24px;
+}
+
+.targetCard,
+.movingCard {
+  position: absolute;
+  left: calc(50% - 21px);
+  top: calc(50% - 30px);
+}
+
+.targetCard { transform: translateX(9px) rotate(4deg); opacity: 0.86; }
+.movingCard { z-index: 3; }
+
+.success {
+  position: absolute;
+  top: 16px;
+  right: 19px;
+  padding: 5px 9px;
+  border: 1px solid rgba(74, 222, 128, 0.62);
+  border-radius: 999px;
+  background: rgba(22, 101, 52, 0.88);
+  color: #bbf7d0;
+  font-weight: 900;
+}
+
+.caption {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 8px;
+  color: #d1fae5;
+  font-size: 11px;
+  font-weight: 750;
+  text-align: center;
+}
+
+.pointer {
+  position: absolute;
+  left: calc(50% - 10px);
+  top: calc(50% - 10px);
+  z-index: 6;
+  color: #facc15;
+  filter: drop-shadow(0 2px 5px #000);
+}
+
+.pointer svg { width: 24px; height: 24px; }
+
+.cycleArrow {
+  position: absolute;
+  left: calc(50% - 28px);
+  top: calc(50% - 33px);
+  color: #4ade80;
+  font-size: 54px;
+  line-height: 1;
+  text-shadow: 0 0 18px rgba(74, 222, 128, 0.65);
+}
+
+.trumpBadge {
+  position: absolute;
+  top: 13px;
+  left: 13px;
+  padding: 6px 9px;
+  border: 1px solid rgba(251, 191, 36, 0.55);
+  border-radius: 8px;
+  background: rgba(120, 53, 15, 0.76);
+  color: #fde68a;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.tableDrop {
+  position: absolute;
+  inset: 21% 24%;
+  display: grid;
+  place-items: center;
+  border: 2px dashed rgba(74, 222, 128, 0.7);
+  border-radius: 16px;
+  color: rgba(187, 247, 208, 0.78);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.stack {
+  position: absolute;
+  left: calc(50% - 21px);
+  top: calc(50% - 30px);
+}
+
+.stack > :last-child {
+  position: absolute;
+  inset: 0;
+  transform: translate(9px, -6px) rotate(5deg);
+}
+
+.takeMoving {
+  position: absolute;
+  left: calc(50% - 21px);
+  top: calc(50% - 30px);
+  z-index: 4;
+}
+
+.singleCard {
+  position: absolute;
+  left: calc(50% - 21px);
+  top: 16px;
+}
+
+.demoButton {
+  position: absolute;
+  left: calc(50% - 67px);
+  bottom: 15px;
+  width: 134px;
+  padding: 9px 8px;
+  border: 1px solid #4ade80;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #16a34a, #15803d);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.penkiCard {
+  position: absolute;
+  top: calc(50% - 32px);
+  width: 42px;
+  height: 60px;
+  transform-style: preserve-3d;
+  transform-origin: center;
+}
+
+.cardBack,
+.cardFront {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+}
+
+.cardFront {
+  transform: rotateY(180deg);
+}
+
+@media (max-height: 680px), (max-width: 420px) {
+  .stage {
+    min-height: 150px;
+    border-radius: 15px;
+  }
+  .card,
+  .deck,
+  .dealt,
+  .cardBack,
+  .penkiCard {
+    transform: scale(0.9);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage * {
+    animation: none !important;
+  }
+}

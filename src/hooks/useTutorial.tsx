@@ -53,15 +53,17 @@ export function useTutorial(
     if (lastOpenedStepRef.current.id === step.id && now - lastOpenedStepRef.current.at < 2500) return;
 
     const token = ++tutorialOpenTokenRef.current;
+    // Останавливаем таймер и ботов сразу, а не после визуальной задержки.
+    // Иначе ИИ успевает сделать следующий ход до появления урока.
+    setIsTutorialPaused(true);
     const open = () => {
       if (tutorialOpenTokenRef.current !== token) return;
       setCurrentStep(prev => (prev?.id === step.id ? prev : step));
-      setIsTutorialPaused(true);
       lastOpenedStepRef.current = { id: step.id, at: Date.now() };
     };
 
     if (delayMs > 0) {
-      setTimeout(open, delayMs);
+      setTimeout(open, Math.min(delayMs, 180));
     } else {
       open();
     }
@@ -524,26 +526,9 @@ export function useTutorial(
       }
     }
     
-    // После перехода показываем правила 2-й стадии (только если нет текущей модалки)
-    if (gameStage === 2 && tutorialConfig.shownSteps.has('stage2_transition') && !tutorialConfig.shownSteps.has('stage2_rules')) {
-      const step = tutorialConfig.steps.find(s => s.id === 'stage2_rules');
-      if (step) {
-        showStep(step);
-        return;
-      }
-    }
-
-    // Показываем пошаговую инструкцию после правил
-    if (gameStage === 2 && tutorialConfig.shownSteps.has('stage2_rules') && !tutorialConfig.shownSteps.has('stage2_how_to_play')) {
-      const step = tutorialConfig.steps.find(s => s.id === 'stage2_how_to_play');
-      if (step) {
-        showStep(step);
-        return;
-      }
-    }
-    
-    // Показываем подсказку для хода пользователя во 2-й стадии (после всех объяснений)
-    if (gameStage === 2 && isUserTurn && !lastUserTurnRef.current && tutorialConfig.shownSteps.has('stage2_how_to_play') && !tutorialConfig.shownSteps.has('your_turn_stage2')) {
+    // Отдельный короткий ролик показываем только когда реально дошёл ход
+    // пользователя. Не ставим три текстовые модалки подряд при смене стадии.
+    if (gameStage === 2 && isUserTurn && !lastUserTurnRef.current && tutorialConfig.shownSteps.has('stage2_transition') && !tutorialConfig.shownSteps.has('your_turn_stage2')) {
       lastUserTurnRef.current = true;
       
       const step = tutorialConfig.steps.find(s => s.id === 'your_turn_stage2');
@@ -581,7 +566,6 @@ export function useTutorial(
   // ✅ 3.6 Модалка для stage2_take_card — когда игроку нечем бить во 2-й стадии
   useEffect(() => {
     if (!tutorialConfig.enabled || isTutorialPaused) return;
-    if (!tutorialConfig.shownSteps.has('stage2_how_to_play')) return;
     if (tutorialConfig.shownSteps.has('stage2_take_card')) return;
     
     if (gameStage >= 2 && isUserTurn && tutorialConfig.shownSteps.has('your_turn_stage2')) {

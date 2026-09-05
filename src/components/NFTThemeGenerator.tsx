@@ -630,9 +630,12 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
               backdropFilter: 'blur(20px)',
               zIndex: 999999,
               display: 'flex',
-              alignItems: 'center',
+              alignItems: 'flex-start',
               justifyContent: 'center',
-              padding: '20px'
+              padding: 'max(12px, env(safe-area-inset-top)) 12px max(20px, env(safe-area-inset-bottom))',
+              overflowY: 'auto',
+              overscrollBehavior: 'contain',
+              WebkitOverflowScrolling: 'touch',
             }}
           >
             <motion.div
@@ -647,8 +650,8 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
                 padding: isCompactLayout ? '18px' : '30px',
                 maxWidth: isCompactLayout ? '420px' : '760px',
                 width: '100%',
-                maxHeight: '90vh',
-                overflowY: 'auto',
+                margin: 'auto 0',
+                overflow: 'visible',
                 boxShadow: T.shadowCard,
               }}
             >
@@ -876,9 +879,12 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
               backdropFilter: 'blur(10px)',
               zIndex: 999999,
               display: 'flex',
-              alignItems: 'center',
+              alignItems: 'flex-start',
               justifyContent: 'center',
-              padding: '20px'
+              padding: 'max(12px, env(safe-area-inset-top)) 12px max(20px, env(safe-area-inset-bottom))',
+              overflowY: 'auto',
+              overscrollBehavior: 'contain',
+              WebkitOverflowScrolling: 'touch',
             }}
           >
             <motion.div
@@ -893,6 +899,7 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
                 padding: '32px',
                 maxWidth: '500px',
                 width: '100%',
+                margin: 'auto 0',
                 boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)'
               }}
             >

@@ -32,6 +32,7 @@ export interface Translations {
     register: string;
     gameBurgerProfile: string;
     gameBurgerWallet: string;
+    gameBurgerSettings: string;
     player: string;
     translatePageHint: string;
   };

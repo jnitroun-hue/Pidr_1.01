@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { buildNftDeckKey } from '../../lib/game/cardAssets';
+import { buildNftDeckKey, type NftDeckVisualMap } from '../../lib/game/cardAssets';
 import styles from './PlayerHand.module.css';
 import { Card } from '../../types/game';
 
@@ -14,7 +14,7 @@ interface PlayerHandProps {
   canPlayCard: (card: Card, index: number) => boolean;
   gameStage: 1 | 2 | 3;
   isPlayerTurn: boolean;
-  nftDeckCards?: Record<string, string>; // ✅ НОВОЕ: NFT карты из колоды
+  nftDeckCards?: NftDeckVisualMap;
 }
 
 const PlayerHand: React.FC<PlayerHandProps> = ({
@@ -120,7 +120,7 @@ const PlayerHand: React.FC<PlayerHandProps> = ({
                     }
 
                     const nftKey = buildNftDeckKey(cardRank, cardSuit);
-                    const nftImageUrl = nftKey ? nftDeckCards[nftKey] : undefined;
+                    const nftImageUrl = nftKey ? nftDeckCards[nftKey]?.imageUrl : undefined;
                     
                     return nftImageUrl ? (
                       <img

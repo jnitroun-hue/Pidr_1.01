@@ -1,507 +1,378 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion, MotionConfig, useReducedMotion } from 'framer-motion';
+import { ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react';
+import styles from './RulesMiniTutorial.module.css';
+
+const SCENE_MS = 5600;
 
 const SCENES = [
   {
+    id: 'goal',
+    badge: 'ЦЕЛЬ',
+    title: 'Не останьтесь последним',
+    text: 'Избавьтесь от обычных карт и двух пеньков. Игроки без карт выходят, а последний участник с картами проигрывает.',
+    tip: 'Побеждает порядок выхода; партия заканчивается, когда остаётся один игрок.',
+  },
+  {
     id: 'deal',
-    badge: 'СТАРТ',
-    title: 'Раздача',
-    text: 'Каждому: 2 закрытых пенька + 1 открытая карта. Пеньки ждут финал.',
-    tip: 'Пеньки лежат рубашкой вверх',
+    badge: 'РАЗДАЧА',
+    title: 'Две закрытые, одна открытая',
+    text: 'Каждый начинает с двух закрытых пеньков и одной открытой карты. Первым ходит игрок с самой старшей открытой картой.',
+    tip: 'Пеньки пока нельзя смотреть или использовать.',
   },
   {
-    id: 'stage1',
+    id: 'plus-one',
     badge: 'СТАДИЯ 1',
-    title: 'Бей ровно +1',
-    text: 'Клади карту на соперника, если она старше ровно на 1. Масти не важны.',
-    tip: '7 → 8 → 9 … без учёта масти',
+    title: 'Только ровно +1',
+    text: 'Кладите верхнюю карту на карту соперника, если ваша старше ровно на один ранг. Масть не важна: 8 бьёт 7, но не 6.',
+    tip: 'После туза цикл продолжает двойка: 2 кладётся на A.',
   },
   {
-    id: 'stage2',
+    id: 'deck',
+    badge: 'КОЛОДА',
+    title: 'Нет хода — откройте карту',
+    text: 'Карта из колоды тоже проверяется по правилу +1. Сыграйте её на соперника или на себя; если нельзя — оставьте себе и передайте ход.',
+    tip: 'Когда колода опустеет, игра автоматически перейдёт к стадии 2.',
+  },
+  {
+    id: 'trump',
     badge: 'СТАДИЯ 2',
-    title: 'Козырь и «Одна карта!»',
-    text: 'Козырь бьёт некозырь. Пики — только пиками. Объявляй «Одна карта!»',
-    tip: 'Забыл объявить — получишь штраф',
+    title: 'Масть, ранг и козырь',
+    text: 'На столе старшая карта той же масти бьёт младшую. Козырь бьёт некозырную карту, но козырь можно перебить только старшим козырем.',
+    tip: 'Козырь — масть последней непиковой карты, открытой из колоды.',
   },
   {
-    id: 'stage3',
-    badge: 'СТАДИЯ 3',
-    title: 'Открытие пеньков',
-    text: 'Колода пуста и рука пуста — переворачиваешь 2 пенька и доигрываешь.',
-    tip: 'Кто избавился от всех карт — не проиграл',
+    id: 'spades',
+    badge: 'ОСОБОЕ ПРАВИЛО',
+    title: 'Пики — только пиками',
+    text: 'Никакой козырь другой масти не бьёт пику. Положить на пику можно только более старшую пику.',
+    tip: 'Пиковая масть никогда не назначается козырем.',
+  },
+  {
+    id: 'take',
+    badge: 'СТОЛ',
+    title: 'Берите нижнюю карту',
+    text: 'Если верхнюю карту стопки нечем побить, нажмите «Взять». Вы получите одну нижнюю карту; остальная стопка останется на столе.',
+    tip: 'Не всю стопку: только самую раннюю карту внизу.',
+  },
+  {
+    id: 'one-card',
+    badge: 'ШТРАФ',
+    title: 'Объявите «Одна карта!»',
+    text: 'Когда на стадиях 2 или 3 остаётся одна карта, объявите это. После вопроса «Сколько карт?» забывший получает по карте от каждого игрока.',
+    tip: 'Своевременное объявление полностью защищает от штрафа.',
+  },
+  {
+    id: 'penki',
+    badge: 'ФИНАЛ',
+    title: 'Откройте пеньки',
+    text: 'После опустошения обычной руки пеньки открываются. Разыграйте их по правилам стадии 2 и выйдите до того, как останетесь последним.',
+    tip: 'Масти, козырь, пики и «Одна карта!» продолжают действовать.',
   },
 ] as const;
 
-const SCENE_MS = 4200;
+type SceneId = (typeof SCENES)[number]['id'];
 
 export default function RulesMiniTutorial() {
+  const reduceMotion = useReducedMotion();
   const [scene, setScene] = useState(0);
-  const [playing, setPlaying] = useState(true);
+  const [playing, setPlaying] = useState(!reduceMotion);
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    if (!playing) return;
-    const started = Date.now();
-    const tick = setInterval(() => {
-      const elapsed = Date.now() - started;
-      setProgress(Math.min(1, elapsed / SCENE_MS));
-      if (elapsed >= SCENE_MS) {
-        setScene((prev) => (prev + 1) % SCENES.length);
-        setProgress(0);
-      }
-    }, 40);
-    return () => clearInterval(tick);
-  }, [playing, scene]);
+    if (!playing || reduceMotion) return;
+
+    const timer = window.setInterval(() => {
+      setProgress((current) => {
+        const next = current + 50 / SCENE_MS;
+        if (next < 1) return next;
+        setScene((index) => (index + 1) % SCENES.length);
+        return 0;
+      });
+    }, 50);
+
+    return () => window.clearInterval(timer);
+  }, [playing, reduceMotion]);
+
+  const goTo = (next: number) => {
+    setScene((next + SCENES.length) % SCENES.length);
+    setProgress(0);
+  };
 
   const current = SCENES[scene];
+  const motionActive = playing && !reduceMotion;
 
   return (
-    <section
-      aria-label="Анимационное обучение правилам"
-      style={{
-        marginTop: 28,
-        marginBottom: 8,
-        borderRadius: 20,
-        overflow: 'hidden',
-        border: '1px solid rgba(212, 175, 55, 0.28)',
-        background:
-          'linear-gradient(165deg, rgba(15,23,42,0.98) 0%, rgba(30,27,75,0.95) 45%, rgba(2,6,23,1) 100%)',
-        boxShadow: '0 20px 48px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)',
-      }}
-    >
-      <header style={{ padding: '14px 16px 10px', display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
-        <div>
-          <div style={{ color: '#fde68a', fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-            Анимационное обучение
+    <MotionConfig reducedMotion="user">
+      <section className={styles.tutorial} aria-labelledby="mini-tutorial-title">
+        <header className={styles.header}>
+          <div>
+            <p className={styles.eyebrow}>Интерактивное обучение</p>
+            <h2 className={styles.heading} id="mini-tutorial-title">Партия за 9 шагов</h2>
           </div>
-          <h2 style={{ color: '#f8fafc', fontSize: 18, fontWeight: 800, margin: '4px 0 0', lineHeight: 1.2 }}>
-            Как играть в P.I.D.R.
-          </h2>
-        </div>
-        <button
-          type="button"
-          onClick={() => setPlaying((p) => !p)}
-          style={{
-            border: '1px solid rgba(148,163,184,0.35)',
-            background: 'rgba(15,23,42,0.7)',
-            color: '#e2e8f0',
-            borderRadius: 999,
-            padding: '7px 12px',
-            fontSize: 12,
-            fontWeight: 700,
-            cursor: 'pointer',
-            flexShrink: 0,
-          }}
-        >
-          {playing ? '⏸ Пауза' : '▶ Смотреть'}
-        </button>
-      </header>
-
-      {/* Кино-сцена: стол */}
-      <div style={{ padding: '0 12px 12px' }}>
-        <div
-          style={{
-            position: 'relative',
-            height: 280,
-            borderRadius: 16,
-            overflow: 'hidden',
-            background:
-              'radial-gradient(ellipse 90% 70% at 50% 55%, #15803d 0%, #14532d 42%, #052e16 78%, #020617 100%)',
-            border: '2px solid rgba(212,175,55,0.4)',
-            boxShadow: 'inset 0 0 60px rgba(0,0,0,0.35)',
-          }}
-        >
-          {/* Декор стола */}
-          <div style={{
-            position: 'absolute',
-            inset: 18,
-            borderRadius: 12,
-            border: '1px solid rgba(253,224,71,0.12)',
-            pointerEvents: 'none',
-          }} />
-
-          {/* Игроки вокруг */}
-          <Seat top={10} left="50%" transform="translateX(-50%)" letter="A" active={scene === 1} />
-          <Seat top={90} left={12} letter="P" active={scene === 2} />
-          <Seat top={90} right={12} letter="B" active={scene === 0} />
-          <Seat bottom={14} left="50%" transform="translateX(-50%)" letter="G" you active={scene >= 0} />
-
-          {/* Бейдж стадии */}
-          <motion.div
-            key={current.badge}
-            initial={{ opacity: 0, y: -8, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            style={{
-              position: 'absolute',
-              top: 12,
-              left: 12,
-              zIndex: 5,
-              background: 'linear-gradient(135deg, rgba(79,70,229,0.95), rgba(124,58,237,0.95))',
-              color: '#fff',
-              fontSize: 11,
-              fontWeight: 800,
-              letterSpacing: '0.06em',
-              padding: '5px 10px',
-              borderRadius: 999,
-              boxShadow: '0 6px 16px rgba(79,70,229,0.45)',
-            }}
+          <button
+            type="button"
+            className={styles.pauseButton}
+            onClick={() => setPlaying((value) => !value)}
+            aria-pressed={!playing}
           >
-            {current.badge}
-          </motion.div>
+            {playing ? <Pause size={14} aria-hidden="true" /> : <Play size={14} aria-hidden="true" />}
+            {' '}
+            {playing ? 'Пауза' : 'Продолжить'}
+          </button>
+        </header>
 
-          {/* Центральная анимация */}
-          <div style={{
-            position: 'absolute',
-            inset: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 3,
-            paddingBottom: 28,
-          }}>
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={current.id}
-                initial={{ opacity: 0, scale: 0.92 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 1.04 }}
-                transition={{ duration: 0.4 }}
-              >
-                <DemoScene sceneId={current.id} />
-              </motion.div>
-            </AnimatePresence>
-          </div>
-
-          {/* Подсказка снизу сцены */}
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={current.tip}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              style={{
-                position: 'absolute',
-                left: 12,
-                right: 12,
-                bottom: 10,
-                zIndex: 4,
-                textAlign: 'center',
-                color: '#fef9c3',
-                fontSize: 11,
-                fontWeight: 700,
-                textShadow: '0 2px 8px rgba(0,0,0,0.7)',
-              }}
+        <div className={styles.viewport} aria-live="polite">
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.article
+              key={current.id}
+              className={styles.scene}
+              initial={reduceMotion ? false : { opacity: 0, x: 24 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={reduceMotion ? { opacity: 0 } : { opacity: 0, x: -20 }}
+              transition={{ duration: reduceMotion ? 0 : 0.3 }}
             >
-              {current.tip}
-            </motion.div>
+              <div className={styles.visual} aria-hidden="true">
+                <SceneVisual id={current.id} moving={motionActive} />
+              </div>
+              <div className={styles.copy}>
+                <span className={styles.badge}>{current.badge}</span>
+                <h3 className={styles.sceneTitle}>{current.title}</h3>
+                <p className={styles.sceneText}>{current.text}</p>
+                <p className={styles.tip}>{current.tip}</p>
+              </div>
+            </motion.article>
           </AnimatePresence>
         </div>
 
-        {/* Текст сцены */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={current.id + '-copy'}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            style={{ marginTop: 12, textAlign: 'center', padding: '0 4px' }}
+        <div className={styles.controls}>
+          <div
+            className={styles.progressTrack}
+            role="progressbar"
+            aria-label="Время до следующего шага"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(progress * 100)}
           >
-            <div style={{ color: '#fde68a', fontWeight: 800, fontSize: 16 }}>{current.title}</div>
-            <div style={{ color: '#cbd5e1', fontSize: 13, lineHeight: 1.5, marginTop: 4 }}>
-              {current.text}
-            </div>
-          </motion.div>
-        </AnimatePresence>
-
-        {/* Прогресс + точки */}
-        <div style={{
-          marginTop: 12,
-          height: 3,
-          borderRadius: 999,
-          background: 'rgba(148,163,184,0.2)',
-          overflow: 'hidden',
-        }}>
-          <div style={{
-            height: '100%',
-            width: `${progress * 100}%`,
-            background: 'linear-gradient(90deg, #818cf8, #fbbf24)',
-            transition: playing ? 'none' : 'width 0.2s',
-          }} />
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-          {SCENES.map((s, i) => (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => {
-                setScene(i);
-                setProgress(0);
-              }}
-              style={{
-                border: i === scene ? '1px solid rgba(251,191,36,0.55)' : '1px solid rgba(148,163,184,0.2)',
-                background: i === scene ? 'rgba(251,191,36,0.15)' : 'rgba(15,23,42,0.55)',
-                color: i === scene ? '#fde68a' : '#94a3b8',
-                borderRadius: 999,
-                padding: '6px 10px',
-                fontSize: 11,
-                fontWeight: 700,
-                cursor: 'pointer',
-              }}
-            >
-              {i + 1}. {s.title}
-            </button>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function Seat({
-  letter,
-  you,
-  active,
-  top,
-  bottom,
-  left,
-  right,
-  transform,
-}: {
-  letter: string;
-  you?: boolean;
-  active?: boolean;
-  top?: number;
-  bottom?: number;
-  left?: number | string;
-  right?: number;
-  transform?: string;
-}) {
-  return (
-    <motion.div
-      animate={active ? { scale: [1, 1.08, 1], boxShadow: ['0 0 0 rgba(34,197,94,0)', '0 0 18px rgba(34,197,94,0.55)', '0 0 0 rgba(34,197,94,0)'] } : { scale: 1 }}
-      transition={{ duration: 1.4, repeat: active ? Infinity : 0 }}
-      style={{
-        position: 'absolute',
-        top,
-        bottom,
-        left,
-        right,
-        transform,
-        width: 34,
-        height: 34,
-        borderRadius: '50%',
-        background: you
-          ? 'linear-gradient(145deg, #22c55e, #15803d)'
-          : 'linear-gradient(145deg, #475569, #1e293b)',
-        border: active ? '2px solid #4ade80' : '2px solid rgba(255,255,255,0.2)',
-        color: '#fff',
-        fontWeight: 800,
-        fontSize: 13,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 2,
-      }}
-    >
-      {letter}
-    </motion.div>
-  );
-}
-
-function MiniCard({
-  label,
-  faceDown,
-  accent,
-  size = 'md',
-}: {
-  label?: string;
-  faceDown?: boolean;
-  accent?: string;
-  size?: 'sm' | 'md' | 'lg';
-}) {
-  const dims = size === 'lg' ? { w: 54, h: 76, fs: 16 } : size === 'sm' ? { w: 36, h: 52, fs: 11 } : { w: 46, h: 66, fs: 14 };
-  return (
-    <div
-      style={{
-        width: dims.w,
-        height: dims.h,
-        borderRadius: 8,
-        background: faceDown
-          ? 'repeating-linear-gradient(45deg, #1e293b 0 6px, #334155 6px 12px)'
-          : 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
-        border: `2px solid ${accent || (faceDown ? '#94a3b8' : '#e2e8f0')}`,
-        boxShadow: '0 10px 22px rgba(0,0,0,0.35)',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'flex-start',
-        justifyContent: 'flex-start',
-        color: faceDown ? '#cbd5e1' : label?.includes('♥') || label?.includes('♦') ? '#dc2626' : '#0f172a',
-        fontWeight: 800,
-        fontSize: dims.fs,
-        padding: faceDown ? 0 : '4px 5px',
-        overflow: 'hidden',
-      }}
-    >
-      {faceDown ? (
-        <div style={{ margin: 'auto', fontSize: 16, opacity: 0.7 }}>◆</div>
-      ) : (
-        <>
-          <div style={{ lineHeight: 1 }}>{label}</div>
-          <div style={{ margin: 'auto', fontSize: dims.fs + 6, opacity: 0.85 }}>
-            {label?.slice(-1)}
+            <div
+              className={styles.progressBar}
+              style={{ transform: `scaleX(${progress})` }}
+            />
           </div>
-        </>
-      )}
+
+          <div className={styles.navigation}>
+            <button
+              type="button"
+              className={styles.navButton}
+              onClick={() => goTo(scene - 1)}
+              aria-label="Предыдущий шаг"
+            >
+              <ChevronLeft size={20} />
+            </button>
+            <div className={styles.steps} aria-label="Выбрать шаг">
+              {SCENES.map((item, index) => (
+                <button
+                  type="button"
+                  key={item.id}
+                  className={`${styles.stepButton} ${index === scene ? styles.activeStep : ''}`}
+                  onClick={() => goTo(index)}
+                  aria-label={`${index + 1}. ${item.title}`}
+                  aria-current={index === scene ? 'step' : undefined}
+                >
+                  {index + 1}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              className={styles.navButton}
+              onClick={() => goTo(scene + 1)}
+              aria-label="Следующий шаг"
+            >
+              <ChevronRight size={20} />
+            </button>
+          </div>
+          <p className={styles.counter}>Шаг {scene + 1} из {SCENES.length} · {playing ? 'автопереход включён' : 'на паузе'}</p>
+        </div>
+      </section>
+    </MotionConfig>
+  );
+}
+
+function Card({ label, down = false }: { label?: string; down?: boolean }) {
+  const red = label?.includes('♥') || label?.includes('♦');
+  return (
+    <div className={`${styles.card} ${down ? styles.faceDown : ''} ${red ? styles.red : ''}`}>
+      {down ? '◆' : label}
     </div>
   );
 }
 
-function DemoScene({ sceneId }: { sceneId: (typeof SCENES)[number]['id'] }) {
-  if (sceneId === 'deal') {
+function SceneVisual({ id, moving }: { id: SceneId; moving: boolean }) {
+  const repeat = moving ? Infinity : 0;
+  const stillTransition = moving ? undefined : { duration: 0 };
+
+  if (id === 'goal') {
     return (
-      <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
+      <div className={styles.cards}>
         <motion.div
-          initial={{ y: -40, opacity: 0, rotate: -12 }}
-          animate={{ y: 0, opacity: 1, rotate: -6 }}
-          transition={{ type: 'spring', stiffness: 220, damping: 16 }}
+          animate={moving ? { y: [0, -10, 0], scale: [1, 1.06, 1] } : { y: 0, scale: 1 }}
+          transition={stillTransition ?? { duration: 1.8, repeat }}
         >
-          <MiniCard faceDown />
+          <Card label="✓" />
         </motion.div>
+        <span className={styles.arrow}>→</span>
         <motion.div
-          initial={{ y: -40, opacity: 0, rotate: 8 }}
-          animate={{ y: 0, opacity: 1, rotate: 6 }}
-          transition={{ type: 'spring', stiffness: 220, damping: 16, delay: 0.15 }}
+          animate={moving ? { opacity: [0.45, 1, 0.45] } : { opacity: 1 }}
+          transition={stillTransition ?? { duration: 1.8, repeat }}
+          className={styles.callout}
         >
-          <MiniCard faceDown />
-        </motion.div>
-        <motion.div
-          initial={{ y: -50, opacity: 0, scale: 0.8 }}
-          animate={{ y: [0, -8, 0], opacity: 1, scale: 1 }}
-          transition={{
-            y: { repeat: Infinity, duration: 1.5 },
-            opacity: { duration: 0.3, delay: 0.3 },
-            scale: { type: 'spring', delay: 0.3 },
-          }}
-        >
-          <MiniCard label="9♠" accent="#22c55e" size="lg" />
+          Последний<br />проигрывает
         </motion.div>
       </div>
     );
   }
 
-  if (sceneId === 'stage1') {
+  if (id === 'deal') {
     return (
-      <div style={{ position: 'relative', width: 200, height: 90, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ color: '#86efac', fontSize: 10, fontWeight: 700, marginBottom: 4 }}>Ты</div>
-          <MiniCard label="8♣" accent="#38bdf8" />
-        </div>
+      <div className={styles.cards}>
+        {[0, 1].map((index) => (
+          <motion.div
+            key={index}
+            initial={moving ? { y: -35, opacity: 0 } : false}
+            animate={{ y: 0, opacity: 1, rotate: index ? 5 : -5 }}
+            transition={{ duration: moving ? 0.35 : 0, delay: moving ? index * 0.12 : 0 }}
+          >
+            <Card down />
+          </motion.div>
+        ))}
         <motion.div
-          animate={{ x: [0, 70], y: [0, -18, 0], rotate: [0, -8, 0], opacity: [1, 1, 0] }}
-          transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
-          style={{ position: 'absolute', left: 48, zIndex: 2 }}
+          animate={moving ? { y: [0, -8, 0] } : { y: 0 }}
+          transition={stillTransition ?? { duration: 1.5, repeat }}
         >
-          <MiniCard label="8♣" accent="#38bdf8" size="sm" />
-        </motion.div>
-        <motion.div
-          animate={{ scale: [1, 1, 1.06, 1] }}
-          transition={{ repeat: Infinity, duration: 2 }}
-          style={{ textAlign: 'center' }}
-        >
-          <div style={{ color: '#fca5a5', fontSize: 10, fontWeight: 700, marginBottom: 4 }}>Соперник</div>
-          <div style={{ display: 'flex' }}>
-            <div style={{ marginRight: -18, zIndex: 0 }}><MiniCard label="6♦" size="sm" /></div>
-            <div style={{ zIndex: 1 }}><MiniCard label="7♥" accent="#fbbf24" /></div>
-          </div>
+          <Card label="K♥" />
         </motion.div>
       </div>
     );
   }
 
-  if (sceneId === 'stage2') {
+  if (id === 'plus-one') {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-        <div style={{
-          background: 'rgba(251,191,36,0.18)',
-          border: '1px solid rgba(251,191,36,0.45)',
-          color: '#fde68a',
-          borderRadius: 999,
-          padding: '4px 10px',
-          fontSize: 11,
-          fontWeight: 800,
-        }}>
-          Козырь ♦
+      <div className={styles.cards}>
+        <Card label="7♣" />
+        <motion.span
+          className={styles.arrow}
+          animate={moving ? { x: [-7, 7, -7], opacity: [0.6, 1, 0.6] } : { x: 0, opacity: 1 }}
+          transition={stillTransition ?? { duration: 1.4, repeat }}
+        >
+          ←
+        </motion.span>
+        <motion.div
+          animate={moving ? { rotate: [0, -5, 0], scale: [1, 1.08, 1] } : { rotate: 0, scale: 1 }}
+          transition={stillTransition ?? { duration: 1.4, repeat }}
+        >
+          <Card label="8♦" />
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (id === 'deck') {
+    return (
+      <div className={styles.cards}>
+        <Card down />
+        <motion.div
+          animate={moving ? { x: [0, 65, 65], rotateY: [0, 0, 180] } : { x: 40, rotateY: 180 }}
+          transition={stillTransition ?? { duration: 2.3, repeat, repeatDelay: 0.35 }}
+          style={{ transformStyle: 'preserve-3d' }}
+        >
+          <Card label="Q♣" />
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (id === 'trump') {
+    return (
+      <div className={styles.cards}>
+        <Card label="K♣" />
+        <motion.div
+          animate={moving ? { y: [0, -12, 0], rotate: [0, -6, 0] } : { y: 0, rotate: 0 }}
+          transition={stillTransition ?? { duration: 1.6, repeat }}
+        >
+          <Card label="6♦" />
+        </motion.div>
+        <div className={styles.callout}>Козырь ♦</div>
+      </div>
+    );
+  }
+
+  if (id === 'spades') {
+    return (
+      <div className={styles.cards}>
+        <Card label="9♠" />
+        <motion.span
+          className={styles.arrow}
+          animate={moving ? { scale: [1, 1.25, 1] } : { scale: 1 }}
+          transition={stillTransition ?? { duration: 1.2, repeat }}
+        >
+          ✓
+        </motion.span>
+        <Card label="J♠" />
+        <div className={styles.callout}>♦ ✕</div>
+      </div>
+    );
+  }
+
+  if (id === 'take') {
+    return (
+      <div className={styles.cards}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 34px)' }}>
+          {['4♥', '9♣', 'Q♦'].map((label, index) => (
+            <motion.div
+              key={label}
+              animate={index === 0 && moving ? { x: [0, -45, -45], y: [0, 18, 18], opacity: [1, 1, 0] } : undefined}
+              transition={index === 0 ? (stillTransition ?? { duration: 1.8, repeat, repeatDelay: 0.4 }) : undefined}
+            >
+              <Card label={label} />
+            </motion.div>
+          ))}
         </div>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          <MiniCard label="9♠" />
-          <motion.div
-            animate={{ scale: [1, 1.12, 1], rotate: [0, -4, 0] }}
-            transition={{ repeat: Infinity, duration: 1.3 }}
-          >
-            <MiniCard label="A♦" accent="#fbbf24" size="lg" />
-          </motion.div>
-          <motion.div
-            animate={{ opacity: [0.4, 1, 0.4], y: [0, -4, 0] }}
-            transition={{ repeat: Infinity, duration: 1.2 }}
-            style={{
-              background: 'rgba(34,197,94,0.2)',
-              border: '1px solid rgba(34,197,94,0.5)',
-              color: '#86efac',
-              borderRadius: 10,
-              padding: '8px 10px',
-              fontSize: 11,
-              fontWeight: 800,
-              maxWidth: 72,
-              textAlign: 'center',
-              lineHeight: 1.25,
-            }}
-          >
-            Одна карта!
-          </motion.div>
-        </div>
+        <div className={styles.callout}>Взять<br />нижнюю</div>
+      </div>
+    );
+  }
+
+  if (id === 'one-card') {
+    return (
+      <div className={styles.cards}>
+        <Card label="A♥" />
+        <motion.div
+          className={styles.callout}
+          animate={moving ? { scale: [0.96, 1.06, 0.96], boxShadow: ['0 0 0 rgba(255,255,255,0)', '0 0 22px rgba(255,255,255,.32)', '0 0 0 rgba(255,255,255,0)'] } : { scale: 1 }}
+          transition={stillTransition ?? { duration: 1.5, repeat }}
+        >
+          Одна карта!
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-      {[
-        { label: 'K♣', delay: 0 },
-        { label: '3♥', delay: 0.25 },
-      ].map((card) => (
+    <div className={styles.cards}>
+      {[0, 1].map((index) => (
         <motion.div
-          key={card.label}
-          style={{ perspective: 600 }}
+          key={index}
+          animate={moving ? { rotateY: [0, 0, 180, 180] } : { rotateY: 180 }}
+          transition={stillTransition ?? { duration: 2.6, repeat, delay: index * 0.18, times: [0, 0.25, 0.55, 1] }}
+          style={{ transformStyle: 'preserve-3d' }}
         >
-          <motion.div
-            animate={{ rotateY: [0, 0, 180, 180] }}
-            transition={{ repeat: Infinity, duration: 2.8, delay: card.delay, times: [0, 0.25, 0.5, 1] }}
-            style={{ transformStyle: 'preserve-3d', position: 'relative', width: 46, height: 66 }}
-          >
-            <div style={{ position: 'absolute', inset: 0, backfaceVisibility: 'hidden' }}>
-              <MiniCard faceDown />
-            </div>
-            <div style={{
-              position: 'absolute',
-              inset: 0,
-              backfaceVisibility: 'hidden',
-              transform: 'rotateY(180deg)',
-            }}>
-              <MiniCard label={card.label} accent="#a78bfa" />
-            </div>
-          </motion.div>
+          <Card label={index ? '3♥' : 'K♣'} />
         </motion.div>
       ))}
-      <motion.div
-        animate={{ opacity: [0, 1, 1, 0], scale: [0.9, 1, 1, 0.95] }}
-        transition={{ repeat: Infinity, duration: 2.8 }}
-        style={{ color: '#c4b5fd', fontWeight: 800, fontSize: 12 }}
-      >
-        Пеньки!
-      </motion.div>
+      <div className={styles.callout}>Пеньки<br />открыты</div>
     </div>
   );
 }

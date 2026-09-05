@@ -58,6 +58,7 @@ export default function ActiveRoomModal({
           alignItems: 'center',
           justifyContent: 'center',
           padding: '20px',
+          backdropFilter: 'blur(6px)',
         }}
         onClick={onClose}
       >
@@ -67,13 +68,14 @@ export default function ActiveRoomModal({
           exit={{ scale: 0.92, opacity: 0 }}
           onClick={(e) => e.stopPropagation()}
           style={{
-            backgroundColor: '#1e293b',
+            background: 'var(--menu-card-bg)',
+            color: 'var(--menu-text)',
             borderRadius: '20px',
             padding: '24px',
             maxWidth: '400px',
             width: '100%',
-            border: '2px solid rgba(59, 130, 246, 0.35)',
-            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
+            border: '1px solid var(--menu-card-border)',
+            boxShadow: 'var(--menu-shadow)',
           }}
         >
           <div
@@ -85,10 +87,10 @@ export default function ActiveRoomModal({
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <DoorOpen size={24} color="#60a5fa" />
+              <DoorOpen size={24} color="var(--menu-accent)" />
               <h2
                 style={{
-                  color: '#ffffff',
+                  color: 'var(--menu-text)',
                   fontSize: '20px',
                   fontWeight: 'bold',
                   margin: 0,
@@ -104,7 +106,7 @@ export default function ActiveRoomModal({
               style={{
                 background: 'none',
                 border: 'none',
-                color: '#94a3b8',
+                color: 'var(--menu-text-muted)',
                 cursor: 'pointer',
                 padding: '8px',
                 display: 'flex',
@@ -118,7 +120,7 @@ export default function ActiveRoomModal({
 
           <p
             style={{
-              color: '#94a3b8',
+              color: 'var(--menu-text-muted)',
               fontSize: '14px',
               lineHeight: 1.6,
               margin: '0 0 16px',
@@ -129,16 +131,16 @@ export default function ActiveRoomModal({
 
           <div
             style={{
-              backgroundColor: '#0f172a',
+              background: 'var(--menu-accent-soft)',
               borderRadius: '12px',
               padding: '16px',
               marginBottom: '24px',
-              border: '1px solid #334155',
+              border: '1px solid var(--menu-card-border)',
             }}
           >
             <div
               style={{
-                color: '#ffffff',
+                color: 'var(--menu-text)',
                 fontSize: '17px',
                 fontWeight: 'bold',
                 marginBottom: '8px',
@@ -148,15 +150,15 @@ export default function ActiveRoomModal({
             </div>
             <div
               style={{
-                color: '#64748b',
+                color: 'var(--menu-text-muted)',
                 fontSize: '14px',
                 marginBottom: '6px',
               }}
             >
               Код:{' '}
-              <span style={{ color: '#10b981', fontWeight: 'bold' }}>{roomCode}</span>
+              <span style={{ color: 'var(--menu-accent)', fontWeight: 'bold' }}>{roomCode}</span>
             </div>
-            <div style={{ color: '#64748b', fontSize: '14px' }}>
+            <div style={{ color: 'var(--menu-text-muted)', fontSize: '14px' }}>
               {modeLabel}:{' '}
               <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>{modeText}</span>
             </div>
@@ -172,9 +174,9 @@ export default function ActiveRoomModal({
                 flex: 1,
                 padding: '12px',
                 borderRadius: '12px',
-                border: '2px solid #334155',
-                background: 'transparent',
-                color: '#94a3b8',
+                border: '1px solid var(--menu-card-border)',
+                background: 'var(--menu-accent-soft)',
+                color: 'var(--menu-text)',
                 fontSize: '14px',
                 fontWeight: 'bold',
                 cursor: loading ? 'not-allowed' : 'pointer',
@@ -193,7 +195,7 @@ export default function ActiveRoomModal({
                 padding: '12px',
                 borderRadius: '12px',
                 border: 'none',
-                background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
                 color: '#ffffff',
                 fontSize: '14px',
                 fontWeight: 'bold',

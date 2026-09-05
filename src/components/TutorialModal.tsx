@@ -1,9 +1,10 @@
 'use client'
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Lightbulb, ChevronRight, Sparkles, Target, MousePointer2 } from 'lucide-react';
+import { Lightbulb, ChevronRight, Sparkles, Target, MousePointer2 } from 'lucide-react';
 import { useLanguage } from './LanguageSwitcher';
 import { translateGameText } from '@/lib/i18n/gameRuntimeTranslations';
+import TutorialActionDemo, { type TutorialDemoKind } from './TutorialActionDemo';
 
 export interface TutorialStep {
   id: string;
@@ -15,6 +16,7 @@ export interface TutorialStep {
   position?: 'top' | 'bottom' | 'center'; // Позиция модалки
   spotlightText?: string; // Текст у стрелки
   stepType?: 'welcome' | 'action' | 'info' | 'warning' | 'tip'; // Тип шага
+  demo?: TutorialDemoKind;
 }
 
 interface TutorialModalProps {
@@ -26,6 +28,50 @@ interface TutorialModalProps {
   totalSteps?: number;
   currentStepIndex?: number;
 }
+
+const DEMO_BY_STEP: Record<string, TutorialDemoKind> = {
+  welcome: 'overview',
+  penki_explanation: 'deal',
+  first_turn_start: 'firstTurn',
+  your_turn_stage1: 'plusOne',
+  your_turn_stage1_game2: 'plusOne',
+  drew_card_from_deck: 'draw',
+  no_cards_stage1: 'draw',
+  bot_placed_on_you: 'botPlace',
+  circle_closed: 'turnCycle',
+  stage2_transition: 'trump',
+  stage2_transition_game2: 'trump',
+  stage2_rules: 'trump',
+  stage2_how_to_play: 'playToTable',
+  your_turn_stage2: 'playToTable',
+  stage2_take_card: 'takeCard',
+  one_card_penalty_explain: 'oneCard',
+  ask_cards_button_explain: 'oneCard',
+  one_card_reminder: 'oneCard',
+  penki_opened: 'penki',
+};
+
+const SHORT_TEXT: Record<string, string> = {
+  welcome: 'Смотрите короткие примеры и повторяйте действия на столе. Пока окно открыто, боты и таймер ждут вас.',
+  penki_explanation: 'Две закрытые карты — ваши пеньки. Они откроются только после колоды, когда обычная рука опустеет.',
+  first_turn_start: 'Зелёная подсветка показывает, чей сейчас ход. Первым начинает игрок с самой старшей открытой картой.',
+  your_turn_stage1: 'Положите свою верхнюю карту на карту соперника, если она старше ровно на один ранг. Масть сейчас не важна.',
+  your_turn_stage1_game2: 'Найдите карту соперника на один ранг младше. Подходящей цели нет — нажмите колоду.',
+  drew_card_from_deck: 'Карта из колоды сразу проверяется по правилу +1. Если цели нет, она остаётся у вас.',
+  no_cards_stage1: 'Обычная рука пуста, но колода ещё есть. Нажмите колоду и продолжайте игру.',
+  bot_placed_on_you: 'Бот положил карту на один ранг старше поверх вашей. Теперь именно она считается верхней.',
+  circle_closed: 'После хода каждого игрока очередь начинается заново. Следите за зелёной подсветкой.',
+  stage2_transition: 'Колода закончилась: теперь карты идут на общий стол. Последняя непиковая масть становится козырем.',
+  stage2_transition_game2: 'Началась вторая стадия: ходите на общий стол, используйте козырь, а пики бейте только пиками.',
+  stage2_rules: 'Старшая карта той же масти бьёт младшую. Козырь бьёт некозырную карту, но не пику.',
+  stage2_how_to_play: 'Выберите подходящую карту в своей руке и положите её в подсвеченную центральную область.',
+  your_turn_stage2: 'Сначала нажмите карту в руке, затем отправьте её на стол. Если побить нечем — используйте «Взять».',
+  stage2_take_card: 'Если побить верхнюю карту нельзя, нажмите «Взять»: к вам перейдёт нижняя карта стопки.',
+  one_card_penalty_explain: 'Осталась одна карта — сразу объявите «Одна карта!», иначе соперник сможет назначить штраф.',
+  ask_cards_button_explain: 'Если соперник забыл объявить последнюю карту, нажмите «Сколько карт?» и примените штраф.',
+  one_card_reminder: 'При одной карте обязательно нажмите «Одна карта!». Это защищает вас от штрафа.',
+  penki_opened: 'Обычная рука закончилась — пеньки открываются. Доиграйте их по правилам второй стадии.',
+};
 
 // Анимированная стрелка-указатель
 function AnimatedArrow({ direction = 'down', text }: { direction: string; text?: string }) {
@@ -217,7 +263,7 @@ export default function TutorialModal({
   // Генерируем частицы для фона
   useEffect(() => {
     if (isOpen) {
-      const newParticles = Array.from({ length: 20 }, (_, i) => ({
+      const newParticles = Array.from({ length: 8 }, (_, i) => ({
         id: i,
         x: Math.random() * 100,
         y: Math.random() * 100,
@@ -231,6 +277,8 @@ export default function TutorialModal({
   if (!isOpen || !step) return null;
 
   const colors = getStepColors(step.stepType);
+  const demoKind = step.demo ?? DEMO_BY_STEP[step.id] ?? 'overview';
+  const conciseContent = SHORT_TEXT[step.id] ?? step.content;
 
   return (
     <AnimatePresence>
@@ -242,7 +290,6 @@ export default function TutorialModal({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.4, ease: 'easeOut' }}
-            onClick={onClose}
             style={{
               position: 'fixed',
               top: 0,
@@ -348,9 +395,9 @@ export default function TutorialModal({
               width: 'min(90vw, 500px)',
               maxHeight: '80vh',
               overflowY: 'auto',
-              background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.99) 100%)',
+              background: 'var(--menu-card-bg, linear-gradient(145deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.99)))',
               borderRadius: '24px',
-              border: `3px solid ${colors.border}`,
+              border: `1px solid ${colors.border}`,
               boxShadow: `0 30px 80px rgba(0, 0, 0, 0.6), 0 0 60px ${colors.glow}, inset 0 1px 0 rgba(255, 255, 255, 0.1)`,
               padding: '0',
               pointerEvents: 'auto',
@@ -433,28 +480,9 @@ export default function TutorialModal({
                   </div>
                 )}
 
-                {/* Кнопка закрытия */}
-                {!showNext && (
-                  <motion.button
-                    onClick={onClose}
-                    whileHover={{ scale: 1.1, rotate: 90 }}
-                    whileTap={{ scale: 0.9 }}
-                    style={{
-                      background: 'rgba(239, 68, 68, 0.15)',
-                      border: '1.5px solid rgba(239, 68, 68, 0.3)',
-                      borderRadius: '10px',
-                      padding: '6px',
-                      cursor: 'pointer',
-                      color: '#ef4444',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      transition: 'all 0.2s',
-                    }}
-                  >
-                    <X size={16} />
-                  </motion.button>
-                )}
+                <span style={{ color: 'var(--menu-text-muted, #94a3b8)', fontSize: 11, fontWeight: 750 }}>
+                  {translateGameText('Игра на паузе', language)}
+                </span>
               </div>
 
               {/* Иконка + Заголовок */}
@@ -505,20 +533,22 @@ export default function TutorialModal({
                 </div>
               </div>
 
-              {/* Контент со стрелкой-маркером */}
+              <TutorialActionDemo kind={demoKind} />
+
+              {/* Короткое пояснение после визуального примера */}
               <motion.div
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3, duration: 0.4 }}
                 style={{
-                  color: '#cbd5e1',
-                  fontSize: 'clamp(14px, 2.5vw, 17px)',
-                  lineHeight: '1.7',
-                  marginBottom: '20px',
-                  background: 'rgba(15, 23, 42, 0.5)',
-                  borderRadius: '16px',
-                  padding: 'clamp(14px, 3vw, 20px)',
-                  border: '1px solid rgba(100, 116, 139, 0.15)',
+                  color: 'var(--menu-text, #cbd5e1)',
+                  fontSize: 'clamp(12px, 2.5vw, 15px)',
+                  lineHeight: '1.5',
+                  margin: '12px 0 14px',
+                  background: 'var(--menu-accent-soft, rgba(15, 23, 42, 0.5))',
+                  borderRadius: '13px',
+                  padding: '12px 14px',
+                  border: '1px solid var(--menu-card-border, rgba(100, 116, 139, 0.15))',
                   position: 'relative',
                 }}
               >
@@ -534,12 +564,12 @@ export default function TutorialModal({
                 }} />
 
                 <div style={{ paddingLeft: '12px' }}>
-                  {typeof step.content === 'string' ? (
+                  {typeof conciseContent === 'string' ? (
                     <p style={{ margin: 0, whiteSpace: 'pre-line' }}>
-                      {translateGameText(step.content, language)}
+                      {translateGameText(conciseContent, language)}
                     </p>
                   ) : (
-                    step.content
+                    conciseContent
                   )}
                 </div>
               </motion.div>
@@ -625,7 +655,7 @@ export default function TutorialModal({
                   }}
                 />
                 <span style={{ position: 'relative', zIndex: 1 }}>
-                  {translateGameText(showNext ? 'Далее' : 'Понятно', language)}
+                  {translateGameText(showNext ? 'Далее' : 'Поехали', language)}
                 </span>
                 {showNext ? (
                   <ChevronRight size={18} style={{ position: 'relative', zIndex: 1 }} />

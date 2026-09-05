@@ -37,7 +37,8 @@ export default function ReplaceRoomModal({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '20px'
+          padding: '20px',
+          backdropFilter: 'blur(6px)'
         }}
         onClick={onClose}
       >
@@ -47,13 +48,14 @@ export default function ReplaceRoomModal({
           exit={{ scale: 0.9, opacity: 0 }}
           onClick={(e) => e.stopPropagation()}
           style={{
-            backgroundColor: '#1e293b',
+            background: 'var(--menu-card-bg)',
+            color: 'var(--menu-text)',
             borderRadius: '20px',
             padding: '24px',
             maxWidth: '400px',
             width: '100%',
-            border: '2px solid rgba(239, 68, 68, 0.3)',
-            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)'
+            border: '1px solid var(--menu-card-border)',
+            boxShadow: 'var(--menu-shadow)'
           }}
         >
           {/* Заголовок */}
@@ -70,7 +72,7 @@ export default function ReplaceRoomModal({
             }}>
               <AlertTriangle size={24} color="#f59e0b" />
               <h2 style={{
-                color: '#ffffff',
+                color: 'var(--menu-text)',
                 fontSize: '20px',
                 fontWeight: 'bold',
                 margin: 0
@@ -85,7 +87,7 @@ export default function ReplaceRoomModal({
               style={{
                 background: 'none',
                 border: 'none',
-                color: '#94a3b8',
+                color: 'var(--menu-text-muted)',
                 cursor: 'pointer',
                 padding: '8px',
                 display: 'flex',
@@ -99,14 +101,14 @@ export default function ReplaceRoomModal({
 
           {/* Сообщение */}
           <div style={{
-            backgroundColor: '#0f172a',
+            background: 'var(--menu-accent-soft)',
             borderRadius: '12px',
             padding: '16px',
             marginBottom: '24px',
-            border: '1px solid #334155'
+            border: '1px solid var(--menu-card-border)'
           }}>
             <div style={{
-              color: '#94a3b8',
+              color: 'var(--menu-text-muted)',
               fontSize: '14px',
               lineHeight: '1.6',
               marginBottom: '12px'
@@ -114,7 +116,7 @@ export default function ReplaceRoomModal({
               У вас уже есть активная комната:
             </div>
             <div style={{
-              color: '#ffffff',
+              color: 'var(--menu-text)',
               fontSize: '16px',
               fontWeight: 'bold',
               marginBottom: '4px'
@@ -122,10 +124,10 @@ export default function ReplaceRoomModal({
               {currentRoomName}
             </div>
             <div style={{
-              color: '#64748b',
+              color: 'var(--menu-text-muted)',
               fontSize: '14px'
             }}>
-              Код: <span style={{ color: '#10b981', fontWeight: 'bold' }}>{currentRoomCode}</span>
+              Код: <span style={{ color: 'var(--menu-accent)', fontWeight: 'bold' }}>{currentRoomCode}</span>
             </div>
           </div>
 
@@ -154,9 +156,9 @@ export default function ReplaceRoomModal({
                 flex: 1,
                 padding: '12px',
                 borderRadius: '12px',
-                border: '2px solid #334155',
-                background: 'transparent',
-                color: '#94a3b8',
+                border: '1px solid var(--menu-card-border)',
+                background: 'var(--menu-accent-soft)',
+                color: 'var(--menu-text)',
                 fontSize: '14px',
                 fontWeight: 'bold',
                 cursor: 'pointer'

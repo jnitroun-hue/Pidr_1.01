@@ -416,32 +416,32 @@ export default function MultiplayerLobby({
   const readyPlayersCount = lobbyState.players.filter(p => p.is_ready).length;
 
   return (
-    <div className={`multiplayer-lobby ${lobbyStyles.lobbyRoot}`}>
+    <div className={lobbyStyles.lobbyRoot}>
       {/* ✅ ПРОФЕССИОНАЛЬНЫЙ ЗАГОЛОВОК С ОПИСАНИЕМ */}
       <motion.div 
-        className="lobby-header"
+        className={lobbyStyles.lobbyHeader}
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <div className="lobby-title-section">
-          <div className="lobby-title">
-            <div className="title-icon-wrapper">
-              <Users className="lobby-icon" />
+        <div>
+          <div className={lobbyStyles.titleCard}>
+            <div className={lobbyStyles.titleIcon}>
+              <Users />
             </div>
-            <div className="title-text">
+            <div className={lobbyStyles.titleText}>
               <h1>Мультиплеер Лобби</h1>
-              <p className="lobby-description">
+              <p className={lobbyStyles.description}>
                 Соберите команду и начните эпическую карточную битву!
               </p>
             </div>
-            <div className="connection-status-badge">
+            <div className={lobbyStyles.connectionBadge}>
               {isConnected ? (
-                <Wifi className="connection-icon connected" />
+                <Wifi className={lobbyStyles.connected} />
               ) : (
-                <WifiOff className="connection-icon disconnected" />
+                <WifiOff className={lobbyStyles.disconnected} />
               )}
-              <span className="connection-text">
+              <span className={lobbyStyles.connectionText}>
                 {isConnected ? 'Подключено' : 'Отключено'}
               </span>
             </div>
@@ -450,7 +450,7 @@ export default function MultiplayerLobby({
         
         {/* ✅ КРАСИВАЯ КАРТОЧКА С КОДОМ КОМНАТЫ */}
         <motion.div 
-          className="room-code-card"
+          className={lobbyStyles.roomCodeCard}
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.4, delay: 0.1 }}
@@ -458,18 +458,18 @@ export default function MultiplayerLobby({
           whileTap={{ scale: 0.98 }}
           onClick={copyRoomCode}
         >
-          <div className="room-code-header">
-            <span className="room-code-label">🎮 Код комнаты</span>
+          <div className={lobbyStyles.roomCodeHeader}>
+            <span className={lobbyStyles.roomCodeLabel}>🎮 Код комнаты</span>
             {codeCopied ? (
-              <Check className="copy-icon success" />
+              <Check className={`${lobbyStyles.copyIcon} ${lobbyStyles.connected}`} />
             ) : (
-              <Copy className="copy-icon" />
+              <Copy className={lobbyStyles.copyIcon} />
             )}
           </div>
-          <div className="room-code-value">
+          <div className={lobbyStyles.roomCodeValue}>
             {roomCode}
           </div>
-          <div className="room-code-hint">
+          <div className={lobbyStyles.roomCodeHint}>
             {codeCopied ? '✅ Скопировано!' : 'Нажмите чтобы скопировать'}
           </div>
         </motion.div>
@@ -477,23 +477,23 @@ export default function MultiplayerLobby({
 
       {/* ✅ ПРОФЕССИОНАЛЬНАЯ СЕКЦИЯ ИГРОКОВ */}
       <motion.div 
-        className="players-section"
+        className={lobbyStyles.playersSection}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.2 }}
       >
-        <div className="players-header">
-          <div className="players-header-left">
-            <Users className="players-header-icon" />
+        <div className={lobbyStyles.playersHeader}>
+          <div className={lobbyStyles.playersHeaderLeft}>
+            <Users className={lobbyStyles.playersHeaderIcon} />
             <div>
-              <h2 className="players-title">Игроки</h2>
-              <p className="players-subtitle">
+              <h2 className={lobbyStyles.playersTitle}>Игроки</h2>
+              <p className={lobbyStyles.playersSubtitle}>
                 {lobbyState.players.length} из {lobbyState.maxPlayers} игроков
               </p>
             </div>
           </div>
-          <div className="ready-count-badge">
-            <Check className="ready-icon" />
+          <div className={lobbyStyles.readyBadge}>
+            <Check size={17} />
             <span>Готовы: {readyPlayersCount}/{lobbyState.players.length}</span>
           </div>
         </div>
@@ -591,7 +591,7 @@ export default function MultiplayerLobby({
         </div>
         
         {/* Список игроков под столом на узких экранах */}
-        <div className="players-list">
+        <div className={lobbyStyles.playersList}>
           <AnimatePresence>
             {lobbyState.players.map((player, index) => {
               const isCurrentUser = playerMatchesLobbyUser(player, lobbyUserIds);
@@ -601,41 +601,43 @@ export default function MultiplayerLobby({
               return (
                 <motion.div
                   key={player.user_id}
-                  className={`player-item ${player.is_ready ? 'ready' : 'not-ready'} ${isHostPlayer ? 'host' : ''}`}
+                  className={`${lobbyStyles.playerItem} ${
+                    player.is_ready ? lobbyStyles.playerReady : lobbyStyles.playerWaiting
+                  } ${isHostPlayer ? lobbyStyles.playerHost : ''}`}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
                   transition={{ duration: 0.3, delay: index * 0.1 }}
                 >
-                  <div className="player-info">
+                  <div className={lobbyStyles.playerInfo}>
                     {player.avatar_url && (
                       <img 
                         src={player.avatar_url} 
                         alt={player.username}
-                        className="player-avatar"
+                        className={lobbyStyles.playerAvatar}
                       />
                     )}
-                    <div className="player-details">
-                      <div className="player-name">
+                    <div>
+                      <div className={lobbyStyles.playerName}>
                         {player.username || `Игрок ${index + 1}`}
-                        {isHostPlayer && <Crown className="host-crown" />}
-                        {isBot && <Bot className="bot-icon" />}
-                        {isCurrentUser && <span className="you-badge">ВЫ</span>}
+                        {isHostPlayer && <Crown className={lobbyStyles.hostCrown} />}
+                        {isBot && <Bot className={lobbyStyles.botIcon} />}
+                        {isCurrentUser && <span className={lobbyStyles.youBadge}>ВЫ</span>}
                       </div>
-                      <div className="player-status">
+                      <div className={lobbyStyles.playerStatus}>
                         {player.is_ready ? '✅ Готов' : '⏳ Не готов'}
                       </div>
                     </div>
                   </div>
                   
-                  <div className="player-actions">
+                  <div>
                     {player.is_ready ? (
-                      <div className="ready-indicator green">
-                        <Check className="ready-check" />
+                      <div className={`${lobbyStyles.statusIndicator} ${lobbyStyles.statusReady}`}>
+                        <Check size={17} />
                       </div>
                     ) : (
-                      <div className="waiting-indicator red">
-                        <Clock className="waiting-clock" />
+                      <div className={`${lobbyStyles.statusIndicator} ${lobbyStyles.statusWaiting}`}>
+                        <Clock size={17} />
                       </div>
                     )}
                   </div>
@@ -648,7 +650,9 @@ export default function MultiplayerLobby({
           {Array.from({ length: lobbyState.maxPlayers - lobbyState.players.length }, (_, index) => (
             <div
               key={`empty-${index}`}
-              className={`player-item empty-slot ${canAddBot ? 'empty-slot-action' : ''}`}
+              className={`${lobbyStyles.playerItem} ${lobbyStyles.emptySlot} ${
+                canAddBot ? lobbyStyles.emptySlotAction : ''
+              }`}
               onClick={canAddBot ? handleAddBot : undefined}
               onKeyDown={
                 canAddBot
@@ -663,15 +667,15 @@ export default function MultiplayerLobby({
               role={canAddBot ? 'button' : undefined}
               tabIndex={canAddBot ? 0 : undefined}
             >
-              <div className="empty-slot-content">
+              <div className={lobbyStyles.emptySlotContent}>
                 {canAddBot ? (
                   <>
-                    <Bot className="empty-slot-icon bot-add-icon" />
+                    <Bot size={20} />
                     <span>{isAddingBot ? 'Добавление бота…' : '🤖 Добавить бота'}</span>
                   </>
                 ) : (
                   <>
-                    <UserPlus className="empty-slot-icon" />
+                    <UserPlus size={20} />
                     <span>Ожидание игрока...</span>
                   </>
                 )}
@@ -684,17 +688,9 @@ export default function MultiplayerLobby({
       {/* ✅ УБРАЛИ НАСТРОЙКИ - ОНИ УЖЕ ВЫБРАНЫ ПРИ СОЗДАНИИ КОМНАТЫ! */}
 
       {/* ✅ ПРОФЕССИОНАЛЬНЫЕ КНОПКИ */}
-      <div className="lobby-actions" style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '12px',
-        padding: '20px',
-        background: 'rgba(0, 0, 0, 0.3)',
-        borderRadius: '16px',
-        border: '1px solid rgba(255, 255, 255, 0.1)'
-      }}>
+      <div className={lobbyStyles.actionsPanel}>
         {addBotError && (
-          <div style={{ color: '#f87171', fontSize: '13px', textAlign: 'center' }}>
+          <div className={lobbyStyles.actionError}>
             {addBotError}
           </div>
         )}
@@ -708,42 +704,12 @@ export default function MultiplayerLobby({
               toggleReady();
             }
           }}
-          onTouchStart={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-          }}
-          onTouchEnd={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (isConnected) {
-              toggleReady();
-            }
-          }}
           disabled={!isConnected}
           whileHover={{ scale: 1.02, y: -2 }}
           whileTap={{ scale: 0.95 }}
-          style={{
-            padding: '16px 24px',
-            borderRadius: '12px',
-            border: 'none',
-            background: currentPlayer?.is_ready 
-              ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-              : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-            color: 'white',
-            fontSize: '16px',
-            fontWeight: 'bold',
-            cursor: isConnected ? 'pointer' : 'not-allowed',
-            opacity: isConnected ? 1 : 0.5,
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
-            transition: 'all 0.2s',
-            WebkitTapHighlightColor: 'transparent',
-            touchAction: 'manipulation',
-            userSelect: 'none',
-            minHeight: '48px',
-            width: '100%',
-            position: 'relative',
-            zIndex: 10
-          }}
+          className={`${lobbyStyles.readyButton} ${
+            currentPlayer?.is_ready ? lobbyStyles.readyButtonActive : ''
+          }`}
         >
           {currentPlayer?.is_ready ? '✅ Готов' : '⏳ Не готов'}
         </motion.button>
@@ -755,19 +721,7 @@ export default function MultiplayerLobby({
             onClick={() => setShowInviteModal(true)}
             whileHover={{ scale: 1.02, y: -2 }}
             whileTap={{ scale: 0.98 }}
-            style={{
-              width: '100%',
-              padding: '14px 24px',
-              borderRadius: '12px',
-              border: 'none',
-              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-              color: 'white',
-              fontSize: '16px',
-              fontWeight: 'bold',
-              cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)',
-              transition: 'all 0.2s',
-            }}
+            className={lobbyStyles.inviteButton}
           >
             👥 Пригласить друзей
           </motion.button>
@@ -780,25 +734,7 @@ export default function MultiplayerLobby({
             disabled={!lobbyState.canStart || !isConnected}
             whileHover={lobbyState.canStart ? { scale: 1.02, y: -2 } : {}}
             whileTap={lobbyState.canStart ? { scale: 0.98 } : {}}
-            style={{
-              padding: '16px 24px',
-              borderRadius: '12px',
-              border: 'none',
-              background: lobbyState.canStart
-                ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
-                : 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)',
-              color: 'white',
-              fontSize: '18px',
-              fontWeight: 'bold',
-              cursor: lobbyState.canStart ? 'pointer' : 'not-allowed',
-              opacity: lobbyState.canStart ? 1 : 0.6,
-              boxShadow: lobbyState.canStart ? '0 6px 16px rgba(245, 158, 11, 0.5)' : '0 4px 12px rgba(0, 0, 0, 0.3)',
-              transition: 'all 0.2s',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px'
-            }}
+            className={lobbyStyles.startButton}
           >
             {lobbyState.canStart ? (
               <>
@@ -816,18 +752,7 @@ export default function MultiplayerLobby({
           onClick={handleLeaveRoom}
           whileHover={{ scale: 1.02, y: -2 }}
           whileTap={{ scale: 0.98 }}
-          style={{
-            padding: '14px 24px',
-            borderRadius: '12px',
-            border: '2px solid rgba(239, 68, 68, 0.5)',
-            background: 'rgba(239, 68, 68, 0.1)',
-            color: '#ef4444',
-            fontSize: '16px',
-            fontWeight: 'bold',
-            cursor: 'pointer',
-            boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)',
-            transition: 'all 0.2s'
-          }}
+          className={lobbyStyles.leaveButton}
         >
           🚪 Покинуть лобби
         </motion.button>
@@ -841,9 +766,7 @@ export default function MultiplayerLobby({
 
       {/* Статус подключения */}
       {!isConnected && (
-        <div className="connection-status">
-          <div className="disconnected">Нет соединения с сервером</div>
-        </div>
+        <div className={lobbyStyles.connectionWarning}>Нет соединения с сервером</div>
       )}
 
       <style jsx>{`

@@ -12,7 +12,7 @@ import {
 
 } from '@/lib/nft/generate-theme-card-client';
 
-import { normalizeRankToken, normalizeSuitToken } from '@/lib/game/cardAssets';
+import { getCardAssetSrc, normalizeRankToken, normalizeSuitToken } from '@/lib/game/cardAssets';
 
 import { NFT_THEME_CONFIG, isAnimatedNftTheme, parseNftThemeFromImageUrl, type NftThemeKey } from '@/lib/nft/theme-config';
 import UniqueLivingCard from '@/components/UniqueLivingCard';
@@ -81,11 +81,16 @@ function normalizeForCanvas(rank: string, suit: string) {
 /** Готовая карта с сервера (акция дня, купленная NFT) */
 
 function isComposedCardUrl(url?: string | null): boolean {
+
   if (!url) return false;
+
   const dailyOfferVersion = url.match(/daily-offer\/v(\d+)\//i);
-  if (dailyOfferVersion) return Number(dailyOfferVersion[1]) >= 11;
-  if (/base-cards/i.test(url)) return true;
-  return false;
+  if (dailyOfferVersion && Number(dailyOfferVersion[1]) < 11) {
+    return false;
+  }
+
+  return /daily-offer\/v(?:1[1-9]|[2-9]\d)|base-cards|_of_(clubs|diamonds|hearts|spades)/i.test(url);
+
 }
 
 
@@ -191,6 +196,7 @@ export default function NftThemedCardCanvas({
   const [composedFailed, setComposedFailed] = useState(false);
 
   const [rawArtworkFailed, setRawArtworkFailed] = useState(false);
+  const [themeComposeState, setThemeComposeState] = useState<'idle' | 'loading' | 'ready' | 'failed'>('idle');
 
   useEffect(() => {
     setComposedFailed(false);
@@ -201,13 +207,28 @@ export default function NftThemedCardCanvas({
     const fastPreview = generateHeroCardFastDataUrl(suitNorm, rankNorm, themeKey ?? undefined);
     setClientUrl(fastPreview);
 
-    if (!themeKey || !validThemeId) return;
-    if (isAnimatedNftTheme(themeKey)) return;
+    if (!themeKey || !validThemeId) {
+      setThemeComposeState('idle');
+      return;
+    }
+    if (isAnimatedNftTheme(themeKey)) {
+      setThemeComposeState('ready');
+      return;
+    }
 
     let cancelled = false;
+    setThemeComposeState('loading');
 
     void generateThemeCardImageDataUrl(suitNorm, rankNorm, themeKey, validThemeId).then((url) => {
-      if (!cancelled && url) setClientUrl(url);
+      if (cancelled) return;
+      if (url) {
+        setClientUrl(url);
+        setThemeComposeState('ready');
+      } else {
+        setThemeComposeState('failed');
+      }
+    }).catch(() => {
+      if (!cancelled) setThemeComposeState('failed');
     });
 
     return () => {
@@ -237,12 +258,19 @@ export default function NftThemedCardCanvas({
     );
   }
 
+  const standardFallback = getCardAssetSrc({ rank: rankNorm, suit: suitNorm });
   const imgSrc =
     composedUrl && !composedFailed
       ? composedUrl
       : rawArtworkUrl && !rawArtworkFailed
         ? rawArtworkUrl
-        : clientUrl || null;
+        : themeKey && validThemeId
+          ? themeComposeState === 'ready'
+            ? clientUrl || standardFallback
+            : themeComposeState === 'failed'
+              ? standardFallback
+              : null
+          : clientUrl || standardFallback;
   const showCornerFallback = ensureReadableCorners && Boolean(rawArtworkUrl && imgSrc === rawArtworkUrl);
 
 
@@ -344,17 +372,19 @@ export default function NftThemedCardCanvas({
 
             justifyContent: 'center',
 
+            background: 'linear-gradient(145deg, #ffffff, #e2e8f0)',
+
             color: '#64748b',
 
-            fontWeight: 800,
+            fontWeight: 700,
 
-            fontSize: 28,
+            fontSize: 'clamp(8px, 9cqw, 14px)',
 
           }}
 
         >
 
-          …
+          Загрузка…
 
         </div>
 

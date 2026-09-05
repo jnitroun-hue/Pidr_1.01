@@ -2,7 +2,20 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Trophy, Target, TrendingUp, Star, UserPlus, MessageCircleOff, MessageCircle } from 'lucide-react';
+import {
+  X,
+  Trophy,
+  Target,
+  TrendingUp,
+  Star,
+  UserPlus,
+  MessageCircleOff,
+  MessageCircle,
+  Crown,
+  ShieldCheck,
+} from 'lucide-react';
+import PremiumAvatarFire from '@/components/PremiumAvatarFire';
+import { PidrCoinAmount } from '@/components/PidrCoinIcon';
 
 export interface PlayerProfileModalPlayer {
   name: string;
@@ -14,6 +27,16 @@ export interface PlayerProfileModalPlayer {
   wins?: number;
   losses?: number;
   winRate?: number;
+  coins?: number;
+  isPremium?: boolean;
+  onlineGamesPlayed?: number;
+  onlineWins?: number;
+  botGamesPlayed?: number;
+  botWins?: number;
+  firstPlaces?: number;
+  secondPlaces?: number;
+  thirdPlaces?: number;
+  bestStreak?: number;
   isChatBlocked?: boolean;
   canAddFriend?: boolean;
   canBlockChat?: boolean;
@@ -80,8 +103,8 @@ export default function PlayerProfileModal({
         style={{
           position: 'fixed',
           inset: 0,
-          background: 'rgba(0, 0, 0, 0.85)',
-          backdropFilter: 'blur(10px)',
+          background: 'rgba(2, 6, 23, 0.82)',
+          backdropFilter: 'blur(14px)',
           zIndex: 999999,
           display: 'flex',
           alignItems: 'center',
@@ -95,14 +118,16 @@ export default function PlayerProfileModal({
           exit={{ scale: 0.8, y: 50 }}
           onClick={(e) => e.stopPropagation()}
           style={{
-            background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)',
-            border: '3px solid #3b82f6',
+            background: 'var(--menu-card-bg, linear-gradient(145deg, #1e293b 0%, #0f172a 100%))',
+            border: '1px solid var(--menu-card-border, rgba(59,130,246,.45))',
             borderRadius: '24px',
-            padding: '30px',
-            maxWidth: '420px',
+            padding: '24px',
+            maxWidth: '460px',
+            maxHeight: 'min(88vh, 88dvh)',
+            overflowY: 'auto',
             width: '100%',
             position: 'relative',
-            boxShadow: '0 20px 60px rgba(59, 130, 246, 0.3)',
+            boxShadow: '0 28px 80px rgba(0,0,0,.58), var(--menu-shadow)',
           }}
         >
           <button
@@ -112,64 +137,86 @@ export default function PlayerProfileModal({
               position: 'absolute',
               top: '20px',
               right: '20px',
-              background: 'rgba(255, 255, 255, 0.1)',
-              border: 'none',
-              borderRadius: '50%',
-              width: '44px',
-              height: '44px',
+              background: 'var(--menu-accent-soft, rgba(255,255,255,.1))',
+              border: '1px solid var(--menu-card-border, transparent)',
+              borderRadius: '12px',
+              width: '38px',
+              height: '38px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
-              color: '#ffffff',
+              color: 'var(--menu-text, #fff)',
             }}
           >
             <X size={24} />
           </button>
 
           <div style={{ textAlign: 'center', marginBottom: '25px' }}>
-            <div
-              style={{
-                width: '120px',
-                height: '120px',
-                margin: '0 auto',
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '64px',
-                border: '4px solid rgba(59, 130, 246, 0.3)',
-                boxShadow: '0 10px 30px rgba(59, 130, 246, 0.4)',
-                marginBottom: '15px',
-                overflow: 'hidden',
-              }}
-            >
-              {player.avatar &&
-              (player.avatar.startsWith('http') ||
-                player.avatar.startsWith('data:') ||
-                player.avatar.startsWith('/avatars/') ||
-                player.avatar.startsWith('/img/')) ? (
-                <img
-                  src={player.avatar}
-                  alt={player.name}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-              ) : (
-                <span style={{ fontSize: '64px' }}>{player.avatar || '👤'}</span>
-              )}
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+              <PremiumAvatarFire size={72} active={!!player.isPremium}>
+                <div
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    borderRadius: '50%',
+                    overflow: 'hidden',
+                    background: 'linear-gradient(135deg, var(--menu-accent), #0f172a)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {player.avatar &&
+                  (player.avatar.startsWith('http') ||
+                    player.avatar.startsWith('data:') ||
+                    player.avatar.startsWith('/avatars/') ||
+                    player.avatar.startsWith('/img/')) ? (
+                    <img
+                      src={player.avatar}
+                      alt={player.name}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  ) : (
+                    <span style={{ fontSize: '38px' }}>{player.avatar || '👤'}</span>
+                  )}
+                </div>
+              </PremiumAvatarFire>
             </div>
 
             <h2
               style={{
-                color: '#ffffff',
-                fontSize: '28px',
-                fontWeight: 'black',
+                color: 'var(--menu-text, #fff)',
+                fontSize: '25px',
+                fontWeight: '850',
                 marginBottom: '8px',
               }}
             >
               {player.name}
             </h2>
+
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
+              {player.isPremium && (
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  padding: '5px 9px', borderRadius: 999,
+                  color: '#fde68a', background: 'rgba(245,197,24,.13)',
+                  border: '1px solid rgba(245,197,24,.38)', fontSize: 11, fontWeight: 800,
+                }}>
+                  <Crown size={13} /> PREMIUM
+                </span>
+              )}
+              {player.isSelf && (
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  padding: '5px 9px', borderRadius: 999,
+                  color: 'var(--menu-accent)', background: 'var(--menu-accent-soft)',
+                  border: '1px solid var(--menu-card-border)', fontSize: 11, fontWeight: 800,
+                }}>
+                  <ShieldCheck size={13} /> ВАШ ПРОФИЛЬ
+                </span>
+              )}
+            </div>
 
             {player.isBot && (
               <div
@@ -209,19 +256,53 @@ export default function PlayerProfileModal({
           </div>
 
           {!player.isBot && (
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(2, 1fr)',
-                gap: '15px',
-                marginTop: '25px',
-              }}
-            >
-              <StatCard icon={<TrendingUp size={20} color="#3b82f6" />} label="Рейтинг" value={player.rating || 1000} color="#3b82f6" />
-              <StatCard icon={<Target size={20} color="#8b5cf6" />} label="Игры" value={player.gamesPlayed || 0} color="#8b5cf6" />
-              <StatCard icon={<Trophy size={20} color="#22c55e" />} label="Победы" value={player.wins || 0} color="#22c55e" />
-              <StatCard icon={<Star size={20} color="#fbbf24" />} label="Винрейт" value={`${winRate}%`} color="#fbbf24" />
-            </div>
+            <>
+              {player.isSelf && player.coins != null && (
+                <div style={{
+                  marginTop: 18, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '11px 14px', borderRadius: 14,
+                  background: 'var(--menu-accent-soft)', border: '1px solid var(--menu-card-border)',
+                }}>
+                  <span style={{ color: 'var(--menu-text-muted)', fontSize: 12, fontWeight: 700 }}>Игровой баланс</span>
+                  <PidrCoinAmount value={player.coins} size={18} />
+                </div>
+              )}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                  gap: '10px',
+                  marginTop: '14px',
+                }}
+              >
+                <StatCard icon={<TrendingUp size={18} />} label="Рейтинг" value={player.rating ?? 0} />
+                <StatCard icon={<Target size={18} />} label="Игры" value={player.gamesPlayed ?? 0} />
+                <StatCard icon={<Trophy size={18} />} label="Победы" value={player.wins ?? 0} />
+                <StatCard icon={<Star size={18} />} label="Винрейт" value={`${winRate}%`} />
+              </div>
+
+              {player.isSelf && (
+                <div style={{
+                  marginTop: 10, padding: 12, borderRadius: 14,
+                  background: 'rgba(2,6,23,.28)', border: '1px solid var(--menu-card-border)',
+                }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                    <MiniMetric label="Онлайн" value={`${player.onlineWins ?? 0}/${player.onlineGamesPlayed ?? 0}`} />
+                    <MiniMetric label="С ботами" value={`${player.botWins ?? 0}/${player.botGamesPlayed ?? 0}`} />
+                    <MiniMetric label="Серия" value={player.bestStreak ?? 0} />
+                  </div>
+                  <div style={{
+                    display: 'flex', justifyContent: 'center', gap: 12, marginTop: 11,
+                    paddingTop: 10, borderTop: '1px solid var(--menu-card-border)',
+                    color: 'var(--menu-text-muted)', fontSize: 11, fontWeight: 750,
+                  }}>
+                    <span>1 место: {player.firstPlaces ?? 0}</span>
+                    <span>2 место: {player.secondPlaces ?? 0}</span>
+                    <span>3 место: {player.thirdPlaces ?? 0}</span>
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           {showActions && (
@@ -312,36 +393,43 @@ function StatCard({
   icon,
   label,
   value,
-  color,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string | number;
-  color: string;
 }) {
   return (
     <div
       style={{
-        background: 'rgba(59, 130, 246, 0.1)',
-        border: '2px solid rgba(59, 130, 246, 0.3)',
-        borderRadius: '16px',
-        padding: '16px',
-        textAlign: 'center',
+        background: 'color-mix(in srgb, var(--menu-accent-soft) 62%, rgba(2,6,23,.32))',
+        border: '1px solid var(--menu-card-border)',
+        borderRadius: '14px',
+        padding: '12px',
       }}
     >
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
+          justifyContent: 'flex-start',
           gap: '8px',
-          marginBottom: '8px',
+          marginBottom: '6px',
+          color: 'var(--menu-accent)',
         }}
       >
         {icon}
-        <span style={{ color: '#94a3b8', fontSize: '13px', fontWeight: '600' }}>{label}</span>
+        <span style={{ color: 'var(--menu-text-muted)', fontSize: '11px', fontWeight: '700' }}>{label}</span>
       </div>
-      <div style={{ color, fontSize: '28px', fontWeight: 'black' }}>{value}</div>
+      <div style={{ color: 'var(--menu-text)', fontSize: '22px', fontWeight: '850' }}>{value}</div>
+    </div>
+  );
+}
+
+function MiniMetric({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div style={{ textAlign: 'center' }}>
+      <div style={{ color: 'var(--menu-text)', fontSize: 14, fontWeight: 850 }}>{value}</div>
+      <div style={{ color: 'var(--menu-text-muted)', fontSize: 10, marginTop: 2 }}>{label}</div>
     </div>
   );
 }

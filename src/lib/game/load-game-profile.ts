@@ -8,6 +8,19 @@ export interface GameUserProfile {
   telegramId: string;
   userId?: number;
   isPremium: boolean;
+  rating: number;
+  gamesPlayed: number;
+  wins: number;
+  losses: number;
+  winRate: number;
+  onlineGamesPlayed: number;
+  onlineWins: number;
+  botGamesPlayed: number;
+  botWins: number;
+  firstPlaces: number;
+  secondPlaces: number;
+  thirdPlaces: number;
+  bestWinStreak: number;
 }
 
 function resolvePremium(
@@ -73,6 +86,19 @@ export async function loadGameUserProfile(): Promise<GameUserProfile | null> {
       telegramId: String(user.telegramId || user.telegram_id || ''),
       userId: user.id != null ? Number(user.id) : undefined,
       isPremium,
+      rating: Number(user.rating) || 0,
+      gamesPlayed: Number(user.gamesPlayed ?? user.games_played) || 0,
+      wins: Number(user.wins ?? user.games_won) || 0,
+      losses: Number(user.losses) || 0,
+      winRate: Number(user.winRate) || 0,
+      onlineGamesPlayed: Number(user.onlineGamesPlayed) || 0,
+      onlineWins: Number(user.onlineWins) || 0,
+      botGamesPlayed: Number(user.botGamesPlayed) || 0,
+      botWins: Number(user.botWins) || 0,
+      firstPlaces: Number(user.firstPlaces) || 0,
+      secondPlaces: Number(user.secondPlaces) || 0,
+      thirdPlaces: Number(user.thirdPlaces) || 0,
+      bestWinStreak: Number(user.best_win_streak) || 0,
     };
   } catch {
     return null;

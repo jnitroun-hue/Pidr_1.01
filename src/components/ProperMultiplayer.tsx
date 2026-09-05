@@ -1001,14 +1001,7 @@ export const ProperMultiplayer: React.FC = () => {
       )}
       
       {playerPosition && (
-        <div className={styles.info} style={{ 
-          background: 'rgba(76, 175, 80, 0.1)', 
-          padding: '12px', 
-          borderRadius: '8px',
-          marginBottom: '15px',
-          textAlign: 'center',
-          color: '#4CAF50'
-        }}>
+        <div className={styles.info}>
           {t.multiplayer.yourPositionLabel} <strong>{playerPosition}</strong>
           {playerPosition === 1 && ` ${t.multiplayer.badgeHost}`}
         </div>

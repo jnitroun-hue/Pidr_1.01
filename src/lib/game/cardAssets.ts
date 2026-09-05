@@ -5,7 +5,15 @@ type CardAssetOptions = {
   faceDown?: boolean;
 };
 
-const DEFAULT_CARD_BACK = '/img/card-back.svg';
+export type NftDeckVisual = {
+  imageUrl: string;
+  rarity?: string | null;
+  metadata?: Record<string, unknown> | null;
+};
+
+export type NftDeckVisualMap = Record<string, NftDeckVisual>;
+
+const DEFAULT_CARD_BACK = '/img/cards/back.png';
 const FALLBACK_CARD_BACK = '/img/card-back.svg';
 
 export function normalizeRankToken(rank?: string | number) {
@@ -50,16 +58,41 @@ export function buildNftDeckKey(rank?: string | number, suit?: string): string {
 }
 
 export function deckEntriesToNftMap(
-  deck: Array<{ rank?: string | number; suit?: string; image_url?: string }>
-): Record<string, string> {
-  const map: Record<string, string> = {};
+  deck: Array<{
+    rank?: string | number;
+    suit?: string;
+    image_url?: string;
+    rarity?: string | null;
+    metadata?: Record<string, unknown> | null;
+    nft_card?: {
+      image_url?: string | null;
+      rarity?: string | null;
+      metadata?: Record<string, unknown> | null;
+    } | null;
+  }>
+): NftDeckVisualMap {
+  const map: NftDeckVisualMap = {};
   for (const entry of deck) {
     const key = buildNftDeckKey(entry.rank, entry.suit);
-    if (key && entry.image_url) {
-      map[key] = entry.image_url;
+    const imageUrl = entry.image_url || entry.nft_card?.image_url || '';
+    if (key && imageUrl) {
+      map[key] = {
+        imageUrl,
+        rarity: entry.rarity ?? entry.nft_card?.rarity ?? null,
+        metadata: entry.metadata ?? entry.nft_card?.metadata ?? null,
+      };
     }
   }
   return map;
+}
+
+export function resolveNftDeckVisual(
+  deck: NftDeckVisualMap | undefined,
+  rank?: string | number,
+  suit?: string
+): NftDeckVisual | null {
+  const key = buildNftDeckKey(rank, suit);
+  return key && deck?.[key] ? deck[key] : null;
 }
 
 function extractIdentityFromImage(image?: string): { rank: string; suit: string; rawName: string } {
