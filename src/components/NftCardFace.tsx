@@ -16,12 +16,12 @@ type Props = {
   style?: CSSProperties;
   className?: string;
   alt?: string;
+  faceDown?: boolean;
   ensureReadableCorners?: boolean;
 };
 
 /**
- * Единый рендер лица NFT-карты: theme → canvas с углами; иначе image_url / стандартная карта.
- * Без HTML-оверлеев ранга/масти поверх уже составленного арта.
+ * Единый рендер карты: NFT через canvas, стандартная — через canvas-лицо, рубашка — SVG.
  */
 export default function NftCardFace({
   suit,
@@ -33,11 +33,33 @@ export default function NftCardFace({
   style,
   className,
   alt,
-  ensureReadableCorners = false,
+  faceDown = false,
+  ensureReadableCorners = true,
 }: Props) {
-  const themeInfo = resolveThemeFromMetadata(metadata, rarity, imageUrl);
+  if (faceDown) {
+    const src = getCardAssetSrc({ faceDown: true });
+    return (
+      <img
+        src={src}
+        alt={alt || 'Card back'}
+        className={className}
+        loading="lazy"
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          display: 'block',
+          borderRadius: 6,
+          ...style,
+        }}
+      />
+    );
+  }
 
-  if (themeInfo || imageUrl) {
+  const themeInfo = resolveThemeFromMetadata(metadata, rarity, imageUrl);
+  const hasIdentity = Boolean(String(rank || '').trim() && String(suit || '').trim());
+
+  if (hasIdentity) {
     return (
       <NftThemedCardCanvas
         suit={suit}
@@ -58,7 +80,8 @@ export default function NftCardFace({
     );
   }
 
-  const src = getCardAssetSrc({ rank, suit }) || getCardAssetSrc({ faceDown: true });
+  const src = getCardAssetSrc({ rank, suit, image: imageUrl ?? undefined, faceDown: false })
+    || getCardAssetSrc({ faceDown: true });
 
   return (
     <img
@@ -72,6 +95,7 @@ export default function NftCardFace({
         objectFit: 'contain',
         display: 'block',
         background: '#fff',
+        borderRadius: 6,
         ...style,
       }}
     />

@@ -850,7 +850,7 @@ export default function MultiplayerLobby({
         .multiplayer-lobby {
           min-height: 100vh;
           min-height: var(--app-viewport-height, 100dvh);
-          background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+          background: var(--menu-bg-accent, transparent), var(--menu-bg, #0f172a);
           padding: 16px;
           width: 100%;
           max-width: 900px;

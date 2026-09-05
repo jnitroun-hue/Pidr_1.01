@@ -5,7 +5,7 @@ type CardAssetOptions = {
   faceDown?: boolean;
 };
 
-const DEFAULT_CARD_BACK = '/img/cards/back.png';
+const DEFAULT_CARD_BACK = '/img/card-back.svg';
 const FALLBACK_CARD_BACK = '/img/card-back.svg';
 
 export function normalizeRankToken(rank?: string | number) {

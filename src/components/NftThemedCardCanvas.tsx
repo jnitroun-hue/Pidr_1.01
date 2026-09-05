@@ -81,16 +81,11 @@ function normalizeForCanvas(rank: string, suit: string) {
 /** Готовая карта с сервера (акция дня, купленная NFT) */
 
 function isComposedCardUrl(url?: string | null): boolean {
-
   if (!url) return false;
-
   const dailyOfferVersion = url.match(/daily-offer\/v(\d+)\//i);
-  if (dailyOfferVersion && Number(dailyOfferVersion[1]) < 11) {
-    return false;
-  }
-
-  return /daily-offer\/v(?:1[1-9]|[2-9]\d)|base-cards|_of_(clubs|diamonds|hearts|spades)/i.test(url);
-
+  if (dailyOfferVersion) return Number(dailyOfferVersion[1]) >= 11;
+  if (/base-cards/i.test(url)) return true;
+  return false;
 }
 
 

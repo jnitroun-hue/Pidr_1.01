@@ -375,6 +375,7 @@ export const translations: Record<Language, Translations> = {
       register: 'Регистрация',
       gameBurgerProfile: 'Профиль',
       gameBurgerWallet: 'Кошелёк',
+      gameBurgerSettings: 'Настройки',
       player: 'Игрок',
       translatePageHint: 'Перевести страницу'
     },
@@ -701,6 +702,7 @@ export const translations: Record<Language, Translations> = {
       register: 'Register',
       gameBurgerProfile: 'Profile',
       gameBurgerWallet: 'Wallet',
+      gameBurgerSettings: 'Settings',
       player: 'Player',
       translatePageHint: 'Translate page'
     },
