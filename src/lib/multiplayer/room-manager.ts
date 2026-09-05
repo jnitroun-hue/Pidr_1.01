@@ -33,6 +33,8 @@ interface RoomPlayer {
 export class RoomManager {
   private channel: RealtimeChannel | null = null;
   private roomId: string | null = null;
+  private channelReady = false;
+  private readyWaiters: Array<(ready: boolean) => void> = [];
 
   /**
    * Создать новую комнату
@@ -206,13 +208,19 @@ export class RoomManager {
     onGameCountdown?: (payload: { gameLaunchAt: number; roomId: string }) => void;
     onPlayerPresence?: (payload: { playerId: string; isOnline: boolean; timestamp: number }) => void;
     onRequestGameStateSync?: () => void;
-  }): void {
-    console.log('📡 [RoomManager] Подписка на комнату:', roomId);
+  }, channelKind: 'lobby' | 'game' = 'game'): void {
+    console.log('📡 [RoomManager] Подписка на комнату:', roomId, channelKind);
+    if (this.channel) {
+      this.unsubscribe();
+    }
     this.roomId = roomId;
+    this.channelReady = false;
 
     try {
-    // Realtime только через публичный клиент (admin в браузере недоступен)
-    this.channel = rt.channel(`room:${roomId}`)
+    // Отдельный топик для лобби и игры: иначе unmount лобби убивает канал партии.
+    this.channel = rt.channel(`pidr-${channelKind}:${roomId}`, {
+      config: { broadcast: { self: false } },
+    })
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
@@ -335,13 +343,51 @@ export class RoomManager {
           callbacks.onRequestGameStateSync();
         }
       })
-      .subscribe();
-
-    console.log('✅ [RoomManager] Подписка активна');
+      .subscribe((status: string) => {
+        if (status === 'SUBSCRIBED') {
+          this.channelReady = true;
+          this.flushReadyWaiters(true);
+          console.log('✅ [RoomManager] Канал SUBSCRIBED:', `pidr-${channelKind}:${roomId}`);
+          return;
+        }
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          this.channelReady = false;
+          console.warn('⚠️ [RoomManager] Статус канала:', status);
+        }
+      });
     } catch (error) {
       console.error('❌ [RoomManager] Не удалось подписаться на комнату (polling продолжит работу):', error);
       this.channel = null;
+      this.channelReady = false;
     }
+  }
+
+  isChannelReady(): boolean {
+    return Boolean(this.channel && this.channelReady && this.roomId);
+  }
+
+  getSubscribedRoomId(): string | null {
+    return this.roomId;
+  }
+
+  whenChannelReady(timeoutMs = 4000): Promise<boolean> {
+    if (this.isChannelReady()) return Promise.resolve(true);
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        this.readyWaiters = this.readyWaiters.filter((waiter) => waiter !== onReady);
+        resolve(false);
+      }, timeoutMs);
+      const onReady = (ready: boolean) => {
+        clearTimeout(timer);
+        resolve(ready);
+      };
+      this.readyWaiters.push(onReady);
+    });
+  }
+
+  private flushReadyWaiters(ready: boolean): void {
+    const waiters = this.readyWaiters.splice(0);
+    waiters.forEach((waiter) => waiter(ready));
   }
 
   /**
@@ -670,11 +716,14 @@ export class RoomManager {
    * Отписаться от обновлений
    */
   unsubscribe(): void {
+    this.channelReady = false;
+    this.flushReadyWaiters(false);
     if (this.channel) {
       rt.removeChannel(this.channel);
       this.channel = null;
       console.log('✅ [RoomManager] Отписка от комнаты');
     }
+    this.roomId = null;
   }
 
   /**

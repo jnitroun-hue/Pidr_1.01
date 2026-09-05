@@ -12,12 +12,22 @@ interface AIDecision {
   confidence: number; // 0-1, насколько ИИ уверен в решении
 }
 
+function playerIdKey(id: string | number): string {
+  return String(id);
+}
+
+function isSameAiPlayer(player: Player, aiId: string): boolean {
+  const raw = playerIdKey(player.id);
+  if (raw === aiId) return true;
+  return raw.replace(/^player_/, '') === aiId.replace(/^player_/, '');
+}
+
 export class AIPlayer {
   private difficulty: AIDifficulty;
-  private playerId: number;
+  private playerId: string;
   
-  constructor(playerId: number, difficulty: AIDifficulty = 'medium') {
-    this.playerId = playerId;
+  constructor(playerId: string | number, difficulty: AIDifficulty = 'medium') {
+    this.playerId = playerIdKey(playerId);
     this.difficulty = difficulty;
   }
   
@@ -57,10 +67,7 @@ export class AIPlayer {
   // Решения для 1-й стадии (раскладывание карт)
   private makeStage1Decision(gameState: any): AIDecision {
     const { players, availableTargets, revealedDeckCard } = gameState;
-    const currentPlayer = players.find((p: Player) => {
-      const pId = typeof p.id === 'string' ? parseInt(p.id.replace('player_', '')) : p.id;
-      return pId === this.playerId;
-    });
+    const currentPlayer = players.find((p: Player) => isSameAiPlayer(p, this.playerId));
     
     if (!currentPlayer) {
       console.error(`🔴 [AI Stage1] Не найден игрок с ID ${this.playerId}`);
@@ -89,7 +96,8 @@ export class AIPlayer {
           // Средний ИИ - старается положить плохие карты противникам
           if (cardRank <= 6 && availableTargets.length > 0) {
             // Кладем слабые карты противникам
-            const enemyTargets = availableTargets.filter((id: number) => id !== this.playerId);
+            const myIndex = players.findIndex((p: Player) => isSameAiPlayer(p, this.playerId));
+            const enemyTargets = availableTargets.filter((id: number) => id !== myIndex);
             if (enemyTargets.length > 0) {
               const target = enemyTargets[Math.floor(Math.random() * enemyTargets.length)];
               return {
@@ -127,10 +135,7 @@ export class AIPlayer {
   // Решения для 2-й стадии (P.I.D.R. правила)
   private makeStage2Decision(gameState: any): AIDecision {
     const { players, tableStack, trumpSuit } = gameState;
-    const currentPlayer = players.find((p: Player) => {
-      const pId = typeof p.id === 'string' ? parseInt(p.id.replace('player_', '')) : p.id;
-      return pId === this.playerId;
-    });
+    const currentPlayer = players.find((p: Player) => isSameAiPlayer(p, this.playerId));
     
     if (!currentPlayer) {
       console.error(`🔴 [AI Stage2 P.I.D.R.] Не найден игрок с ID ${this.playerId}`);
@@ -269,10 +274,7 @@ export class AIPlayer {
   private identifyCriticalThreats(players: Player[]): number[] {
     // Игроки с минимальным количеством карт (близкие к победе)
     return players
-      .filter(p => {
-        const pId = typeof p.id === 'string' ? parseInt(p.id.replace('player_', '')) : p.id;
-        return pId !== this.playerId;
-      })
+      .filter(p => !isSameAiPlayer(p, this.playerId))
       .filter(p => {
         const totalCards = p.cards.length + (p.penki?.length || 0);
         return totalCards <= 2; // Критическая угроза - 2 или меньше карт
@@ -282,43 +284,28 @@ export class AIPlayer {
         const bCards = b.cards.length + (b.penki?.length || 0);
         return aCards - bCards; // Сортируем по возрастанию количества карт
       })
-      .map(p => {
-        const pId = typeof p.id === 'string' ? parseInt(p.id.replace('player_', '')) : p.id;
-        return pId;
-      });
+      .map(p => players.indexOf(p));
   }
   
   private identifyThreats(players: Player[]): number[] {
     // Определяем игроков, которые представляют угрозу
     return players
-      .filter(p => {
-        const pId = typeof p.id === 'string' ? parseInt(p.id.replace('player_', '')) : p.id;
-        return pId !== this.playerId;
-      })
+      .filter(p => !isSameAiPlayer(p, this.playerId))
       .sort((a, b) => {
         // Сортируем по количеству хороших карт
         const aScore = this.evaluatePlayerPosition(a);
         const bScore = this.evaluatePlayerPosition(b);
         return bScore - aScore;
       })
-      .map(p => {
-        const pId = typeof p.id === 'string' ? parseInt(p.id.replace('player_', '')) : p.id;
-        return pId;
-      });
+      .map(p => players.indexOf(p));
   }
   
   private identifyOpportunities(players: Player[]): number[] {
     // Определяем слабых игроков
     return players
-      .filter(p => {
-        const pId = typeof p.id === 'string' ? parseInt(p.id.replace('player_', '')) : p.id;
-        return pId !== this.playerId;
-      })
+      .filter(p => !isSameAiPlayer(p, this.playerId))
       .filter(p => p.cards.length < 3) // Мало карт
-      .map(p => {
-        const pId = typeof p.id === 'string' ? parseInt(p.id.replace('player_', '')) : p.id;
-        return pId;
-      });
+      .map(p => players.indexOf(p));
   }
   
   private evaluatePlayerPosition(player: Player): number {

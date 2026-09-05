@@ -565,6 +565,7 @@ let multiplayerStateSyncTimer: ReturnType<typeof setTimeout> | null = null;
 let lastRemoteSyncTimestamp = 0;
 let lastRemoteSyncSeq = 0;
 let hostSyncSeq = 0;
+let lastHttpSnapshotAt = 0;
 const pendingBotAskTargets = new Set<string>();
 
 /** Ослабление «одна карта» у ботов — только после того, как кто-то уже выбыл */
@@ -572,9 +573,28 @@ function hasAnyPlayerExited(players: Player[]): boolean {
   return players.some(p => p.isWinner);
 }
 
-function publishHostMultiplayerState(): void {
+function publishHttpGameSnapshot(roomId: string, payload: Record<string, unknown>, force = false): void {
+  if (typeof window === 'undefined') return;
+  const now = Date.now();
+  if (!force && now - lastHttpSnapshotAt < 400) return;
+  lastHttpSnapshotAt = now;
+  const headers = new Headers(getApiHeaders() as HeadersInit);
+  headers.set('Content-Type', 'application/json');
+  void fetch(`/api/rooms/${roomId}/game-state`, {
+    method: 'POST',
+    credentials: 'include',
+    headers,
+    body: JSON.stringify(payload),
+  }).catch(() => {});
+}
+
+function publishHostMultiplayerState(forceHttp = false): void {
   const snap = useGameStore.getState();
-  if (!snap.isGameActive || !snap.multiplayerData?.isHost || !multiplayerRealtimeActive) return;
+  if (!snap.isGameActive || !snap.multiplayerData?.isHost) return;
+
+  if (!multiplayerRealtimeActive) {
+    snap.initMultiplayerRealtime();
+  }
 
   hostSyncSeq += 1;
   const payload = {
@@ -583,10 +603,17 @@ function publishHostMultiplayerState(): void {
     timestamp: Date.now(),
   };
 
-  void getMultiplayerRoomManager().syncGameState(
-    snap.multiplayerData.roomId,
-    payload as Parameters<RoomManager['syncGameState']>[1]
-  );
+  const roomId = snap.multiplayerData.roomId;
+  const manager = getMultiplayerRoomManager();
+  void manager.whenChannelReady(2500).then((ready) => {
+    if (ready) {
+      void manager.syncGameState(
+        roomId,
+        payload as Parameters<RoomManager['syncGameState']>[1]
+      );
+    }
+  });
+  publishHttpGameSnapshot(roomId, payload, forceHttp);
 }
 
 function scheduleHostMultiplayerState(): void {
@@ -606,7 +633,7 @@ function flushHostMultiplayerState(): void {
     clearTimeout(multiplayerStateSyncTimer);
     multiplayerStateSyncTimer = null;
   }
-  publishHostMultiplayerState();
+  publishHostMultiplayerState(true);
 }
 
 function getMultiplayerRoomManager(): RoomManager {
@@ -1021,7 +1048,15 @@ export const useGameStore = create<GameState>()(
         if (!isNonHostMultiplayer) {
           setTimeout(() => {
             get().processPlayerTurn(players[firstPlayerIndex].id);
+            if (mode === 'multiplayer' && multiplayerConfig?.isHost) {
+              get().activateMultiplayerGameSync();
+              flushHostMultiplayerState();
+            }
           }, BOT_TIMING.storeFirstTurn);
+        } else if (mode === 'multiplayer') {
+          setTimeout(() => {
+            get().requestMultiplayerStateSync();
+          }, 200);
         }
 
         // NFT-колода подгружается в фоне — стандартные PNG уже на столе
@@ -4371,10 +4406,22 @@ export const useGameStore = create<GameState>()(
 
         initMultiplayerRealtime: () => {
           const { multiplayerData, isGameActive } = get();
-          if (!multiplayerData?.roomId || multiplayerRealtimeActive) return;
+          if (!multiplayerData?.roomId) return;
 
           const manager = getMultiplayerRoomManager();
           const roomId = multiplayerData.roomId;
+          if (
+            multiplayerRealtimeActive &&
+            manager.isChannelReady() &&
+            manager.getSubscribedRoomId() === roomId
+          ) {
+            return;
+          }
+
+          if (multiplayerRealtimeActive) {
+            manager.unsubscribe();
+            multiplayerRealtimeActive = false;
+          }
 
           manager.subscribeToRoom(roomId, {
             onPlayerMove: (moveData) => {
@@ -4386,12 +4433,6 @@ export const useGameStore = create<GameState>()(
             },
             onGameStateSync: (gameState) => {
               if (get().multiplayerData?.isHost) return;
-              const ts = typeof gameState?.timestamp === 'number' ? gameState.timestamp : 0;
-              const seq = typeof gameState?.syncSeq === 'number' ? gameState.syncSeq : 0;
-              if (seq > 0 && seq <= lastRemoteSyncSeq) return;
-              if (seq === 0 && ts > 0 && ts <= lastRemoteSyncTimestamp) return;
-              if (seq > 0) lastRemoteSyncSeq = seq;
-              if (ts > 0) lastRemoteSyncTimestamp = ts;
               get().syncGameState(gameState as RemoteGameState);
             },
             onPlayerPresence: (payload) => {
@@ -4421,9 +4462,11 @@ export const useGameStore = create<GameState>()(
             });
             publishHostMultiplayerState();
           } else if (isGameActive) {
-            setTimeout(() => {
-              getMultiplayerRoomManager().requestGameStateSync(roomId);
-            }, 150);
+            void manager.whenChannelReady(2500).then((ready) => {
+              if (ready) {
+                getMultiplayerRoomManager().requestGameStateSync(roomId);
+              }
+            });
           }
 
           multiplayerRealtimeActive = true;
@@ -4432,7 +4475,12 @@ export const useGameStore = create<GameState>()(
 
         activateMultiplayerGameSync: () => {
           const { multiplayerData, isGameActive } = get();
-          if (!multiplayerData?.roomId || !isGameActive || !multiplayerRealtimeActive) return;
+          if (!multiplayerData?.roomId || !isGameActive) return;
+
+          const manager = getMultiplayerRoomManager();
+          if (!multiplayerRealtimeActive || !manager.isChannelReady() || manager.getSubscribedRoomId() !== multiplayerData.roomId) {
+            get().initMultiplayerRealtime();
+          }
 
           if (multiplayerData.isHost) {
             if (!multiplayerStoreUnsub) {
@@ -4440,11 +4488,15 @@ export const useGameStore = create<GameState>()(
                 scheduleHostMultiplayerState();
               });
             }
-            publishHostMultiplayerState();
+            publishHostMultiplayerState(true);
             return;
           }
 
-          getMultiplayerRoomManager().requestGameStateSync(multiplayerData.roomId);
+          void getMultiplayerRoomManager().whenChannelReady(2500).then((ready) => {
+            if (ready) {
+              getMultiplayerRoomManager().requestGameStateSync(multiplayerData.roomId);
+            }
+          });
         },
 
         requestMultiplayerStateSync: () => {
@@ -4473,6 +4525,7 @@ export const useGameStore = create<GameState>()(
           lastRemoteSyncTimestamp = 0;
           lastRemoteSyncSeq = 0;
           hostSyncSeq = 0;
+          lastHttpSnapshotAt = 0;
           console.log('📡 [Multiplayer] Realtime отключён');
         },
          
@@ -4480,6 +4533,16 @@ export const useGameStore = create<GameState>()(
          syncGameState: (remoteGameState) => {
           const { multiplayerData } = get();
            if (!multiplayerData || multiplayerData.isHost) return;
+
+          const ts = typeof remoteGameState.timestamp === 'number' ? remoteGameState.timestamp : 0;
+          const seq = typeof remoteGameState.syncSeq === 'number' ? remoteGameState.syncSeq : 0;
+          const hostRestarted = seq > 0 && seq < lastRemoteSyncSeq && ts > lastRemoteSyncTimestamp + 400;
+          if (!hostRestarted) {
+            if (seq > 0 && seq <= lastRemoteSyncSeq) return;
+            if (seq === 0 && ts > 0 && ts <= lastRemoteSyncTimestamp) return;
+          }
+          if (seq > 0) lastRemoteSyncSeq = seq;
+          if (ts > 0) lastRemoteSyncTimestamp = ts;
            
            const stateUpdates: Partial<GameState> = {
              selectedHandCard: null,
@@ -4528,6 +4591,29 @@ export const useGameStore = create<GameState>()(
            if (remoteGameState.players && Array.isArray(remoteGameState.players)) {
             const remotePlayers = remoteGameState.players;
              const { players } = get();
+            const matchedCount = players.filter((localPlayer) => findRemotePlayer(remotePlayers, localPlayer)).length;
+            const shouldAdoptRoster =
+              players.length === 0 ||
+              matchedCount === 0 ||
+              (remotePlayers.length > 0 && matchedCount < Math.min(players.length, remotePlayers.length));
+
+            if (shouldAdoptRoster) {
+              const localUser = players.find((player) => player.isUser);
+              stateUpdates.players = remotePlayers.map((remotePlayer) => {
+                const isUser = localUser
+                  ? matchRemotePlayerId(remotePlayer, localUser.id) ||
+                    (localUser.publicUserId != null && matchRemotePlayerId(remotePlayer, localUser.publicUserId)) ||
+                    (localUser.dbUserId != null && matchRemotePlayerId(remotePlayer, String(localUser.dbUserId)))
+                  : Boolean(remotePlayer.isUser);
+                return {
+                  ...remotePlayer,
+                  cards: Array.isArray(remotePlayer.cards) ? remotePlayer.cards.map((c) => ({ ...c })) : [],
+                  penki: Array.isArray(remotePlayer.penki) ? remotePlayer.penki.map((c) => ({ ...c })) : [],
+                  isUser,
+                  isBot: Boolean(remotePlayer.isBot) && !isUser,
+                };
+              });
+            } else {
              const updatedPlayers = players.map((localPlayer) => {
                const remotePlayer = findRemotePlayer(remotePlayers, localPlayer);
                if (!remotePlayer) return localPlayer;
@@ -4552,6 +4638,7 @@ export const useGameStore = create<GameState>()(
                };
              });
              stateUpdates.players = updatedPlayers;
+            }
            }
            
            set(stateUpdates);

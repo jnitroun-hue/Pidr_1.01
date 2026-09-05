@@ -396,8 +396,10 @@ function GamePageContentComponent({
     drawCard, makeMove, onDeckClick, placeCardOnSelfByRules,
     selectHandCard, playSelectedCard, takeTableCards, showNotification,
     declareOneCard, askHowManyCards, contributePenaltyCard, cancelPenalty,
-    togglePenaltyDeckModal, nextTurn
+    togglePenaltyDeckModal, nextTurn,
+    multiplayerData: storeMultiplayerData,
   } = useGameStore();
+  const isMpHost = storeMultiplayerData?.isHost ?? multiplayerData?.isHost ?? false;
 
   // ИСПРАВЛЕНО: Получаем данные пользователя из Supabase БД
   const [userData, setUserData] = useState<{
@@ -1112,10 +1114,19 @@ function GamePageContentComponent({
   // Обновляем состояние мультиплеера при изменении пропсов
   useEffect(() => {
     if (multiplayerData) {
-      setMultiplayerRoom({
-        id: multiplayerData.roomId,
-        code: multiplayerData.roomCode,
-        isHost: multiplayerData.isHost
+      setMultiplayerRoom((prev) => {
+        if (
+          prev &&
+          prev.id === multiplayerData.roomId &&
+          prev.code === multiplayerData.roomCode
+        ) {
+          return prev;
+        }
+        return {
+          id: multiplayerData.roomId,
+          code: multiplayerData.roomCode,
+          isHost: multiplayerData.isHost,
+        };
       });
     }
   }, [multiplayerData]);
@@ -1140,20 +1151,20 @@ function GamePageContentComponent({
     }
 
     store.initMultiplayerRealtime();
-  }, [isMultiplayer, multiplayerData?.roomId, multiplayerData?.roomCode, multiplayerData?.isHost]);
-
-  useEffect(() => {
-    if (!isMultiplayer || !multiplayerData?.roomId || !isGameActive) return;
-    useGameStore.getState().activateMultiplayerGameSync();
 
     return () => {
       useGameStore.getState().cleanupMultiplayerRealtime();
     };
-  }, [isMultiplayer, multiplayerData?.roomId, isGameActive]);
+  }, [isMultiplayer, multiplayerData?.roomId, multiplayerData?.roomCode]);
+
+  useEffect(() => {
+    if (!isMultiplayer || !multiplayerData?.roomId || !isGameActive) return;
+    useGameStore.getState().activateMultiplayerGameSync();
+  }, [isMultiplayer, multiplayerData?.roomId, isGameActive, isMpHost]);
 
   // Хост: резервный опрос HTTP-ходов (если Realtime broadcast потерялся)
   useEffect(() => {
-    if (!isMultiplayer || !multiplayerData?.isHost || !isGameActive || !multiplayerData.roomId) return;
+    if (!isMultiplayer || !isMpHost || !isGameActive || !multiplayerData?.roomId) return;
 
     let cancelled = false;
     const pollMoves = async () => {
@@ -1182,27 +1193,43 @@ function GamePageContentComponent({
       cancelled = true;
       clearInterval(interval);
     };
-  }, [isMultiplayer, multiplayerData?.isHost, multiplayerData?.roomId, isGameActive]);
+  }, [isMultiplayer, isMpHost, multiplayerData?.roomId, isGameActive]);
 
-  // Гость: на своём ходу периодически просим полный sync у хоста
+  // Гость: периодически просим полный sync и читаем HTTP-снимок (боты ходят не на нашем ходу)
   useEffect(() => {
-    if (!isMultiplayer || multiplayerData?.isHost || !isGameActive || !multiplayerData?.roomId) return;
+    if (!isMultiplayer || isMpHost || !isGameActive || !multiplayerData?.roomId) return;
 
     let cancelled = false;
-    const tick = () => {
+    const tick = async () => {
       if (cancelled) return;
       const state = useGameStore.getState();
-      const me = state.players.find((p) => p.isUser);
-      if (!me || state.currentPlayerId !== me.id) return;
       state.requestMultiplayerStateSync();
+      try {
+        const response = await fetch(`/api/rooms/${multiplayerData.roomId}/game-state`, {
+          method: 'GET',
+          credentials: 'include',
+          headers: getApiHeaders(),
+          cache: 'no-store',
+        });
+        if (!response.ok || cancelled) return;
+        const data = await response.json();
+        if (data?.success && data.state && typeof data.state === 'object') {
+          useGameStore.getState().syncGameState(data.state);
+        }
+      } catch {
+        /* ignore */
+      }
     };
 
-    const interval = setInterval(tick, 2500);
+    void tick();
+    const interval = setInterval(() => {
+      void tick();
+    }, 1200);
     return () => {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [isMultiplayer, multiplayerData?.isHost, multiplayerData?.roomId, isGameActive, currentPlayerId, userPlayerId]);
+  }, [isMultiplayer, isMpHost, multiplayerData?.roomId, isGameActive]);
 
   // Пульс «я в игре» + мгновенный Realtime-presence
   const presenceLastSeenRef = useRef<Map<string, number>>(new Map());
@@ -1291,7 +1318,7 @@ function GamePageContentComponent({
 
     const id = setInterval(tick, PRESENCE_STALE_CHECK_MS);
     return () => clearInterval(id);
-  }, [isMultiplayer, isGameActive, multiplayerData?.isHost]);
+  }, [isMultiplayer, isGameActive, isMpHost]);
 
   useEffect(() => {
     if (!isMultiplayer || !isGameActive) return;
@@ -1343,7 +1370,7 @@ function GamePageContentComponent({
           }));
 
         useGameStore.getState().applyMultiplayerPresence(updates, {
-          authoritative: multiplayerData.isHost,
+          authoritative: isMpHost,
         });
       } catch {
         /* ignore */
@@ -1356,7 +1383,7 @@ function GamePageContentComponent({
       cancelled = true;
       clearInterval(interval);
     };
-  }, [isMultiplayer, multiplayerData?.roomId, multiplayerData?.isHost, isGameActive]);
+  }, [isMultiplayer, multiplayerData?.roomId, isMpHost, isGameActive]);
 
   // ❌ УДАЛЕНО: Старая логика WinnerScreen - теперь используем WinnerModal из gameStore
     // Отслеживаем завершение игры для мультиплеера
@@ -1516,7 +1543,7 @@ function GamePageContentComponent({
   // ОТЛАДКА убрана - логи были слишком многословные
   
   // Создаем экземпляры ИИ для ботов
-  const [aiPlayers, setAiPlayers] = useState<Map<number, AIPlayer>>(new Map());
+  const [aiPlayers, setAiPlayers] = useState<Map<string, AIPlayer>>(new Map());
   
   // Защита от повторных вызовов AI (race condition protection)
   const aiProcessingRef = useRef<string | null>(null);
@@ -1729,12 +1756,10 @@ function GamePageContentComponent({
 
   // Инициализация ИИ игроков
   useEffect(() => {
-    const newAiPlayers = new Map<number, AIPlayer>();
+    const newAiPlayers = new Map<string, AIPlayer>();
     players.forEach(player => {
       if (player.isBot || player.isBotSubstitute) {
-        const playerId = typeof player.id === 'string' ? 
-          parseInt(player.id.replace('player_', '')) : player.id;
-        newAiPlayers.set(playerId, new AIPlayer(playerId, player.difficulty || 'medium'));
+        newAiPlayers.set(String(player.id), new AIPlayer(String(player.id), player.difficulty || 'medium'));
       }
     });
     setAiPlayers(newAiPlayers);
@@ -1756,7 +1781,7 @@ function GamePageContentComponent({
     }
 
     // В мультиплеере ботами управляет только хост — иначе клиенты расходятся
-    if (isMultiplayer && multiplayerData && !multiplayerData.isHost) {
+    if (isMultiplayer && !isMpHost) {
       return;
     }
     
@@ -1816,15 +1841,16 @@ function GamePageContentComponent({
         return;
       }
     } else if (gameStage === 1) {
+      // В мультиплеере 1-ю стадию ботов ведёт store.processPlayerTurn на хосте.
+      if (isMultiplayer) {
+        return;
+      }
       if (turnPhase !== 'analyzing_hand' && turnPhase !== 'waiting_deck_action') {
         return;
       }
     }
     
-    const playerIdNum = typeof currentPlayerId === 'string' ? 
-      parseInt(currentPlayerId.replace('player_', '')) : currentPlayerId;
-    
-    const ai = aiPlayers.get(playerIdNum);
+    const ai = aiPlayers.get(String(currentPlayerId));
     if (!ai) {
       return;
     }
@@ -1993,61 +2019,70 @@ function GamePageContentComponent({
       // Сбрасываем флаг при очистке useEffect
       aiProcessingRef.current = null;
     };
-  }, [isGameActive, currentPlayerId, gameStage, stage2TurnPhase, turnPhase, pendingPenalty, isGamePaused, isTutorialPaused, isMultiplayer, multiplayerData?.isHost]);
+  }, [isGameActive, currentPlayerId, gameStage, stage2TurnPhase, turnPhase, pendingPenalty, isGamePaused, isTutorialPaused, isMultiplayer, isMpHost, aiPlayers]);
 
   // Защита от зависания раунда, когда бот "застревает" в фазе хода.
   useEffect(() => {
-    if (isMultiplayer && multiplayerData && !multiplayerData.isHost) return;
-    if (!isGameActive || !currentPlayerId || (gameStage !== 2 && gameStage !== 3)) {
+    if (isMultiplayer && !isMpHost) return;
+    if (!isGameActive) {
       botStallGuardRef.current = { key: '', since: 0 };
       return;
     }
 
-    if (isTutorialPaused || isGamePaused || pendingPenalty) {
+    const tick = () => {
+      const state = useGameStore.getState();
+      if (!state.isGameActive || !state.currentPlayerId || state.isGamePaused || state.pendingPenalty) {
+        botStallGuardRef.current = { key: '', since: 0 };
+        return;
+      }
+      if (isTutorialPaused) {
+        botStallGuardRef.current = { key: '', since: 0 };
+        return;
+      }
+
+      const currentTurnPlayer = state.players.find((p) => p.id === state.currentPlayerId);
+      if (!currentTurnPlayer?.isBot && !currentTurnPlayer?.isBotSubstitute) {
+        botStallGuardRef.current = { key: '', since: 0 };
+        return;
+      }
+
+      const stallKey = `${state.currentPlayerId}:${state.gameStage}:${state.turnPhase}:${state.stage2TurnPhase}:${state.tableStack.length}`;
+      const now = Date.now();
+      if (botStallGuardRef.current.key !== stallKey) {
+        botStallGuardRef.current = { key: stallKey, since: now };
+        return;
+      }
+
+      if (now - botStallGuardRef.current.since < 7000) return;
+
+      console.warn(`⚠️ [BotStallGuard] Обнаружено зависание у ${currentTurnPlayer.name} (${state.turnPhase}/${state.stage2TurnPhase}), восстановление...`);
+      if (state.gameStage === 1) {
+        state.processPlayerTurn(state.currentPlayerId);
+        botStallGuardRef.current = { key: '', since: 0 };
+        return;
+      }
+
+      if (state.stage2TurnPhase === 'card_selected') {
+        useGameStore.setState({ stage2TurnPhase: 'selecting_card', selectedHandCard: null });
+        state.processPlayerTurn(state.currentPlayerId);
+      } else {
+        const stuckId = state.currentPlayerId;
+        const stuckPhase = state.stage2TurnPhase;
+        state.processPlayerTurn(stuckId);
+        setTimeout(() => {
+          const fresh = useGameStore.getState();
+          if (fresh.currentPlayerId === stuckId && fresh.stage2TurnPhase === stuckPhase) {
+            fresh.nextTurn();
+          }
+        }, 1200);
+      }
       botStallGuardRef.current = { key: '', since: 0 };
-      return;
-    }
+    };
 
-    const currentTurnPlayer = players.find(p => p.id === currentPlayerId);
-    if (!currentTurnPlayer?.isBot && !currentTurnPlayer?.isBotSubstitute) {
-      botStallGuardRef.current = { key: '', since: 0 };
-      return;
-    }
-
-    const stallKey = `${currentPlayerId}:${stage2TurnPhase}:${tableStack.length}`;
-    const now = Date.now();
-
-    if (botStallGuardRef.current.key !== stallKey) {
-      botStallGuardRef.current = { key: stallKey, since: now };
-      return;
-    }
-
-    const stalledFor = now - botStallGuardRef.current.since;
-    if (stalledFor < 7000) return;
-
-    console.warn(`⚠️ [BotStallGuard] Обнаружено зависание у ${currentTurnPlayer.name} (${stage2TurnPhase}), восстановление...`);
-    const state = useGameStore.getState();
-
-    if (state.currentPlayerId !== currentPlayerId || !state.isGameActive) {
-      botStallGuardRef.current = { key: '', since: 0 };
-      return;
-    }
-
-    if (state.stage2TurnPhase === 'card_selected') {
-      useGameStore.setState({ stage2TurnPhase: 'selecting_card', selectedHandCard: null });
-      state.processPlayerTurn(currentPlayerId);
-    } else {
-      state.processPlayerTurn(currentPlayerId);
-      setTimeout(() => {
-        const fresh = useGameStore.getState();
-        if (fresh.currentPlayerId === currentPlayerId && (fresh.stage2TurnPhase === stage2TurnPhase)) {
-          fresh.nextTurn();
-        }
-      }, 1200);
-    }
-
-    botStallGuardRef.current = { key: '', since: 0 };
-  }, [isGameActive, currentPlayerId, gameStage, stage2TurnPhase, tableStack.length, players, isTutorialPaused, isGamePaused, pendingPenalty]);
+    tick();
+    const interval = setInterval(tick, 2000);
+    return () => clearInterval(interval);
+  }, [isGameActive, isTutorialPaused, isMultiplayer, isMpHost]);
   
   // ✅ УБРАН ЕБАНЫЙ БАГ: Больше НЕ СБРАСЫВАЕМ игру для single player!
   // Этот useEffect УБИВАЛ только что созданную игру!
@@ -2340,94 +2375,136 @@ function GamePageContentComponent({
           };
 
           let tableSize = playerCount;
+          const myIds = new Set(
+            [userData.telegramId, userPlayerId, userData.dbUserId != null ? String(userData.dbUserId) : '']
+              .filter((value) => value != null && String(value).trim() !== '')
+              .map(String)
+          );
 
-          try {
+          const loadRoomPlayers = async () => {
             const response = await fetch(`/api/rooms/${multiplayerData.roomId}/players`, {
               method: 'GET',
               credentials: 'include',
               headers: getApiHeaders(),
               cache: 'no-store',
             });
+            if (!response.ok) return null;
+            return response.json();
+          };
 
-            if (response.ok) {
-              const data = await response.json();
-              if (data.success && Array.isArray(data.players) && data.players.length > 0) {
-                if (data.isRanked === true || data.matchType === 'rated') {
-                  multiplayerConfig.isRanked = true;
-                  multiplayerConfig.matchType = 'rated';
-                } else {
-                  multiplayerConfig.isRanked = false;
-                  multiplayerConfig.matchType = 'normal';
-                }
+          let roomData: {
+            success?: boolean;
+            players?: Array<Record<string, unknown>>;
+            isRanked?: boolean;
+            matchType?: string;
+            hostId?: string | number | null;
+          } | null = null;
 
-                const myIds = new Set(
-                  [userData.telegramId, userPlayerId, userData.dbUserId != null ? String(userData.dbUserId) : '']
-                    .filter((value) => value != null && String(value).trim() !== '')
-                    .map(String)
-                );
-
-                const myPlayerRow = data.players.find((player: {
-                  user_id: string | number;
-                  db_user_id?: number | null;
-                  is_host?: boolean;
-                }) => {
-                  const publicId = String(player.user_id);
-                  const dbId =
-                    player.db_user_id != null ? String(player.db_user_id) : '';
-                  return myIds.has(publicId) || (dbId !== '' && myIds.has(dbId));
-                });
-
-                if (myPlayerRow?.is_host === true) {
-                  multiplayerConfig.isHost = true;
-                  console.log('👑 [AUTOSTART] Хост подтверждён сервером');
-                } else if (myPlayerRow) {
-                  multiplayerConfig.isHost = false;
-                }
-
-                const roomPlayers = data.players.map((player: {
-                  user_id: string | number;
-                  db_user_id?: number | null;
-                  username?: string;
-                  avatar_url?: string | null;
-                  is_bot?: boolean;
-                  is_premium?: boolean;
-                  premium_flame?: string | null;
-                  position?: number;
-                }) => {
-                  const publicId = String(player.user_id);
-                  const dbId =
-                    player.db_user_id != null ? String(player.db_user_id) : '';
-                  const isBot =
-                    player.is_bot === true || Number(publicId) < 0;
-                  const isUser =
-                    myIds.has(publicId) || (dbId !== '' && myIds.has(dbId));
-
-                  return {
-                    id: publicId,
-                    name: player.username || (isBot ? 'Бот' : 'Игрок'),
-                    avatar: player.avatar_url,
-                    isBot,
-                    position: player.position ?? 0,
-                    isUser,
-                    isPremium: player.is_premium === true,
-                    flameColor: resolvePremiumFlame(player.premium_flame),
-                    dbUserId: player.db_user_id ?? null,
-                  };
-                });
-
-                multiplayerConfig.roomPlayers = roomPlayers;
-                tableSize = roomPlayers.length;
-                console.log(
-                  `🎮 [AUTOSTART] Загружено игроков комнаты: ${tableSize}`,
-                  roomPlayers
-                );
+          for (let attempt = 0; attempt < 5 && !cancelled; attempt += 1) {
+            try {
+              const data = await loadRoomPlayers();
+              if (data?.success && Array.isArray(data.players) && data.players.length > 0) {
+                roomData = data;
+                break;
               }
+            } catch (error) {
+              console.warn('⚠️ [AUTOSTART] Не удалось загрузить игроков комнаты:', error);
             }
-          } catch (error) {
-            console.warn('⚠️ [AUTOSTART] Не удалось загрузить игроков комнаты:', error);
+            await new Promise((resolve) => setTimeout(resolve, 400));
+          }
+
+          if (roomData?.players) {
+            if (roomData.isRanked === true || roomData.matchType === 'rated') {
+              multiplayerConfig.isRanked = true;
+              multiplayerConfig.matchType = 'rated';
+            } else {
+              multiplayerConfig.isRanked = false;
+              multiplayerConfig.matchType = 'normal';
+            }
+
+            const players = roomData.players as Array<{
+              user_id: string | number;
+              db_user_id?: number | null;
+              is_host?: boolean;
+              is_bot?: boolean;
+              username?: string;
+              avatar_url?: string | null;
+              is_premium?: boolean;
+              premium_flame?: string | null;
+              position?: number;
+            }>;
+
+            const hostRow = players.find((player) => {
+              const publicId = String(player.user_id);
+              const isBot = player.is_bot === true || Number(publicId) < 0;
+              return player.is_host === true && !isBot;
+            });
+            const myPlayerRow = players.find((player) => {
+              const publicId = String(player.user_id);
+              const dbId = player.db_user_id != null ? String(player.db_user_id) : '';
+              return myIds.has(publicId) || (dbId !== '' && myIds.has(dbId));
+            });
+            const roomHostId = roomData.hostId != null ? String(roomData.hostId) : '';
+
+            if (hostRow) {
+              const hostPublicId = String(hostRow.user_id);
+              const hostDbId = hostRow.db_user_id != null ? String(hostRow.db_user_id) : '';
+              multiplayerConfig.isHost =
+                myIds.has(hostPublicId) || (hostDbId !== '' && myIds.has(hostDbId));
+            } else if (roomHostId && myIds.has(roomHostId)) {
+              multiplayerConfig.isHost = true;
+            } else if (myPlayerRow?.is_host === true) {
+              multiplayerConfig.isHost = true;
+            }
+            // Если сервер никого не пометил хостом — оставляем флаг из URL.
+            // Нельзя принудительно ставить isHost=false: тогда боты не ходят ни на одном клиенте.
+
+            if (multiplayerConfig.isHost) {
+              console.log('👑 [AUTOSTART] Хост подтверждён');
+            }
+
+            const roomPlayers = players.map((player) => {
+              const publicId = String(player.user_id);
+              const dbId = player.db_user_id != null ? String(player.db_user_id) : '';
+              const isBot = player.is_bot === true || Number(publicId) < 0;
+              const isUser = myIds.has(publicId) || (dbId !== '' && myIds.has(dbId));
+
+              return {
+                id: publicId,
+                name: player.username || (isBot ? 'Бот' : 'Игрок'),
+                avatar: player.avatar_url,
+                isBot,
+                position: player.position ?? 0,
+                isUser,
+                isPremium: player.is_premium === true,
+                flameColor: resolvePremiumFlame(player.premium_flame),
+                dbUserId: player.db_user_id ?? null,
+              };
+            });
+
+            multiplayerConfig.roomPlayers = roomPlayers;
+            tableSize = roomPlayers.length;
+            console.log(
+              `🎮 [AUTOSTART] Загружено игроков комнаты: ${tableSize}`,
+              roomPlayers
+            );
           }
 
           if (cancelled) return;
+
+          useGameStore.setState((state) => ({
+            multiplayerData: {
+              roomId: multiplayerConfig.roomId,
+              roomCode: multiplayerConfig.roomCode,
+              isHost: multiplayerConfig.isHost,
+              connectedPlayers: state.multiplayerData?.connectedPlayers ?? [],
+            },
+          }));
+          setMultiplayerRoom({
+            id: multiplayerConfig.roomId,
+            code: multiplayerConfig.roomCode,
+            isHost: multiplayerConfig.isHost,
+          });
 
           await startGame('multiplayer', tableSize, multiplayerConfig, profilePayload);
           setGameInitialized(true);

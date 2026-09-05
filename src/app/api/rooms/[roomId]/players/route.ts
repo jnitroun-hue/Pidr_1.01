@@ -110,7 +110,8 @@ export async function GET(
         !isBot &&
         room?.host_id &&
         (String(room.host_id) === String(rawUserId) ||
-          (userData?.id != null && String(room.host_id) === String(userData.id)));
+          (userData?.id != null && String(room.host_id) === String(userData.id)) ||
+          (userData?.telegram_id != null && String(room.host_id) === String(userData.telegram_id)));
       const publicUserId = isBot
         ? String(player.user_id)
         : String(userData?.telegram_id ?? player.user_id);
@@ -186,10 +187,11 @@ export async function GET(
 
     const response = NextResponse.json({
       success: true, 
-      players: playersWithHost || [], // ✅ ИСПОЛЬЗУЕМ playersWithHost
-      maxPlayers: room.max_players, // ✅ ДОБАВЛЕНО!
+      players: playersWithHost || [],
+      maxPlayers: room.max_players,
       currentPlayers: players?.length || 0,
       roomStatus: room.status,
+      hostId: room.host_id ?? null,
       gameLaunchAt,
       matchType,
       isRanked: matchType === 'rated',

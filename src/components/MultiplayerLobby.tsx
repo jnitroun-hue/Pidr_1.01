@@ -237,7 +237,7 @@ export default function MultiplayerLobby({
           beginSyncedCountdown(payload.gameLaunchAt);
         }
       },
-    });
+    }, 'lobby');
 
     setIsConnected(true);
     loadRoomPlayers(true);

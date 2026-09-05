@@ -911,7 +911,11 @@ export const ProperMultiplayer: React.FC = () => {
   const handleStartGame = () => {
     if (!currentRoom) return;
     const publicId = resolveLobbyUserId(user);
-    const hostFlag = currentRoom.hostId === publicId ? '1' : '0';
+    const hostFlag =
+      String(currentRoom.hostId) === String(publicId) ||
+      currentRoom.players.some((p) => p.isHost && String(p.id) === String(publicId))
+        ? '1'
+        : '0';
     const params = new URLSearchParams({
       mode: 'multiplayer',
       roomId: String(currentRoom.id),
