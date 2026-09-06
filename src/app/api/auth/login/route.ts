@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import * as bcrypt from 'bcryptjs';
 import { createSession } from '@/lib/auth/redis-session-manager';
+import { setAuthCookies } from '@/lib/auth/auth-cookies';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -149,7 +150,11 @@ export async function POST(request: NextRequest) {
     };
     
     // ✅ Устанавливаем новый cookie (перезаписывает старый Telegram-токен)
-    response.cookies.set('auth_token', token, cookieSettings);
+    setAuthCookies(response, token, {
+      sameSite: cookieSettings.sameSite,
+      secure: cookieSettings.secure,
+      maxAge: cookieSettings.maxAge,
+    });
     
     console.log('🍪 [Login] Cookie установлен:', {
       hasToken: !!token,

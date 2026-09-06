@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { getApiHeaders } from '@/lib/api-headers';
+import { hasClientAuthHint } from '@/lib/auth/session-client';
 import {
   applyMenuThemeToDocument,
   readStoredMenuTheme,
@@ -19,18 +20,20 @@ export default function MenuThemeRoot() {
     };
     window.addEventListener('pidr-menu-theme', onTheme as EventListener);
 
-    void fetch('/api/user/menu-theme', {
-      credentials: 'include',
-      headers: getApiHeaders(),
-      cache: 'no-store',
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data?.success && isMenuThemeId(data.themeId)) {
-          applyMenuThemeToDocument(data.themeId);
-        }
+    if (hasClientAuthHint()) {
+      void fetch('/api/user/menu-theme', {
+        credentials: 'include',
+        headers: getApiHeaders(),
+        cache: 'no-store',
       })
-      .catch(() => {});
+        .then((res) => res.json())
+        .then((data) => {
+          if (data?.success && isMenuThemeId(data.themeId)) {
+            applyMenuThemeToDocument(data.themeId);
+          }
+        })
+        .catch(() => {});
+    }
 
     return () => window.removeEventListener('pidr-menu-theme', onTheme as EventListener);
   }, []);

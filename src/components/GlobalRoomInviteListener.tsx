@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchWithAuth } from '@/lib/api-headers';
+import { hasClientAuthHint } from '@/lib/auth/session-client';
 import RoomInviteModal from './RoomInviteModal';
 
 interface InviteInfo {
@@ -97,6 +98,7 @@ export default function GlobalRoomInviteListener() {
     const pollInvites = async () => {
       try {
         if (isModalOpenRef.current) return;
+        if (!hasClientAuthHint()) return;
 
         const response = await fetchWithAuth('/api/friends/invites', {
           method: 'GET',

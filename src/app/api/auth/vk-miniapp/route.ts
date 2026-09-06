@@ -7,6 +7,7 @@ import {
   clearPendingReferralCookie,
 } from '@/lib/referral/pending-referral-server';
 import * as crypto from 'crypto';
+import { setAuthCookies } from '@/lib/auth/auth-cookies';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -222,12 +223,10 @@ export async function POST(request: NextRequest) {
     });
 
     // Устанавливаем cookie с токеном
-    response.cookies.set('auth_token', token, {
-      httpOnly: true,
+    setAuthCookies(response, token, {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 30 * 24 * 60 * 60, // 30 дней
-      path: '/'
+      maxAge: 30 * 24 * 60 * 60,
     });
 
     if (refResult?.success) {

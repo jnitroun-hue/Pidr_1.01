@@ -5,6 +5,7 @@ import {
   applyPendingReferralForNewUser,
   clearPendingReferralCookie,
 } from '@/lib/referral/pending-referral-server';
+import { setAuthCookies } from '@/lib/auth/auth-cookies';
 
 interface VKAccessTokenResponse {
   access_token?: string;
@@ -197,12 +198,10 @@ export async function POST(request: NextRequest) {
     });
 
     const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
-    response.cookies.set('auth_token', token, {
-      httpOnly: true,
+    setAuthCookies(response, token, {
       secure: isProduction,
       sameSite: 'lax',
       maxAge: 30 * 24 * 60 * 60,
-      path: '/',
     });
 
     if (refResult?.success) {

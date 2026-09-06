@@ -7,6 +7,7 @@ import {
   clearPendingReferralCookie,
 } from '@/lib/referral/pending-referral-server';
 import { PENDING_REFERRAL_COOKIE } from '@/lib/referral/constants';
+import { setAuthCookies } from '@/lib/auth/auth-cookies';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -207,7 +208,11 @@ export async function POST(request: NextRequest) {
       path: '/'
     };
     
-    response.cookies.set('auth_token', token, cookieSettings);
+    setAuthCookies(response, token, {
+      sameSite: cookieSettings.sameSite,
+      secure: cookieSettings.secure,
+      maxAge: cookieSettings.maxAge,
+    });
 
     if (pendingReferral && refResult?.success) {
       clearPendingReferralCookie(response);

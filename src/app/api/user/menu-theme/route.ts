@@ -37,10 +37,22 @@ export async function GET(req: NextRequest) {
   try {
     const auth = requireAuth(req);
     if (auth.error || !auth.userId) {
-      return noStoreJson(
-        { success: false, message: auth.error || 'Требуется авторизация' },
-        { status: 401 }
-      );
+      const theme = resolveMenuTheme(DEFAULT_MENU_THEME);
+      return noStoreJson({
+        success: true,
+        authenticated: false,
+        themeId: theme.id,
+        theme,
+        isPremium: false,
+        available: listMenuThemes({ includePremium: true }).map((t) => ({
+          id: t.id,
+          labelRu: t.labelRu,
+          labelEn: t.labelEn,
+          premium: t.premium,
+          locked: t.premium,
+          vars: t.vars,
+        })),
+      });
     }
 
     const { dbUserId } = await getUserIdFromDatabase(auth.userId, auth.environment);

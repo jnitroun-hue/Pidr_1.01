@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
 
     const auth = requireAuth(request);
     if (auth.error || !auth.userId) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ success: true, authenticated: false, invites: [] });
     }
 
     const { dbUserId, user: dbUser } = await getUserIdFromDatabase(

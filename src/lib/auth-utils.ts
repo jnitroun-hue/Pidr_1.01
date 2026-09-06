@@ -78,26 +78,15 @@ export function getUserIdFromRequest(req: NextRequest): { userId: string | null;
   let token: string | null = null;
   
   const cookieToken = req.cookies.get('auth_token')?.value;
-  console.log('🍪 [getUserIdFromRequest] Проверка cookies:', {
-    hasCookie: !!cookieToken,
-    cookieLength: cookieToken?.length || 0,
-    cookiePreview: cookieToken?.substring(0, 20) + '...' || 'none'
-  });
   
   if (cookieToken) {
     token = cookieToken;
-    console.log('🍪 [getUserIdFromRequest] Токен найден в cookies');
   }
   
   if (!token) {
     const authHeader = req.headers.get('authorization');
-    console.log('🔑 [getUserIdFromRequest] Проверка Authorization header:', {
-      hasHeader: !!authHeader,
-      headerPreview: authHeader?.substring(0, 20) + '...' || 'none'
-    });
     if (authHeader?.startsWith('Bearer ')) {
       token = authHeader.replace('Bearer ', '');
-      console.log('🔑 [getUserIdFromRequest] Токен найден в Authorization header');
     }
   }
   
@@ -110,23 +99,10 @@ export function getUserIdFromRequest(req: NextRequest): { userId: string | null;
     }
   }
   
-  console.log('🔍 [getUserIdFromRequest] Итоговый токен:', {
-    hasToken: !!token,
-    tokenLength: token?.length || 0,
-    hasJwtSecret: hasJwtSecret()
-  });
-  
   // Верифицируем токен
   if (token && hasJwtSecret()) {
     try {
       const payload = jwt.verify(token, requireJwtSecret()) as any;
-      console.log('✅ [getUserIdFromRequest] Токен верифицирован:', {
-        hasTelegramId: !!payload.telegramId,
-        hasVkId: !!payload.vkId,
-        hasUserId: !!payload.userId,
-        authSource: payload.authSource,
-        authMethod: payload.authMethod
-      });
       
       // Извлекаем userId в зависимости от источника
       let userId: string | null = null;
@@ -154,11 +130,11 @@ export function getUserIdFromRequest(req: NextRequest): { userId: string | null;
       }
       
       if (userId) {
-        console.log(`✅ [getUserIdFromRequest] Пользователь из токена: ${userId} (${detectedEnv})`);
         return { userId, environment: detectedEnv, source: 'token' };
       }
-    } catch (error: any) {
-      console.error('❌ [getUserIdFromRequest] Ошибка проверки токена:', error.message);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'invalid token';
+      console.warn('[getUserIdFromRequest] Невалидный токен:', message);
     }
   }
   
@@ -171,7 +147,6 @@ export function getUserIdFromRequest(req: NextRequest): { userId: string | null;
     return { userId: vkIdHeader, environment: 'vk', source: 'header-fallback' };
   }
   
-  console.log('❌ [getUserIdFromRequest] userId не найден');
   return { userId: null, environment, source: 'none' };
 }
 
@@ -236,28 +211,12 @@ export function requireAuth(req: NextRequest): {
   environment?: never;
   error: string 
 } {
-  console.log('🔍 [requireAuth] Проверка авторизации...');
-  console.log('🔍 [requireAuth] Headers:', {
-    'x-telegram-id': req.headers.get('x-telegram-id'),
-    'x-vk-id': req.headers.get('x-vk-id'),
-    'x-auth-source': req.headers.get('x-auth-source'),
-    'authorization': req.headers.get('authorization')?.substring(0, 20) + '...',
-  });
-  console.log('🔍 [requireAuth] Cookies:', {
-    hasAuthToken: !!req.cookies.get('auth_token')?.value,
-    authTokenLength: req.cookies.get('auth_token')?.value?.length || 0,
-  });
-  
-  const { userId, environment, source } = getUserIdFromRequest(req);
-  
-  console.log('🔍 [requireAuth] Результат:', { userId, environment, source });
-  
+  const { userId, environment } = getUserIdFromRequest(req);
+
   if (!userId) {
-    console.error('❌ [requireAuth] userId не найден');
     return { error: 'Unauthorized: Требуется авторизация' };
   }
-  
-  console.log('✅ [requireAuth] Авторизация успешна:', { userId, environment });
+
   return { userId, environment };
 }
 

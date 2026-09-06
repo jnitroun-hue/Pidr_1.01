@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { invalidateSession } from '../../../../lib/auth/universal-auth';
+import { clearAuthCookies } from '@/lib/auth/auth-cookies';
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,21 +17,7 @@ export async function POST(request: NextRequest) {
 
     const response = NextResponse.json({ success: true });
     
-    // ✅ Удаляем оба возможных cookie (auth_token и pidr_session)
-    response.cookies.set('auth_token', '', {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-      maxAge: 0,
-      path: '/',
-    });
-    response.cookies.set('auth_token', '', {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'lax',
-      maxAge: 0,
-      path: '/',
-    });
+    clearAuthCookies(response);
     response.cookies.delete('pidr_session');
 
     return response;

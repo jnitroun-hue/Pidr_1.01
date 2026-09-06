@@ -11,6 +11,7 @@ import {
 } from '@/lib/referral/pending-referral-server';
 import { PENDING_REFERRAL_COOKIE } from '@/lib/referral/constants';
 import { normalizeUserStats } from '@/lib/user/normalize-user-stats';
+import { authCookieBase, clearAuthCookies, setAuthCookies, SIGNED_IN_COOKIE } from '@/lib/auth/auth-cookies';
 
 // ✅ Явная конфигурация runtime для Next.js 15
 export const runtime = 'nodejs';
@@ -90,11 +91,13 @@ export async function GET(req: NextRequest) {
     });
 
     if (!token) {
-      console.log('❌ JWT токен не найден в cookies');
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Не авторизован' 
-      }, { status: 401 });
+      const guest = NextResponse.json({
+        success: false,
+        authenticated: false,
+        message: 'Не авторизован',
+      });
+      guest.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate');
+      return guest;
     }
 
     // Верифицируем JWT токен
@@ -193,14 +196,7 @@ export async function GET(req: NextRequest) {
             message: 'Несоответствие токена и Telegram ID. Доступ запрещен. Пожалуйста, перезайдите.' 
           }, { status: 403 });
           
-          // Удаляем неверный токен
-          errorResponse.cookies.set('auth_token', '', {
-            httpOnly: true,
-            secure: true,
-            sameSite: 'none',
-            path: '/',
-            maxAge: 0
-          });
+          clearAuthCookies(errorResponse);
           
           return errorResponse;
         }
@@ -322,14 +318,7 @@ export async function GET(req: NextRequest) {
           message: 'Несоответствие данных пользователя. Доступ запрещен. Пожалуйста, перезайдите.' 
         }, { status: 403 });
         
-        // Удаляем неверный токен
-        errorResponse.cookies.set('auth_token', '', {
-          httpOnly: true,
-          secure: true,
-          sameSite: 'none',
-          path: '/',
-          maxAge: 0
-        });
+        clearAuthCookies(errorResponse);
         
         return errorResponse;
       }
@@ -399,6 +388,8 @@ export async function GET(req: NextRequest) {
         is_admin: user.is_admin || false
       }
     });
+    // Старые сессии имеют только httpOnly JWT — помечаем клиента, чтобы не дергать API вхолостую.
+    response.cookies.set(SIGNED_IN_COOKIE, '1', { ...authCookieBase(), httpOnly: false });
     // /api/auth зависит от cookie и не должен кешироваться CDN/браузером.
     response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate');
     response.headers.set('Pragma', 'no-cache');
@@ -753,7 +744,11 @@ export async function POST(req: NextRequest) {
       userAgent: req.headers.get('user-agent')?.substring(0, 50)
     });
     
-    response.cookies.set('auth_token', token, cookieSettings);
+    setAuthCookies(response, token, {
+      sameSite: cookieSettings.sameSite,
+      secure: cookieSettings.secure,
+      maxAge: cookieSettings.maxAge,
+    });
 
     if (isNewUser && (referrerId || req.cookies.get(PENDING_REFERRAL_COOKIE)?.value)) {
       clearPendingReferralCookie(response);
@@ -796,13 +791,7 @@ export async function DELETE(req: NextRequest) {
       message: 'Выход выполнен успешно'
     });
 
-    // Удаляем cookie с токеном
-    response.cookies.set('auth_token', '', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 0 // Удаляем cookie
-    });
+    clearAuthCookies(response);
 
     return response;
 
