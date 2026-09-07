@@ -1,6 +1,7 @@
 import {
   APP_BUILD_STORAGE_KEY,
   APP_UPDATE_RELOAD_KEY,
+  APP_VERSION_FETCH_TIMEOUT_MS,
   getEmbeddedBuildId,
 } from '@/lib/app-version/constants';
 
@@ -10,12 +11,15 @@ export type AppVersionInfo = {
 };
 
 export async function fetchServerAppVersion(): Promise<AppVersionInfo | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), APP_VERSION_FETCH_TIMEOUT_MS);
   try {
     const res = await fetch(`/api/app/version?t=${Date.now()}`, {
       method: 'GET',
       cache: 'no-store',
       credentials: 'same-origin',
       headers: { Accept: 'application/json' },
+      signal: controller.signal,
     });
     if (!res.ok) return null;
     const data = (await res.json()) as AppVersionInfo;
@@ -23,6 +27,8 @@ export async function fetchServerAppVersion(): Promise<AppVersionInfo | null> {
     return data;
   } catch {
     return null;
+  } finally {
+    clearTimeout(timer);
   }
 }
 

@@ -3,7 +3,10 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import PageLoadingScreen from '@/components/PageLoadingScreen';
-import { APP_VERSION_CHECK_INTERVAL_MS } from '@/lib/app-version/constants';
+import {
+  APP_UPDATE_GATE_MAX_WAIT_MS,
+  APP_VERSION_CHECK_INTERVAL_MS,
+} from '@/lib/app-version/constants';
 import { ensureLatestAppVersion } from '@/lib/app-version/check-app-update';
 
 type Props = {
@@ -22,10 +25,11 @@ export default function AppUpdateGate({ children }: Props) {
   useEffect(() => {
     let cancelled = false;
 
-    const runCheck = async (isInitial: boolean) => {
-      if (isInitial) setReady(false);
-      else setUpdating(true);
+    const failOpen = window.setTimeout(() => {
+      if (!cancelled) setReady(true);
+    }, APP_UPDATE_GATE_MAX_WAIT_MS);
 
+    const runCheck = async () => {
       const result = await ensureLatestAppVersion();
       if (cancelled) return;
 
@@ -38,10 +42,11 @@ export default function AppUpdateGate({ children }: Props) {
       setReady(true);
     };
 
-    void runCheck(true);
+    void runCheck();
 
     return () => {
       cancelled = true;
+      window.clearTimeout(failOpen);
     };
   }, []);
 

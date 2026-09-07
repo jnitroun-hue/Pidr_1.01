@@ -1,6 +1,9 @@
 export const APP_BUILD_STORAGE_KEY = 'pidr_app_build_id';
 export const APP_UPDATE_RELOAD_KEY = 'pidr_app_update_reloading';
 export const APP_VERSION_CHECK_INTERVAL_MS = 3 * 60 * 1000;
+/** Если /api/app/version не отвечает — не держим весь UI на «Проверка обновлений…» */
+export const APP_VERSION_FETCH_TIMEOUT_MS = 4000;
+export const APP_UPDATE_GATE_MAX_WAIT_MS = 2500;
 
 /** Встроенный id сборки (NEXT_PUBLIC_APP_BUILD_ID на этапе build) */
 export function getEmbeddedBuildId(): string {

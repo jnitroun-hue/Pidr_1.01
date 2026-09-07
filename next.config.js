@@ -31,6 +31,14 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'pidr-1-01.vercel.app',
       },
+      {
+        protocol: 'https',
+        hostname: 'www.pidr1-01.ru',
+      },
+      {
+        protocol: 'https',
+        hostname: 'pidr1-01.ru',
+      },
     ],
   },
   

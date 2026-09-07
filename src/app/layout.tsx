@@ -10,6 +10,9 @@ import ReferralCapture from '../components/ReferralCapture'
 
 const inter = Inter({ subsets: ['latin'] })
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export const metadata: Metadata = {
   title: 'The Must! - Card Game',
   description: 'Карточная игра The Must! - Увлекательная игра для Telegram',
