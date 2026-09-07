@@ -126,6 +126,11 @@ const nextConfig = {
             key: 'X-Content-Type-Options',
             value: 'nosniff',
           },
+          {
+            key: 'Content-Security-Policy',
+            value:
+              "frame-ancestors 'self' https://vk.com https://*.vk.com https://m.vk.com https://web.telegram.org https://*.telegram.org;",
+          },
         ],
       },
     ];

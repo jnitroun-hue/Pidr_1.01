@@ -77,6 +77,35 @@ export async function initVKBridge(): Promise<boolean> {
   }
 }
 
+const VK_LAUNCH_QUERY_KEY = 'pidr_vk_launch_query';
+
+export function persistVkLaunchQuery(): void {
+  if (typeof window === 'undefined') return;
+  const search = window.location.search;
+  if (search.includes('vk_user_id=') && search.includes('sign=')) {
+    try {
+      sessionStorage.setItem(VK_LAUNCH_QUERY_KEY, search);
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+function vkSearchParams(): URLSearchParams {
+  const live = new URLSearchParams(window.location.search);
+  if (live.get('vk_user_id') && live.get('sign')) {
+    persistVkLaunchQuery();
+    return live;
+  }
+  try {
+    const stored = sessionStorage.getItem(VK_LAUNCH_QUERY_KEY);
+    if (stored) return new URLSearchParams(stored.startsWith('?') ? stored.slice(1) : stored);
+  } catch {
+    /* ignore */
+  }
+  return live;
+}
+
 /**
  * Получить данные запуска VK Mini App
  */
@@ -86,8 +115,7 @@ export function getVKLaunchParams(): VKBridgeAuthData | null {
   }
 
   try {
-    // Получаем параметры из URL
-    const searchParams = new URLSearchParams(window.location.search);
+    const searchParams = vkSearchParams();
     
     const vk_user_id = searchParams.get('vk_user_id');
     const sign = searchParams.get('sign');
@@ -145,9 +173,17 @@ export function isVKMiniApp(): boolean {
     return false;
   }
 
-  // Проверяем наличие VK параметров в URL
   const searchParams = new URLSearchParams(window.location.search);
-  return searchParams.has('vk_user_id') && searchParams.has('sign');
+  if (searchParams.has('vk_user_id') && searchParams.has('sign')) {
+    persistVkLaunchQuery();
+    return true;
+  }
+  try {
+    const stored = sessionStorage.getItem(VK_LAUNCH_QUERY_KEY);
+    return Boolean(stored && stored.includes('vk_user_id=') && stored.includes('sign='));
+  } catch {
+    return false;
+  }
 }
 
 /**

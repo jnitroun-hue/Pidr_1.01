@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { setAuthCookies } from '@/lib/auth/auth-cookies';
+import { applyPendingReferralForNewUser, clearPendingReferralCookie } from '@/lib/referral/pending-referral-server';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -14,7 +15,7 @@ export async function POST(request: NextRequest) {
     console.log('🔐 [Telegram Login] Начало авторизации');
 
     const body = await request.json();
-    const { id, first_name, last_name, username, photo_url, auth_date, hash } = body;
+    const { id, first_name, last_name, username, photo_url, auth_date, hash, referralCode } = body;
 
     // 1. ПРОВЕРКА ПОДЛИННОСТИ (hash verification)
     if (!BOT_TOKEN) {
@@ -83,6 +84,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     let user;
+    const isNewUser = !existingUser;
 
     if (existingUser) {
       // Обновляем существующего пользователя
@@ -145,6 +147,13 @@ export async function POST(request: NextRequest) {
       console.log('✅ [Telegram Login] Пользователь создан с бонусом 1000 монет!');
     }
 
+    const refResult = await applyPendingReferralForNewUser(request, supabase, {
+      referredUserId: user.id,
+      authMethod: 'telegram',
+      isNewUser,
+      explicitReferralCode: typeof referralCode === 'string' ? referralCode : null,
+    });
+
     // 4. СОЗДАНИЕ СЕССИИ (HTTP-only cookie)
     const sessionData = {
       userId: user.id,
@@ -205,6 +214,10 @@ export async function POST(request: NextRequest) {
       console.log('✅ [Telegram Login] Cookies установлены: pidr_session + auth_token');
     } else {
       console.log('✅ [Telegram Login] Cookie pidr_session установлена');
+    }
+
+    if (refResult?.success) {
+      clearPendingReferralCookie(response);
     }
 
     return response;

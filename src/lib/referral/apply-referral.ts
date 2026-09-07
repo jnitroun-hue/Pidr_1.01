@@ -8,7 +8,7 @@ export interface ApplyReferralParams {
   referredUserId: number;
   referralCode: string;
   authMethod: ReferralAuthMethod;
-  /** Бонусы включим позже — пока только учёт в БД */
+  /** Начислить +500 пригласившему и +200 новому игроку */
   grantBonuses?: boolean;
 }
 
@@ -68,8 +68,8 @@ export async function applyReferralForNewUser(
     if (!rpcError && rpcData?.success) {
       await patchReferredUserMeta(supabase, referredUserId, referrer.id, params.authMethod, code);
       await ensureMutualFriendship(supabase, referrer.id, referredUserId);
-      if (params.grantBonuses) {
-        await tryGrantBonuses(referrer.id, referredUserId);
+      if (params.grantBonuses !== false) {
+        await tryGrantBonuses(supabase, referrer.id, referredUserId);
       }
       return { success: true, referrerId: referrer.id };
     }
@@ -92,8 +92,8 @@ export async function applyReferralForNewUser(
   await patchReferredUserMeta(supabase, referredUserId, referrer.id, params.authMethod, code);
   await ensureMutualFriendship(supabase, referrer.id, referredUserId);
 
-  if (params.grantBonuses) {
-    await tryGrantBonuses(referrer.id, referredUserId);
+  if (params.grantBonuses !== false) {
+    await tryGrantBonuses(supabase, referrer.id, referredUserId);
   }
 
   return { success: true, referrerId: referrer.id };
@@ -126,20 +126,78 @@ function isDuplicateReferralError(error: { code?: string; message?: string }) {
   return error.code === '23505' || (error.message || '').includes('duplicate');
 }
 
-async function tryGrantBonuses(referrerId: number, newUserId: number) {
-  const base = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-  try {
-    await fetch(`${base}/api/referral/bonus`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        referrer_id: String(referrerId),
-        new_user_id: String(newUserId),
-      }),
-    });
-  } catch (e) {
-    console.warn('⚠️ [referral] bonus grant deferred:', e);
+async function tryGrantBonuses(
+  supabase: SupabaseClient,
+  referrerId: number,
+  newUserId: number
+) {
+  const REFERRER_BONUS = 500;
+  const NEW_USER_BONUS = 200;
+
+  const { data: alreadyPaid } = await supabase
+    .from('_pidr_referral_bonuses')
+    .select('id')
+    .eq('referrer_id', referrerId)
+    .eq('referred_user_id', newUserId)
+    .maybeSingle();
+
+  if (alreadyPaid) return;
+
+  const { error: bonusInsertError } = await supabase.from('_pidr_referral_bonuses').insert({
+    referrer_id: referrerId,
+    referred_user_id: newUserId,
+    referrer_bonus: REFERRER_BONUS,
+    referred_bonus: NEW_USER_BONUS,
+    created_at: new Date().toISOString(),
+  });
+
+  if (bonusInsertError && !isDuplicateReferralError(bonusInsertError)) {
+    console.warn('⚠️ [referral] bonus row:', bonusInsertError.message);
   }
+  if (bonusInsertError && isDuplicateReferralError(bonusInsertError)) {
+    return;
+  }
+
+  await addCoins(supabase, referrerId, REFERRER_BONUS, 'Реферальный бонус за приглашение друга');
+  await addCoins(supabase, newUserId, NEW_USER_BONUS, 'Бонус за регистрацию по реферальной ссылке');
+}
+
+async function addCoins(
+  supabase: SupabaseClient,
+  userId: number,
+  amount: number,
+  description: string
+) {
+  const { data: user } = await supabase
+    .from('_pidr_users')
+    .select('id, coins')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (!user) return;
+
+  const oldBalance = Number(user.coins) || 0;
+  const newBalance = oldBalance + amount;
+
+  const { error } = await supabase
+    .from('_pidr_users')
+    .update({ coins: newBalance, updated_at: new Date().toISOString() })
+    .eq('id', userId);
+
+  if (error) {
+    console.warn(`⚠️ [referral] coins ${userId}:`, error.message);
+    return;
+  }
+
+  await supabase.from('_pidr_coin_transactions').insert({
+    user_id: userId,
+    transaction_type: 'bonus',
+    amount,
+    description,
+    balance_before: oldBalance,
+    balance_after: newBalance,
+    created_at: new Date().toISOString(),
+  });
 }
 
 /** Маппинг окружения авторизации → метод для статистики */

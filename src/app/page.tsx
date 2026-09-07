@@ -16,6 +16,7 @@ import {
   captureReferralFromCurrentUrl,
   getPendingReferralFromClient,
 } from '@/lib/referral/pending-referral-client';
+import { isVKMiniApp, loginWithVKMiniApp, persistVkLaunchQuery } from '@/lib/auth/vk-bridge';
 import {
   readCachedHomeUser,
   cacheHomeUser,
@@ -141,7 +142,41 @@ function HomeWithParams() {
       // Проверяем сессию через API (cookie → Redis/БД)
       const checkAuth = async () => {
         captureReferralFromCurrentUrl();
+        persistVkLaunchQuery();
         const pendingReferral = getPendingReferralFromClient();
+        const launchQuery = typeof window !== 'undefined' ? window.location.search : '';
+
+        if (isVKMiniApp()) {
+          try {
+            const vkResult = await loginWithVKMiniApp();
+            if (vkResult.success && vkResult.user) {
+              const existingUser = mapApiUserToHomeUser({
+                id: vkResult.user.id,
+                username: vkResult.user.username,
+                firstName: vkResult.user.first_name,
+                lastName: vkResult.user.last_name,
+                coins: vkResult.user.coins,
+                rating: vkResult.user.rating,
+                photoUrl: vkResult.user.avatar_url,
+              });
+              setUser(existingUser);
+              setCheckingAuth(false);
+              initialized.current = true;
+              setTimeout(() => {
+                setLoading(false);
+                setTimeout(() => setShowMainMenu(true), 100);
+              }, 400);
+              return;
+            }
+          } catch {
+            /* fallback to login */
+          }
+          router.push(`/auth/login${launchQuery}`);
+          setCheckingAuth(false);
+          setIsBrowser(true);
+          initialized.current = true;
+          return;
+        }
 
         try {
           console.log('🔍 [Браузер] Проверяем сессию через /api/auth...');
@@ -257,15 +292,10 @@ function HomeWithParams() {
         setShowMainMenu(false);
 
         const authPath = pendingReferral ? '/auth/register' : '/auth/login';
-        console.log(
-          pendingReferral
-            ? `🎁 Реферальная ссылка (${pendingReferral}) — редирект на регистрацию`
-            : '📝 Нет активной сессии — редирект на страницу входа'
-        );
+        router.push(`${authPath}${launchQuery}`);
         setCheckingAuth(false);
         setIsBrowser(true);
         initialized.current = true;
-        router.push(authPath);
       };
       
       checkAuth();
@@ -800,9 +830,10 @@ function HomeWithParams() {
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={() => setLeftMenuOpen(true)}
+          className="home-chrome-btn home-chrome-btn-left"
           style={{
             position: 'fixed',
-            top: '20px',
+            top: 'var(--app-chrome-top)',
             left: '20px',
             zIndex: 1000,
             background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
@@ -824,9 +855,10 @@ function HomeWithParams() {
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={() => setRightMenuOpen(true)}
+          className="home-chrome-btn home-chrome-btn-right"
           style={{
             position: 'fixed',
-            top: '20px',
+            top: 'var(--app-chrome-top)',
             right: '20px',
             zIndex: 1000,
             background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',

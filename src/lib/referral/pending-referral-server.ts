@@ -37,7 +37,7 @@ export async function applyPendingReferralForNewUser(
     referredUserId: params.referredUserId,
     referralCode: code,
     authMethod: params.authMethod,
-    grantBonuses: params.grantBonuses ?? false,
+    grantBonuses: params.grantBonuses ?? true,
   });
 
   console.log(`🎁 [referral] apply (${params.authMethod}):`, { code, ...result });

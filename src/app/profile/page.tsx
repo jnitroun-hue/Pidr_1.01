@@ -19,7 +19,8 @@ import { patchHomeSessionPhoto } from '@/lib/user/home-session-cache';
 import { parseJsonResponse } from '@/lib/api/parse-json-response';
 import { appAlert, appConfirm } from '@/lib/app-notice';
 import { fetchPremiumStatus, isPremiumUsable } from '@/lib/premium/refresh-premium';
-import { buildReferralLink, buildReferralShareText } from '@/lib/referral/referral-links';
+import { buildReferralLink } from '@/lib/referral/referral-links';
+import { shareReferralInvite } from '@/lib/share/share-referral';
 import UserAvatarBadge from '@/components/UserAvatarBadge';
 import AuthMethodBadge from '@/components/AuthMethodBadge';
 import { themedPageShellStyle } from '@/lib/ui/menu-theme-client';
@@ -588,31 +589,16 @@ export default function ProfilePage() {
           alert('Войдите в аккаунт, чтобы получить реферальную ссылку');
           return;
         }
-        const inviteUrl = buildReferralLink(referralId);
-        
-        if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
-          const tg = window.Telegram.WebApp;
-          const inviteText = buildReferralShareText(inviteUrl);
-          
-          if (typeof tg.openTelegramLink === 'function') {
-            tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(inviteUrl)}&text=${encodeURIComponent(inviteText)}`);
-          } else {
-            window.open(`https://t.me/share/url?url=${encodeURIComponent(inviteUrl)}&text=${encodeURIComponent(inviteText)}`, '_blank');
-          }
-        } else {
-          // Fallback - копируем в буфер обмена
-          if (navigator.clipboard) {
-            await navigator.clipboard.writeText(inviteUrl);
-            alert(`✅ Реферальная ссылка скопирована!\n\n${inviteUrl}\n\nПоделитесь ей с друзьями и получите +500 монет за каждого активного друга!`);
-          } else {
-            prompt('Скопируйте эту ссылку и поделитесь с друзьями:', inviteUrl);
-          }
+        const result = await shareReferralInvite(referralId, 'auto');
+        if (result === 'copied') {
+          const inviteUrl = buildReferralLink(referralId);
+          alert(`Ссылка скопирована.\n\n${inviteUrl}\n\nЗа каждого нового друга: вам +500 монет, другу +200.`);
         }
       } catch (error: any) {
         console.error('❌ Ошибка создания реферальной ссылки:', error);
         alert(`❌ Ошибка: ${error.message || 'Не удалось создать реферальную ссылку'}`);
       }
-      return; // Выходим, не обрабатываем как обычный бонус
+      return;
     }
     
     // ✅ НОВОЕ: Для бонусов за подписки открываем ссылку
@@ -2274,6 +2260,18 @@ export default function ProfilePage() {
                 bonuses={bonuses}
                 claimingId={claimingBonusId}
                 onAction={handleBonusClick}
+                onShareReferral={async (channel) => {
+                  const currentUser = getCurrentUser();
+                  const referralId = currentUser?.id || user?.id;
+                  if (!referralId) {
+                    alert('Войдите в аккаунт, чтобы получить реферальную ссылку');
+                    return;
+                  }
+                  const result = await shareReferralInvite(referralId, channel);
+                  if (result === 'copied') {
+                    alert(`Ссылка скопирована.\n\n${buildReferralLink(referralId)}\n\nЗа каждого нового друга: вам +500 монет, другу +200.`);
+                  }
+                }}
               />
             )}
 

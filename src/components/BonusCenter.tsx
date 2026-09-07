@@ -24,6 +24,7 @@ interface Props {
   bonuses: ProfileBonus[];
   claimingId?: string | null;
   onAction: (bonusId: string) => void | Promise<void>;
+  onShareReferral?: (channel: 'auto' | 'telegram' | 'vk' | 'whatsapp' | 'copy') => void | Promise<void>;
 }
 
 function cooldownLabel(value?: string | Date | null) {
@@ -44,7 +45,7 @@ function Cooldown({ until }: { until?: string | Date | null }) {
   return <>{cooldownLabel(until)}</>;
 }
 
-export default function BonusCenter({ bonuses, claimingId, onAction }: Props) {
+export default function BonusCenter({ bonuses, claimingId, onAction, onShareReferral }: Props) {
   return (
     <section className={styles.wrap} aria-label="Центр бонусов">
       <header className={styles.hero}>
@@ -97,7 +98,32 @@ export default function BonusCenter({ bonuses, claimingId, onAction }: Props) {
                 <div className={`${styles.status} ${styles.done}`}>✓ Бонус уже получен</div>
               ) : !isConfigured ? (
                 <div className={styles.status}>Настраивается администратором</div>
-              ) : isReferral || bonus.available ? (
+              ) : isReferral ? (
+                <div className={styles.shareStack}>
+                  <button
+                    type="button"
+                    className={`${styles.action} ${styles.actionReferral}`}
+                    disabled={Boolean(claimingId)}
+                    onClick={() => void (onShareReferral ? onShareReferral('auto') : onAction(bonus.id))}
+                  >
+                    Поделиться ссылкой
+                  </button>
+                  <div className={styles.shareRow}>
+                    <button type="button" className={styles.shareChip} onClick={() => void onShareReferral?.('telegram')}>
+                      Telegram
+                    </button>
+                    <button type="button" className={styles.shareChip} onClick={() => void onShareReferral?.('vk')}>
+                      VK
+                    </button>
+                    <button type="button" className={styles.shareChip} onClick={() => void onShareReferral?.('whatsapp')}>
+                      WhatsApp
+                    </button>
+                    <button type="button" className={styles.shareChip} onClick={() => void onShareReferral?.('copy')}>
+                      Копировать
+                    </button>
+                  </div>
+                </div>
+              ) : bonus.available ? (
                 <button
                   type="button"
                   className={`${styles.action} ${isReferral ? styles.actionReferral : ''}`}

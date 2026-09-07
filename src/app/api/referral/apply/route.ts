@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
       referredUserId: dbUserId,
       referralCode: String(code),
       authMethod: authMethod as 'web' | 'telegram' | 'vk' | 'google' | 'email' | 'apple' | 'unknown',
-      grantBonuses: false,
+      grantBonuses: true,
     });
 
     if (!result.success && !result.alreadyLinked) {

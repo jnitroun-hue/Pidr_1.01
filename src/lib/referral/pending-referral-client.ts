@@ -1,7 +1,7 @@
 'use client';
 
 import { PENDING_REFERRAL_COOKIE, REFERRAL_QUERY_PARAM } from './constants';
-import { normalizeReferralCode } from './referral-links';
+import { normalizeReferralCode, referralCodeFromTelegramStartParam } from './referral-links';
 
 export function setPendingReferralCookie(code: string) {
   if (typeof document === 'undefined') return;
@@ -42,13 +42,16 @@ export function getPendingReferralFromClient(): string | null {
   }
 }
 
-/** Считать ?ref= из текущего URL и сохранить */
+/** Считать ?ref= / Telegram start_param и сохранить */
 export function captureReferralFromCurrentUrl(): string | null {
   if (typeof window === 'undefined') return null;
   const params = new URLSearchParams(window.location.search);
   const ref = params.get(REFERRAL_QUERY_PARAM) || params.get('invite');
-  if (!ref) return null;
-  const normalized = normalizeReferralCode(ref);
+  const fromUrl = normalizeReferralCode(ref);
+  const fromTelegram = referralCodeFromTelegramStartParam(
+    window.Telegram?.WebApp?.initDataUnsafe?.start_param
+  );
+  const normalized = fromUrl || fromTelegram;
   if (!normalized) return null;
   setPendingReferralCookie(normalized);
   return normalized;

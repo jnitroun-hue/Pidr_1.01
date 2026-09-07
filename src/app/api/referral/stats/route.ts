@@ -32,26 +32,40 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log(`👤 Получаем статистику рефералов для ${dbUserId}`);
-
-    // Вызываем функцию получения статистики
     const { data, error } = await supabase.rpc('get_referral_stats', {
       p_user_id: dbUserId
     });
 
-    if (error) {
-      console.error('❌ Ошибка получения статистики:', error);
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 500 }
-      );
+    if (!error && data) {
+      return NextResponse.json({
+        success: true,
+        stats: data
+      });
     }
 
-    console.log('✅ Статистика получена:', data);
+    const { count } = await supabase
+      .from('_pidr_referrals')
+      .select('id', { count: 'exact', head: true })
+      .eq('referrer_user_id', dbUserId);
+
+    const { data: bonusRows } = await supabase
+      .from('_pidr_referral_bonuses')
+      .select('referrer_bonus')
+      .eq('referrer_id', dbUserId);
+
+    const totalBonus = (bonusRows || []).reduce(
+      (sum: number, row: { referrer_bonus?: number }) => sum + Number(row.referrer_bonus || 0),
+      0
+    );
 
     return NextResponse.json({
       success: true,
-      stats: data
+      stats: {
+        referral_code: String(dbUserId),
+        referral_count: count || 0,
+        total_bonus_earned: totalBonus,
+        referrals: [],
+      }
     });
 
   } catch (error: any) {

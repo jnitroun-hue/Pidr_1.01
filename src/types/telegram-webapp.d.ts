@@ -33,6 +33,8 @@ export interface TelegramWebApp {
   isFullscreen?: boolean;
   requestFullscreen?(): void;
   exitFullscreen?(): void;
+  safeAreaInset?: { top: number; bottom: number; left: number; right: number };
+  contentSafeAreaInset?: { top: number; bottom: number; left: number; right: number };
   onEvent?(eventType: 'viewportChanged' | 'fullscreenChanged' | string, callback: () => void): void;
   offEvent?(eventType: string, callback: () => void): void;
   setHeaderColor?(color: string): void;

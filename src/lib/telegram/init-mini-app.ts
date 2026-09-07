@@ -27,6 +27,15 @@ function applyViewportCss(tg: TelegramWebApp) {
   root.style.setProperty('--tg-viewport-height', `${height}px`);
   root.style.setProperty('--tg-viewport-stable-height', `${stable}px`);
   root.style.setProperty('--app-viewport-height', `${stable}px`);
+
+  const safe = tg.safeAreaInset;
+  const content = tg.contentSafeAreaInset;
+  const safeTop = Number(safe?.top) || 0;
+  const contentTop = Number(content?.top) || 0;
+  const fullscreenFallback = tg.isFullscreen && safeTop === 0 && contentTop === 0 ? 72 : 0;
+
+  root.style.setProperty('--tg-safe-area-top', `${safeTop}px`);
+  root.style.setProperty('--tg-content-safe-area-top', `${contentTop + fullscreenFallback}px`);
 }
 
 export function initTelegramMiniApp(): TelegramWebApp | null {
@@ -92,6 +101,8 @@ export function initTelegramMiniApp(): TelegramWebApp | null {
   if (typeof tg.onEvent === 'function') {
     tg.onEvent('viewportChanged', onViewportChange);
     tg.onEvent('fullscreenChanged', onViewportChange);
+    tg.onEvent('safeAreaChanged', onViewportChange);
+    tg.onEvent('contentSafeAreaChanged', onViewportChange);
   }
 
   window.addEventListener('resize', onViewportChange);
