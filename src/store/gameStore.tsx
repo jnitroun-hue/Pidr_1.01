@@ -4,6 +4,7 @@ import { persist } from 'zustand/middleware'
 import { createPlayers, generateAvatar } from '../lib/game/avatars'
 import { getApiHeaders, telegramUsernameHeader } from '../lib/api-headers'
 import { deckEntriesToNftMap, type NftDeckVisualMap } from '../lib/game/cardAssets'
+import { warmupNftDeck, writeCachedNftDeck } from '../lib/game/preload-card-assets'
 import { BOT_TIMING } from '../lib/game/botTiming'
 import { calculateRatingRewards, calculatePlayerPositions, isWinningPosition } from '../lib/rating/ratingSystem'
 import { RoomManager } from '../lib/multiplayer/room-manager'
@@ -1072,6 +1073,8 @@ export const useGameStore = create<GameState>()(
               const map = deckEntriesToNftMap(deckResult.deck);
               if (Object.keys(map).length > 0) {
                 set({ nftDeckCards: { ...get().nftDeckCards, ...map } });
+                writeCachedNftDeck(map);
+                void warmupNftDeck(map);
                 console.log(`✅ [startGame] NFT колода подгружена: ${Object.keys(map).length} карт`);
               }
             }
@@ -2324,11 +2327,11 @@ export const useGameStore = create<GameState>()(
         
         set({ turnPhase: 'showing_deck_hint' });
         
-        if (currentPlayer.isBot) {
+        if (isAutomatedPlayer(currentPlayer)) {
           setTimeout(() => {
             get().onDeckClick();
           }, BOT_TIMING.storeStage1DeckClick);
-        } else if (!currentPlayer.isBot) {
+        } else {
           get().showNotification(`${currentPlayer.name}: кликните на колоду чтобы открыть карту`, 'info');
         }
       },
@@ -2361,13 +2364,17 @@ export const useGameStore = create<GameState>()(
           get().getDeckCardPlayOptions(newRevealedCard);
         const canMoveToOpponents = deckTargets.length > 0;
         
+        // Автоматически действуют только боты (и бот-замена вышедшего игрока).
+        // Живой игрок всегда сам решает, что делать с открытой картой.
+        const automated = isAutomatedPlayer(currentPlayer);
+
         if (!canMoveToOpponents && canPlaceOnSelfByRules) {
           set({
             turnPhase: 'waiting_deck_action',
             canPlaceOnSelfByRules: true,
             availableTargets: [],
           });
-          if (currentPlayer.isBot) {
+          if (automated) {
             setTimeout(() => {
               get().placeCardOnSelfByRules();
             }, BOT_TIMING.storePlaceOnSelf);
@@ -2387,9 +2394,18 @@ export const useGameStore = create<GameState>()(
             canPlaceOnSelfByRules: false,
             availableTargets: [],
           });
-          setTimeout(() => {
-            get().takeCardNotByRules();
-          }, currentPlayer.isBot ? BOT_TIMING.storeTakeNotByRulesBot : 800);
+          if (automated) {
+            setTimeout(() => {
+              get().takeCardNotByRules();
+            }, BOT_TIMING.storeTakeNotByRulesBot);
+          } else {
+            // Раньше карта забиралась сама через 800 мс — игрок терял контроль над ходом.
+            get().showNotification(
+              'Ходов нет — нажмите на открытую карту или «Взять себе», чтобы забрать её',
+              'warning',
+              4000
+            );
+          }
           return;
         }
         
@@ -2399,7 +2415,7 @@ export const useGameStore = create<GameState>()(
           availableTargets: canMoveToOpponents ? deckTargets : [],
         });
         
-        if (currentPlayer.isBot && canMoveToOpponents) {
+        if (automated && canMoveToOpponents) {
           setTimeout(() => {
             const targetIndex = deckTargets[0];
             const targetPlayer = players[targetIndex];
@@ -2594,17 +2610,34 @@ export const useGameStore = create<GameState>()(
        
              // Положить карту поверх своих карт (завершение хода)
       takeCardNotByRules: (opts?: { fromRemote?: boolean }) => {
-        const { players, currentPlayerId, revealedDeckCard, deck, isGameActive } = get();
+        const { players, currentPlayerId, revealedDeckCard, deck, isGameActive, turnPhase } = get();
         if (!isGameActive) return;
         if (!currentPlayerId || !revealedDeckCard) return;
+        if (turnPhase !== 'waiting_deck_action') return;
+
+        const currentPlayer = players.find(p => p.id === currentPlayerId);
+        if (!currentPlayer) return;
+
+        // Забрать карту «не по правилам» можно только когда ходов действительно нет:
+        // ни на соперника, ни на себя (+1). Иначе игрок обязан сделать ход.
+        const { opponentTargets, canPlaceOnSelf } = get().getDeckCardPlayOptions(revealedDeckCard);
+        if (opponentTargets.length > 0 || canPlaceOnSelf) {
+          if (!isAutomatedPlayer(currentPlayer) && !opts?.fromRemote) {
+            get().showNotification(
+              canPlaceOnSelf
+                ? 'Эту карту нужно положить на себя — она старше вашей на 1'
+                : 'У вас есть ход — положите карту подсвеченному сопернику',
+              'warning',
+              3000
+            );
+          }
+          return;
+        }
 
         if (!opts?.fromRemote && shouldDeferHumanMoveToHost(get(), currentPlayerId)) {
           void get().sendPlayerMove({ type: 'take_not_by_rules', playerId: currentPlayerId });
           return;
         }
-        
-        const currentPlayer = players.find(p => p.id === currentPlayerId);
-        if (!currentPlayer) return;
         
         const placedCard: Card = { ...revealedDeckCard, open: true };
         const newPlayers = players.map((p) =>

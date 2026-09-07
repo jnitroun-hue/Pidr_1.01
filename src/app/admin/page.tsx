@@ -30,6 +30,7 @@ import {
   Gift
 } from 'lucide-react';
 import PageLoadingScreen from '@/components/PageLoadingScreen';
+import AdminPromocodesPanel from '@/components/admin/AdminPromocodesPanel';
 import { GRAM, formatGramAmount } from '@/lib/crypto/gram-brand';
 import UserAvatarBadge from '@/components/UserAvatarBadge';
 import AuthMethodBadge from '@/components/AuthMethodBadge';
@@ -83,20 +84,8 @@ export default function AdminPanel() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [updating, setUpdating] = useState(false);
   
-  // Promocodes state
-  const [promocodes, setPromocodes] = useState<any[]>([]);
-  const [promocodesPage, setPromocodesPage] = useState(1);
-  const [promocodesTotalPages, setPromocodesTotalPages] = useState(1);
-  const [showPromocodeModal, setShowPromocodeModal] = useState(false);
-  const [newPromocode, setNewPromocode] = useState({
-    code: '',
-    description: '',
-    reward_type: 'coins',
-    reward_value: 0,
-    max_uses: null as number | null,
-    expires_at: ''
-  });
-  
+  // Промокоды — вынесены в AdminPromocodesPanel (список, создание, редактирование, вкл/выкл, удаление)
+
   // Transactions state
   const [transactions, setTransactions] = useState<any[]>([]);
   const [transactionsPage, setTransactionsPage] = useState(1);
@@ -151,7 +140,6 @@ export default function AdminPanel() {
 
         setIsAdmin(true);
         loadUsers();
-        if (activeTab === 'promocodes') loadPromocodes();
         if (activeTab === 'transactions') loadTransactions();
       } catch (error) {
         console.error('❌ Ошибка проверки админ-прав:', error);
@@ -212,23 +200,6 @@ export default function AdminPanel() {
     }
   };
 
-  // Загрузка промокодов
-  const loadPromocodes = async (page: number = 1) => {
-    try {
-      const response = await fetch(`/api/admin/promocodes?page=${page}&limit=20`, {
-        credentials: 'include'
-      });
-      const data = await response.json();
-      if (data.success) {
-        setPromocodes(data.promocodes || []);
-        setPromocodesPage(data.pagination.page);
-        setPromocodesTotalPages(data.pagination.totalPages);
-      }
-    } catch (error) {
-      console.error('❌ Ошибка загрузки промокодов:', error);
-    }
-  };
-
   // Загрузка транзакций
   const loadTransactions = async (page: number = 1) => {
     try {
@@ -251,37 +222,6 @@ export default function AdminPanel() {
       }
     } catch (error) {
       console.error('❌ Ошибка загрузки транзакций:', error);
-    }
-  };
-
-  // Создание промокода
-  const createPromocode = async () => {
-    try {
-      const response = await fetch('/api/admin/promocodes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(newPromocode)
-      });
-      const data = await response.json();
-      if (data.success) {
-        alert('✅ Промокод создан!');
-        setShowPromocodeModal(false);
-        setNewPromocode({
-          code: '',
-          description: '',
-          reward_type: 'coins',
-          reward_value: 0,
-          max_uses: null,
-          expires_at: ''
-        });
-        loadPromocodes();
-      } else {
-        alert('❌ Ошибка: ' + data.error);
-      }
-    } catch (error) {
-      console.error('❌ Ошибка создания промокода:', error);
-      alert('❌ Ошибка создания промокода');
     }
   };
 
@@ -396,7 +336,6 @@ export default function AdminPanel() {
   // Загрузка данных при смене таба
   useEffect(() => {
     if (isAdmin) {
-      if (activeTab === 'promocodes') loadPromocodes();
       if (activeTab === 'transactions') loadTransactions();
       if (activeTab === 'rooms') loadRooms();
       if (activeTab === 'rating') loadRating();
@@ -616,29 +555,6 @@ export default function AdminPanel() {
               </div>
             </div>
           </motion.div>
-          {activeTab === 'promocodes' && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              style={{
-                background: 'rgba(251, 191, 36, 0.1)',
-                border: '2px solid rgba(251, 191, 36, 0.3)',
-                borderRadius: '16px',
-                padding: '20px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px'
-              }}
-            >
-              <Ticket size={32} color="#fbbf24" />
-              <div>
-                <div style={{ fontSize: '24px', fontWeight: '700', color: '#fbbf24' }}>
-                  {promocodes.length}
-                </div>
-                <div style={{ fontSize: '14px', color: '#94a3b8' }}>Промокодов</div>
-              </div>
-            </motion.div>
-          )}
           {activeTab === 'transactions' && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -854,115 +770,7 @@ export default function AdminPanel() {
           </>
         )}
 
-        {activeTab === 'promocodes' && (
-          <div>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: isTablet ? 'stretch' : 'center',
-              flexDirection: isTablet ? 'column' : 'row',
-              gap: isTablet ? '12px' : '0',
-              marginBottom: '20px'
-            }}>
-              <h2 style={{ color: '#e2e8f0', fontSize: '24px', fontWeight: '700' }}>Промокоды</h2>
-              <motion.button
-                onClick={() => setShowPromocodeModal(true)}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                style={{
-                  padding: isTablet ? '12px 16px' : '12px 24px',
-                  background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                  border: 'none',
-                  borderRadius: '12px',
-                  color: 'white',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  width: isTablet ? '100%' : 'auto'
-                }}
-              >
-                <Plus size={18} />
-                Создать промокод
-              </motion.button>
-            </div>
-
-            <div style={{
-              background: 'rgba(15, 23, 42, 0.6)',
-              border: '2px solid rgba(100, 116, 139, 0.3)',
-              borderRadius: '16px',
-              overflow: 'hidden'
-            }}>
-              {tableHint}
-              <div style={tableScrollStyle}>
-              <div style={{ minWidth: '860px' }}>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 2fr 1fr 1fr 1fr 1fr auto',
-                gap: '16px',
-                padding: '16px',
-                background: 'rgba(251, 191, 36, 0.1)',
-                borderBottom: '2px solid rgba(100, 116, 139, 0.3)',
-                fontWeight: '700',
-                fontSize: '14px',
-                color: '#94a3b8'
-              }}>
-                <div>Код</div>
-                <div>Описание</div>
-                <div>Тип награды</div>
-                <div>Значение</div>
-                <div>Использовано</div>
-                <div>Статус</div>
-                <div>Действия</div>
-              </div>
-
-              {promocodes.map((promo) => (
-                <div key={promo.id} style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 2fr 1fr 1fr 1fr 1fr auto',
-                  gap: '16px',
-                  padding: '16px',
-                  borderBottom: '1px solid rgba(100, 116, 139, 0.1)',
-                  alignItems: 'center'
-                }}>
-                  <div style={{ color: '#fbbf24', fontWeight: '700', fontSize: '16px' }}>{promo.code}</div>
-                  <div style={{ color: '#cbd5e1' }}>{promo.description || '-'}</div>
-                  <div style={{ color: '#e2e8f0' }}>{promo.reward_type}</div>
-                  <div style={{ color: '#10b981', fontWeight: '600' }}>{promo.reward_value}</div>
-                  <div style={{ color: '#cbd5e1' }}>{promo.used_count} / {promo.max_uses || '∞'}</div>
-                  <div>{promo.is_active ? <Check size={16} color="#10b981" /> : <X size={16} color="#ef4444" />}</div>
-                  <div>
-                    <motion.button
-                      onClick={() => {
-                        setNewPromocode({ ...promo, expires_at: promo.expires_at ? new Date(promo.expires_at).toISOString().split('T')[0] : '' });
-                        setShowPromocodeModal(true);
-                      }}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      style={{
-                        padding: '6px 12px',
-                        background: 'rgba(99, 102, 241, 0.2)',
-                        border: '1px solid rgba(99, 102, 241, 0.3)',
-                        borderRadius: '8px',
-                        color: '#6366f1',
-                        cursor: 'pointer',
-                        fontSize: '12px',
-                        fontWeight: '600'
-                      }}
-                    >
-                      Изменить
-                    </motion.button>
-                  </div>
-                </div>
-              ))}
-              </div>
-              </div>
-            </div>
-          </div>
-        )}
+        {activeTab === 'promocodes' && <AdminPromocodesPanel isTablet={isTablet} />}
 
         {activeTab === 'transactions' && (
           <div>
@@ -1769,219 +1577,6 @@ export default function AdminPanel() {
       </div>
 
       {/* Модалка создания/редактирования промокода */}
-      {showPromocodeModal && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={() => setShowPromocodeModal(false)}
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.85)',
-            zIndex: 9999,
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            padding: '20px'
-          }}
-        >
-          <motion.div
-            initial={{ scale: 0.95, y: 20 }}
-            animate={{ scale: 1, y: 0 }}
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%)',
-              borderRadius: '24px',
-              border: '4px solid rgba(251, 191, 36, 0.6)',
-              padding: '32px',
-              maxWidth: '500px',
-              width: '100%',
-              maxHeight: '90vh',
-              overflowY: 'auto'
-            }}
-          >
-            <h2 style={{ fontSize: '24px', fontWeight: '800', color: '#e2e8f0', marginBottom: '24px' }}>
-              Создать промокод
-            </h2>
-
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', color: '#cbd5e1', marginBottom: '8px', fontWeight: '600' }}>
-                Код *
-              </label>
-              <input
-                type="text"
-                value={newPromocode.code}
-                onChange={(e) => setNewPromocode({ ...newPromocode, code: e.target.value.toUpperCase() })}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  background: 'rgba(15, 23, 42, 0.6)',
-                  border: '2px solid rgba(100, 116, 139, 0.3)',
-                  borderRadius: '10px',
-                  color: '#e2e8f0',
-                  fontSize: '16px',
-                  outline: 'none'
-                }}
-              />
-            </div>
-
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', color: '#cbd5e1', marginBottom: '8px', fontWeight: '600' }}>
-                Описание
-              </label>
-              <textarea
-                value={newPromocode.description}
-                onChange={(e) => setNewPromocode({ ...newPromocode, description: e.target.value })}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  background: 'rgba(15, 23, 42, 0.6)',
-                  border: '2px solid rgba(100, 116, 139, 0.3)',
-                  borderRadius: '10px',
-                  color: '#e2e8f0',
-                  fontSize: '16px',
-                  outline: 'none',
-                  minHeight: '80px'
-                }}
-              />
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
-              <div>
-                <label style={{ display: 'block', color: '#cbd5e1', marginBottom: '8px', fontWeight: '600' }}>
-                  Тип награды
-                </label>
-                <select
-                  value={newPromocode.reward_type}
-                  onChange={(e) => setNewPromocode({ ...newPromocode, reward_type: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    background: 'rgba(15, 23, 42, 0.6)',
-                    border: '2px solid rgba(100, 116, 139, 0.3)',
-                    borderRadius: '10px',
-                    color: '#e2e8f0',
-                    fontSize: '16px',
-                    outline: 'none'
-                  }}
-                >
-                  <option value="coins">Монеты</option>
-                  <option value="nft">NFT</option>
-                  <option value="item">Предмет</option>
-                </select>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', color: '#cbd5e1', marginBottom: '8px', fontWeight: '600' }}>
-                  Значение *
-                </label>
-                <input
-                  type="number"
-                  value={newPromocode.reward_value}
-                  onChange={(e) => setNewPromocode({ ...newPromocode, reward_value: parseInt(e.target.value) || 0 })}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    background: 'rgba(15, 23, 42, 0.6)',
-                    border: '2px solid rgba(100, 116, 139, 0.3)',
-                    borderRadius: '10px',
-                    color: '#e2e8f0',
-                    fontSize: '16px',
-                    outline: 'none'
-                  }}
-                />
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
-              <div>
-                <label style={{ display: 'block', color: '#cbd5e1', marginBottom: '8px', fontWeight: '600' }}>
-                  Макс. использований
-                </label>
-                <input
-                  type="number"
-                  value={newPromocode.max_uses || ''}
-                  onChange={(e) => setNewPromocode({ ...newPromocode, max_uses: e.target.value ? parseInt(e.target.value) : null })}
-                  placeholder="Безлимит"
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    background: 'rgba(15, 23, 42, 0.6)',
-                    border: '2px solid rgba(100, 116, 139, 0.3)',
-                    borderRadius: '10px',
-                    color: '#e2e8f0',
-                    fontSize: '16px',
-                    outline: 'none'
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', color: '#cbd5e1', marginBottom: '8px', fontWeight: '600' }}>
-                  Срок действия
-                </label>
-                <input
-                  type="date"
-                  value={newPromocode.expires_at}
-                  onChange={(e) => setNewPromocode({ ...newPromocode, expires_at: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    background: 'rgba(15, 23, 42, 0.6)',
-                    border: '2px solid rgba(100, 116, 139, 0.3)',
-                    borderRadius: '10px',
-                    color: '#e2e8f0',
-                    fontSize: '16px',
-                    outline: 'none'
-                  }}
-                />
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <motion.button
-                onClick={createPromocode}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                style={{
-                  flex: 1,
-                  padding: '14px 24px',
-                  background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
-                  border: 'none',
-                  borderRadius: '12px',
-                  color: 'white',
-                  fontSize: '16px',
-                  fontWeight: '700',
-                  cursor: 'pointer'
-                }}
-              >
-                Создать
-              </motion.button>
-              <motion.button
-                onClick={() => setShowPromocodeModal(false)}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                style={{
-                  padding: '14px 24px',
-                  background: 'rgba(100, 116, 139, 0.2)',
-                  border: '2px solid rgba(100, 116, 139, 0.3)',
-                  borderRadius: '12px',
-                  color: '#cbd5e1',
-                  fontSize: '16px',
-                  fontWeight: '600',
-                  cursor: 'pointer'
-                }}
-              >
-                Отмена
-              </motion.button>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
 
       {/* Модалка редактирования пользователя */}
       {selectedUser && (

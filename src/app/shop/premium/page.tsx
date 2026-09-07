@@ -267,10 +267,16 @@ export default function PremiumShopPage() {
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
             onClick={() => {
+              // Возвращаемся туда, откуда пришли (главное меню, профиль или маркетплейс),
+              // а не пушим /shop — иначе «Назад» ходило по кругу shop ↔ premium.
               try {
-                router.push('/shop');
+                if (typeof window !== 'undefined' && window.history.length > 1) {
+                  router.back();
+                } else {
+                  router.push('/');
+                }
               } catch {
-                window.location.href = '/shop';
+                window.location.href = '/';
               }
             }}
             style={{
@@ -287,7 +293,7 @@ export default function PremiumShopPage() {
             }}
           >
             <ArrowLeft size={18} />
-            {language === 'en' ? 'Marketplace' : 'Маркетплейс'}
+            {language === 'en' ? 'Back' : 'Назад'}
           </motion.button>
 
           <div

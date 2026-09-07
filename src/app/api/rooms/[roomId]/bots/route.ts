@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
-import { atomicJoinRoom, atomicLeaveRoom } from '@/lib/multiplayer/player-state-manager';
+import { atomicJoinRoom, atomicLeaveRoom, removePlayerFromAllRooms } from '@/lib/multiplayer/player-state-manager';
 import { idsEqual, isRoomHostUser } from '@/lib/multiplayer/room-host';
 
 // ✅ Явная конфигурация runtime для Next.js 15
@@ -104,76 +104,106 @@ export async function POST(
       const maxPosition = currentPlayers[0]?.position || 0;
       const nextPosition = maxPosition + 1;
       
-      // ✅ ПОЛУЧАЕМ TELEGRAM_ID ВСЕХ ИГРОКОВ УЖЕ В КОМНАТЕ
-      const usedBotIds = currentPlayers
-        .map((p: any) => p.user_id)
-        .filter((id: any) => parseInt(id) < 0); // Только боты (отрицательные ID)
-      
-      console.log(`🤖 [ADD BOT] Боты уже в комнате:`, usedBotIds);
+      // Боты уже в этой комнате (user_id хранится как telegram_id, отрицательная строка)
+      const usedBotIds = new Set(
+        currentPlayers
+          .map((p: { user_id: string | number }) => String(p.user_id))
+          .filter((id: string) => Number(id) < 0)
+      );
+      console.log(`🤖 [ADD BOT] Боты уже в комнате:`, [...usedBotIds]);
 
-      // ✅ ШАГ 1: ИЩЕМ СВОБОДНОГО БОТА ИЗ БД (НЕ ЗАНЯТОГО НИ В ОДНОЙ КОМНАТЕ!)
-      // Сначала получаем всех ботов которые УЖЕ В КОМНАТАХ
-      const { data: busyBots } = await supabase
-        .from('_pidr_room_players')
-        .select('user_id')
-        .lt('user_id', 0); // Только боты (отрицательные ID)
-      
-      const busyBotIds = busyBots ? busyBots.map((b: any) => b.user_id) : [];
-      console.log(`🤖 [ADD BOT] Занятые боты:`, busyBotIds);
-      
-      // ✅ Ищем свободного бота по отрицательному telegram_id (боты имеют ID < 0)
-      let query = supabase
+      // ✅ ШАГ 1: СВОБОДНЫЙ БОТ ИЗ БД.
+      // «Занят» = сидит в комнате, которая реально живая (waiting/playing).
+      // Раньше занятыми считались боты из ЛЮБЫХ комнат, включая давно завершённые,
+      // поэтому свободных никогда не находилось и каждый раз создавался новый бот.
+      const { data: activeRooms, error: activeRoomsError } = await supabase
+        .from('_pidr_rooms')
+        .select('id')
+        .in('status', ['waiting', 'playing']);
+
+      if (activeRoomsError) {
+        console.warn('⚠️ [ADD BOT] Не удалось получить активные комнаты:', activeRoomsError);
+      }
+
+      const activeRoomIds = (activeRooms || []).map((r: { id: number }) => r.id);
+      const busyBotIds = new Set<string>();
+
+      if (activeRoomIds.length > 0) {
+        const { data: busyRows, error: busyError } = await supabase
+          .from('_pidr_room_players')
+          .select('user_id, room_id')
+          .in('room_id', activeRoomIds)
+          .like('user_id', '-%');
+
+        if (busyError) {
+          console.warn('⚠️ [ADD BOT] Не удалось получить занятых ботов:', busyError);
+        }
+        for (const row of busyRows || []) {
+          if (Number(row.user_id) < 0) busyBotIds.add(String(row.user_id));
+        }
+      }
+      console.log(`🤖 [ADD BOT] Занятые боты (в живых комнатах):`, [...busyBotIds]);
+
+      // telegram_id — VARCHAR, поэтому сравнение по числу делаем в коде, а не в SQL.
+      const { data: allBots, error: botsError } = await supabase
         .from('_pidr_users')
         .select('telegram_id, username, first_name, avatar_url')
-        .lt('telegram_id', 0) // ✅ Боты имеют отрицательные telegram_id
-        .order('telegram_id', { ascending: true })
-        .limit(1);
-      
-      // Исключаем занятых ботов
-      if (busyBotIds.length > 0) {
-        query = query.not('telegram_id', 'in', `(${busyBotIds.join(',')})`);
-      }
-      
-      const { data: availableBots, error: botsError } = await query;
+        .like('telegram_id', '-%')
+        .order('created_at', { ascending: true })
+        .limit(500);
 
       if (botsError) {
         console.error('❌ Ошибка получения ботов из БД:', botsError);
       }
 
+      const freeBots = (allBots || []).filter((b: { telegram_id: string | number }) => {
+        const id = String(b.telegram_id);
+        return Number(id) < 0 && !busyBotIds.has(id) && !usedBotIds.has(id);
+      });
+
+      console.log(`🤖 [ADD BOT] Ботов в БД: ${(allBots || []).length}, свободных: ${freeBots.length}`);
+
       let botId: number;
       let botName: string;
       let botAvatar: string | null;
 
-      if (availableBots && availableBots.length > 0) {
-        // ✅ НАШЛИ СВОБОДНОГО БОТА!
-        const selectedBot = availableBots[0];
-        botId = selectedBot.telegram_id;
-        botName = selectedBot.username || selectedBot.first_name;
-        botAvatar = selectedBot.avatar_url || '🤖'; // ✅ ИСПРАВЛЕНО НА avatar_url
-        
+      if (freeBots.length > 0) {
+        // ✅ НАШЛИ СВОБОДНОГО БОТА — берём случайного, чтобы соперники не повторялись
+        const selectedBot = freeBots[Math.floor(Math.random() * freeBots.length)];
+        botId = Number(selectedBot.telegram_id);
+        botName = selectedBot.username || selectedBot.first_name || `Бот_${Math.abs(botId) % 1000}`;
+        botAvatar = selectedBot.avatar_url || '🤖';
+
+        // Хвосты в завершённых/отменённых комнатах и Redis — чистим, иначе atomicJoinRoom
+        // решит, что бот «уже в другой комнате».
+        try {
+          await removePlayerFromAllRooms(String(botId));
+        } catch (cleanupError) {
+          console.warn('⚠️ [ADD BOT] Очистка старых комнат бота:', cleanupError);
+        }
+
         console.log(`✅ [ADD BOT] Используем бота из БД: ${botName} (ID: ${botId})`);
       } else {
-        // ❌ СВОБОДНЫХ БОТОВ НЕТ - СОЗДАЁМ НОВОГО
-        console.log(`⚠️ [ADD BOT] Свободных ботов нет, создаём нового...`);
-        
-        // Генерируем уникальный ID
+        // ❌ СВОБОДНЫХ БОТОВ НЕТ — только теперь создаём нового
+        console.log(`⚠️ [ADD BOT] Свободных ботов нет (все ${busyBotIds.size} заняты), создаём нового...`);
+
         botId = -(Date.now() + Math.floor(Math.random() * 1000));
-        
+
         const botFirstNames = [
           'Александр', 'Дмитрий', 'Максим', 'Артём', 'Никита',
           'Владислав', 'Андрей', 'Иван', 'Егор', 'Михаил',
           'Даниил', 'Кирилл', 'Сергей', 'Павел', 'Роман'
         ];
-        
+
         const randomName = botFirstNames[Math.floor(Math.random() * botFirstNames.length)];
         botName = `${randomName}_БОТ`;
         botAvatar = '🤖';
-        
-        // Создаем бота в _pidr_users (без поля is_bot, так как боты определяются по telegram_id < 0)
+
+        // Создаем бота в _pidr_users (боты определяются по telegram_id < 0)
         const { error: createBotError } = await supabase
           .from('_pidr_users')
           .insert({
-            telegram_id: botId,
+            telegram_id: String(botId),
             username: botName,
             first_name: randomName,
             last_name: 'БОТ',
@@ -192,7 +222,7 @@ export async function POST(
             message: 'Ошибка создания бота: ' + createBotError.message 
           }, { status: 500 });
         }
-        
+
         console.log(`✅ [ADD BOT] Создан новый бот: ${botName} (ID: ${botId})`);
       }
 

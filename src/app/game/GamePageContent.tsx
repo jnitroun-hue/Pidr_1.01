@@ -47,7 +47,12 @@ import {
   MULTIPLAYER_PRESENCE_TIMEOUT_MS,
 } from '@/lib/multiplayer/presence';
 import { BOT_TIMING } from '@/lib/game/botTiming';
-import { preloadNftCardUrls, preloadStandardCardAssets } from '@/lib/game/preload-card-assets';
+import {
+  preloadStandardCardAssets,
+  readCachedNftDeck,
+  warmupNftDeck,
+  writeCachedNftDeck,
+} from '@/lib/game/preload-card-assets';
 import {
   computeCardFanLayout,
   getOpponentStackDisplayCount,
@@ -393,7 +398,7 @@ function GamePageContentComponent({
     startGame, endGame, resetGame, setNftDeckCards: patchStoreNftDeck,
     syncLocalUserPremium,
     syncLocalUserProfile,
-    drawCard, makeMove, onDeckClick, placeCardOnSelfByRules,
+    drawCard, makeMove, onDeckClick, placeCardOnSelfByRules, takeCardNotByRules,
     selectHandCard, playSelectedCard, takeTableCards, showNotification,
     declareOneCard, askHowManyCards, contributePenaltyCard, cancelPenalty,
     togglePenaltyDeckModal, nextTurn,
@@ -1057,6 +1062,13 @@ function GamePageContentComponent({
 
   // ✅ ЗАГРУЗКА NFT КАРТ ИЗ КОЛОДЫ (фон — стандартные PNG уже на столе)
   useEffect(() => {
+    // Мгновенно: последняя известная колода из localStorage + предсборка, пока идёт запрос.
+    const cachedDeck = readCachedNftDeck();
+    if (cachedDeck && Object.keys(cachedDeck).length > 0) {
+      patchStoreNftDeck(cachedDeck);
+      void warmupNftDeck(cachedDeck);
+    }
+
     const loadNFTDeck = async () => {
       try {
         const response = await fetch('/api/user/deck', {
@@ -1073,9 +1085,11 @@ function GamePageContentComponent({
           const result = await response.json();
           if (result.success && result.deck) {
             const nftMap = deckEntriesToNftMap(result.deck);
+            // Свежая колода — источник истины (в т.ч. пустая: игрок мог убрать карты).
+            patchStoreNftDeck(nftMap);
+            writeCachedNftDeck(nftMap);
             if (Object.keys(nftMap).length > 0) {
-              patchStoreNftDeck(nftMap);
-              preloadNftCardUrls(Object.values(nftMap).map((entry) => entry.imageUrl));
+              void warmupNftDeck(nftMap);
             }
           }
         }
@@ -1519,6 +1533,17 @@ function GamePageContentComponent({
       !!revealedDeckCard &&
       currentPlayerId === myPlayer?.id,
     [gameStage, turnPhase, canPlaceOnSelfByRules, revealedDeckCard, currentPlayerId, myPlayer?.id]
+  );
+  // Ходов с открытой картой нет (ни на соперника, ни на себя) — игрок сам забирает её себе.
+  const mustTakeDeckCard = useMemo(
+    () =>
+      gameStage === 1 &&
+      turnPhase === 'waiting_deck_action' &&
+      !!revealedDeckCard &&
+      currentPlayerId === myPlayer?.id &&
+      !canPlaceOnSelfByRules &&
+      availableTargets.length === 0,
+    [gameStage, turnPhase, revealedDeckCard, currentPlayerId, myPlayer?.id, canPlaceOnSelfByRules, availableTargets.length]
   );
 
   // ✅ ТАЙМЕР ДЕЙСТВИЯ: 15 секунд на действие, обратный отсчёт
@@ -3045,9 +3070,11 @@ function GamePageContentComponent({
                         : '0 0 20px rgba(255, 255, 255, 0.3), 0 4px 12px rgba(0,0,0,0.4)',
                       border: canPlaceDeckOnSelf
                         ? '2px solid rgba(34, 197, 94, 0.85)'
-                        : '2px solid #e2e8f0',
+                        : mustTakeDeckCard
+                          ? '2px solid rgba(245, 158, 11, 0.9)'
+                          : '2px solid #e2e8f0',
                       animation: turnPhase === 'waiting_deck_action' ? 'pulse 2s ease-in-out infinite' : 'none',
-                      cursor: (turnPhase === 'waiting_deck_action' && (availableTargets.length > 0 || canPlaceDeckOnSelf)) ? 'pointer' : 'default',
+                      cursor: (turnPhase === 'waiting_deck_action' && (availableTargets.length > 0 || canPlaceDeckOnSelf || mustTakeDeckCard)) ? 'pointer' : 'default',
                       transition: 'transform 0.2s ease'
                     }}
                     onClick={() => {
@@ -3056,13 +3083,17 @@ function GamePageContentComponent({
                         placeCardOnSelfByRules();
                         return;
                       }
+                      if (mustTakeDeckCard) {
+                        takeCardNotByRules();
+                        return;
+                      }
                       if (availableTargets.length === 1) {
                         const targetPlayer = players[availableTargets[0]];
                         makeMove(targetPlayer?.id || '');
                       }
                     }}
                     onMouseEnter={(e) => {
-                      if (turnPhase === 'waiting_deck_action' && (availableTargets.length > 0 || canPlaceDeckOnSelf)) {
+                      if (turnPhase === 'waiting_deck_action' && (availableTargets.length > 0 || canPlaceDeckOnSelf || mustTakeDeckCard)) {
                         e.currentTarget.style.transform = 'scale(1.08)';
                       }
                     }}
@@ -3158,6 +3189,34 @@ function GamePageContentComponent({
                         Положить на себя (+1)
                       </button>
                     )}
+                    {mustTakeDeckCard && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          takeCardNotByRules();
+                        }}
+                        style={{
+                          position: 'absolute',
+                          left: '50%',
+                          bottom: '-34px',
+                          transform: 'translateX(-50%)',
+                          whiteSpace: 'nowrap',
+                          padding: '5px 10px',
+                          borderRadius: '8px',
+                          border: '1px solid rgba(245, 158, 11, 0.7)',
+                          background: 'rgba(245, 158, 11, 0.95)',
+                          color: '#1c1917',
+                          fontSize: '10px',
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                          boxShadow: '0 4px 12px rgba(245, 158, 11, 0.35)',
+                          zIndex: 20,
+                        }}
+                      >
+                        Ходов нет — взять себе
+                      </button>
+                    )}
                   </div>
                   );
                 })()}
@@ -3186,7 +3245,13 @@ function GamePageContentComponent({
                     } else if (currentPlayerId !== myPlayer?.id) {
                       console.log('⛔ [КЛИК НА КОЛОДУ] Сейчас не ваш ход');
                     } else if (turnPhase === 'waiting_deck_action') {
-                      showNotification('Сначала положите открытую карту на себя или на соперника', 'warning', 2500);
+                      showNotification(
+                        mustTakeDeckCard
+                          ? 'Ходов нет — нажмите на открытую карту, чтобы взять её себе'
+                          : 'Сначала положите открытую карту на себя или на соперника',
+                        'warning',
+                        2500
+                      );
                     } else {
                       showNotification('Сначала попробуйте сходить из руки!', 'warning', 2000);
                     }
@@ -3490,6 +3555,7 @@ function GamePageContentComponent({
                           const showOpen = isHumanPlayer || gameStage === 1;
                           const isMyTurn = player.id === currentPlayerId;
                           const canPlaceDeckOnSelfHere = isHumanPlayer && isTopCard && canPlaceDeckOnSelf;
+                          const canTakeDeckCardHere = isHumanPlayer && isTopCard && mustTakeDeckCard;
                           const canMakeMove = gameStage === 1 && isMyTurn && isHumanPlayer && canPickStage1Target && availableTargets.length > 0;
                           const shouldHighlight = gameStage === 1 && isTopCard && canMakeMove;
                           
@@ -3528,7 +3594,7 @@ function GamePageContentComponent({
                           const overlap = cardIndex > 0 ? `-${opponentFan.marginLeftPx}px` : '0';
                           // Верхняя (только что положенная) карта всегда выше нижних — без перехвата hover'ом.
                           const cardStackZIndex = isTopCard ? 80 + cardIndex : cardIndex + 1;
-                          const canInteractCard = isTopCard && (shouldHighlight || isAvailableTarget || canPlaceDeckOnSelfHere);
+                          const canInteractCard = isTopCard && (shouldHighlight || isAvailableTarget || canPlaceDeckOnSelfHere || canTakeDeckCardHere);
                           
                           const cardId = typeof card === 'string' ? undefined : card.id;
                           return (
@@ -3549,6 +3615,8 @@ function GamePageContentComponent({
                                 transition: 'transform 0.2s ease, box-shadow 0.2s ease',
                                 boxShadow: canPlaceDeckOnSelfHere
                                   ? '0 0 16px rgba(34, 197, 94, 0.75), 0 0 0 2px rgba(34, 197, 94, 0.85)'
+                                  : canTakeDeckCardHere
+                                    ? '0 0 16px rgba(245, 158, 11, 0.75), 0 0 0 2px rgba(245, 158, 11, 0.85)'
                                   : stage1OpenStack && isTopCard
                                     ? '0 3px 10px rgba(0, 0, 0, 0.42), 0 0 0 1px rgba(255,255,255,0.45)'
                                   : undefined,
@@ -3558,6 +3626,8 @@ function GamePageContentComponent({
                                 if (gameStage === 1 && isTopCard) {
                                   if (canPlaceDeckOnSelfHere) {
                                     placeCardOnSelfByRules();
+                                  } else if (canTakeDeckCardHere) {
+                                    takeCardNotByRules();
                                   } else if (shouldHighlight) {
                                     console.log(`🎴 [1-я стадия] Клик по своей карте, инициируем выбор цели`);
                                     makeMove('initiate_move');

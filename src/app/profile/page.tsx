@@ -2260,6 +2260,20 @@ export default function ProfilePage() {
                 bonuses={bonuses}
                 claimingId={claimingBonusId}
                 onAction={handleBonusClick}
+                onPromoRedeemed={(result) => {
+                  // Награда уже начислена сервером — синхронизируем локальный профиль.
+                  setUser((prev: any) => {
+                    if (!prev) return prev;
+                    const next = { ...prev };
+                    if (result.newBalance != null) next.coins = result.newBalance;
+                    if (result.newRating != null && result.rewardType === 'rating') next.rating = result.newRating;
+                    if (result.premiumExpiresAt && result.rewardType === 'premium_days') {
+                      next.isPremium = true;
+                      next.premiumExpiresAt = result.premiumExpiresAt;
+                    }
+                    return next;
+                  });
+                }}
                 onShareReferral={async (channel) => {
                   const currentUser = getCurrentUser();
                   const referralId = currentUser?.id || user?.id;

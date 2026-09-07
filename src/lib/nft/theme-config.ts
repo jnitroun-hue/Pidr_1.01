@@ -73,6 +73,34 @@ export function parseNftThemeFromImageUrl(url?: string | null): { theme: NftThem
   return { theme, themeId };
 }
 
+/** Тема карты из metadata → имени файла → rarity (единая логика для рендера и предзагрузки). */
+export function resolveThemeFromMetadata(
+  metadata?: Record<string, unknown> | null,
+  rarity?: string | null,
+  imageUrl?: string | null
+): { theme: NftThemeKey; themeId: number } | null {
+  if (metadata) {
+    const theme = (metadata.theme ?? metadata.nft_theme) as string | undefined;
+    const themeId = Number(metadata.theme_id ?? metadata.themeId);
+    if (theme && theme in NFT_THEME_CONFIG && Number.isFinite(themeId) && themeId >= 1) {
+      return { theme: theme as NftThemeKey, themeId };
+    }
+  }
+
+  const fromUrl = parseNftThemeFromImageUrl(imageUrl);
+  if (fromUrl) return fromUrl;
+
+  if (rarity && rarity in NFT_THEME_CONFIG) {
+    const themeId = Number(metadata?.theme_id ?? metadata?.themeId ?? 1);
+    return {
+      theme: rarity as NftThemeKey,
+      themeId: Number.isFinite(themeId) && themeId >= 1 ? themeId : 1,
+    };
+  }
+
+  return null;
+}
+
 export interface ThemeAssetPick {
   theme: NftThemeKey;
   themeId: number;

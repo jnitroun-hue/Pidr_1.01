@@ -10,11 +10,19 @@ import {
 
   generateThemeCardImageDataUrl,
 
+  getCachedThemeCardUrl,
+
 } from '@/lib/nft/generate-theme-card-client';
 
 import { getCardAssetSrc, normalizeRankToken, normalizeSuitToken } from '@/lib/game/cardAssets';
 
-import { NFT_THEME_CONFIG, isAnimatedNftTheme, parseNftThemeFromImageUrl, type NftThemeKey } from '@/lib/nft/theme-config';
+import {
+  NFT_THEME_CONFIG,
+  isAnimatedNftTheme,
+  parseNftThemeFromImageUrl,
+  resolveThemeFromMetadata,
+  type NftThemeKey,
+} from '@/lib/nft/theme-config';
 import UniqueLivingCard from '@/components/UniqueLivingCard';
 
 
@@ -37,32 +45,8 @@ export type NftCardRenderSpec = {
 
 
 
-export function resolveThemeFromMetadata(
-  metadata?: Record<string, unknown> | null,
-  rarity?: string | null,
-  imageUrl?: string | null
-): { theme: NftThemeKey; themeId: number } | null {
-  if (metadata) {
-    const theme = (metadata.theme ?? metadata.nft_theme) as string | undefined;
-    const themeId = Number(metadata.theme_id ?? metadata.themeId);
-    if (theme && theme in NFT_THEME_CONFIG && Number.isFinite(themeId) && themeId >= 1) {
-      return { theme: theme as NftThemeKey, themeId };
-    }
-  }
-
-  const fromUrl = parseNftThemeFromImageUrl(imageUrl);
-  if (fromUrl) return fromUrl;
-
-  if (rarity && rarity in NFT_THEME_CONFIG) {
-    const themeId = Number(metadata?.theme_id ?? metadata?.themeId ?? 1);
-    return {
-      theme: rarity as NftThemeKey,
-      themeId: Number.isFinite(themeId) && themeId >= 1 ? themeId : 1,
-    };
-  }
-
-  return null;
-}
+// Логика перенесена в lib (нужна и для предзагрузки колоды); здесь — реэкспорт для совместимости.
+export { resolveThemeFromMetadata };
 
 
 
@@ -191,12 +175,21 @@ export default function NftThemedCardCanvas({
 
 
 
-  const [clientUrl, setClientUrl] = useState('');
+  // Если карта уже собиралась (предсборка колоды при старте игры) — берём из кеша синхронно,
+  // без промежуточного состояния загрузки.
+  const cachedComposed =
+    themeKey && validThemeId && !isAnimatedNftTheme(themeKey)
+      ? getCachedThemeCardUrl(suitNorm, rankNorm, themeKey, validThemeId)
+      : null;
+
+  const [clientUrl, setClientUrl] = useState(() => cachedComposed ?? '');
 
   const [composedFailed, setComposedFailed] = useState(false);
 
   const [rawArtworkFailed, setRawArtworkFailed] = useState(false);
-  const [themeComposeState, setThemeComposeState] = useState<'idle' | 'loading' | 'ready' | 'failed'>('idle');
+  const [themeComposeState, setThemeComposeState] = useState<'idle' | 'loading' | 'ready' | 'failed'>(
+    () => (cachedComposed ? 'ready' : 'idle')
+  );
 
   useEffect(() => {
     setComposedFailed(false);
@@ -204,14 +197,19 @@ export default function NftThemedCardCanvas({
   }, [fallbackImageUrl]);
 
   useEffect(() => {
-    const fastPreview = generateHeroCardFastDataUrl(suitNorm, rankNorm, themeKey ?? undefined);
-    setClientUrl(fastPreview);
-
     if (!themeKey || !validThemeId) {
+      setClientUrl(generateHeroCardFastDataUrl(suitNorm, rankNorm, undefined));
       setThemeComposeState('idle');
       return;
     }
     if (isAnimatedNftTheme(themeKey)) {
+      setThemeComposeState('ready');
+      return;
+    }
+
+    const cached = getCachedThemeCardUrl(suitNorm, rankNorm, themeKey, validThemeId);
+    if (cached) {
+      setClientUrl(cached);
       setThemeComposeState('ready');
       return;
     }
@@ -267,9 +265,8 @@ export default function NftThemedCardCanvas({
         : themeKey && validThemeId
           ? themeComposeState === 'ready'
             ? clientUrl || standardFallback
-            : themeComposeState === 'failed'
-              ? standardFallback
-              : null
+            : // Пока карта собирается — показываем обычную карту (уже прогрета), без «Загрузка…»
+              standardFallback
           : clientUrl || standardFallback;
   const showCornerFallback = ensureReadableCorners && Boolean(rawArtworkUrl && imgSrc === rawArtworkUrl);
 
@@ -335,60 +332,22 @@ export default function NftThemedCardCanvas({
 
     >
 
-      {imgSrc ? (
+      <img
 
-        <img
+        src={imgSrc}
 
-          src={imgSrc}
+        alt={alt ?? `${getRankLabel(rankNorm)} ${suitNorm}`}
 
-          alt={alt ?? `${getRankLabel(rankNorm)} ${suitNorm}`}
+        style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
 
-          style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+        draggable={false}
 
-          draggable={false}
+        onError={() => {
+          if (composedUrl && imgSrc === composedUrl) setComposedFailed(true);
+          if (rawArtworkUrl && imgSrc === rawArtworkUrl) setRawArtworkFailed(true);
+        }}
 
-          onError={() => {
-            if (composedUrl && imgSrc === composedUrl) setComposedFailed(true);
-            if (rawArtworkUrl && imgSrc === rawArtworkUrl) setRawArtworkFailed(true);
-          }}
-
-        />
-
-      ) : (
-
-        <div
-
-          aria-hidden
-
-          style={{
-
-            width: '100%',
-
-            height: '100%',
-
-            display: 'flex',
-
-            alignItems: 'center',
-
-            justifyContent: 'center',
-
-            background: 'linear-gradient(145deg, #ffffff, #e2e8f0)',
-
-            color: '#64748b',
-
-            fontWeight: 700,
-
-            fontSize: 'clamp(8px, 9cqw, 14px)',
-
-          }}
-
-        >
-
-          Загрузка…
-
-        </div>
-
-      )}
+      />
       {showCornerFallback && (
         <div
           aria-hidden

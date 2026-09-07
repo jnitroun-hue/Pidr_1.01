@@ -1,5 +1,6 @@
 'use client';
 
+import { useId } from 'react';
 import styles from './PremiumAvatarFire.module.css';
 import {
   getFlamePalette,
@@ -14,18 +15,28 @@ interface PremiumAvatarFireProps {
   color?: PremiumFlameColorId | string | null;
 }
 
-const HUE: Record<string, string> = {
-  red: 'hue-rotate(-8deg) saturate(1.25)',
-  orange: 'hue-rotate(0deg) saturate(1.15)',
-  gold: 'hue-rotate(8deg) saturate(1.2) brightness(1.08)',
-  yellow: 'hue-rotate(22deg) saturate(1.25) brightness(1.12)',
-  green: 'hue-rotate(95deg) saturate(1.3)',
-  blue: 'hue-rotate(198deg) saturate(1.35)',
-  cyan: 'hue-rotate(168deg) saturate(1.3)',
-  purple: 'hue-rotate(255deg) saturate(1.25)',
-  pink: 'hue-rotate(300deg) saturate(1.3)',
-  white: 'saturate(0.15) brightness(1.35)',
+/** Исходный спрайт — красно-оранжевый огонь; палитры получаем поворотом оттенка. */
+const HUE: Record<PremiumFlameColorId, string> = {
+  red: 'hue-rotate(-12deg) saturate(1.25)',
+  orange: 'hue-rotate(6deg) saturate(1.1)',
+  gold: 'hue-rotate(20deg) saturate(1.1) brightness(1.06)',
+  yellow: 'hue-rotate(34deg) saturate(1.15) brightness(1.1)',
+  green: 'hue-rotate(102deg) saturate(1.2) brightness(1.04)',
+  blue: 'hue-rotate(208deg) saturate(1.3) brightness(1.08)',
+  cyan: 'hue-rotate(172deg) saturate(1.25) brightness(1.08)',
+  purple: 'hue-rotate(258deg) saturate(1.2) brightness(1.05)',
+  pink: 'hue-rotate(308deg) saturate(1.25) brightness(1.05)',
+  white: 'saturate(0) brightness(1.55) contrast(1.05)',
 };
+
+const FIRE_SPEED_S = 2.8;
+
+/** Детерминированный сдвиг анимации, чтобы несколько аватаров за столом не горели синхронно. */
+function delayFromId(id: string, span: number): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return -((h % 1000) / 1000) * span;
+}
 
 export default function PremiumAvatarFire({
   children,
@@ -33,11 +44,14 @@ export default function PremiumAvatarFire({
   active = true,
   color,
 }: PremiumAvatarFireProps) {
+  const uid = useId();
   if (!active) return <>{children}</>;
 
-  const palette = getFlamePalette(resolvePremiumFlame(color));
   const flameId = resolvePremiumFlame(color);
-  const box = Math.round(size * 2.15);
+  const palette = getFlamePalette(flameId);
+  const box = Math.round(size * 2.3);
+  const backDelay = delayFromId(uid, FIRE_SPEED_S);
+  const frontDelay = delayFromId(`${uid}/front`, FIRE_SPEED_S);
 
   return (
     <div
@@ -50,23 +64,18 @@ export default function PremiumAvatarFire({
         ['--flame-mid' as string]: palette.mid,
         ['--flame-core' as string]: palette.core,
         ['--flame-base' as string]: palette.base,
-        ['--flame-filter' as string]: HUE[flameId] ?? HUE.gold,
+        ['--flame-filter' as string]: HUE[flameId],
+        ['--fire-speed' as string]: `${FIRE_SPEED_S}s`,
+        ['--fire-delay' as string]: `${backDelay.toFixed(3)}s`,
+        ['--fire-delay-front' as string]: `${frontDelay.toFixed(3)}s`,
       }}
     >
       <div className={styles.heat} aria-hidden />
-      <div className={styles.wreath} aria-hidden>
-        <img src="/fx/premium-flame-a.png" alt="" className={`${styles.tongue} ${styles.leftOuter}`} />
-        <img src="/fx/premium-flame-b.png" alt="" className={`${styles.tongue} ${styles.leftInner}`} />
-        <img src="/fx/premium-flame-a.png" alt="" className={`${styles.tongue} ${styles.rightInner}`} />
-        <img src="/fx/premium-flame-b.png" alt="" className={`${styles.tongue} ${styles.rightOuter}`} />
-      </div>
-      <div className={styles.crown} aria-hidden>
-        <img src="/fx/premium-flame-a.png" alt="" className={styles.crownTall} />
-        <img src="/fx/premium-flame-b.png" alt="" className={styles.crownWide} />
-      </div>
+      <div className={`${styles.sprite} ${styles.back}`} aria-hidden />
       <div className={styles.core} style={{ width: size, height: size }}>
         {children}
       </div>
+      <div className={`${styles.sprite} ${styles.front}`} aria-hidden />
     </div>
   );
 }

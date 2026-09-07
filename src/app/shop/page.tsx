@@ -406,8 +406,10 @@ export default function ShopPage() {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => {
+              // Всегда выходим в главное меню: router.back() зацикливался
+              // между /shop и /shop/premium (каждая страница пушила другую).
               try {
-                router.back();
+                router.push('/');
               } catch (error) {
                 console.error('Ошибка навигации:', error);
                 window.location.href = '/';

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import PidrCoinIcon from '@/components/PidrCoinIcon';
+import PromoCodeCard, { type PromoRedeemResult } from '@/components/PromoCodeCard';
 import styles from './BonusCenter.module.css';
 
 export interface ProfileBonus {
@@ -25,6 +26,7 @@ interface Props {
   claimingId?: string | null;
   onAction: (bonusId: string) => void | Promise<void>;
   onShareReferral?: (channel: 'auto' | 'telegram' | 'vk' | 'whatsapp' | 'copy') => void | Promise<void>;
+  onPromoRedeemed?: (result: PromoRedeemResult) => void;
 }
 
 function cooldownLabel(value?: string | Date | null) {
@@ -45,19 +47,20 @@ function Cooldown({ until }: { until?: string | Date | null }) {
   return <>{cooldownLabel(until)}</>;
 }
 
-export default function BonusCenter({ bonuses, claimingId, onAction, onShareReferral }: Props) {
+export default function BonusCenter({ bonuses, claimingId, onAction, onShareReferral, onPromoRedeemed }: Props) {
   return (
     <section className={styles.wrap} aria-label="Центр бонусов">
       <header className={styles.hero}>
         <div className={styles.eyebrow}>НАГРАДЫ И АКТИВНОСТИ</div>
         <h3 className={styles.title}>Центр бонусов</h3>
         <p className={styles.subtitle}>
-          Получайте ежедневные награды, приглашайте друзей и подтверждайте подписки.
+          Получайте ежедневные награды, активируйте промокоды, приглашайте друзей и подтверждайте подписки.
           Все начисления проверяются сервером и сохраняются в истории.
         </p>
       </header>
 
       <div className={styles.grid}>
+        <PromoCodeCard onRedeemed={onPromoRedeemed} />
         {bonuses.map((bonus) => {
           const isReferral = bonus.id === 'referral';
           const isSocial = bonus.id === 'telegram_subscribe' || bonus.id === 'vk_subscribe';

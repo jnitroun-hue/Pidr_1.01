@@ -342,7 +342,7 @@ async function isStaleRoomMembership(
     .maybeSingle();
 
   if (!room) return true;
-  if (room.status === 'finished') return true;
+  if (room.status === 'finished' || room.status === 'cancelled') return true;
 
   let row = membership;
   if (!row) {

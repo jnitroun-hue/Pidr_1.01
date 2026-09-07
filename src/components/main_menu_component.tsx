@@ -16,6 +16,8 @@ import { CRYPTO_TOKENS } from '@/lib/crypto/crypto-assets'
 import CryptoIcon from './CryptoIcon'
 import { getApiHeaders } from '@/lib/api-headers'
 import { parseJsonResponse } from '@/lib/api/parse-json-response'
+import { deckEntriesToNftMap } from '@/lib/game/cardAssets'
+import { readCachedNftDeck, warmupNftDeck, writeCachedNftDeck } from '@/lib/game/preload-card-assets'
 import {
   DEFAULT_MENU_THEME,
   isMenuThemeId,
@@ -93,6 +95,35 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
     void loadTheme()
     return () => {
       cancelled = true
+    }
+  }, [user])
+
+  // Прогрев NFT-колоды ещё в меню: к началу партии карты уже собраны и лежат в кеше.
+  useEffect(() => {
+    if (!user) return
+    let cancelled = false
+    const warm = async () => {
+      const cached = readCachedNftDeck()
+      if (cached && Object.keys(cached).length > 0) void warmupNftDeck(cached)
+      try {
+        const res = await fetch('/api/user/deck', {
+          credentials: 'include',
+          headers: getApiHeaders(),
+          cache: 'no-store',
+        })
+        const parsed = await parseJsonResponse<{ success?: boolean; deck?: unknown[] }>(res)
+        if (cancelled || !parsed.data?.success || !Array.isArray(parsed.data.deck)) return
+        const map = deckEntriesToNftMap(parsed.data.deck as Parameters<typeof deckEntriesToNftMap>[0])
+        writeCachedNftDeck(map)
+        if (Object.keys(map).length > 0) void warmupNftDeck(map)
+      } catch {
+        /* колода подгрузится в игре */
+      }
+    }
+    const timer = window.setTimeout(() => void warm(), 800)
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
     }
   }, [user])
 
