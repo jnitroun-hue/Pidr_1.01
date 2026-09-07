@@ -8,23 +8,35 @@ import {
   APP_VERSION_CHECK_INTERVAL_MS,
 } from '@/lib/app-version/constants';
 import { ensureLatestAppVersion } from '@/lib/app-version/check-app-update';
+import { isTelegramMiniAppClient } from '@/lib/telegram/init-mini-app';
+import { isVKMiniApp } from '@/lib/auth/vk-bridge';
 
 type Props = {
   children: ReactNode;
 };
 
+function isMiniAppClient(): boolean {
+  return isTelegramMiniAppClient() || isVKMiniApp();
+}
+
 /**
- * При входе и при смене страницы проверяет build id на сервере.
- * Если деплой новее — принудительно обновляет (как в онлайн-играх).
+ * Принудительное обновление кэша только в Telegram / VK Mini App:
+ * клиент там долго держит старый JS. В браузере обычного обновления страницы достаточно.
  */
 export default function AppUpdateGate({ children }: Props) {
   const pathname = usePathname();
+  const [runGate, setRunGate] = useState(false);
   const [ready, setReady] = useState(false);
   const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
+    if (!isMiniAppClient()) {
+      return;
+    }
 
+    setRunGate(true);
+
+    let cancelled = false;
     const failOpen = window.setTimeout(() => {
       if (!cancelled) setReady(true);
     }, APP_UPDATE_GATE_MAX_WAIT_MS);
@@ -50,9 +62,8 @@ export default function AppUpdateGate({ children }: Props) {
     };
   }, []);
 
-  // При навигации внутри SPA — лёгкая проверка (новый деплой без перезапуска Mini App)
   useEffect(() => {
-    if (!ready) return;
+    if (!runGate || !ready) return;
 
     let cancelled = false;
     void (async () => {
@@ -64,11 +75,10 @@ export default function AppUpdateGate({ children }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [pathname, ready]);
+  }, [pathname, ready, runGate]);
 
-  // Периодически + при возврате в Telegram / вкладку
   useEffect(() => {
-    if (!ready) return;
+    if (!runGate || !ready) return;
 
     const tick = () => {
       void ensureLatestAppVersion().then((result) => {
@@ -94,7 +104,11 @@ export default function AppUpdateGate({ children }: Props) {
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('focus', tick);
     };
-  }, [ready]);
+  }, [ready, runGate]);
+
+  if (!runGate) {
+    return <>{children}</>;
+  }
 
   if (!ready || updating) {
     return (
