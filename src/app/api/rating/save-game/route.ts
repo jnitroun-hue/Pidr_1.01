@@ -3,7 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 
 /**
  * POST /api/rating/save-game
- * Сохраняет результат рейтинговой игры
+ * История рейтинговой партии. Монеты и рейтинг начисляет /api/user/add-coins,
+ * сюда передаём 0, чтобы RPC не задвоил изменение рейтинга.
  */
 export async function POST(request: NextRequest) {
   try {

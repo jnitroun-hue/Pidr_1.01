@@ -17,14 +17,17 @@ function noStoreJson(body: unknown, init?: ResponseInit) {
   return response;
 }
 
-async function loadFlame(dbUserId: number): Promise<string> {
+async function loadFlame(dbUserId: number): Promise<{ color: string; persisted: boolean }> {
   const { data, error } = await supabaseAdmin
     .from('_pidr_users')
     .select('premium_flame')
     .eq('id', dbUserId)
     .maybeSingle();
-  if (error) return DEFAULT_PREMIUM_FLAME;
-  return resolvePremiumFlame((data as { premium_flame?: string | null } | null)?.premium_flame);
+  if (error) return { color: DEFAULT_PREMIUM_FLAME, persisted: false };
+  return {
+    color: resolvePremiumFlame((data as { premium_flame?: string | null } | null)?.premium_flame),
+    persisted: true,
+  };
 }
 
 export async function GET(req: NextRequest) {
@@ -38,8 +41,13 @@ export async function GET(req: NextRequest) {
       return noStoreJson({ success: false, message: 'Пользователь не найден' }, { status: 404 });
     }
     const premium = await getPremiumStatus(Number(dbUserId));
-    const color = await loadFlame(Number(dbUserId));
-    return noStoreJson({ success: true, color, isPremium: premium.isPremium });
+    const flame = await loadFlame(Number(dbUserId));
+    return noStoreJson({
+      success: true,
+      color: flame.color,
+      persisted: flame.persisted,
+      isPremium: premium.isPremium,
+    });
   } catch (error: unknown) {
     console.error('❌ [premium-flame GET]', error);
     return noStoreJson({ success: false, message: 'Ошибка сервера' }, { status: 500 });

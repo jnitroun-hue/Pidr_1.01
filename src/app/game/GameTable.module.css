@@ -1,4 +1,4 @@
-/* ✅ АДАПТАЦИЯ ПОД IPHONE - safe-area + dvh */
+/* Стол: safe-area + dvh на всех платформах */
 .gameContainer {
   height: 100dvh; /* ✅ DVH ДЛЯ IPHONE! */
   width: 100vw;
@@ -463,7 +463,7 @@
   }
 }
 
-/* ОЧЕНЬ МАЛЕНЬКИЕ ЭКРАНЫ (iPhone SE и подобные) */
+/* Очень узкие экраны */
 @media (max-width: 375px) {
   .gameContainer {
     padding: 0;
@@ -512,7 +512,7 @@
   }
 }
 
-/* СПЕЦИАЛЬНАЯ АДАПТАЦИЯ ДЛЯ iPhone */
+/* Узкие экраны (телефоны) */
 @media (max-width: 480px) and (min-width: 376px) {
   .gameContainer {
     padding: 0;
@@ -580,7 +580,7 @@
   }
   
   .tableCardsContainer {
-    transform: scale(0.9); /* Карты на столе меньше для iPhone */
+    transform: scale(1);
   }
   
   .tableCard {
@@ -602,12 +602,12 @@
     border-radius: 5px;
   }
   
-  /* Минимальные отступы для iPhone */
+  /* Компактные отступы */
   .cardsContainer {
     gap: 3px;
   }
   
-  /* Адаптивные стили кнопок для iPhone */
+  /* Компактные кнопки на узком экране */
   .takeCardFromTableButton {
     padding: 13px 20px;
     font-size: 15px;
@@ -625,7 +625,7 @@
   .cardCountButtonsContainer {
     gap: 10px;
     margin-top: 10px;
-    flex-direction: row; /* Горизонтально на iPhone */
+    flex-direction: row;
   }
 }
 
@@ -2146,7 +2146,7 @@
   }
 }
 
-/* Высокие экраны (например, iPhone X и выше) */
+/* Высокие узкие экраны */
 @media (max-width: 480px) and (min-height: 800px) {
   /* .tableBg удален - используем .rectangularTable */
   

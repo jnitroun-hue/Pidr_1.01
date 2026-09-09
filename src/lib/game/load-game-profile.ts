@@ -1,5 +1,6 @@
 import { getApiHeaders } from '@/lib/api-headers';
 import { fetchPremiumStatus, isPremiumUsable } from '@/lib/premium/refresh-premium';
+import { resolvePremiumFlame, type PremiumFlameColorId } from '@/lib/premium/flame';
 
 export interface GameUserProfile {
   coins: number;
@@ -21,6 +22,7 @@ export interface GameUserProfile {
   secondPlaces: number;
   thirdPlaces: number;
   bestWinStreak: number;
+  flameColor?: PremiumFlameColorId;
 }
 
 function resolvePremium(
@@ -99,6 +101,10 @@ export async function loadGameUserProfile(): Promise<GameUserProfile | null> {
       secondPlaces: Number(user.secondPlaces) || 0,
       thirdPlaces: Number(user.thirdPlaces) || 0,
       bestWinStreak: Number(user.best_win_streak) || 0,
+      flameColor:
+        isPremium && typeof user.premium_flame === 'string' && user.premium_flame
+          ? resolvePremiumFlame(user.premium_flame)
+          : undefined,
     };
   } catch {
     return null;

@@ -45,6 +45,12 @@
   /* Анимации */
   --transition-fast: 0.2s ease;
   --transition-normal: 0.3s ease;
+  --tg-safe-area-top: env(safe-area-inset-top, 0px);
+  --tg-content-safe-area-top: 0px;
+  --app-chrome-top: calc(
+    12px + var(--tg-safe-area-top, 0px) + var(--tg-content-safe-area-top, 0px)
+  );
+  --app-viewport-height: 100dvh;
   --menu-bg: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
   --menu-bg-accent: radial-gradient(circle at 80% 10%, rgba(99,102,241,0.18), transparent 42%);
   --menu-card-bg: linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);
@@ -78,37 +84,26 @@ body {
   background-color: var(--background-color);
   color: var(--menu-text);
   line-height: 1.6;
-  padding-bottom: 70px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  min-height: var(--app-viewport-height, 100dvh);
+  width: 100%;
+  overflow-x: hidden;
+  overscroll-behavior-y: none;
 }
 
 .app-root {
-  min-height: 100vh;
-  min-height: 100dvh;
+  min-height: var(--app-viewport-height, 100dvh);
+  width: 100%;
   background: var(--menu-bg-accent), var(--menu-bg);
-}
-
-:root {
-  --tg-safe-area-top: env(safe-area-inset-top, 0px);
-  --tg-content-safe-area-top: 0px;
-  --app-chrome-top: 20px;
 }
 
 html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
-}
-
-html.telegram-mini-app {
-  --app-chrome-top: calc(
-    12px + var(--tg-safe-area-top, 0px) + var(--tg-content-safe-area-top, 0px)
-  );
+  width: 100%;
+  height: var(--app-viewport-height, 100dvh);
+  overflow-x: hidden;
   overscroll-behavior-y: none;
-}
-
-html.telegram-mini-app.telegram-desktop {
-  --app-chrome-top: calc(
-    16px + var(--tg-safe-area-top, 0px) + var(--tg-content-safe-area-top, 0px)
-  );
 }
 
 /* Telegram Mini App — на десктопе/web растягиваем на весь iframe */
@@ -122,7 +117,7 @@ html.telegram-mini-app body {
 }
 
 html.telegram-mini-app body {
-  padding-bottom: 0;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 html.telegram-mini-app .app-root {

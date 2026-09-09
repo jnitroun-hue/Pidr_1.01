@@ -7,7 +7,7 @@ import {
   clearPendingReferralCookie,
 } from '@/lib/referral/pending-referral-server';
 import { PENDING_REFERRAL_COOKIE } from '@/lib/referral/constants';
-import { setAuthCookies } from '@/lib/auth/auth-cookies';
+import { setAuthCookies, resolveAuthCookieOptions } from '@/lib/auth/auth-cookies';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -198,21 +198,9 @@ export async function POST(request: NextRequest) {
       token
     });
 
-    // ✅ ИСПРАВЛЕНО: Устанавливаем cookie с правильными настройками
-    const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
-    const cookieSettings = {
-      httpOnly: true,
-      secure: isProduction, // На Vercel всегда true
-      sameSite: 'lax' as const,
-      maxAge: 30 * 24 * 60 * 60, // 30 дней
-      path: '/'
-    };
+    const cookieSettings = resolveAuthCookieOptions();
     
-    setAuthCookies(response, token, {
-      sameSite: cookieSettings.sameSite,
-      secure: cookieSettings.secure,
-      maxAge: cookieSettings.maxAge,
-    });
+    setAuthCookies(response, token, cookieSettings);
 
     if (pendingReferral && refResult?.success) {
       clearPendingReferralCookie(response);
@@ -222,8 +210,6 @@ export async function POST(request: NextRequest) {
       hasToken: !!token,
       tokenLength: token.length,
       settings: cookieSettings,
-      isProduction,
-      vercel: process.env.VERCEL
     });
 
     return response;

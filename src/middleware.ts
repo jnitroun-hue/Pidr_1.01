@@ -6,21 +6,31 @@ import {
 } from '@/lib/referral/constants';
 import { normalizeReferralCode } from '@/lib/referral/referral-links';
 
-// Публичные пути (НЕ требуют авторизации)
-const publicPaths: string[] = [
-  '/',           // Главная страница (меню)
-  '/auth',       // Страница авторизации
-  '/game',       // Игра (single player работает без авторизации)
-  '/rules',      // Правила
-  '/shop',       // Магазин
-  '/shop/premium', // Premium Shop
-  '/friends',    // Друзья
-  '/rating',     // Рейтинг
-  '/settings',   // Настройки
-  '/multiplayer', // Мультиплеер
-];
+function canonicalHostRedirect(req: NextRequest): NextResponse | null {
+  const raw = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL;
+  if (!raw) return null;
+  let canonical: URL;
+  try {
+    canonical = new URL(raw);
+  } catch {
+    return null;
+  }
+  const requestHost = (req.headers.get('host') || '').split(':')[0].toLowerCase();
+  const targetHost = canonical.hostname.toLowerCase();
+  if (!requestHost || !targetHost) return null;
+  if (requestHost === 'localhost' || requestHost.endsWith('.vercel.app')) return null;
+  if (requestHost === targetHost) return null;
+  const requestApex = requestHost.replace(/^www\./, '');
+  const targetApex = targetHost.replace(/^www\./, '');
+  if (requestApex !== targetApex) return null;
+  const dest = new URL(req.nextUrl.pathname + req.nextUrl.search, canonical.origin);
+  return NextResponse.redirect(dest, 308);
+}
 
 export function middleware(req: NextRequest) {
+  const hostRedirect = canonicalHostRedirect(req);
+  if (hostRedirect) return hostRedirect;
+
   const refRaw = req.nextUrl.searchParams.get(REFERRAL_QUERY_PARAM)
     || req.nextUrl.searchParams.get('invite');
   const refCode = normalizeReferralCode(refRaw);
@@ -31,7 +41,7 @@ export function middleware(req: NextRequest) {
     res.cookies.set(PENDING_REFERRAL_COOKIE, refCode, {
       path: '/',
       maxAge: PENDING_REFERRAL_MAX_AGE_SEC,
-      sameSite: 'lax',
+      sameSite: isProduction ? 'none' : 'lax',
       secure: isProduction,
       httpOnly: false,
     });
@@ -43,14 +53,6 @@ export function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     */
     '/((?!api|_next/static|_next/image|favicon.ico|.*\\.png$|.*\\.jpg$|.*\\.jpeg$|.*\\.gif$|.*\\.svg$).*)',
   ],
-}
+};

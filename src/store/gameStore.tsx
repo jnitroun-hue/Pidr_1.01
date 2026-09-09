@@ -6,7 +6,7 @@ import { getApiHeaders, telegramUsernameHeader } from '../lib/api-headers'
 import { deckEntriesToNftMap, type NftDeckVisualMap } from '../lib/game/cardAssets'
 import { warmupNftDeck, writeCachedNftDeck } from '../lib/game/preload-card-assets'
 import { BOT_TIMING } from '../lib/game/botTiming'
-import { calculateRatingRewards, calculatePlayerPositions, isWinningPosition } from '../lib/rating/ratingSystem'
+import { calculateRatingRewards, calculatePlayerPositions, isWinningPosition, applyPremiumRatingMultiplier } from '../lib/rating/ratingSystem'
 import { RoomManager } from '../lib/multiplayer/room-manager'
 import type { TelegramWebAppUser } from '../types/telegram-webapp'
 import { playTakeSfx, disableTableSfx } from '../lib/audio/game-sfx'
@@ -144,8 +144,8 @@ async function persistRankedGameToDb(params: {
           return {
             userId: p.dbUserId ?? p.id,
             position: place,
-            ratingChange: rewards.ratingChange,
-            coinsChange: rewards.coinsEarned,
+            ratingChange: 0,
+            coinsChange: 0,
             isWinner: rewards.isWinner,
           };
         }),
@@ -412,7 +412,7 @@ interface GameState {
   } | null
   
   // Действия игры
-  startGame: (mode: 'single' | 'multiplayer', playersCount?: number, multiplayerConfig?: MultiplayerConfig | null, userInfo?: { avatar?: string; username?: string; isPremium?: boolean }) => Promise<void>
+  startGame: (mode: 'single' | 'multiplayer', playersCount?: number, multiplayerConfig?: MultiplayerConfig | null, userInfo?: { avatar?: string; username?: string; isPremium?: boolean; flameColor?: PremiumFlameColorId }) => Promise<void>
   endGame: () => void
   playCard: (cardId: string) => void
   drawCard: () => void
@@ -949,8 +949,9 @@ export const useGameStore = create<GameState>()(
             isPremium: roomPlayer
               ? Boolean(roomPlayer.isPremium) || (Boolean(roomPlayer.isUser) && userIsPremium)
               : !playerInfo.isBot && userIsPremium,
-            flameColor: roomPlayer?.flameColor
-              || ((roomPlayer ? Boolean(roomPlayer.isUser) : !playerInfo.isBot) ? readStoredFlameColor() : undefined),
+            flameColor: (roomPlayer ? Boolean(roomPlayer.isUser) : !playerInfo.isBot)
+              ? (userInfo?.flameColor ?? roomPlayer?.flameColor ?? readStoredFlameColor())
+              : roomPlayer?.flameColor,
             difficulty: playerInfo.difficulty,
             dbUserId: roomPlayer?.dbUserId ?? undefined,
             publicUserId: roomPlayer ? String(roomPlayer.id) : undefined,
@@ -3680,7 +3681,10 @@ export const useGameStore = create<GameState>()(
               name: player.name,
               avatar: player.avatar,
               coinsEarned: rewards.coinsEarned,
-              ratingChange: rewards.ratingChange,
+              ratingChange: applyPremiumRatingMultiplier(
+                rewards.ratingChange,
+                Boolean((player.isUser || player.id === currentUserTelegramId) && player.isPremium)
+              ),
               isUser: player.isUser || player.id === currentUserTelegramId
             };
           });
@@ -3723,7 +3727,9 @@ export const useGameStore = create<GameState>()(
                 const requestBody = {
                   amount: userResult.coinsEarned,
                   source: 'game_loss',
-                  ratingChange: get().isRankedGame ? (userResult.ratingChange || -25) : 0,
+                  ratingChange: get().isRankedGame
+                    ? (getPlaceRewards(userResult.place, results.length, true).ratingChange || -25)
+                    : 0,
                   updateStats: {
                     gamesPlayed: true,
                     wins: false,
@@ -3798,7 +3804,9 @@ export const useGameStore = create<GameState>()(
                   body: JSON.stringify({
                     amount: userResult.coinsEarned,
                     source: `game_finish_place_${userResult.place}`,
-                    ratingChange: get().isRankedGame ? (userResult.ratingChange || 0) : 0,
+                    ratingChange: get().isRankedGame
+                      ? getPlaceRewards(userResult.place, results.length, true).ratingChange
+                      : 0,
                     updateStats: {
                       gamesPlayed: true,
                       wins: userResult.place >= 1 && userResult.place <= 3,

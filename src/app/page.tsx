@@ -185,6 +185,7 @@ function HomeWithParams() {
             credentials: 'include',
             cache: 'no-store',
             headers: getApiHeaders(),
+            signal: AbortSignal.timeout(8000),
           });
 
           console.log('📥 [Браузер] Ответ от /api/auth:', {
@@ -263,6 +264,7 @@ function HomeWithParams() {
                 console.log('📝 Повторная проверка не помогла - редирект на страницу входа');
                 setCheckingAuth(false);
                 setIsBrowser(true);
+                setLoading(false);
                 initialized.current = true;
                 router.push(getPendingReferralFromClient() ? '/auth/register' : '/auth/login');
               }, 2000); // Ждем 2 секунды перед повторной попыткой
@@ -289,6 +291,7 @@ function HomeWithParams() {
         clearHomeSessionCache();
         setUser(null);
         setShowMainMenu(false);
+        setLoading(false);
 
         const authPath = pendingReferral ? '/auth/register' : '/auth/login';
         router.push(`${authPath}${launchQuery}`);

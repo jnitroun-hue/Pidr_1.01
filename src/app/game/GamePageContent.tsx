@@ -10,6 +10,7 @@ import PenaltyDeckModal from '../../components/PenaltyDeckModal';
 import TutorialModal from '../../components/TutorialModal';
 import PremiumAvatarFire from '../../components/PremiumAvatarFire';
 import {
+  DEFAULT_PREMIUM_FLAME,
   PREMIUM_FLAME_CHANGED_EVENT,
   readStoredFlameColor,
   resolvePremiumFlame,
@@ -26,6 +27,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { WifiOff } from 'lucide-react';
 import React from 'react';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
+import { applyPremiumRatingMultiplier } from '@/lib/rating/ratingSystem';
 import { getPlaceRewards, useGameStore } from '@/store/gameStore';
 import { AIPlayer, AIDifficulty } from '@/lib/game/ai-player';
 import GameChat from '@/components/GameChat';
@@ -429,6 +431,10 @@ function GamePageContentComponent({
 
   const applyGameProfile = useCallback(
     (profile: NonNullable<Awaited<ReturnType<typeof loadGameUserProfile>>>) => {
+      const storedFlame = readStoredFlameColor();
+      const flameColor = profile.isPremium
+        ? (storedFlame !== DEFAULT_PREMIUM_FLAME ? storedFlame : profile.flameColor ?? storedFlame)
+        : undefined;
       setUserData({
         coins: profile.coins,
         avatar: profile.avatar,
@@ -436,13 +442,13 @@ function GamePageContentComponent({
         telegramId: profile.telegramId,
         dbUserId: profile.userId,
         isPremium: profile.isPremium,
-        flameColor: profile.isPremium ? readStoredFlameColor() : undefined,
+        flameColor,
       });
       syncLocalUserProfile({
         username: profile.username,
         avatar: profile.avatar,
         isPremium: profile.isPremium,
-        flameColor: profile.isPremium ? readStoredFlameColor() : undefined,
+        flameColor,
       });
       if (profile.isPremium) syncLocalUserPremium(true);
     },
@@ -1581,11 +1587,8 @@ function GamePageContentComponent({
     isSmallMobile: false,
     isVerySmallMobile: false,
     isLandscape: false,
-    isIPhone: false,
-    isAndroid: false,
     viewportWidth: 0,
     viewportHeight: 0,
-    safeArea: { top: 0, bottom: 0, left: 0, right: 0 }
   });
   
   // Принудительное обновление позиций при изменении экрана
@@ -1599,37 +1602,17 @@ function GamePageContentComponent({
       const vh = Math.min(window.innerHeight, document.documentElement.clientHeight);
       const isMobile = vw <= 768;
       const isSmallMobile = vw <= 480;
-      const isVerySmallMobile = vw <= 375; // iPhone SE и подобные
+      const isVerySmallMobile = vw <= 375;
       const isLandscape = vw > vh;
-      
-      // Особая проверка для iPhone
-      const isIPhone = typeof navigator !== 'undefined' && /iPhone|iPod/.test(navigator.userAgent);
-      const isAndroid = typeof navigator !== 'undefined' && /Android/.test(navigator.userAgent);
-      
-      // Определяем safe areas для iOS и Android
-      const safeAreaTop = 
-        window.screen && window.screen.height && window.innerHeight < window.screen.height 
-          ? Math.max(0, (window.screen.height - window.innerHeight) / 2) 
-          : 0;
-      
-      const newScreenInfo = {
+
+      setScreenInfo({
         isMobile,
         isSmallMobile,
         isVerySmallMobile,
         isLandscape,
-        isIPhone,
-        isAndroid,
         viewportWidth: vw,
         viewportHeight: vh,
-        safeArea: {
-          top: safeAreaTop,
-          bottom: isVerySmallMobile ? 120 : isSmallMobile ? 100 : isMobile ? 80 : 60, // Больше места для iPhone
-          left: isIPhone ? 10 : 0, // Отступы по бокам для iPhone
-          right: isIPhone ? 10 : 0
-        }
-      };
-      
-      setScreenInfo(newScreenInfo);
+      });
       // Принудительно обновляем позиции игроков
       setPositionKey(prev => prev + 1);
     };
@@ -2301,7 +2284,8 @@ function GamePageContentComponent({
     if (!currentPlayerId) return;
     
     const currentPlayer = players.find(p => p.id === currentPlayerId);
-    if (!currentPlayer || !currentPlayer.isBot) return;
+    if (!currentPlayer || (!currentPlayer.isBot && !currentPlayer.isBotSubstitute)) return;
+    if (isMultiplayer && !isMpHost) return;
     
     // ✅ Бот спрашивает "Сколько карт?" у игроков с 1 картой
     if (playersWithOneCard.length > 0) {
@@ -2315,7 +2299,7 @@ function GamePageContentComponent({
         }
       }
     }
-  }, [playersWithOneCard, currentPlayerId, gameStage, players]);
+  }, [playersWithOneCard, currentPlayerId, gameStage, players, isMultiplayer, isMpHost]);
 
   // Объявить что у игрока последняя карта (ОБНОВЛЕННАЯ ЛОГИКА)
   const announceLastCard = () => {
@@ -2371,6 +2355,7 @@ function GamePageContentComponent({
         avatar: userData.avatar,
         username: userData.username,
         isPremium: userData.isPremium,
+        flameColor: userData.flameColor,
       };
 
       if (isMultiplayer && multiplayerData) {
@@ -4289,7 +4274,10 @@ function GamePageContentComponent({
           avatar={winnerModalData.avatar}
           isCurrentUser={winnerModalData.isCurrentUser}
           coinsEarned={getPlaceRewards(winnerModalData.place, players.length, isRankedGame).coinsEarned}
-          ratingChange={getPlaceRewards(winnerModalData.place, players.length, isRankedGame).ratingChange}
+          ratingChange={applyPremiumRatingMultiplier(
+            getPlaceRewards(winnerModalData.place, players.length, isRankedGame).ratingChange,
+            Boolean(winnerModalData.isCurrentUser && userData?.isPremium)
+          )}
           isBotGame={!isMultiplayer}
           onClose={() => {
             useGameStore.setState({

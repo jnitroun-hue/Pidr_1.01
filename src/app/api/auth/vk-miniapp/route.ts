@@ -7,7 +7,7 @@ import {
   clearPendingReferralCookie,
 } from '@/lib/referral/pending-referral-server';
 import * as crypto from 'crypto';
-import { setAuthCookies } from '@/lib/auth/auth-cookies';
+import { setAuthCookies, resolveAuthCookieOptions } from '@/lib/auth/auth-cookies';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -223,11 +223,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Устанавливаем cookie с токеном
-    setAuthCookies(response, token, {
-      secure: true,
-      sameSite: 'none',
-      maxAge: 30 * 24 * 60 * 60,
-    });
+    setAuthCookies(response, token, resolveAuthCookieOptions({ sameSite: 'none', secure: true }));
 
     if (refResult?.success) {
       clearPendingReferralCookie(response);

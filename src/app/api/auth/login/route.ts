@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import * as bcrypt from 'bcryptjs';
 import { createSession } from '@/lib/auth/redis-session-manager';
-import { setAuthCookies } from '@/lib/auth/auth-cookies';
+import { setAuthCookies, resolveAuthCookieOptions } from '@/lib/auth/auth-cookies';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -127,41 +127,14 @@ export async function POST(request: NextRequest) {
     response.headers.set('Pragma', 'no-cache');
     response.headers.set('Expires', '0');
 
-    // ✅ Cookie настройки для веб-логина
-    // sameSite: 'lax' — стандарт для браузера, работает на Vercel
-    // secure: true — обязательно для production HTTPS
-    const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+    const cookieSettings = resolveAuthCookieOptions();
     
-    // Проверяем - это Telegram WebApp запрос? (cross-site iframe)
-    const userAgent = request.headers.get('user-agent') || '';
-    const isTelegramRequest = userAgent.includes('Telegram') || 
-                              !!request.headers.get('x-telegram-id');
-    
-    // Для Telegram WebApp нужен sameSite: 'none' (cross-site iframe)
-    // Для обычного браузера - sameSite: 'lax' (более безопасно и надежно)
-    const sameSiteValue: 'none' | 'lax' = isTelegramRequest ? 'none' : 'lax';
-    
-    const cookieSettings = {
-      httpOnly: true,
-      secure: isProduction, // true на Vercel (HTTPS), false на localhost
-      sameSite: sameSiteValue,
-      maxAge: 30 * 24 * 60 * 60, // 30 дней
-      path: '/'
-    };
-    
-    // ✅ Устанавливаем новый cookie (перезаписывает старый Telegram-токен)
-    setAuthCookies(response, token, {
-      sameSite: cookieSettings.sameSite,
-      secure: cookieSettings.secure,
-      maxAge: cookieSettings.maxAge,
-    });
+    setAuthCookies(response, token, cookieSettings);
     
     console.log('🍪 [Login] Cookie установлен:', {
       hasToken: !!token,
       tokenLength: token.length,
       settings: cookieSettings,
-      isProduction,
-      vercel: process.env.VERCEL
     });
 
     return response;

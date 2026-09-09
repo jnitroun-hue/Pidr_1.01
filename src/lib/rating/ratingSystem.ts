@@ -1,6 +1,8 @@
 // 🏆 СИСТЕМА РЕЙТИНГА P.I.D.R.
 // Расчет опыта и монет в зависимости от места и количества игроков
 
+import { PREMIUM_RATING_MULTIPLIER } from '@/lib/premium/constants';
+
 export interface RatingReward {
   experience: number; // +/- опыт
   coins: number; // монеты (0 для проигравших)
@@ -22,6 +24,11 @@ const BASE_REWARDS_9_PLAYERS = {
   9: { experience: -30, coins: 0, isWinner: false }
 };
 
+export function applyPremiumRatingMultiplier(change: number, isPremium: boolean): number {
+  if (!isPremium || !Number.isFinite(change) || change <= 0) return change;
+  return change * PREMIUM_RATING_MULTIPLIER;
+}
+
 /**
  * Рассчитывает награды для игрока в зависимости от его места и общего количества игроков
  * @param position - место игрока (1 = лучший)
@@ -29,8 +36,8 @@ const BASE_REWARDS_9_PLAYERS = {
  * @param isRanked - рейтинговая игра или нет
  */
 export function calculateRatingRewards(
-  position: number, 
-  totalPlayers: number, 
+  position: number,
+  totalPlayers: number,
   isRanked: boolean = true
 ): RatingReward {
   

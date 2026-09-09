@@ -71,20 +71,41 @@ export async function GET(req: NextRequest) {
 
     await syncPremiumFlag(Number(dbUserId));
 
-    const { data: freshUser } = await supabaseAdmin
+    let freshUser: {
+      is_premium?: boolean;
+      premium_expires_at?: string | null;
+      menu_theme?: string | null;
+      premium_flame?: string | null;
+    } | null = null;
+
+    const withFlame = await supabaseAdmin
       .from('_pidr_users')
-      .select('is_premium, premium_expires_at, menu_theme')
+      .select('is_premium, premium_expires_at, menu_theme, premium_flame')
       .eq('id', dbUserId)
       .single();
+    if (withFlame.error) {
+      const fallback = await supabaseAdmin
+        .from('_pidr_users')
+        .select('is_premium, premium_expires_at, menu_theme')
+        .eq('id', dbUserId)
+        .single();
+      freshUser = fallback.data;
+    } else {
+      freshUser = withFlame.data;
+    }
 
     const premiumExpiresAt = freshUser?.premium_expires_at ?? user.premium_expires_at ?? null;
     const isPremiumFlag =
       freshUser?.is_premium ??
       (premiumExpiresAt ? new Date(premiumExpiresAt).getTime() > Date.now() : false);
     const menuTheme =
-      (freshUser as { menu_theme?: string | null } | null)?.menu_theme ??
+      freshUser?.menu_theme ??
       (user as { menu_theme?: string | null }).menu_theme ??
       'slate';
+    const premiumFlame =
+      freshUser?.premium_flame ??
+      (user as { premium_flame?: string | null }).premium_flame ??
+      null;
 
     // Обновляем last_seen
     // ✅ ИСПРАВЛЕНО: Используем supabaseAdmin для обхода RLS
@@ -138,6 +159,7 @@ export async function GET(req: NextRequest) {
         is_premium: isPremiumFlag,
         premium_expires_at: premiumExpiresAt,
         menu_theme: menuTheme,
+        premium_flame: premiumFlame,
       }
     });
   } catch (error: unknown) {

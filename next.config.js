@@ -129,7 +129,11 @@ const nextConfig = {
           {
             key: 'Content-Security-Policy',
             value:
-              "frame-ancestors 'self' https://vk.com https://*.vk.com https://m.vk.com https://web.telegram.org https://*.telegram.org;",
+              "frame-ancestors 'self' https://vk.com https://*.vk.com https://m.vk.com https://web.telegram.org https://*.telegram.org https://telegram.org;",
+          },
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=63072000; includeSubDomains; preload',
           },
         ],
       },

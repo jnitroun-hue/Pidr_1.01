@@ -5,6 +5,7 @@ import { Flame, Lock } from 'lucide-react';
 import { getApiHeaders } from '@/lib/api-headers';
 import PremiumAvatarFire from '@/components/PremiumAvatarFire';
 import {
+  DEFAULT_PREMIUM_FLAME,
   PREMIUM_FLAME_COLORS,
   readStoredFlameColor,
   resolvePremiumFlame,
@@ -40,11 +41,32 @@ export default function PremiumFlamePicker({
       .then((r) => r.json())
       .then((data) => {
         if (data?.isPremium) setPremiumOk(true);
-        if (data?.success && data.color) {
-          const next = resolvePremiumFlame(data.color);
-          setColor(next);
-          storeFlameColor(next);
+        if (!data?.success) return;
+        const local = readStoredFlameColor();
+        if (data.persisted === false) {
+          if (local !== DEFAULT_PREMIUM_FLAME) {
+            void fetch('/api/user/premium-flame', {
+              method: 'POST',
+              credentials: 'include',
+              headers: { ...getApiHeaders(), 'Content-Type': 'application/json' },
+              body: JSON.stringify({ color: local }),
+            }).catch(() => {});
+          }
+          return;
         }
+        const server = resolvePremiumFlame(data.color);
+        if (server === DEFAULT_PREMIUM_FLAME && local !== DEFAULT_PREMIUM_FLAME) {
+          setColor(local);
+          void fetch('/api/user/premium-flame', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { ...getApiHeaders(), 'Content-Type': 'application/json' },
+            body: JSON.stringify({ color: local }),
+          }).catch(() => {});
+          return;
+        }
+        setColor(server);
+        storeFlameColor(server);
       })
       .catch(() => {});
   }, []);

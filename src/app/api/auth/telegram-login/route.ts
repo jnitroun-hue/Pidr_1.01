@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
-import { setAuthCookies } from '@/lib/auth/auth-cookies';
+import { setAuthCookies, resolveAuthCookieOptions, authCookieBase } from '@/lib/auth/auth-cookies';
 import { applyPendingReferralForNewUser, clearPendingReferralCookie } from '@/lib/referral/pending-referral-server';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
@@ -182,13 +182,12 @@ export async function POST(request: NextRequest) {
       }
     });
 
+    const cookieSettings = resolveAuthCookieOptions();
+
     // Устанавливаем pidr_session cookie
     response.cookies.set('pidr_session', sessionJson, {
+      ...authCookieBase(cookieSettings),
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax', // Изменено с 'none' на 'lax' для лучшей совместимости
-      maxAge: 60 * 60 * 24 * 30,
-      path: '/'
     });
 
     // ТАКЖЕ устанавливаем auth_token (JWT) для совместимости с /api/auth
@@ -205,11 +204,7 @@ export async function POST(request: NextRequest) {
         { expiresIn: '30d' }
       );
 
-      setAuthCookies(response, token, {
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 30,
-      });
+      setAuthCookies(response, token, cookieSettings);
 
       console.log('✅ [Telegram Login] Cookies установлены: pidr_session + auth_token');
     } else {

@@ -11,7 +11,7 @@ import {
 } from '@/lib/referral/pending-referral-server';
 import { PENDING_REFERRAL_COOKIE } from '@/lib/referral/constants';
 import { normalizeUserStats } from '@/lib/user/normalize-user-stats';
-import { authCookieBase, clearAuthCookies, setAuthCookies, SIGNED_IN_COOKIE } from '@/lib/auth/auth-cookies';
+import { authCookieBase, clearAuthCookies, setAuthCookies, SIGNED_IN_COOKIE, resolveAuthCookieOptions } from '@/lib/auth/auth-cookies';
 
 // ✅ Явная конфигурация runtime для Next.js 15
 export const runtime = 'nodejs';
@@ -125,15 +125,8 @@ export async function GET(req: NextRequest) {
     // ✅ ИСПРАВЛЕНО: Дефолт 'web' вместо 'telegram', чтобы веб-пользователи не блокировались
     const authMethod = payload?.authMethod || payload?.authSource || (payload?.telegramId ? 'telegram' : 'web');
     
-    // Если это Telegram авторизация - проверяем header
-    // Если это веб-версия - пропускаем проверку header
-    if (authMethod === 'telegram' && !telegramIdHeader) {
-      console.log('⚠️ x-telegram-id header отсутствует для Telegram авторизации, возвращаем 401');
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Требуется авторизация через Telegram' 
-      }, { status: 401 });
-    }
+    // Валидный JWT в cookie достаточно для браузера на купленном домене.
+    // x-telegram-id обязателен только в Mini App; Telegram Login Widget его не шлёт.
 
     // ✅ ИСПРАВЛЕНО: userId из токена может быть как id из БД, так и telegram_id
     // Для веб-версии проверяем только по id из БД
@@ -722,33 +715,7 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    // Устанавливаем HTTP-only cookie с правильными настройками
-    // ✅ ИСПРАВЛЕНО: Определяем настройки в зависимости от окружения
-    const isProduction = process.env.NODE_ENV === 'production';
-    const isTelegramWebApp = req.headers.get('user-agent')?.includes('Telegram') || 
-                            req.headers.get('x-telegram-id') !== null;
-    
-    const cookieSettings = {
-      httpOnly: true,
-      secure: isProduction, // В production всегда true, в dev может быть false для localhost
-      sameSite: (isTelegramWebApp ? 'none' : 'lax') as 'none' | 'lax', // Для Telegram WebApp 'none', для браузера 'lax'
-      path: '/',
-      maxAge: 30 * 24 * 60 * 60, // 30 дней
-      domain: undefined // Автоопределение домена
-    };
-    
-    console.log('🍪 Cookie настройки:', {
-      ...cookieSettings,
-      isProduction,
-      isTelegramWebApp,
-      userAgent: req.headers.get('user-agent')?.substring(0, 50)
-    });
-    
-    setAuthCookies(response, token, {
-      sameSite: cookieSettings.sameSite,
-      secure: cookieSettings.secure,
-      maxAge: cookieSettings.maxAge,
-    });
+    setAuthCookies(response, token, resolveAuthCookieOptions());
 
     if (isNewUser && (referrerId || req.cookies.get(PENDING_REFERRAL_COOKIE)?.value)) {
       clearPendingReferralCookie(response);
@@ -756,7 +723,6 @@ export async function POST(req: NextRequest) {
 
     console.log('✅ JWT токен создан и установлен в cookie');
     console.log('🔑 Токен (первые 50 символов):', token.substring(0, 50) + '...');
-    console.log('🍪 Cookie настройки:', cookieSettings);
     console.log('📊 Возвращаем статистику пользователя:', {
       gamesPlayed: user.games_played,
       wins: user.wins,

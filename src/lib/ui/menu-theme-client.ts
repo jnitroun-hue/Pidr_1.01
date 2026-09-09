@@ -70,7 +70,7 @@ export function themedPageShellStyle(extra?: CSSProperties): CSSProperties {
     transition: 'background 0.35s ease, color 0.25s ease',
     overflowX: 'hidden',
     WebkitTextSizeAdjust: '100%',
-    // shorthand `padding` must not wipe Telegram/iOS chrome offset
+    // shorthand `padding` must not wipe Telegram chrome offset
     paddingTop: paddingTop ?? CHROME_PAD_TOP,
     paddingLeft: paddingLeft ?? shorthand ?? CHROME_PAD_INLINE,
     paddingRight: paddingRight ?? shorthand ?? CHROME_PAD_INLINE_RIGHT,

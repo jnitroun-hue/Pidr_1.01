@@ -252,7 +252,14 @@ export async function POST(req: NextRequest) {
       return noStoreJson({
         success: true,
         newBalance,
-        added: amount
+        added: amount,
+        ratingChange:
+          ratingChange && typeof ratingChange === 'number'
+            ? (isPremiumActiveFromUser(userData) && ratingChange > 0
+                ? ratingChange * PREMIUM_RATING_MULTIPLIER
+                : ratingChange)
+            : 0,
+        ratingAfter: typeof updateData.rating === 'number' ? updateData.rating : undefined,
       });
     } finally {
       if (redis && lockAcquired) {
