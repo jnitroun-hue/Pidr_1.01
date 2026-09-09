@@ -41,8 +41,13 @@ export function classifyTonConnectError(error: unknown): Exclude<TonSendOutcome,
     typeof error === 'object' && error !== null && 'code' in error
       ? String((error as { code?: unknown }).code || '')
       : '';
-  if (/reject|cancel|declin|user.?denied|user.?reject/i.test(`${code} ${message}`)) {
-    return { status: 'cancelled', message };
+  const haystack = `${code} ${message}`.trim();
+  if (
+    !haystack ||
+    haystack === 'undefined' ||
+    /reject|cancel|declin|user.?denied|user.?reject|closed|abort|dismiss|отмен/i.test(haystack)
+  ) {
+    return { status: 'cancelled', message: message || 'cancelled' };
   }
   return { status: 'ambiguous', message };
 }
@@ -68,7 +73,7 @@ export async function sendGramViaTonConnect(params: {
     }
 
     const result = await tonConnectUI.sendTransaction({
-      validUntil: Math.floor(Date.now() / 1000) + 600,
+      validUntil: Math.floor(Date.now() / 1000) + 180,
       messages: [
         {
           address: transferAddress,

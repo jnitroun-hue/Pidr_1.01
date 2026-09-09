@@ -186,7 +186,7 @@ export default function WalletQuickConnect({ className = '', variant = 'default'
   const rootClass = `${styles.root} ${variant === 'embedded' ? styles.rootEmbedded : ''} ${className}`.trim();
 
   return (
-    <div className={rootClass}>
+    <div className={rootClass} id="profile-wallet-connect">
       {variant === 'default' && (
         <div className={styles.header}>
           <div>

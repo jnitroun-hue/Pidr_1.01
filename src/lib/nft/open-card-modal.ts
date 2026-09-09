@@ -10,6 +10,8 @@ export interface NftCardModalPayload {
   created_at?: string;
   is_listed?: boolean;
   is_in_deck?: boolean;
+  /** Праздничное раскрытие после генерации — без мигания галереи. */
+  festive?: boolean;
 }
 
 export const NFT_OPEN_CARD_MODAL_EVENT = 'nft-open-card-modal';

@@ -23,7 +23,7 @@ import { buildReferralLink } from '@/lib/referral/referral-links';
 import { shareReferralInvite } from '@/lib/share/share-referral';
 import UserAvatarBadge from '@/components/UserAvatarBadge';
 import AuthMethodBadge from '@/components/AuthMethodBadge';
-import { themedPageShellStyle } from '@/lib/ui/menu-theme-client';
+import { themedPageShellStyle, themedFixedBackStyle } from '@/lib/ui/menu-theme-client';
 import AddToDeckModal from '@/components/AddToDeckModal';
 import NftCardFace from '@/components/NftCardFace';
 import { formatNftCardName, getNftRarityLabel } from '@/lib/nft/card-display';
@@ -395,6 +395,14 @@ export default function ProfilePage() {
 
   const [activeSection, setActiveSection] = useState('stats'); // 'stats', 'achievements', 'wallet'
   const [showModal, setShowModal] = useState<'skins' | 'effects' | 'bonuses' | 'frames' | 'deck' | 'wallet' | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('wallet') === '1' || params.get('open') === 'wallet') {
+      setShowModal('wallet');
+    }
+  }, []);
   const [dailyBonusModal, setDailyBonusModal] = useState<{
     open: boolean;
     wonAmount: number;
@@ -1237,7 +1245,7 @@ export default function ProfilePage() {
   return (
     <div style={themedPageShellStyle({
       padding: '20px',
-      paddingTop: '80px',
+      paddingTop: 'calc(var(--app-chrome-top, 12px) + 56px)',
       paddingBottom: '40px',
     })}>
       {/* Кнопка назад */}
@@ -1252,22 +1260,20 @@ export default function ProfilePage() {
           router.push('/');
         }}
         style={{
-          position: 'fixed',
-          top: '20px',
-          left: '20px',
-          background: 'rgba(239, 68, 68, 0.2)',
-          border: '2px solid rgba(239, 68, 68, 0.3)',
-          borderRadius: '12px',
-          padding: '12px',
-          color: '#ef4444',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          fontSize: '16px',
-          fontWeight: '600',
-          zIndex: 100,
-          backdropFilter: 'blur(10px)'
+          ...themedFixedBackStyle({
+            background: 'rgba(239, 68, 68, 0.2)',
+            border: '2px solid rgba(239, 68, 68, 0.3)',
+            borderRadius: '12px',
+            padding: '12px',
+            color: '#ef4444',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: '16px',
+            fontWeight: '600',
+            backdropFilter: 'blur(10px)',
+          }),
         }}
       >
         <ArrowLeft size={20} />

@@ -47,12 +47,44 @@ export function applyMenuThemeToDocument(themeId: MenuThemeId | string | null | 
   storeMenuTheme(theme.id);
 }
 
+const CHROME_PAD_TOP = 'calc(var(--app-chrome-top, 12px) + 8px)';
+const CHROME_PAD_INLINE = 'max(12px, env(safe-area-inset-left, 0px))';
+const CHROME_PAD_INLINE_RIGHT = 'max(12px, env(safe-area-inset-right, 0px))';
+const CHROME_PAD_BOTTOM = 'max(20px, env(safe-area-inset-bottom, 0px))';
+
 export function themedPageShellStyle(extra?: CSSProperties): CSSProperties {
+  const {
+    padding,
+    paddingTop,
+    paddingRight,
+    paddingBottom,
+    paddingLeft,
+    ...rest
+  } = extra ?? {};
+  const shorthand = typeof padding === 'string' || typeof padding === 'number' ? padding : undefined;
+
   return {
-    minHeight: '100vh',
+    minHeight: '100dvh',
     background: 'var(--menu-bg-accent), var(--menu-bg)',
     color: 'var(--menu-text)',
     transition: 'background 0.35s ease, color 0.25s ease',
+    overflowX: 'hidden',
+    WebkitTextSizeAdjust: '100%',
+    // shorthand `padding` must not wipe Telegram/iOS chrome offset
+    paddingTop: paddingTop ?? CHROME_PAD_TOP,
+    paddingLeft: paddingLeft ?? shorthand ?? CHROME_PAD_INLINE,
+    paddingRight: paddingRight ?? shorthand ?? CHROME_PAD_INLINE_RIGHT,
+    paddingBottom: paddingBottom ?? shorthand ?? CHROME_PAD_BOTTOM,
+    ...rest,
+  };
+}
+
+export function themedFixedBackStyle(extra?: CSSProperties): CSSProperties {
+  return {
+    position: 'fixed',
+    top: 'calc(var(--app-chrome-top, 12px) + 4px)',
+    left: 'max(12px, env(safe-area-inset-left, 0px))',
+    zIndex: 100,
     ...extra,
   };
 }

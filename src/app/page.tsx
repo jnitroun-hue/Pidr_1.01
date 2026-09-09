@@ -10,7 +10,7 @@ import { useLanguage } from '../components/LanguageSwitcher';
 import RoomInviteModal from '../components/RoomInviteModal';
 import BurgerMenu from '../components/BurgerMenu';
 import { motion } from 'framer-motion';
-import { Menu, X } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { getApiHeaders, sanitizeHttpHeaderValue } from '@/lib/api-headers';
 import {
   captureReferralFromCurrentUrl,
@@ -59,8 +59,7 @@ function HomeWithParams() {
   const [isBrowser, setIsBrowser] = useState(false); // ✅ НОВОЕ: Определяем браузер vs mini app
   const [checkingAuth, setCheckingAuth] = useState(false); // ✅ Проверка авторизации в браузере
   const [retryCount, setRetryCount] = useState(0); // ✅ НОВОЕ: Счетчик попыток
-  const [leftMenuOpen, setLeftMenuOpen] = useState(false); // ✅ Бургер-меню слева
-  const [rightMenuOpen, setRightMenuOpen] = useState(false); // ✅ Бургер-меню справа
+  const [menuOpen, setMenuOpen] = useState(false);
   const initialized = useRef(false); // ✅ useRef - НЕ СБРАСЫВАЕТСЯ при рендере
   const { user: telegramUser, isReady } = useTelegram();
   const { language } = useLanguage();
@@ -808,58 +807,26 @@ function HomeWithParams() {
   if (user && showMainMenu) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 relative">
-        {/* Бургер-меню */}
-        <BurgerMenu 
-          isOpen={leftMenuOpen} 
-          onClose={() => setLeftMenuOpen(false)} 
-          side="left" 
+        <BurgerMenu
+          isOpen={menuOpen}
+          onClose={() => setMenuOpen(false)}
+          side="right"
           user={user}
         />
-        <BurgerMenu 
-          isOpen={rightMenuOpen} 
-          onClose={() => setRightMenuOpen(false)} 
-          side="right" 
-          user={user}
-        />
-        
-        {/* Кнопки бургер-меню */}
-        <motion.button
-          initial={{ x: -20, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          onClick={() => setLeftMenuOpen(true)}
-          className="home-chrome-btn home-chrome-btn-left"
-          style={{
-            position: 'fixed',
-            top: 'var(--app-chrome-top)',
-            left: '20px',
-            zIndex: 1000,
-            background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
-            border: '2px solid rgba(99, 102, 241, 0.3)',
-            borderRadius: '12px',
-            padding: '12px',
-            cursor: 'pointer',
-            color: '#ffffff',
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
-          }}
-        >
-          <Menu size={24} />
-        </motion.button>
-        
+
         <motion.button
           initial={{ x: 20, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ delay: 0.5 }}
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
-          onClick={() => setRightMenuOpen(true)}
+          onClick={() => setMenuOpen(true)}
           className="home-chrome-btn home-chrome-btn-right"
+          aria-label={language === 'en' ? 'Open menu' : 'Открыть меню'}
           style={{
             position: 'fixed',
             top: 'var(--app-chrome-top)',
-            right: '20px',
+            right: 'max(12px, env(safe-area-inset-right, 0px))',
             zIndex: 1000,
             background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
             border: '2px solid rgba(99, 102, 241, 0.3)',

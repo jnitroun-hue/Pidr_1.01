@@ -4,16 +4,12 @@ import { motion } from 'framer-motion'
 import { Play, User, Book, Store, Users, Image, LogIn, UserPlus, Crown } from 'lucide-react'
 import { useGameStore } from '../store/gameStore'
 import { useTelegram } from '../hooks/useTelegram'
-import { useWalletStore } from '../store/walletStore'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import LanguageSwitcher, { useLanguage } from './LanguageSwitcher'
 import { useTranslations } from '../lib/i18n/translations'
 import OnlineIndicator from './OnlineIndicator'
 import CardDealerHero from './CardDealerHero'
-import { GRAM } from '@/lib/crypto/gram-brand'
-import { CRYPTO_TOKENS } from '@/lib/crypto/crypto-assets'
-import CryptoIcon from './CryptoIcon'
 import { getApiHeaders } from '@/lib/api-headers'
 import { parseJsonResponse } from '@/lib/api/parse-json-response'
 import { deckEntriesToNftMap } from '@/lib/game/cardAssets'
@@ -29,12 +25,6 @@ import {
   storeMenuTheme,
 } from '@/lib/ui/menu-theme-client'
 
-const tokens = [
-  { name: GRAM.name, symbol: GRAM.symbol, color: GRAM.color, icon: CRYPTO_TOKENS.GRAM.icon },
-  { name: 'SOLANA', symbol: 'SOL', color: CRYPTO_TOKENS.SOL.color, icon: CRYPTO_TOKENS.SOL.icon },
-  { name: 'ETHEREUM', symbol: 'ETH', color: CRYPTO_TOKENS.ETH.color, icon: CRYPTO_TOKENS.ETH.icon },
-]
-
 interface MainMenuProps {
   user?: any
   onLogout?: () => void
@@ -44,17 +34,9 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
   const { stats } = useGameStore()
   const { hapticFeedback } = useTelegram()
   const router = useRouter()
-  const [menuOpen, setMenuOpen] = useState(false)
   const [menuThemeId, setMenuThemeId] = useState<MenuThemeId>(DEFAULT_MENU_THEME)
   const { language } = useLanguage()
   const t = useTranslations(language)
-  const { 
-    tonAddress, tonBalance, isTonConnected,
-    solanaAddress, solanaBalance, isSolanaConnected,
-    ethereumAddress, ethereumBalance, isEthereumConnected,
-    connectTonWallet, connectSolanaWallet, connectEthereumWallet,
-    disconnectTonWallet, disconnectSolanaWallet, disconnectEthereumWallet
-  } = useWalletStore()
 
   useEffect(() => {
     setMenuThemeId(readStoredMenuTheme())
@@ -147,43 +129,6 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
         window.location.assign(path)
       }
     }, 450)
-  }
-
-  const handleWalletAction = async (type: 'ton' | 'solana' | 'ethereum', fromBurger = false) => {
-    hapticFeedback('medium')
-    
-    // Закрываем бургер меню если действие из него
-    if (fromBurger) {
-      setMenuOpen(false)
-    }
-    
-    try {
-      switch (type) {
-        case 'ton':
-          if (isTonConnected) {
-            disconnectTonWallet()
-          } else {
-            await connectTonWallet()
-          }
-          break
-        case 'solana':
-          if (isSolanaConnected) {
-            disconnectSolanaWallet()
-          } else {
-            await connectSolanaWallet()
-          }
-          break
-        case 'ethereum':
-          if (isEthereumConnected) {
-            disconnectEthereumWallet()
-          } else {
-            await connectEthereumWallet()
-          }
-          break
-      }
-    } catch (error: unknown) {
-      console.error('Wallet connection error:', error)
-    }
   }
 
   // Проверяем, авторизован ли пользователь
@@ -291,7 +236,10 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
         minHeight: '100vh',
         background: 'var(--menu-bg-accent), var(--menu-bg)',
         padding: '20px',
-        paddingTop: '80px',
+        paddingTop: 'calc(var(--app-chrome-top, 12px) + 56px)',
+        paddingLeft: 'max(16px, env(safe-area-inset-left, 0px))',
+        paddingRight: 'max(16px, env(safe-area-inset-right, 0px))',
+        paddingBottom: 'max(24px, env(safe-area-inset-bottom, 0px))',
         transition: 'background 0.35s ease',
       }}
     >
@@ -303,8 +251,8 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
         animate={{ x: 0, opacity: 1 }}
         style={{
           position: 'fixed',
-          top: '76px',
-          left: '20px',
+          top: 'calc(var(--app-chrome-top, 12px) + 8px)',
+          left: 'max(16px, env(safe-area-inset-left, 0px))',
           zIndex: 1100,
           maxWidth: 'calc(100vw - 40px)'
         }}
@@ -318,8 +266,8 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
         animate={{ x: 0, opacity: 1 }}
         style={{
           position: 'fixed',
-          top: '76px',
-          right: '20px',
+          top: 'calc(var(--app-chrome-top, 12px) + 56px)',
+          right: 'max(16px, env(safe-area-inset-right, 0px))',
           zIndex: 1090
         }}
       >
@@ -403,139 +351,6 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
             </motion.button>
           ))}
         </div>
-
-        {/* Компактные кошельки */}
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.6 }}
-          style={{
-            marginTop: '40px',
-            background: 'var(--menu-card-bg)',
-            border: '2px solid var(--menu-wallet-border)',
-            borderRadius: '16px',
-            padding: '20px',
-            boxShadow: 'var(--menu-shadow)'
-          }}
-        >
-          <div style={{
-            color: 'var(--menu-text-muted)',
-            fontSize: '14px',
-            fontWeight: '600',
-            marginBottom: '15px',
-            textAlign: 'center'
-          }}>
-            {language === 'en' ? 'WALLET' : 'КОШЕЛЕК'}
-          </div>
-          <div style={{
-            display: 'flex',
-            gap: '10px',
-            justifyContent: 'center',
-            flexWrap: 'wrap'
-          }}>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => {
-                hapticFeedback('medium');
-                // Открываем Telegram Wallet через deep link
-                const tgWebApp = typeof window !== 'undefined' && (window as any).Telegram?.WebApp;
-                if (tgWebApp) {
-                  // Используем Telegram WebApp API для открытия кошелька
-                  tgWebApp.openTelegramLink('https://t.me/wallet');
-                } else {
-                  // Fallback для браузера
-                  window.open('https://t.me/wallet', '_blank');
-                }
-              }}
-              style={{
-                flex: 1,
-                minWidth: '80px',
-                background: isTonConnected 
-                  ? 'linear-gradient(135deg, #0088ff 0%, #0066cc 100%)' 
-                  : 'rgba(0, 136, 255, 0.2)',
-                border: '2px solid rgba(0, 136, 255, 0.3)',
-                borderRadius: '12px',
-                padding: '12px',
-                cursor: 'pointer',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '5px'
-              }}
-            >
-              <CryptoIcon src={CRYPTO_TOKENS.GRAM.icon} size={28} alt={GRAM.symbol} />
-              <div style={{ 
-                color: 'white', 
-                fontSize: '12px', 
-                fontWeight: '600' 
-              }}>
-                {isTonConnected ? `✓ ${GRAM.symbol}` : GRAM.symbol}
-              </div>
-            </motion.button>
-
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => handleWalletAction('solana')}
-              style={{
-                flex: 1,
-                minWidth: '80px',
-                background: isSolanaConnected 
-                  ? 'linear-gradient(135deg, #9945ff 0%, #7733cc 100%)' 
-                  : 'rgba(153, 69, 255, 0.2)',
-                border: '2px solid rgba(153, 69, 255, 0.3)',
-                borderRadius: '12px',
-                padding: '12px',
-                cursor: 'pointer',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '5px'
-              }}
-            >
-              <CryptoIcon src={CRYPTO_TOKENS.SOL.icon} size={28} alt="SOL" />
-              <div style={{ 
-                color: 'white', 
-                fontSize: '12px', 
-                fontWeight: '600' 
-              }}>
-                {isSolanaConnected ? '✓ SOL' : 'SOL'}
-              </div>
-            </motion.button>
-
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => handleWalletAction('ethereum')}
-              style={{
-                flex: 1,
-                minWidth: '80px',
-                background: isEthereumConnected 
-                  ? 'linear-gradient(135deg, #627eea 0%, #4a5ecc 100%)' 
-                  : 'rgba(98, 126, 234, 0.2)',
-                border: '2px solid rgba(98, 126, 234, 0.3)',
-                borderRadius: '12px',
-                padding: '12px',
-                cursor: 'pointer',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '5px'
-              }}
-            >
-              <CryptoIcon src={CRYPTO_TOKENS.ETH.icon} size={28} alt="ETH" />
-              <div style={{ 
-                color: 'white', 
-                fontSize: '12px', 
-                fontWeight: '600' 
-              }}>
-                {isEthereumConnected ? '✓ ETH' : 'ETH'}
-              </div>
-            </motion.button>
-
-          </div>
-        </motion.div>
       </div>
     </div>
   )

@@ -1,18 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation'
 import NFTGallery from '../../components/NFTGallery'
 import NFTThemeGenerator from '../../components/NFTThemeGenerator'
 import PremiumFreeRollBanner from '../../components/PremiumFreeRollBanner'
-import { useTelegram } from '../../hooks/useTelegram'
 import { getApiHeaders } from '@/lib/api-headers'
 import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme'
 import { themedPageShellStyle } from '@/lib/ui/menu-theme-client'
 
 export default function NFTCollectionPage() {
-  const router = useRouter()
-  const { hapticFeedback } = useTelegram()
   const [userCoins, setUserCoins] = useState<number>(0)
   const [isLoadingUser, setIsLoadingUser] = useState(true)
 
@@ -70,42 +66,9 @@ export default function NFTCollectionPage() {
 
   return (
     <div style={themedPageShellStyle({
-      padding: '20px',
-      paddingTop: '80px',
+      padding: '16px',
+      paddingBottom: 'max(24px, env(safe-area-inset-bottom, 0px))',
     })}>
-      {/* Кнопка назад */}
-      <button
-        onClick={() => {
-          hapticFeedback('medium')
-          router.back()
-        }}
-        style={{
-          position: 'fixed',
-          top: '20px',
-          left: '20px',
-          zIndex: 100,
-          background: T.bgElevated,
-          border: `1px solid ${T.borderGold}`,
-          borderRadius: T.radiusMd,
-          padding: '10px 18px',
-          color: T.text,
-          cursor: 'pointer',
-          fontSize: '15px',
-          fontWeight: '600',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.borderColor = T.borderGoldStrong;
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.borderColor = T.borderGold;
-        }}
-      >
-        ← Назад
-      </button>
-
       <div style={{
         maxWidth: '1200px',
         margin: '0 auto'

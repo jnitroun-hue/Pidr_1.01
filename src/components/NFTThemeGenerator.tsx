@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles } from 'lucide-react';
 import { useTonConnectUI } from '@tonconnect/ui-react';
@@ -113,6 +113,7 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
   const [genQty, setGenQty] = useState(1);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'bank_card' | 'sberbank' | 'yoo_money' | 'sbp'>('bank_card');
   const [tonConnectUI] = useTonConnectUI();
+  const payAbortRef = useRef<AbortController | null>(null);
   const [isCompactLayout, setIsCompactLayout] = useState(false);
   const [rateSnapshot, setRateSnapshot] = useState<ExchangeRateSnapshot | null>(null);
 
@@ -124,6 +125,12 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
     updateLayout();
     window.addEventListener('resize', updateLayout);
     return () => window.removeEventListener('resize', updateLayout);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      payAbortRef.current?.abort();
+    };
   }, []);
 
   useEffect(() => {
@@ -239,6 +246,10 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
 
       let txHash: string | undefined;
 
+      payAbortRef.current?.abort();
+      const payAbort = new AbortController();
+      payAbortRef.current = payAbort;
+
       if (coin === 'GRAM') {
         const outcome = await sendGramViaTonConnect({
           tonConnectUI,
@@ -246,10 +257,11 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
           amount,
           memo: paymentId,
         });
-        if (outcome.status === 'cancelled') {
-          throw new Error('Оплата отменена в Telegram Wallet');
+        if (payAbort.signal.aborted) return;
+        if (outcome.status !== 'submitted') {
+          return;
         }
-        txHash = outcome.status === 'submitted' ? outcome.clientResult : undefined;
+        txHash = outcome.clientResult;
       } else {
         await copyDepositDetails(receiverAddress, paymentId);
         openExternalWalletForDeposit({
@@ -267,13 +279,16 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
       setShowCryptoModal(false);
 
       const first = prepared[0]!;
-      const maxAttempts = coin === 'GRAM' ? 15 : 24;
+      const maxAttempts = coin === 'GRAM' ? 12 : 24;
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
-        await new Promise((r) => setTimeout(r, 4000));
+        if (payAbort.signal.aborted) return;
+        await new Promise((r) => setTimeout(r, 3000));
+        if (payAbort.signal.aborted) return;
 
         const genRes = await fetch('/api/nft/generate-crypto', {
           method: 'POST',
           credentials: 'include',
+          signal: payAbort.signal,
           headers: getApiHeaders(),
           body: JSON.stringify({
             theme,
@@ -304,6 +319,7 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
               rarity: shown.rarity ?? theme,
               image_url: shown.image_url,
               metadata: { theme, theme_id: first.themeId },
+              festive: true,
             });
           }
           setCryptoTheme(null);
@@ -318,10 +334,15 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
 
       throw new Error('Платёж не подтвердился. Если перевод уже ушёл, подождите и откройте коллекцию.');
     } catch (error: unknown) {
+      if (error instanceof DOMException && error.name === 'AbortError') return;
       const msg = error instanceof Error ? error.message : String(error);
-      if (!msg.includes('User rejects') && !msg.includes('Rejected') && !msg.includes('отменена')) {
-        alert(`❌ ${msg}`);
+      if (
+        !msg ||
+        /User rejects|Rejected|отмен|AbortError|The user aborted|cancelled/i.test(msg)
+      ) {
+        return;
       }
+      alert(`❌ ${msg}`);
     } finally {
       setGenerating(false);
       setGenStatus('');
@@ -378,21 +399,9 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
       const result = await response.json();
 
         if (response.ok && result.success) {
-        // ✅ ОБНОВЛЯЕМ КОЛЛЕКЦИЮ NFT ПОСЛЕ ГЕНЕРАЦИИ (мгновенно с retry)
         window.dispatchEvent(new CustomEvent('nft-collection-updated'));
-        window.dispatchEvent(new CustomEvent('nft-deck-updated')); // ✅ Обновляем колоду
-        window.dispatchEvent(new CustomEvent('transaction-created')); // ✅ Триггерим обновление истории
-        
-        // ✅ Retry механизм: повторяем обновление через 1 и 3 секунды для надежности
-        setTimeout(() => {
-          window.dispatchEvent(new CustomEvent('nft-collection-updated'));
-          window.dispatchEvent(new CustomEvent('nft-deck-updated'));
-        }, 1000);
-        setTimeout(() => {
-          window.dispatchEvent(new CustomEvent('nft-collection-updated'));
-          window.dispatchEvent(new CustomEvent('nft-deck-updated'));
-        }, 3000);
-        
+        window.dispatchEvent(new CustomEvent('nft-deck-updated'));
+        window.dispatchEvent(new CustomEvent('transaction-created'));
         // ✅ ОБНОВЛЯЕМ БАЛАНС НА КЛИЕНТЕ
         if (result.newBalance !== undefined) {
           if (onBalanceUpdate) {
@@ -438,6 +447,7 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
               theme: result.nft.theme ?? theme,
               theme_id: result.nft.theme_id ?? randomId,
             },
+            festive: true,
           });
         }
 
@@ -528,18 +538,8 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
       if (deductResponse.ok && deductResult.success) {
         // ✅ ОБНОВЛЯЕМ КОЛЛЕКЦИЮ NFT ПОСЛЕ ГЕНЕРАЦИИ КОЛОДЫ (мгновенно с retry)
         window.dispatchEvent(new CustomEvent('nft-collection-updated'));
-        window.dispatchEvent(new CustomEvent('nft-deck-updated')); // ✅ Обновляем колоду
-        window.dispatchEvent(new CustomEvent('transaction-created')); // ✅ Триггерим обновление истории
-        
-        // ✅ Retry механизм: повторяем обновление через 1 и 3 секунды для надежности
-        setTimeout(() => {
-          window.dispatchEvent(new CustomEvent('nft-collection-updated'));
-          window.dispatchEvent(new CustomEvent('nft-deck-updated'));
-        }, 1000);
-        setTimeout(() => {
-          window.dispatchEvent(new CustomEvent('nft-collection-updated'));
-          window.dispatchEvent(new CustomEvent('nft-deck-updated'));
-        }, 3000);
+        window.dispatchEvent(new CustomEvent('nft-deck-updated'));
+        window.dispatchEvent(new CustomEvent('transaction-created'));
         
         setGenStatus('Колода готова!');
         

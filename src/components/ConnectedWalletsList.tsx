@@ -110,34 +110,8 @@ export default function ConnectedWalletsList({
         <div style={{ marginBottom: '12px', fontSize: '32px' }}>💳</div>
         <div style={{ marginBottom: '8px', fontWeight: '600' }}>Нет подключенных кошельков</div>
         <div style={{ fontSize: '12px', color: '#64748b' }}>
-          Для пополнения и вывода подключите один из ваших кошельков
+          Для пополнения и вывода подключите кошелёк в блоке ниже
         </div>
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => {
-            window.location.href = '/nft-collection';
-          }}
-          style={{
-            marginTop: '14px',
-            width: '100%',
-            padding: '12px 14px',
-            borderRadius: '10px',
-            border: '1px solid rgba(59, 130, 246, 0.55)',
-            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.22), rgba(14, 165, 233, 0.16))',
-            color: '#dbeafe',
-            fontSize: '13px',
-            fontWeight: 700,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px'
-          }}
-        >
-          <FaWallet />
-          Подключить кошелек
-        </motion.button>
       </div>
     );
   }
@@ -281,8 +255,10 @@ export default function ConnectedWalletsList({
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => {
-            // Переходим в NFT коллекцию для добавления кошелька
-            window.location.href = '/nft-collection';
+            document.getElementById('profile-wallet-connect')?.scrollIntoView({
+              behavior: 'smooth',
+              block: 'center',
+            });
           }}
           style={{
             width: '100%',
@@ -310,7 +286,7 @@ export default function ConnectedWalletsList({
             e.currentTarget.style.color = '#94a3b8';
           }}
         >
-          <FaWallet /> Добавить кошелек в NFT коллекции
+          <FaWallet /> Добавить кошелёк
         </motion.button>
       )}
     </div>

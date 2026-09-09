@@ -35,6 +35,18 @@ export interface Translations {
     gameBurgerSettings: string;
     player: string;
     translatePageHint: string;
+    burgerSubtitle: string;
+    burgerHintPlay: string;
+    burgerHintOnline: string;
+    burgerHintRules: string;
+    burgerHintEarnNft: string;
+    burgerHintNft: string;
+    burgerHintProfile: string;
+    burgerHintShop: string;
+    burgerHintRating: string;
+    burgerHintWallet: string;
+    burgerHintSettings: string;
+    burgerHintAdmin: string;
   };
   
   // Игра
@@ -378,7 +390,19 @@ export const translations: Record<Language, Translations> = {
       gameBurgerWallet: 'Кошелёк',
       gameBurgerSettings: 'Настройки',
       player: 'Игрок',
-      translatePageHint: 'Перевести страницу'
+      translatePageHint: 'Перевести страницу',
+      burgerSubtitle: 'Все разделы в одном месте',
+      burgerHintPlay: 'Офлайн-стол с ботами — разминка без очереди',
+      burgerHintOnline: 'Комнаты, приглашения и матчи с живыми игроками',
+      burgerHintRules: 'Как играть в P.I.D.R.: стадии, козырь и штрафы',
+      burgerHintEarnNft: 'Как получать и продавать NFT-карты',
+      burgerHintNft: 'Коллекция, генерация и игровая колода',
+      burgerHintProfile: 'Аватар, статистика, бонусы и кошелёк',
+      burgerHintShop: 'Скины, рамки, премиум и маркетплейс',
+      burgerHintRating: 'Таблица лидеров по рейтингу',
+      burgerHintWallet: 'Пополнение, вывод и подключение кошельков',
+      burgerHintSettings: 'Язык, тема меню и уведомления',
+      burgerHintAdmin: 'Служебная панель модерации',
     },
     game: {
       findRoom: 'Найти комнату',
@@ -705,7 +729,19 @@ export const translations: Record<Language, Translations> = {
       gameBurgerWallet: 'Wallet',
       gameBurgerSettings: 'Settings',
       player: 'Player',
-      translatePageHint: 'Translate page'
+      translatePageHint: 'Translate page',
+      burgerSubtitle: 'Everything in one menu',
+      burgerHintPlay: 'Offline table with bots — practice without a queue',
+      burgerHintOnline: 'Rooms, invites and live multiplayer matches',
+      burgerHintRules: 'How to play P.I.D.R.: stages, trump and penalties',
+      burgerHintEarnNft: 'How to earn and sell NFT cards',
+      burgerHintNft: 'Collection, generation and playable deck',
+      burgerHintProfile: 'Avatar, stats, bonuses and wallet',
+      burgerHintShop: 'Skins, frames, premium and marketplace',
+      burgerHintRating: 'Leaderboard by rating',
+      burgerHintWallet: 'Deposits, withdrawals and wallet connect',
+      burgerHintSettings: 'Language, menu theme and notifications',
+      burgerHintAdmin: 'Moderation console',
     },
     game: {
       findRoom: 'Find Room',

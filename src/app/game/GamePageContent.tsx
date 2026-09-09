@@ -228,7 +228,7 @@ const getRectanglePosition = (index: number, totalPlayers: number, gameStage: nu
   if (index === 0) {
     return { 
       left: '50%', 
-      top: isStage2Plus ? (isMobileViewport ? '74%' : '76%') : '83%',
+      top: isStage2Plus ? (isMobileViewport ? '78%' : '76%') : '83%',
       cardDirection: 'horizontal',
       cardOffset: { x: 0, y: -40 },
       side: 'bottom'
@@ -256,14 +256,14 @@ const getRectanglePosition = (index: number, totalPlayers: number, gameStage: nu
     ? (isMobileViewport ? '26%' : '30%')
     : (isMobileViewport ? '28%' : '32%');
   const sideBottomY = isStage2Plus
-    ? (isMobileViewport ? '62%' : '58%')
-    : (isMobileViewport ? '66%' : '62%');
+    ? (isMobileViewport ? '46%' : '52%')
+    : (isMobileViewport ? '58%' : '62%');
   const sideTop7 = isStage2Plus
-    ? (isMobileViewport ? '28%' : '32%')
+    ? (isMobileViewport ? '26%' : '32%')
     : (isMobileViewport ? '30%' : '34%');
   const sideBottom7 = isStage2Plus
-    ? (isMobileViewport ? '64%' : '60%')
-    : (isMobileViewport ? '68%' : '64%');
+    ? (isMobileViewport ? '48%' : '54%')
+    : (isMobileViewport ? '60%' : '64%');
   
   if (totalPlayers === 4) {
     const positions = [
@@ -1664,7 +1664,7 @@ function GamePageContentComponent({
   const layoutMetrics = useMemo(() => {
     const vw = screenInfo.viewportWidth || 390;
     const vh = screenInfo.viewportHeight || 844;
-    const CARD_SCALE = 1.5;
+    const CARD_SCALE = vw >= 1024 ? 1.18 : vw >= 769 ? 1.1 : 1;
     const px = (n: number) => Math.round(n * CARD_SCALE);
 
     const base = (handW: number, oppW: number, handFanMax: number, oppFanMax: number) => ({
@@ -2560,8 +2560,8 @@ function GamePageContentComponent({
     const isStage2Plus = gameStage >= 2;
     const minGap = isMobileViewport ? (isStage2Plus ? 18 : 20) : (isStage2Plus ? 14 : 16);
     const sideClamp = isMobileViewport
-      ? (isStage2Plus ? { minY: 14, maxY: 68, minX: 8, maxX: 92 } : { minY: 20, maxY: 72, minX: 18, maxX: 82 })
-      : (isStage2Plus ? { minY: 12, maxY: 66, minX: 6, maxX: 94 } : { minY: 18, maxY: 74, minX: 16, maxX: 84 });
+      ? (isStage2Plus ? { minY: 12, maxY: 52, minX: 8, maxX: 92 } : { minY: 18, maxY: 64, minX: 18, maxX: 82 })
+      : (isStage2Plus ? { minY: 12, maxY: 58, minX: 6, maxX: 94 } : { minY: 18, maxY: 74, minX: 16, maxX: 84 });
 
     const base = Array.from({ length: totalPlayers }, (_, i) => {
       const rectPos = getRectanglePosition(i, totalPlayers, gameStage);

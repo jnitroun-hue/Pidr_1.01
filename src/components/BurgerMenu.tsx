@@ -11,7 +11,7 @@ import { getApiHeaders } from '@/lib/api-headers'
 interface BurgerMenuProps {
   isOpen: boolean
   onClose: () => void
-  side: 'left' | 'right'
+  side?: 'left' | 'right'
   user?: any
 }
 
@@ -23,7 +23,7 @@ function hasUserIdentity(u: any): boolean {
   return false
 }
 
-export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuProps) {
+export default function BurgerMenu({ isOpen, onClose, side = 'right', user }: BurgerMenuProps) {
   const router = useRouter()
   const { language } = useLanguage()
   const t = useTranslations(language)
@@ -130,11 +130,11 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
       })
   }, [user?.id, user?.telegramId, profileExtras.id])
 
-  // Левое меню - навигация
-  const leftMenuItems = [
+  const menuItems = [
     {
-      icon: <Gamepad2 size={24} />,
+      icon: <Gamepad2 size={22} />,
       label: t.mainMenu.play,
+      hint: t.mainMenu.burgerHintPlay,
       emoji: '🎮',
       onClick: () => {
         navigateSafely('/game')
@@ -143,8 +143,9 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
       gradient: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
     },
     {
-      icon: <Users size={24} />,
-      label: t.mainMenu.community,
+      icon: <Users size={22} />,
+      label: t.mainMenu.online,
+      hint: t.mainMenu.burgerHintOnline,
       emoji: '👥',
       onClick: () => {
         navigateSafely('/multiplayer')
@@ -153,8 +154,9 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
       gradient: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)'
     },
     {
-      icon: <BookOpen size={24} />,
+      icon: <BookOpen size={22} />,
       label: t.mainMenu.rules,
+      hint: t.mainMenu.burgerHintRules,
       emoji: '📖',
       onClick: () => {
         navigateSafely('/rules')
@@ -163,21 +165,31 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
       gradient: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)'
     },
     {
-      icon: <Coins size={24} />,
+      icon: <Coins size={22} />,
       label: t.mainMenu.earnNft,
+      hint: t.mainMenu.burgerHintEarnNft,
       emoji: '💰',
       onClick: () => {
         navigateSafely('/earn-nft')
         onClose()
       },
       gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
-    }
-  ]
-
-  const rightMenuItems = [
+    },
     {
-      icon: <User size={24} />,
+      icon: <Coins size={22} />,
+      label: t.mainMenu.nftCollection,
+      hint: t.mainMenu.burgerHintNft,
+      emoji: '🎴',
+      onClick: () => {
+        navigateSafely('/nft-collection')
+        onClose()
+      },
+      gradient: 'linear-gradient(135deg, #eab308 0%, #ca8a04 100%)'
+    },
+    {
+      icon: <User size={22} />,
       label: t.mainMenu.profile,
+      hint: t.mainMenu.burgerHintProfile,
       emoji: '👤',
       onClick: () => {
         navigateSafely('/profile')
@@ -186,8 +198,9 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
       gradient: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
     },
     {
-      icon: <Store size={24} />,
+      icon: <Store size={22} />,
       label: t.mainMenu.shop,
+      hint: t.mainMenu.burgerHintShop,
       emoji: '🛒',
       onClick: () => {
         navigateSafely('/shop')
@@ -196,8 +209,9 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
       gradient: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)'
     },
     {
-      icon: <Trophy size={24} />,
+      icon: <Trophy size={22} />,
       label: t.mainMenu.rating,
+      hint: t.mainMenu.burgerHintRating,
       emoji: '🏆',
       onClick: () => {
         navigateSafely('/rating')
@@ -206,18 +220,20 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
       gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
     },
     {
-      icon: <Wallet size={24} />,
+      icon: <Wallet size={22} />,
       label: t.mainMenu.wallet,
+      hint: t.mainMenu.burgerHintWallet,
       emoji: '💳',
       onClick: () => {
-        navigateSafely('/wallet')
+        navigateSafely('/profile?wallet=1')
         onClose()
       },
       gradient: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)'
     },
     {
-      icon: <Settings size={24} />,
+      icon: <Settings size={22} />,
       label: t.mainMenu.settings,
+      hint: t.mainMenu.burgerHintSettings,
       emoji: '⚙️',
       onClick: () => {
         navigateSafely('/settings')
@@ -226,8 +242,9 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
       gradient: 'linear-gradient(135deg, #64748b 0%, #475569 100%)'
     },
     ...(isAdmin ? [{
-      icon: <Shield size={24} />,
+      icon: <Shield size={22} />,
       label: t.mainMenu.adminPanel,
+      hint: t.mainMenu.burgerHintAdmin,
       emoji: '🔐',
       onClick: () => {
         navigateSafely('/admin')
@@ -236,9 +253,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
       gradient: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
     }] : [])
   ]
-
-  const menuItems = side === 'left' ? leftMenuItems : rightMenuItems
-  const showAccountFooter = side === 'right' && hasUserIdentity(effectiveUser)
+  const showAccountFooter = hasUserIdentity(effectiveUser)
 
   return (
     <AnimatePresence>
@@ -273,8 +288,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
               top: 0,
               [side]: 0,
               bottom: 0,
-              width: '320px',
-              maxWidth: '85vw',
+              width: 'min(360px, 88vw)',
               background: 'var(--menu-card-bg)',
               backdropFilter: 'blur(20px)',
               borderRight: side === 'left' ? '2px solid var(--menu-card-border)' : 'none',
@@ -285,6 +299,7 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
               flexDirection: 'column',
               overflowY: 'auto',
               color: 'var(--menu-text)',
+              paddingBottom: 'env(safe-area-inset-bottom, 0px)',
             }}
           >
             {/* Header */}
@@ -295,14 +310,25 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
               alignItems: 'center',
               justifyContent: 'space-between'
             }}>
-              <h2 style={{
-                fontSize: '24px',
-                fontWeight: '900',
-                color: 'var(--menu-accent)',
-                margin: 0,
-              }}>
-                {side === 'left' ? t.mainMenu.burgerMenuTitle : t.mainMenu.burgerAccountTitle}
-              </h2>
+              <div>
+                <h2 style={{
+                  fontSize: '22px',
+                  fontWeight: '900',
+                  color: 'var(--menu-accent)',
+                  margin: 0,
+                }}>
+                  {t.mainMenu.burgerMenuTitle}
+                </h2>
+                <p style={{
+                  margin: '6px 0 0',
+                  fontSize: '12px',
+                  color: 'var(--menu-text-muted)',
+                  fontWeight: 500,
+                  letterSpacing: '0.02em',
+                }}>
+                  {t.mainMenu.burgerSubtitle}
+                </p>
+              </div>
               <motion.button
                 whileHover={{ scale: 1.1, rotate: 90 }}
                 whileTap={{ scale: 0.9 }}
@@ -325,10 +351,10 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
 
             {/* Menu Items */}
             <div style={{
-              padding: '16px',
+              padding: '12px',
               display: 'flex',
               flexDirection: 'column',
-              gap: '12px',
+              gap: '8px',
               flex: 1
             }}>
               {menuItems.length > 0 ? (
@@ -345,14 +371,15 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
                       background: 'var(--menu-accent-soft)',
                       border: '1px solid var(--menu-card-border)',
                       borderRadius: '16px',
-                      padding: '16px',
+                      padding: '13px 14px',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '16px',
+                      gap: '12px',
                       transition: 'all 0.3s ease',
                       position: 'relative',
-                      overflow: 'hidden'
+                      overflow: 'hidden',
+                      textAlign: 'left',
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.borderColor = 'var(--menu-accent)'
@@ -387,17 +414,32 @@ export default function BurgerMenu({ isOpen, onClose, side, user }: BurgerMenuPr
                       {item.emoji}
                     </div>
                     
-                    {/* Label */}
-                    <span style={{
-                      color: 'var(--menu-text)',
-                      fontSize: '16px',
-                      fontWeight: '600',
+                    <div style={{
                       zIndex: 1,
                       flex: 1,
+                      minWidth: 0,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '3px',
                       textAlign: 'left'
                     }}>
-                      {item.label}
-                    </span>
+                      <span style={{
+                        color: 'var(--menu-text)',
+                        fontSize: '15px',
+                        fontWeight: '700',
+                        lineHeight: 1.2,
+                      }}>
+                        {item.label}
+                      </span>
+                      <span style={{
+                        color: 'var(--menu-text-muted)',
+                        fontSize: '11px',
+                        fontWeight: 500,
+                        lineHeight: 1.35,
+                      }}>
+                        {item.hint}
+                      </span>
+                    </div>
 
                     {/* Arrow */}
                     <motion.div

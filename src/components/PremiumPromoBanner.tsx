@@ -206,22 +206,34 @@ export default function PremiumPromoBanner({ premium, compact = false, onOpenPur
       </div>
 
       <div style={{
-        marginTop: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '10px 14px', borderRadius: '12px',
-        background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(56,189,248,0.2)',
+        marginTop: '14px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '10px',
+        flexWrap: 'wrap',
+        padding: '10px 14px',
+        borderRadius: '12px',
+        background: 'rgba(0,0,0,0.25)',
+        border: '1px solid rgba(56,189,248,0.2)',
       }}>
-        <div>
+        <div style={{ minWidth: 0, flex: '1 1 140px' }}>
           <div style={{ color: '#fda4af', fontSize: '10px', fontWeight: 800, letterSpacing: '0.08em' }}>АКЦИЯ</div>
           <PremiumSalePrice mode="rub" size="md" />
         </div>
-        <div style={{ textAlign: 'right' }}>
+        <div style={{ textAlign: 'right', minWidth: 0, flex: '1 1 100px' }}>
           <div style={{ color: '#64748b', fontSize: '10px' }}>или</div>
           <PremiumSalePrice mode="coins" size="sm" />
         </div>
         <div style={{
-          padding: '8px 14px', borderRadius: '10px',
+          padding: '8px 14px',
+          borderRadius: '10px',
           background: 'linear-gradient(135deg, #0ea5e9, #6366f1)',
-          color: '#fff', fontWeight: 800, fontSize: '12px',
+          color: '#fff',
+          fontWeight: 800,
+          fontSize: '12px',
+          flex: '0 0 auto',
+          whiteSpace: 'nowrap',
         }}>
           Купить →
         </div>

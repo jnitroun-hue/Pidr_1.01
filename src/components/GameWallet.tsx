@@ -2291,7 +2291,7 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
                             <WalletQuickConnect />
                           ) : (
                             <p style={{ fontSize: '11px', color: '#64748b', margin: 0 }}>
-                              Используйте блок «Quick Connect» выше или подключите кошелёк в профиле / NFT-коллекции.
+                              Подключите кошелёк в профиле: Профиль → Кошелёк.
                             </p>
                           )}
                         </div>

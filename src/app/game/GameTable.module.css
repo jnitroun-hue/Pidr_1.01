@@ -1140,16 +1140,16 @@
   background: linear-gradient(180deg, rgba(15, 23, 42, 0.94) 0%, rgba(30, 41, 59, 0.88) 100%);
   border: 1px solid rgba(99, 102, 241, 0.35);
   border-radius: 14px;
-  padding: 8px 10px 10px;
+  padding: 6px 8px 8px;
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(12px);
   position: fixed;
-  bottom: calc(12px + env(safe-area-inset-bottom));
+  bottom: calc(8px + env(safe-area-inset-bottom));
   left: 50%;
   transform: translateX(-50%);
   overflow: visible;
   width: auto;
-  max-width: min(96vw, 900px);
+  max-width: min(94vw, 720px);
   z-index: 100;
 }
 
@@ -3444,22 +3444,22 @@
   --name-font: 9px;
 
   --cards-gap: 2px;
-  --opponent-card-width: 54px;
-  --opponent-card-height: 80px;
-  --opponent-card-radius: 6px;
+  --opponent-card-width: 42px;
+  --opponent-card-height: 62px;
+  --opponent-card-radius: 5px;
 
-  --deck-card-width: 57px;
-  --deck-card-height: 86px;
-  --deck-count-size: 28px;
-  --deck-count-font: 12px;
+  --deck-card-width: 48px;
+  --deck-card-height: 72px;
+  --deck-count-size: 24px;
+  --deck-count-font: 11px;
 
-  --player-hand-width: min(92vw, 480px);
-  --player-hand-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
-  --player-hand-padding-y: 8px;
-  --player-hand-padding-x: 10px;
-  --player-hand-min-height: 162px;
-  --hand-card-width: 90px;
-  --hand-card-height: 135px;
+  --player-hand-width: min(92vw, 420px);
+  --player-hand-bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
+  --player-hand-padding-y: 6px;
+  --player-hand-padding-x: 8px;
+  --player-hand-min-height: 118px;
+  --hand-card-width: 64px;
+  --hand-card-height: 96px;
 }
 
 .rectangularTable {
@@ -3572,20 +3572,20 @@
     --name-font: 10px;
 
     --cards-gap: 3px;
-    --opponent-card-width: 60px;
-    --opponent-card-height: 87px;
-    --deck-card-width: 63px;
-    --deck-card-height: 95px;
-    --deck-count-size: 30px;
-    --deck-count-font: 13px;
+    --opponent-card-width: 46px;
+    --opponent-card-height: 68px;
+    --deck-card-width: 52px;
+    --deck-card-height: 78px;
+    --deck-count-size: 26px;
+    --deck-count-font: 12px;
 
-    --player-hand-width: min(84vw, 540px);
-    --player-hand-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
-    --player-hand-padding-y: 10px;
-    --player-hand-padding-x: 12px;
-    --player-hand-min-height: 180px;
-    --hand-card-width: 102px;
-    --hand-card-height: 153px;
+    --player-hand-width: min(84vw, 480px);
+    --player-hand-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+    --player-hand-padding-y: 6px;
+    --player-hand-padding-x: 10px;
+    --player-hand-min-height: 124px;
+    --hand-card-width: 72px;
+    --hand-card-height: 108px;
   }
 }
 

@@ -9,12 +9,10 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
-import WalletQuickConnect from '@/components/WalletQuickConnect';
 import { SellModal } from '@/components/MarketplaceTabs';
 import { getApiHeaders } from '@/lib/api-headers';
 import { appAlert, appConfirm } from '@/lib/app-notice';
 import PidrCoinIcon from '@/components/PidrCoinIcon';
-import { GRAM } from '@/lib/crypto/gram-brand';
 import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
 import {
   getNftRarityLabel,
@@ -46,7 +44,9 @@ export default function NFTGallery() {
   const { language } = useLanguage();
   const [collection, setCollection] = useState<NFTCard[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [selectedCard, setSelectedCard] = useState<NFTCard | null>(null);
+  const [revealFestive, setRevealFestive] = useState(false);
   const [showReplaceModal, setShowReplaceModal] = useState(false);
   const [duplicateInfo, setDuplicateInfo] = useState<{
     existingCard: { id: string | number; image_url?: string; rarity?: string };
@@ -78,13 +78,13 @@ export default function NFTGallery() {
     loadCollection();
     
     const handleCollectionUpdate = () => {
-      console.log('🔄 [NFTGallery] Обновляем коллекцию...');
-      loadCollection();
+      loadCollection(0, true);
     };
 
     const handleOpenCardModal = (event: Event) => {
       const detail = (event as CustomEvent<NftCardModalPayload>).detail;
       if (!detail?.id) return;
+      setRevealFestive(Boolean(detail.festive));
       setSelectedCard({
         id: String(detail.id),
         user_id: String(detail.user_id ?? ''),
@@ -97,7 +97,7 @@ export default function NFTGallery() {
         is_listed: detail.is_listed ?? false,
         is_in_deck: detail.is_in_deck ?? false,
       });
-      loadCollection();
+      loadCollection(0, true);
     };
     
     window.addEventListener('nft-collection-updated', handleCollectionUpdate);
@@ -109,8 +109,8 @@ export default function NFTGallery() {
     };
   }, []);
 
-  const loadCollection = async (retryCount = 0) => {
-    setIsLoading(true);
+  const loadCollection = async (retryCount = 0, silent = false) => {
+    if (!silent) setIsLoading(true);
     try {
       const response = await fetch('/api/nft/collection', {
         method: 'GET',
@@ -130,20 +130,18 @@ export default function NFTGallery() {
         setCollection([]);
         // ✅ RETRY: Повторяем запрос если не получили данные (максимум 2 попытки)
         if (retryCount < 2) {
-          console.log(`🔄 [NFTGallery] Retry загрузки коллекции (попытка ${retryCount + 1})...`);
-          setTimeout(() => loadCollection(retryCount + 1), 1000 * (retryCount + 1));
+          setTimeout(() => loadCollection(retryCount + 1, true), 1000 * (retryCount + 1));
         }
       }
     } catch (error) {
       console.error('❌ Ошибка загрузки коллекции:', error);
       setCollection([]);
-      // ✅ RETRY: Повторяем запрос при ошибке (максимум 2 попытки)
       if (retryCount < 2) {
-        console.log(`🔄 [NFTGallery] Retry после ошибки (попытка ${retryCount + 1})...`);
-        setTimeout(() => loadCollection(retryCount + 1), 1000 * (retryCount + 1));
+        setTimeout(() => loadCollection(retryCount + 1, true), 1000 * (retryCount + 1));
       }
     } finally {
       setIsLoading(false);
+      setHasLoadedOnce(true);
     }
   };
 
@@ -277,192 +275,138 @@ export default function NFTGallery() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div style={{ textAlign: 'center', padding: '48px 20px', color: T.textMuted, fontSize: '14px' }}>
-        Загрузка коллекции…
-      </div>
-    );
-  }
-
-  if (collection.length === 0) {
-    return (
-      <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
-        <div style={{ fontSize: '3rem', marginBottom: '10px' }}>🎴</div>
-        <p style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '5px' }}>
-          Коллекция пуста
-        </p>
-        <p>Создайте свою первую NFT карту!</p>
-      </div>
-    );
-  }
+  const closeCardModal = () => {
+    setSelectedCard(null);
+    setRevealFestive(false);
+  };
 
   return (
     <div style={{ width: '100%' }}>
-      {/* Заголовок */}
-      <div style={{ marginBottom: '30px', textAlign: 'center' }}>
-        <h3 style={{ 
-          color: T.accentGold, 
-          fontSize: 'clamp(1.25rem, 4vw, 1.75rem)', 
-          fontWeight: 800, 
+      <div style={{ marginBottom: '24px', textAlign: 'center' }}>
+        <h3 style={{
+          color: T.accentGold,
+          fontSize: 'clamp(1.25rem, 4vw, 1.75rem)',
+          fontWeight: 800,
           marginBottom: '12px',
           letterSpacing: '0.08em',
           textTransform: 'uppercase',
         }}>
           Моя NFT коллекция
         </h3>
-        <p style={{ color: T.textMuted, fontSize: '1rem', marginBottom: '20px' }}>
+        <p style={{ color: T.textMuted, fontSize: '1rem', marginBottom: 0 }}>
           Всего карт:{' '}
           <span style={{ color: T.accentGold, fontWeight: 'bold', fontSize: '1.2rem' }}>{collection.length}</span>
         </p>
-
-        {/* ✅ ПОДКЛЮЧЕНИЕ КОШЕЛЬКОВ */}
-        <div
-          style={{
-            maxWidth: 520,
-            margin: '0 auto',
-            padding: '18px 18px',
-            borderRadius: T.radiusLg,
-            border: `1px solid ${T.borderGold}`,
-            background: `linear-gradient(160deg, ${T.bgCard} 0%, rgba(12,17,26,0.95) 100%)`,
-            boxShadow: `${T.shadowCard}, inset 0 1px 0 rgba(251,191,36,0.08)`,
-          }}
-        >
-          <div
-            style={{
-              padding: '14px 16px',
-              borderRadius: T.radiusMd,
-              background: T.warningBg,
-              border: `1px solid ${T.warningBorder}`,
-              marginBottom: 16,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-              <span style={{ fontSize: '17px', lineHeight: 1 }}>⚠️</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ color: T.warningTitle, fontSize: '12px', fontWeight: 800, marginBottom: 4 }}>
-                  Внимание
-                </div>
-                <div style={{ color: T.warningBody, fontSize: '11px', lineHeight: 1.55 }}>
-                  Проверьте сеть и адрес перед переводами и выводом NFT — ошибки в блокчейне необратимы.
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <p
-            style={{
-              color: T.textMuted,
-              fontSize: '12px',
-              textAlign: 'center',
-              margin: '0 0 14px',
-              letterSpacing: '0.06em',
-              textTransform: 'uppercase',
-              fontWeight: 700,
-            }}
-          >
-            Кошельки для NFT · {GRAM.symbol} / EVM / Solana
-          </p>
-
-          <div
-            style={{
-              borderRadius: T.radiusMd,
-              border: `1px solid rgba(251,191,36,0.12)`,
-              overflow: 'hidden',
-              background: 'rgba(2, 6, 23, 0.55)',
-            }}
-          >
-            <WalletQuickConnect variant="embedded" />
-          </div>
-        </div>
       </div>
 
-      {/* СЕТКА КАРТ - КАК В МАГАЗИНЕ */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
-        gap: '12px',
-        padding: '12px'
-      }}>
-        {collection.map((card, index) => {
-          const suitColor = getSuitColor(card.suit);
-          
-          return (
-            <motion.div
-              key={card.id}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: index * 0.03 }}
-              onClick={() => setSelectedCard(card)}
-              style={{
-                background: 'rgba(30, 41, 59, 0.8)',
-                borderRadius: '8px',
-                border: `2px solid ${suitColor}40`,
-                padding: '8px',
-                textAlign: 'center',
-                cursor: 'pointer'
-              }}
-            >
-              {/* ИЗОБРАЖЕНИЕ КАРТЫ - ОПТИМИЗИРОВАНО ДЛЯ МОБИЛЬНЫХ */}
-              <div
+      {isLoading && !hasLoadedOnce ? (
+        <div style={{ textAlign: 'center', padding: '48px 20px', color: T.textMuted, fontSize: '14px' }}>
+          Загрузка коллекции…
+        </div>
+      ) : collection.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+          <div style={{ fontSize: '3rem', marginBottom: '10px' }}>🎴</div>
+          <p style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '5px' }}>
+            Коллекция пуста
+          </p>
+          <p>Создайте свою первую NFT карту!</p>
+        </div>
+      ) : (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+          gap: '12px',
+          padding: '12px'
+        }}>
+          {collection.map((card, index) => {
+            const suitColor = getSuitColor(card.suit);
+            return (
+              <motion.div
+                key={card.id}
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: Math.min(index, 12) * 0.02 }}
+                onClick={() => {
+                  setRevealFestive(false);
+                  setSelectedCard(card);
+                }}
                 style={{
-                  width: '100%',
-                  aspectRatio: '0.7',
-                  position: 'relative',
-                  borderRadius: '6px',
-                  overflow: 'hidden',
-                  marginBottom: '8px',
-                  background: '#ffffff',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  pointerEvents: 'none',
+                  background: 'rgba(30, 41, 59, 0.8)',
+                  borderRadius: '8px',
+                  border: `2px solid ${suitColor}40`,
+                  padding: '8px',
+                  textAlign: 'center',
+                  cursor: 'pointer'
                 }}
               >
-                {renderCardVisual(card, 300, 420)}
-              </div>
+                <div
+                  style={{
+                    width: '100%',
+                    aspectRatio: '0.7',
+                    position: 'relative',
+                    borderRadius: '6px',
+                    overflow: 'hidden',
+                    marginBottom: '8px',
+                    background: '#ffffff',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  {renderCardVisual(card, 300, 420)}
+                </div>
+                <div style={{
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  color: suitColor,
+                  marginBottom: '6px'
+                }}>
+                  {formatNftCardName(card.rank, card.suit, language)}
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
 
-              {/* Rank and Suit Info */}
-              <div style={{
-                fontSize: '12px',
-                fontWeight: 'bold',
-                color: suitColor,
-                marginBottom: '6px'
-              }}>
-                {formatNftCardName(card.rank, card.suit, language)}
-              </div>
-            </motion.div>
-          );
-        })}
-      </div>
-
-      {/* Модалка карты */}
       {typeof document !== 'undefined' &&
         createPortal(
           <AnimatePresence>
             {selectedCard && (
               <motion.div
-                key="nft-card-detail"
-                className={styles.cardOverlay}
+                key={`nft-card-detail-${selectedCard.id}`}
+                className={`${styles.cardOverlay} ${revealFestive ? styles.revealOverlay : ''}`}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                onClick={() => setSelectedCard(null)}
+                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                onClick={closeCardModal}
               >
                 <motion.div
-                  className={styles.cardModal}
+                  className={`${styles.cardModal} ${revealFestive ? styles.festiveModal : ''}`}
                   style={{ borderColor: getSuitColor(selectedCard.suit) }}
-                  initial={{ scale: 0.92, y: 24 }}
-                  animate={{ scale: 1, y: 0 }}
-                  exit={{ scale: 0.92, y: 24 }}
+                  initial={revealFestive
+                    ? { opacity: 0, scale: 0.72, rotateX: 16, y: 36 }
+                    : { scale: 0.96, y: 16, opacity: 0 }}
+                  animate={{ opacity: 1, scale: 1, rotateX: 0, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.96, y: 12 }}
+                  transition={revealFestive
+                    ? { duration: 0.9, ease: [0.16, 1, 0.3, 1] }
+                    : { duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
                   onClick={(e) => e.stopPropagation()}
                 >
+                  {revealFestive && <div className={styles.festiveAura} aria-hidden />}
                   <button
                     type="button"
                     className={styles.closeBtn}
-                    onClick={() => setSelectedCard(null)}
+                    onClick={closeCardModal}
                     aria-label="Закрыть"
                   >
                     <X size={22} />
                   </button>
+
+                  {revealFestive && (
+                    <div className={styles.revealCaption}>Карта получена</div>
+                  )}
 
                   {selectedCard.is_listed && (
                     <div className={styles.badgeListed}>На продаже в магазине</div>
@@ -473,7 +417,7 @@ export default function NFTGallery() {
                     </div>
                   )}
 
-                  <div className={`${styles.cardFrame} ${styles.cardFrameLarge}`}>
+                  <div className={`${styles.cardFrame} ${styles.cardFrameLarge} ${revealFestive ? styles.festiveCard : ''}`}>
                     {renderCardVisual(selectedCard, 280, 392)}
                   </div>
 
