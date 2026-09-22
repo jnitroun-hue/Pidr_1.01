@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Crown, Sparkles } from 'lucide-react';
+import NftGenerationProgress from '@/components/NftGenerationProgress';
+import { NFT_THEME_CONFIG, isNftThemeKey } from '@/lib/nft/theme-config';
 
 type PaymentState = {
   status: 'loading' | 'succeeded' | 'pending' | 'canceled' | 'error';
@@ -15,6 +17,14 @@ export default function PaymentSuccessClient({ orderId, paymentId }: { orderId?:
     status: 'loading',
     message: 'Проверяем статус платежа...'
   });
+  const fulfillingRef = useRef(false);
+  const [genOpen, setGenOpen] = useState(false);
+  const [genFloor, setGenFloor] = useState(0);
+  const [genCap, setGenCap] = useState(0);
+  const [genStatus, setGenStatus] = useState('');
+  const [genTheme, setGenTheme] = useState('Коллекция');
+  const [genTotal, setGenTotal] = useState(1);
+  const [genDone, setGenDone] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -51,29 +61,62 @@ export default function PaymentSuccessClient({ orderId, paymentId }: { orderId?:
           }
 
           if (itemType === 'nft_generation' && !data.payment?.generationFulfilled) {
+            const qty = Math.max(1, Number(data.payment?.qty) || 1);
+            const themeKey = String(data.payment?.theme || '');
+            setGenTheme(isNftThemeKey(themeKey) ? NFT_THEME_CONFIG[themeKey].name : 'Коллекция');
+            setGenTotal(qty);
+            setGenOpen(true);
             setState({ status: 'pending', itemType, message: 'Оплата прошла. Собираем карты в коллекцию…' });
-            const fulfill = await fetch('/api/nft/fulfill-generation', {
-              method: 'POST',
-              credentials: 'include',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ paymentId: data.payment?.id, orderId }),
-            });
-            const fulfillData = await fulfill.json();
-            if (cancelled) return;
-            if (fulfill.ok && fulfillData.success) {
+            if (fulfillingRef.current) return;
+            fulfillingRef.current = true;
+            setGenStatus(qty > 1 ? 'Собираем карты...' : 'Собираем карту...');
+            setGenFloor(22);
+            setGenCap(qty > 1 ? 94 : 88);
+            try {
+              const fulfill = await fetch('/api/nft/fulfill-generation', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ paymentId: data.payment?.id, orderId }),
+              });
+              const fulfillData = await fulfill.json();
+              if (cancelled) return;
+              if (fulfill.ok && fulfillData.success) {
+                const created = Number(fulfillData.created || qty);
+                setGenDone(created);
+                setGenFloor(100);
+                setGenCap(100);
+                setGenStatus(created > 1 ? 'Карты готовы' : 'Карта готова');
+                await new Promise((resolve) => window.setTimeout(resolve, 420));
+                if (cancelled) return;
+                setGenOpen(false);
+                setState({
+                  status: 'succeeded',
+                  itemType,
+                  message: `Готово: ${created} карт в коллекции.`,
+                });
+                return;
+              }
+              if (fulfillData.code === 'PAYMENT_PENDING') {
+                setGenStatus('Ждём подтверждение оплаты...');
+                setGenFloor(10);
+                setGenCap(36);
+                setState({ status: 'pending', itemType, message: 'Ждём подтверждение оплаты, затем выпустим карты.' });
+                return;
+              }
+              setGenOpen(false);
               setState({
-                status: 'succeeded',
+                status: 'error',
                 itemType,
-                message: `Готово: ${fulfillData.created || data.payment?.qty || ''} карт в коллекции.`,
+                message: fulfillData.error || 'Не удалось собрать карты. Откройте коллекцию чуть позже.',
               });
               return;
-            }
-            if (fulfillData.code === 'PAYMENT_PENDING') {
-              setState({ status: 'pending', itemType, message: 'Ждём подтверждение оплаты, затем выпустим карты.' });
-              return;
+            } finally {
+              fulfillingRef.current = false;
             }
           }
 
+          setGenOpen(false);
           setState({
             status: 'succeeded',
             itemType,
@@ -84,7 +127,18 @@ export default function PaymentSuccessClient({ orderId, paymentId }: { orderId?:
                 : 'Оплата прошла. Монеты будут начислены webhook-обработчиком.',
           });
         } else if (status === 'canceled') {
+          setGenOpen(false);
           setState({ status: 'canceled', message: 'Платеж отменен или не завершен.', itemType });
+        } else if (itemType === 'nft_generation') {
+          const qty = Math.max(1, Number(data.payment?.qty) || 1);
+          const themeKey = String(data.payment?.theme || '');
+          setGenTheme(isNftThemeKey(themeKey) ? NFT_THEME_CONFIG[themeKey].name : 'Коллекция');
+          setGenTotal(qty);
+          setGenOpen(true);
+          setGenStatus('Ждём подтверждение оплаты...');
+          setGenFloor(8);
+          setGenCap(32);
+          setState({ status: 'pending', itemType, message: 'Ждём подтверждение оплаты, затем выпустим карты.' });
         } else if (response.ok) {
           setState({ status: 'pending', message: 'Платеж еще обрабатывается. Обновите страницу через несколько секунд.', itemType });
         } else {
@@ -92,6 +146,7 @@ export default function PaymentSuccessClient({ orderId, paymentId }: { orderId?:
         }
       } catch {
         if (!cancelled) {
+          setGenOpen(false);
           setState({ status: 'error', message: 'Не удалось проверить статус. Проверьте баланс чуть позже.' });
         }
       }
@@ -225,6 +280,15 @@ export default function PaymentSuccessClient({ orderId, paymentId }: { orderId?:
           )}
         </div>
       </section>
+      <NftGenerationProgress
+        open={genOpen}
+        themeName={genTheme}
+        status={genStatus}
+        floor={genFloor}
+        cap={genCap}
+        completed={genDone}
+        total={genTotal}
+      />
     </main>
   );
 }

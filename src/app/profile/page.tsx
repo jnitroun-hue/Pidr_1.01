@@ -31,6 +31,7 @@ import BonusCenter, { type ProfileBonus } from '@/components/BonusCenter';
 import type { AuthMethod } from '@/lib/user/resolve-auth-method';
 import AvatarGeneratorModal from '@/components/AvatarGeneratorModal';
 import MenuThemePicker from '@/components/MenuThemePicker';
+import NftGenerationProgress from '@/components/NftGenerationProgress';
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -420,6 +421,9 @@ export default function ProfilePage() {
   const [showAddToDeckPicker, setShowAddToDeckPicker] = useState(false);
   const [selectedDeckCardIds, setSelectedDeckCardIds] = useState<string[]>([]);
   const [isGeneratingStarter, setIsGeneratingStarter] = useState(false);
+  const [starterFloor, setStarterFloor] = useState(0);
+  const [starterCap, setStarterCap] = useState(0);
+  const [starterStatus, setStarterStatus] = useState('');
   const [isAddingToDeckBatch, setIsAddingToDeckBatch] = useState(false);
 
   // Скины для карт
@@ -1021,6 +1025,9 @@ export default function ProfilePage() {
   const handleGenerateStarterCard = async () => {
     if (isGeneratingStarter) return;
     setIsGeneratingStarter(true);
+    setStarterStatus('Собираем первую карту...');
+    setStarterFloor(8);
+    setStarterCap(86);
     try {
       const response = await fetch('/api/nft/generate-starter', {
         method: 'POST',
@@ -1041,6 +1048,11 @@ export default function ProfilePage() {
         window.dispatchEvent(new CustomEvent('deck-updated'));
         window.dispatchEvent(new CustomEvent('nft-deck-updated'));
         window.dispatchEvent(new CustomEvent('nft-collection-updated'));
+        setStarterStatus('Карта готова');
+        setStarterFloor(100);
+        setStarterCap(100);
+        await new Promise((resolve) => window.setTimeout(resolve, 420));
+        setIsGeneratingStarter(false);
         await appAlert(result.message || 'Первая карта создана и добавлена в колоду!', {
           title: 'Готово',
           type: 'success',
@@ -1062,6 +1074,9 @@ export default function ProfilePage() {
       await appAlert('Ошибка генерации карты', { title: 'Ошибка', type: 'error' });
     } finally {
       setIsGeneratingStarter(false);
+      setStarterFloor(0);
+      setStarterCap(0);
+      setStarterStatus('');
     }
   };
 
@@ -2580,6 +2595,16 @@ export default function ProfilePage() {
         open={showAvatarGenerator}
         onClose={() => setShowAvatarGenerator(false)}
         onSelected={handleAvatarSelected}
+      />
+
+      <NftGenerationProgress
+        open={isGeneratingStarter}
+        themeName="Первая карта"
+        status={starterStatus}
+        floor={starterFloor}
+        cap={starterCap}
+        completed={starterFloor >= 100 ? 1 : 0}
+        total={1}
       />
 
     </div>

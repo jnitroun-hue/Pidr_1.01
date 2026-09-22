@@ -13,6 +13,7 @@ import type { NftThemeKey } from '@/lib/nft/theme-config';
 import type { ExchangeRateSnapshot } from '@/lib/pricing/types';
 import { GRAM, formatGramAmount } from '@/lib/crypto/gram-brand';
 import { PidrCoinAmount } from '@/components/PidrCoinIcon';
+import NftGenerationProgress from '@/components/NftGenerationProgress';
 import {
   copyDepositDetails,
   openExternalWalletForDeposit,
@@ -100,6 +101,8 @@ const THEMES = {
 const SUITS = ['spades', 'hearts', 'diamonds', 'clubs'];
 const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'j', 'q', 'k', 'a'];
 
+const hold = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
+
 export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThemeGeneratorProps) {
   const [showModal, setShowModal] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -108,6 +111,8 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
   const [genProgress, setGenProgress] = useState(0);
   const [genTotal, setGenTotal] = useState(0);
   const [genStatus, setGenStatus] = useState('');
+  const [progressFloor, setProgressFloor] = useState(0);
+  const [progressCap, setProgressCap] = useState(0);
   const [showCryptoModal, setShowCryptoModal] = useState(false);
   const [cryptoTheme, setCryptoTheme] = useState<keyof typeof THEMES | null>(null);
   const [genQty, setGenQty] = useState(1);
@@ -146,6 +151,21 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
   const genAmountFor = (coin: 'GRAM' | 'SOL' | 'TRX' | 'USDT', qty = genQty) => {
     const theme = cryptoTheme || focusTheme;
     return nftGenCryptoAmount(theme, coin, qty, rateSnapshot);
+  };
+
+  const pushProgress = (floor: number, cap = floor) => {
+    const nextFloor = Math.max(0, Math.min(100, floor));
+    const nextCap = Math.max(nextFloor, Math.min(100, cap));
+    setProgressFloor(nextFloor);
+    setProgressCap(nextCap);
+  };
+
+  const resetProgress = () => {
+    setProgressFloor(0);
+    setProgressCap(0);
+    setGenProgress(0);
+    setGenTotal(0);
+    setGenStatus('');
   };
 
   const rubForQty = (qty: number, themeKey: keyof typeof THEMES = cryptoTheme || focusTheme) => {
@@ -203,9 +223,11 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
     const amount = genAmountFor(coin, qty);
 
     setGenerating(true);
+    setSelectedTheme(theme);
     setGenTotal(qty);
     setGenProgress(0);
     setGenStatus('Подготовка карт...');
+    pushProgress(6, 14);
 
     try {
       const meRes = await fetch('/api/user/me', {
@@ -236,13 +258,16 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
         const randomSuit = SUITS[Math.floor(Math.random() * SUITS.length)];
         const randomRank = RANKS[Math.floor(Math.random() * RANKS.length)];
         const randomId = Math.floor(Math.random() * themeConfig.total) + 1;
+        const drawn = 14 + (i / qty) * 46;
         setGenStatus(`Рисунок ${i + 1} из ${qty}...`);
         setGenProgress(i);
+        pushProgress(drawn, drawn + (46 / qty) * 0.82);
         const imageData = await generateThemeCardImage(randomSuit, randomRank, randomId, theme);
         prepared.push({ suit: randomSuit, rank: randomRank, imageData, themeId: randomId });
       }
 
       setGenStatus(`Оплата ${amount} ${coin === 'GRAM' ? GRAM.symbol : coin}...`);
+      pushProgress(62, 70);
 
       let txHash: string | undefined;
 
@@ -275,7 +300,8 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
         );
       }
 
-      setGenStatus(`Проверка оплаты и выпуск карт...`);
+      setGenStatus('Проверка оплаты и выпуск карт...');
+      pushProgress(74, 93);
       setShowCryptoModal(false);
 
       const first = prepared[0]!;
@@ -310,6 +336,10 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
         if (genRes.ok && genData.success) {
           window.dispatchEvent(new CustomEvent('nft-collection-updated'));
           window.dispatchEvent(new CustomEvent('nft-deck-updated'));
+          pushProgress(100, 100);
+          setGenStatus(qty > 1 ? 'Карты готовы' : 'Карта готова');
+          setGenProgress(qty);
+          await hold(420);
           const shown = genData.nft || genData.nfts?.[0];
           if (shown) {
             openNftCardModal({
@@ -345,9 +375,8 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
       alert(`❌ ${msg}`);
     } finally {
       setGenerating(false);
-      setGenStatus('');
-      setGenProgress(0);
-      setGenTotal(0);
+      setSelectedTheme(null);
+      resetProgress();
     }
   };
 
@@ -370,7 +399,8 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
     setSelectedTheme(theme);
     setGenProgress(0);
     setGenTotal(1);
-    setGenStatus('Генерация изображения...');
+    setGenStatus('Собираем изображение...');
+    pushProgress(8, 66);
 
     try {
       const randomSuit = SUITS[Math.floor(Math.random() * SUITS.length)];
@@ -379,7 +409,8 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
 
       console.log(`🎨 [Client] Генерируем карту: ${theme}, ID: ${randomId}`);
       const imageData = await generateThemeCardImage(randomSuit, randomRank, randomId, theme);
-      setGenStatus('Сохранение в коллекцию...');
+      setGenStatus('Сохраняем в коллекцию...');
+      pushProgress(74, 90);
       
       const response = await fetch('/api/nft/generate-theme', {
         method: 'POST',
@@ -434,7 +465,9 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
         }
         
         setGenProgress(1);
-        setGenStatus('Готово!');
+        setGenStatus('Карта готова');
+        pushProgress(100, 100);
+        await hold(420);
 
         if (result.nft) {
           openNftCardModal({
@@ -461,9 +494,7 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
     } finally {
       setGenerating(false);
       setSelectedTheme(null);
-      setGenProgress(0);
-      setGenTotal(0);
-      setGenStatus('');
+      resetProgress();
     }
   };
 
@@ -486,17 +517,20 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
     setSelectedTheme(theme);
     setGenProgress(0);
     setGenTotal(52);
-    setGenStatus('Подготовка генерации колоды...');
+    setGenStatus('Подготовка колоды...');
+    pushProgress(2, 4);
 
     try {
       let successCount = 0;
+      let index = 0;
       const themeConfig = THEMES[theme];
 
       for (const suit of SUITS) {
         for (const rank of RANKS) {
           const themeId = Math.floor(Math.random() * themeConfig.total) + 1;
-          
-          setGenStatus(`${getSuitSymbol(suit)} ${rank.toUpperCase()} — генерация...`);
+          const done = (index / 52) * 100;
+          setGenStatus(`${getSuitSymbol(suit)} ${rank.toUpperCase()}`);
+          pushProgress(done, done + 70 / 52);
           const imageData = await generateThemeCardImage(suit, rank, themeId, theme);
           
           const response = await fetch('/api/nft/generate-theme', {
@@ -519,11 +553,14 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
           if (response.ok && result.success) {
             successCount++;
           }
-          setGenProgress(successCount);
+          index += 1;
+          setGenProgress(index);
+          pushProgress((index / 52) * 100);
         }
       }
 
       setGenStatus('Списание монет...');
+      pushProgress(97, 99);
       const deductResponse = await fetch('/api/user/add-coins', {
         method: 'POST',
         credentials: 'include',
@@ -541,7 +578,10 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
         window.dispatchEvent(new CustomEvent('nft-deck-updated'));
         window.dispatchEvent(new CustomEvent('transaction-created'));
         
-        setGenStatus('Колода готова!');
+        setGenStatus('Колода готова');
+        setGenProgress(52);
+        pushProgress(100, 100);
+        await hold(420);
         
         alert(`✅ Колода ${themeConfig.name} создана!\n\n${successCount} уникальных карт\nСохранено в коллекцию!`);
         
@@ -561,9 +601,7 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
     } finally {
       setGenerating(false);
       setSelectedTheme(null);
-      setGenProgress(0);
-      setGenTotal(0);
-      setGenStatus('');
+      resetProgress();
     }
   };
 
@@ -796,52 +834,6 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
                   </div>
                 );
               })()}
-
-              {/* ПРОГРЕСС-БАР ГЕНЕРАЦИИ */}
-              {generating && genTotal > 0 && (
-                <div style={{
-                  padding: '20px', borderRadius: '16px', marginBottom: '16px',
-                  background: 'linear-gradient(135deg, rgba(255,215,0,0.08) 0%, rgba(6,182,212,0.06) 100%)',
-                  border: '1.5px solid rgba(255,215,0,0.25)',
-                  boxShadow: '0 4px 24px rgba(255,215,0,0.08)',
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                    <span style={{ fontSize: '14px', fontWeight: '700', color: '#ffd700' }}>
-                      {genTotal === 1 ? 'Генерация карты...' : `Генерация колоды`}
-                    </span>
-                    <span style={{ fontSize: '13px', fontWeight: '600', color: '#06b6d4' }}>
-                      {genProgress}/{genTotal}
-                    </span>
-                  </div>
-                  <div style={{
-                    width: '100%', height: '10px', borderRadius: '5px',
-                    background: 'rgba(0,0,0,0.4)', overflow: 'hidden',
-                    border: '1px solid rgba(255,215,0,0.1)',
-                  }}>
-                    <motion.div
-                      initial={{ width: '0%' }}
-                      animate={{ width: `${genTotal > 0 ? (genProgress / genTotal) * 100 : 0}%` }}
-                      transition={{ duration: 0.4, ease: 'easeOut' }}
-                      style={{
-                        height: '100%', borderRadius: '5px',
-                        background: 'linear-gradient(90deg, #ffd700 0%, #06b6d4 50%, #ffd700 100%)',
-                        backgroundSize: '200% 100%',
-                        animation: 'shimmer 2s linear infinite',
-                        boxShadow: '0 0 12px rgba(255,215,0,0.4)',
-                      }}
-                    />
-                  </div>
-                  <div style={{ marginTop: '8px', fontSize: '12px', color: '#94a3b8', textAlign: 'center' }}>
-                    {genStatus}
-                  </div>
-                  <style>{`
-                    @keyframes shimmer {
-                      0% { background-position: 200% 0; }
-                      100% { background-position: -200% 0; }
-                    }
-                  `}</style>
-                </div>
-              )}
 
               {/* БАЛАНС */}
               <div style={{
@@ -1143,6 +1135,16 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
           </motion.div>
         )}
       </AnimatePresence>
+
+      <NftGenerationProgress
+        open={generating}
+        themeName={THEMES[(selectedTheme && selectedTheme in THEMES ? selectedTheme : focusTheme) as keyof typeof THEMES].name}
+        status={genStatus}
+        floor={progressFloor}
+        cap={progressCap}
+        completed={genProgress}
+        total={genTotal}
+      />
     </>
   );
 }

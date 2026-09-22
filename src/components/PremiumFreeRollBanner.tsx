@@ -12,6 +12,7 @@ import { appAlert } from '@/lib/app-notice';
 import { getApiHeaders } from '@/lib/api-headers';
 import { parseJsonResponse } from '@/lib/api/parse-json-response';
 import { openNftCardModal } from '@/lib/nft/open-card-modal';
+import NftGenerationProgress from '@/components/NftGenerationProgress';
 
 interface PremiumFreeRollBannerProps {
   onGenerated?: () => void;
@@ -60,6 +61,9 @@ export default function PremiumFreeRollBanner({ onGenerated }: PremiumFreeRollBa
   const [premium, setPremium] = useState<PremiumStatus | null>(null);
   const [loadingStatus, setLoadingStatus] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [progressFloor, setProgressFloor] = useState(0);
+  const [progressCap, setProgressCap] = useState(0);
+  const [progressStatus, setProgressStatus] = useState('');
 
   const refreshPremium = useCallback(async () => {
     const status = await fetchPremiumStatus();
@@ -91,6 +95,9 @@ export default function PremiumFreeRollBanner({ onGenerated }: PremiumFreeRollBa
     if (!available || generating) return;
 
     setGenerating(true);
+    setProgressStatus('Собираем карту...');
+    setProgressFloor(8);
+    setProgressCap(86);
     try {
       const response = await fetch('/api/nft/mint-random', {
         method: 'POST',
@@ -129,6 +136,10 @@ export default function PremiumFreeRollBanner({ onGenerated }: PremiumFreeRollBa
       window.dispatchEvent(new CustomEvent('nft-collection-updated'));
       onGenerated?.();
       await refreshPremium();
+      setProgressStatus('Карта готова');
+      setProgressFloor(100);
+      setProgressCap(100);
+      await new Promise((resolve) => window.setTimeout(resolve, 420));
 
       if (!card?.id) {
         await appAlert('Карта создана, но не удалось открыть превью', { title: 'Готово', type: 'success' });
@@ -154,10 +165,14 @@ export default function PremiumFreeRollBanner({ onGenerated }: PremiumFreeRollBa
       });
     } finally {
       setGenerating(false);
+      setProgressFloor(0);
+      setProgressCap(0);
+      setProgressStatus('');
     }
   };
 
   return (
+    <>
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
@@ -348,5 +363,15 @@ export default function PremiumFreeRollBanner({ onGenerated }: PremiumFreeRollBa
         }
       `}</style>
     </motion.div>
+    <NftGenerationProgress
+      open={generating}
+      themeName="Премиум"
+      status={progressStatus}
+      floor={progressFloor}
+      cap={progressCap}
+      completed={progressFloor >= 100 ? 1 : 0}
+      total={1}
+    />
+    </>
   );
 }
