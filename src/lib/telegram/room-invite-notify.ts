@@ -1,12 +1,17 @@
 import { getSupabaseAdmin } from '@/lib/supabase';
 
 function appBaseUrl(): string {
-  const raw =
+  const raw = (
     process.env.NEXT_PUBLIC_APP_URL ||
     process.env.APP_URL ||
     process.env.NEXTAUTH_URL ||
-    '';
-  return raw.replace(/\/$/, '');
+    'https://www.pidr1-01.ru'
+  )
+    .trim()
+    .replace(/\/$/, '');
+  if (!raw) return '';
+  if (/^https?:\/\//i.test(raw)) return raw.replace(/^http:\/\//i, 'https://');
+  return `https://${raw}`;
 }
 
 function botToken(): string {

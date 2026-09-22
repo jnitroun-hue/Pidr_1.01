@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
 import { declineRoomInviteFromTelegram } from '@/lib/telegram/room-invite-notify';
 import { referralCodeFromTelegramStartParam } from '@/lib/referral/referral-links';
+
+/** В проде URL иногда лежит без схемы — Telegram тогда отклоняет web_app-кнопки целиком. */
+function botAppBase(): string {
+  const raw = (process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || 'https://www.pidr1-01.ru')
+    .trim()
+    .replace(/\/$/, '');
+  if (/^https?:\/\//i.test(raw)) return raw.replace(/^http:\/\//i, 'https://');
+  return `https://${raw}`;
+}
 
 /**
  * 🎮 Telegram Bot Webhook Handler
@@ -136,7 +144,7 @@ export async function POST(req: NextRequest) {
               inline_keyboard: [[
                 {
                   text: '🎮 Начать игру',
-                  web_app: { url: process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || 'https://your-app-url.vercel.app' }
+                  web_app: { url: botAppBase() }
                 }
               ]]
             }
@@ -178,71 +186,16 @@ export async function POST(req: NextRequest) {
 
     // Обрабатываем команду /start
     if (text && text.startsWith('/start')) {
-      console.log('✅ [Telegram Webhook] Обрабатываем команду /start');
-      const startParam = text.split(' ')[1]; // Параметр после /start
-      console.log('📋 [Telegram Webhook] Параметр start:', startParam);
-      
-      // ✅ ПОЛУЧАЕМ СТАТИСТИКУ ДЛЯ ПРОМО-СООБЩЕНИЯ
-      let recentWins = '';
-      try {
-        console.log('📊 [Telegram Webhook] Загружаем статистику игроков...');
-        const { data: recentGames, error: statsError } = await supabase
-          .from('_pidr_users')
-          .select('username, wins, games_played')
-          .gt('wins', 0)
-          .order('wins', { ascending: false })
-          .limit(3);
-        
-        if (statsError) {
-          console.error('❌ [Telegram Webhook] Ошибка загрузки статистики:', statsError);
-        } else {
-          console.log('✅ [Telegram Webhook] Статистика загружена:', recentGames?.length || 0, 'игроков');
-        }
-        
-        if (recentGames && recentGames.length > 0) {
-          recentWins = `\n🏆 <b>Топ игроков:</b>\n`;
-          recentGames.forEach((user: { username: string | null; wins: number; games_played: number }, index: number) => {
-            const winRate = user.games_played > 0 ? Math.round((user.wins / user.games_played) * 100) : 0;
-            const name = (user.username || 'Игрок').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            recentWins += `${index + 1}. ${name} - ${user.wins} побед (${winRate}%)\n`;
-          });
-        }
-      } catch (error: unknown) {
-        console.error('❌ [Telegram Webhook] Ошибка получения статистики:', error);
-      }
-      
-      let caption = `<b>P.I.D.R.</b> — карточная игра\n\n`;
-      caption += `Садись за стол с друзьями, собирай NFT и поднимайся в рейтинге.\n`;
-      caption += `Зарегистрируйся или сразу играй — в Telegram или во ВКонтакте.`;
-      if (recentWins) caption += `\n${recentWins}`;
-      if (startParam?.startsWith('invite_')) {
-        caption += `\n\n🎁 <b>Вас пригласил друг.</b> Бонус придёт после регистрации.`;
-      } else if (startParam?.startsWith('join_')) {
-        const parts = startParam.replace('join_', '').split('_');
-        if (parts.length >= 2) {
-          const roomCode = parts.slice(1).join('_').replace(/[<>&]/g, '');
-          caption += `\n\n🎮 <b>Приглашение в игру.</b> Код комнаты: <code>${roomCode}</code>`;
-        }
-      }
-
-      // Отправляем ответ через Telegram Bot API
+      const startParam = text.split(' ')[1];
       const botToken = process.env.TELEGRAM_BOT_TOKEN;
-      console.log('🔑 [Telegram Webhook] Bot token:', botToken ? `${botToken.substring(0, 10)}...` : 'НЕ УСТАНОВЛЕН');
-      
+      console.log('✅ [Telegram Webhook] /start', { startParam, hasToken: !!botToken });
+
       if (botToken) {
-        // ✅ Поддержка обеих переменных: NEXT_PUBLIC_APP_URL и APP_URL
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || 'https://your-app-url.vercel.app';
-        console.log('🌐 [Telegram Webhook] App URL:', appUrl);
-        
-        // Формируем URL с параметром start_param если есть
-        let webAppUrl = appUrl;
-        if (startParam) {
-          webAppUrl += `?start_param=${encodeURIComponent(startParam)}`;
-        }
-        console.log('🔗 [Telegram Webhook] Web App URL:', webAppUrl);
-        
-        const appBase = appUrl.replace(/\/$/, '');
+        const appBase = botAppBase();
         const heroUrl = `${appBase}/img/vk-app-icon-512.png`;
+        const playUrl = startParam
+          ? `${appBase}/?start_param=${encodeURIComponent(startParam)}`
+          : `${appBase}/`;
         const referralCode = referralCodeFromTelegramStartParam(startParam);
         const registerUrl = referralCode
           ? `${appBase}/auth/register?ref=${encodeURIComponent(referralCode)}`
@@ -250,14 +203,18 @@ export async function POST(req: NextRequest) {
         const vkAppId = (process.env.NEXT_PUBLIC_VK_CLIENT_ID || '').trim();
         const vkPlayUrl = /^\d+$/.test(vkAppId) ? `https://vk.com/app${vkAppId}` : null;
 
-        const playRow: Array<Record<string, unknown>> = [
-          { text: '🎮 Играть в Telegram', web_app: { url: webAppUrl } },
-        ];
-        if (vkPlayUrl) {
-          playRow.push({ text: '🔵 Играть в VK', url: vkPlayUrl });
-        } else {
-          console.warn('⚠️ [Telegram Webhook] NEXT_PUBLIC_VK_CLIENT_ID не задан — кнопка VK скрыта');
+        let caption = `<b>P.I.D.R.</b> — карточная игра\n\nЗарегистрируйся или сразу садись за стол: Telegram или VK.`;
+        if (startParam?.startsWith('invite_')) {
+          caption += `\n\n🎁 <b>Вас пригласил друг.</b> Бонус придёт после регистрации.`;
+        } else if (startParam?.startsWith('join_')) {
+          const roomCode = startParam.replace(/^join_/, '').split('_').slice(1).join('_').replace(/[<>&]/g, '');
+          if (roomCode) caption += `\n\n🎮 Код комнаты: <code>${roomCode}</code>`;
         }
+
+        const playRow: Array<Record<string, unknown>> = [
+          { text: '🎮 Играть в Telegram', web_app: { url: playUrl } },
+        ];
+        if (vkPlayUrl) playRow.push({ text: '🔵 Играть в VK', url: vkPlayUrl });
 
         const replyMarkup = {
           inline_keyboard: [
@@ -267,41 +224,56 @@ export async function POST(req: NextRequest) {
           ],
         };
 
-        console.log('📤 [Telegram Webhook] Отправляем /start с картинкой...');
-        const photoResponse = await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: chatId,
-            photo: heroUrl,
-            caption,
-            parse_mode: 'HTML',
-            reply_markup: replyMarkup,
-          }),
-        });
-        const photoData = await photoResponse.json();
-        if (photoData.ok) {
-          console.log('✅ [Telegram Webhook] /start с картинкой отправлен');
-        } else {
-          console.error('❌ [Telegram Webhook] sendPhoto не удался, шлём текст:', photoData);
-          const textResponse = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        const api = `https://api.telegram.org/bot${botToken}`;
+        try {
+          const photoResponse = await fetch(`${api}/sendPhoto`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               chat_id: chatId,
-              text: caption,
+              photo: heroUrl,
+              caption,
               parse_mode: 'HTML',
               reply_markup: replyMarkup,
             }),
           });
-          const textData = await textResponse.json();
-          if (!textData.ok) {
-            console.error('❌ [Telegram Webhook] Ошибка отправки /start:', textData);
+          const photoData = await photoResponse.json().catch(() => null);
+          if (!photoData?.ok) {
+            console.error('❌ [Telegram Webhook] sendPhoto:', photoData);
+            const textResponse = await fetch(`${api}/sendMessage`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: chatId,
+                text: caption,
+                parse_mode: 'HTML',
+                reply_markup: replyMarkup,
+              }),
+            });
+            const textData = await textResponse.json().catch(() => null);
+            if (!textData?.ok) {
+              console.error('❌ [Telegram Webhook] sendMessage fallback:', textData);
+              await fetch(`${api}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  chat_id: chatId,
+                  text: `P.I.D.R. — карточная игра.\nИграть: ${appBase}/`,
+                }),
+              });
+            }
           }
+        } catch (sendError) {
+          console.error('❌ [Telegram Webhook] /start send failed:', sendError);
+          await fetch(`${api}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: chatId,
+              text: 'P.I.D.R. — карточная игра. Нажми кнопку меню «Играть» или открой https://pidr-1-01.vercel.app',
+            }),
+          }).catch(() => undefined);
         }
-      } else {
-        console.warn('⚠️ [Telegram Webhook] TELEGRAM_BOT_TOKEN не установлен');
-        console.warn('💡 Установите переменную окружения TELEGRAM_BOT_TOKEN в Vercel');
       }
     }
 
