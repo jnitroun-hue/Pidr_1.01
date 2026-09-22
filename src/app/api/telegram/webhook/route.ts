@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
           `Избавиться от всех карт раньше других игроков.\n\n` +
           `🎮 <b>Стадии игры:</b>\n\n` +
           `1️⃣ <b>Первая стадия:</b>\n` +
-          `• У каждого игрока 1 открытая карта\n` +
+          `• У каждого игрока 1 открытая и 2 закрытые карты (пеньки — до 3 стадии)\n` +
           `• Старшая карта бьет младшую (Туз → Король → Дама → Валет → 10 → ... → 2)\n` +
           `• Двойка бьет только Туз\n` +
           `• Можно брать карты из колоды\n` +
@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
           `• Когда пеньки заканчиваются - игрок выходит из игры\n\n` +
           `⚠️ <b>Штрафы:</b>\n` +
           `• Если у игрока 1 карта, он должен объявить "Одна карта!"\n` +
-          `• Если забыл - получает штрафные карты от других игроков\n\n` +
+          `• Если забыл — получает карты от всех остальных за столом, но только если кто-то успел первым спросить «Сколько карт?»\n\n` +
           `🏆 <b>Победа:</b>\n` +
           `Первый игрок, избавившийся от всех карт - победитель!\n\n` +
           `💡 <b>Советы:</b>\n` +
@@ -197,13 +197,16 @@ export async function POST(req: NextRequest) {
           ? `${appBase}/?start_param=${encodeURIComponent(startParam)}`
           : `${appBase}/`;
         const referralCode = referralCodeFromTelegramStartParam(startParam);
-        const registerUrl = referralCode
-          ? `${appBase}/auth/register?ref=${encodeURIComponent(referralCode)}`
-          : `${appBase}/auth/register`;
+        const earnUrl = referralCode
+          ? `${appBase}/earn-nft?ref=${encodeURIComponent(referralCode)}`
+          : `${appBase}/earn-nft`;
         const vkAppId = (process.env.NEXT_PUBLIC_VK_CLIENT_ID || '').trim();
         const vkPlayUrl = /^\d+$/.test(vkAppId) ? `https://vk.com/app${vkAppId}` : null;
 
-        let caption = `<b>P.I.D.R.</b> — карточная игра\n\nЗарегистрируйся или сразу садись за стол: Telegram или VK.`;
+        let caption =
+          `<b>P.I.D.R.</b> — карточная игра\n\n` +
+          `Садись за стол в Telegram или VK.\n\n` +
+          `💰 <b>Заработать</b> можно в самой игре: поднимайся в рейтинге, получай монеты, генерируй NFT-карты и продавай их другим игрокам.`;
         if (startParam?.startsWith('invite_')) {
           caption += `\n\n🎁 <b>Вас пригласил друг.</b> Бонус придёт после регистрации.`;
         } else if (startParam?.startsWith('join_')) {
@@ -218,7 +221,7 @@ export async function POST(req: NextRequest) {
 
         const replyMarkup = {
           inline_keyboard: [
-            [{ text: '📝 Зарегистрироваться', web_app: { url: registerUrl } }],
+            [{ text: '💰 Заработать', web_app: { url: earnUrl } }],
             playRow,
             [{ text: '📖 Изучить правила', callback_data: 'show_rules' }],
           ],
