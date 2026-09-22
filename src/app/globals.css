@@ -61,6 +61,9 @@
   --menu-accent-soft: rgba(99, 102, 241, 0.22);
   --menu-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   --menu-wallet-border: rgba(99, 102, 241, 0.35);
+  --menu-button-bg: var(--menu-card-bg);
+  --menu-button-border: var(--menu-card-border);
+  --menu-button-text: var(--menu-text);
 }
 
 .dark {

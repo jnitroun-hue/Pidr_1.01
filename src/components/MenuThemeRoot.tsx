@@ -7,7 +7,7 @@ import {
   applyMenuThemeToDocument,
   readStoredMenuTheme,
 } from '@/lib/ui/menu-theme-client';
-import { isMenuThemeId } from '@/lib/ui/menuThemes';
+import { isStoredMenuTheme } from '@/lib/ui/menuThemes';
 
 /** Поднимает выбранную тему меню на весь интерфейс (html CSS vars). */
 export default function MenuThemeRoot() {
@@ -16,7 +16,7 @@ export default function MenuThemeRoot() {
 
     const onTheme = (event: Event) => {
       const themeId = (event as CustomEvent<{ themeId?: string }>).detail?.themeId;
-      if (isMenuThemeId(themeId)) applyMenuThemeToDocument(themeId);
+      if (isStoredMenuTheme(themeId)) applyMenuThemeToDocument(themeId);
     };
     window.addEventListener('pidr-menu-theme', onTheme as EventListener);
 
@@ -28,7 +28,7 @@ export default function MenuThemeRoot() {
       })
         .then((res) => res.json())
         .then((data) => {
-          if (data?.success && isMenuThemeId(data.themeId)) {
+          if (data?.success && isStoredMenuTheme(data.themeId)) {
             applyMenuThemeToDocument(data.themeId);
           }
         })

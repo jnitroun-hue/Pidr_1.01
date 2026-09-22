@@ -1,24 +1,23 @@
 import type { CSSProperties } from 'react';
 import {
   DEFAULT_MENU_THEME,
-  isMenuThemeId,
+  isStoredMenuTheme,
   resolveMenuTheme,
-  type MenuThemeId,
 } from '@/lib/ui/menuThemes';
 
 export const MENU_THEME_STORAGE_KEY = 'pidr_menu_theme';
 
-export function readStoredMenuTheme(): MenuThemeId {
+export function readStoredMenuTheme(): string {
   if (typeof window === 'undefined') return DEFAULT_MENU_THEME;
   try {
     const raw = localStorage.getItem(MENU_THEME_STORAGE_KEY);
-    return isMenuThemeId(raw) ? raw : DEFAULT_MENU_THEME;
+    return isStoredMenuTheme(raw) ? raw : DEFAULT_MENU_THEME;
   } catch {
     return DEFAULT_MENU_THEME;
   }
 }
 
-export function storeMenuTheme(themeId: MenuThemeId): void {
+export function storeMenuTheme(themeId: string): void {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(MENU_THEME_STORAGE_KEY, themeId);
@@ -27,19 +26,27 @@ export function storeMenuTheme(themeId: MenuThemeId): void {
   }
 }
 
-export function menuThemeStyleVars(themeId: MenuThemeId | string | null | undefined): CSSProperties {
+export function menuThemeStyleVars(themeId: string | null | undefined): CSSProperties {
   const theme = resolveMenuTheme(themeId);
-  return theme.vars as unknown as CSSProperties;
+  return {
+    ...theme.vars,
+    '--menu-button-bg': theme.vars['--menu-button-bg'] || theme.vars['--menu-card-bg'],
+    '--menu-button-border': theme.vars['--menu-button-border'] || theme.vars['--menu-card-border'],
+    '--menu-button-text': theme.vars['--menu-button-text'] || theme.vars['--menu-text'],
+  } as CSSProperties;
 }
 
 /** CSS-переменные темы на documentElement — действуют на всех страницах, включая бургер-меню. */
-export function applyMenuThemeToDocument(themeId: MenuThemeId | string | null | undefined): void {
+export function applyMenuThemeToDocument(themeId: string | null | undefined): void {
   if (typeof document === 'undefined') return;
   const theme = resolveMenuTheme(themeId);
   const root = document.documentElement;
   for (const [key, value] of Object.entries(theme.vars)) {
-    root.style.setProperty(key, value);
+    if (value) root.style.setProperty(key, value);
   }
+  root.style.setProperty('--menu-button-bg', theme.vars['--menu-button-bg'] || theme.vars['--menu-card-bg']);
+  root.style.setProperty('--menu-button-border', theme.vars['--menu-button-border'] || theme.vars['--menu-card-border']);
+  root.style.setProperty('--menu-button-text', theme.vars['--menu-button-text'] || theme.vars['--menu-text']);
   root.dataset.menuTheme = theme.id;
   root.style.setProperty('--background-color', theme.vars['--menu-bg']);
   root.style.setProperty('--game-bg', theme.vars['--menu-bg']);

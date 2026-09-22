@@ -4,12 +4,14 @@ import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 import { getPremiumStatus } from '@/lib/premium/premium-service';
 import {
   DEFAULT_MENU_THEME,
+  buildCustomMenuTheme,
   canUseMenuTheme,
+  encodeCustomMenuTheme,
   isMenuThemeId,
+  isStoredMenuTheme,
   listMenuThemes,
-  pickRandomMenuTheme,
+  parseCustomMenuTheme,
   resolveMenuTheme,
-  type MenuThemeId,
 } from '@/lib/ui/menuThemes';
 
 export const runtime = 'nodejs';
@@ -21,7 +23,7 @@ function noStoreJson(body: unknown, init?: ResponseInit) {
   return response;
 }
 
-async function loadUserTheme(dbUserId: number): Promise<MenuThemeId> {
+async function loadUserTheme(dbUserId: number): Promise<string> {
   const { data } = await supabaseAdmin
     .from('_pidr_users')
     .select('menu_theme')
@@ -29,7 +31,7 @@ async function loadUserTheme(dbUserId: number): Promise<MenuThemeId> {
     .maybeSingle();
 
   const raw = data?.menu_theme;
-  return isMenuThemeId(raw) ? raw : DEFAULT_MENU_THEME;
+  return isStoredMenuTheme(raw) ? raw : DEFAULT_MENU_THEME;
 }
 
 // GET /api/user/menu-theme
@@ -61,7 +63,9 @@ export async function GET(req: NextRequest) {
     }
 
     const premium = await getPremiumStatus(Number(dbUserId));
-    const themeId = await loadUserTheme(Number(dbUserId));
+    const storedThemeId = await loadUserTheme(Number(dbUserId));
+    const customStored = parseCustomMenuTheme(storedThemeId) != null;
+    const themeId = customStored && !premium.isPremium ? DEFAULT_MENU_THEME : storedThemeId;
     const theme = resolveMenuTheme(themeId);
 
     return noStoreJson({
@@ -101,18 +105,51 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json().catch(() => ({}));
-    const action = body?.action === 'generate' ? 'generate' : 'set';
+    const action = body?.action === 'custom' ? 'custom' : 'set';
     const premium = await getPremiumStatus(Number(dbUserId));
 
-    let nextThemeId: MenuThemeId;
-    if (action === 'generate') {
-      nextThemeId = pickRandomMenuTheme(premium.isPremium);
+    let nextThemeId: string;
+    if (action === 'custom') {
+      if (!premium.isPremium) {
+        return noStoreJson(
+          {
+            success: false,
+            requiresPremium: true,
+            message: 'Своя тема доступна только с Premium',
+          },
+          { status: 403 }
+        );
+      }
+      const encoded = encodeCustomMenuTheme({
+        background: String(body?.background || ''),
+        button: String(body?.button || ''),
+        outline: String(body?.outline || ''),
+      });
+      if (!encoded || !buildCustomMenuTheme({
+        background: String(body?.background || ''),
+        button: String(body?.button || ''),
+        outline: String(body?.outline || ''),
+      })) {
+        return noStoreJson({ success: false, message: 'Некорректные цвета темы' }, { status: 400 });
+      }
+      nextThemeId = encoded;
     } else {
       const requested = body?.themeId;
-      if (!isMenuThemeId(requested)) {
+      if (parseCustomMenuTheme(requested)) {
+        if (!premium.isPremium) {
+          return noStoreJson(
+            {
+              success: false,
+              requiresPremium: true,
+              message: 'Своя тема доступна только с Premium',
+            },
+            { status: 403 }
+          );
+        }
+        nextThemeId = String(requested).toLowerCase();
+      } else if (!isMenuThemeId(requested)) {
         return noStoreJson({ success: false, message: 'Некорректная тема' }, { status: 400 });
-      }
-      if (!canUseMenuTheme(requested, premium.isPremium)) {
+      } else if (!canUseMenuTheme(requested, premium.isPremium)) {
         return noStoreJson(
           {
             success: false,
@@ -121,8 +158,9 @@ export async function POST(req: NextRequest) {
           },
           { status: 403 }
         );
+      } else {
+        nextThemeId = requested;
       }
-      nextThemeId = requested;
     }
 
     const { error } = await supabaseAdmin
@@ -152,7 +190,8 @@ export async function POST(req: NextRequest) {
       success: true,
       themeId: theme.id,
       theme,
-      generated: action === 'generate',
+      generated: action === 'custom',
+      custom: parseCustomMenuTheme(theme.id) != null,
       isPremium: premium.isPremium,
     });
   } catch (error: unknown) {

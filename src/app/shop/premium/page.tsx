@@ -38,8 +38,6 @@ import { formatNftCardTitle } from '@/lib/nft/card-display';
 import type { NftThemeKey } from '@/lib/nft/theme-config';
 import { useLanguage } from '@/components/LanguageSwitcher';
 import { storeMenuTheme, themedPageShellStyle } from '@/lib/ui/menu-theme-client';
-import type { MenuThemeId } from '@/lib/ui/menuThemes';
-
 interface PromoCard {
   listingId: number;
   cardTitle: string;
@@ -649,7 +647,7 @@ export default function PremiumShopPage() {
             {language === 'en' ? 'App theme' : 'Тема оформления'}
           </h2>
           <MenuThemePicker
-            onThemeApplied={(themeId: MenuThemeId) => {
+            onThemeApplied={(themeId) => {
               storeMenuTheme(themeId);
             }}
           />

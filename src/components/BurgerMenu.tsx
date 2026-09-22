@@ -335,7 +335,7 @@ export default function BurgerMenu({ isOpen, onClose, side = 'right', user }: Bu
                 onClick={onClose}
                 style={{
                   background: 'var(--menu-accent-soft)',
-                  border: '1px solid var(--menu-card-border)',
+                  border: '1px solid var(--menu-button-border, var(--menu-card-border))',
                   borderRadius: '12px',
                   padding: '8px',
                   cursor: 'pointer',
@@ -369,7 +369,7 @@ export default function BurgerMenu({ isOpen, onClose, side = 'right', user }: Bu
                     onClick={item.onClick}
                     style={{
                       background: 'var(--menu-accent-soft)',
-                      border: '1px solid var(--menu-card-border)',
+                      border: '1px solid var(--menu-button-border, var(--menu-card-border))',
                       borderRadius: '16px',
                       padding: '13px 14px',
                       cursor: 'pointer',
@@ -386,7 +386,7 @@ export default function BurgerMenu({ isOpen, onClose, side = 'right', user }: Bu
                       e.currentTarget.style.boxShadow = 'var(--menu-shadow)'
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--menu-card-border)'
+                      e.currentTarget.style.borderColor = 'var(--menu-button-border, var(--menu-card-border))'
                       e.currentTarget.style.boxShadow = 'none'
                     }}
                   >

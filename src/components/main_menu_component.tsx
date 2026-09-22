@@ -17,7 +17,7 @@ import { readCachedNftDeck, warmupNftDeck, writeCachedNftDeck } from '@/lib/game
 import {
   DEFAULT_MENU_THEME,
   isMenuThemeId,
-  type MenuThemeId,
+  isStoredMenuTheme,
 } from '@/lib/ui/menuThemes'
 import {
   menuThemeStyleVars,
@@ -34,7 +34,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
   const { stats } = useGameStore()
   const { hapticFeedback } = useTelegram()
   const router = useRouter()
-  const [menuThemeId, setMenuThemeId] = useState<MenuThemeId>(DEFAULT_MENU_THEME)
+  const [menuThemeId, setMenuThemeId] = useState<string>(DEFAULT_MENU_THEME)
   const { language } = useLanguage()
   const t = useTranslations(language)
 
@@ -45,7 +45,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
   useEffect(() => {
     const onTheme = (event: Event) => {
       const detail = (event as CustomEvent<{ themeId?: string }>).detail
-      if (isMenuThemeId(detail?.themeId)) {
+      if (isStoredMenuTheme(detail?.themeId)) {
         setMenuThemeId(detail.themeId)
         storeMenuTheme(detail.themeId)
       }
@@ -66,7 +66,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
         })
         const parsed = await parseJsonResponse<{ success?: boolean; themeId?: string }>(res)
         if (cancelled) return
-        if (parsed.data?.success && isMenuThemeId(parsed.data.themeId)) {
+        if (parsed.data?.success && isStoredMenuTheme(parsed.data.themeId)) {
           setMenuThemeId(parsed.data.themeId)
           storeMenuTheme(parsed.data.themeId)
         }
@@ -230,7 +230,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
 
   return (
     <div
-      className={`main-menu-root menu-theme-${menuThemeId}`}
+      className={`main-menu-root ${isMenuThemeId(menuThemeId) ? `menu-theme-${menuThemeId}` : 'menu-theme-custom'}`}
       style={{
         ...themeVars,
         minHeight: '100vh',
@@ -317,8 +317,8 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
               }}
               style={{
                 width: '100%',
-                background: 'var(--menu-card-bg)',
-                border: '2px solid var(--menu-card-border)',
+                background: 'var(--menu-button-bg, var(--menu-card-bg))',
+                border: '2px solid var(--menu-button-border, var(--menu-card-border))',
                 borderRadius: '16px',
                 padding: '20px',
                 cursor: 'pointer',
@@ -336,7 +336,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
                 {button.emoji}
               </div>
               <h3 style={{
-                color: 'var(--menu-text)',
+                color: 'var(--menu-button-text, var(--menu-text))',
                 fontSize: '20px',
                 fontWeight: '700',
                 margin: 0,
