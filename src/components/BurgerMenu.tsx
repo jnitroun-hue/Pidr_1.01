@@ -367,6 +367,7 @@ export default function BurgerMenu({ isOpen, onClose, side = 'right', user }: Bu
                     whileHover={{ scale: 1.02, x: side === 'left' ? 5 : -5 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={item.onClick}
+                    className="menuThemeButton"
                     style={{
                       background: 'var(--menu-accent-soft)',
                       border: '1px solid var(--menu-button-border, var(--menu-card-border))',
@@ -390,6 +391,7 @@ export default function BurgerMenu({ isOpen, onClose, side = 'right', user }: Bu
                       e.currentTarget.style.boxShadow = 'none'
                     }}
                   >
+                    <span className="menuThemeSheen" aria-hidden />
                     {/* Gradient Background on Hover */}
                     <motion.div
                       initial={{ opacity: 0 }}

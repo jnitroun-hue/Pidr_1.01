@@ -117,7 +117,7 @@
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
 }
 
-.cardFrame img {
+.cardFrame > img {
   width: 100%;
   height: 100%;
   object-fit: contain;
@@ -132,7 +132,7 @@
   box-shadow: none;
 }
 
-.cardFrameLarge img,
+.cardFrameLarge > img,
 .cardFrameLarge > div {
   width: 100% !important;
   height: 100% !important;

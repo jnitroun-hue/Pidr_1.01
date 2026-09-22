@@ -315,6 +315,7 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
                 e.stopPropagation();
                 button.onClick();
               }}
+              className="menuThemeButton"
               style={{
                 width: '100%',
                 background: 'var(--menu-button-bg, var(--menu-card-bg))',
@@ -329,6 +330,8 @@ export default function MainMenu({ user, onLogout }: MainMenuProps) {
                 boxShadow: 'var(--menu-shadow)'
               }}
             >
+              <span className="menuThemeFlow" aria-hidden />
+              <span className="menuThemeSheen" aria-hidden />
               <div style={{
                 fontSize: '32px',
                 filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))'

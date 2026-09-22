@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import '../app/menu-theme-effects.css';
 import { getApiHeaders } from '@/lib/api-headers';
 import { hasClientAuthHint } from '@/lib/auth/session-client';
 import {

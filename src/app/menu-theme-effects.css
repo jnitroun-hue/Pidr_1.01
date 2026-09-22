@@ -1,0 +1,144 @@
+@property --menu-orbit {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.menuThemeButton {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.menuThemeFlow {
+  display: none;
+}
+
+[data-menu-button-finish='gradient'] .menuThemeFlow,
+[data-menu-button-finish='both'] .menuThemeFlow {
+  display: block;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: var(--menu-button-bg);
+  background-size: 220% 220%;
+  animation: menu-theme-flow 7.5s ease-in-out infinite;
+}
+
+.menuThemeButton > :not(.menuThemeSheen, .menuThemeFlow) {
+  position: relative;
+  z-index: 1;
+}
+
+.menuThemeSheen {
+  display: none;
+}
+
+[data-menu-button-finish='shimmer'] .menuThemeSheen,
+[data-menu-button-finish='both'] .menuThemeSheen {
+  display: block;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    108deg,
+    transparent 28%,
+    rgba(255, 255, 255, 0.08) 42%,
+    rgba(255, 255, 255, 0.28) 50%,
+    rgba(255, 255, 255, 0.08) 58%,
+    transparent 72%
+  );
+  transform: translateX(-130%);
+  animation: menu-theme-sheen 3.6s ease-in-out infinite;
+}
+
+[data-menu-outline-motion='snake'] .menuThemeButton::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  padding: 2px;
+  pointer-events: none;
+}
+
+[data-menu-outline-motion='snake'] .menuThemeButton {
+  border-color: transparent !important;
+}
+
+[data-menu-outline-motion='snake'] .menuThemeButton::before {
+  background: conic-gradient(
+    from var(--menu-orbit),
+    transparent 0 68%,
+    var(--menu-button-border, var(--menu-accent)) 80%,
+    rgba(255, 255, 255, 0.92) 88%,
+    transparent 96%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: menu-theme-orbit 2.8s linear infinite;
+}
+
+[data-menu-outline-motion='orbit'] .menuThemeButton::after {
+  content: '';
+  position: absolute;
+  z-index: 3;
+  width: 7px;
+  height: 7px;
+  margin: -3px 0 0 -3px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: var(--menu-button-border, var(--menu-accent));
+  box-shadow: 0 0 8px var(--menu-button-border, var(--menu-accent));
+  offset-path: inset(1px round 16px);
+  animation: menu-theme-travel 3.2s linear infinite;
+}
+
+@keyframes menu-theme-travel {
+  to {
+    offset-distance: 100%;
+  }
+}
+
+@keyframes menu-theme-orbit {
+  to {
+    --menu-orbit: 360deg;
+  }
+}
+
+@keyframes menu-theme-flow {
+  0%,
+  100% {
+    background-position: 12% 40%;
+  }
+  50% {
+    background-position: 88% 60%;
+  }
+}
+
+@keyframes menu-theme-sheen {
+  0%,
+  18% {
+    transform: translateX(-130%);
+  }
+  55%,
+  100% {
+    transform: translateX(130%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-menu-button-finish='gradient'] .menuThemeFlow,
+  [data-menu-button-finish='both'] .menuThemeFlow,
+  [data-menu-button-finish='shimmer'] .menuThemeSheen,
+  [data-menu-button-finish='both'] .menuThemeSheen,
+  [data-menu-outline-motion='snake'] .menuThemeButton::before,
+  [data-menu-outline-motion='orbit'] .menuThemeButton::after {
+    animation: none;
+  }
+}

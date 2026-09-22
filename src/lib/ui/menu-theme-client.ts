@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react';
 import {
   DEFAULT_MENU_THEME,
   isStoredMenuTheme,
+  parseCustomMenuTheme,
   resolveMenuTheme,
 } from '@/lib/ui/menuThemes';
 
@@ -48,6 +49,14 @@ export function applyMenuThemeToDocument(themeId: string | null | undefined): vo
   root.style.setProperty('--menu-button-border', theme.vars['--menu-button-border'] || theme.vars['--menu-card-border']);
   root.style.setProperty('--menu-button-text', theme.vars['--menu-button-text'] || theme.vars['--menu-text']);
   root.dataset.menuTheme = theme.id;
+  const custom = parseCustomMenuTheme(theme.id);
+  if (custom) {
+    root.dataset.menuButtonFinish = custom.buttonFinish || 'gradient';
+    root.dataset.menuOutlineMotion = custom.outlineMotion || 'still';
+  } else {
+    delete root.dataset.menuButtonFinish;
+    delete root.dataset.menuOutlineMotion;
+  }
   root.style.setProperty('--background-color', theme.vars['--menu-bg']);
   root.style.setProperty('--game-bg', theme.vars['--menu-bg']);
   root.style.setProperty('--accent-color', theme.vars['--menu-accent']);

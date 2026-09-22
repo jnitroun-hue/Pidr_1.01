@@ -7,6 +7,7 @@ import { getApiHeaders } from '@/lib/api-headers';
 import { parseJsonResponse } from '@/lib/api/parse-json-response';
 import { appAlert } from '@/lib/app-notice';
 import { useLanguage } from '@/components/LanguageSwitcher';
+import CustomThemeStudio from '@/components/CustomThemeStudio';
 import { applyMenuThemeToDocument } from '@/lib/ui/menu-theme-client';
 import {
   buildCustomMenuTheme,
@@ -31,8 +32,10 @@ interface MenuThemePickerProps {
 const CUSTOM_THEME_STORAGE_KEY = 'pidr_menu_theme_custom';
 const DEFAULT_CUSTOM_COLORS: CustomMenuColors = {
   background: '#0f172a',
-  button: '#f5c518',
-  outline: '#fde68a',
+  button: '#312e81',
+  outline: '#818cf8',
+  buttonFinish: 'gradient',
+  outlineMotion: 'snake',
 };
 
 function readSavedCustomColors(): CustomMenuColors | null {
@@ -330,7 +333,7 @@ export default function MenuThemePicker({ compact = false, onThemeApplied }: Men
       </div>
 
       {editorOpen && (
-        <CustomThemeModal
+        <CustomThemeStudio
           language={language}
           draft={draft}
           saving={saving}
@@ -343,198 +346,11 @@ export default function MenuThemePicker({ compact = false, onThemeApplied }: Men
             background: draft.background,
             button: draft.button,
             outline: draft.outline,
+            buttonFinish: draft.buttonFinish,
+            outlineMotion: draft.outlineMotion,
           })}
         />
       )}
     </div>
-  );
-}
-
-function CustomThemeModal({
-  language,
-  draft,
-  saving,
-  onChange,
-  onClose,
-  onApply,
-}: {
-  language: string;
-  draft: CustomMenuColors;
-  saving: boolean;
-  onChange: (next: CustomMenuColors) => void;
-  onClose: () => void;
-  onApply: () => void;
-}) {
-  const preview = buildCustomMenuTheme(draft);
-  const vars = preview?.vars;
-  const en = language === 'en';
-
-  return (
-    <div
-      role="presentation"
-      onClick={onClose}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 4000,
-        background: 'rgba(2, 6, 23, 0.78)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 16,
-        overflowY: 'auto',
-      }}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={en ? 'Custom theme' : 'Своя тема'}
-        onClick={(event) => event.stopPropagation()}
-        style={{
-          width: 'min(460px, 100%)',
-          borderRadius: 22,
-          padding: 18,
-          background: 'linear-gradient(160deg, #111827 0%, #020617 100%)',
-          border: '1px solid rgba(148, 163, 184, 0.28)',
-          boxShadow: '0 24px 60px rgba(0,0,0,0.45)',
-        }}
-      >
-        <div style={{ color: '#f8fafc', fontWeight: 900, fontSize: 18 }}>
-          {en ? 'Create your theme' : 'Своя тема'}
-        </div>
-        <div style={{ color: '#94a3b8', fontSize: 13, marginTop: 4, marginBottom: 14 }}>
-          {en
-            ? 'Pick the background, button color, and the outline around buttons. It applies everywhere, like the built-in themes.'
-            : 'Выберите фон, цвет кнопок и контур вокруг них. Тема применится везде, как и готовые.'}
-        </div>
-
-        {vars && (
-          <div
-            style={{
-              borderRadius: 16,
-              padding: 14,
-              marginBottom: 14,
-              background: `${vars['--menu-bg-accent']}, ${vars['--menu-bg']}`,
-            }}
-          >
-            <div style={{ color: vars['--menu-text-muted'], fontSize: 12, marginBottom: 10 }}>
-              {en ? 'Preview' : 'Как будет выглядеть'}
-            </div>
-            {['Play', 'Profile'].map((label) => (
-              <div
-                key={label}
-                style={{
-                  borderRadius: 16,
-                  padding: '10px 14px',
-                  marginBottom: 8,
-                  background: vars['--menu-button-bg'],
-                  border: `2px solid ${vars['--menu-button-border']}`,
-                  color: vars['--menu-button-text'],
-                  fontWeight: 800,
-                  textAlign: 'center',
-                }}
-              >
-                {en ? label : label === 'Play' ? 'Играть' : 'Профиль'}
-              </div>
-            ))}
-          </div>
-        )}
-
-        <ColorField
-          label={en ? 'Background' : 'Фон'}
-          value={draft.background}
-          onChange={(background) => onChange({ ...draft, background })}
-        />
-        <ColorField
-          label={en ? 'Buttons' : 'Кнопки'}
-          value={draft.button}
-          onChange={(button) => onChange({ ...draft, button })}
-        />
-        <ColorField
-          label={en ? 'Button outline' : 'Контур кнопок'}
-          value={draft.outline}
-          onChange={(outline) => onChange({ ...draft, outline })}
-        />
-
-        <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={saving}
-            style={{
-              flex: 1,
-              borderRadius: 12,
-              padding: '12px 14px',
-              border: '1px solid rgba(148,163,184,0.35)',
-              background: 'transparent',
-              color: '#e2e8f0',
-              fontWeight: 800,
-              cursor: 'pointer',
-            }}
-          >
-            {en ? 'Cancel' : 'Отмена'}
-          </button>
-          <button
-            type="button"
-            onClick={onApply}
-            disabled={saving || !preview}
-            style={{
-              flex: 1.4,
-              borderRadius: 12,
-              padding: '12px 14px',
-              border: 'none',
-              background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
-              color: '#fff',
-              fontWeight: 800,
-              cursor: saving ? 'wait' : 'pointer',
-            }}
-          >
-            {saving ? (en ? 'Saving…' : 'Сохраняем…') : (en ? 'Apply theme' : 'Применить тему')}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ColorField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <label style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-      <input
-        type="color"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        aria-label={label}
-        style={{
-          width: 54,
-          height: 42,
-          padding: 0,
-          border: 'none',
-          background: 'transparent',
-          cursor: 'pointer',
-        }}
-      />
-      <div style={{ flex: 1 }}>
-        <div style={{ color: '#e2e8f0', fontWeight: 800, fontSize: 14 }}>{label}</div>
-        <div style={{ color: '#94a3b8', fontSize: 12, letterSpacing: 0.4 }}>{value.toUpperCase()}</div>
-      </div>
-      <div
-        style={{
-          width: 72,
-          height: 36,
-          borderRadius: 999,
-          background: value,
-          border: '2px solid rgba(255,255,255,0.35)',
-        }}
-      />
-    </label>
   );
 }

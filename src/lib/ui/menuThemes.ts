@@ -28,14 +28,48 @@ export interface MenuThemeTokens {
     '--menu-button-bg'?: string;
     '--menu-button-border'?: string;
     '--menu-button-text'?: string;
+    '--menu-button-finish'?: string;
+    '--menu-outline-motion'?: string;
   };
 }
+
+export type ButtonFinish = 'solid' | 'gradient' | 'shimmer' | 'both';
+export type OutlineMotion = 'still' | 'snake' | 'orbit';
 
 export interface CustomMenuColors {
   background: string;
   button: string;
   outline: string;
+  buttonFinish?: ButtonFinish;
+  outlineMotion?: OutlineMotion;
 }
+
+export interface ThemeSwatch {
+  id: string;
+  label: string;
+  base: string;
+  sheen: string;
+}
+
+/** 16 приглушённых оттенков в духе готовых тем, не чистые RGB. */
+export const CUSTOM_THEME_SWATCHES: ThemeSwatch[] = [
+  { id: 'ink', label: 'Чернила', base: '#0f172a', sheen: '#334155' },
+  { id: 'midnight', label: 'Полночь', base: '#0b1224', sheen: '#1e3a5f' },
+  { id: 'indigo', label: 'Индиго', base: '#312e81', sheen: '#818cf8' },
+  { id: 'sapphire', label: 'Сапфир', base: '#1e3a8a', sheen: '#60a5fa' },
+  { id: 'ice', label: 'Лёд', base: '#155e75', sheen: '#22d3ee' },
+  { id: 'teal', label: 'Бирюза', base: '#115e59', sheen: '#5eead4' },
+  { id: 'forest', label: 'Лес', base: '#14532d', sheen: '#4ade80' },
+  { id: 'moss', label: 'Мох', base: '#3f6212', sheen: '#84cc16' },
+  { id: 'gold', label: 'Золото', base: '#854d0e', sheen: '#f5c518' },
+  { id: 'champagne', label: 'Шампань', base: '#92400e', sheen: '#fcd34d' },
+  { id: 'copper', label: 'Медь', base: '#9a3412', sheen: '#fdba74' },
+  { id: 'wine', label: 'Вино', base: '#881337', sheen: '#fb7185' },
+  { id: 'aurora', label: 'Аврора', base: '#831843', sheen: '#f9a8d4' },
+  { id: 'violet', label: 'Фиолет', base: '#4c1d95', sheen: '#c4b5fd' },
+  { id: 'graphite', label: 'Графит', base: '#334155', sheen: '#cbd5e1' },
+  { id: 'pearl', label: 'Жемчуг', base: '#cbd5e1', sheen: '#ffffff' },
+];
 
 export const DEFAULT_MENU_THEME: MenuThemeId = 'slate';
 
@@ -192,7 +226,11 @@ export function isMenuThemeId(value: unknown): value is MenuThemeId {
   return typeof value === 'string' && value in MENU_THEMES;
 }
 
-const CUSTOM_THEME_RE = /^c:([0-9a-f]{6}):([0-9a-f]{6}):([0-9a-f]{6})$/i;
+const CUSTOM_THEME_RE = /^c:([0-9a-f]{6}):([0-9a-f]{6}):([0-9a-f]{6})(?::([0-3])([0-2]))?$/i;
+const BUTTON_FINISH_BY_CODE: ButtonFinish[] = ['solid', 'gradient', 'shimmer', 'both'];
+const OUTLINE_MOTION_BY_CODE: OutlineMotion[] = ['still', 'snake', 'orbit'];
+const BUTTON_FINISH_CODE: Record<ButtonFinish, string> = { solid: '0', gradient: '1', shimmer: '2', both: '3' };
+const OUTLINE_MOTION_CODE: Record<OutlineMotion, string> = { still: '0', snake: '1', orbit: '2' };
 
 export function normalizeHexColor(value: unknown): string | null {
   if (typeof value !== 'string') return null;
@@ -208,10 +246,14 @@ export function parseCustomMenuTheme(value: unknown): CustomMenuColors | null {
   if (typeof value !== 'string') return null;
   const match = CUSTOM_THEME_RE.exec(value.trim());
   if (!match) return null;
+  const finish = match[4] != null ? BUTTON_FINISH_BY_CODE[Number(match[4])] : 'gradient';
+  const motion = match[5] != null ? OUTLINE_MOTION_BY_CODE[Number(match[5])] : 'still';
   return {
     background: `#${match[1].toLowerCase()}`,
     button: `#${match[2].toLowerCase()}`,
     outline: `#${match[3].toLowerCase()}`,
+    buttonFinish: finish,
+    outlineMotion: motion,
   };
 }
 
@@ -220,7 +262,9 @@ export function encodeCustomMenuTheme(colors: CustomMenuColors): string | null {
   const button = normalizeHexColor(colors.button);
   const outline = normalizeHexColor(colors.outline);
   if (!background || !button || !outline) return null;
-  return `c:${background.slice(1)}:${button.slice(1)}:${outline.slice(1)}`;
+  const finish = BUTTON_FINISH_CODE[colors.buttonFinish || 'gradient'] ?? BUTTON_FINISH_CODE.gradient;
+  const motion = OUTLINE_MOTION_CODE[colors.outlineMotion || 'still'] ?? OUTLINE_MOTION_CODE.still;
+  return `c:${background.slice(1)}:${button.slice(1)}:${outline.slice(1)}:${finish}${motion}`;
 }
 
 export function isStoredMenuTheme(value: unknown): value is string {
@@ -276,9 +320,14 @@ export function buildCustomMenuTheme(colors: CustomMenuColors): MenuThemeTokens 
   const parsed = token ? parseCustomMenuTheme(token) : null;
   if (!token || !parsed) return null;
 
-  const { background, button, outline } = parsed;
+  const { background, button, outline, buttonFinish = 'gradient', outlineMotion = 'still' } = parsed;
   const buttonText = contrastText(button);
   const pageText = contrastText(background);
+  const sheen = CUSTOM_THEME_SWATCHES.find((swatch) => swatch.base === button)?.sheen || shade(button, 0.42);
+  const highlight = mixHex(button, sheen, 0.55);
+  const flowingButton = buttonFinish === 'gradient' || buttonFinish === 'both'
+    ? `linear-gradient(118deg, ${shade(button, -0.2)} 0%, ${button} 36%, ${highlight} 50%, ${button} 64%, ${shade(button, -0.08)} 100%)`
+    : button;
 
   return {
     id: token,
@@ -296,9 +345,11 @@ export function buildCustomMenuTheme(colors: CustomMenuColors): MenuThemeTokens 
       '--menu-accent-soft': rgba(button, 0.24),
       '--menu-shadow': `0 10px 28px ${rgba(shade(background, -0.45), 0.42)}`,
       '--menu-wallet-border': outline,
-      '--menu-button-bg': `linear-gradient(145deg, ${shade(button, 0.1)} 0%, ${shade(button, -0.16)} 100%)`,
+      '--menu-button-bg': flowingButton,
       '--menu-button-border': outline,
       '--menu-button-text': buttonText,
+      '--menu-button-finish': buttonFinish,
+      '--menu-outline-motion': outlineMotion,
     },
   };
 }

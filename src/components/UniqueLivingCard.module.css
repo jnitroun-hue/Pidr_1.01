@@ -31,12 +31,13 @@
   background: #0f172a;
 }
 
-.sticker {
+.photo .sticker {
   position: absolute;
   inset: -8%;
-  width: 116%;
-  height: 116%;
-  object-fit: cover;
+  width: 116% !important;
+  height: 116% !important;
+  max-width: none;
+  object-fit: cover !important;
   object-position: center center;
   display: block;
   transform: translateZ(0);

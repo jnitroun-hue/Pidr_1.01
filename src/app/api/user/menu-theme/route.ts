@@ -12,6 +12,8 @@ import {
   listMenuThemes,
   parseCustomMenuTheme,
   resolveMenuTheme,
+  type ButtonFinish,
+  type OutlineMotion,
 } from '@/lib/ui/menuThemes';
 
 export const runtime = 'nodejs';
@@ -120,16 +122,21 @@ export async function POST(req: NextRequest) {
           { status: 403 }
         );
       }
-      const encoded = encodeCustomMenuTheme({
+      const finish: ButtonFinish =
+        body?.buttonFinish === 'solid' || body?.buttonFinish === 'shimmer' || body?.buttonFinish === 'both'
+          ? body.buttonFinish
+          : 'gradient';
+      const motion: OutlineMotion =
+        body?.outlineMotion === 'snake' || body?.outlineMotion === 'orbit' ? body.outlineMotion : 'still';
+      const customColors = {
         background: String(body?.background || ''),
         button: String(body?.button || ''),
         outline: String(body?.outline || ''),
-      });
-      if (!encoded || !buildCustomMenuTheme({
-        background: String(body?.background || ''),
-        button: String(body?.button || ''),
-        outline: String(body?.outline || ''),
-      })) {
+        buttonFinish: finish,
+        outlineMotion: motion,
+      };
+      const encoded = encodeCustomMenuTheme(customColors);
+      if (!encoded || !buildCustomMenuTheme(customColors)) {
         return noStoreJson({ success: false, message: 'Некорректные цвета темы' }, { status: 400 });
       }
       nextThemeId = encoded;

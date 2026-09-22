@@ -1,0 +1,221 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  overflow-y: auto;
+  background: rgba(2, 6, 23, 0.72);
+  backdrop-filter: blur(14px);
+}
+
+.dialog {
+  width: min(520px, 100%);
+  max-height: min(92dvh, 860px);
+  overflow: auto;
+  border: 1px solid var(--menu-card-border);
+  border-radius: 24px;
+  background: var(--menu-card-bg);
+  color: var(--menu-text);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.55), var(--menu-shadow);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 18px 14px;
+  border-bottom: 1px solid var(--menu-card-border);
+  background: linear-gradient(135deg, var(--menu-accent-soft), transparent 70%);
+}
+
+.titleBlock {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.titleIcon {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 12px;
+  color: var(--menu-accent);
+  background: var(--menu-accent-soft);
+}
+
+.titleBlock h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.titleBlock p {
+  margin: 4px 0 0;
+  color: var(--menu-text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.close {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--menu-card-border);
+  border-radius: 11px;
+  background: rgba(15, 23, 42, 0.28);
+  color: var(--menu-text);
+  cursor: pointer;
+}
+
+.body {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+}
+
+.stage {
+  border-radius: 18px;
+  padding: 14px;
+  background: var(--menu-bg-accent), var(--menu-bg);
+}
+
+.stageLabel {
+  margin: 0 0 10px;
+  color: var(--menu-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.previewButton {
+  width: 100%;
+  margin-bottom: 8px;
+  border-radius: 16px;
+  padding: 12px 14px;
+  border: 2px solid var(--menu-button-border);
+  background-image: var(--menu-button-bg);
+  color: var(--menu-button-text);
+  font-weight: 800;
+  text-align: center;
+}
+
+.section {
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--menu-card-border) 72%, transparent);
+  border-radius: 17px;
+  background: color-mix(in srgb, var(--menu-accent-soft) 24%, rgba(2, 6, 23, 0.38));
+}
+
+.section h3 {
+  margin: 0 0 10px;
+  color: var(--menu-accent);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.swatch {
+  aspect-ratio: 1;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background-image: linear-gradient(135deg, var(--swatch-base), var(--swatch-sheen) 55%, var(--swatch-base));
+  background-size: 180% 180%;
+  animation: swatch-flow 5.5s ease-in-out infinite;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18);
+}
+
+.swatchSelected {
+  box-shadow:
+    0 0 0 2px var(--menu-bg, #020617),
+    0 0 0 4px var(--menu-accent);
+}
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.choice {
+  border-radius: 999px;
+  padding: 7px 12px;
+  border: 1px solid var(--menu-card-border);
+  background: transparent;
+  color: var(--menu-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.choiceOn {
+  border-color: var(--menu-accent);
+  background: var(--menu-accent-soft);
+  color: var(--menu-text);
+}
+
+.footer {
+  display: flex;
+  gap: 10px;
+  padding: 0 16px 16px;
+}
+
+.cancel,
+.apply {
+  border-radius: 14px;
+  padding: 12px 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.cancel {
+  flex: 1;
+  border: 1px solid var(--menu-card-border);
+  background: transparent;
+  color: var(--menu-text);
+}
+
+.apply {
+  flex: 1.4;
+  border: none;
+  background: linear-gradient(135deg, var(--menu-accent), color-mix(in srgb, var(--menu-accent) 55%, #0f172a));
+  color: var(--menu-button-text, #f8fafc);
+}
+
+@keyframes swatch-flow {
+  0%,
+  100% {
+    background-position: 0% 40%;
+  }
+  50% {
+    background-position: 100% 60%;
+  }
+}
+
+@media (max-width: 420px) {
+  .swatches {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    gap: 6px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .swatch {
+    animation: none;
+  }
+}
