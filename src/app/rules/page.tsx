@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ChevronDown } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import RulesMiniTutorial from '@/components/RulesMiniTutorial';
 import styles from './RulesPage.module.css';
 
@@ -95,20 +95,6 @@ export default function RulesPage() {
 
   return (
     <main className={styles.page}>
-      <motion.button
-        type="button"
-        className={styles.backButton}
-        initial={reduceMotion ? false : { x: -20, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        whileHover={reduceMotion ? undefined : { scale: 1.04 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={() => router.back()}
-        aria-label="Вернуться назад"
-      >
-        <ArrowLeft size={20} />
-        Назад
-      </motion.button>
-
       <div className={styles.container}>
         <motion.header
           className={styles.hero}

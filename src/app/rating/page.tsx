@@ -1,7 +1,6 @@
 'use client'
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useRouter } from 'next/navigation';
 import {
   getWeeklyPlacePrize,
   getNextWeeklyPayoutDate,
@@ -47,7 +46,6 @@ function getRankInfo(rating: number): { title: string; color: string; bg: string
 }
 
 export default function RatingPage() {
-  const router = useRouter();
   const [userData, setUserData] = useState<UserData | null>(null);
   const [topPlayers, setTopPlayers] = useState<RatingEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -102,20 +100,11 @@ export default function RatingPage() {
         borderBottom: '1px solid rgba(100, 116, 139, 0.15)',
         background: 'rgba(15, 23, 42, 0.5)',
         backdropFilter: 'blur(10px)',
-        position: 'sticky', top: 0, zIndex: 20,
+        position: 'sticky', top: 'calc(var(--app-chrome-top, 12px) + 52px)', zIndex: 20,
       }}>
-        <button
-          onClick={() => router.back()}
-          style={{
-            background: 'none', border: 'none', color: '#94a3b8',
-            fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
-          }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-          Назад
-        </button>
-        <span style={{ fontSize: '16px', fontWeight: '700', color: '#e2e8f0' }}>Рейтинг</span>
-        <div style={{ width: '60px' }} />
+        <div style={{ width: 72 }} />
+        <span style={{ fontSize: '16px', fontWeight: '700', color: 'var(--menu-text, #e2e8f0)' }}>Рейтинг</span>
+        <div style={{ width: 72 }} />
       </div>
 
       {/* Табы */}

@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import {
-  ArrowLeft,
   Crown,
   Flame,
   Gift,
@@ -255,45 +254,12 @@ export default function PremiumShopPage() {
           style={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
+            justifyContent: 'flex-end',
             gap: 12,
             marginBottom: 18,
             flexWrap: 'wrap',
           }}
         >
-          <motion.button
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-            onClick={() => {
-              // Возвращаемся туда, откуда пришли (главное меню, профиль или маркетплейс),
-              // а не пушим /shop — иначе «Назад» ходило по кругу shop ↔ premium.
-              try {
-                if (typeof window !== 'undefined' && window.history.length > 1) {
-                  router.back();
-                } else {
-                  router.push('/');
-                }
-              } catch {
-                window.location.href = '/';
-              }
-            }}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
-              padding: '11px 16px',
-              borderRadius: 12,
-              border: `1px solid ${T.borderSubtle}`,
-              background: T.bgElevated,
-              color: T.text,
-              fontWeight: 700,
-              cursor: 'pointer',
-            }}
-          >
-            <ArrowLeft size={18} />
-            {language === 'en' ? 'Back' : 'Назад'}
-          </motion.button>
-
           <div
             style={{
               display: 'inline-flex',

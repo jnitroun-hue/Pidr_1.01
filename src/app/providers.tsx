@@ -11,6 +11,7 @@ import OnlineHeartbeat from '../components/OnlineHeartbeat'
 import { LanguageProvider } from '../components/LanguageSwitcher'
 import AppNoticeHost from '../components/AppNoticeHost'
 import TelegramBackNavigation from '../components/TelegramBackNavigation'
+import HomeNavButton from '../components/HomeNavButton'
 import { initTelegramMiniApp, isTelegramMiniAppClient } from '../lib/telegram/init-mini-app'
 import MenuThemeRoot from '../components/MenuThemeRoot'
 
@@ -70,6 +71,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
               <MenuThemeRoot />
               <OnlineHeartbeat />
               <TelegramBackNavigation />
+              <HomeNavButton />
               {children}
               <AppNoticeHost />
             </TonConnectProvider>

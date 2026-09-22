@@ -63,7 +63,7 @@ export function applyMenuThemeToDocument(themeId: string | null | undefined): vo
   storeMenuTheme(theme.id);
 }
 
-const CHROME_PAD_TOP = 'calc(var(--app-chrome-top, 12px) + 8px)';
+const CHROME_PAD_TOP = 'calc(var(--app-chrome-top, 12px) + 56px)';
 const CHROME_PAD_INLINE = 'max(12px, env(safe-area-inset-left, 0px))';
 const CHROME_PAD_INLINE_RIGHT = 'max(12px, env(safe-area-inset-right, 0px))';
 const CHROME_PAD_BOTTOM = 'max(20px, env(safe-area-inset-bottom, 0px))';

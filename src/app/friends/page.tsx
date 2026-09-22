@@ -2,10 +2,8 @@
 
 import { buildReferralShareText } from '@/lib/referral/referral-links';
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
-  ArrowLeft,
   UserPlus,
   Search,
   User,
@@ -43,7 +41,6 @@ interface Friend {
 }
 
 export default function FriendsPage() {
-  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -315,16 +312,6 @@ export default function FriendsPage() {
 
   return (
     <div className={styles.page}>
-      <motion.button
-        type="button"
-        className={styles.backBtn}
-        whileTap={{ scale: 0.96 }}
-        onClick={() => router.back()}
-      >
-        <ArrowLeft size={18} />
-        Назад
-      </motion.button>
-
       <header className={styles.header}>
         <h1 className={styles.title}>ДРУЗЬЯ</h1>
         <p className={styles.subtitle}>Приглашай, играй вместе, следи за статистикой</p>

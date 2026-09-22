@@ -14,6 +14,7 @@ interface InviteInfo {
     status: string;
     max_players: number;
     current_players: number;
+    match_label?: string;
   } | null;
   from: {
     telegram_id: number;
@@ -149,14 +150,15 @@ export default function GlobalRoomInviteListener() {
       isOpen={isModalOpen}
       roomId={String(room.id)}
       roomCode={room.room_code}
-      prefillRoom={{
-        id: String(room.id),
-        roomCode: room.room_code,
-        name: room.name,
-        status: room.status,
-        maxPlayers: room.max_players,
-        currentPlayers: room.current_players,
-      }}
+        prefillRoom={{
+          id: String(room.id),
+          roomCode: room.room_code,
+          name: room.name,
+          status: room.status,
+          maxPlayers: room.max_players,
+          currentPlayers: room.current_players,
+          matchLabel: room.match_label,
+        }}
       prefillHost={
         host
           ? {

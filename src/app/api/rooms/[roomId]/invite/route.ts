@@ -4,6 +4,8 @@ import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { getRedisUserId } from '@/lib/multiplayer/public-user-id';
 import { resolveFriendUser } from '@/lib/friends/friend-links';
+import { matchLabelFromRoom } from '@/lib/multiplayer/room-rules';
+import { sendRoomInviteTelegram } from '@/lib/telegram/room-invite-notify';
 
 // ✅ Явная конфигурация runtime для Next.js 15
 export const runtime = 'nodejs';
@@ -176,6 +178,24 @@ export async function POST(
     }
 
     console.log('✅ [ROOM INVITE] Приглашение создано:', invite);
+
+    const inviterName =
+      (dbUser as { first_name?: string | null; username?: string | null }).first_name ||
+      (dbUser as { username?: string | null }).username ||
+      'Друг';
+
+    try {
+      await sendRoomInviteTelegram({
+        telegramId: friendUser.telegram_id,
+        friendName: inviterName,
+        matchLabel: matchLabelFromRoom(room),
+        roomCode: room.room_code,
+        roomId: room.id,
+        inviteId: invite.id,
+      });
+    } catch (notifyError) {
+      console.warn('⚠️ [ROOM INVITE] Telegram-уведомление не отправлено:', notifyError);
+    }
 
     return NextResponse.json({
       success: true,

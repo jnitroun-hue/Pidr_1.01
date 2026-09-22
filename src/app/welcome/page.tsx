@@ -49,6 +49,7 @@ export default function WelcomePage() {
       alignItems: 'center',
       justifyContent: 'center',
       padding: '20px',
+      paddingTop: 'calc(var(--app-chrome-top, 12px) + 56px)',
       position: 'relative',
       overflow: 'hidden'
     }}>

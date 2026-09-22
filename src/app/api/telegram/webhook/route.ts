@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { declineRoomInviteFromTelegram } from '@/lib/telegram/room-invite-notify';
+import { referralCodeFromTelegramStartParam } from '@/lib/referral/referral-links';
 
 /**
  * 🎮 Telegram Bot Webhook Handler
@@ -47,6 +49,36 @@ export async function POST(req: NextRequest) {
       const botToken = process.env.TELEGRAM_BOT_TOKEN;
       if (!botToken) {
         console.warn('⚠️ [Telegram Webhook] TELEGRAM_BOT_TOKEN не установлен');
+        return NextResponse.json({ ok: true });
+      }
+
+      if (typeof callbackData === 'string' && callbackData.startsWith('inv_decline:')) {
+        const inviteId = Number(callbackData.slice('inv_decline:'.length));
+        const telegramUserId = Number(callbackQuery.from?.id);
+        const result = await declineRoomInviteFromTelegram({ inviteId, telegramUserId });
+
+        await fetch(`https://api.telegram.org/bot${botToken}/answerCallbackQuery`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            callback_query_id: callbackQuery.id,
+            text: result.message,
+            show_alert: !result.ok,
+          }),
+        });
+
+        if (result.ok && callbackChatId && callbackMessageId) {
+          await fetch(`https://api.telegram.org/bot${botToken}/editMessageText`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: callbackChatId,
+              message_id: callbackMessageId,
+              text: '❌ Вы отказались от приглашения в игру.',
+            }),
+          });
+        }
+
         return NextResponse.json({ ok: true });
       }
       
@@ -171,60 +203,27 @@ export async function POST(req: NextRequest) {
           recentWins = `\n🏆 <b>Топ игроков:</b>\n`;
           recentGames.forEach((user: { username: string | null; wins: number; games_played: number }, index: number) => {
             const winRate = user.games_played > 0 ? Math.round((user.wins / user.games_played) * 100) : 0;
-            recentWins += `${index + 1}. ${user.username || 'Игрок'} - ${user.wins} побед (${winRate}%)\n`;
+            const name = (user.username || 'Игрок').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            recentWins += `${index + 1}. ${name} - ${user.wins} побед (${winRate}%)\n`;
           });
         }
       } catch (error: unknown) {
         console.error('❌ [Telegram Webhook] Ошибка получения статистики:', error);
       }
       
-      // ✅ КРАСИВОЕ ПРОМО-СООБЩЕНИЕ КАК В PRAGMATIC PLAY
-      let promoText = `🎴 <b>Играй в P.I.D.R. прямо в Telegram!</b>\n\n`;
-      promoText += `От создателей увлекательной карточной игры – официальное мини-приложение!\n\n`;
-      
-      // ✅ ОСНОВНОЕ СООБЩЕНИЕ С ПРОМО-ИНФОРМАЦИЕЙ
-      let mainMessage = `<b>🎯 Что может этот бот?</b>\n\n`;
-      mainMessage += `🎮 <b>Динамичная карточная игра</b>\n`;
-      mainMessage += `• Играй с ботами или друзьями\n`;
-      mainMessage += `• Мультиплеер на 4-7 игроков\n`;
-      mainMessage += `• Реалистичная механика игры\n\n`;
-      
-      mainMessage += `🏆 <b>Система достижений</b>\n`;
-      mainMessage += `• Рейтинг и ранги\n`;
-      mainMessage += `• Статистика побед\n`;
-      mainMessage += `• Уникальные награды\n\n`;
-      
-      mainMessage += `🎴 <b>NFT коллекция</b>\n`;
-      mainMessage += `• Создавай уникальные карты\n`;
-      mainMessage += `• Торгуй на маркетплейсе\n`;
-      mainMessage += `• Собирай редкие NFT\n\n`;
-      
-      mainMessage += `💰 <b>Игровая валюта</b>\n`;
-      mainMessage += `• Зарабатывай монеты\n`;
-      mainMessage += `• Пополняй баланс\n`;
-      mainMessage += `• Используй в игре\n\n`;
-      
-      // ✅ ДОБАВЛЯЕМ СТАТИСТИКУ ПОБЕД
-      if (recentWins) {
-        mainMessage += recentWins + '\n';
-      }
-      
-      // Если есть параметр (invite_ или join_), добавляем информацию
-      if (startParam) {
-        if (startParam.startsWith('invite_')) {
-          const referrerId = startParam.replace('invite_', '');
-          mainMessage += `🎁 <b>Вы были приглашены другом!</b>\nВы получите бонус при регистрации.\n\n`;
-        } else if (startParam.startsWith('join_')) {
-          const parts = startParam.replace('join_', '').split('_');
-          if (parts.length >= 2) {
-            const roomCode = parts.slice(1).join('_');
-            mainMessage += `🎮 <b>Приглашение в игру!</b>\nКод комнаты: <code>${roomCode}</code>\n\n`;
-          }
+      let caption = `<b>P.I.D.R.</b> — карточная игра\n\n`;
+      caption += `Садись за стол с друзьями, собирай NFT и поднимайся в рейтинге.\n`;
+      caption += `Зарегистрируйся или сразу играй — в Telegram или во ВКонтакте.`;
+      if (recentWins) caption += `\n${recentWins}`;
+      if (startParam?.startsWith('invite_')) {
+        caption += `\n\n🎁 <b>Вас пригласил друг.</b> Бонус придёт после регистрации.`;
+      } else if (startParam?.startsWith('join_')) {
+        const parts = startParam.replace('join_', '').split('_');
+        if (parts.length >= 2) {
+          const roomCode = parts.slice(1).join('_').replace(/[<>&]/g, '');
+          caption += `\n\n🎮 <b>Приглашение в игру.</b> Код комнаты: <code>${roomCode}</code>`;
         }
       }
-      
-      mainMessage += `🚀 <b>Испытай удачу в P.I.D.R.!</b>\n`;
-      mainMessage += `Играй и выигрывай в лучшей карточной игре Telegram!`;
 
       // Отправляем ответ через Telegram Bot API
       const botToken = process.env.TELEGRAM_BOT_TOKEN;
@@ -242,70 +241,63 @@ export async function POST(req: NextRequest) {
         }
         console.log('🔗 [Telegram Webhook] Web App URL:', webAppUrl);
         
-        // ✅ ОТПРАВЛЯЕМ ПЕРВОЕ ПРОМО-СООБЩЕНИЕ
-        console.log('📤 [Telegram Webhook] Отправляем первое промо-сообщение...');
-        const promoResponse = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: chatId,
-            text: promoText,
-            parse_mode: 'HTML'
-          })
-        });
-        
-        const promoData = await promoResponse.json();
-        console.log('📥 [Telegram Webhook] Ответ на промо-сообщение:', promoData);
-        if (!promoData.ok) {
-          console.error('❌ [Telegram Webhook] Ошибка отправки промо:', promoData);
+        const appBase = appUrl.replace(/\/$/, '');
+        const heroUrl = `${appBase}/img/vk-app-icon-512.png`;
+        const referralCode = referralCodeFromTelegramStartParam(startParam);
+        const registerUrl = referralCode
+          ? `${appBase}/auth/register?ref=${encodeURIComponent(referralCode)}`
+          : `${appBase}/auth/register`;
+        const vkAppId = (process.env.NEXT_PUBLIC_VK_CLIENT_ID || '').trim();
+        const vkPlayUrl = /^\d+$/.test(vkAppId) ? `https://vk.com/app${vkAppId}` : null;
+
+        const playRow: Array<Record<string, unknown>> = [
+          { text: '🎮 Играть в Telegram', web_app: { url: webAppUrl } },
+        ];
+        if (vkPlayUrl) {
+          playRow.push({ text: '🔵 Играть в VK', url: vkPlayUrl });
         } else {
-          console.log('✅ [Telegram Webhook] Первое промо-сообщение отправлено успешно');
+          console.warn('⚠️ [Telegram Webhook] NEXT_PUBLIC_VK_CLIENT_ID не задан — кнопка VK скрыта');
         }
-        
-        // ✅ ОТПРАВЛЯЕМ ОСНОВНОЕ СООБЩЕНИЕ С КНОПКАМИ
-        console.log('📤 [Telegram Webhook] Отправляем основное сообщение с кнопками...');
-        const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+
+        const replyMarkup = {
+          inline_keyboard: [
+            [{ text: '📝 Зарегистрироваться', web_app: { url: registerUrl } }],
+            playRow,
+            [{ text: '📖 Изучить правила', callback_data: 'show_rules' }],
+          ],
+        };
+
+        console.log('📤 [Telegram Webhook] Отправляем /start с картинкой...');
+        const photoResponse = await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             chat_id: chatId,
-            text: mainMessage,
+            photo: heroUrl,
+            caption,
             parse_mode: 'HTML',
-            reply_markup: {
-              inline_keyboard: [
-                [
-                  {
-                    text: '🎮 Играть',
-                    web_app: { url: webAppUrl }
-                  }
-                ],
-                [
-                  {
-                    text: '📖 Изучить правила',
-                    callback_data: 'show_rules'
-                  },
-                  {
-                    text: '💬 Поддержка',
-                    url: 'https://t.me/your_support_bot' // ✅ ЗАМЕНИТЕ НА ВАШ БОТ ПОДДЕРЖКИ
-                  }
-                ],
-                [
-                  {
-                    text: '📢 Новости',
-                    url: 'https://t.me/your_news_channel' // ✅ ЗАМЕНИТЕ НА ВАШ КАНАЛ С НОВОСТЯМИ
-                  }
-                ]
-              ]
-            }
-          })
+            reply_markup: replyMarkup,
+          }),
         });
-        
-        const responseData = await response.json();
-        console.log('📥 [Telegram Webhook] Ответ на основное сообщение:', responseData);
-        if (!responseData.ok) {
-          console.error('❌ [Telegram Webhook] Ошибка отправки сообщения:', responseData);
+        const photoData = await photoResponse.json();
+        if (photoData.ok) {
+          console.log('✅ [Telegram Webhook] /start с картинкой отправлен');
         } else {
-          console.log('✅ [Telegram Webhook] Промо-сообщения отправлены успешно');
+          console.error('❌ [Telegram Webhook] sendPhoto не удался, шлём текст:', photoData);
+          const textResponse = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: chatId,
+              text: caption,
+              parse_mode: 'HTML',
+              reply_markup: replyMarkup,
+            }),
+          });
+          const textData = await textResponse.json();
+          if (!textData.ok) {
+            console.error('❌ [Telegram Webhook] Ошибка отправки /start:', textData);
+          }
         }
       } else {
         console.warn('⚠️ [Telegram Webhook] TELEGRAM_BOT_TOKEN не установлен');

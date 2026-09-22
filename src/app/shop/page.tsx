@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, TrendingUp, Users, Sparkles, ShieldCheck, TimerReset, Percent, Crown } from 'lucide-react';
+import { TrendingUp, Users, Sparkles, ShieldCheck, TimerReset, Percent, Crown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import NFTMarketplace from '../../components/NFTMarketplace';
 import PremiumPromoBanner from '../../components/PremiumPromoBanner';
@@ -396,43 +396,11 @@ export default function ShopPage() {
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between',
+          justifyContent: 'flex-end',
           marginBottom: '30px',
           flexWrap: 'wrap',
           gap: '20px'
         }}>
-          {/* Back Button */}
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => {
-              // Всегда выходим в главное меню: router.back() зацикливался
-              // между /shop и /shop/premium (каждая страница пушила другую).
-              try {
-                router.push('/');
-              } catch (error) {
-                console.error('Ошибка навигации:', error);
-                window.location.href = '/';
-              }
-            }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '12px 20px',
-              borderRadius: T.radiusMd,
-              border: `1px solid ${T.borderSubtle}`,
-              background: T.bgElevated,
-              color: T.text,
-              fontWeight: 700,
-              fontSize: '15px',
-              cursor: 'pointer'
-            }}
-          >
-            <ArrowLeft size={20} />
-            Назад
-          </motion.button>
-
           {/* User Info */}
           {user && (
             <div style={{

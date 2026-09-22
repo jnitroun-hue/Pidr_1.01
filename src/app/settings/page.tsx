@@ -1,9 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Palette, Volume2, User, Check, Flame } from 'lucide-react';
+import { Palette, Volume2, User, Check, Flame } from 'lucide-react';
 import MenuThemePicker from '@/components/MenuThemePicker';
 import PremiumFlamePicker from '@/components/PremiumFlamePicker';
 import { getApiHeaders } from '@/lib/api-headers';
@@ -26,7 +25,6 @@ function readFlag(key: string, fallback = true): boolean {
 }
 
 export default function SettingsPage() {
-  const router = useRouter();
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [isPremium, setIsPremium] = useState(false);
@@ -137,22 +135,7 @@ export default function SettingsPage() {
     <div className="main-menu-container" style={themedPageShellStyle({ overflow: 'auto' })}>
       <div className="main-menu-inner" style={{ maxWidth: 520, width: '100%' }}>
         <div className="menu-header">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            style={{
-              padding: '8px 12px',
-              borderRadius: 12,
-              border: '1px solid var(--menu-card-border)',
-              background: 'var(--menu-accent-soft)',
-              color: 'var(--menu-text)',
-              fontWeight: 700,
-              cursor: 'pointer',
-            }}
-          >
-            <ArrowLeft className="inline w-4 h-4 mr-1" />
-            Назад
-          </button>
+          <div style={{ width: 28 }} aria-hidden />
           <span className="menu-title">НАСТРОЙКИ</span>
           <div className="w-6" />
         </div>

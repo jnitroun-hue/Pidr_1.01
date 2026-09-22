@@ -2427,9 +2427,31 @@
 
 .gameControls {
   position: fixed;
-  top: 15px;
-  right: 15px;
-  z-index: 1100;
+  top: calc(var(--app-chrome-top, 12px) + 4px);
+  right: max(12px, env(safe-area-inset-right, 0px));
+  z-index: 1200;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.gameHomeButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--menu-button-border, var(--menu-card-border, rgba(255, 255, 255, 0.12)));
+  background: var(--menu-button-bg, var(--menu-card-bg, rgba(15, 23, 42, 0.95)));
+  color: var(--menu-button-text, var(--menu-text, #f8fafc));
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: var(--menu-shadow, 0 8px 20px rgba(0, 0, 0, 0.35));
+  backdrop-filter: blur(12px);
 }
 
 /* Бургер меню стили */

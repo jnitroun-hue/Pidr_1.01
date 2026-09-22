@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowLeft, Pause, Play, Sparkles } from 'lucide-react';
+import { Pause, Play, Sparkles } from 'lucide-react';
 import styles from './EarnNft.module.css';
 
 const SCENE_MS = 4300;
@@ -177,11 +177,6 @@ export default function EarnNftPage() {
   return (
     <main className={styles.page}>
       <div className={styles.shell}>
-        <button type="button" className={styles.back} onClick={() => router.back()}>
-          <ArrowLeft size={16} style={{ verticalAlign: 'middle', marginRight: 7 }} />
-          Назад
-        </button>
-
         <header className={styles.hero}>
           <div className={styles.eyebrow}>NFT • СОЗДАНИЕ • ТОРГОВЛЯ</div>
           <h1 className={styles.title}>Как зарабатывать на NFT-картах</h1>

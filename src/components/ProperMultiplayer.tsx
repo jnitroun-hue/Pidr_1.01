@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import MultiplayerLobby from './MultiplayerLobby'; // ✅ ИСПОЛЬЗУЕМ НОВЫЙ КОМПОНЕНТ!
 import ReplaceRoomModal from './ReplaceRoomModal';
 import ActiveRoomModal from './ActiveRoomModal';
@@ -73,6 +73,8 @@ export const ProperMultiplayer: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [currentRoom, setCurrentRoom] = useState<RoomData | null>(null);
+  const currentRoomRef = useRef<RoomData | null>(null);
+  currentRoomRef.current = currentRoom;
   const [currentRoomId, setCurrentRoomId] = useState<string | null>(null); // Для отслеживания текущей комнаты
   const [blockedRoomId, setBlockedRoomId] = useState<string | null>(null); // Зависшая комната из API
   const [playerPosition, setPlayerPosition] = useState<number | null>(null); // Позиция игрока
@@ -194,6 +196,26 @@ export const ProperMultiplayer: React.FC = () => {
       handleJoinRoom(roomCode);
     }
   }, [user]);
+
+  useEffect(() => {
+    const onHome = (event: Event) => {
+      const room = currentRoomRef.current;
+      if (!room) return;
+      event.preventDefault();
+      void fetch('/api/rooms', {
+        method: 'POST',
+        headers: mergeApiHeaders(),
+        credentials: 'include',
+        keepalive: true,
+        body: JSON.stringify({ action: 'leave', roomId: room.id }),
+      }).catch(() => {
+        // Страница всё равно закроется.
+      });
+      window.location.assign('/');
+    };
+    window.addEventListener('pidr:home-request', onHome);
+    return () => window.removeEventListener('pidr:home-request', onHome);
+  }, []);
 
   // Загрузка комнат в лобби и на экране присоединения
   useEffect(() => {
@@ -950,7 +972,7 @@ export const ProperMultiplayer: React.FC = () => {
           gamesPlayed={gamesPlayed || 0}
           requiredGames={3}
           onClose={() => {
-            if (typeof window !== 'undefined') window.history.back();
+            window.location.assign('/');
           }}
           onPlayBots={() => {
             if (typeof window !== 'undefined') window.location.href = '/';
@@ -988,12 +1010,6 @@ export const ProperMultiplayer: React.FC = () => {
   return (
     <div className={`${styles.container} multiplayer-page`}>
       <div className={styles.header}>
-        <button 
-          className={styles.backButton}
-          onClick={() => typeof window !== 'undefined' && window.history.back()}
-        >
-          {t.multiplayer.back}
-        </button>
         <h1 className={styles.title}>{t.multiplayer.pageTitle}</h1>
         <p className={styles.subtitle}>{t.multiplayer.pageSubtitle}</p>
       </div>
@@ -1265,7 +1281,7 @@ export const ProperMultiplayer: React.FC = () => {
         onClose={() => {
           setShowAccessModal(false);
           if (!canPlayMultiplayer) {
-            if (typeof window !== 'undefined') window.history.back();
+            window.location.assign('/');
           }
         }}
         onPlayBots={() => {

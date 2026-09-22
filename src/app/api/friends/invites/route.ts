@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 import { formatFriendForApi } from '@/lib/friends/friend-links';
+import { matchLabelFromRoom } from '@/lib/multiplayer/room-rules';
 
 /** GET /api/friends/invites — приглашения в комнаты для текущего пользователя */
 export async function GET(request: NextRequest) {
@@ -65,7 +66,7 @@ export async function GET(request: NextRequest) {
         const [roomRes, fromUser] = await Promise.all([
           supabase
             .from('_pidr_rooms')
-            .select('id, room_code, name, status, max_players, current_players')
+            .select('id, room_code, name, status, max_players, current_players, match_type, settings')
             .eq('id', invite.room_id)
             .single(),
           supabase
@@ -77,9 +78,20 @@ export async function GET(request: NextRequest) {
             .maybeSingle(),
         ]);
 
+        const room = roomRes.data;
         return {
           id: invite.id,
-          room: roomRes.data || null,
+          room: room
+            ? {
+                id: room.id,
+                room_code: room.room_code,
+                name: room.name,
+                status: room.status,
+                max_players: room.max_players,
+                current_players: room.current_players,
+                match_label: matchLabelFromRoom(room),
+              }
+            : null,
           from: fromUser.data ? formatFriendForApi(fromUser.data) : null,
           created_at: invite.created_at,
           expires_at: invite.expires_at,

@@ -23,7 +23,7 @@ import { buildReferralLink } from '@/lib/referral/referral-links';
 import { shareReferralInvite } from '@/lib/share/share-referral';
 import UserAvatarBadge from '@/components/UserAvatarBadge';
 import AuthMethodBadge from '@/components/AuthMethodBadge';
-import { themedPageShellStyle, themedFixedBackStyle } from '@/lib/ui/menu-theme-client';
+import { themedPageShellStyle } from '@/lib/ui/menu-theme-client';
 import AddToDeckModal from '@/components/AddToDeckModal';
 import NftCardFace from '@/components/NftCardFace';
 import { formatNftCardName, getNftRarityLabel } from '@/lib/nft/card-display';
@@ -1263,38 +1263,6 @@ export default function ProfilePage() {
       paddingTop: 'calc(var(--app-chrome-top, 12px) + 56px)',
       paddingBottom: '40px',
     })}>
-      {/* Кнопка назад */}
-      <motion.button
-        initial={{ x: -20, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={() => {
-          // ✅ Сохраняем сессию перед переходом
-          console.log('🔙 [Profile] Возврат на главную страницу...');
-          router.push('/');
-        }}
-        style={{
-          ...themedFixedBackStyle({
-            background: 'rgba(239, 68, 68, 0.2)',
-            border: '2px solid rgba(239, 68, 68, 0.3)',
-            borderRadius: '12px',
-            padding: '12px',
-            color: '#ef4444',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            fontSize: '16px',
-            fontWeight: '600',
-            backdropFilter: 'blur(10px)',
-          }),
-        }}
-      >
-        <ArrowLeft size={20} />
-        {t.profile.back}
-      </motion.button>
-
       <div style={{
         maxWidth: '800px',
         margin: '0 auto'

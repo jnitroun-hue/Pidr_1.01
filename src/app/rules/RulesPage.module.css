@@ -1,6 +1,6 @@
 .page {
   min-height: 100vh;
-  padding: 88px 20px 40px;
+  padding: calc(var(--app-chrome-top, 12px) + 64px) 20px 40px;
   background: var(--menu-bg-accent), var(--menu-bg);
   color: var(--menu-text);
 }

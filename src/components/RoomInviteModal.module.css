@@ -1,0 +1,228 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(16px, env(safe-area-inset-top, 0px)) 16px max(16px, env(safe-area-inset-bottom, 0px));
+  background: rgba(2, 6, 23, 0.72);
+  backdrop-filter: blur(8px);
+}
+
+.card {
+  position: relative;
+  width: min(100%, 420px);
+  padding: 22px 18px 18px;
+  border-radius: 22px;
+  border: 1px solid var(--menu-card-border);
+  background: var(--menu-card-bg);
+  color: var(--menu-text);
+  box-shadow: var(--menu-shadow), 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+
+.close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--menu-card-border);
+  background: var(--menu-accent-soft);
+  color: var(--menu-text);
+  cursor: pointer;
+}
+
+.eyebrow {
+  margin: 0 36px 6px 0;
+  color: var(--menu-accent);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0 36px 14px 0;
+  font-size: 22px;
+  line-height: 1.2;
+  font-weight: 900;
+}
+
+.mode {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--menu-card-border);
+  background: var(--menu-accent-soft);
+  color: var(--menu-text);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.host {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  margin-bottom: 12px;
+  border-radius: 16px;
+  border: 1px solid var(--menu-card-border);
+  background: var(--menu-accent-soft);
+}
+
+.avatar {
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: var(--menu-accent);
+  color: #fff;
+  font-size: 22px;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hostName {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.hostUser {
+  color: var(--menu-text-muted);
+  font-size: 13px;
+}
+
+.badge {
+  margin-left: auto;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.badgeOnline {
+  background: rgba(16, 185, 129, 0.18);
+  color: #6ee7b7;
+}
+
+.badgeOffline {
+  background: rgba(148, 163, 184, 0.16);
+  color: var(--menu-text-muted);
+}
+
+.meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.metaItem {
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--menu-card-border);
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.metaLabel {
+  color: var(--menu-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.metaValue {
+  margin-top: 4px;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.join,
+.decline,
+.dismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  border-radius: 14px;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.join {
+  border: none;
+  background: var(--menu-accent);
+  color: #fff;
+}
+
+.join:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.decline,
+.dismiss {
+  border: 1px solid var(--menu-card-border);
+  background: transparent;
+  color: var(--menu-text);
+}
+
+.note {
+  margin: 12px 0 0;
+  color: var(--menu-text-muted);
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.center {
+  padding: 28px 8px 12px;
+  text-align: center;
+}
+
+.spinner {
+  width: 42px;
+  height: 42px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  border: 3px solid var(--menu-accent-soft);
+  border-top-color: var(--menu-accent);
+  animation: spin 0.8s linear infinite;
+}
+
+.errorTitle {
+  margin: 8px 0;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

@@ -21,6 +21,20 @@ export function matchTypeLabel(type: MatchType): string {
   return type === 'rated' ? 'Рейтинговый' : 'Обычный';
 }
 
+export function matchLabelFromRoom(room: {
+  match_type?: string | null;
+  settings?: unknown;
+} | null | undefined): string {
+  if (!room) return matchTypeLabel('normal');
+  const settings =
+    room.settings && typeof room.settings === 'object' && !Array.isArray(room.settings)
+      ? (room.settings as { matchType?: string; gameMode?: string })
+      : {};
+  return matchTypeLabel(
+    normalizeMatchType(room.match_type || settings.matchType || settings.gameMode)
+  );
+}
+
 export function isRatedMatchType(raw: unknown): boolean {
   return normalizeMatchType(raw) === 'rated';
 }

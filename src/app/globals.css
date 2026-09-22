@@ -100,6 +100,34 @@ body {
   background: var(--menu-bg-accent), var(--menu-bg);
 }
 
+.pidr-home-nav {
+  position: fixed;
+  top: calc(var(--app-chrome-top, 12px) + 4px);
+  left: max(12px, env(safe-area-inset-left, 0px));
+  z-index: 1400;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 8px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--menu-button-border, var(--menu-card-border));
+  background: var(--menu-button-bg, var(--menu-card-bg));
+  color: var(--menu-button-text, var(--menu-text));
+  box-shadow: var(--menu-shadow);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.pidr-home-nav:active {
+  transform: scale(0.97);
+}
+
 html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;

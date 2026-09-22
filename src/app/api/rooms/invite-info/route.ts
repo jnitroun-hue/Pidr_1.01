@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { formatRoomHostForInvite, resolveRoomHost } from '@/lib/multiplayer/room-host';
+import { matchLabelFromRoom } from '@/lib/multiplayer/room-rules';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,7 +31,7 @@ export async function GET(req: NextRequest) {
 
     const { data: room, error: roomError } = await supabase
       .from('_pidr_rooms')
-      .select('id, room_code, name, host_id, status, max_players, current_players')
+      .select('id, room_code, name, host_id, status, max_players, current_players, match_type, settings')
       .eq('id', roomIdNum)
       .eq('room_code', roomCode.toUpperCase())
       .maybeSingle();
@@ -59,6 +60,7 @@ export async function GET(req: NextRequest) {
           status: room.status,
           maxPlayers: room.max_players,
           currentPlayers: room.current_players,
+          matchLabel: matchLabelFromRoom(room),
         },
         host: {
           telegramId: 0,
@@ -81,6 +83,7 @@ export async function GET(req: NextRequest) {
         status: room.status,
         maxPlayers: room.max_players,
         currentPlayers: room.current_players,
+        matchLabel: matchLabelFromRoom(room),
       },
       host: formatRoomHostForInvite(host),
     });

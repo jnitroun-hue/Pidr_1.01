@@ -24,7 +24,7 @@ import { useDragAndDrop } from '@/hooks/useDragAndDrop';
 // TableSelector удален - выбор стола больше не нужен
 import type { Player as StorePlayer, Card as StoreCard } from '../../store/gameStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { WifiOff } from 'lucide-react';
+import { Home, WifiOff } from 'lucide-react';
 import React from 'react';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { applyPremiumRatingMultiplier } from '@/lib/rating/ratingSystem';
@@ -2654,6 +2654,16 @@ function GamePageContentComponent({
           justifyContent: 'center',
         minHeight: '100vh'
         }}>
+          <div className={styles.gameControls}>
+            <button
+              type="button"
+              className={styles.gameHomeButton}
+              onClick={() => window.location.assign('/')}
+            >
+              <Home size={15} />
+              {language === 'en' ? 'Home' : 'Домой'}
+            </button>
+          </div>
           <div style={{
           width: '60px',
           height: '60px',
@@ -2775,9 +2785,22 @@ function GamePageContentComponent({
         </div>
       )}
 
-      {/* БУРГЕР МЕНЮ */}
-      {players.length > 0 && (
-        <div className={styles.gameControls}>
+      <div className={styles.gameControls}>
+          <button
+            type="button"
+            className={styles.gameHomeButton}
+            onClick={() => {
+              if (isGameActive) {
+                void requestLeaveGame('direct');
+                return;
+              }
+              window.location.assign('/');
+            }}
+          >
+            <Home size={15} />
+            {language === 'en' ? 'Home' : 'Домой'}
+          </button>
+          {players.length > 0 && (
           <div className={`${styles.burgerMenu} ${burgerMenuOpen ? styles.burgerMenuOpen : ''}`}>
             <button
               type="button"
@@ -2857,8 +2880,8 @@ function GamePageContentComponent({
               </button>
             </div>
           </div>
+          )}
         </div>
-      )}
 
       {/* 🎮 ИГРОВОЙ СТОЛ И КАРТЫ */}
       {players.length > 0 && (
