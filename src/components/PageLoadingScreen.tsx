@@ -1,7 +1,6 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import CardDealerHero from './CardDealerHero';
 import styles from './PageLoadingScreen.module.css';
 
 export interface PageLoadingScreenProps {
@@ -18,7 +17,7 @@ export interface PageLoadingScreenProps {
 }
 
 export default function PageLoadingScreen({
-  title = 'P.I.D.R.',
+  title = 'The Must',
   subtitle = 'Загрузка...',
   fullScreen = true,
   fixed = false,
@@ -26,10 +25,8 @@ export default function PageLoadingScreen({
   showProgress = true,
   showTitle = true,
   progress,
-  dealerSize,
 }: PageLoadingScreenProps) {
   const indeterminate = progress === undefined;
-  const resolvedDealerSize = dealerSize ?? (compact ? 'compact' : 'default');
 
   return (
     <div
@@ -38,13 +35,22 @@ export default function PageLoadingScreen({
       aria-live="polite"
       aria-label={subtitle}
     >
+      <div className={styles.glow} aria-hidden />
       <motion.div
         className={styles.panel}
         initial={{ opacity: 0, y: 12, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.45, ease: 'easeOut' }}
       >
-        <CardDealerHero size={resolvedDealerSize} />
+        <div className={styles.emblem} aria-hidden>
+          <span className={styles.ring} />
+          <img src="/img/vk-app-icon-512-clean.png" alt="" className={styles.emblemImage} />
+          <span className={styles.cardFan}>
+            <i />
+            <i />
+            <i />
+          </span>
+        </div>
         {showTitle && title ? <h2 className={styles.title}>{title}</h2> : null}
         {subtitle ? <p className={styles.subtitle}>{subtitle}</p> : null}
 

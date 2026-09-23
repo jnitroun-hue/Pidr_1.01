@@ -898,7 +898,7 @@ function HomeWithParams() {
 
   // Fallback - не должно появляться
   return (
-    <PageLoadingScreen title="P.I.D.R. Game" subtitle="Загрузка..." />
+    <PageLoadingScreen title="The Must" subtitle="Загрузка..." />
   );
 }
 
