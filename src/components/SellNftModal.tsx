@@ -87,17 +87,16 @@ export function SellNftModal({
 
   const priceStep =
     sellCategory === 'coins' ? '1' : sellCategory === 'fiat' ? '0.01' : '0.001';
+  const selectedCrypto = CRYPTO_OPTIONS.find((c) => c.id === sellCrypto) ?? CRYPTO_OPTIONS[0];
   const placeholder =
-    sellCategory === 'coins' ? '1000' : sellCategory === 'fiat' ? '500' : sellCrypto === 'GRAM' ? '0.5' : '0.1';
+    sellCategory === 'coins' ? '1000' : sellCategory === 'fiat' ? '500' : sellCrypto === 'USDT' ? '5' : sellCrypto === 'GRAM' ? '0.5' : '0.1';
 
   const priceLabel =
     sellCategory === 'fiat'
       ? 'Цена (₽)'
       : sellCategory === 'coins'
         ? 'Цена (монеты)'
-        : sellCrypto === 'GRAM'
-          ? `Цена (${GRAM.symbol})`
-          : 'Цена (SOL)';
+        : `Цена (${selectedCrypto.id === 'GRAM' ? GRAM.symbol : selectedCrypto.label})`;
 
   const needsP2P = sellCategory === 'fiat' && (sellFiatMethod === 'sbp' || sellFiatMethod === 'sberbank');
 
@@ -191,22 +190,22 @@ export function SellNftModal({
         {sellCategory === 'crypto' && (
           <>
             <div className={styles.sectionLabel}>Криптовалюта</div>
-            <div className={styles.optionRow}>
+            <div className={styles.cryptoGrid}>
               {CRYPTO_OPTIONS.map((c) => (
                 <button
                   key={c.id}
                   type="button"
-                  className={`${styles.optionBtn} ${sellCrypto === c.id ? styles.optionBtnActive : ''}`}
+                  className={`${styles.cryptoChip} ${sellCrypto === c.id ? styles.cryptoChipActive : ''}`}
                   onClick={() => setSellCrypto(c.id)}
                 >
-                  <Image src={c.icon} alt={c.label} width={28} height={28} />
+                  <Image src={c.icon} alt={c.label} width={22} height={22} />
                   <span>{c.label}</span>
                 </button>
               ))}
             </div>
             <div className={styles.field}>
               <label className={styles.fieldLabel}>
-                {sellCrypto === 'GRAM' ? `Ваш ${GRAM.walletLabel} для получения` : 'Ваш Solana-кошелёк для получения'}
+                {sellCrypto === 'GRAM' ? `Ваш ${GRAM.walletLabel} для получения` : `Ваш ${selectedCrypto.label}-кошелёк для получения`}
               </label>
               <div className={styles.walletRow}>
                 <input
@@ -214,14 +213,14 @@ export function SellNftModal({
                   className={styles.input}
                   value={walletAddress}
                   onChange={(e) => setWalletAddress(e.target.value)}
-                  placeholder={sellCrypto === 'GRAM' ? 'UQ... или EQ...' : 'Адрес Solana'}
+                  placeholder={selectedCrypto.placeholder}
                 />
                 <button type="button" className={styles.pasteBtn} onClick={() => void pasteWallet()}>
                   Вставить
                 </button>
               </div>
               <p className={styles.hint}>
-                Сеть: <strong>{sellCrypto === 'GRAM' ? 'TON' : 'Solana'}</strong>. Адрес хранится
+                Сеть: <strong>{selectedCrypto.network}</strong>. Адрес хранится
                 приватно и не показывается в карточке лота; он доступен покупателю только на шаге оплаты.
               </p>
             </div>

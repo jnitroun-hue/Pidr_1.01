@@ -3,10 +3,8 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingBag, X } from 'lucide-react';
 import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
-import { fiatMethodLabel } from '@/lib/marketplace/payment-meta';
+import { fiatMethodLabel, resolveListingCrypto } from '@/lib/marketplace/payment-meta';
 import { listingHasValidPrice } from '@/lib/marketplace/listing-price';
-import { GRAM } from '@/lib/crypto/gram-brand';
-import { CRYPTO_TOKENS } from '@/lib/crypto/crypto-assets';
 import CryptoIcon from '@/components/CryptoIcon';
 import PidrCoinIcon, { PidrCoinAmount } from '@/components/PidrCoinIcon';
 import NftCardFace from '@/components/NftCardFace';
@@ -193,36 +191,25 @@ export function BuyTab({ listings, onBuy, userCoins, getSuitColor }: BuyTabProps
                 <PidrCoinAmount value={listing.price_coins} size={22} />
               </div>
             )}
-            {listing.price_ton && (
+            {(() => {
+              const offer = resolveListingCrypto(listing);
+              if (!offer) return null;
+              return (
               <div style={{
                 fontSize: '20px',
                 fontWeight: 'bold',
-                color: '#60a5fa',
+                color: offer.color,
                 textAlign: 'center',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '6px'
               }}>
-                <CryptoIcon src={CRYPTO_TOKENS.GRAM.icon} size={22} alt={GRAM.symbol} />
-                {listing.price_ton} {GRAM.symbol}
+                <CryptoIcon src={offer.icon} size={22} alt={offer.symbol} />
+                {offer.amount} {offer.symbol}
               </div>
-            )}
-            {listing.price_sol && (
-              <div style={{
-                fontSize: '20px',
-                fontWeight: 'bold',
-                color: '#f59e0b',
-                textAlign: 'center',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px'
-              }}>
-                <CryptoIcon src={CRYPTO_TOKENS.SOL.icon} size={22} alt="SOL" />
-                {listing.price_sol} SOL
-              </div>
-            )}
+              );
+            })()}
             {listing.price_rub != null && Number(listing.price_rub) > 0 && (
               <div
                 style={{
@@ -730,18 +717,16 @@ function ListingCard({ listing, onCancel, getSuitColor }: any) {
                 <PidrCoinAmount value={listing.price_coins ?? 0} size={16} showLabel />
               </div>
             )}
-            {listing.price_ton != null && listing.price_ton > 0 && (
+            {(() => {
+              const offer = resolveListingCrypto(listing);
+              if (!offer) return null;
+              return (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <CryptoIcon src={CRYPTO_TOKENS.GRAM.icon} size={18} alt={GRAM.symbol} />
-                {listing.price_ton} {GRAM.symbol}
+                <CryptoIcon src={offer.icon} size={18} alt={offer.symbol} />
+                {offer.amount} {offer.symbol}
               </div>
-            )}
-            {listing.price_sol != null && listing.price_sol > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <CryptoIcon src={CRYPTO_TOKENS.SOL.icon} size={18} alt="SOL" />
-                {listing.price_sol} SOL
-              </div>
-            )}
+              );
+            })()}
             {listing.price_rub != null && Number(listing.price_rub) > 0 && (
               <div>₽ {Number(listing.price_rub).toLocaleString('ru-RU')}</div>
             )}
@@ -819,8 +804,10 @@ function SoldCard({ listing, getSuitColor }: any) {
                 ✅ Продано за <PidrCoinAmount value={listing.price_coins} size={16} showLabel />
               </span>
             ) : null}
-            {listing.price_ton && `✅ Продано за ${listing.price_ton} ${GRAM.symbol}`}
-            {listing.price_sol && `✅ Продано за ${listing.price_sol} SOL`}
+            {(() => {
+              const offer = resolveListingCrypto(listing);
+              return offer ? `✅ Продано за ${offer.amount} ${offer.symbol}` : null;
+            })()}
             {listing.price_rub != null && Number(listing.price_rub) > 0 && `✅ Продано за ${Number(listing.price_rub).toLocaleString('ru-RU')} ₽`}
           </div>
         </div>

@@ -1514,9 +1514,18 @@ export default function GameWallet({ user, onBalanceUpdate, hideInlineQuickConne
               {(Number(pendingDeposit.amountNano) / 1_000_000_000).toLocaleString('ru-RU')} {GRAM.symbol} · перевод сохранён
             </span>
           </div>
-          <button type="button" onClick={() => void reconcilePendingDeposit()} disabled={isMonitoringPayments}>
-            {isMonitoringPayments ? 'Проверяем…' : 'Проверить оплату'}
-          </button>
+          <div className={styles['pending-actions']}>
+            <button
+              type="button"
+              className={styles['pending-dismiss']}
+              onClick={() => pendingDeposit && void updateTonDepositIntent(pendingDeposit, 'cancelled')}
+            >
+              Скрыть
+            </button>
+            <button type="button" onClick={() => void reconcilePendingDeposit()} disabled={isMonitoringPayments}>
+              {isMonitoringPayments ? 'Проверяем…' : 'Проверить оплату'}
+            </button>
+          </div>
         </div>
       )}
 

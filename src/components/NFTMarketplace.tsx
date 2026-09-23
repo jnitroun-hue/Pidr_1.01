@@ -11,6 +11,7 @@ import { useNftSellModal } from '@/hooks/useNftSellModal';
 import { getApiHeaders } from '@/lib/api-headers';
 import { appAlert, appConfirm } from '@/lib/app-notice';
 import { gramDisplayFromApi } from '@/lib/crypto/gram-brand';
+import { resolveListingCrypto } from '@/lib/marketplace/payment-meta';
 import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
 import PageLoadingScreen from '@/components/PageLoadingScreen';
 
@@ -274,8 +275,9 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
     !!(listing.seller_fiat_phone || listing.seller_fiat_qr_url);
 
   const executeCryptoPurchase = async (listing: Listing) => {
-    const currency = listing.price_ton ? 'TON' : 'SOL';
-    const amount = listing.price_ton || listing.price_sol;
+    const offer = resolveListingCrypto(listing);
+    const currency = offer?.code || (listing.price_ton ? 'TON' : 'SOL');
+    const amount = offer?.amount || listing.price_ton || listing.price_sol;
 
     try {
       const response = await fetch('/api/marketplace/buy', {
@@ -292,6 +294,29 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
       });
 
       const data = await response.json();
+      const paySymbol = gramDisplayFromApi(String(data.crypto_currency || currency));
+      const payAmount = data.paid || amount;
+
+      if (data.success && data.manual) {
+        const wallet = String(data.seller_wallet || '');
+        if (wallet) {
+          try {
+            await navigator.clipboard.writeText(wallet);
+          } catch {
+            /* optional */
+          }
+        }
+        if (data.payment_url && typeof window !== 'undefined') {
+          window.open(data.payment_url, '_blank');
+        }
+        await appAlert(
+          wallet
+            ? `Адрес продавца скопирован. Переведите ${payAmount} ${paySymbol} напрямую. Карта остаётся в продаже.`
+            : `Переведите ${payAmount} ${paySymbol} на кошелёк продавца.`,
+          { title: 'Оплата продавцу', type: 'info' }
+        );
+        return;
+      }
 
       if (data.success && data.payment_url) {
         if (typeof window !== 'undefined') {
@@ -301,7 +326,7 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
             const opened = window.open(data.payment_url, '_blank');
             if (!opened) {
               await navigator.clipboard.writeText(data.payment_url);
-              await appAlert(`Ссылка скопирована. Оплатите ${amount} ${gramDisplayFromApi(currency)} в кошельке.`, {
+              await appAlert(`Ссылка скопирована. Оплатите ${payAmount} ${paySymbol} в кошельке.`, {
                 title: 'Оплата в кошельке',
                 type: 'info',
               });
@@ -314,7 +339,7 @@ export default function NFTMarketplace({ userCoins, onBalanceUpdate }: NFTMarket
 
         if (
           await appConfirm(
-            `После оплаты ${amount} ${gramDisplayFromApi(currency)} нажмите «Подтвердить» — проверим перевод и передадим карту.`,
+            `После оплаты ${payAmount} ${paySymbol} нажмите «Подтвердить» — проверим перевод и передадим карту.`,
             { confirmText: 'Я оплатил' }
           )
         ) {

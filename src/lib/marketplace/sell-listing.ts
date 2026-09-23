@@ -6,6 +6,7 @@ import {
   isValidPhone,
   isValidWallet,
   normalizePhone,
+  sellCryptoCode,
 } from './payment-meta';
 
 export interface SellListingInput {
@@ -78,6 +79,7 @@ export function buildSellListingBody(input: SellListingInput, validatedPrice: nu
     fiat_payment_method: null,
     seller_wallet_address: null,
     seller_wallet_network: null,
+    crypto_currency: null,
     seller_fiat_phone: null,
     seller_fiat_qr_url: null,
   };
@@ -85,10 +87,12 @@ export function buildSellListingBody(input: SellListingInput, validatedPrice: nu
   if (input.category === 'coins') {
     body.price_coins = Math.floor(validatedPrice);
   } else if (input.category === 'crypto') {
-    if (input.crypto === 'GRAM') body.price_ton = validatedPrice;
+    const code = sellCryptoCode(input.crypto);
+    if (code === 'TON') body.price_ton = validatedPrice;
     else body.price_sol = validatedPrice;
     body.seller_wallet_address = input.walletAddress.trim();
-    body.seller_wallet_network = input.crypto === 'GRAM' ? 'TON' : input.crypto;
+    body.seller_wallet_network = code;
+    body.crypto_currency = code;
   } else {
     body.price_rub = Math.round(validatedPrice * 100) / 100;
     body.fiat_payment_method = input.fiatMethod;

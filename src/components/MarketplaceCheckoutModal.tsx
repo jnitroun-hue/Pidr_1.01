@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Wallet, CreditCard, Zap } from 'lucide-react';
-import { type FiatMethod } from '@/lib/marketplace/payment-meta';
+import { type FiatMethod, resolveListingCrypto } from '@/lib/marketplace/payment-meta';
 import { gramDisplayFromApi } from '@/lib/crypto/gram-brand';
 import { useLanguage } from '@/components/LanguageSwitcher';
 import { formatNftCardName } from '@/lib/nft/card-display';
@@ -14,6 +14,8 @@ export interface CheckoutListing {
   price_ton?: number | null;
   price_sol?: number | null;
   price_rub?: number | null;
+  crypto_currency?: string | null;
+  seller_wallet_network?: string | null;
   nft_card?: {
     rank: string;
     suit: string;
@@ -47,8 +49,9 @@ export function MarketplaceCheckoutModal({
   );
 
   const rubAmount = listing.price_rub != null ? Number(listing.price_rub) : 0;
-  const cryptoCurrency = listing.price_ton ? 'TON' : listing.price_sol ? 'SOL' : null;
-  const cryptoAmount = listing.price_ton ?? listing.price_sol;
+  const cryptoOffer = resolveListingCrypto(listing);
+  const cryptoCurrency = cryptoOffer?.code ?? null;
+  const cryptoAmount = cryptoOffer?.amount;
 
   if (typeof document === 'undefined') return null;
 

@@ -63,7 +63,9 @@ export function useNftSellModal(onListed?: () => void) {
   useEffect(() => {
     if (!showSellModal || sellCategory !== 'crypto') return;
     let cancelled = false;
-    const walletType = sellCrypto === 'GRAM' ? 'ton' : 'sol';
+    setWalletAddress('');
+    const walletType = sellCrypto === 'GRAM' ? 'ton' : sellCrypto === 'SOL' ? 'sol' : null;
+    if (!walletType) return;
     (async () => {
       try {
         const res = await fetch('/api/wallet/check', {

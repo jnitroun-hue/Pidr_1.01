@@ -23,7 +23,8 @@ async function authenticatedUser(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const userId = await authenticatedUser(req);
   if (!userId) return json({ success: false, message: 'Unauthorized' }, { status: 401 });
-  const { data, error } = await getSupabaseAdmin()
+  const db = getSupabaseAdmin();
+  const { data, error } = await db
     .from('_pidr_deposit_intents')
     .select('id, memo, destination, expected_amount_nano, status, tx_hash, coins_credited, expires_at, created_at')
     .eq('user_id', userId)
@@ -32,7 +33,26 @@ export async function GET(req: NextRequest) {
     .limit(1)
     .maybeSingle();
   if (error) return json({ success: false, message: 'Не удалось загрузить платёж' }, { status: 500 });
+  if (data && staleDepositIntent(data)) {
+    await db
+      .from('_pidr_deposit_intents')
+      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+      .eq('id', data.id)
+      .eq('user_id', userId)
+      .in('status', ['pending', 'submitted', 'ambiguous']);
+    return json({ success: true, intent: null });
+  }
   return json({ success: true, intent: data });
+}
+
+function staleDepositIntent(row: { created_at?: string | null; expires_at?: string | null; coins_credited?: number | null }): boolean {
+  if (Number(row.coins_credited) > 0) return true;
+  const now = Date.now();
+  const expires = row.expires_at ? Date.parse(row.expires_at) : NaN;
+  if (Number.isFinite(expires) && expires < now) return true;
+  const created = row.created_at ? Date.parse(row.created_at) : NaN;
+  if (!Number.isFinite(created)) return true;
+  return now - created > 48 * 60 * 60 * 1000;
 }
 
 export async function POST(req: NextRequest) {

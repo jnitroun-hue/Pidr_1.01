@@ -9,6 +9,7 @@ import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 import { verifyTonIncomingPayment } from '@/lib/nft/ton-payment-verify';
 import { GRAM } from '@/lib/crypto/gram-brand';
 import { invalidateMarketplaceListCache } from '@/lib/marketplace/listing-cache';
+import { resolveListingCrypto } from '@/lib/marketplace/payment-meta';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -70,17 +71,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const priceTon = Number(listing.price_ton || 0);
-    const priceSol = Number(listing.price_sol || 0);
-    if (!priceTon && !priceSol) {
+    const offer = resolveListingCrypto(listing);
+    if (!offer) {
       return NextResponse.json(
         { success: false, error: 'Лот не продаётся за криптовалюту' },
         { status: 400 }
       );
     }
 
-    const cryptoCurrency = priceTon ? 'TON' : 'SOL';
-    const price = priceTon || priceSol;
+    const cryptoCurrency = offer.code;
+    const price = offer.amount;
     const memo =
       paymentId || `NFT_${listing_id}_from_${buyerId}`;
 
@@ -104,9 +104,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (cryptoCurrency === 'SOL') {
+    if (cryptoCurrency !== 'TON') {
       return NextResponse.json(
-        { success: false, error: `Подтверждение SOL пока не реализовано — используйте монеты или ${GRAM.symbol}` },
+        {
+          success: false,
+          error: `Автопроверка ${offer.symbol} пока недоступна. Переведите сумму напрямую на кошелёк продавца или оплатите монетами / ${GRAM.symbol}.`,
+        },
         { status: 501 }
       );
     }

@@ -8,7 +8,7 @@ import { NFT_CARDS_TABLE, NFT_MARKETPLACE_TABLE } from '@/lib/nft/constants';
 import { GRAM } from '@/lib/crypto/gram-brand';
 import { listingHasValidPrice } from '@/lib/marketplace/listing-price';
 import { isYooKassaConfigured } from '@/lib/payments/yookassa-config';
-import { isValidWallet } from '@/lib/marketplace/payment-meta';
+import { isValidWallet, type SellCrypto } from '@/lib/marketplace/payment-meta';
 import { invalidateMarketplaceListCache } from '@/lib/marketplace/listing-cache';
 
 export const runtime = 'nodejs';
@@ -22,6 +22,7 @@ function isSchemaCompatError(msg: string): boolean {
     msg.includes('seller_fiat') ||
     msg.includes('views_count') ||
     msg.includes('crypto_currency') ||
+    msg.includes('marketplace_wallet_network_check') ||
     msg.includes('schema cache')
   );
 }
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
 
     if (!hasPrice) {
       return NextResponse.json(
-        { success: false, error: `Укажите цену (монеты, ${GRAM.symbol}, SOL или ₽)` },
+        { success: false, error: `Укажите цену (монеты, ${GRAM.symbol}, SOL, TRX, ETH, USDT или ₽)` },
         { status: 400 }
       );
     }
@@ -107,26 +108,27 @@ export async function POST(request: NextRequest) {
     }
 
     const walletAddress = String(seller_wallet_address || '').trim();
+    const requestedNetwork = String(seller_wallet_network || '').toUpperCase();
+    const cryptoNetwork = wantsTon
+      ? 'TON'
+      : (['SOL', 'ETH', 'TRX', 'USDT'].includes(requestedNetwork) ? requestedNetwork : 'SOL');
+    const walletKind = (cryptoNetwork === 'TON' ? 'GRAM' : cryptoNetwork) as SellCrypto;
     if (wantsTon || wantsSol) {
-      const expectedNetwork = wantsTon ? 'TON' : 'SOL';
       if (!walletAddress) {
         return NextResponse.json(
-          { success: false, error: `Укажите адрес ${expectedNetwork}-кошелька для получения оплаты` },
+          { success: false, error: `Укажите адрес ${cryptoNetwork}-кошелька для получения оплаты` },
           { status: 400 }
         );
       }
-      if (
-        (wantsTon && !isValidWallet('GRAM', walletAddress)) ||
-        (wantsSol && !isValidWallet('SOL', walletAddress))
-      ) {
+      if (!isValidWallet(walletKind, walletAddress)) {
         return NextResponse.json(
-          { success: false, error: `Некорректный адрес кошелька сети ${expectedNetwork}` },
+          { success: false, error: `Некорректный адрес кошелька сети ${cryptoNetwork}` },
           { status: 400 }
         );
       }
-      if (seller_wallet_network && String(seller_wallet_network).toUpperCase() !== expectedNetwork) {
+      if (requestedNetwork && requestedNetwork !== cryptoNetwork) {
         return NextResponse.json(
-          { success: false, error: `Адрес должен соответствовать выбранной сети ${expectedNetwork}` },
+          { success: false, error: `Адрес должен соответствовать выбранной сети ${cryptoNetwork}` },
           { status: 400 }
         );
       }
@@ -214,12 +216,14 @@ export async function POST(request: NextRequest) {
       insertRow.price_sol = null;
       insertRow.seller_wallet_address = walletAddress;
       insertRow.seller_wallet_network = 'TON';
+      insertRow.crypto_currency = 'TON';
     } else if (price_sol && Number(price_sol) > 0) {
       insertRow.price_sol = Number(price_sol);
       insertRow.price_coins = null;
       insertRow.price_ton = null;
       insertRow.seller_wallet_address = walletAddress;
-      insertRow.seller_wallet_network = 'SOL';
+      insertRow.seller_wallet_network = cryptoNetwork;
+      insertRow.crypto_currency = cryptoNetwork;
     }
 
     let { data: listing, error: insertError } = await db
@@ -229,8 +233,20 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (insertError && isSchemaCompatError(String(insertError.message || ''))) {
+      const extendedCrypto = ['ETH', 'TRX', 'USDT'].includes(cryptoNetwork);
+      const missingCurrencyColumn = String(insertError.message || '').includes('crypto_currency');
+      if (missingCurrencyColumn && (wantsTon || wantsSol) && !extendedCrypto) {
+        delete insertRow.crypto_currency;
+        const retryCurrency = await db.from(NFT_MARKETPLACE_TABLE).insert(insertRow).select().single();
+        listing = retryCurrency.data;
+        insertError = retryCurrency.error;
+      }
+    }
+
+    if (insertError && isSchemaCompatError(String(insertError.message || ''))) {
       const wantsRub = priceRubNum !== null && !Number.isNaN(priceRubNum) && priceRubNum > 0;
-      if (wantsRub || wantsTon || wantsSol) {
+      const extendedCrypto = ['ETH', 'TRX', 'USDT'].includes(String(insertRow.seller_wallet_network || ''));
+      if (wantsRub || wantsTon || wantsSol || extendedCrypto) {
         return NextResponse.json(
           {
             success: false,

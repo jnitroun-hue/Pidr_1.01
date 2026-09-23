@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { X, Copy, Check, Smartphone, QrCode, Wallet } from 'lucide-react';
 import { marketplaceTheme as T } from '@/lib/ui/marketplaceTheme';
-import { CRYPTO_OPTIONS, fiatMethodLabel } from '@/lib/marketplace/payment-meta';
+import { fiatMethodLabel, resolveListingCrypto } from '@/lib/marketplace/payment-meta';
 import { gramDisplayFromApi } from '@/lib/crypto/gram-brand';
 import { useLanguage } from '@/components/LanguageSwitcher';
 import { formatNftCardName } from '@/lib/nft/card-display';
@@ -19,6 +19,7 @@ export interface BuyPaymentListing {
   fiat_payment_method?: string | null;
   seller_wallet_address?: string | null;
   seller_wallet_network?: string | null;
+  crypto_currency?: string | null;
   seller_fiat_phone?: string | null;
   seller_fiat_qr_url?: string | null;
   nft_card?: {
@@ -56,11 +57,10 @@ export function BuyPaymentModal({
     }
   }, []);
 
-  const currency = listing.price_ton ? 'TON' : listing.price_sol ? 'SOL' : null;
-  const cryptoAmount = listing.price_ton ?? listing.price_sol;
-  const cryptoMeta = listing.price_ton
-    ? CRYPTO_OPTIONS.find((c) => c.id === 'GRAM')
-    : CRYPTO_OPTIONS.find((c) => c.id === currency);
+  const offer = resolveListingCrypto(listing);
+  const currency = offer?.code ?? null;
+  const cryptoAmount = offer?.amount;
+  const cryptoMeta = offer;
   const wallet = listing.seller_wallet_address?.trim();
   const rubAmount = listing.price_rub != null ? Number(listing.price_rub) : 0;
 
@@ -88,7 +88,7 @@ export function BuyPaymentModal({
           <>
             <div className={styles.amountRow}>
               {cryptoMeta && (
-                <Image src={cryptoMeta.icon} alt={cryptoMeta.label} width={32} height={32} />
+                <Image src={cryptoMeta.icon} alt={cryptoMeta.symbol} width={32} height={32} />
               )}
               <span className={styles.amount}>
                 {cryptoAmount} {gramDisplayFromApi(currency)}

@@ -30,7 +30,6 @@ import { formatNftCardName, getNftRarityLabel } from '@/lib/nft/card-display';
 import BonusCenter, { type ProfileBonus } from '@/components/BonusCenter';
 import type { AuthMethod } from '@/lib/user/resolve-auth-method';
 import AvatarGeneratorModal from '@/components/AvatarGeneratorModal';
-import MenuThemePicker from '@/components/MenuThemePicker';
 import NftGenerationProgress from '@/components/NftGenerationProgress';
 
 export default function ProfilePage() {
@@ -1604,10 +1603,6 @@ export default function ProfilePage() {
         >
           {language === 'en' ? 'Open Premium Shop →' : 'Открыть Premium Shop →'}
         </motion.button>
-
-        <div style={{ marginBottom: 16 }}>
-          <MenuThemePicker compact />
-        </div>
 
         {/* СТАТИСТИКА — онлайн / боты */}
         <motion.div 

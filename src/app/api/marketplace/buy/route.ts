@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { invalidateMarketplaceListCache } from '@/lib/marketplace/listing-cache';
+import { resolveListingCrypto } from '@/lib/marketplace/payment-meta';
 
 /**
  * POST /api/marketplace/buy
@@ -104,13 +105,10 @@ export async function POST(request: NextRequest) {
     if (payment_method === 'coins') {
       price = listing.price_coins;
     } else if (payment_method === 'crypto') {
-      // Определяем валюту и цену
-      if (listing.price_ton) {
-        price = listing.price_ton;
-        cryptoCurrency = 'TON';
-      } else if (listing.price_sol) {
-        price = listing.price_sol;
-        cryptoCurrency = 'SOL';
+      const offer = resolveListingCrypto(listing);
+      if (offer) {
+        price = offer.amount;
+        cryptoCurrency = offer.code;
       }
     }
     
@@ -127,7 +125,11 @@ export async function POST(request: NextRequest) {
     if (payment_method === 'crypto' && cryptoCurrency) {
       const listingNetwork = String(listing.seller_wallet_network || '').toUpperCase();
       const listingWallet = String(listing.seller_wallet_address || '').trim();
-      if (listingWallet && (!listingNetwork || listingNetwork === cryptoCurrency)) {
+      const networkMatches =
+        !listingNetwork ||
+        listingNetwork === cryptoCurrency ||
+        (cryptoCurrency === 'TON' && listingNetwork === 'GRAM');
+      if (listingWallet && networkMatches) {
         sellerWalletAddress = listingWallet;
       } else {
         const walletType = cryptoCurrency.toLowerCase();
@@ -261,6 +263,19 @@ export async function POST(request: NextRequest) {
           status: 'completed',
           completed_at: new Date().toISOString()
         });
+    } else if (payment_method === 'crypto' && cryptoCurrency && !['TON', 'SOL'].includes(cryptoCurrency)) {
+      return NextResponse.json({
+        success: true,
+        manual: true,
+        message: `Переведите ${price} ${cryptoCurrency} на кошелёк продавца.`,
+        paid: price,
+        payment_method,
+        crypto_currency: cryptoCurrency,
+        payment_url: cryptoPaymentUrl(cryptoCurrency, sellerWalletAddress || '', price),
+        seller_wallet: sellerWalletAddress,
+        listing_id,
+        buyer_id: buyerId,
+      });
     } else if (payment_method === 'crypto') {
       // ===== ОПЛАТА КРИПТОЙ - ТОЛЬКО РЕЗЕРВИРУЕМ =====
       console.log(`💎 [Marketplace Buy] Резервируем лот ${listing_id} для покупателя ${buyerId}`);
@@ -312,6 +327,8 @@ export async function POST(request: NextRequest) {
         const platformFeeNano = Math.floor(price * 0.05 * 1000000000);
         console.log(`💸 [Marketplace] Комиссия платформы: ${price * 0.05} TON (${platformFeeNano} nano)`);
         
+      } else if (cryptoCurrency === 'ETH' || cryptoCurrency === 'TRX' || cryptoCurrency === 'USDT') {
+        paymentUrl = cryptoPaymentUrl(cryptoCurrency, sellerWalletAddress || '', price) || undefined;
       } else if (cryptoCurrency === 'SOL') {
         // Solana Pay URL - ДЕНЬГИ ИДУТ ПРОДАВЦУ!
         paymentUrl = `solana:${sellerWalletAddress}?amount=${price}&label=NFT_${listing_id}&message=NFT_from_buyer_${buyerId}`;
@@ -352,5 +369,18 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+function cryptoPaymentUrl(currency: string, address: string, price: number): string | null {
+  if (!address) return null;
+  if (currency === 'ETH') {
+    const wei = BigInt(Math.round(price * 1e9)) * BigInt(1_000_000_000);
+    return `ethereum:${address}?value=${wei.toString()}`;
+  }
+  if (currency === 'TRX') {
+    const sun = Math.round(price * 1_000_000);
+    return `tronlink://send?to=${encodeURIComponent(address)}&amount=${sun}`;
+  }
+  return null;
 }
 
