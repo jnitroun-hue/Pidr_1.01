@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { declineRoomInviteFromTelegram } from '@/lib/telegram/room-invite-notify';
-import { referralCodeFromTelegramStartParam } from '@/lib/referral/referral-links';
 
 /** В проде URL иногда лежит без схемы — Telegram тогда отклоняет web_app-кнопки целиком. */
 function botAppBase(): string {
@@ -87,6 +86,63 @@ export async function POST(req: NextRequest) {
           });
         }
 
+        return NextResponse.json({ ok: true });
+      }
+
+      if (callbackData === 'show_earn') {
+        const earnText =
+          `💰 <b>Как зарабатывать в P.I.D.R.</b>\n\n` +
+          `Заработок внутри игры: рейтинг, монеты и свои NFT-карты, которые можно продать другим игрокам.\n\n` +
+          `🏆 <b>Рейтинг</b>\n` +
+          `• Садись за стол и поднимайся в таблице\n` +
+          `• Чем выше место — тем заметнее профиль и тем больше шансов на призы сезона\n\n` +
+          `🪙 <b>Монеты</b>\n` +
+          `• Игровые монеты копятся за игру и бонусы\n` +
+          `• Ими оплачивают генерацию NFT и покупки на площадке\n` +
+          `• Пригласи друга: после его регистрации тебе начисляется <b>500 монет</b>\n\n` +
+          `🎨 <b>NFT-карты</b>\n` +
+          `• Открой коллекцию, выбери тему и запусти генерацию\n` +
+          `• У карты сохраняются ранг, масть и оформление\n` +
+          `• Редкая тема и сильный ранг интереснее покупателям\n\n` +
+          `💸 <b>Продажа другим игрокам</b>\n` +
+          `• Нажми «Продать» и укажи одну цену\n` +
+          `• Оплата: монеты, рубли, GRAM, SOL, TRX, ETH или USDT\n` +
+          `• Для крипты выбери сеть и свой кошелёк получения\n` +
+          `• Адрес скрыт в карточке лота и открывается покупателю только на оплате\n` +
+          `• После сделки карта уходит покупателю, а оплата — тебе\n\n` +
+          `⚠️ <b>Важно</b>\n` +
+          `Доход не гарантирован: карта должна найти покупателя. Перед криптопереводом проверяй сеть и адрес — в блокчейне его не отменить.`;
+
+        await fetch(`https://api.telegram.org/bot${botToken}/answerCallbackQuery`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            callback_query_id: callbackQuery.id,
+            text: 'Как зарабатывать',
+          }),
+        });
+
+        const earnResponse = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: callbackChatId,
+            text: earnText,
+            parse_mode: 'HTML',
+            reply_markup: {
+              inline_keyboard: [[
+                {
+                  text: '🎮 Начать игру',
+                  web_app: { url: botAppBase() },
+                },
+              ]],
+            },
+          }),
+        });
+        const earnData = await earnResponse.json();
+        if (!earnData.ok) {
+          console.error('❌ [Telegram Webhook] Ошибка отправки заработка:', earnData);
+        }
         return NextResponse.json({ ok: true });
       }
       
@@ -196,10 +252,6 @@ export async function POST(req: NextRequest) {
         const playUrl = startParam
           ? `${appBase}/?start_param=${encodeURIComponent(startParam)}`
           : `${appBase}/`;
-        const referralCode = referralCodeFromTelegramStartParam(startParam);
-        const earnUrl = referralCode
-          ? `${appBase}/earn-nft?ref=${encodeURIComponent(referralCode)}`
-          : `${appBase}/earn-nft`;
         const vkAppId = (process.env.NEXT_PUBLIC_VK_CLIENT_ID || '').trim();
         const vkPlayUrl = /^\d+$/.test(vkAppId) ? `https://vk.com/app${vkAppId}` : null;
 
@@ -221,7 +273,7 @@ export async function POST(req: NextRequest) {
 
         const replyMarkup = {
           inline_keyboard: [
-            [{ text: '💰 Заработать', web_app: { url: earnUrl } }],
+            [{ text: '💰 Заработать', callback_data: 'show_earn' }],
             playRow,
             [{ text: '📖 Изучить правила', callback_data: 'show_rules' }],
           ],
