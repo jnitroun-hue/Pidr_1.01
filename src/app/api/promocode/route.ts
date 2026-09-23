@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
-import { describePromoReward, normalizePromoCode, type PromoRewardType } from '@/lib/promo/promo-rewards';
+import { describePromoBundle, normalizePromoCode, type PromoRewardType } from '@/lib/promo/promo-rewards';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -85,6 +85,9 @@ export async function POST(req: NextRequest) {
           new_balance: number | null;
           premium_expires_at: string | null;
           new_rating: number | null;
+          coins_granted: number | null;
+          premium_days: number | null;
+          free_nft_pending: boolean | null;
         }
       | undefined;
 
@@ -92,7 +95,16 @@ export async function POST(req: NextRequest) {
       return noStoreJson({ success: false, message: 'Пустой ответ сервера' }, { status: 500 });
     }
 
-    const rewardText = describePromoReward(row.reward_type, row.reward_value);
+    const coinsGranted = Number(row.coins_granted ?? (row.reward_type === 'coins' ? row.reward_value : 0)) || 0;
+    const premiumDays = Number(row.premium_days ?? (row.reward_type === 'premium_days' ? row.reward_value : 0)) || 0;
+    const freeNftPending = row.free_nft_pending === true;
+    const rewardText = describePromoBundle({
+      coins: coinsGranted,
+      premiumDays,
+      freeNft: freeNftPending,
+      rewardType: row.reward_type,
+      rewardValue: row.reward_value,
+    });
 
     return noStoreJson({
       success: true,
@@ -105,6 +117,9 @@ export async function POST(req: NextRequest) {
         newBalance: row.new_balance,
         premiumExpiresAt: row.premium_expires_at,
         newRating: row.new_rating,
+        coinsGranted,
+        premiumDays,
+        freeNftPending,
       },
     });
   } catch (error) {
@@ -131,29 +146,50 @@ export async function GET(req: NextRequest) {
 
     const { data, error } = await supabaseAdmin
       .from('_pidr_promocode_redemptions')
-      .select('code, reward_type, reward_value, redeemed_at')
+      .select('code, reward_type, reward_value, redeemed_at, coins_granted, premium_days, free_nft')
       .eq('user_id', dbUserId)
       .order('redeemed_at', { ascending: false })
       .limit(20);
 
     if (error) {
       if (migrationMissing(error)) {
-        return noStoreJson({ success: true, redemptions: [], configured: false });
+        return noStoreJson({ success: true, redemptions: [], configured: false, pendingFreeNft: false });
       }
       console.error('❌ [GET /api/promocode]', error);
       return noStoreJson({ success: false, message: 'Не удалось загрузить историю' }, { status: 500 });
     }
 
+    const { count: pendingNft } = await supabaseAdmin
+      .from('_pidr_promo_nft_grants')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', dbUserId)
+      .eq('status', 'pending');
+
     return noStoreJson({
       success: true,
       configured: true,
+      pendingFreeNft: (pendingNft || 0) > 0,
       redemptions: (
-        (data || []) as Array<{ code: string; reward_type: string; reward_value: number; redeemed_at: string }>
+        (data || []) as Array<{
+          code: string;
+          reward_type: string;
+          reward_value: number;
+          redeemed_at: string;
+          coins_granted?: number | null;
+          premium_days?: number | null;
+          free_nft?: number | null;
+        }>
       ).map((r) => ({
         code: r.code,
         rewardType: r.reward_type,
         rewardValue: r.reward_value,
-        rewardText: describePromoReward(r.reward_type as PromoRewardType, r.reward_value),
+        rewardText: describePromoBundle({
+          coins: r.coins_granted,
+          premiumDays: r.premium_days,
+          freeNft: r.free_nft,
+          rewardType: r.reward_type,
+          rewardValue: r.reward_value,
+        }),
         redeemedAt: r.redeemed_at,
       })),
     });

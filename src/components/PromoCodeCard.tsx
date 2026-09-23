@@ -1,8 +1,12 @@
 'use client';
 
 import { useEffect, useState, type FormEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { getApiHeaders } from '@/lib/api-headers';
 import { normalizePromoCode, type PromoRewardType } from '@/lib/promo/promo-rewards';
+import { formatNftCardName } from '@/lib/nft/card-display';
+import NftCardFace from '@/components/NftCardFace';
+import PidrCoinIcon from '@/components/PidrCoinIcon';
 import styles from './PromoCodeCard.module.css';
 
 export interface PromoRedeemResult {
@@ -13,6 +17,17 @@ export interface PromoRedeemResult {
   newBalance: number | null;
   premiumExpiresAt: string | null;
   newRating: number | null;
+  coinsGranted?: number;
+  premiumDays?: number;
+  freeNftPending?: boolean;
+}
+
+interface MintedCard {
+  id: number;
+  rank: string;
+  suit: string;
+  rarity: string;
+  image_url: string;
 }
 
 interface Redemption {
@@ -30,6 +45,12 @@ export default function PromoCodeCard({ onRedeemed }: Props) {
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
   const [history, setHistory] = useState<Redemption[]>([]);
+  const [pendingNft, setPendingNft] = useState(false);
+  const [nftOpen, setNftOpen] = useState(false);
+  const [minting, setMinting] = useState(false);
+  const [minted, setMinted] = useState<MintedCard | null>(null);
+  const [mintError, setMintError] = useState<string | null>(null);
+  const [giftCoins, setGiftCoins] = useState(5000);
 
   const loadHistory = async () => {
     try {
@@ -40,6 +61,7 @@ export default function PromoCodeCard({ onRedeemed }: Props) {
       });
       const data = await res.json();
       if (data?.success && Array.isArray(data.redemptions)) setHistory(data.redemptions);
+      if (data?.success) setPendingNft(Boolean(data.pendingFreeNft));
     } catch {
       /* история — не критично */
     }
@@ -82,12 +104,85 @@ export default function PromoCodeCard({ onRedeemed }: Props) {
       if (typeof window !== 'undefined' && result.newBalance != null) {
         window.dispatchEvent(new CustomEvent('coinsUpdated', { detail: { coins: result.newBalance } }));
       }
+      if (result.freeNftPending) {
+        setGiftCoins(result.coinsGranted || result.rewardValue || 5000);
+        setMinted(null);
+        setMintError(null);
+        setPendingNft(true);
+        setNftOpen(true);
+      }
     } catch {
       setFeedback({ kind: 'err', text: 'Сеть недоступна, попробуйте ещё раз' });
     } finally {
       setBusy(false);
     }
   };
+
+  const claimNft = async () => {
+    if (minting || minted) return;
+    setMinting(true);
+    setMintError(null);
+    try {
+      const res = await fetch('/api/promocode/claim-nft', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { ...getApiHeaders(), 'Content-Type': 'application/json' },
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.success || !data.card) {
+        setMintError(data?.message || 'Не удалось сгенерировать карту');
+        return;
+      }
+      setMinted(data.card);
+      setPendingNft(false);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('nft-collection-updated'));
+      }
+    } catch {
+      setMintError('Сеть недоступна, попробуйте ещё раз');
+    } finally {
+      setMinting(false);
+    }
+  };
+
+  const nftModal = nftOpen && typeof document !== 'undefined'
+    ? createPortal(
+        <div className={styles.overlay} role="dialog" aria-modal="true" onClick={() => !minting && setNftOpen(false)}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalKicker}>Промокод активирован</div>
+            <h3 className={styles.modalTitle}>Вам начислено {giftCoins.toLocaleString('ru-RU')} монет</h3>
+            <p className={styles.modalText}>
+              И ещё одна бесплатная NFT. Нажмите кнопку — карта выпадет случайной и сразу появится в коллекции.
+            </p>
+            <div className={styles.coinLine}>
+              <PidrCoinIcon size={28} alt="" />
+              <span>+{giftCoins.toLocaleString('ru-RU')}</span>
+            </div>
+            {minted ? (
+              <div className={styles.minted}>
+                <NftCardFace
+                  suit={minted.suit}
+                  rank={minted.rank}
+                  rarity={minted.rarity}
+                  imageUrl={minted.image_url}
+                  style={{ width: 148, height: 210, borderRadius: 12 }}
+                />
+                <div className={styles.mintedName}>{formatNftCardName(minted.rank, minted.suit, 'ru')}</div>
+              </div>
+            ) : (
+              <button type="button" className={styles.mintBtn} onClick={() => void claimNft()} disabled={minting}>
+                {minting ? 'Генерируем…' : 'Сгенерировать бесплатную карту'}
+              </button>
+            )}
+            {mintError && <div className={`${styles.feedback} ${styles.err}`}>{mintError}</div>}
+            <button type="button" className={styles.laterBtn} onClick={() => setNftOpen(false)} disabled={minting}>
+              {minted ? 'Отлично' : 'Позже'}
+            </button>
+          </div>
+        </div>,
+        document.body
+      )
+    : null;
 
   return (
     <article className={styles.card}>
@@ -128,6 +223,12 @@ export default function PromoCodeCard({ onRedeemed }: Props) {
         </div>
       )}
 
+      {pendingNft && !nftOpen && (
+        <button type="button" className={styles.mintBtn} onClick={() => setNftOpen(true)}>
+          Забрать бесплатную NFT
+        </button>
+      )}
+
       {history.length > 0 && (
         <div className={styles.history}>
           <div className={styles.historyTitle}>Активировано</div>
@@ -144,6 +245,7 @@ export default function PromoCodeCard({ onRedeemed }: Props) {
           </ul>
         </div>
       )}
+      {nftModal}
     </article>
   );
 }

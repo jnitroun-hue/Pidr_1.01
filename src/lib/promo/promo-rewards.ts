@@ -45,6 +45,25 @@ export function describePromoReward(type: PromoRewardType | string, value: numbe
   }
 }
 
+export function describePromoBundle(parts: {
+  coins?: number | null;
+  premiumDays?: number | null;
+  freeNft?: boolean | number | null;
+  rewardType?: string | null;
+  rewardValue?: number | null;
+}): string {
+  const coins = Number(parts.coins ?? (parts.rewardType === 'coins' ? parts.rewardValue : 0)) || 0;
+  const days = Number(parts.premiumDays ?? (parts.rewardType === 'premium_days' ? parts.rewardValue : 0)) || 0;
+  const bits: string[] = [];
+  if (coins > 0) bits.push(describePromoReward('coins', coins));
+  if (days > 0) bits.push(describePromoReward('premium_days', days));
+  if (parts.rewardType === 'rating' && Number(parts.rewardValue) > 0) {
+    bits.push(describePromoReward('rating', Number(parts.rewardValue)));
+  }
+  if (Number(parts.freeNft) > 0 || parts.freeNft === true) bits.push('бесплатная генерация NFT');
+  return bits.join(' · ') || describePromoReward(parts.rewardType || 'coins', Number(parts.rewardValue) || 0);
+}
+
 export function promoRewardLabel(type: PromoRewardType | string): string {
   return PROMO_REWARD_TYPES.find((t) => t.id === type)?.label ?? String(type);
 }

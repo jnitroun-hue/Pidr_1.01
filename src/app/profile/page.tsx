@@ -2251,7 +2251,7 @@ export default function ProfilePage() {
                     const next = { ...prev };
                     if (result.newBalance != null) next.coins = result.newBalance;
                     if (result.newRating != null && result.rewardType === 'rating') next.rating = result.newRating;
-                    if (result.premiumExpiresAt && result.rewardType === 'premium_days') {
+                    if (result.premiumExpiresAt && (result.rewardType === 'premium_days' || (result.premiumDays ?? 0) > 0)) {
                       next.isPremium = true;
                       next.premiumExpiresAt = result.premiumExpiresAt;
                     }
