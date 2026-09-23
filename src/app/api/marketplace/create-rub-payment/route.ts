@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createYooKassaPayment } from '@/lib/payments/yookassa';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { publicAppUrl } from '@/lib/payments/yookassa-config';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -68,7 +69,7 @@ export async function POST(request: NextRequest) {
     }
     const amountStr = Number(listing.price_rub).toFixed(2);
 
-    const returnUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/payment/success?payment_id={PAYMENT_ID}`;
+    const returnUrl = `${publicAppUrl()}/payment/success?payment_id={PAYMENT_ID}`;
 
     const payment = await createYooKassaPayment({
       amount: {
@@ -95,6 +96,29 @@ export async function POST(request: NextRequest) {
 
     if (!payment) {
       return NextResponse.json({ success: false, error: 'Не удалось создать платёж' }, { status: 500 });
+    }
+
+    const { error: insertError } = await db.from('_pidr_payments').upsert({
+      payment_id: payment.id,
+      user_id: dbUserId,
+      provider: 'yookassa',
+      payment_method: pm,
+      amount: Number(listing.price_rub),
+      currency: payment.amount.currency,
+      status: payment.status,
+      item_id: String(listingId),
+      item_type: 'nft_listing',
+      confirmation_url: payment.confirmation?.confirmation_url || null,
+      metadata: {
+        ...(payment.metadata || {}),
+        paymentMethod: pm,
+        listingId: String(listingId),
+      },
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'payment_id' });
+
+    if (insertError) {
+      console.warn('⚠️ [create-rub-payment] платёж не сохранён в _pidr_payments:', insertError.message);
     }
 
     return NextResponse.json({

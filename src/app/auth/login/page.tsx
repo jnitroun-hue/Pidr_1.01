@@ -258,9 +258,11 @@ export default function LoginPage() {
       background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)',
       padding: '20px',
       paddingTop: 'calc(var(--app-chrome-top, 12px) + 56px)',
+      paddingBottom: '48px',
       display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center'
+      alignItems: 'flex-start',
+      justifyContent: 'center',
+      overflowY: 'auto'
     }}>
       <motion.div
         initial={{ y: 20, opacity: 0 }}

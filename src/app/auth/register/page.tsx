@@ -290,18 +290,18 @@ export default function RegisterPage() {
       background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)',
       padding: '20px',
       paddingTop: 'calc(var(--app-chrome-top, 12px) + 56px)',
+      paddingBottom: '48px',
       display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center'
+      alignItems: 'flex-start',
+      justifyContent: 'center',
+      overflowY: 'auto'
     }}>
       <motion.div
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         style={{
           width: '100%',
-          maxWidth: '420px',
-          maxHeight: '90vh',
-          overflowY: 'auto'
+          maxWidth: '420px'
         }}
       >
         <div style={{

@@ -32,7 +32,7 @@ function verifyVKSignature(searchParams: URLSearchParams): boolean {
   // Собираем все параметры кроме sign
   const params: string[] = [];
   searchParams.forEach((value, key) => {
-    if (key !== 'sign') {
+    if (key.startsWith('vk_')) {
       params.push(`${key}=${value}`);
     }
   });
@@ -58,9 +58,21 @@ function verifyVKSignature(searchParams: URLSearchParams): boolean {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { vk_user_id, vk_access_token_settings, vk_app_id, vk_are_notifications_enabled, 
-            vk_is_app_user, vk_is_favorite, vk_language, vk_platform, vk_ref, vk_ts, 
-            sign, first_name, last_name, photo_url } = body;
+    const launchQuery = typeof body.launch_query === 'string' ? body.launch_query : '';
+    const searchParams = new URLSearchParams(
+      launchQuery.startsWith('?') ? launchQuery.slice(1) : launchQuery
+    );
+    if (!searchParams.get('vk_user_id') || !searchParams.get('sign')) {
+      Object.entries(body).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && (key.startsWith('vk_') || key === 'sign')) {
+          searchParams.set(key, String(value));
+        }
+      });
+    }
+
+    const vk_user_id = searchParams.get('vk_user_id') || body.vk_user_id;
+    const sign = searchParams.get('sign') || body.sign;
+    const { first_name, last_name, photo_url } = body;
 
     console.log('🔍 VK Mini App авторизация:', { vk_user_id, first_name, last_name });
 
@@ -72,15 +84,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Создаем URLSearchParams для проверки подписи
-    const searchParams = new URLSearchParams();
-    Object.entries(body).forEach(([key, value]) => {
-      if (value !== null && value !== undefined && key !== 'first_name' && key !== 'last_name' && key !== 'photo_url') {
-        searchParams.set(key, String(value));
-      }
-    });
-
-    // Проверяем подпись VK
     if (!verifyVKSignature(searchParams)) {
       console.error('❌ Неверная подпись VK');
       return NextResponse.json(

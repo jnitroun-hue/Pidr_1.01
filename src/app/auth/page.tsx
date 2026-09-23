@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Send, LogIn, ExternalLink } from 'lucide-react';
-import { getTelegramBotUsername } from '@/lib/auth/social-auth';
+import { getTelegramBotUsername, buildVkOAuthUrl } from '@/lib/auth/social-auth';
 import type { TelegramWebAppUser } from '@/types/telegram-webapp';
 import styles from './page.module.css';
 
@@ -167,6 +167,22 @@ export default function AuthPage() {
             </div>
           )}
         </section>
+
+        <button
+          type="button"
+          className={styles.vkBtn}
+          onClick={() => {
+            const redirectUri = `${window.location.origin}/auth/vk/callback`;
+            const oauthUrl = buildVkOAuthUrl(redirectUri);
+            if (!oauthUrl) {
+              setAuthError('VK ещё не подключён: в Vercel нужен NEXT_PUBLIC_VK_CLIENT_ID');
+              return;
+            }
+            window.location.href = oauthUrl;
+          }}
+        >
+          Войти через VK
+        </button>
 
         <p className={styles.registerHint}>
           Нет аккаунта?{' '}

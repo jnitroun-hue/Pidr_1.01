@@ -98,6 +98,8 @@ async function handlePaymentSucceeded(supabase: any, payment: any) {
       payment_id: payment.id,
       order_id: metadata.orderId || null,
       user_id: parseInt(userId, 10) || null,
+      provider: 'yookassa',
+      payment_method: payment.payment_method?.type || metadata.paymentMethod || null,
       amount: amount,
       currency: payment.amount.currency,
       status: 'processing',
@@ -231,6 +233,7 @@ async function handlePaymentSucceeded(supabase: any, payment: any) {
     .from('_pidr_payments')
     .update({
       status: 'succeeded',
+      payment_method: payment.payment_method?.type || metadata.paymentMethod || null,
       metadata,
       updated_at: new Date().toISOString()
     })
@@ -266,9 +269,12 @@ async function handlePaymentCanceled(supabase: any, payment: any) {
       payment_id: payment.id,
       order_id: metadata.orderId || null,
       user_id: parseInt(userId, 10) || null,
+      provider: 'yookassa',
+      payment_method: payment.payment_method?.type || metadata.paymentMethod || null,
       amount: parseFloat(payment.amount.value),
       currency: payment.amount.currency,
       status: 'canceled',
+      item_type: metadata.itemType || null,
       metadata: metadata,
       updated_at: new Date().toISOString()
     }, { onConflict: 'payment_id' });

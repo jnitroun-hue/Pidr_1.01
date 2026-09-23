@@ -5,6 +5,7 @@ import { supabaseAdmin } from '@/lib/supabase';
 import { assertCanPurchasePremium } from '@/lib/premium/premium-service';
 import { coinsFromRub, getExchangeRates } from '@/lib/pricing/exchange-rates';
 import { PREMIUM_PRICE_RUB } from '@/lib/premium/constants';
+import { publicAppUrl } from '@/lib/payments/yookassa-config';
 
 // ✅ Явная конфигурация runtime для Next.js 15
 export const runtime = 'nodejs';
@@ -87,7 +88,7 @@ export async function POST(request: NextRequest) {
         : String(description || 'Покупка в P.I.D.R.');
 
     // Формируем URL для возврата после оплаты
-    const returnUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/payment/success?order_id=${encodeURIComponent(orderId)}`;
+    const returnUrl = `${publicAppUrl()}/payment/success?order_id=${encodeURIComponent(orderId)}`;
 
     // Создаем платеж в YooKassa
     const payment = await createYooKassaPayment({
@@ -133,12 +134,18 @@ export async function POST(request: NextRequest) {
         payment_id: payment.id,
         order_id: orderId,
         user_id: dbUserId,
+        provider: 'yookassa',
+        payment_method: safePaymentMethod || null,
         amount: normalizedAmount,
         currency: payment.amount.currency,
         status: payment.status,
         item_id: itemId ? String(itemId) : null,
         item_type: itemType,
-        metadata: payment.metadata || {},
+        confirmation_url: payment.confirmation?.confirmation_url || null,
+        metadata: {
+          ...(payment.metadata || {}),
+          paymentMethod: safePaymentMethod || null,
+        },
         updated_at: new Date().toISOString()
       }, { onConflict: 'payment_id' });
 

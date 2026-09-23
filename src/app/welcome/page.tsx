@@ -46,12 +46,14 @@ export default function WelcomePage() {
       minHeight: '100vh',
       background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)',
       display: 'flex',
-      alignItems: 'center',
+      alignItems: 'flex-start',
       justifyContent: 'center',
       padding: '20px',
       paddingTop: 'calc(var(--app-chrome-top, 12px) + 56px)',
+      paddingBottom: '48px',
       position: 'relative',
-      overflow: 'hidden'
+      overflowX: 'hidden',
+      overflowY: 'auto'
     }}>
       {/* Анимированный фон */}
       <div style={{

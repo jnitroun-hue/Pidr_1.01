@@ -241,7 +241,8 @@ export async function loginWithVKMiniApp(): Promise<{
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({
+        body: JSON.stringify({
+        launch_query: vkSearchParams().toString(),
         ...launchParams,
         first_name: userInfo.first_name,
         last_name: userInfo.last_name,

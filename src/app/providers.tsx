@@ -13,6 +13,7 @@ import AppNoticeHost from '../components/AppNoticeHost'
 import TelegramBackNavigation from '../components/TelegramBackNavigation'
 import HomeNavButton from '../components/HomeNavButton'
 import { initTelegramMiniApp, isTelegramMiniAppClient } from '../lib/telegram/init-mini-app'
+import { initVKBridge, isVKMiniApp, persistVkLaunchQuery } from '../lib/auth/vk-bridge'
 import MenuThemeRoot from '../components/MenuThemeRoot'
 
 // Add global augmentation for Window to include Telegram
@@ -27,6 +28,10 @@ declare global {
 export function Providers({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     initTelegramMiniApp()
+    persistVkLaunchQuery()
+    if (isVKMiniApp()) {
+      void initVKBridge()
+    }
   }, [])
 
   useEffect(() => {
