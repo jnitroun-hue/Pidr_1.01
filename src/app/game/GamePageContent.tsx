@@ -2644,6 +2644,16 @@ function GamePageContentComponent({
     }
   };
 
+  const [tableMissing, setTableMissing] = useState(false);
+  useEffect(() => {
+    if (isLoadingUserData || players.length > 0) {
+      setTableMissing(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setTableMissing(true), 8000);
+    return () => window.clearTimeout(timer);
+  }, [isLoadingUserData, players.length]);
+
   // ✅ УБРАН ЗАГРУЗОЧНЫЙ ЭКРАН - ИГРА ПОКАЗЫВАЕТСЯ СРАЗУ ПОСЛЕ СОЗДАНИЯ ИГРОКОВ!
   // Показываем лоадер ТОЛЬКО если userData еще не загружена
   if (isLoadingUserData) {
@@ -2678,6 +2688,40 @@ function GamePageContentComponent({
 
   return (
     <div className={styles.gameContainer}>
+      {tableMissing && (
+        <div style={{
+          position: 'relative',
+          zIndex: 30,
+          margin: 'auto',
+          maxWidth: 320,
+          padding: 22,
+          borderRadius: 18,
+          textAlign: 'center',
+          background: 'var(--menu-card-bg)',
+          border: '1px solid var(--menu-card-border)',
+          color: 'var(--menu-text)',
+        }}>
+          <div style={{ fontWeight: 800, marginBottom: 8 }}>Стол не загрузился</div>
+          <p style={{ margin: '0 0 14px', color: 'var(--menu-text-muted)', fontSize: 14 }}>
+            Игра зависла на пустом экране. Обнови стол, прогресс партии на сервере сохранится.
+          </p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            style={{
+              border: 'none',
+              borderRadius: 12,
+              padding: '12px 16px',
+              fontWeight: 800,
+              background: 'var(--menu-accent)',
+              color: '#1a1208',
+              cursor: 'pointer',
+            }}
+          >
+            Обновить стол
+          </button>
+        </div>
+      )}
       {/* ЗАГОЛОВОК ИГРЫ - СТАДИЯ И КОЛОДА/БИТКО */}
       {players.length > 0 && (
         <div className={styles.gameHeader}>

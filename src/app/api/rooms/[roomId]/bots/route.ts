@@ -3,10 +3,26 @@ import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 import { atomicJoinRoom, atomicLeaveRoom, removePlayerFromAllRooms } from '@/lib/multiplayer/player-state-manager';
 import { idsEqual, isRoomHostUser } from '@/lib/multiplayer/room-host';
+import {
+  characterAvatarPublicPath,
+  isGeneratedCharacterAvatar,
+  type CharacterAvatarStyle,
+} from '@/lib/avatars/character-avatars';
 
 // ✅ Явная конфигурация runtime для Next.js 15
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+const BOT_AVATAR_STYLES: CharacterAvatarStyle[] = ['adventurer', 'avataaars', 'lorelei'];
+
+function botPortrait(botId: number): string {
+  const style = BOT_AVATAR_STYLES[Math.abs(botId) % BOT_AVATAR_STYLES.length];
+  return characterAvatarPublicPath(style, `bot-${Math.abs(botId)}`);
+}
+
+function isUsableBotAvatar(url: string | null | undefined): boolean {
+  return isGeneratedCharacterAvatar(url) || Boolean(url && /^https?:\/\//.test(url));
+}
 
 // 🤖 API ДЛЯ УПРАВЛЕНИЯ БОТАМИ В КОМНАТЕ
 export async function POST(
@@ -145,16 +161,32 @@ export async function POST(
       console.log(`🤖 [ADD BOT] Занятые боты (в живых комнатах):`, [...busyBotIds]);
 
       // telegram_id — VARCHAR, поэтому сравнение по числу делаем в коде, а не в SQL.
-      const { data: allBots, error: botsError } = await supabase
+      const botColumns = 'telegram_id, username, first_name, avatar_url, is_bot';
+      const byFlag = await supabase
+        .from('_pidr_users')
+        .select(botColumns)
+        .eq('is_bot', true)
+        .order('created_at', { ascending: true })
+        .limit(500);
+      const byId = await supabase
         .from('_pidr_users')
         .select('telegram_id, username, first_name, avatar_url')
         .like('telegram_id', '-%')
         .order('created_at', { ascending: true })
         .limit(500);
 
-      if (botsError) {
-        console.error('❌ Ошибка получения ботов из БД:', botsError);
+      if (byFlag.error) {
+        console.warn('⚠️ [ADD BOT] Выборка is_bot:', byFlag.error.message);
       }
+      if (byId.error) {
+        console.error('❌ Ошибка получения ботов из БД:', byId.error);
+      }
+
+      const botMap = new Map<string, { telegram_id: string | number; username?: string | null; first_name?: string | null; avatar_url?: string | null }>();
+      for (const row of [...(byFlag.data || []), ...(byId.data || [])]) {
+        botMap.set(String(row.telegram_id), row);
+      }
+      const allBots = [...botMap.values()];
 
       const freeBots = (allBots || []).filter((b: { telegram_id: string | number }) => {
         const id = String(b.telegram_id);
@@ -172,7 +204,9 @@ export async function POST(
         const selectedBot = freeBots[Math.floor(Math.random() * freeBots.length)];
         botId = Number(selectedBot.telegram_id);
         botName = selectedBot.username || selectedBot.first_name || `Бот_${Math.abs(botId) % 1000}`;
-        botAvatar = selectedBot.avatar_url || '🤖';
+        botAvatar = isUsableBotAvatar(selectedBot.avatar_url)
+          ? selectedBot.avatar_url!
+          : botPortrait(botId);
 
         // Хвосты в завершённых/отменённых комнатах и Redis — чистим, иначе atomicJoinRoom
         // решит, что бот «уже в другой комнате».
@@ -197,23 +231,29 @@ export async function POST(
 
         const randomName = botFirstNames[Math.floor(Math.random() * botFirstNames.length)];
         botName = `${randomName}_БОТ`;
-        botAvatar = '🤖';
+        botAvatar = botPortrait(botId);
 
-        // Создаем бота в _pidr_users (боты определяются по telegram_id < 0)
-        const { error: createBotError } = await supabase
-          .from('_pidr_users')
-          .insert({
-            telegram_id: String(botId),
-            username: botName,
-            first_name: randomName,
-            last_name: 'БОТ',
-            coins: 5000,
-            rating: 1000 + Math.floor(Math.random() * 500),
-            games_played: Math.floor(Math.random() * 100),
-            games_won: Math.floor(Math.random() * 50),
-            status: 'offline',
-            avatar_url: botAvatar
-          });
+        const nowIso = new Date().toISOString();
+        const botRow = {
+          telegram_id: String(botId),
+          username: botName,
+          first_name: randomName,
+          last_name: 'БОТ',
+          coins: 5000,
+          rating: 1000 + Math.floor(Math.random() * 500),
+          games_played: Math.floor(Math.random() * 100),
+          games_won: Math.floor(Math.random() * 50),
+          status: 'online',
+          online_status: 'in_room',
+          last_seen: nowIso,
+          is_bot: true,
+          avatar_url: botAvatar,
+        };
+        let { error: createBotError } = await supabase.from('_pidr_users').insert(botRow);
+        if (createBotError && /is_bot|online_status/i.test(createBotError.message || '')) {
+          const { is_bot: _bot, online_status: _online, ...withoutFlags } = botRow;
+          ({ error: createBotError } = await supabase.from('_pidr_users').insert(withoutFlags));
+        }
 
         if (createBotError) {
           console.error('❌ Ошибка создания бота в _pidr_users:', createBotError);
@@ -247,11 +287,22 @@ export async function POST(
       }
 
       // ✅ ОБНОВЛЯЕМ avatar_url для бота (atomicJoinRoom не устанавливает его)
+      const seenAt = new Date().toISOString();
+      await supabase
+        .from('_pidr_users')
+        .update({
+          avatar_url: botAvatar,
+          status: 'online',
+          online_status: 'in_room',
+          last_seen: seenAt,
+        })
+        .eq('telegram_id', String(botId));
+
       const { error: avatarError } = await supabase
         .from('_pidr_room_players')
-        .update({ avatar_url: botAvatar })
+        .update({ avatar_url: botAvatar, is_bot: true })
         .eq('room_id', roomId)
-        .eq('user_id', botId);
+        .eq('user_id', String(botId));
 
       if (avatarError) {
         console.warn('⚠️ [ADD BOT] Ошибка обновления avatar_url (не критично):', avatarError);

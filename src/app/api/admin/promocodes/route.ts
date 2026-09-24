@@ -15,6 +15,8 @@ type PromoInput = {
   per_user_limit?: unknown;
   expires_at?: unknown;
   is_active?: unknown;
+  premium_days?: unknown;
+  free_nft?: unknown;
 };
 
 function adminError(adminCheck: { error?: string }) {
@@ -90,14 +92,36 @@ function validatePromo(input: PromoInput, partial: boolean): { ok: true; row: Re
     row.is_active = Boolean(input.is_active);
   }
 
+  if (input.premium_days !== undefined && input.premium_days !== '' && input.premium_days !== null) {
+    const days = toPositiveInt(input.premium_days);
+    if (!days) return { ok: false, error: 'Дни Premium — положительное число или пусто' };
+    row.premium_days = days;
+  }
+
+  if (input.free_nft !== undefined && input.free_nft !== '' && input.free_nft !== null) {
+    const nft = toPositiveInt(input.free_nft);
+    if (!nft) return { ok: false, error: 'Бесплатные NFT — положительное число или пусто' };
+    row.free_nft = nft;
+  }
+
   return { ok: true, row };
 }
 
 /** Колонка per_user_limit появляется после scripts/sql/promocodes.sql — без неё не роняем запрос. */
 function stripMissingColumn(row: Record<string, unknown>, error: { message?: string } | null) {
-  if (error?.message && /per_user_limit/i.test(error.message)) {
-    const { per_user_limit: _omit, ...rest } = row;
-    return rest;
+  const message = error?.message || '';
+  const missing = message.match(/column ["']?([a-z0-9_]+)["']?/i)?.[1];
+  if (missing && missing in row) {
+    const next = { ...row };
+    delete next[missing];
+    return next;
+  }
+  if (/per_user_limit|premium_days|free_nft|created_by/i.test(message)) {
+    const next = { ...row };
+    for (const key of ['per_user_limit', 'premium_days', 'free_nft', 'created_by']) {
+      if (message.toLowerCase().includes(key)) delete next[key];
+    }
+    return next;
   }
   return null;
 }
@@ -199,7 +223,6 @@ export async function POST(req: NextRequest) {
       ...validated.row,
       used_count: 0,
       is_active: validated.row.is_active ?? true,
-      created_by: adminCheck.userId,
     };
 
     let { data: promocode, error } = await supabaseAdmin
@@ -226,7 +249,7 @@ export async function POST(req: NextRequest) {
           success: false,
           error: constraint
             ? 'БД не принимает этот тип награды. Выполните scripts/sql/promocodes.sql.'
-            : 'Ошибка создания промокода',
+            : error.message || 'Ошибка создания промокода',
         },
         { status: 500 }
       );

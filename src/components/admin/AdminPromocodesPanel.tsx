@@ -23,6 +23,8 @@ export interface AdminPromocode {
   expires_at: string | null;
   is_active: boolean;
   created_at: string;
+  premium_days?: number | null;
+  free_nft?: number | null;
 }
 
 type PromoForm = {
@@ -34,6 +36,8 @@ type PromoForm = {
   per_user_limit: string;
   expires_at: string; // datetime-local
   is_active: boolean;
+  premium_days: string;
+  free_nft: string;
 };
 
 const EMPTY_FORM: PromoForm = {
@@ -45,15 +49,17 @@ const EMPTY_FORM: PromoForm = {
   per_user_limit: '1',
   expires_at: '',
   is_active: true,
+  premium_days: '',
+  free_nft: '',
 };
 
 const inputStyle: CSSProperties = {
   width: '100%',
   padding: '12px',
-  background: 'rgba(15, 23, 42, 0.6)',
-  border: '2px solid rgba(100, 116, 139, 0.3)',
+  background: 'var(--menu-card-bg)',
+  border: '1px solid var(--menu-card-border)',
   borderRadius: '10px',
-  color: '#e2e8f0',
+  color: 'var(--menu-text)',
   fontSize: '15px',
   outline: 'none',
   boxSizing: 'border-box',
@@ -172,6 +178,8 @@ export default function AdminPromocodesPanel({ isTablet = false }: Props) {
       per_user_limit: String(p.per_user_limit ?? 1),
       expires_at: toDatetimeLocal(p.expires_at),
       is_active: Boolean(p.is_active),
+      premium_days: p.premium_days ? String(p.premium_days) : '',
+      free_nft: p.free_nft ? String(p.free_nft) : '',
     });
     setFormError(null);
     setModal({ mode: 'edit', id: p.id });
@@ -198,6 +206,8 @@ export default function AdminPromocodesPanel({ isTablet = false }: Props) {
       per_user_limit: form.per_user_limit.trim() ? Number(form.per_user_limit) : 1,
       expires_at: form.expires_at ? new Date(form.expires_at).toISOString() : null,
       is_active: form.is_active,
+      premium_days: form.premium_days.trim() ? Number(form.premium_days) : undefined,
+      free_nft: form.free_nft.trim() ? Number(form.free_nft) : undefined,
     };
 
     setSaving(true);
@@ -597,6 +607,31 @@ export default function AdminPromocodesPanel({ isTablet = false }: Props) {
                     Игрок получит: {describePromoReward(form.reward_type, Number(form.reward_value))}
                   </div>
                 )}
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 16 }}>
+              <div>
+                <label style={labelStyle}>Дни Premium вместе с наградой</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={form.premium_days}
+                  onChange={(e) => setForm({ ...form, premium_days: e.target.value })}
+                  style={inputStyle}
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Бесплатные NFT</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={form.free_nft}
+                  onChange={(e) => setForm({ ...form, free_nft: e.target.value })}
+                  style={inputStyle}
+                  placeholder="0 или 1"
+                />
               </div>
             </div>
 

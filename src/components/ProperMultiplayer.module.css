@@ -465,15 +465,18 @@
 }
 
 .playerCard {
-  background: var(--menu-card-bg);
+  background: transparent;
   border: 2px solid var(--menu-card-border);
   border-radius: 16px;
   padding: 16px 12px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
   text-align: center;
   position: relative;
+  z-index: 1;
   overflow: hidden;
+  color: var(--menu-text);
+  touch-action: manipulation;
 }
 
 .playerCard::before {
@@ -499,9 +502,14 @@
 }
 
 .playerCard.selected {
-  background: var(--menu-accent-soft);
+  background: var(--menu-accent);
   border-color: var(--menu-accent);
-  box-shadow: 0 0 0 2px var(--menu-accent), var(--menu-shadow);
+  box-shadow: var(--menu-shadow);
+}
+
+.playerCard.selected .cardNumber,
+.playerCard.selected .cardLabel {
+  color: #1a1208;
 }
 
 .playerCard.selected::before {
@@ -750,8 +758,14 @@
 
 .modeCardActive {
   border-color: var(--menu-accent);
-  background: var(--menu-accent-soft);
-  box-shadow: 0 0 0 1px var(--menu-accent), var(--menu-shadow);
+  background: var(--menu-accent);
+  color: #1a1208;
+  box-shadow: var(--menu-shadow);
+}
+
+.modeCardActive .modeCardTitle,
+.modeCardActive .modeCardDesc {
+  color: #1a1208;
 }
 
 .modeCardTitle {

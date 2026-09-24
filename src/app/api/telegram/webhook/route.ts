@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { declineRoomInviteFromTelegram } from '@/lib/telegram/room-invite-notify';
+import {
+  acceptFriendRequestFromTelegram,
+  declineFriendRequestFromTelegram,
+} from '@/lib/telegram/friend-request-notify';
 
 /** В проде URL иногда лежит без схемы — Telegram тогда отклоняет web_app-кнопки целиком. */
 function botAppBase(): string {
@@ -82,6 +86,44 @@ export async function POST(req: NextRequest) {
               chat_id: callbackChatId,
               message_id: callbackMessageId,
               text: '❌ Вы отказались от приглашения в игру.',
+            }),
+          });
+        }
+
+        return NextResponse.json({ ok: true });
+      }
+
+      if (
+        typeof callbackData === 'string' &&
+        (callbackData.startsWith('fr_accept:') || callbackData.startsWith('fr_decline:'))
+      ) {
+        const accept = callbackData.startsWith('fr_accept:');
+        const fromUserId = Number(callbackData.slice(accept ? 'fr_accept:'.length : 'fr_decline:'.length));
+        const telegramUserId = Number(callbackQuery.from?.id);
+        const result = accept
+          ? await acceptFriendRequestFromTelegram({ fromUserId, telegramUserId })
+          : await declineFriendRequestFromTelegram({ fromUserId, telegramUserId });
+
+        await fetch(`https://api.telegram.org/bot${botToken}/answerCallbackQuery`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            callback_query_id: callbackQuery.id,
+            text: result.message,
+            show_alert: !result.ok,
+          }),
+        });
+
+        if (result.ok && callbackChatId && callbackMessageId) {
+          await fetch(`https://api.telegram.org/bot${botToken}/editMessageText`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: callbackChatId,
+              message_id: callbackMessageId,
+              text: accept
+                ? '✅ Заявка в друзья принята.'
+                : '❌ Заявка в друзья отклонена.',
             }),
           });
         }

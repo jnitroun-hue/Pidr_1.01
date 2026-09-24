@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, User, CheckCircle, AlertCircle } from 'lucide-react';
 import { fetchWithAuth } from '@/lib/api-headers';
+import { formatLastSeen } from '@/lib/friends/presence';
 
 interface Friend {
   id: number;
@@ -12,6 +13,9 @@ interface Friend {
   first_name?: string;
   avatar_url?: string;
   status?: string;
+  status_label?: string;
+  is_online?: boolean;
+  last_seen?: string | null;
 }
 
 interface InviteFriendsModalProps {
@@ -130,7 +134,9 @@ export default function InviteFriendsModal({
           exit={{ scale: 0.9, opacity: 0 }}
           onClick={(e) => e.stopPropagation()}
           style={{
-            backgroundColor: '#1e293b',
+            background: 'var(--menu-bg-accent), var(--menu-bg)',
+            color: 'var(--menu-text)',
+            border: '1px solid var(--menu-card-border)',
             borderRadius: '20px',
             padding: '24px',
             maxWidth: '500px',
@@ -150,7 +156,7 @@ export default function InviteFriendsModal({
             marginBottom: '20px'
           }}>
             <h2 style={{
-              color: '#ffffff',
+              color: 'var(--menu-text)',
               fontSize: '20px',
               fontWeight: 'bold',
               margin: 0
@@ -178,16 +184,16 @@ export default function InviteFriendsModal({
 
           {/* Информация о комнате */}
           <div style={{
-            backgroundColor: '#0f172a',
+            background: 'var(--menu-card-bg)',
             borderRadius: '12px',
             padding: '12px',
             marginBottom: '20px',
-            border: '1px solid #334155'
+            border: '1px solid var(--menu-card-border)'
           }}>
-            <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>
+            <div style={{ color: 'var(--menu-text-muted)', fontSize: '12px', marginBottom: '4px' }}>
               Комната
             </div>
-            <div style={{ color: '#ffffff', fontSize: '16px', fontWeight: 'bold' }}>
+            <div style={{ color: 'var(--menu-accent)', fontSize: '16px', fontWeight: 'bold' }}>
               {roomCode}
             </div>
           </div>
@@ -254,13 +260,13 @@ export default function InviteFriendsModal({
                       key={friend.id}
                       whileHover={{ scale: 1.02 }}
                       style={{
-                        backgroundColor: '#0f172a',
+                        background: 'var(--menu-card-bg)',
                         borderRadius: '12px',
                         padding: '12px',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '12px',
-                        border: '1px solid #334155'
+                        border: '1px solid var(--menu-card-border)'
                       }}
                     >
                       {/* Аватар */}
@@ -289,7 +295,7 @@ export default function InviteFriendsModal({
                       {/* Информация */}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{
-                          color: '#ffffff',
+                          color: 'var(--menu-text)',
                           fontSize: '14px',
                           fontWeight: 'bold',
                           marginBottom: '4px',
@@ -303,7 +309,9 @@ export default function InviteFriendsModal({
                           color: '#64748b',
                           fontSize: '12px'
                         }}>
-                          {friend.status === 'online' ? '🟢 Онлайн' : '⚫ Офлайн'}
+                          {friend.is_online || friend.status === 'online'
+                            ? (friend.status_label || 'В сети')
+                            : `Был в сети ${formatLastSeen(friend.last_seen)}`}
                         </div>
                       </div>
 
@@ -330,10 +338,8 @@ export default function InviteFriendsModal({
                             padding: '8px 16px',
                             borderRadius: '8px',
                             border: 'none',
-                            background: isInviting
-                              ? '#334155'
-                              : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                            color: '#ffffff',
+                            background: isInviting ? 'var(--menu-accent-soft)' : 'var(--menu-accent)',
+                            color: '#1a1208',
                             fontSize: '12px',
                             fontWeight: 'bold',
                             cursor: isInviting ? 'not-allowed' : 'pointer',

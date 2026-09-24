@@ -756,6 +756,7 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
                     <h3 className={styles.panelTitle}>{cfg.name}</h3>
                     <p className={styles.blurb}>{cfg.blurb}</p>
                     <div className={styles.previewRow}>
+                      <div className={styles.artStage}>
                       {samples.map((id) => (
                         <img
                           key={`${focusTheme}-${id}`}
@@ -764,6 +765,7 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
                           alt=""
                         />
                       ))}
+                      </div>
                       <p className={styles.previewCaption}>
                         Примеры из набора «{cfg.name}». В колоде {cfg.total} таких артов. Оплата монетами, рублями или криптой.
                       </p>
@@ -1113,7 +1115,7 @@ function ThemeCard({ theme, themeConfig, previews, selected, onSelect, disabled 
         <span className={styles.themeIcon}>{themeConfig.icon}</span>
         <span className={styles.themeName}>{themeConfig.name}</span>
       </div>
-      <div className={styles.thumbs}>
+      <div className={`${styles.thumbs} ${styles.artStage}`}>
         {previews.map((id) => (
           <img
             key={`${theme}-${id}`}

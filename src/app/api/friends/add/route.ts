@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 import { resolveFriendUser, sendFriendRequest } from '@/lib/friends/friend-links';
+import { sendFriendRequestTelegram } from '@/lib/telegram/friend-request-notify';
 
 /**
  * POST /api/friends/add
@@ -56,6 +57,16 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await sendFriendRequest(supabase, dbUserId, friendUser.id);
+
+    if (result === 'sent') {
+      const fromName =
+        dbUser.first_name || dbUser.username || 'Игрок';
+      void sendFriendRequestTelegram({
+        telegramId: friendUser.telegram_id,
+        fromName: String(fromName),
+        fromUserId: dbUserId,
+      });
+    }
 
     if (result === 'already_friends') {
       return NextResponse.json(

@@ -136,16 +136,30 @@
   font-weight: 650;
 }
 
-.thumbs {
+.thumbs,
+.artStage {
   display: flex;
   gap: 8px;
+}
+
+.artStage {
+  width: fit-content;
+  padding: 8px;
+  border-radius: 14px;
+  border: 1px solid rgba(232, 196, 122, 0.55);
+  background:
+    radial-gradient(ellipse at 50% 35%, #1f7a45 0%, #0d4a28 55%, #062214 100%);
+  box-shadow:
+    inset 0 0 18px rgba(0, 0, 0, 0.45),
+    0 8px 18px rgba(0, 0, 0, 0.28);
 }
 
 .thumb,
 .previewCard {
   object-fit: cover;
-  background: var(--menu-accent-soft);
-  border: 1px solid var(--menu-card-border);
+  background: #f8f1e3;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35);
 }
 
 .thumb {

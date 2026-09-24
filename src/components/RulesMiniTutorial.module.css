@@ -126,30 +126,61 @@
   line-height: 1.45;
 }
 
+.stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.caption {
+  max-width: 220px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(8, 18, 12, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+  line-height: 1.3;
+}
+
 .cards {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  width: 210px;
-  min-height: 130px;
+  width: 230px;
+  min-height: 140px;
 }
 
 .card {
-  width: 58px;
-  height: 84px;
+  width: 64px;
+  height: 92px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  padding: 7px;
+  justify-content: space-between;
+  padding: 6px 7px 8px;
   border: 2px solid #e2e8f0;
-  border-radius: 9px;
-  background: linear-gradient(165deg, #fff, #e2e8f0);
+  border-radius: 10px;
+  background: linear-gradient(165deg, #fff, #f1f5f9);
   color: #111827;
   box-shadow: 0 12px 25px rgba(0, 0, 0, 0.35);
-  font-size: 16px;
   font-weight: 900;
+}
+
+.corner {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.pip {
+  align-self: center;
+  font-size: 26px;
+  line-height: 1;
 }
 
 .red {
@@ -235,7 +266,7 @@
 .activeStep {
   border-color: var(--menu-accent);
   background: var(--menu-accent);
-  color: #fff;
+  color: #1a1208;
 }
 
 .counter {

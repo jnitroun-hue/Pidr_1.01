@@ -400,10 +400,10 @@ export default function AdminPanel() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+      background: 'var(--menu-bg-accent), var(--menu-bg)',
       padding: isTablet ? '12px' : '20px',
       paddingTop: 'calc(var(--app-chrome-top, 12px) + 56px)',
-      color: '#e2e8f0'
+      color: 'var(--menu-text)'
     }}>
       {/* Заголовок */}
       <div style={{

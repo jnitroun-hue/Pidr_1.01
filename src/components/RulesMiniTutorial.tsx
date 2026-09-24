@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion, MotionConfig, useReducedMotion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react';
 import styles from './RulesMiniTutorial.module.css';
@@ -12,36 +12,36 @@ const SCENES = [
     id: 'goal',
     badge: 'ЦЕЛЬ',
     title: 'Не останьтесь последним',
-    text: 'Избавьтесь от обычных карт и двух пеньков. Игроки без карт выходят, а последний участник с картами проигрывает.',
-    tip: 'Побеждает порядок выхода; партия заканчивается, когда остаётся один игрок.',
+    text: 'Сбросьте руку и оба пенька. Кто остался с картами один — проиграл.',
+    tip: 'Выходят по очереди. Партия кончается, когда за столом один.',
   },
   {
     id: 'deal',
     badge: 'РАЗДАЧА',
     title: 'Две закрытые, одна открытая',
-    text: 'У каждого 1 открытая карта и 2 закрытые пенька. Пеньки лежат до 3 стадии. Первым ходит игрок с самой старшей открытой картой.',
-    tip: 'До третьей стадии пеньки нельзя смотреть или разыгрывать.',
+    text: 'Каждому: 1 открытая карта и 2 закрытых пенька. Первым ходит тот, у кого открытая карта старше.',
+    tip: 'Пеньки нельзя смотреть до финала.',
   },
   {
     id: 'plus-one',
     badge: 'СТАДИЯ 1',
     title: 'Только ровно +1',
-    text: 'Кладите верхнюю карту на карту соперника, если ваша старше ровно на один ранг. Масть не важна: 8 бьёт 7, но не 6.',
-    tip: 'После туза цикл продолжает двойка: 2 кладётся на A.',
+    text: 'Кладите карту только если она старше ровно на один ранг. Масть не важна: 8 на 7 можно, 9 на 7 — нет.',
+    tip: 'После туза цикл начинается заново: 2 кладётся на A.',
   },
   {
     id: 'deck',
     badge: 'КОЛОДА',
     title: 'Нет хода — откройте карту',
-    text: 'Карта из колоды тоже проверяется по правилу +1. Сыграйте её на соперника или на себя; если нельзя — оставьте себе и передайте ход.',
-    tip: 'Когда колода опустеет, игра автоматически перейдёт к стадии 2.',
+    text: 'Если своей картой ход не сделать, откройте колоду. Подходит — сыграйте. Нет — карта остаётся вам, ход дальше.',
+    tip: 'Колода кончилась — сразу стадия 2.',
   },
   {
     id: 'trump',
     badge: 'СТАДИЯ 2',
     title: 'Масть, ранг и козырь',
-    text: 'На столе старшая карта той же масти бьёт младшую. Козырь бьёт некозырную карту, но козырь можно перебить только старшим козырем.',
-    tip: 'Козырь — масть последней непиковой карты, открытой из колоды.',
+    text: 'Старшая карта той же масти бьёт младшую. Козырь бьёт чужую масть, а сам козырь бьётся только старшим козырем.',
+    tip: 'Козырь — масть последней непиковой карты из колоды.',
   },
   {
     id: 'spades',
@@ -54,22 +54,22 @@ const SCENES = [
     id: 'take',
     badge: 'СТОЛ',
     title: 'Берите нижнюю карту',
-    text: 'Если верхнюю карту стопки нечем побить, нажмите «Взять». Вы получите одну нижнюю карту; остальная стопка останется на столе.',
-    tip: 'Не всю стопку: только самую раннюю карту внизу.',
+    text: 'Верхнюю нечем побить — жмите «Взять». В руку уходит только нижняя карта стопки, остальное остаётся на столе.',
+    tip: 'Не всю стопку. Только самую раннюю карту снизу.',
   },
   {
     id: 'one-card',
     badge: 'ШТРАФ',
     title: 'Объявите «Одна карта!»',
-    text: 'Когда остаётся одна карта, объявите «Одна карта!». Если забыли, а кто-то успел первым спросить «Сколько карт?», вы получаете по карте от всех остальных за столом.',
-    tip: 'Своевременное объявление полностью защищает от штрафа.',
+    text: 'Осталась одна карта — сразу скажите «Одна карта!». Если кто-то раньше спросит «Сколько карт?», вы берёте по карте от каждого.',
+    tip: 'Успели объявить — штрафа нет.',
   },
   {
     id: 'penki',
     badge: 'ФИНАЛ',
     title: 'Откройте пеньки',
-    text: 'После опустошения обычной руки пеньки открываются. Разыграйте их по правилам стадии 2 и выйдите до того, как останетесь последним.',
-    tip: 'Масти, козырь, пики и «Одна карта!» продолжают действовать.',
+    text: 'Рука пустая — пеньки открываются. Их играют по правилам стадии 2, пока не выйдете.',
+    tip: 'Козырь, пики и «Одна карта!» всё ещё работают.',
   },
 ] as const;
 
@@ -201,11 +201,25 @@ export default function RulesMiniTutorial() {
   );
 }
 
-function Card({ label, down = false }: { label?: string; down?: boolean }) {
-  const red = label?.includes('♥') || label?.includes('♦');
+function Card({ rank, suit, down = false }: { rank?: string; suit?: string; down?: boolean }) {
+  const red = suit === '♥' || suit === '♦';
   return (
     <div className={`${styles.card} ${down ? styles.faceDown : ''} ${red ? styles.red : ''}`}>
-      {down ? '◆' : label}
+      {down ? '◆' : (
+        <>
+          <span className={styles.corner}>{rank}{suit}</span>
+          <span className={styles.pip}>{suit}</span>
+        </>
+      )}
+    </div>
+  );
+}
+
+function Stage({ caption, children }: { caption: string; children: ReactNode }) {
+  return (
+    <div className={styles.stage}>
+      <div className={styles.cards}>{children}</div>
+      <div className={styles.caption}>{caption}</div>
     </div>
   );
 }
@@ -216,28 +230,23 @@ function SceneVisual({ id, moving }: { id: SceneId; moving: boolean }) {
 
   if (id === 'goal') {
     return (
-      <div className={styles.cards}>
-        <motion.div
-          animate={moving ? { y: [0, -10, 0], scale: [1, 1.06, 1] } : { y: 0, scale: 1 }}
-          transition={stillTransition ?? { duration: 1.8, repeat }}
-        >
-          <Card label="✓" />
+      <Stage caption="Двое вышли — последний проиграл">
+        <motion.div animate={moving ? { y: [0, -16, -16], opacity: [1, 1, 0.35] } : { y: -8, opacity: 0.45 }} transition={stillTransition ?? { duration: 1.8, repeat }}>
+          <Card rank="✓" suit="" />
         </motion.div>
-        <span className={styles.arrow}>→</span>
-        <motion.div
-          animate={moving ? { opacity: [0.45, 1, 0.45] } : { opacity: 1 }}
-          transition={stillTransition ?? { duration: 1.8, repeat }}
-          className={styles.callout}
-        >
-          Последний<br />проигрывает
+        <motion.div animate={moving ? { y: [0, -16, -16], opacity: [1, 1, 0.35] } : { y: -8, opacity: 0.45 }} transition={stillTransition ?? { duration: 1.8, repeat, delay: 0.15 }}>
+          <Card rank="✓" suit="" />
         </motion.div>
-      </div>
+        <motion.div animate={moving ? { scale: [1, 1.08, 1] } : { scale: 1 }} transition={stillTransition ?? { duration: 1.2, repeat }} className={styles.callout}>
+          ещё с картами
+        </motion.div>
+      </Stage>
     );
   }
 
   if (id === 'deal') {
     return (
-      <div className={styles.cards}>
+      <Stage caption="2 пенька закрыты, 1 карта открыта">
         {[0, 1].map((index) => (
           <motion.div
             key={index}
@@ -252,127 +261,113 @@ function SceneVisual({ id, moving }: { id: SceneId; moving: boolean }) {
           animate={moving ? { y: [0, -8, 0] } : { y: 0 }}
           transition={stillTransition ?? { duration: 1.5, repeat }}
         >
-          <Card label="K♥" />
+          <Card rank="K" suit="♥" />
         </motion.div>
-      </div>
+      </Stage>
     );
   }
 
   if (id === 'plus-one') {
     return (
-      <div className={styles.cards}>
-        <Card label="7♣" />
-        <motion.span
-          className={styles.arrow}
-          animate={moving ? { x: [-7, 7, -7], opacity: [0.6, 1, 0.6] } : { x: 0, opacity: 1 }}
-          transition={stillTransition ?? { duration: 1.4, repeat }}
-        >
-          ←
-        </motion.span>
-        <motion.div
-          animate={moving ? { rotate: [0, -5, 0], scale: [1, 1.08, 1] } : { rotate: 0, scale: 1 }}
-          transition={stillTransition ?? { duration: 1.4, repeat }}
-        >
-          <Card label="8♦" />
+      <Stage caption="8 на 7 — ровно +1. 9 на 7 нельзя">
+        <Card rank="7" suit="♣" />
+        <motion.span className={styles.arrow} animate={moving ? { x: [-6, 6, -6] } : { x: 0 }} transition={stillTransition ?? { duration: 1.2, repeat }}>+1</motion.span>
+        <motion.div animate={moving ? { y: [18, 0, 0], scale: [0.9, 1.06, 1] } : { y: 0, scale: 1 }} transition={stillTransition ?? { duration: 1.4, repeat }}>
+          <Card rank="8" suit="♦" />
         </motion.div>
-      </div>
+        <motion.div className={styles.callout} animate={moving ? { opacity: [0.4, 1, 0.4], x: [0, 8, 0] } : { opacity: 1 }} transition={stillTransition ?? { duration: 1.4, repeat }}>
+          9 ✕
+        </motion.div>
+      </Stage>
     );
   }
 
   if (id === 'deck') {
     return (
-      <div className={styles.cards}>
+      <Stage caption="Нет хода — открой карту из колоды">
         <Card down />
         <motion.div
-          animate={moving ? { x: [0, 65, 65], rotateY: [0, 0, 180] } : { x: 40, rotateY: 180 }}
-          transition={stillTransition ?? { duration: 2.3, repeat, repeatDelay: 0.35 }}
-          style={{ transformStyle: 'preserve-3d' }}
+          animate={moving ? { x: [0, 28, 28], rotate: [0, 0, -8] } : { x: 24 }}
+          transition={stillTransition ?? { duration: 2, repeat, repeatDelay: 0.3 }}
         >
-          <Card label="Q♣" />
+          <Card rank="Q" suit="♣" />
         </motion.div>
-      </div>
+      </Stage>
     );
   }
 
   if (id === 'trump') {
     return (
-      <div className={styles.cards}>
-        <Card label="K♣" />
-        <motion.div
-          animate={moving ? { y: [0, -12, 0], rotate: [0, -6, 0] } : { y: 0, rotate: 0 }}
-          transition={stillTransition ?? { duration: 1.6, repeat }}
-        >
-          <Card label="6♦" />
+      <Stage caption="Козырь ♦ бьёт любую некозырную">
+        <Card rank="K" suit="♣" />
+        <motion.div animate={moving ? { y: [16, 0, 0], rotate: [8, -4, 0] } : { y: 0 }} transition={stillTransition ?? { duration: 1.5, repeat }}>
+          <Card rank="6" suit="♦" />
         </motion.div>
-        <div className={styles.callout}>Козырь ♦</div>
-      </div>
+        <div className={styles.callout}>козырь</div>
+      </Stage>
     );
   }
 
   if (id === 'spades') {
     return (
-      <div className={styles.cards}>
-        <Card label="9♠" />
-        <motion.span
-          className={styles.arrow}
-          animate={moving ? { scale: [1, 1.25, 1] } : { scale: 1 }}
-          transition={stillTransition ?? { duration: 1.2, repeat }}
-        >
-          ✓
-        </motion.span>
-        <Card label="J♠" />
-        <div className={styles.callout}>♦ ✕</div>
-      </div>
+      <Stage caption="На пику только старшая пика">
+        <Card rank="9" suit="♠" />
+        <motion.div animate={moving ? { y: [14, 0, 0] } : { y: 0 }} transition={stillTransition ?? { duration: 1.3, repeat }}>
+          <Card rank="J" suit="♠" />
+        </motion.div>
+        <motion.div className={styles.callout} animate={moving ? { x: [0, 14, 0], opacity: [1, 0.35, 1] } : { opacity: 1 }} transition={stillTransition ?? { duration: 1.3, repeat }}>
+          ♦ не бьёт
+        </motion.div>
+      </Stage>
     );
   }
 
   if (id === 'take') {
+    const pile = [
+      { rank: '4', suit: '♥' },
+      { rank: '9', suit: '♣' },
+      { rank: 'Q', suit: '♦' },
+    ];
     return (
-      <div className={styles.cards}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 34px)' }}>
-          {['4♥', '9♣', 'Q♦'].map((label, index) => (
+      <Stage caption="Берёте только самую нижнюю">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 28px)' }}>
+          {pile.map((card, index) => (
             <motion.div
-              key={label}
-              animate={index === 0 && moving ? { x: [0, -45, -45], y: [0, 18, 18], opacity: [1, 1, 0] } : undefined}
-              transition={index === 0 ? (stillTransition ?? { duration: 1.8, repeat, repeatDelay: 0.4 }) : undefined}
+              key={card.rank + card.suit}
+              animate={index === 0 && moving ? { x: [0, -36, -36], y: [0, 16, 16], opacity: [1, 1, 0.2] } : undefined}
+              transition={index === 0 ? (stillTransition ?? { duration: 1.8, repeat, repeatDelay: 0.35 }) : undefined}
             >
-              <Card label={label} />
+              <Card rank={card.rank} suit={card.suit} />
             </motion.div>
           ))}
         </div>
-        <div className={styles.callout}>Взять<br />нижнюю</div>
-      </div>
+      </Stage>
     );
   }
 
   if (id === 'one-card') {
     return (
-      <div className={styles.cards}>
-        <Card label="A♥" />
+      <Stage caption="Скажи «Одна карта!», пока не спросили">
+        <Card rank="A" suit="♥" />
         <motion.div
           className={styles.callout}
-          animate={moving ? { scale: [0.96, 1.06, 0.96], boxShadow: ['0 0 0 rgba(255,255,255,0)', '0 0 22px rgba(255,255,255,.32)', '0 0 0 rgba(255,255,255,0)'] } : { scale: 1 }}
-          transition={stillTransition ?? { duration: 1.5, repeat }}
+          animate={moving ? { scale: [0.92, 1.08, 0.92] } : { scale: 1 }}
+          transition={stillTransition ?? { duration: 1.3, repeat }}
         >
           Одна карта!
         </motion.div>
-      </div>
+      </Stage>
     );
   }
 
   return (
-    <div className={styles.cards}>
-      {[0, 1].map((index) => (
-        <motion.div
-          key={index}
-          animate={moving ? { rotateY: [0, 0, 180, 180] } : { rotateY: 180 }}
-          transition={stillTransition ?? { duration: 2.6, repeat, delay: index * 0.18, times: [0, 0.25, 0.55, 1] }}
-          style={{ transformStyle: 'preserve-3d' }}
-        >
-          <Card label={index ? '3♥' : 'K♣'} />
-        </motion.div>
-      ))}
-      <div className={styles.callout}>Пеньки<br />открыты</div>
-    </div>
+    <Stage caption="Пеньки открываются и играются как обычно">
+      <motion.div animate={moving ? { rotateY: [180, 180, 0] } : { rotateY: 0 }} transition={stillTransition ?? { duration: 1.6, repeat }} style={{ transformStyle: 'preserve-3d' }}>
+        <Card rank="K" suit="♣" />
+      </motion.div>
+      <motion.div animate={moving ? { rotateY: [180, 180, 0] } : { rotateY: 0 }} transition={stillTransition ?? { duration: 1.6, delay: 0.2, repeat }} style={{ transformStyle: 'preserve-3d' }}>
+        <Card rank="3" suit="♥" />
+      </motion.div>
+    </Stage>
   );
 }

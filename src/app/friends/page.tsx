@@ -1,5 +1,6 @@
 'use client';
 
+import { formatLastSeen } from '@/lib/friends/presence';
 import { buildReferralShareText } from '@/lib/referral/referral-links';
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
@@ -54,6 +55,7 @@ export default function FriendsPage() {
   const [incomingRequests, setIncomingRequests] = useState<Friend[]>([]);
   const [outgoingPendingIds, setOutgoingPendingIds] = useState<Set<number>>(new Set());
   const [actingOnId, setActingOnId] = useState<number | null>(null);
+  const [profileFriend, setProfileFriend] = useState<Friend | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -414,6 +416,7 @@ export default function FriendsPage() {
                   key={`online-${friend.id}`}
                   person={friend}
                   alreadyFriend
+                  onOpen={() => setProfileFriend(friend)}
                   inviteRoomMode={Boolean(inviteRoomId && inviteRoomCode)}
                   inviting={invitingId === friend.id}
                   onInviteRoom={() =>
@@ -448,6 +451,7 @@ export default function FriendsPage() {
                 key={friend.id}
                 person={friend}
                 alreadyFriend
+                onOpen={() => setProfileFriend(friend)}
                 inviteRoomMode={Boolean(inviteRoomId && inviteRoomCode)}
                 inviting={invitingId === friend.id}
                 onInviteRoom={() =>
@@ -458,6 +462,9 @@ export default function FriendsPage() {
           </div>
         )}
       </section>
+      {profileFriend && (
+        <FriendProfileModal friend={profileFriend} onClose={() => setProfileFriend(null)} />
+      )}
     </div>
   );
 }
@@ -474,6 +481,7 @@ function PersonCard({
   onAccept,
   onReject,
   onInviteRoom,
+  onOpen,
 }: {
   person: Friend;
   alreadyFriend?: boolean;
@@ -486,6 +494,7 @@ function PersonCard({
   onAccept?: () => void;
   onReject?: () => void;
   onInviteRoom?: () => void;
+  onOpen?: () => void;
 }) {
   const presenceClass =
     person.status === 'playing' || person.status === 'in_room'
@@ -505,6 +514,8 @@ function PersonCard({
     <motion.div
       className={`${styles.card} ${person.is_online ? styles.cardOnline : ''}`}
       whileHover={{ y: -1 }}
+      onClick={() => onOpen?.()}
+      role={onOpen ? 'button' : undefined}
     >
       <div className={styles.avatarWrap}>
         <UserAvatarBadge
@@ -537,9 +548,12 @@ function PersonCard({
             {person.win_rate}% побед
           </span>
         </div>
+        {!person.is_online && (
+          <div className={styles.lastSeen}>Был в сети {formatLastSeen(person.last_seen)}</div>
+        )}
       </div>
 
-      <div className={styles.cardActions}>
+      <div className={styles.cardActions} onClick={(event) => event.stopPropagation()}>
         <span className={`${styles.presencePill} ${presenceClass}`}>
           {person.status_label || (person.is_online ? 'В сети' : 'Не в сети')}
         </span>
@@ -595,5 +609,103 @@ function PersonCard({
         )}
       </div>
     </motion.div>
+  );
+}
+
+function FriendProfileModal({ friend, onClose }: { friend: Friend; onClose: () => void }) {
+  const [profile, setProfile] = useState<{
+    rating: number;
+    games_played: number;
+    wins: number;
+    losses: number;
+    win_rate: number;
+    first_places: number;
+    second_places: number;
+    third_places: number;
+    best_streak: number;
+    nft_count: number;
+    achievement_count: number;
+    is_premium: boolean;
+    last_seen_label: string;
+    status_label: string;
+  } | null>(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetchWithAuth(`/api/friends/profile?id=${friend.id}`, { cache: 'no-store' });
+        const result = await response.json();
+        if (!cancelled) {
+          if (result.success) setProfile(result.profile);
+          else setError(result.error || 'Не удалось открыть профиль');
+        }
+      } catch {
+        if (!cancelled) setError('Не удалось открыть профиль');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [friend.id]);
+
+  const stats = profile || {
+    rating: friend.rating,
+    games_played: friend.games_played,
+    wins: friend.wins,
+    losses: 0,
+    win_rate: friend.win_rate,
+    first_places: 0,
+    second_places: 0,
+    third_places: 0,
+    best_streak: 0,
+    nft_count: 0,
+    achievement_count: 0,
+    is_premium: false,
+    last_seen_label: friend.is_online ? 'В сети' : formatLastSeen(friend.last_seen),
+    status_label: friend.status_label,
+  };
+
+  return (
+    <div className={styles.modalBackdrop} onClick={onClose}>
+      <div className={styles.modal} onClick={(event) => event.stopPropagation()}>
+        <div className={styles.modalHead}>
+          <UserAvatarBadge
+            username={friend.first_name || friend.username}
+            avatarUrl={friend.avatar_url}
+            authMethod={(friend.auth_method as AuthMethod) || 'web'}
+            size="md"
+            showAuthBadge={false}
+          />
+          <div>
+            <div className={styles.modalName}>{friend.first_name}</div>
+            <div className={styles.modalHandle}>@{friend.username}</div>
+            <div className={styles.lastSeen}>
+              {stats.is_premium ? 'Premium · ' : ''}
+              {friend.is_online ? stats.status_label : `Был в сети ${stats.last_seen_label}`}
+            </div>
+          </div>
+          <button type="button" className={styles.modalClose} onClick={onClose} aria-label="Закрыть">
+            ×
+          </button>
+        </div>
+        {error && <p className={styles.lastSeen}>{error}</p>}
+        <div className={styles.modalGrid}>
+          <div className={styles.modalStat}><b>{stats.rating}</b><span>Рейтинг</span></div>
+          <div className={styles.modalStat}><b>{stats.nft_count}</b><span>NFT-карты</span></div>
+          <div className={styles.modalStat}><b>{stats.games_played}</b><span>Партий</span></div>
+          <div className={styles.modalStat}><b>{stats.win_rate}%</b><span>Побед</span></div>
+          <div className={styles.modalStat}><b>{stats.wins}</b><span>Выигрышей</span></div>
+          <div className={styles.modalStat}><b>{stats.achievement_count}</b><span>Медалей</span></div>
+        </div>
+        <div className={styles.medals}>
+          <div className={styles.medal}>🥇 {stats.first_places}</div>
+          <div className={styles.medal}>🥈 {stats.second_places}</div>
+          <div className={styles.medal}>🥉 {stats.third_places}</div>
+        </div>
+        <p className={styles.lastSeen} style={{ marginTop: 10 }}>Лучшая серия: {stats.best_streak}</p>
+      </div>
+    </div>
   );
 }
