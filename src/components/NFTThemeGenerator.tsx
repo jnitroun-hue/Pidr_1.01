@@ -20,6 +20,7 @@ import {
   sendGramViaTonConnect,
 } from '@/lib/wallets/telegram-wallet-deposit';
 import { nftGenCryptoAmount, nftGenRub, NFT_GEN_MAX_COUNT, NFT_GEN_TON_COST } from '@/lib/nft/crypto-gen-costs';
+import styles from './NFTThemeGenerator.module.css';
 
 interface NFTThemeGeneratorProps {
   userCoins: number;
@@ -98,6 +99,23 @@ const THEMES = {
   }
 };
 
+const PREVIEW_POOL: Record<keyof typeof THEMES, number[]> = {
+  pokemon: [3, 11, 19, 27, 36, 44, 52],
+  halloween: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+  starwars: [1, 2, 3, 4, 5, 6, 7],
+  legendary: [1, 2, 3, 4, 5],
+  unique: [1, 2, 3, 6, 7, 8, 10, 12],
+};
+
+function pickPreviewPair(ids: number[]): [number, number] {
+  const copy = [...ids];
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return [copy[0], copy[1] ?? copy[0]];
+}
+
 const SUITS = ['spades', 'hearts', 'diamonds', 'clubs'];
 const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'j', 'q', 'k', 'a'];
 
@@ -120,7 +138,25 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
   const [tonConnectUI] = useTonConnectUI();
   const payAbortRef = useRef<AbortController | null>(null);
   const [isCompactLayout, setIsCompactLayout] = useState(false);
+  const [previewIds, setPreviewIds] = useState<Record<keyof typeof THEMES, [number, number]>>(() => ({
+    pokemon: pickPreviewPair(PREVIEW_POOL.pokemon),
+    halloween: pickPreviewPair(PREVIEW_POOL.halloween),
+    starwars: pickPreviewPair(PREVIEW_POOL.starwars),
+    legendary: pickPreviewPair(PREVIEW_POOL.legendary),
+    unique: pickPreviewPair(PREVIEW_POOL.unique),
+  }));
   const [rateSnapshot, setRateSnapshot] = useState<ExchangeRateSnapshot | null>(null);
+
+  useEffect(() => {
+    if (!showModal) return;
+    setPreviewIds({
+      pokemon: pickPreviewPair(PREVIEW_POOL.pokemon),
+      halloween: pickPreviewPair(PREVIEW_POOL.halloween),
+      starwars: pickPreviewPair(PREVIEW_POOL.starwars),
+      legendary: pickPreviewPair(PREVIEW_POOL.legendary),
+      unique: pickPreviewPair(PREVIEW_POOL.unique),
+    });
+  }, [showModal]);
 
   useEffect(() => {
     const updateLayout = () => {
@@ -660,91 +696,50 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            className={styles.overlay}
             onClick={() => !generating && setShowModal(false)}
-            style={{
-              position: 'fixed',
-              inset: 0,
-              background: 'rgba(0, 0, 0, 0.92)',
-              backdropFilter: 'blur(20px)',
-              zIndex: 999999,
-              display: 'flex',
-              alignItems: 'flex-start',
-              justifyContent: 'center',
-              padding: 'max(12px, env(safe-area-inset-top)) 12px max(20px, env(safe-area-inset-bottom))',
-              overflowY: 'auto',
-              overscrollBehavior: 'contain',
-              WebkitOverflowScrolling: 'touch',
-            }}
           >
             <motion.div
               initial={{ scale: 0.9, y: 50 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 50 }}
               onClick={(e) => e.stopPropagation()}
-              style={{
-                background: `linear-gradient(165deg, ${T.bgCard} 0%, ${T.bgDeep} 100%)`,
-                borderRadius: T.radiusLg,
-                border: `1px solid ${T.borderGold}`,
-                padding: isCompactLayout ? '18px' : '30px',
-                maxWidth: isCompactLayout ? '420px' : '760px',
-                width: '100%',
-                margin: 'auto 0',
-                overflow: 'visible',
-                boxShadow: T.shadowCard,
-              }}
+              className={`${styles.sheet} ${isCompactLayout ? styles.sheetCompact : ''}`}
             >
               {/* ЗАГОЛОВОК */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '18px', gap: 12 }}>
+              <div className={styles.header}>
                 <div>
-                  <h2 style={{ fontSize: isCompactLayout ? '20px' : '24px', fontWeight: 800, color: T.accentGold, display: 'flex', alignItems: 'center', gap: '10px', margin: 0 }}>
+                  <h2 className={styles.title}>
                     <Sparkles size={24} />
                     Генерация карт
                   </h2>
-                  <p style={{ color: T.textMuted, fontSize: 13, lineHeight: 1.5, margin: '8px 0 0' }}>
-                    Это коллекции рисунков для карт, не тема приложения. Сначала выберите набор, затем одну карту или всю колоду.
+                  <p className={styles.lead}>
+                    Наборы рисунков для лицевой стороны. Выберите коллекцию и посмотрите примеры, затем одну карту или всю колоду.
                   </p>
                 </div>
                 <button
+                  type="button"
+                  className={styles.closeBtn}
                   onClick={() => setShowModal(false)}
                   disabled={generating}
-                  style={{
-                    background: 'rgba(239, 68, 68, 0.2)',
-                    border: '2px solid rgba(239, 68, 68, 0.5)',
-                    borderRadius: '50%',
-                    width: '40px',
-                    height: '40px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: generating ? 'not-allowed' : 'pointer',
-                    color: '#ef4444'
-                  }}
+                  aria-label="Закрыть"
                 >
-                  <X size={24} />
+                  <X size={22} />
                 </button>
               </div>
 
               {/* ШАГ 1: КОЛЛЕКЦИЯ */}
-              <div style={{ color: T.textMuted, fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8 }}>
-                1. Коллекция артов
-              </div>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-                  gap: '10px',
-                  marginBottom: '16px'
-                }}
-              >
+              <p className={styles.step}>1. Коллекция</p>
+              <div className={styles.grid}>
                 {(Object.keys(THEMES) as Array<keyof typeof THEMES>).map((themeKey) => (
                   <ThemeCard
                     key={themeKey}
                     theme={themeKey}
                     themeConfig={THEMES[themeKey]}
+                    previews={previewIds[themeKey]}
                     selected={focusTheme === themeKey}
                     onSelect={() => setFocusTheme(themeKey)}
                     disabled={generating}
-                    isLegendary={themeKey === 'legendary'}
                   />
                 ))}
               </div>
@@ -754,97 +749,44 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
                 const singleCostLabel = cfg.singleCost.toLocaleString('ru-RU');
                 const deckCostLabel = cfg.deckCost.toLocaleString('ru-RU');
                 const busy = generating;
+                const samples = previewIds[focusTheme];
                 return (
-                  <div style={{
-                    borderRadius: 16,
-                    padding: 16,
-                    marginBottom: 16,
-                    background: 'rgba(0,0,0,0.22)',
-                    border: `1px solid ${cfg.color}44`,
-                  }}>
-                    <div style={{ color: T.textMuted, fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 6 }}>
-                      2. Что создать
+                  <div className={styles.panel}>
+                    <p className={styles.step}>2. Что создать</p>
+                    <h3 className={styles.panelTitle}>{cfg.name}</h3>
+                    <p className={styles.blurb}>{cfg.blurb}</p>
+                    <div className={styles.previewRow}>
+                      {samples.map((id) => (
+                        <img
+                          key={`${focusTheme}-${id}`}
+                          className={styles.previewCard}
+                          src={`/api/nft/theme-asset/${focusTheme}/${id}`}
+                          alt=""
+                        />
+                      ))}
+                      <p className={styles.previewCaption}>
+                        Примеры из набора «{cfg.name}». В колоде {cfg.total} таких артов. Оплата монетами, рублями или криптой.
+                      </p>
                     </div>
-                    <div style={{ color: '#f8fafc', fontWeight: 800, fontSize: 16, marginBottom: 4 }}>{cfg.name}</div>
-                    <p style={{ color: T.textMuted, fontSize: 13, lineHeight: 1.5, margin: '0 0 12px' }}>{cfg.blurb}</p>
-                    <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: 12, color: T.textMuted }}>{cfg.total} артов в наборе</span>
-                      <span style={{ fontSize: 12, color: T.textMuted }}>·</span>
-                      <span style={{ fontSize: 12, color: T.textMuted }}>Оплата: монеты или крипта</span>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      <motion.button
-                        whileHover={{ scale: busy ? 1 : 1.01 }}
-                        whileTap={{ scale: busy ? 1 : 0.99 }}
-                        disabled={busy}
-                        onClick={() => handleGenerateSingle(focusTheme)}
-                        style={{
-                          padding: '12px 14px',
-                          borderRadius: 12,
-                          border: `1px solid ${cfg.color}88`,
-                          background: cfg.gradient,
-                          color: '#0f172a',
-                          fontWeight: 800,
-                          fontSize: 14,
-                          cursor: busy ? 'wait' : 'pointer',
-                          opacity: busy ? 0.65 : 1,
-                        }}
-                      >
+                    <div className={styles.actions}>
+                      <button type="button" className={styles.primaryBtn} disabled={busy} onClick={() => handleGenerateSingle(focusTheme)}>
                         {busy && selectedTheme === focusTheme ? 'Создаём карту…' : `Одна случайная карта · ${singleCostLabel} монет`}
-                      </motion.button>
-                      <motion.button
-                        whileHover={{ scale: busy ? 1 : 1.01 }}
-                        whileTap={{ scale: busy ? 1 : 0.99 }}
-                        disabled={busy}
-                        onClick={() => handleGenerateDeck(focusTheme)}
-                        style={{
-                          padding: '12px 14px',
-                          borderRadius: 12,
-                          border: `1px solid ${cfg.color}55`,
-                          background: 'rgba(15,23,42,0.7)',
-                          color: '#f8fafc',
-                          fontWeight: 800,
-                          fontSize: 14,
-                          cursor: busy ? 'wait' : 'pointer',
-                          opacity: busy ? 0.65 : 1,
-                        }}
-                      >
+                      </button>
+                      <button type="button" className={styles.secondaryBtn} disabled={busy} onClick={() => handleGenerateDeck(focusTheme)}>
                         {busy && selectedTheme === focusTheme ? 'Создаём колоду…' : `Полная колода · ${deckCostLabel} монет`}
-                      </motion.button>
-                      <motion.button
-                        whileHover={{ scale: busy ? 1 : 1.01 }}
-                        whileTap={{ scale: busy ? 1 : 0.99 }}
-                        disabled={busy}
-                        onClick={() => { setCryptoTheme(focusTheme); setGenQty(1); setShowCryptoModal(true); }}
-                        style={{
-                          padding: '11px 14px',
-                          borderRadius: 12,
-                          border: '1px solid rgba(16,185,129,0.4)',
-                          background: 'rgba(16,185,129,0.12)',
-                          color: '#6ee7b7',
-                          fontWeight: 800,
-                          fontSize: 13,
-                          cursor: busy ? 'wait' : 'pointer',
-                          opacity: busy ? 0.65 : 1,
-                        }}
-                      >
-                        Оплатить генерацию рублями или криптой
-                      </motion.button>
+                      </button>
+                      <button type="button" className={styles.payBtn} disabled={busy} onClick={() => { setCryptoTheme(focusTheme); setGenQty(1); setShowCryptoModal(true); }}>
+                        Оплатить рублями или криптой
+                      </button>
                     </div>
                   </div>
                 );
               })()}
 
               {/* БАЛАНС */}
-              <div style={{
-                padding: '16px',
-                borderRadius: '12px',
-                background: 'rgba(251, 191, 36, 0.1)',
-                border: '1px solid rgba(251, 191, 36, 0.3)',
-                textAlign: 'center'
-              }}>
-                <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '4px' }}>Ваш баланс:</p>
-                <p style={{ color: '#fbbf24', fontSize: '24px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              <div className={styles.balance}>
+                <p className={styles.balanceLabel}>Ваш баланс</p>
+                <p className={styles.balanceValue}>
                   <PidrCoinAmount value={userCoins} size={24} />
                 </p>
               </div>
@@ -1153,50 +1095,37 @@ export default function NFTThemeGenerator({ userCoins, onBalanceUpdate }: NFTThe
 interface ThemeCardProps {
   theme: keyof typeof THEMES;
   themeConfig: typeof THEMES[keyof typeof THEMES];
+  previews: [number, number];
   selected: boolean;
   onSelect: () => void;
   disabled: boolean;
-  isLegendary?: boolean;
 }
 
-function ThemeCard({ theme, themeConfig, selected, onSelect, disabled, isLegendary }: ThemeCardProps) {
+function ThemeCard({ theme, themeConfig, previews, selected, onSelect, disabled }: ThemeCardProps) {
   return (
     <button
       type="button"
       onClick={onSelect}
       disabled={disabled}
-      style={{
-        position: 'relative',
-        textAlign: 'left',
-        background: selected
-          ? `linear-gradient(180deg, ${themeConfig.color}22 0%, rgba(15, 23, 42, 0.94) 100%)`
-          : 'rgba(15, 23, 42, 0.88)',
-        borderRadius: 16,
-        border: selected ? `1.5px solid ${themeConfig.color}` : `1px solid ${themeConfig.color}33`,
-        padding: '12px 12px 14px',
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        overflow: 'hidden',
-        boxShadow: selected ? `0 0 0 1px ${themeConfig.color}55, 0 10px 24px rgba(0,0,0,0.35)` : 'none',
-        opacity: disabled ? 0.65 : 1,
-      }}
+      className={`${styles.themeBtn} ${selected ? styles.themeBtnSelected : ''}`}
     >
-      {isLegendary && (
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 2,
-          background: 'linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #ff7f00, #ff0000)',
-        }} />
-      )}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-        <span style={{ fontSize: 22, lineHeight: 1 }}>{themeConfig.icon}</span>
-        <span style={{ color: '#f8fafc', fontWeight: 800, fontSize: 14 }}>{themeConfig.name}</span>
+      <div className={styles.themeTop}>
+        <span className={styles.themeIcon}>{themeConfig.icon}</span>
+        <span className={styles.themeName}>{themeConfig.name}</span>
       </div>
-      <div style={{ color: '#94a3b8', fontSize: 11, lineHeight: 1.4 }}>
+      <div className={styles.thumbs}>
+        {previews.map((id) => (
+          <img
+            key={`${theme}-${id}`}
+            className={styles.thumb}
+            src={`/api/nft/theme-asset/${theme}/${id}`}
+            alt=""
+          />
+        ))}
+      </div>
+      <div className={styles.themeMeta}>
         {themeConfig.total} артов
-        {theme === 'legendary' ? ' · rare' : theme === 'unique' ? ' · gif' : ''}
+        {theme === 'unique' ? ' · gif' : ''}
       </div>
     </button>
   );
