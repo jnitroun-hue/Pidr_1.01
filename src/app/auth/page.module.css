@@ -10,28 +10,6 @@
   overflow: visible;
 }
 
-:global(html:has(.auth-screen)),
-:global(html:has(.auth-screen) body),
-:global(html:has(.auth-screen) .app-root) {
-  height: auto !important;
-  max-height: none !important;
-  min-height: 100%;
-  overflow-x: hidden !important;
-  overflow-y: auto !important;
-}
-
-:global(html:has(.auth-screen)),
-:global(html:has(.auth-screen) *) {
-  scrollbar-width: thin;
-}
-
-:global(html:has(.auth-screen))::-webkit-scrollbar,
-:global(html:has(.auth-screen) *)::-webkit-scrollbar {
-  display: block;
-  width: 10px;
-  height: 10px;
-}
-
 .page::before,
 .page::after {
   content: '';

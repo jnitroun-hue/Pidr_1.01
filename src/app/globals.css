@@ -139,6 +139,27 @@ html {
   overscroll-behavior-y: none;
 }
 
+html:has(.auth-screen),
+html:has(.auth-screen) body,
+html:has(.auth-screen) .app-root {
+  height: auto !important;
+  max-height: none !important;
+  min-height: 100%;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+
+html:has(.auth-screen),
+html:has(.auth-screen) .auth-screen {
+  scrollbar-width: thin;
+}
+
+html:has(.auth-screen)::-webkit-scrollbar {
+  display: block;
+  width: 10px;
+  height: 10px;
+}
+
 /* Telegram Mini App — на десктопе/web растягиваем на весь iframe */
 html.telegram-mini-app,
 html.telegram-mini-app body {
