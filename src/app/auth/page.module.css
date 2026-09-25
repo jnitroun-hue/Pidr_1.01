@@ -1,13 +1,35 @@
 .page {
   min-height: 100dvh;
+  height: auto;
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: calc(var(--app-chrome-top, 12px) + 56px) 20px 40px;
-  background: #070b14;
+  padding: calc(var(--app-chrome-top, 12px) + 56px) 20px 48px;
+  background: var(--menu-bg-accent, transparent), var(--menu-bg, #070b14);
   position: relative;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: visible;
+}
+
+:global(html:has(.auth-screen)),
+:global(html:has(.auth-screen) body),
+:global(html:has(.auth-screen) .app-root) {
+  height: auto !important;
+  max-height: none !important;
+  min-height: 100%;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+
+:global(html:has(.auth-screen)),
+:global(html:has(.auth-screen) *) {
+  scrollbar-width: thin;
+}
+
+:global(html:has(.auth-screen))::-webkit-scrollbar,
+:global(html:has(.auth-screen) *)::-webkit-scrollbar {
+  display: block;
+  width: 10px;
+  height: 10px;
 }
 
 .page::before,
@@ -35,11 +57,61 @@
   background: radial-gradient(circle, rgba(99, 102, 241, 0.18) 0%, transparent 70%);
 }
 
+.layout {
+  position: relative;
+  z-index: 1;
+  width: min(1080px, 100%);
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 28px;
+  align-items: start;
+}
+
+.hero {
+  display: none;
+}
+
+.heroKicker {
+  margin: 0 0 10px;
+  color: var(--menu-accent, #fbbf24);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.heroTitle {
+  margin: 0 0 12px;
+  color: var(--menu-text, #f8fafc);
+  font-size: clamp(36px, 4vw, 52px);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+
+.heroText {
+  margin: 0;
+  max-width: 420px;
+  color: var(--menu-text-muted, #cbd5e1);
+  font-size: 17px;
+  line-height: 1.55;
+}
+
+.heroPoints {
+  margin: 22px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+  color: var(--menu-text, #f8fafc);
+  font-weight: 700;
+}
+
 .card {
   position: relative;
   z-index: 1;
   width: 100%;
   max-width: 440px;
+  justify-self: center;
   padding: 40px 32px 28px;
   border-radius: 28px;
   background: linear-gradient(165deg, rgba(30, 41, 59, 0.92) 0%, rgba(15, 23, 42, 0.96) 100%);
@@ -50,10 +122,26 @@
   backdrop-filter: blur(16px);
 }
 
-@media (min-width: 480px) {
+@media (min-width: 960px) {
+  .page {
+    align-items: flex-start;
+    padding: 48px 48px 64px;
+  }
+
+  .layout {
+    grid-template-columns: minmax(280px, 1fr) 460px;
+    align-items: center;
+    gap: 56px;
+  }
+
+  .hero {
+    display: block;
+  }
+
   .card {
-    max-width: 480px;
-    padding: 48px 40px 32px;
+    max-width: none;
+    justify-self: stretch;
+    padding: 36px 32px 28px;
   }
 }
 

@@ -6,6 +6,8 @@ import { motion } from 'framer-motion';
 import { UserPlus, Eye, EyeOff, Mail, Lock, User, Phone, CheckCircle } from 'lucide-react';
 import { isVKMiniApp, loginWithVKMiniApp } from '@/lib/auth/vk-bridge';
 import { buildVkOAuthUrl, detectMiniAppContext } from '@/lib/auth/social-auth';
+import AuthScreen from '@/components/AuthScreen';
+import BrowserSocialAuth from '@/components/BrowserSocialAuth';
 import Link from 'next/link';
 import { getApiHeaders } from '@/lib/api-headers';
 import { hasAuthTokenCookie } from '@/lib/auth/session-client';
@@ -285,32 +287,8 @@ export default function RegisterPage() {
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)',
-      padding: '20px',
-      paddingTop: 'calc(var(--app-chrome-top, 12px) + 56px)',
-      paddingBottom: '48px',
-      display: 'flex',
-      alignItems: 'flex-start',
-      justifyContent: 'center',
-      overflowY: 'auto'
-    }}>
-      <motion.div
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        style={{
-          width: '100%',
-          maxWidth: '420px'
-        }}
-      >
-        <div style={{
-          background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
-          border: '2px solid rgba(99, 102, 241, 0.3)',
-          borderRadius: '20px',
-          padding: '32px',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)'
-        }}>
+    <AuthScreen>
+        <div>
           {/* Header */}
           <motion.div
             initial={{ y: -10, opacity: 0 }}
@@ -661,7 +639,9 @@ export default function RegisterPage() {
             <div style={{ flex: 1, height: '1px', background: 'rgba(99, 102, 241, 0.2)' }} />
           </div>
 
-          {/* Social Buttons */}
+          {!availableAuthMethods.telegram && !availableAuthMethods.vk ? (
+            <BrowserSocialAuth redirectPath="/" />
+          ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <motion.button
               whileHover={{ scale: 1.02 }}
@@ -747,6 +727,7 @@ export default function RegisterPage() {
               </span>
             </motion.button>
           </div>
+          )}
 
           {/* Login Link */}
           <div style={{
@@ -779,8 +760,7 @@ export default function RegisterPage() {
             </Link>
           </div>
         </div>
-      </motion.div>
-    </div>
+    </AuthScreen>
   );
 }
 

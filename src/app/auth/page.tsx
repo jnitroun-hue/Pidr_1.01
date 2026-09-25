@@ -95,7 +95,15 @@ export default function AuthPage() {
   }, [router, redirectPath, botUsername]);
 
   return (
-    <div className={styles.page}>
+    <div className={`${styles.page} auth-screen`}>
+      <div className={styles.layout}>
+        <aside className={styles.hero}>
+          <p className={styles.heroKicker}>The Must</p>
+          <h2 className={styles.heroTitle}>Играйте в браузере своим аккаунтом</h2>
+          <p className={styles.heroText}>
+            Telegram, VK или логин с паролем. Рейтинг, друзья и карты остаются на том же профиле.
+          </p>
+        </aside>
       <motion.div
         className={styles.card}
         initial={{ opacity: 0, y: 24 }}
@@ -195,6 +203,7 @@ export default function AuthPage() {
           © {new Date().getFullYear()} P.I.D.R.
         </footer>
       </motion.div>
+      </div>
     </div>
   );
 }
