@@ -1691,12 +1691,6 @@ export const useGameStore = create<GameState>()(
             } else {
               rank = parsedRank;
             }
-          } else {
-            // ✅ Попытка найти число в любом месте имени (для совместимости)
-            const numberMatch = name.match(/(\d+)/);
-            if (numberMatch) {
-              rank = parseInt(numberMatch[1], 10);
-            }
           }
         }
         return rank;
@@ -2448,8 +2442,8 @@ export const useGameStore = create<GameState>()(
         console.log(`🃏 [determineTrumpSuit] История взятых карт: ${drawnHistory.length} карт`);
         
         // Сначала проверяем последнюю взятую карту
-        if (lastDrawnCard && lastDrawnCard.image) {
-          const suit = get().getCardSuit(lastDrawnCard.image);
+        if (lastDrawnCard && (lastDrawnCard.suit || lastDrawnCard.image)) {
+          const suit = lastDrawnCard.suit || get().getCardSuit(lastDrawnCard.image || '');
           console.log(`🃏 [determineTrumpSuit] Последняя взятая карта: ${lastDrawnCard.image} → масть: ${suit}`);
           
           // Козырем может быть любая масть КРОМЕ пик
@@ -3044,10 +3038,10 @@ export const useGameStore = create<GameState>()(
         canBeatCard: (attackCard: Card, defendCard: Card, trumpSuit: string) => {
           if (!attackCard.image || !defendCard.image) return false;
           
-          const attackSuit = get().getCardSuit(attackCard.image);
-          const defendSuit = get().getCardSuit(defendCard.image);
-          const attackRank = get().getCardRank(attackCard.image);
-          const defendRank = get().getCardRank(defendCard.image);
+          const attackSuit = attackCard.suit || get().getCardSuit(attackCard.image || '');
+          const defendSuit = defendCard.suit || get().getCardSuit(defendCard.image || '');
+          const attackRank = get().resolveCardRank(attackCard);
+          const defendRank = get().resolveCardRank(defendCard);
           
           // ✅ ПРАВИЛО 1: "Пики только Пикями" - пики можно бить ТОЛЬКО пиками
           if (attackSuit === 'spades' && defendSuit !== 'spades') {
@@ -4115,7 +4109,7 @@ export const useGameStore = create<GameState>()(
                  
                  // ✅ НОВАЯ ЛОГИКА: Бот выбирает худшие карты и распределяет их по штрафникам
                  const sortedWorstCards = openCards
-                   .map(card => ({ card, rank: get().getCardRank(card.image || '') }))
+                   .map(card => ({ card, rank: get().resolveCardRank(card) }))
                    .sort((a, b) => a.rank - b.rank) // Сортируем от худшей к лучшей
                    .slice(0, cardsToGive)
                    .map(item => item.card);
@@ -4348,29 +4342,30 @@ export const useGameStore = create<GameState>()(
            // 2. Козыри низкого ранга (если нет некозырных)
            // 3. Любая самая низкая карта
            
-           const nonTrumpCards = cards.filter(c => trumpSuit && get().getCardSuit(c.image || '') !== trumpSuit);
-           const trumpCards = cards.filter(c => trumpSuit && get().getCardSuit(c.image || '') === trumpSuit);
+           const cardSuitOf = (card: Card) => card.suit || get().getCardSuit(card.image || '');
+           const nonTrumpCards = cards.filter(c => trumpSuit && cardSuitOf(c) !== trumpSuit);
+           const trumpCards = cards.filter(c => trumpSuit && cardSuitOf(c) === trumpSuit);
            
            // Сначала ищем плохие некозырные карты
            if (nonTrumpCards.length > 0) {
              const lowNonTrumpCards = nonTrumpCards.filter(c => {
-               const rank = get().getCardRank(c.image || '');
+               const rank = get().resolveCardRank(c);
                return rank <= 7; // 2, 3, 4, 5, 6, 7 - плохие карты
              });
              
              if (lowNonTrumpCards.length > 0) {
                // Возвращаем самую низкую некозырную карту
                return lowNonTrumpCards.reduce((worst, card) => {
-                 const worstRank = get().getCardRank(worst.image || '');
-                 const cardRank = get().getCardRank(card.image || '');
+                 const worstRank = get().resolveCardRank(worst);
+                 const cardRank = get().resolveCardRank(card);
                  return cardRank < worstRank ? card : worst;
                });
              }
              
              // Возвращаем любую некозырную карту (самую низкую)
              return nonTrumpCards.reduce((worst, card) => {
-               const worstRank = get().getCardRank(worst.image || '');
-               const cardRank = get().getCardRank(card.image || '');
+               const worstRank = get().resolveCardRank(worst);
+               const cardRank = get().resolveCardRank(card);
                return cardRank < worstRank ? card : worst;
              });
            }
@@ -4378,16 +4373,16 @@ export const useGameStore = create<GameState>()(
            // Если некозырных карт нет, берем самый низкий козырь
            if (trumpCards.length > 0) {
              return trumpCards.reduce((worst, card) => {
-               const worstRank = get().getCardRank(worst.image || '');
-               const cardRank = get().getCardRank(card.image || '');
+               const worstRank = get().resolveCardRank(worst);
+               const cardRank = get().resolveCardRank(card);
                return cardRank < worstRank ? card : worst;
              });
            }
            
            // В крайнем случае - самую низкую карту из всех
            return cards.reduce((worst, card) => {
-             const worstRank = get().getCardRank(worst.image || '');
-             const cardRank = get().getCardRank(card.image || '');
+             const worstRank = get().resolveCardRank(worst);
+             const cardRank = get().resolveCardRank(card);
              return cardRank < worstRank ? card : worst;
            });
          },

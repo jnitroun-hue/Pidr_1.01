@@ -17,7 +17,6 @@ export async function GET(req: NextRequest) {
     const { data: users, error } = await supabaseAdmin
       .from('_pidr_users')
       .select('id, username, first_name, rating, games_played, total_games, total_games_played, games_won, wins, avatar_url, auth_method, telegram_id, vk_id')
-      .eq('is_active', true)
       .order('rating', { ascending: false })
       .limit(limit);
 
@@ -26,7 +25,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
 
-    const players = (users || []).map((u: Record<string, unknown>) => {
+    const players = (users || [])
+      .filter((u: Record<string, unknown>) => !String(u.telegram_id || '').startsWith('-'))
+      .map((u: Record<string, unknown>) => {
       const stats = normalizeUserStats(u);
       return {
         id: u.id,

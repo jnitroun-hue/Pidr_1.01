@@ -1890,13 +1890,14 @@ export default function ProfilePage() {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.8, y: 50 }}
             style={{
-              background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
+              background: 'var(--menu-card-bg, linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%))',
+              color: 'var(--menu-text, #f8fafc)',
               borderRadius: '24px',
               padding: showModal === 'bonuses' ? 'clamp(14px, 4vw, 24px)' : '24px',
               boxSizing: 'border-box',
-              width: showModal === 'bonuses' ? 'min(calc(100vw - 24px), 780px)' : '90vw',
-              maxWidth: showModal === 'bonuses' ? '780px' : '420px',
-              maxHeight: showModal === 'bonuses' ? '88vh' : '80vh',
+              width: showModal === 'deck' ? 'min(calc(100vw - 16px), 560px)' : showModal === 'bonuses' ? 'min(calc(100vw - 24px), 780px)' : 'min(calc(100vw - 24px), 420px)',
+              maxWidth: showModal === 'deck' ? '560px' : showModal === 'bonuses' ? '780px' : '420px',
+              maxHeight: 'min(88dvh, calc(100dvh - var(--app-chrome-top, 12px) - 24px))',
               overflowY: 'auto',
               border: '1px solid rgba(255, 255, 255, 0.1)',
               boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)'
@@ -1910,8 +1911,8 @@ export default function ProfilePage() {
               marginBottom: '20px'
             }}>
               <h3 style={{
-                color: '#e2e8f0',
-                fontSize: '1.5rem',
+                color: 'var(--menu-text, #f8fafc)',
+                fontSize: '1.25rem',
                 fontWeight: '700',
                 margin: 0
               }}>
@@ -2305,12 +2306,12 @@ export default function ProfilePage() {
                 {!isLoadingDeck && deckCards.length > 0 && (
                   <div style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 1fr))',
                     gap: '16px'
                   }}>
                     {deckCards.map((card: any) => {
                       const nftCard = card.nft_card || card;
-                      const suitColor = (nftCard.suit === 'hearts' || nftCard.suit === 'diamonds') ? '#ef4444' : '#1e293b';
+                      const suitColor = (nftCard.suit === 'hearts' || nftCard.suit === 'diamonds') ? '#f87171' : 'var(--menu-text, #f8fafc)';
                       const cardName = formatNftCardName(nftCard.rank, nftCard.suit, language);
 
                       return (
@@ -2329,7 +2330,9 @@ export default function ProfilePage() {
                         >
                           <div style={{
                             width: '100%',
-                            height: '180px',
+                            height: 'auto',
+                            aspectRatio: '2 / 3',
+                            maxHeight: '220px',
                             borderRadius: '8px',
                             marginBottom: '10px',
                             overflow: 'hidden',
@@ -2354,8 +2357,9 @@ export default function ProfilePage() {
                           }}>
                             <span style={{
                               color: suitColor,
-                              fontSize: '1.2rem',
-                              fontWeight: 'bold'
+                              fontSize: '0.95rem',
+                              fontWeight: '800',
+                              lineHeight: 1.25,
                             }}>
                               {cardName}
                             </span>

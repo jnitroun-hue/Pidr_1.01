@@ -11,6 +11,7 @@ import {
 } from '@/lib/referral/pending-referral-server';
 import { PENDING_REFERRAL_COOKIE } from '@/lib/referral/constants';
 import { normalizeUserStats } from '@/lib/user/normalize-user-stats';
+import { shouldSyncPlatformPhoto } from '@/lib/user/avatar-policy';
 import { authCookieBase, clearAuthCookies, setAuthCookies, SIGNED_IN_COOKIE, resolveAuthCookieOptions } from '@/lib/auth/auth-cookies';
 
 // ✅ Явная конфигурация runtime для Next.js 15
@@ -554,7 +555,7 @@ export async function POST(req: NextRequest) {
               username: username && username.trim() ? username.trim() : existingUserRetry.username, // Обновляем только если есть непустое значение
               first_name: firstName || existingUserRetry.first_name,
               last_name: lastName || existingUserRetry.last_name,
-              avatar_url: photoUrl || existingUserRetry.avatar_url,
+              ...(shouldSyncPlatformPhoto(existingUserRetry.avatar_url, photoUrl) ? { avatar_url: photoUrl } : {}),
               last_seen: moscowTime,
               updated_at: new Date().toISOString(),
               online_status: 'online',
@@ -640,7 +641,7 @@ export async function POST(req: NextRequest) {
         username: finalUsername,
         first_name: firstName || user.first_name,
         last_name: lastName || user.last_name,
-        avatar_url: photoUrl || user.avatar_url,
+        ...(shouldSyncPlatformPhoto(user.avatar_url, photoUrl) ? { avatar_url: photoUrl } : {}),
         auth_method: 'telegram',
         last_seen: moscowTime,
         updated_at: new Date().toISOString(),

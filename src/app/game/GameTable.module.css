@@ -120,30 +120,80 @@
 
 /* ✅ УМЕНЬШЕНО В 3 РАЗА ПО ПРОСЬБЕ ПОЛЬЗОВАТЕЛЯ */
 .stageInfo, .deckInfo {
-  background: rgba(15, 23, 42, 0.95);
-  color: #e2e8f0;
-  padding: 3px 7px; /* Было 10px 20px */
-  border-radius: 8px; /* Было 25px */
-  font-weight: 600;
-  font-size: 11px; /* Было 15px */
-  box-shadow: 
-    0 3px 8px rgba(0, 0, 0, 0.4),
-    0 0 0 1px rgba(99, 102, 241, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(15px);
-  transition: all 0.3s ease;
-  border: 1px solid rgba(99, 102, 241, 0.2);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 0;
+  background: color-mix(in srgb, var(--menu-card-bg, #14110c) 88%, transparent);
+  color: var(--menu-text, #fff7ed);
+  padding: 2px 7px 2px 2px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(14px);
+  border: 1px solid color-mix(in srgb, var(--menu-accent, #f5c518) 55%, transparent);
+  white-space: nowrap;
 }
 
 .stageInfo {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  color: #fff;
-  box-shadow: 
-    0 3px 8px rgba(99, 102, 241, 0.4),
-    0 0 0 1px rgba(255, 255, 255, 0.1);
-  display: flex;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--menu-accent, #f5c518) 92%, #fff), #c9892d);
+  color: #1a1208;
+  border-color: rgba(255, 244, 214, 0.55);
+}
+
+.hudKicker {
+  display: inline-flex;
   align-items: center;
-  gap: 4px; /* Было 8px */
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.22);
+  color: inherit;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.stageInfo .hudKicker {
+  background: rgba(26, 18, 8, 0.16);
+}
+
+.hudValue {
+  font-size: 12px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.hudTrump {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.18);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.hudBitButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.hudBitButton:disabled {
+  cursor: default;
 }
 
 .trumpIcon {
@@ -1225,9 +1275,11 @@
 }
 
 .handCard.selected {
-  transform: translateY(-18px) scale(1.04);
+  transform: translateY(-16px);
   z-index: 220 !important;
-  box-shadow: 0 0 0 2px #fbbf24, 0 12px 28px rgba(251, 191, 36, 0.35);
+  outline: 2px solid #f5c518;
+  outline-offset: 1px;
+  box-shadow: 0 10px 22px rgba(245, 197, 24, 0.4) !important;
 }
 
 .handCard.open {
@@ -3126,8 +3178,8 @@
     gap: 8px !important;
   }
   
-  /* Увеличенная колода и карты в центре */
-  .deckStack img {
+  /* Рубашка колоды. Не трогаем вложенные картинки NFT-лица. */
+  .deckCard {
     width: 50px !important;
     height: 75px !important;
   }
@@ -3200,8 +3252,8 @@
     gap: 7px !important;
   }
   
-  /* Колода */
-  .deckStack img {
+  /* Рубашка колоды */
+  .deckCard {
     width: 45px !important;
     height: 67px !important;
   }
@@ -3357,8 +3409,8 @@
     font-size: 12px !important;
   }
   
-  /* Компактная колода */
-  .deckStack img {
+  /* Рубашка колоды */
+  .deckCard {
     width: 32px !important;
     height: 48px !important;
   }
@@ -3547,7 +3599,7 @@
   border-radius: calc(var(--opponent-card-radius) - 1px) !important;
 }
 
-.deckStack img {
+.deckCard {
   width: var(--deck-card-width) !important;
   height: var(--deck-card-height) !important;
   object-fit: contain !important;
@@ -3707,38 +3759,70 @@
 
 @media (orientation: landscape) and (max-height: 720px) {
   .gameContainer {
-    --table-width: min(58vw, 600px);
-    --table-height: 80dvh;
-    --table-max-width: 600px;
-    --table-min-width: 380px;
-    --table-min-height: 420px;
+    --table-width: min(52vw, 560px);
+    --table-height: min(58dvh, calc(100dvh - 132px));
+    --table-max-width: 560px;
+    --table-min-width: 280px;
+    --table-min-height: 0px;
 
-    --hud-top: 8px;
-    --hud-side: 8px;
-    --hud-pad-y: 5px;
-    --hud-pad-x: 10px;
-    --hud-font: 11px;
+    --hud-top: 6px;
+    --hud-side: 6px;
+    --hud-gap: 3px;
+    --hud-pad-y: 2px;
+    --hud-pad-x: 6px;
+    --hud-font: 10px;
 
-    --seat-width: 72px;
-    --seat-pad-y: 4px;
-    --seat-pad-x: 4px;
-    --avatar-size: 24px;
+    --seat-width: 58px;
+    --seat-pad-y: 2px;
+    --seat-pad-x: 3px;
+    --avatar-size: 22px;
     --name-font: 8px;
 
-    --opponent-card-width: 45px;
-    --opponent-card-height: 66px;
-    --deck-card-width: 57px;
-    --deck-card-height: 84px;
-    --deck-count-size: 26px;
-    --deck-count-font: 11px;
+    --opponent-card-width: 34px;
+    --opponent-card-height: 50px;
+    --deck-card-width: 40px;
+    --deck-card-height: 58px;
+    --deck-count-size: 20px;
+    --deck-count-font: 10px;
 
-    --player-hand-width: min(72vw, 560px);
-    --player-hand-bottom: 10px;
-    --player-hand-padding-y: 6px;
-    --player-hand-padding-x: 10px;
-    --player-hand-min-height: 138px;
-    --hand-card-width: 84px;
-    --hand-card-height: 126px;
+    --player-hand-width: min(46vw, 420px);
+    --player-hand-bottom: 4px;
+    --player-hand-padding-y: 4px;
+    --player-hand-padding-x: 8px;
+    --player-hand-min-height: 0px;
+    --hand-card-width: 58px;
+    --hand-card-height: 85px;
+  }
+
+  .stage2TableLayout {
+    height: min(58dvh, calc(100dvh - 132px)) !important;
+    max-height: calc(100dvh - 132px) !important;
+  }
+
+  .handCard {
+    width: var(--hand-card-width) !important;
+    height: var(--hand-card-height) !important;
+  }
+
+  .cardOnPenki {
+    width: var(--opponent-card-width) !important;
+    height: var(--opponent-card-height) !important;
+  }
+
+  .playerName {
+    max-width: calc(var(--seat-width) - 8px) !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .gameControls {
+    top: 6px;
+    right: 6px;
+  }
+
+  .playerHand {
+    max-width: min(46vw, 420px) !important;
   }
 }
 

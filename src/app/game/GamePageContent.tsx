@@ -24,7 +24,7 @@ import { useDragAndDrop } from '@/hooks/useDragAndDrop';
 // TableSelector удален - выбор стола больше не нужен
 import type { Player as StorePlayer, Card as StoreCard } from '../../store/gameStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Home, WifiOff } from 'lucide-react';
+import { WifiOff } from 'lucide-react';
 import React from 'react';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { applyPremiumRatingMultiplier } from '@/lib/rating/ratingSystem';
@@ -2664,16 +2664,6 @@ function GamePageContentComponent({
           justifyContent: 'center',
         minHeight: '100vh'
         }}>
-          <div className={styles.gameControls}>
-            <button
-              type="button"
-              className={styles.gameHomeButton}
-              onClick={() => window.location.assign('/')}
-            >
-              <Home size={15} />
-              {language === 'en' ? 'Home' : 'Домой'}
-            </button>
-          </div>
           <div style={{
           width: '60px',
           height: '60px',
@@ -2726,75 +2716,43 @@ function GamePageContentComponent({
       {players.length > 0 && (
         <div className={styles.gameHeader}>
           <div className={styles.stageInfo}>
-            <span className={styles.trumpIcon}>
-              {gameStage === 1 ? '🎴' : gameStage === 2 ? '🃏' : gameStage === 3 ? '🎯' : '🏆'}
-            </span>
-            Стадия {gameStage}
+            <span className={styles.hudKicker}>Стадия</span>
+            <span className={styles.hudValue}>{gameStage}</span>
             {gameStage >= 2 && trumpSuit && (
-              <span style={{ marginLeft: '8px' }}>
-                {trumpSuit === 'hearts' ? '♥️' : 
-                 trumpSuit === 'diamonds' ? '♦️' : 
-                 trumpSuit === 'clubs' ? '♣️' : 
-                 trumpSuit === 'spades' ? '♠️' : ''}
+              <span className={styles.hudTrump} aria-label="Козырь">
+                {trumpSuit === 'hearts' ? '♥' :
+                 trumpSuit === 'diamonds' ? '♦' :
+                 trumpSuit === 'clubs' ? '♣' :
+                 trumpSuit === 'spades' ? '♠' : ''}
               </span>
             )}
           </div>
           <div className={styles.deckInfo}>
             {gameStage === 1 ? (
-              <>🎴 Колода: {deck.length}</>
+              <>
+                <span className={styles.hudKicker}>Колода</span>
+                <span className={styles.hudValue}>{deck.length}</span>
+              </>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
+              <>
                 <button
+                  type="button"
+                  className={styles.hudBitButton}
                   onClick={() => togglePenaltyDeckModal(true)}
-                        style={{ 
-                    background: 'none',
-                    border: 'none',
-                    color: 'inherit',
-                    fontSize: 'inherit',
-                    fontFamily: 'inherit',
-                    cursor: penaltyDeck.length > 0 ? 'pointer' : 'default',
-                    padding: 0,
-                    margin: 0,
-                    transition: 'all 0.2s',
-                    textDecoration: penaltyDeck.length > 0 ? 'underline' : 'none'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (penaltyDeck.length > 0) {
-                      e.currentTarget.style.transform = 'scale(1.05)';
-                      e.currentTarget.style.color = '#60a5fa';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'scale(1)';
-                    e.currentTarget.style.color = '';
-                  }}
                   disabled={penaltyDeck.length === 0}
                 >
-                  🗑️ Бито: {playedCards?.length || 0}
+                  <span className={styles.hudKicker}>Бито</span>
+                  <span className={styles.hudValue}>{playedCards?.length || 0}</span>
                 </button>
-                {/* ✅ НОВОЕ: Отдельный индикатор козыря во 2-й стадии */}
-                {gameStage >= 2 && trumpSuit && (
-                  <div style={{
-                    fontSize: '11px',
-                    fontWeight: '700',
-                    color: '#fbbf24',
-                    textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    justifyContent: 'center',
-                    whiteSpace: 'nowrap'
-                  }}>
-                    <span>🃏 Козырь:</span>
-                    <span style={{ fontSize: '13px' }}>
-                      {trumpSuit === 'hearts' ? '♥️' : 
-                       trumpSuit === 'diamonds' ? '♦️' : 
-                       trumpSuit === 'clubs' ? '♣️' : 
-                       trumpSuit === 'spades' ? '♠️' : ''}
-                    </span>
-                  </div>
+                {trumpSuit && (
+                  <span className={styles.hudTrump} aria-label="Козырь">
+                    {trumpSuit === 'hearts' ? '♥' :
+                     trumpSuit === 'diamonds' ? '♦' :
+                     trumpSuit === 'clubs' ? '♣' :
+                     trumpSuit === 'spades' ? '♠' : ''}
+                  </span>
                 )}
-              </div>
+              </>
             )}
           </div>
           {/* 💸 СЧЕТЧИК ШТРАФНОЙ СТОПКИ - КНОПКА! */}
@@ -2830,20 +2788,6 @@ function GamePageContentComponent({
       )}
 
       <div className={styles.gameControls}>
-          <button
-            type="button"
-            className={styles.gameHomeButton}
-            onClick={() => {
-              if (isGameActive) {
-                void requestLeaveGame('direct');
-                return;
-              }
-              window.location.assign('/');
-            }}
-          >
-            <Home size={15} />
-            {language === 'en' ? 'Home' : 'Домой'}
-          </button>
           {players.length > 0 && (
           <div className={`${styles.burgerMenu} ${burgerMenuOpen ? styles.burgerMenuOpen : ''}`}>
             <button
@@ -4267,9 +4211,9 @@ function GamePageContentComponent({
                         filter: canPlay ? 'brightness(1.1)' : 'none',
                         visibility: 'visible',
                         display: 'block',
-                        transform: isSelected ? 'translateY(-20px) scale(1.1)' : 'none',
-                        transition: 'all 0.3s ease',
-                        boxShadow: canPlay ? '0 0 20px rgba(40, 167, 69, 0.6), 0 0 40px rgba(40, 167, 69, 0.3)' : 'none',
+                        transform: 'none',
+                        transition: 'filter 0.2s ease',
+                        boxShadow: 'none',
                       }}
                     />
                     </div>
@@ -4288,10 +4232,10 @@ function GamePageContentComponent({
                       filter: canPlay ? 'brightness(1.1)' : 'none',
                       visibility: 'visible',
                       display: nftImageUrl ? 'none' : 'block',
-                      transform: isSelected ? 'translateY(-20px) scale(1.1)' : 'none',
-                      transition: 'all 0.3s ease',
-                      boxShadow: canPlay ? '0 0 20px rgba(40, 167, 69, 0.6), 0 0 40px rgba(40, 167, 69, 0.3)' : 'none',
-                      objectFit: 'cover'
+                      transform: 'none',
+                      transition: 'filter 0.2s ease',
+                      boxShadow: 'none',
+                      objectFit: 'contain'
                     }}
                   />
                       </>

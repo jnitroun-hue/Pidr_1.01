@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { setAuthCookies, resolveAuthCookieOptions, authCookieBase } from '@/lib/auth/auth-cookies';
 import { applyPendingReferralForNewUser, clearPendingReferralCookie } from '@/lib/referral/pending-referral-server';
+import { shouldSyncPlatformPhoto } from '@/lib/user/avatar-policy';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -96,7 +97,7 @@ export async function POST(request: NextRequest) {
           username: username || existingUser.username,
           first_name: first_name || existingUser.first_name,
           last_name: last_name || existingUser.last_name,
-          avatar_url: photo_url || existingUser.avatar_url,
+          ...(shouldSyncPlatformPhoto(existingUser.avatar_url, photo_url) ? { avatar_url: photo_url } : {}),
           last_login: new Date().toISOString()
         })
         .eq('telegram_id', id.toString())

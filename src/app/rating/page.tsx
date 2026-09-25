@@ -13,11 +13,13 @@ import UserAvatarBadge from '@/components/UserAvatarBadge';
 import AuthMethodBadge from '@/components/AuthMethodBadge';
 import type { AuthMethod } from '@/lib/user/resolve-auth-method';
 import { themedPageShellStyle } from '@/lib/ui/menu-theme-client';
+import { getApiHeaders } from '@/lib/api-headers';
 
 interface UserData {
   id: number;
   username: string;
   first_name: string;
+  firstName?: string;
   coins: number;
   rating: number;
   games_played: number;
@@ -49,7 +51,7 @@ export default function RatingPage() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [topPlayers, setTopPlayers] = useState<RatingEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'my' | 'top'>('my');
+  const [activeTab, setActiveTab] = useState<'my' | 'top'>('top');
   const nextPayoutLabel = useMemo(
     () => formatWeeklyPayoutDate(getNextWeeklyPayoutDate()),
     []
@@ -59,7 +61,7 @@ export default function RatingPage() {
     const loadData = async () => {
       try {
         // Загружаем данные текущего юзера
-        const meRes = await fetch('/api/user/me', { credentials: 'include' });
+        const meRes = await fetch('/api/user/me', { credentials: 'include', headers: getApiHeaders(), cache: 'no-store' });
         if (meRes.ok) {
           const meData = await meRes.json();
           if (meData.success && meData.user) {
@@ -68,7 +70,7 @@ export default function RatingPage() {
         }
 
         // Загружаем топ игроков (публичный API)
-        const ratingRes = await fetch('/api/rating/top?limit=10', { credentials: 'include' });
+        const ratingRes = await fetch('/api/rating/top?limit=20', { credentials: 'include', cache: 'no-store' });
         if (ratingRes.ok) {
           const ratingData = await ratingRes.json();
           if (ratingData.success && ratingData.players) {
@@ -117,14 +119,14 @@ export default function RatingPage() {
             onClick={() => setActiveTab(tab)}
             style={{
               flex: 1, padding: '10px', border: 'none', borderRadius: '10px',
-              background: activeTab === tab ? 'rgba(34, 197, 94, 0.15)' : 'rgba(100, 116, 139, 0.1)',
-              color: activeTab === tab ? '#4ade80' : '#64748b',
+              background: activeTab === tab ? 'var(--menu-accent, #22c55e)' : 'var(--menu-accent-soft, rgba(100, 116, 139, 0.15))',
+              color: activeTab === tab ? '#1a1208' : 'var(--menu-text, #e2e8f0)',
               fontSize: '13px', fontWeight: activeTab === tab ? '700' : '500',
               cursor: 'pointer', transition: 'all 0.2s',
               borderBottom: activeTab === tab ? '2px solid #22c55e' : '2px solid transparent',
             }}
           >
-            {tab === 'my' ? 'Мой рейтинг' : 'Топ игроков'}
+            {tab === 'my' ? 'Мой рейтинг' : 'Топ-20 и призы'}
           </button>
         ))}
       </div>
@@ -163,7 +165,7 @@ export default function RatingPage() {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span style={{ fontSize: '15px', fontWeight: 700, color: '#e2e8f0' }}>
-                          {userData?.username || userData?.first_name || 'Игрок'}
+                          {userData?.username || userData?.first_name || userData?.firstName || 'Игрок'}
                         </span>
                         <AuthMethodBadge method={userData?.auth_method || 'web'} size="sm" />
                       </div>
