@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Trophy, Medal, Users, User, Star, Award, Target, Wallet, Sparkles, Gift, Frame, LogOut, Shield } from 'lucide-react';
+import { ArrowLeft, Trophy, Medal, Users, User, Star, Award, Target, Wallet, Sparkles, Gift, Frame, LogOut, Shield, Dices } from 'lucide-react';
 import GameWallet from '../../components/GameWallet';
 import DailyBonusWheelModal from '../../components/DailyBonusWheelModal';
 import PremiumPromoBanner from '../../components/PremiumPromoBanner';
@@ -1518,11 +1518,11 @@ export default function ProfilePage() {
           </div>
         </motion.div>
 
-        {/* 2 кнопки: КОШЕЛЕК (модалка) и РЕЙТИНГ */}
+        {/* КОШЕЛЕК, РЕЙТИНГ и СЛОТЫ */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: '15px',
+          gridTemplateColumns: '1fr 1fr 1fr',
+          gap: '10px',
           marginBottom: '20px'
         }}>
           {/* КОШЕЛЕК → МОДАЛКА */}
@@ -1537,7 +1537,7 @@ export default function ProfilePage() {
               background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
               border: '2px solid rgba(99, 102, 241, 0.4)',
               borderRadius: '16px',
-              padding: '20px',
+              padding: '16px 8px',
               cursor: 'pointer',
               display: 'flex',
               flexDirection: 'column',
@@ -1548,7 +1548,7 @@ export default function ProfilePage() {
             }}
           >
             <Wallet size={32} style={{ color: '#6366f1' }} />
-            <span style={{ color: '#f1f5f9', fontSize: '16px', fontWeight: '700' }}>КОШЕЛЕК</span>
+            <span style={{ color: '#f1f5f9', fontSize: '14px', fontWeight: '700' }}>КОШЕЛЕК</span>
           </motion.button>
 
           {/* РЕЙТИНГ */}
@@ -1563,7 +1563,7 @@ export default function ProfilePage() {
               background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
               border: '2px solid rgba(251, 191, 36, 0.4)',
               borderRadius: '16px',
-              padding: '20px',
+              padding: '16px 8px',
               cursor: 'pointer',
               display: 'flex',
               flexDirection: 'column',
@@ -1574,7 +1574,31 @@ export default function ProfilePage() {
             }}
           >
             <Trophy size={32} style={{ color: '#fbbf24' }} />
-            <span style={{ color: '#f1f5f9', fontSize: '16px', fontWeight: '700' }}>РЕЙТИНГ</span>
+            <span style={{ color: '#f1f5f9', fontSize: '14px', fontWeight: '700' }}>РЕЙТИНГ</span>
+          </motion.button>
+
+          <motion.button
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            whileHover={{ scale: 1.03, boxShadow: '0 8px 30px rgba(244, 63, 94, 0.4)' }}
+            whileTap={{ scale: 0.97 }}
+            onClick={() => router.push('/slots')}
+            style={{
+              background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
+              border: '2px solid rgba(244, 63, 94, 0.45)',
+              borderRadius: '16px',
+              padding: '16px 8px',
+              cursor: 'pointer',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '10px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+            }}
+          >
+            <Dices size={32} style={{ color: '#fb7185' }} />
+            <span style={{ color: '#f1f5f9', fontSize: '14px', fontWeight: '700' }}>СЛОТЫ</span>
           </motion.button>
         </div>
 
