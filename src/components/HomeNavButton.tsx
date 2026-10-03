@@ -12,7 +12,7 @@ export default function HomeNavButton() {
   const router = useRouter();
   const { language } = useLanguage();
 
-  if (!pathname || HIDDEN_PATHS.has(pathname)) return null;
+  if (!pathname || HIDDEN_PATHS.has(pathname) || pathname.startsWith('/slots')) return null;
 
   const label = language === 'en' ? 'Home' : 'Домой';
 

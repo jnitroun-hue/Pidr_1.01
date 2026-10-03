@@ -1,0 +1,131 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: grid;
+  place-items: center;
+  background: rgba(2, 6, 16, 0.72);
+  overflow: hidden;
+}
+
+.rays {
+  position: absolute;
+  width: 140vmax;
+  height: 140vmax;
+  background: repeating-conic-gradient(from 0deg, rgba(250, 204, 21, 0.0) 0 12deg, rgba(250, 204, 21, 0.28) 12deg 18deg);
+  animation: spin 8s linear infinite;
+}
+
+.shock {
+  position: absolute;
+  width: 40vmin;
+  height: 40vmin;
+  border-radius: 50%;
+  border: 8px solid rgba(255, 236, 170, 0.7);
+  animation: boom 0.8s ease-out infinite;
+}
+
+.card {
+  position: relative;
+  z-index: 2;
+  min-width: min(86vw, 420px);
+  padding: 28px 22px 22px;
+  text-align: center;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 244, 190, 0.35), transparent 46%),
+    linear-gradient(180deg, #3a2a10, #120c08);
+  border: 2px solid #f5c518;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55), 0 0 60px rgba(245, 197, 24, 0.35);
+  animation: pop 0.45s cubic-bezier(0.16, 0.84, 0.3, 1.2);
+}
+
+.card p {
+  margin: 0;
+  letter-spacing: 0.16em;
+  font-size: 13px;
+  font-weight: 800;
+  color: #fde68a;
+}
+
+.card strong {
+  display: block;
+  margin: 8px 0;
+  font-size: clamp(64px, 16vw, 112px);
+  line-height: 0.9;
+  color: #fff7d6;
+  text-shadow: 0 0 24px rgba(250, 204, 21, 0.8), 0 8px 0 #7c4a12;
+}
+
+.card span {
+  display: block;
+  font-size: 22px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.card button {
+  margin-top: 16px;
+  border: none;
+  border-radius: 999px;
+  padding: 12px 22px;
+  font-weight: 900;
+  background: linear-gradient(180deg, #fff4c2, #f5c518);
+  color: #1c1408;
+  cursor: pointer;
+}
+
+.coins i {
+  position: absolute;
+  top: -10%;
+  left: calc(6% + (var(--i) * 5.2%));
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff6c8, #f5c518 45%, #b45309);
+  animation: fall 1.6s linear infinite;
+  animation-delay: calc(var(--i) * -0.12s);
+}
+
+.mega .rays { animation-duration: 4s; filter: hue-rotate(20deg); }
+.mega .card { border-color: #fb923c; box-shadow: 0 0 80px rgba(251, 146, 60, 0.45); }
+.mega .card strong { color: #ffedd5; text-shadow: 0 0 30px #fb923c, 0 8px 0 #7c2d12; }
+
+.ultra {
+  animation: shake 0.45s linear infinite;
+}
+.ultra .rays {
+  animation-duration: 2.2s;
+  background: repeating-conic-gradient(from 0deg, rgba(244, 63, 94, 0) 0 8deg, rgba(250, 204, 21, 0.45) 8deg 14deg);
+}
+.ultra .card {
+  border-color: #fecaca;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(254, 202, 202, 0.4), transparent 42%),
+    linear-gradient(180deg, #4c0519, #1a0a08);
+  box-shadow: 0 0 100px rgba(244, 63, 94, 0.55), 0 0 40px rgba(250, 204, 21, 0.4);
+}
+.ultra .card strong {
+  color: #fff;
+  text-shadow: 0 0 18px #fff, 0 0 40px #fb7185, 0 8px 0 #7f1d1d;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes boom {
+  from { transform: scale(0.4); opacity: 0.8; }
+  to { transform: scale(3.2); opacity: 0; }
+}
+@keyframes pop {
+  from { transform: scale(0.6); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+@keyframes fall {
+  from { transform: translateY(-10vh) rotate(0deg); opacity: 0; }
+  15% { opacity: 1; }
+  to { transform: translateY(110vh) rotate(240deg); opacity: 0.2; }
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-2px); }
+  75% { transform: translateX(2px); }
+}

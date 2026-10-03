@@ -11,7 +11,11 @@ import {
   getSlotGame,
 } from '@/lib/slots/games';
 import { formatGramUnits, spinSlot, type BonusPlay, type SpinResult } from '@/lib/slots/engine';
-import SlotGlyph from '@/components/slots/SlotGlyph';
+import type { SlotEvent } from '@/lib/slots/characters';
+import SlotReel from '@/components/slots/SlotReel';
+import BigWin from '@/components/slots/BigWin';
+import CharacterCast from '@/components/slots/CharacterCast';
+import { slotArt, slotBackdrop } from '@/lib/slots/art';
 import styles from '../Slots.module.css';
 
 type Mode = 'demo' | 'coins' | 'gram';
@@ -33,6 +37,10 @@ function PlayInner() {
   const [loaded, setLoaded] = useState(false);
   const [feature, setFeature] = useState<BonusPlay | null>(null);
   const [featureStep, setFeatureStep] = useState(-1);
+  const [rolling, setRolling] = useState(false);
+  const [landed, setLanded] = useState<string[][] | null>(null);
+  const [cast, setCast] = useState<SlotEvent | null>(null);
+  const [bigMultiple, setBigMultiple] = useState<number | null>(null);
 
   const bets = mode === 'gram' ? GRAM_UNIT_BETS : COIN_BETS;
   const bet = bets[Math.min(betIndex, bets.length - 1)];
@@ -85,9 +93,13 @@ function PlayInner() {
         if (demoChips < bet) throw new Error('Демо-фишки закончились. Обновите страницу.');
         await wait(700);
         const next = spinSlot(game, bet);
+        setLanded(next.grid);
+        setRolling(true);
+        await wait(1750);
+        setRolling(false);
         setDemoChips((value) => value - bet + next.totalWin);
         setResult(next);
-        if (next.bonus) await revealBonus(next.bonus);
+        await present(next);
         return;
       }
       await ensureBalance();
@@ -102,7 +114,6 @@ function PlayInner() {
         }),
       });
       const data = await response.json();
-      await wait(700);
       if (!data.success) throw new Error(data.error || 'Спин не прошёл');
       if (mode === 'coins') setCoins(Number(data.balance));
       else setGramUnits(Number(data.balance));
@@ -113,15 +124,32 @@ function PlayInner() {
         totalWin: data.totalWin,
         capped: data.capped,
         scatterCount: data.scatterCount ?? 0,
+        events: data.events ?? [],
         bonus: data.bonus ?? null,
       };
+      setLanded(next.grid);
+      setRolling(true);
+      await wait(1750);
+      setRolling(false);
       setResult(next);
-      if (next.bonus) await revealBonus(next.bonus);
+      await present(next);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка спина');
     } finally {
       setSpinning(false);
     }
+  }
+
+  async function present(next: SpinResult & { bonus: BonusPlay | null }) {
+    const event = next.events?.[0];
+    if (event) {
+      setCast(event);
+      await wait(1100);
+      setCast(null);
+    }
+    if (next.bonus) await revealBonus(next.bonus);
+    const ratio = bet > 0 ? next.totalWin / bet : 0;
+    if (ratio >= 15) setBigMultiple(ratio);
   }
 
   async function revealBonus(bonus: BonusPlay) {
@@ -130,8 +158,12 @@ function PlayInner() {
     await wait(1100);
     for (let index = 0; index < bonus.spins.length; index += 1) {
       setFeatureStep(index);
+      setLanded(bonus.spins[index].grid);
+      setRolling(true);
+      await wait(1500);
+      setRolling(false);
       setResult((current) => current ? { ...current, grid: bonus.spins[index].grid, wins: bonus.spins[index].wins, multiplier: bonus.spins[index].multiplier } : current);
-      await wait(700);
+      await wait(250);
     }
     setFeatureStep(bonus.spins.length);
   }
@@ -151,25 +183,21 @@ function PlayInner() {
       <div className={styles.machine}>
         <div className={styles.marquee}>ДО x{game.maxWinMultiplier}</div>
         <div className={`${styles.cabinet} ${styles[game.id] || ''}`} style={{ borderColor: game.accent }}>
-          <div className={styles.window}>
-            <div
-              className={`${styles.reels} ${spinning ? styles.spinning : ''}`}
-              style={{ gridTemplateColumns: `repeat(${game.reels}, max-content)` }}
-            >
-              {grid.map((reel, reelIndex) => (
-                <div key={reelIndex} className={styles.reel}>
-                  {reel.map((symbolId, rowIndex) => (
-                    <div key={`${reelIndex}-${rowIndex}`} className={styles.cell} title={game.symbols.find((item) => item.id === symbolId)?.name}>
-                      {symbolId === 'scatter' ? (
-                        <img src="/img/slots/scatter-bonus.jpg" alt="" className={styles.scatterArt} />
-                      ) : (
-                        <SlotGlyph id={symbolId} className={styles.glyph} />
-                      )}
-                    </div>
-                  ))}
-                </div>
+          <div className={styles.window} style={{ ['--slot-bg' as string]: `url(${slotBackdrop(game.id)})` }}>
+            <div className={styles.reels} style={{ gridTemplateColumns: `repeat(${game.reels}, var(--cell))` }}>
+              {(landed ?? grid).map((reel, reelIndex) => (
+                <SlotReel
+                  key={`${game.id}-${reelIndex}`}
+                  gameId={game.id}
+                  reelIndex={reelIndex}
+                  rows={game.rows}
+                  symbolIds={game.symbols.map((symbol) => symbol.id)}
+                  landed={reel}
+                  rolling={rolling}
+                />
               ))}
             </div>
+            {cast ? <CharacterCast event={cast} /> : null}
           </div>
         </div>
 
@@ -217,7 +245,7 @@ function PlayInner() {
         )}
         {feature && featureStep >= feature.spins.length && (
           <div className={styles.bonusDone}>
-            <img src="/img/slots/scatter-bonus.jpg" alt="" />
+            <img src={slotArt(game.id, 'scatter')} alt="" />
             <div>
               <strong>{feature.title} завершён</strong>
               <span>Бонус принёс {money(feature.totalWin)}{result?.capped ? ' · сработал потолок' : ''}</span>
@@ -227,7 +255,7 @@ function PlayInner() {
         )}
         {feature && featureStep < 0 && (
           <div className={styles.bonusSplash}>
-            <img src="/img/slots/scatter-bonus.jpg" alt="" />
+            <img src={slotArt(game.id, 'scatter')} alt="" />
             <strong>{feature.scatterCount} скаттера</strong>
             <b>{feature.title}</b>
             <p>{feature.rule}</p>
@@ -254,7 +282,7 @@ function PlayInner() {
             {game.symbols.map((symbol) => (
               <div key={symbol.id} className={styles.payRow}>
                 <span className={styles.paySymbol}>
-                  {symbol.scatter ? <img src="/img/slots/scatter-bonus.jpg" alt="" /> : <SlotGlyph id={symbol.id} />}
+                  <img src={slotArt(game.id, symbol.id)} alt="" />
                   {symbol.name}{symbol.wild ? ' · заменяет' : ''}{symbol.scatter ? ' · 3–5 запускают бонус' : ''}
                 </span>
                 <span>x{symbol.pays[0]} / x{symbol.pays[1]} / x{symbol.pays[2]}</span>
@@ -267,6 +295,13 @@ function PlayInner() {
           </div>
         )}
       </div>
+      {bigMultiple != null && result && (
+        <BigWin
+          multiple={bigMultiple}
+          amountLabel={money(result.totalWin)}
+          onClose={() => setBigMultiple(null)}
+        />
+      )}
     </main>
   );
 }

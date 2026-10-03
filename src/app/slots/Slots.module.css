@@ -57,7 +57,7 @@
   max-width: 1180px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 14px;
 }
 
@@ -76,9 +76,10 @@
   color: white;
 }
 
-.card svg {
+.card svg, .card img {
   width: 100%;
   height: 100%;
+  object-fit: cover;
   display: block;
 }
 
@@ -128,6 +129,7 @@
 .cabinet.limitless-city { border-color: #fb7185; background: linear-gradient(180deg, #881337, #4c0519 46%, #0c0a09); }
 
 .cabinet {
+  position: relative;
   border-radius: 28px;
   padding: 16px 16px 18px;
   background:
@@ -140,39 +142,51 @@
 }
 
 .window {
+  position: relative;
   border-radius: 18px;
-  padding: 10px;
+  padding: 12px;
   background:
-    radial-gradient(circle at 50% 0%, rgba(255,255,255,0.08), transparent 40%),
-    #14081f;
+    linear-gradient(180deg, rgba(0,0,0,0.25), rgba(0,0,0,0.55)),
+    var(--slot-bg) center / cover no-repeat;
   box-shadow: inset 0 0 0 2px rgba(250, 204, 21, 0.35);
   overflow: hidden;
 }
 
 .reels {
+  --cell: 86px;
   display: grid;
-  gap: 8px;
+  gap: 6px;
   justify-content: center;
 }
 
-.reel {
-  display: grid;
-  gap: 8px;
-  padding: 6px;
-  border-radius: 12px;
-  background: rgba(0, 0, 0, 0.28);
+.reelWindow {
+  height: calc(var(--rows) * var(--cell));
+  overflow: hidden;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.45);
+  box-shadow: inset 0 0 0 1px rgba(255, 220, 140, 0.25);
+}
+
+.reelStrip {
+  display: flex;
+  flex-direction: column;
+  will-change: transform;
 }
 
 .cell {
-  width: 78px;
-  height: 78px;
-  border-radius: 14px;
-  display: grid;
-  place-items: center;
-  background:
-    radial-gradient(circle at 30% 20%, rgba(255,255,255,0.55), transparent 36%),
-    linear-gradient(180deg, #2a2140, #120c22);
-  box-shadow: inset 0 0 0 2px rgba(255, 236, 180, 0.28), 0 8px 16px rgba(0, 0, 0, 0.35);
+  width: var(--cell);
+  height: var(--cell);
+  padding: 4px;
+  box-sizing: border-box;
+}
+
+.cell img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+  display: block;
+  background: #120c18;
 }
 
 .glyph, .scatterArt {
@@ -229,17 +243,18 @@
 }
 
 .spin {
-  width: 92px;
-  height: 92px;
+  width: 96px;
+  height: 96px;
   border-radius: 50%;
-  border: 6px solid #fde68a;
+  border: 5px solid #fff4c2;
   background:
-    radial-gradient(circle at 40% 30%, #fff7d6, #facc15 42%, #b45309);
+    radial-gradient(circle at 35% 30%, #fff, #fde047 36%, #f59e0b 70%, #b45309);
   color: #1c1408;
   font-weight: 900;
-  font-size: 16px;
+  font-size: 18px;
+  letter-spacing: 0.04em;
   cursor: pointer;
-  box-shadow: 0 10px 0 #7c4a12, 0 16px 30px rgba(0,0,0,0.4);
+  box-shadow: 0 8px 0 #7c4a12, 0 18px 30px rgba(0,0,0,0.45), inset 0 -8px 12px rgba(120, 53, 15, 0.25);
 }
 
 .spin:disabled {
@@ -349,8 +364,7 @@
 @media (max-width: 720px) {
   .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dock { grid-template-columns: 1fr; justify-items: center; }
-  .cell { width: 54px; height: 54px; }
-  .glyph, .scatterArt { width: 42px; height: 42px; }
+  .reels { --cell: 58px; }
   .spin { width: 76px; height: 76px; }
   .title { font-size: 26px; }
 }

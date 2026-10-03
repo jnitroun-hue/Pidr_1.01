@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { SLOT_GAMES } from '@/lib/slots/games';
-import SlotPoster from '@/components/slots/SlotPoster';
+import { slotPoster } from '@/lib/slots/art';
 import styles from './Slots.module.css';
 
 export default function SlotsLobbyPage() {
@@ -26,7 +26,7 @@ export default function SlotsLobbyPage() {
             className={styles.card}
             onClick={() => router.push(`/slots/play?game=${game.id}`)}
           >
-            <SlotPoster gameId={game.id} />
+            <img src={slotPoster(game.id)} alt="" />
             <span className={styles.cardFoot}>
               <strong>{game.title}</strong>
               <span>{game.bonus.title} · 10 спинов</span>

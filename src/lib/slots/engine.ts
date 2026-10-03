@@ -1,5 +1,6 @@
 import { pickWeighted, randomInt } from './rng';
 import type { SlotGame, SlotSymbol } from './games';
+import { applyCharacter, dragonGift, type SlotEvent } from './characters';
 
 export type SpinWin = {
   kind: 'line' | 'ways' | 'scatter';
@@ -18,6 +19,7 @@ export type SpinResult = {
   totalWin: number;
   capped: boolean;
   scatterCount: number;
+  events: SlotEvent[];
 };
 
 export type BonusPlay = {
@@ -77,8 +79,28 @@ function applyBonusGrid(game: SlotGame, grid: string[][], index: number): string
       next[reel][randomInt(game.rows)] = wild;
     }
   }
-  if (game.bonus.kind === 'rising') {
-    void index;
+  if (game.bonus.kind === 'arrow') {
+    const spotReel = randomInt(game.reels);
+    const spotRow = randomInt(game.rows);
+    next[spotReel][spotRow] = wild;
+  }
+  if (game.bonus.kind === 'pollen') {
+    for (let reel = 0; reel < game.reels; reel += 1) {
+      for (let row = 0; row < game.rows; row += 1) {
+        if (next[reel][row] === 'bloom') next[reel][row] = wild;
+      }
+    }
+  }
+  if (game.bonus.kind === 'breath') {
+    next[randomInt(game.reels)][randomInt(game.rows)] = 'horn';
+  }
+  if (game.bonus.kind === 'throne') {
+    const middle = Math.floor(game.reels / 2);
+    for (let row = 0; row < game.rows; row += 1) next[middle][row] = wild;
+  }
+  if (game.bonus.kind === 'slash') {
+    const row = index % game.rows;
+    for (let reel = 0; reel < game.reels; reel += 1) next[reel][row] = wild;
   }
   return next;
 }
@@ -94,12 +116,28 @@ function bonusMultiplier(game: SlotGame, index: number, natural: number, free: b
   if (!free) return natural;
   if (game.bonus.kind === 'rising') return Math.ceil((index + 1) / 2);
   if (game.bonus.kind === 'siren') return Math.max(2, natural);
+  if (game.bonus.kind === 'breath') return Math.max(3, natural);
   return natural;
 }
 
+function expandOakWilds(game: SlotGame, grid: string[][]): string[][] {
+  if (game.id !== 'oak-fortune') return grid;
+  const wild = wildId(game);
+  return grid.map((reel) => (reel.includes(wild) ? reel.map(() => wild) : reel));
+}
+
 export function spinSlot(game: SlotGame, totalBet: number): SpinResult & { bonus: BonusPlay | null } {
-  const grid = drawGrid(game, game.symbols);
+  const acted = applyCharacter(game, drawGrid(game, game.symbols));
+  const grid = expandOakWilds(game, acted.grid);
   const played = evaluateGrid(game, grid, totalBet, true, 0);
+  const gift = dragonGift(game, played.totalWin);
+  if (gift?.multiplier) {
+    played.totalWin = roundMoney(played.totalWin * gift.multiplier);
+    played.multiplier = gift.multiplier;
+    played.events = [...acted.events, gift];
+  } else {
+    played.events = acted.events;
+  }
   const bonus = played.scatterCount >= 3 ? playBonus(game, totalBet, played.scatterCount) : null;
   const cap = totalBet * game.maxWinMultiplier;
   let totalWin = played.totalWin + (bonus?.totalWin ?? 0);
@@ -116,7 +154,7 @@ function playBonus(game: SlotGame, totalBet: number, scatterCount: number): Bonu
   const bag = bonusBag(game);
   const spins: SpinResult[] = [];
   for (let index = 0; index < FREE_SPINS; index += 1) {
-    const grid = applyBonusGrid(game, drawGrid(game, bag), index);
+    const grid = expandOakWilds(game, applyBonusGrid(game, drawGrid(game, bag), index));
     spins.push(evaluateGrid(game, grid, totalBet, false, index));
   }
   return {
@@ -197,7 +235,7 @@ function evaluateGrid(game: SlotGame, grid: string[][], totalBet: number, paySca
   const multiplier = base > 0 ? bonusMultiplier(game, freeIndex, natural, !payScatter) : 1;
   const totalWin = roundMoney(base * multiplier);
 
-  return { grid, wins, multiplier, totalWin, capped: false, scatterCount };
+  return { grid, wins, multiplier, totalWin, capped: false, scatterCount, events: [] };
 }
 
 function roundMoney(value: number): number {
