@@ -29,7 +29,7 @@ export default function SlotsLobbyPage() {
             <SlotPoster gameId={game.id} />
             <span className={styles.cardFoot}>
               <strong>{game.title}</strong>
-              <span>{game.volatility}</span>
+              <span>{game.bonus.title} · 10 спинов</span>
             </span>
           </button>
         ))}

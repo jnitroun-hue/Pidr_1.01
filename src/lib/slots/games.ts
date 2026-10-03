@@ -24,6 +24,11 @@ export type SlotGame = {
   maxWinMultiplier: number;
   accent: string;
   felt: string;
+  bonus: {
+    title: string;
+    rule: string;
+    kind: 'wild-reel' | 'rising' | 'premium-only' | 'tide' | 'siren';
+  };
 };
 
 const LINES_20: number[][] = [
@@ -64,6 +69,11 @@ export const SLOT_GAMES: SlotGame[] = [
     accent: '#f5c518',
     felt: '#3a2410',
     maxWinMultiplier: 2500,
+    bonus: {
+      kind: 'wild-reel',
+      title: 'Золотой дождь',
+      rule: 'В каждом бесплатном спине один случайный барабан целиком становится диким.',
+    },
     multipliers: NO_MULTIPLIER,
     symbols: [
       { id: 'cherry', name: 'Вишня', weight: 46, pays: [5, 15, 40] },
@@ -88,6 +98,11 @@ export const SLOT_GAMES: SlotGame[] = [
     accent: '#f97316',
     felt: '#1a120c',
     maxWinMultiplier: 5000,
+    bonus: {
+      kind: 'rising',
+      title: 'Сундук открыт',
+      rule: 'Множитель растёт со спина: x1, x2 и дальше до x5.',
+    },
     multipliers: NO_MULTIPLIER,
     symbols: [
       { id: 'coin', name: 'Монета', weight: 50, pays: [3, 8, 18] },
@@ -111,6 +126,11 @@ export const SLOT_GAMES: SlotGame[] = [
     accent: '#84cc16',
     felt: '#14240f',
     maxWinMultiplier: 3000,
+    bonus: {
+      kind: 'premium-only',
+      title: 'Лунная поляна',
+      rule: 'Листья и жёлуди уходят с барабанов, остаются старшие символы.',
+    },
     multipliers: NO_MULTIPLIER,
     symbols: [
       { id: 'leaf', name: 'Лист', weight: 44, pays: [3, 10, 31] },
@@ -134,6 +154,11 @@ export const SLOT_GAMES: SlotGame[] = [
     accent: '#22d3ee',
     felt: '#071824',
     maxWinMultiplier: 4000,
+    bonus: {
+      kind: 'tide',
+      title: 'Прилив',
+      rule: 'На каждом барабане в каждом спине появляется дикий символ.',
+    },
     multipliers: NO_MULTIPLIER,
     symbols: [
       { id: 'drop', name: 'Капля', weight: 42, pays: [1, 3, 8] },
@@ -157,6 +182,11 @@ export const SLOT_GAMES: SlotGame[] = [
     accent: '#e11d48',
     felt: '#1a0610',
     maxWinMultiplier: 8000,
+    bonus: {
+      kind: 'siren',
+      title: 'Ночная сирена',
+      rule: 'Каждый выигрышный бесплатный спин получает множитель не ниже x2.',
+    },
     multipliers: [
       { value: 1, weight: 900 },
       { value: 2, weight: 60 },

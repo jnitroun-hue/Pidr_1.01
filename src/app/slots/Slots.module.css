@@ -175,10 +175,18 @@
   box-shadow: inset 0 0 0 2px rgba(255, 236, 180, 0.28), 0 8px 16px rgba(0, 0, 0, 0.35);
 }
 
-.glyph {
+.glyph, .scatterArt {
   width: 62px;
   height: 62px;
   filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.35));
+}
+
+.scatterArt {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  object-fit: cover;
+  box-shadow: 0 0 0 2px #f5c518;
 }
 
 .spinning .glyph {
@@ -278,9 +286,48 @@
   font-weight: 700;
 }
 
-.paySymbol svg {
+.paySymbol svg, .paySymbol img {
   width: 36px;
   height: 36px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.bonusSplash, .bonusDone {
+  margin-top: 12px;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 16px;
+  border-radius: 18px;
+  text-align: center;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(245, 197, 24, 0.28), transparent 55%),
+    #111827;
+  border: 1px solid rgba(250, 204, 21, 0.45);
+}
+
+.bonusSplash img, .bonusDone img {
+  width: 96px;
+  height: 96px;
+  border-radius: 18px;
+  object-fit: cover;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+}
+
+.bonusSplash b {
+  font-size: 22px;
+}
+
+.bonusSplash p, .bonusDone span {
+  margin: 0;
+  color: #cbd5e1;
+}
+
+.bonusDone {
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  text-align: left;
 }
 
 .error {
@@ -303,7 +350,7 @@
   .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dock { grid-template-columns: 1fr; justify-items: center; }
   .cell { width: 54px; height: 54px; }
-  .glyph { width: 42px; height: 42px; }
+  .glyph, .scatterArt { width: 42px; height: 42px; }
   .spin { width: 76px; height: 76px; }
   .title { font-size: 26px; }
 }

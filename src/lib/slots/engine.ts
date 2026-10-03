@@ -1,4 +1,4 @@
-import { pickWeighted } from './rng';
+import { pickWeighted, randomInt } from './rng';
 import type { SlotGame, SlotSymbol } from './games';
 
 export type SpinWin = {
@@ -17,6 +17,15 @@ export type SpinResult = {
   multiplier: number;
   totalWin: number;
   capped: boolean;
+  scatterCount: number;
+};
+
+export type BonusPlay = {
+  title: string;
+  rule: string;
+  scatterCount: number;
+  spins: SpinResult[];
+  totalWin: number;
 };
 
 function payingSymbols(game: SlotGame): SlotSymbol[] {
@@ -38,16 +47,88 @@ function payForCount(symbol: SlotSymbol, count: number): number {
   return symbol.pays[Math.min(count, 5) - 3] ?? 0;
 }
 
-export function spinSlot(game: SlotGame, totalBet: number): SpinResult {
+const FREE_SPINS = 10;
+
+function wildId(game: SlotGame): string {
+  return game.symbols.find((symbol) => symbol.wild)?.id ?? 'wild';
+}
+
+function drawGrid(game: SlotGame, bag: SlotSymbol[]): string[][] {
   const grid: string[][] = [];
   for (let reel = 0; reel < game.reels; reel += 1) {
     const column: string[] = [];
     for (let row = 0; row < game.rows; row += 1) {
-      column.push(pickWeighted(game.symbols).id);
+      column.push(pickWeighted(bag).id);
     }
     grid.push(column);
   }
+  return grid;
+}
 
+function applyBonusGrid(game: SlotGame, grid: string[][], index: number): string[][] {
+  const next = grid.map((reel) => [...reel]);
+  const wild = wildId(game);
+  if (game.bonus.kind === 'wild-reel') {
+    const reel = randomInt(game.reels);
+    for (let row = 0; row < game.rows; row += 1) next[reel][row] = wild;
+  }
+  if (game.bonus.kind === 'tide') {
+    for (let reel = 0; reel < game.reels; reel += 1) {
+      next[reel][randomInt(game.rows)] = wild;
+    }
+  }
+  if (game.bonus.kind === 'rising') {
+    void index;
+  }
+  return next;
+}
+
+function bonusBag(game: SlotGame): SlotSymbol[] {
+  if (game.bonus.kind !== 'premium-only') return game.symbols;
+  const low = new Set(['leaf', 'acorn']);
+  const bag = game.symbols.filter((symbol) => !low.has(symbol.id));
+  return bag.length ? bag : game.symbols;
+}
+
+function bonusMultiplier(game: SlotGame, index: number, natural: number, free: boolean): number {
+  if (!free) return natural;
+  if (game.bonus.kind === 'rising') return Math.ceil((index + 1) / 2);
+  if (game.bonus.kind === 'siren') return Math.max(2, natural);
+  return natural;
+}
+
+export function spinSlot(game: SlotGame, totalBet: number): SpinResult & { bonus: BonusPlay | null } {
+  const grid = drawGrid(game, game.symbols);
+  const played = evaluateGrid(game, grid, totalBet, true, 0);
+  const bonus = played.scatterCount >= 3 ? playBonus(game, totalBet, played.scatterCount) : null;
+  const cap = totalBet * game.maxWinMultiplier;
+  let totalWin = played.totalWin + (bonus?.totalWin ?? 0);
+  let capped = played.capped;
+  if (totalWin > cap) {
+    capped = true;
+    if (bonus) bonus.totalWin = Math.max(0, cap - played.totalWin);
+    totalWin = cap;
+  }
+  return { ...played, totalWin, capped, bonus };
+}
+
+function playBonus(game: SlotGame, totalBet: number, scatterCount: number): BonusPlay {
+  const bag = bonusBag(game);
+  const spins: SpinResult[] = [];
+  for (let index = 0; index < FREE_SPINS; index += 1) {
+    const grid = applyBonusGrid(game, drawGrid(game, bag), index);
+    spins.push(evaluateGrid(game, grid, totalBet, false, index));
+  }
+  return {
+    title: game.bonus.title,
+    rule: game.bonus.rule,
+    scatterCount,
+    spins,
+    totalWin: spins.reduce((sum, spin) => sum + spin.totalWin, 0),
+  };
+}
+
+function evaluateGrid(game: SlotGame, grid: string[][], totalBet: number, payScatter: boolean, freeIndex: number): SpinResult {
   const wins: SpinWin[] = [];
   if (game.mode === 'lines') {
     const lineBet = totalBet / game.lines.length;
@@ -97,28 +178,26 @@ export function spinSlot(game: SlotGame, totalBet: number): SpinResult {
   }
 
   const scatter = game.symbols.find((symbol) => symbol.scatter);
-  if (scatter) {
-    const count = grid.flat().filter((id) => id === scatter.id).length;
-    const multiplier = payForCount(scatter, count);
+  const scatterCount = scatter ? grid.flat().filter((id) => id === scatter.id).length : 0;
+  if (scatter && payScatter && scatterCount >= 3) {
+    const multiplier = payForCount(scatter, scatterCount);
     if (multiplier > 0) {
       wins.push({
         kind: 'scatter',
         symbolId: scatter.id,
         symbolName: scatter.name,
-        count,
+        count: scatterCount,
         amount: roundMoney(totalBet * multiplier),
       });
     }
   }
 
   const base = wins.reduce((sum, win) => sum + win.amount, 0);
-  const multiplier = base > 0 ? pickWeighted(game.multipliers).value : 1;
-  let totalWin = roundMoney(base * multiplier);
-  const cap = totalBet * game.maxWinMultiplier;
-  const capped = totalWin > cap;
-  if (capped) totalWin = cap;
+  const natural = base > 0 ? pickWeighted(game.multipliers).value : 1;
+  const multiplier = base > 0 ? bonusMultiplier(game, freeIndex, natural, !payScatter) : 1;
+  const totalWin = roundMoney(base * multiplier);
 
-  return { grid, wins, multiplier, totalWin, capped };
+  return { grid, wins, multiplier, totalWin, capped: false, scatterCount };
 }
 
 function roundMoney(value: number): number {

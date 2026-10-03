@@ -10,7 +10,7 @@ import {
   GRAM_UNIT_BETS,
   getSlotGame,
 } from '@/lib/slots/games';
-import { formatGramUnits, spinSlot, type SpinResult } from '@/lib/slots/engine';
+import { formatGramUnits, spinSlot, type BonusPlay, type SpinResult } from '@/lib/slots/engine';
 import SlotGlyph from '@/components/slots/SlotGlyph';
 import styles from '../Slots.module.css';
 
@@ -31,6 +31,8 @@ function PlayInner() {
   const [error, setError] = useState('');
   const [showPay, setShowPay] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [feature, setFeature] = useState<BonusPlay | null>(null);
+  const [featureStep, setFeatureStep] = useState(-1);
 
   const bets = mode === 'gram' ? GRAM_UNIT_BETS : COIN_BETS;
   const bet = bets[Math.min(betIndex, bets.length - 1)];
@@ -85,6 +87,7 @@ function PlayInner() {
         const next = spinSlot(game, bet);
         setDemoChips((value) => value - bet + next.totalWin);
         setResult(next);
+        if (next.bonus) await revealBonus(next.bonus);
         return;
       }
       await ensureBalance();
@@ -103,19 +106,37 @@ function PlayInner() {
       if (!data.success) throw new Error(data.error || 'Спин не прошёл');
       if (mode === 'coins') setCoins(Number(data.balance));
       else setGramUnits(Number(data.balance));
-      setResult({
+      const next: SpinResult & { bonus: BonusPlay | null } = {
         grid: data.grid,
         wins: data.wins,
         multiplier: data.multiplier,
         totalWin: data.totalWin,
         capped: data.capped,
-      });
+        scatterCount: data.scatterCount ?? 0,
+        bonus: data.bonus ?? null,
+      };
+      setResult(next);
+      if (next.bonus) await revealBonus(next.bonus);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка спина');
     } finally {
       setSpinning(false);
     }
   }
+
+  async function revealBonus(bonus: BonusPlay) {
+    setFeature(bonus);
+    setFeatureStep(-1);
+    await wait(1100);
+    for (let index = 0; index < bonus.spins.length; index += 1) {
+      setFeatureStep(index);
+      setResult((current) => current ? { ...current, grid: bonus.spins[index].grid, wins: bonus.spins[index].wins, multiplier: bonus.spins[index].multiplier } : current);
+      await wait(700);
+    }
+    setFeatureStep(bonus.spins.length);
+  }
+
+  const money = (value: number) => mode === 'gram' ? `${formatGramUnits(value)} GRAM` : String(value);
 
   const balanceLabel = mode === 'gram'
     ? `${formatGramUnits(balance || 0)} GRAM`
@@ -139,7 +160,11 @@ function PlayInner() {
                 <div key={reelIndex} className={styles.reel}>
                   {reel.map((symbolId, rowIndex) => (
                     <div key={`${reelIndex}-${rowIndex}`} className={styles.cell} title={game.symbols.find((item) => item.id === symbolId)?.name}>
-                      <SlotGlyph id={symbolId} className={styles.glyph} />
+                      {symbolId === 'scatter' ? (
+                        <img src="/img/slots/scatter-bonus.jpg" alt="" className={styles.scatterArt} />
+                      ) : (
+                        <SlotGlyph id={symbolId} className={styles.glyph} />
+                      )}
                     </div>
                   ))}
                 </div>
@@ -176,11 +201,37 @@ function PlayInner() {
           </div>
         </div>
 
-        {result && (
+        {result && !feature && (
           <div className={styles.win}>
             {result.totalWin > 0
               ? `Выигрыш ${mode === 'gram' ? formatGramUnits(result.totalWin) + ' GRAM' : result.totalWin}${result.multiplier > 1 ? ` · множитель x${result.multiplier}` : ''}`
               : 'Пустой спин'}
+          </div>
+        )}
+        {feature && featureStep >= 0 && featureStep < feature.spins.length && (
+          <div className={styles.win}>
+            {feature.title} · спин {featureStep + 1} из {feature.spins.length}
+            {feature.spins[featureStep].multiplier > 1 ? ` · x${feature.spins[featureStep].multiplier}` : ''}
+            {` · ${money(feature.spins[featureStep].totalWin)}`}
+          </div>
+        )}
+        {feature && featureStep >= feature.spins.length && (
+          <div className={styles.bonusDone}>
+            <img src="/img/slots/scatter-bonus.jpg" alt="" />
+            <div>
+              <strong>{feature.title} завершён</strong>
+              <span>Бонус принёс {money(feature.totalWin)}{result?.capped ? ' · сработал потолок' : ''}</span>
+            </div>
+            <button type="button" className={styles.pay} onClick={() => setFeature(null)}>Закрыть</button>
+          </div>
+        )}
+        {feature && featureStep < 0 && (
+          <div className={styles.bonusSplash}>
+            <img src="/img/slots/scatter-bonus.jpg" alt="" />
+            <strong>{feature.scatterCount} скаттера</strong>
+            <b>{feature.title}</b>
+            <p>{feature.rule}</p>
+            <span>10 бесплатных спинов</span>
           </div>
         )}
         {error && <p className={styles.error}>{error}</p>}
@@ -203,8 +254,8 @@ function PlayInner() {
             {game.symbols.map((symbol) => (
               <div key={symbol.id} className={styles.payRow}>
                 <span className={styles.paySymbol}>
-                  <SlotGlyph id={symbol.id} />
-                  {symbol.name}{symbol.wild ? ' · заменяет' : ''}{symbol.scatter ? ' · где угодно' : ''}
+                  {symbol.scatter ? <img src="/img/slots/scatter-bonus.jpg" alt="" /> : <SlotGlyph id={symbol.id} />}
+                  {symbol.name}{symbol.wild ? ' · заменяет' : ''}{symbol.scatter ? ' · 3–5 запускают бонус' : ''}
                 </span>
                 <span>x{symbol.pays[0]} / x{symbol.pays[1]} / x{symbol.pays[2]}</span>
               </div>
