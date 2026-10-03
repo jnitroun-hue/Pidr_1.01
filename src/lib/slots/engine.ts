@@ -70,19 +70,20 @@ function wildId(game: SlotGame): string {
   return game.symbols.find((symbol) => symbol.wild)?.id ?? 'wild';
 }
 
-function boostScatter(game: SlotGame): SlotSymbol[] {
-  return game.symbols.map((symbol) => (
-    symbol.scatter
-      ? { ...symbol, weight: Math.max(symbol.weight + 1, Math.round(symbol.weight * 1.5)) }
-      : symbol
-  ));
-}
-
-function seedScatter(game: SlotGame, grid: string[][]): string[][] {
+function anteScatter(game: SlotGame, grid: string[][]): string[][] {
+  if (randomInt(10000) >= 1677) return grid;
   const scatter = game.symbols.find((symbol) => symbol.scatter);
-  if (!scatter || grid.some((reel) => reel.includes(scatter.id))) return grid;
-  const next = grid.map((reel) => [...reel]);
-  next[randomInt(game.reels)][randomInt(game.rows)] = scatter.id;
+  if (!scatter) return grid;
+  const spots: Array<[number, number]> = [];
+  grid.forEach((reel, reelIndex) => {
+    reel.forEach((id, row) => {
+      if (id !== scatter.id) spots.push([reelIndex, row]);
+    });
+  });
+  if (!spots.length) return grid;
+  const [reel, row] = spots[randomInt(spots.length)];
+  const next = grid.map((column) => [...column]);
+  next[reel][row] = scatter.id;
   return next;
 }
 
@@ -170,10 +171,9 @@ function expandOakWilds(game: SlotGame, grid: string[][]): string[][] {
 }
 
 export function spinSlot(game: SlotGame, totalBet: number, ante = false): SpinResult & { bonus: BonusPlay | null } {
-  const bag = ante && game.ante === 'boost' ? boostScatter(game) : game.symbols;
-  const acted = applyCharacter(game, drawGrid(game, bag));
+  const acted = applyCharacter(game, drawGrid(game, game.symbols));
   const drawn = expandOakWilds(game, acted.grid);
-  const grid = ante && game.ante === 'seed' ? seedScatter(game, drawn) : drawn;
+  const grid = ante ? anteScatter(game, drawn) : drawn;
   const played = evaluateGrid(game, grid, totalBet, true, 0);
   const gift = dragonGift(game, played.totalWin);
   if (gift?.multiplier) {

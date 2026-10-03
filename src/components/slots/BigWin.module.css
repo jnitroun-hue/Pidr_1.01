@@ -4,7 +4,7 @@
   z-index: 2000;
   display: grid;
   place-items: center;
-  background: rgba(2, 6, 16, 0.72);
+  background: #140c04 center / cover no-repeat;
   overflow: hidden;
 }
 
@@ -42,26 +42,30 @@
 
 .card p {
   margin: 0;
-  letter-spacing: 0.16em;
-  font-size: 13px;
-  font-weight: 800;
-  color: #fde68a;
+  font-family: Georgia, "Times New Roman", serif;
+  letter-spacing: 0.14em;
+  font-size: clamp(22px, 6vw, 40px);
+  font-weight: 900;
+  color: #fff6c8;
+  text-shadow: 0 3px 0 #7c4a12, 0 0 18px rgba(250, 204, 21, 0.8);
 }
 
 .card strong {
   display: block;
-  margin: 8px 0;
-  font-size: clamp(64px, 16vw, 112px);
-  line-height: 0.9;
+  margin: 6px 0 0;
+  font-size: clamp(72px, 18vw, 128px);
+  line-height: 0.86;
   color: #fff7d6;
-  text-shadow: 0 0 24px rgba(250, 204, 21, 0.8), 0 8px 0 #7c4a12;
+  text-shadow: 0 0 24px rgba(250, 204, 21, 0.85), 0 8px 0 #7c4a12;
 }
 
-.card span {
+.card b {
   display: block;
-  font-size: 22px;
-  font-weight: 800;
+  margin-top: 8px;
+  font-size: clamp(28px, 7vw, 44px);
+  font-weight: 900;
   color: #fff;
+  text-shadow: 0 3px 0 #3f2208;
 }
 
 .card button {
@@ -87,27 +91,28 @@
   animation-delay: calc(var(--i) * -0.12s);
 }
 
-.mega .rays { animation-duration: 4s; filter: hue-rotate(20deg); }
-.mega .card { border-color: #fb923c; box-shadow: 0 0 80px rgba(251, 146, 60, 0.45); }
-.mega .card strong { color: #ffedd5; text-shadow: 0 0 30px #fb923c, 0 8px 0 #7c2d12; }
+.mega .rays { animation-duration: 4s; filter: hue-rotate(18deg); }
+.mega .card { border-color: #fb923c; box-shadow: 0 0 80px rgba(251, 146, 60, 0.55); }
+.mega .card p, .mega .card strong { color: #ffedd5; text-shadow: 0 0 28px #fb923c, 0 6px 0 #7c2d12; }
 
-.ultra {
-  animation: shake 0.45s linear infinite;
+.sensational {
+  animation: shake 0.4s linear infinite;
 }
-.ultra .rays {
+.sensational .rays {
   animation-duration: 2.2s;
-  background: repeating-conic-gradient(from 0deg, rgba(244, 63, 94, 0) 0 8deg, rgba(250, 204, 21, 0.45) 8deg 14deg);
+  background: repeating-conic-gradient(from 0deg, rgba(244, 63, 94, 0) 0 8deg, rgba(255, 244, 214, 0.55) 8deg 14deg);
 }
-.ultra .card {
+.sensational .card {
   border-color: #fecaca;
   background:
-    radial-gradient(circle at 50% 0%, rgba(254, 202, 202, 0.4), transparent 42%),
-    linear-gradient(180deg, #4c0519, #1a0a08);
-  box-shadow: 0 0 100px rgba(244, 63, 94, 0.55), 0 0 40px rgba(250, 204, 21, 0.4);
+    radial-gradient(circle at 50% 0%, rgba(254, 202, 202, 0.45), transparent 42%),
+    linear-gradient(180deg, #7f1d1d, #1a0a08 70%);
+  box-shadow: 0 0 100px rgba(244, 63, 94, 0.65), 0 0 40px rgba(250, 204, 21, 0.45);
 }
-.ultra .card strong {
+.sensational .card p,
+.sensational .card strong {
   color: #fff;
-  text-shadow: 0 0 18px #fff, 0 0 40px #fb7185, 0 8px 0 #7f1d1d;
+  text-shadow: 0 0 18px #fff, 0 0 36px #fb7185, 0 6px 0 #7f1d1d;
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }

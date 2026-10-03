@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import { getApiHeaders } from '@/lib/api-headers';
@@ -45,11 +45,21 @@ function PlayInner() {
   const [bigMultiple, setBigMultiple] = useState<number | null>(null);
   const [speed, setSpeed] = useState<ReelSpeed>('slow');
   const [ante, setAnte] = useState(false);
+  const [buyAsk, setBuyAsk] = useState<null | 'regular' | 'top'>(null);
+  const [autoLeft, setAutoLeft] = useState(0);
+  const [autoOpen, setAutoOpen] = useState(false);
+  const stopAuto = useRef(false);
+  const spinningRef = useRef(false);
+  const bigClose = useRef<(() => void) | null>(null);
+  const featureClose = useRef<(() => void) | null>(null);
+  const spinRef = useRef<() => Promise<boolean>>(async () => false);
 
   const bets = mode === 'gram' ? GRAM_UNIT_BETS : COIN_BETS;
   const bet = bets[Math.min(betIndex, bets.length - 1)];
   const charge = ante ? anteCharge(bet) : bet;
   const balance = mode === 'demo' ? demoChips : mode === 'coins' ? coins : gramUnits;
+  const live = useRef({ bet, charge, ante, mode, speed, game, demoChips });
+  live.current = { bet, charge, ante, mode, speed, game, demoChips };
 
   const emptyGrid = useMemo(
     () => Array.from({ length: game.reels }, (_, reel) =>
@@ -89,40 +99,42 @@ function PlayInner() {
     setGramUnits(Number(data.gramUnits));
   }
 
-  async function spin() {
-    if (spinning) return;
+  async function spin(): Promise<boolean> {
+    if (spinningRef.current) return false;
+    const snap = live.current;
+    spinningRef.current = true;
     setError('');
     setFeature(null);
     setSpinning(true);
-    const motion = reelSpinMs(speed, game.reels);
+    const motion = reelSpinMs(snap.speed, snap.game.reels);
     try {
-      if (mode === 'demo') {
-        if (demoChips < charge) throw new Error('Не хватает демо-фишек');
-        const next = spinSlot(game, bet, ante);
+      if (snap.mode === 'demo') {
+        if (snap.demoChips < snap.charge) throw new Error('Не хватает демо-фишек');
+        const next = spinSlot(snap.game, snap.bet, snap.ante);
         setLanded(next.grid);
         setRolling(true);
         await wait(motion);
         setRolling(false);
-        setDemoChips((value) => value - charge + next.totalWin);
+        setDemoChips((value) => value - snap.charge + next.totalWin);
         setResult(next);
-        await present(next, motion);
-        return;
+        await present(next, motion, snap.bet);
+        return true;
       }
       await ensureBalance();
       const response = await fetch('/api/slots/spin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...getApiHeaders() },
         body: JSON.stringify({
-          gameId: game.id,
-          mode,
-          bet,
-          ante,
+          gameId: snap.game.id,
+          mode: snap.mode,
+          bet: snap.bet,
+          ante: snap.ante,
           spinId: crypto.randomUUID(),
         }),
       });
       const data = await response.json();
       if (!data.success) throw new Error(data.error || 'Спин не прошёл');
-      if (mode === 'coins') setCoins(Number(data.balance));
+      if (snap.mode === 'coins') setCoins(Number(data.balance));
       else setGramUnits(Number(data.balance));
       const next: SpinResult & { bonus: BonusPlay | null } = {
         grid: data.grid,
@@ -139,16 +151,20 @@ function PlayInner() {
       await wait(motion);
       setRolling(false);
       setResult(next);
-      await present(next, motion);
+      await present(next, motion, snap.bet);
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка спина');
+      return false;
     } finally {
+      spinningRef.current = false;
       setSpinning(false);
     }
   }
 
   async function buy(tier: 'regular' | 'top') {
-    if (spinning) return;
+    if (spinningRef.current) return;
+    spinningRef.current = true;
     const cost = bet * (tier === 'top' ? 500 : 100);
     setError('');
     setFeature(null);
@@ -164,7 +180,7 @@ function PlayInner() {
         setRolling(false);
         setDemoChips((value) => value - cost + next.totalWin);
         setResult(next);
-        await present(next, motion);
+        await present(next, motion, bet);
         return;
       }
       await ensureBalance();
@@ -192,15 +208,16 @@ function PlayInner() {
       await wait(motion);
       setRolling(false);
       setResult(next);
-      await present(next, motion);
+      await present(next, motion, bet);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка покупки');
     } finally {
+      spinningRef.current = false;
       setSpinning(false);
     }
   }
 
-  async function present(next: SpinResult & { bonus: BonusPlay | null }, motion: number) {
+  async function present(next: SpinResult & { bonus: BonusPlay | null }, motion: number, baseBet: number) {
     const event = next.events?.[0];
     if (event) {
       setCast(event);
@@ -208,8 +225,26 @@ function PlayInner() {
       setCast(null);
     }
     if (next.bonus) await revealBonus(next.bonus, motion);
-    const ratio = bet > 0 ? next.totalWin / bet : 0;
-    if (ratio >= 15) setBigMultiple(ratio);
+    const ratio = baseBet > 0 ? next.totalWin / baseBet : 0;
+    if (ratio >= 15) {
+      setBigMultiple(ratio);
+      await new Promise<void>((resolve) => { bigClose.current = resolve; });
+    }
+    if (next.bonus) {
+      await new Promise<void>((resolve) => { featureClose.current = resolve; });
+    }
+  }
+
+  async function runAuto(count: number) {
+    setAutoOpen(false);
+    stopAuto.current = false;
+    for (let left = count; left > 0; left -= 1) {
+      if (stopAuto.current) break;
+      setAutoLeft(left);
+      const ok = await spinRef.current();
+      if (!ok || stopAuto.current) break;
+    }
+    setAutoLeft(0);
   }
 
   async function revealBonus(bonus: BonusPlay, motion: number) {
@@ -238,6 +273,15 @@ function PlayInner() {
   function cycleSpeed() {
     setSpeed((value) => (value === 'slow' ? 'mid' : value === 'mid' ? 'fast' : 'slow'));
   }
+
+  function finishFeature() {
+    setFeature(null);
+    featureClose.current?.();
+    featureClose.current = null;
+  }
+
+  spinRef.current = spin;
+  const locked = spinning || autoLeft > 0;
 
   return (
     <main
@@ -314,44 +358,41 @@ function PlayInner() {
           </div>
         )}
         {feature && featureStep >= 0 && featureStep < feature.spins.length && (
-          <div className={styles.ticker}>
-            {feature.title} · {featureStep + 1}/{feature.spins.length}
-            {feature.spins[featureStep].multiplier > 1 ? ` · x${feature.spins[featureStep].multiplier}` : ''}
-            {` · ${money(feature.spins[featureStep].totalWin)}`}
-          </div>
+          <div className={styles.ticker}>{featureStep + 1}/10 бесплатных спинов</div>
         )}
       </section>
 
-      <footer className={styles.console}>
-        <div className={styles.tools}>
-          <button type="button" className={styles.infoBtn} onClick={() => setShowInfo(true)} aria-label="Информация">i</button>
-          <button
-            type="button"
-            className={`${styles.ante} ${ante ? styles.anteOn : ''}`}
-            onClick={() => setAnte((value) => !value)}
-            disabled={spinning}
-          >
-            <strong>ANTE</strong>
-            <small>{ante ? 'вкл · +50%' : game.ante === 'seed' ? '1 скаттер' : 'шанс скаттера'}</small>
+      <footer className={styles.dock}>
+        <div className={`${styles.dockSide} ${styles.dockLeft}`}>
+          <button type="button" className={styles.tumbler} disabled={locked} onClick={() => setAnte((value) => !value)} aria-pressed={ante}>
+            <span>
+              <b>ANTE</b>
+              <small>+16.77%</small>
+            </span>
+            <span className={`${styles.track} ${ante ? styles.trackOn : styles.trackOff}`}>
+              <i className={styles.knob} />
+              <em>{ante ? 'ON' : 'OFF'}</em>
+            </span>
           </button>
-          <button type="button" className={styles.buy} disabled={spinning} onClick={() => void buy('regular')}>
-            Бонус
-            <small>×100</small>
-          </button>
-          <button type="button" className={`${styles.buy} ${styles.buyTop}`} disabled={spinning} onClick={() => void buy('top')}>
-            Топ
-            <small>×500</small>
-          </button>
-        </div>
-        <div className={styles.playRow}>
           <div className={styles.stakeGroup}>
-            <button type="button" className={styles.nudge} aria-label="Меньше" onClick={() => setBetIndex((value) => Math.max(0, value - 1))}>−</button>
+            <button type="button" className={styles.nudge} aria-label="Меньше" disabled={locked} onClick={() => setBetIndex((value) => Math.max(0, value - 1))}>−</button>
             <div className={styles.coin} aria-label={`Ставка ${stakeLabel}`}>
               <span>{stakeLabel}</span>
               <small>{ante ? 'анте' : 'ставка'}</small>
             </div>
-            <button type="button" className={styles.nudge} aria-label="Больше" onClick={() => setBetIndex((value) => Math.min(bets.length - 1, value + 1))}>+</button>
+            <button type="button" className={styles.nudge} aria-label="Больше" disabled={locked} onClick={() => setBetIndex((value) => Math.min(bets.length - 1, value + 1))}>+</button>
           </div>
+          <button type="button" className={styles.buy} disabled={locked} onClick={() => setBuyAsk('regular')}>
+            Бонус
+            <small>×100</small>
+          </button>
+        </div>
+        <button type="button" className={styles.spin} disabled={spinning} onClick={() => void spin()}>
+          <span>{spinning ? '…' : 'SPIN'}</span>
+          <small>{stakeLabel}</small>
+        </button>
+        <div className={`${styles.dockSide} ${styles.dockRight}`}>
+          <button type="button" className={styles.infoBtn} onClick={() => setShowInfo(true)} aria-label="Информация">i</button>
           <button
             type="button"
             className={`${styles.bolt} ${speed === 'slow' ? styles.boltSlow : speed === 'mid' ? styles.boltMid : styles.boltFast}`}
@@ -360,9 +401,24 @@ function PlayInner() {
           >
             <Bolt />
           </button>
-          <button type="button" className={styles.spin} disabled={spinning} onClick={() => void spin()}>
-            <span>{spinning ? '…' : 'SPIN'}</span>
-            <small>{stakeLabel} {unit}</small>
+          <button
+            type="button"
+            className={`${styles.autoBtn} ${autoLeft ? styles.autoOn : ''}`}
+            onClick={() => {
+              if (autoLeft) {
+                stopAuto.current = true;
+                setAutoLeft(0);
+                return;
+              }
+              if (!spinning) setAutoOpen(true);
+            }}
+          >
+            {autoLeft ? 'СТОП' : 'АВТО'}
+            <small>{autoLeft ? String(autoLeft) : '10–100'}</small>
+          </button>
+          <button type="button" className={`${styles.buy} ${styles.buyTop}`} disabled={locked} onClick={() => setBuyAsk('top')}>
+            Топ
+            <small>×500</small>
           </button>
         </div>
       </footer>
@@ -374,24 +430,50 @@ function PlayInner() {
 
       {feature && featureStep < 0 && (
         <div className={styles.overlay}>
-          <div className={styles.bonusSplash}>
+          <div className={styles.sheet}>
             <img src={slotArt(game.id, 'scatter')} alt="" />
-            <strong>{feature.scatterCount} скаттера</strong>
-            <b>{feature.title}</b>
-            <p>{feature.rule}</p>
-            <span>10 бесплатных спинов</span>
+            <p>{feature.title}</p>
+            <strong>10</strong>
+            <span>бесплатных спинов</span>
           </div>
         </div>
       )}
-      {feature && featureStep >= feature.spins.length && (
+      {feature && featureStep >= feature.spins.length && bigMultiple == null && (
         <div className={styles.overlay}>
-          <div className={styles.bonusDone}>
+          <div className={styles.sheet}>
             <img src={slotArt(game.id, 'scatter')} alt="" />
-            <div>
-              <strong>{feature.title} завершён</strong>
-              <span>Бонус принёс {money(feature.totalWin)}{result?.capped ? ' · сработал потолок' : ''}</span>
+            <p>{feature.title}</p>
+            <strong>{money(feature.totalWin)}</strong>
+            <span>{result?.capped ? 'Сработал потолок выигрыша' : 'Бонус завершён'}</span>
+            <button type="button" className={styles.sheetGo} onClick={finishFeature}>Забрать</button>
+          </div>
+        </div>
+      )}
+      {buyAsk && (
+        <div className={styles.overlay}>
+          <div className={styles.sheet}>
+            <img src={buyAsk === 'top' ? '/img/slots/bonus-top.jpg' : '/img/slots/bonus-gold.jpg'} alt="" />
+            <p>{buyAsk === 'top' ? 'Топ-бонус' : 'Бонус'}</p>
+            <strong>{money(bet * (buyAsk === 'top' ? 500 : 100))}</strong>
+            <span>Списать эту сумму и сразу открыть 10 бесплатных спинов?</span>
+            <div className={styles.sheetActions}>
+              <button type="button" onClick={() => setBuyAsk(null)}>Отмена</button>
+              <button type="button" className={styles.sheetGo} onClick={() => { const tier = buyAsk; setBuyAsk(null); void buy(tier); }}>Играть</button>
             </div>
-            <button type="button" className={styles.buy} onClick={() => setFeature(null)}>Закрыть</button>
+          </div>
+        </div>
+      )}
+      {autoOpen && (
+        <div className={styles.overlay}>
+          <div className={styles.sheet}>
+            <p>Автоспины</p>
+            <span>Сколько вращений запустить подряд</span>
+            <div className={styles.autoList}>
+              {[10, 20, 50, 100].map((count) => (
+                <button key={count} type="button" onClick={() => void runAuto(count)}>{count}</button>
+              ))}
+            </div>
+            <button type="button" onClick={() => setAutoOpen(false)}>Отмена</button>
           </div>
         </div>
       )}
@@ -401,7 +483,11 @@ function PlayInner() {
         <BigWin
           multiple={bigMultiple}
           amountLabel={money(result.totalWin)}
-          onClose={() => setBigMultiple(null)}
+          onClose={() => {
+            setBigMultiple(null);
+            bigClose.current?.();
+            bigClose.current = null;
+          }}
         />
       )}
     </main>
