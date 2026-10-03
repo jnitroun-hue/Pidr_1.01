@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import { getApiHeaders } from '@/lib/api-headers';
@@ -26,7 +26,8 @@ function PlayInner() {
   const router = useRouter();
   const params = useSearchParams();
   const game = getSlotGame(params.get('game') || '') ?? getSlotGame('golden-must')!;
-  const [mode, setMode] = useState<Mode>('demo');
+  const modeParam = params.get('mode');
+  const mode: Mode = modeParam === 'coins' || modeParam === 'gram' ? modeParam : 'demo';
   const [betIndex, setBetIndex] = useState(2);
   const [demoChips, setDemoChips] = useState(DEMO_START_CHIPS);
   const [coins, setCoins] = useState<number | null>(null);
@@ -45,10 +46,13 @@ function PlayInner() {
   const [bigMultiple, setBigMultiple] = useState<number | null>(null);
   const [speed, setSpeed] = useState<ReelSpeed>('slow');
   const [ante, setAnte] = useState(false);
+  const [showLines, setShowLines] = useState(false);
   const [buyAsk, setBuyAsk] = useState<null | 'regular' | 'top'>(null);
   const [autoLeft, setAutoLeft] = useState(0);
   const [autoOpen, setAutoOpen] = useState(false);
   const stopAuto = useRef(false);
+  const bonusGo = useRef<(() => void) | null>(null);
+  const autoLeftRef = useRef(0);
   const spinningRef = useRef(false);
   const bigClose = useRef<(() => void) | null>(null);
   const featureClose = useRef<(() => void) | null>(null);
@@ -68,6 +72,10 @@ function PlayInner() {
     [game]
   );
   const grid = result?.grid ?? emptyGrid;
+
+  useEffect(() => {
+    if (mode !== 'demo') void loadBalance();
+  }, [mode]);
 
   async function loadBalance() {
     const response = await fetch('/api/slots/balance', { headers: getApiHeaders(), cache: 'no-store' });
@@ -224,7 +232,7 @@ function PlayInner() {
       await wait(1100);
       setCast(null);
     }
-    if (next.bonus) await revealBonus(next.bonus, motion);
+    if (next.bonus) await revealBonus(next.bonus);
     const ratio = baseBet > 0 ? next.totalWin / baseBet : 0;
     if (ratio >= 15) {
       setBigMultiple(ratio);
@@ -247,18 +255,22 @@ function PlayInner() {
     setAutoLeft(0);
   }
 
-  async function revealBonus(bonus: BonusPlay, motion: number) {
+  async function revealBonus(bonus: BonusPlay) {
     setFeature(bonus);
     setFeatureStep(-1);
-    await wait(1100);
+    await new Promise<void>((resolve) => {
+      bonusGo.current = resolve;
+      if (autoLeftRef.current > 0) window.setTimeout(resolve, 1600);
+    });
+    bonusGo.current = null;
     for (let index = 0; index < bonus.spins.length; index += 1) {
       setFeatureStep(index);
       setLanded(bonus.spins[index].grid);
       setRolling(true);
-      await wait(motion);
+      await wait(reelSpinMs(speed, game.reels, true));
       setRolling(false);
       setResult((current) => current ? { ...current, grid: bonus.spins[index].grid, wins: bonus.spins[index].wins, multiplier: bonus.spins[index].multiplier } : current);
-      await wait(speed === 'fast' ? 180 : 320);
+        await wait(speed === 'fast' ? 160 : 480);
     }
     setFeatureStep(bonus.spins.length);
   }
@@ -281,7 +293,34 @@ function PlayInner() {
   }
 
   spinRef.current = spin;
+  autoLeftRef.current = autoLeft;
   const locked = spinning || autoLeft > 0;
+  const bonusIntro = Boolean(feature && featureStep < 0);
+  const bonusPace = Boolean(feature && featureStep >= 0 && featureStep < feature.spins.length);
+  const shownWins = !rolling && bonusPace && feature
+    ? feature.spins[featureStep].wins
+    : !rolling && !feature && result ? result.wins : [];
+  const shownAmount = bonusPace && feature
+    ? feature.spins[featureStep].totalWin
+    : result?.totalWin ?? 0;
+  const shownGrid = landed ?? result?.grid ?? null;
+
+  function reelHighlight(reelIndex: number): boolean[] {
+    const hot = Array.from({ length: game.rows }, () => false);
+    if (!showLines || rolling || !shownGrid) return hot;
+    for (const win of shownWins) {
+      if (win.kind === 'line' && win.lineIndex != null && reelIndex < win.count) {
+        hot[game.lines[win.lineIndex][reelIndex]] = true;
+      }
+      if (win.kind === 'ways' && reelIndex < win.count) {
+        shownGrid[reelIndex].forEach((id, row) => {
+          const symbol = game.symbols.find((item) => item.id === id);
+          if (id === win.symbolId || symbol?.wild) hot[row] = true;
+        });
+      }
+    }
+    return hot;
+  }
 
   return (
     <main
@@ -296,25 +335,6 @@ function PlayInner() {
         <div className={styles.hudTitle}>
           <strong>{game.title}</strong>
           <span>до x{game.maxWinMultiplier}</span>
-        </div>
-        <div className={styles.modes} role="tablist" aria-label="На что играть">
-          {(['demo', 'coins', 'gram'] as Mode[]).map((item) => (
-            <button
-              key={item}
-              type="button"
-              role="tab"
-              aria-selected={mode === item}
-              className={`${styles.mode} ${mode === item ? styles.active : ''}`}
-              onClick={() => {
-                setMode(item);
-                setResult(null);
-                setError('');
-                if (item !== 'demo') void loadBalance();
-              }}
-            >
-              {item === 'demo' ? 'Демо' : item === 'coins' ? 'Монеты' : 'GRAM'}
-            </button>
-          ))}
         </div>
         <div className={styles.balance}>
           <span>{unit}</span>
@@ -345,25 +365,59 @@ function PlayInner() {
                 landed={reel}
                 rolling={rolling}
                 speed={speed}
+                bonus={bonusPace}
+                highlight={reelHighlight(reelIndex)}
               />
             ))}
           </div>
           {cast ? <CharacterCast event={cast} /> : null}
         </div>
-        {result && !feature && (
-          <div className={styles.ticker}>
-            {result.totalWin > 0
-              ? `Выигрыш ${money(result.totalWin)}${result.multiplier > 1 ? ` · x${result.multiplier}` : ''}`
-              : 'Пустой спин'}
-          </div>
-        )}
-        {feature && featureStep >= 0 && featureStep < feature.spins.length && (
-          <div className={styles.ticker}>{featureStep + 1}/10 бесплатных спинов</div>
-        )}
       </section>
 
+      <div className={styles.winStrip}>
+        {bonusPace && <em>{featureStep + 1}/10 бесплатных спинов</em>}
+        {shownWins.filter((win) => win.kind !== 'scatter').slice(0, 3).map((win, index) => (
+          <div key={`${win.symbolId}-${win.lineIndex ?? index}`} className={styles.winChip}>
+            <img src={slotArt(game.id, win.symbolId)} alt="" />
+            <span>{win.kind === 'ways' ? `${win.ways} путей` : `${win.count} в линии`}</span>
+            <b>{money(win.amount)}</b>
+          </div>
+        ))}
+        {!rolling && !bonusIntro && shownAmount > 0 && <strong>{money(shownAmount)}</strong>}
+      </div>
+
       <footer className={styles.dock}>
-        <div className={`${styles.dockSide} ${styles.dockLeft}`}>
+        <div className={styles.dockTop}>
+          <div className={styles.dockCol}>
+            <button type="button" className={styles.buy} disabled={locked} onClick={() => setBuyAsk('regular')}>
+              Бонус
+              <small>×100</small>
+            </button>
+            <button type="button" className={`${styles.buy} ${styles.buyTop}`} disabled={locked} onClick={() => setBuyAsk('top')}>
+              Топ
+              <small>×500</small>
+            </button>
+            <button type="button" className={styles.tumbler} onClick={() => setShowLines((value) => !value)} aria-pressed={showLines}>
+              <span><b>ЛИНИИ</b></span>
+              <span className={`${styles.track} ${showLines ? styles.trackOn : styles.trackOff}`}>
+                <i className={styles.knob} />
+                <em>{showLines ? 'ON' : 'OFF'}</em>
+              </span>
+            </button>
+          </div>
+          <div className={styles.dockCol}>
+            <button type="button" className={styles.infoBtn} onClick={() => setShowInfo(true)} aria-label="Информация">i</button>
+            <button
+              type="button"
+              className={`${styles.bolt} ${speed === 'slow' ? styles.boltSlow : speed === 'mid' ? styles.boltMid : styles.boltFast}`}
+              onClick={cycleSpeed}
+              aria-label={speed === 'slow' ? 'Медленно' : speed === 'mid' ? 'Средне' : 'Быстро'}
+            >
+              <Bolt />
+            </button>
+          </div>
+        </div>
+        <div className={styles.dockBottom}>
           <button type="button" className={styles.tumbler} disabled={locked} onClick={() => setAnte((value) => !value)} aria-pressed={ante}>
             <span>
               <b>ANTE</b>
@@ -382,28 +436,13 @@ function PlayInner() {
             </div>
             <button type="button" className={styles.nudge} aria-label="Больше" disabled={locked} onClick={() => setBetIndex((value) => Math.min(bets.length - 1, value + 1))}>+</button>
           </div>
-          <button type="button" className={styles.buy} disabled={locked} onClick={() => setBuyAsk('regular')}>
-            Бонус
-            <small>×100</small>
-          </button>
-        </div>
-        <button type="button" className={styles.spin} disabled={spinning} onClick={() => void spin()}>
-          <span>{spinning ? '…' : 'SPIN'}</span>
-          <small>{stakeLabel}</small>
-        </button>
-        <div className={`${styles.dockSide} ${styles.dockRight}`}>
-          <button type="button" className={styles.infoBtn} onClick={() => setShowInfo(true)} aria-label="Информация">i</button>
-          <button
-            type="button"
-            className={`${styles.bolt} ${speed === 'slow' ? styles.boltSlow : speed === 'mid' ? styles.boltMid : styles.boltFast}`}
-            onClick={cycleSpeed}
-            aria-label={speed === 'slow' ? 'Медленно' : speed === 'mid' ? 'Средне' : 'Быстро'}
-          >
-            <Bolt />
+          <button type="button" className={styles.spin} disabled={spinning} onClick={() => void spin()}>
+            <span>{spinning ? '…' : 'SPIN'}</span>
+            <small>{stakeLabel}</small>
           </button>
           <button
             type="button"
-            className={`${styles.autoBtn} ${autoLeft ? styles.autoOn : ''}`}
+            className={`${styles.autoRound} ${autoLeft ? styles.autoOn : ''}`}
             onClick={() => {
               if (autoLeft) {
                 stopAuto.current = true;
@@ -412,13 +451,13 @@ function PlayInner() {
               }
               if (!spinning) setAutoOpen(true);
             }}
+            aria-label="Автоспины"
           >
-            {autoLeft ? 'СТОП' : 'АВТО'}
-            <small>{autoLeft ? String(autoLeft) : '10–100'}</small>
-          </button>
-          <button type="button" className={`${styles.buy} ${styles.buyTop}`} disabled={locked} onClick={() => setBuyAsk('top')}>
-            Топ
-            <small>×500</small>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 4a8 8 0 1 1-7.5 5.2" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+              <path d="M4 4.5v5h5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <b>{autoLeft ? autoLeft : 'auto'}</b>
           </button>
         </div>
       </footer>
@@ -430,11 +469,12 @@ function PlayInner() {
 
       {feature && featureStep < 0 && (
         <div className={styles.overlay}>
-          <div className={styles.sheet}>
-            <img src={slotArt(game.id, 'scatter')} alt="" />
-            <p>{feature.title}</p>
-            <strong>10</strong>
-            <span>бесплатных спинов</span>
+          <div className={`${styles.sheet} ${styles.congrats}`}>
+            <img src={feature.tier === 'top' ? '/img/slots/bonus-top.jpg' : '/img/slots/bonus-gold.jpg'} alt="" />
+            <p>Поздравляем!</p>
+            <strong>Вы выиграли бонусную игру</strong>
+            <span>Вам доступно 10 бесплатных вращений.</span>
+            <button type="button" className={styles.sheetGo} onClick={() => bonusGo.current?.()}>Крутить</button>
           </div>
         </div>
       )}
@@ -478,7 +518,7 @@ function PlayInner() {
         </div>
       )}
 
-      {showInfo && <SlotInfo game={game} onClose={() => setShowInfo(false)} />}
+      {showInfo && <SlotInfo game={game} bet={bet} gram={mode === 'gram'} onClose={() => setShowInfo(false)} />}
       {bigMultiple != null && result && (
         <BigWin
           multiple={bigMultiple}

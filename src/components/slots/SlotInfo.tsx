@@ -18,9 +18,19 @@ const FEATURE: Record<string, string> = {
   'blade-ronin': 'Ронин рубит один горизонтальный ряд. В топ-бонусе за спин рубятся два ряда.',
 };
 
-type Props = { game: SlotGame; onClose: () => void };
+type Props = { game: SlotGame; bet: number; gram: boolean; onClose: () => void };
 
-export default function SlotInfo({ game, onClose }: Props) {
+function payout(game: SlotGame, bet: number, pays: number, scatter: boolean): number {
+  if (scatter) return Math.round(bet * pays);
+  if (game.mode === 'ways') return Math.round((bet / 165) * pays);
+  return Math.round((bet / Math.max(1, game.lines.length)) * pays);
+}
+
+function formatPay(value: number, gram: boolean): string {
+  return gram ? (value / 100).toFixed(2) : String(value);
+}
+
+export default function SlotInfo({ game, bet, gram, onClose }: Props) {
   const [page, setPage] = useState(0);
   const pages = 4;
   return (
@@ -30,14 +40,20 @@ export default function SlotInfo({ game, onClose }: Props) {
         {page === 0 && (
           <>
             <h2>Выплаты</h2>
-            <p className={styles.note}>Числа — множитель за 3, 4 и 5 одинаковых слева направо. Скаттер платит от всей ставки. WILD заменяет любой символ, кроме скаттера. Линия из 3–5 WILD платит как самый дорогой символ.</p>
+            <p className={styles.note}>Суммы считаются от текущей ставки: 3, 4 и 5 одинаковых. Скаттер платит от всей ставки, остальные символы — от ставки на линию. WILD заменяет любой символ, кроме скаттера.</p>
             <div className={styles.symbols}>
               {game.symbols.map((symbol) => (
                 <div key={symbol.id} className={styles.symbol}>
                   <img src={slotArt(game.id, symbol.id)} alt="" />
                   <strong>{symbol.name}</strong>
                   <span>{symbol.scatter ? 'везде' : symbol.wild ? 'заменяет' : '3 / 4 / 5'}</span>
-                  <b>x{symbol.pays[0]} · x{symbol.pays[1]} · x{symbol.pays[2]}</b>
+                  <b>
+                    {formatPay(payout(game, bet, symbol.pays[0], Boolean(symbol.scatter)), gram)}
+                    {' · '}
+                    {formatPay(payout(game, bet, symbol.pays[1], Boolean(symbol.scatter)), gram)}
+                    {' · '}
+                    {formatPay(payout(game, bet, symbol.pays[2], Boolean(symbol.scatter)), gram)}
+                  </b>
                 </div>
               ))}
             </div>

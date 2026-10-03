@@ -2,8 +2,21 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { slotArt } from '@/lib/slots/art';
-import { reelMotion, type ReelSpeed } from '@/lib/slots/speed';
+import { reelPlan, type ReelSpeed } from '@/lib/slots/speed';
 import styles from '@/app/slots/Slots.module.css';
+
+const SCATTER_FX: Record<string, string> = {
+  'golden-must': styles.fxShimmer,
+  'hex-vault': styles.fxFire,
+  'oak-fortune': styles.fxFlicker,
+  'neon-river': styles.fxSpin,
+  'limitless-city': styles.fxShake,
+  'green-arrow': styles.fxPulse,
+  'fairy-glade': styles.fxSpark,
+  'ash-dragon': styles.fxFlame,
+  'frost-queen': styles.fxIce,
+  'blade-ronin': styles.fxTwist,
+};
 
 type Props = {
   gameId: string;
@@ -13,42 +26,57 @@ type Props = {
   landed: string[];
   rolling: boolean;
   speed: ReelSpeed;
+  bonus: boolean;
+  highlight: boolean[];
 };
 
-export default function SlotReel({ gameId, reelIndex, rows, symbolIds, landed, rolling, speed }: Props) {
-  const [roll, setRoll] = useState(false);
+export default function SlotReel({ gameId, reelIndex, rows, symbolIds, landed, rolling, speed, bonus, highlight }: Props) {
+  const [phase, setPhase] = useState<'idle' | 'ready' | 'go'>('idle');
+  const plan = reelPlan(speed, reelIndex, bonus);
   const filler = useMemo(() => {
-    const count = 14;
-    return Array.from({ length: count }, (_, index) => symbolIds[(index * 2 + reelIndex * 3) % symbolIds.length]);
+    const count = 16;
+    return Array.from({ length: count }, (_, index) => symbolIds[(index * 3 + reelIndex * 2) % symbolIds.length]);
   }, [symbolIds, reelIndex, rolling]);
-  const strip = rolling ? [...filler, ...landed] : landed;
+  const spinning = phase !== 'idle';
+  const strip = spinning ? [...filler, ...landed] : landed;
 
   useEffect(() => {
     if (!rolling) {
-      setRoll(false);
+      setPhase('idle');
       return;
     }
-    setRoll(false);
-    const frame = requestAnimationFrame(() => {
-      requestAnimationFrame(() => setRoll(true));
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [rolling, landed.join('|')]);
+    setPhase('idle');
+    let frame = 0;
+    const timer = window.setTimeout(() => {
+      setPhase('ready');
+      frame = requestAnimationFrame(() => {
+        frame = requestAnimationFrame(() => setPhase('go'));
+      });
+    }, plan.delay);
+    return () => {
+      window.clearTimeout(timer);
+      cancelAnimationFrame(frame);
+    };
+  }, [rolling, landed.join('|'), plan.delay]);
 
   return (
     <div className={styles.reelWindow} style={{ ['--rows' as string]: rows }}>
       <div
         className={styles.reelStrip}
         style={{
-          transform: roll ? `translateY(calc(${filler.length} * -1 * var(--cell)))` : 'translateY(0)',
-          transition: roll ? `transform ${reelMotion(speed, reelIndex)}ms cubic-bezier(0.15, 0.75, 0.12, 1)` : 'none',
+          transform: phase === 'go' ? `translateY(calc(${filler.length} * var(--cell)))` : 'translateY(0)',
+          transition: phase === 'go' ? `transform ${plan.duration}ms cubic-bezier(0.12, 0.72, 0.14, 1)` : 'none',
         }}
       >
-        {strip.map((id, index) => (
-          <div key={`${reelIndex}-${index}-${id}`} className={styles.cell}>
-            <img src={slotArt(gameId, id)} alt="" draggable={false} />
-          </div>
-        ))}
+        {strip.map((id, index) => {
+          const row = index - (spinning ? filler.length : 0);
+          const hot = !rolling && row >= 0 && highlight[row];
+          return (
+            <div key={`${reelIndex}-${index}-${id}`} className={`${styles.cell} ${hot ? styles.hot : ''} ${id === 'scatter' ? SCATTER_FX[gameId] ?? '' : ''}`}>
+              <img src={slotArt(gameId, id)} alt="" draggable={false} />
+            </div>
+          );
+        })}
       </div>
     </div>
   );

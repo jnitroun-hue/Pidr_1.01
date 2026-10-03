@@ -2,8 +2,14 @@
 
 import { useRouter } from 'next/navigation';
 import { SLOT_GAMES } from '@/lib/slots/games';
-import { slotPoster } from '@/lib/slots/art';
+import { slotHero, slotPoster } from '@/lib/slots/art';
 import styles from './Slots.module.css';
+
+const MODES = [
+  { id: 'demo', label: 'Демо' },
+  { id: 'coins', label: 'Монеты' },
+  { id: 'gram', label: 'GRAM' },
+] as const;
 
 export default function SlotsLobbyPage() {
   const router = useRouter();
@@ -20,19 +26,26 @@ export default function SlotsLobbyPage() {
       </header>
       <div className={styles.floor}>
         {SLOT_GAMES.map((game) => (
-          <button
-            key={game.id}
-            type="button"
-            className={styles.card}
-            onClick={() => router.push(`/slots/play?game=${game.id}`)}
-          >
-            <img src={slotPoster(game.id)} alt="" />
+          <article key={game.id} className={styles.card}>
+            <img className={styles.cardBg} src={slotPoster(game.id)} alt="" />
+            <img className={styles.cardHero} src={slotHero(game.id)} alt="" />
             <em>x{game.maxWinMultiplier}</em>
             <span className={styles.cardFoot}>
               <strong>{game.title}</strong>
-              <span>{game.bonus.title}</span>
+              <small>{game.bonus.title}</small>
+              <span className={styles.cardModes}>
+                {MODES.map((mode) => (
+                  <button
+                    key={mode.id}
+                    type="button"
+                    onClick={() => router.push(`/slots/play?game=${game.id}&mode=${mode.id}`)}
+                  >
+                    {mode.label}
+                  </button>
+                ))}
+              </span>
             </span>
-          </button>
+          </article>
         ))}
       </div>
     </main>

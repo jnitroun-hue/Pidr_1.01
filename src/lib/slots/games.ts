@@ -6,6 +6,8 @@ export type SlotSymbol = {
   pays: [number, number, number];
   wild?: boolean;
   scatter?: boolean;
+  /** Множитель линии, если выигрыш проходит через этот дикий символ. */
+  multiplier?: number;
 };
 
 export type SlotGame = {
@@ -61,7 +63,7 @@ const NO_MULTIPLIER = [{ value: 1, weight: 1 }];
 export const SLOT_GAMES: SlotGame[] = [
   {
     id: 'golden-must',
-    title: 'Золотой муст',
+    title: 'Козырной ус',
     mood: 'Яркий классический автомат: фрукты, камни и корона. Частые небольшие выигрыши.',
     volatility: 'средняя',
     reels: 5,
@@ -91,7 +93,7 @@ export const SLOT_GAMES: SlotGame[] = [
   },
   {
     id: 'hex-vault',
-    title: 'Сундук гекса',
+    title: 'Сейф шулера',
     mood: 'Тёмный металлический автомат. Выигрыши реже, зато крупнее.',
     volatility: 'высокая',
     reels: 5,
@@ -115,12 +117,15 @@ export const SLOT_GAMES: SlotGame[] = [
       { id: 'rune', name: 'Руна', weight: 12, pays: [25, 74, 218] },
       { id: 'chest', name: 'Сундук', weight: 6, pays: [46, 155, 496] },
       { id: 'wild', name: 'Гекс', weight: 3, pays: [78, 280, 930], wild: true },
+      { id: 'm2', name: 'x2', weight: 2, pays: [8, 20, 60], wild: true, multiplier: 2 },
+      { id: 'm3', name: 'x3', weight: 2, pays: [8, 20, 60], wild: true, multiplier: 3 },
+      { id: 'm5', name: 'x5', weight: 1, pays: [8, 20, 60], wild: true, multiplier: 5 },
       { id: 'scatter', name: 'Ключ', weight: 2, pays: [12, 46, 155], scatter: true },
     ],
   },
   {
     id: 'oak-fortune',
-    title: 'Дубовый клад',
+    title: 'Дуб-богатей',
     mood: 'Лесной автомат со средним ритмом: листья, жёлуди и золотой дуб.',
     volatility: 'средняя',
     reels: 5,
@@ -149,7 +154,7 @@ export const SLOT_GAMES: SlotGame[] = [
   },
   {
     id: 'neon-river',
-    title: 'Неоновая река',
+    title: 'Река фишек',
     mood: 'Спокойный неон. Выигрыш идёт путями: одинаковые символы на соседних барабанах слева направо.',
     volatility: 'высокая',
     reels: 5,
@@ -173,12 +178,14 @@ export const SLOT_GAMES: SlotGame[] = [
       { id: 'pearl', name: 'Жемчуг', weight: 10, pays: [8, 24, 80] },
       { id: 'wave', name: 'Волна', weight: 6, pays: [16, 50, 160] },
       { id: 'wild', name: 'Неон', weight: 3, pays: [24, 80, 280], wild: true },
+      { id: 'm4', name: 'x4', weight: 1, pays: [6, 16, 40], wild: true, multiplier: 4 },
+      { id: 'm10', name: 'x10', weight: 1, pays: [6, 16, 40], wild: true, multiplier: 10 },
       { id: 'scatter', name: 'Лотос', weight: 2, pays: [6, 20, 80], scatter: true },
     ],
   },
   {
     id: 'limitless-city',
-    title: 'Город без лимита',
+    title: 'Ва-банк сити',
     mood: 'Самый резкий автомат. Иногда на выигрыш падает честный множитель x2–x50.',
     volatility: 'очень высокая',
     reels: 5,
@@ -209,12 +216,14 @@ export const SLOT_GAMES: SlotGame[] = [
       { id: 'car', name: 'Машина', weight: 18, pays: [9, 24, 69] },
       { id: 'vault', name: 'Сейф', weight: 8, pays: [19, 60, 189] },
       { id: 'wild', name: 'Город', weight: 3, pays: [34, 120, 430], wild: true },
+      { id: 'm50', name: 'x50', weight: 1, pays: [8, 24, 70], wild: true, multiplier: 50 },
+      { id: 'm100', name: 'x100', weight: 1, pays: [8, 24, 70], wild: true, multiplier: 100 },
       { id: 'scatter', name: 'Сирена', weight: 2, pays: [9, 34, 129], scatter: true },
     ],
   },
   {
     id: 'green-arrow',
-    title: 'Зелёный выстрел',
+    title: 'Туз в яблочко',
     mood: 'Лучник в лесу. Иногда выпускает до двух стрел и ставит скаттеры.',
     volatility: 'высокая',
     reels: 5,
@@ -242,7 +251,7 @@ export const SLOT_GAMES: SlotGame[] = [
   },
   {
     id: 'fairy-glade',
-    title: 'Пыльца',
+    title: 'Фея на удаче',
     mood: 'Феи пролетают над полем и меняют слабые символы на старшие.',
     volatility: 'средняя',
     reels: 5,
@@ -270,7 +279,7 @@ export const SLOT_GAMES: SlotGame[] = [
   },
   {
     id: 'ash-dragon',
-    title: 'Пепел',
+    title: 'Дракон орёт',
     mood: 'Дракон выдыхает множитель на уже собранный выигрыш.',
     volatility: 'очень высокая',
     reels: 5,
@@ -293,12 +302,14 @@ export const SLOT_GAMES: SlotGame[] = [
       { id: 'egg', name: 'Яйцо', weight: 14, pays: [12, 36, 100] },
       { id: 'horn', name: 'Рог', weight: 7, pays: [24, 80, 240] },
       { id: 'wild', name: 'Клык', weight: 3, pays: [40, 140, 420], wild: true },
+      { id: 'm15', name: 'x15', weight: 1, pays: [8, 24, 70], wild: true, multiplier: 15 },
+      { id: 'm20', name: 'x20', weight: 1, pays: [8, 24, 70], wild: true, multiplier: 20 },
       { id: 'scatter', name: 'Пламя', weight: 2, pays: [8, 24, 80], scatter: true },
     ],
   },
   {
     id: 'frost-queen',
-    title: 'Иней',
+    title: 'Ледяная дама',
     mood: 'Королева замораживает целый барабан одним символом.',
     volatility: 'высокая',
     reels: 5,
@@ -326,7 +337,7 @@ export const SLOT_GAMES: SlotGame[] = [
   },
   {
     id: 'blade-ronin',
-    title: 'Клинок',
+    title: 'Катана на кону',
     mood: 'Ронин рассекает целый ряд и превращает его в дикие символы.',
     volatility: 'очень высокая',
     reels: 5,
