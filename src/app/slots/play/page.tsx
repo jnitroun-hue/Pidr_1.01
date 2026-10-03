@@ -11,38 +11,8 @@ import {
   getSlotGame,
 } from '@/lib/slots/games';
 import { formatGramUnits, spinSlot, type SpinResult } from '@/lib/slots/engine';
-import { themedPageShellStyle } from '@/lib/ui/menu-theme-client';
+import SlotGlyph from '@/components/slots/SlotGlyph';
 import styles from '../Slots.module.css';
-
-const SYMBOL_COLORS: Record<string, string> = {
-  cherry: '#fb7185',
-  lemon: '#fde047',
-  grape: '#c084fc',
-  bell: '#fbbf24',
-  gem: '#34d399',
-  crown: '#f5c518',
-  wild: '#fff7ed',
-  scatter: '#93c5fd',
-  coin: '#fbbf24',
-  dagger: '#fdba74',
-  skull: '#e7e5e4',
-  rune: '#fb923c',
-  chest: '#f59e0b',
-  leaf: '#86efac',
-  acorn: '#d6d3d1',
-  mushroom: '#fca5a5',
-  owl: '#fde68a',
-  oak: '#a3e635',
-  drop: '#67e8f9',
-  fish: '#7dd3fc',
-  lantern: '#fde68a',
-  pearl: '#e2e8f0',
-  wave: '#22d3ee',
-  ticket: '#fda4af',
-  neon: '#f43f5e',
-  car: '#fb7185',
-  vault: '#fecdd3',
-};
 
 type Mode = 'demo' | 'coins' | 'gram';
 
@@ -67,7 +37,9 @@ function PlayInner() {
   const balance = mode === 'demo' ? demoChips : mode === 'coins' ? coins : gramUnits;
 
   const emptyGrid = useMemo(
-    () => Array.from({ length: game.reels }, () => Array.from({ length: game.rows }, () => game.symbols[0].id)),
+    () => Array.from({ length: game.reels }, (_, reel) =>
+      Array.from({ length: game.rows }, (_, row) => game.symbols[(reel * 3 + row * 2) % game.symbols.length].id)
+    ),
     [game]
   );
   const grid = result?.grid ?? emptyGrid;
@@ -150,39 +122,33 @@ function PlayInner() {
     : `${balance ?? '…'} ${mode === 'demo' ? 'демо' : 'монет'}`;
 
   return (
-    <main className={styles.page} style={themedPageShellStyle()}>
+    <main className={styles.page}>
       <div className={styles.top}>
         <button type="button" className={styles.back} onClick={() => router.push('/slots')}>← Слоты</button>
-        <strong>{balanceLabel}</strong>
+        <div className={styles.balance}>{balanceLabel}</div>
       </div>
       <div className={styles.machine}>
-        <h1 className={styles.title}>{game.title}</h1>
-        <p className={styles.lead}>{game.mood} Риск: {game.volatility}.</p>
-        <div className={styles.cabinet} style={{ background: `linear-gradient(180deg, ${game.felt}, #050505)` }}>
-          <div
-            className={`${styles.reels} ${spinning ? styles.spinning : ''}`}
-            style={{ gridTemplateColumns: `repeat(${game.reels}, max-content)` }}
-          >
-            {grid.map((reel, reelIndex) => (
-              <div key={reelIndex} className={styles.reel}>
-                {reel.map((symbolId, rowIndex) => {
-                  const symbol = game.symbols.find((item) => item.id === symbolId);
-                  return (
-                    <div
-                      key={`${reelIndex}-${rowIndex}`}
-                      className={styles.symbol}
-                      style={{ background: `linear-gradient(160deg, #fff, ${SYMBOL_COLORS[symbolId] || game.accent})` }}
-                    >
-                      {symbol?.name || symbolId}
+        <div className={styles.marquee}>ДО x{game.maxWinMultiplier}</div>
+        <div className={`${styles.cabinet} ${styles[game.id] || ''}`} style={{ borderColor: game.accent }}>
+          <div className={styles.window}>
+            <div
+              className={`${styles.reels} ${spinning ? styles.spinning : ''}`}
+              style={{ gridTemplateColumns: `repeat(${game.reels}, max-content)` }}
+            >
+              {grid.map((reel, reelIndex) => (
+                <div key={reelIndex} className={styles.reel}>
+                  {reel.map((symbolId, rowIndex) => (
+                    <div key={`${reelIndex}-${rowIndex}`} className={styles.cell} title={game.symbols.find((item) => item.id === symbolId)?.name}>
+                      <SlotGlyph id={symbolId} className={styles.glyph} />
                     </div>
-                  );
-                })}
-              </div>
-            ))}
+                  ))}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
-        <div className={styles.controls}>
+        <div className={styles.dock}>
           <div className={styles.modes}>
             {(['demo', 'coins', 'gram'] as Mode[]).map((item) => (
               <button
@@ -200,14 +166,14 @@ function PlayInner() {
               </button>
             ))}
           </div>
+          <button type="button" className={styles.spin} disabled={spinning} onClick={() => void spin()}>
+            {spinning ? '…' : 'SPIN'}
+          </button>
           <div className={styles.bets}>
             <button type="button" className={styles.bet} onClick={() => setBetIndex((value) => Math.max(0, value - 1))}>−</button>
-            <span>Ставка {mode === 'gram' ? formatGramUnits(bet) : bet}</span>
+            <span className={styles.stake}>{mode === 'gram' ? formatGramUnits(bet) : bet}</span>
             <button type="button" className={styles.bet} onClick={() => setBetIndex((value) => Math.min(bets.length - 1, value + 1))}>+</button>
           </div>
-          <button type="button" className={styles.spin} disabled={spinning} onClick={() => void spin()}>
-            {spinning ? '…' : 'Крутить'}
-          </button>
         </div>
 
         {result && (
@@ -236,8 +202,11 @@ function PlayInner() {
           <div className={styles.paytable}>
             {game.symbols.map((symbol) => (
               <div key={symbol.id} className={styles.payRow}>
-                <span>{symbol.name}{symbol.wild ? ' · заменяет' : ''}{symbol.scatter ? ' · где угодно' : ''}</span>
-                <span>3: {symbol.pays[0]} · 4: {symbol.pays[1]} · 5: {symbol.pays[2]}</span>
+                <span className={styles.paySymbol}>
+                  <SlotGlyph id={symbol.id} />
+                  {symbol.name}{symbol.wild ? ' · заменяет' : ''}{symbol.scatter ? ' · где угодно' : ''}
+                </span>
+                <span>x{symbol.pays[0]} / x{symbol.pays[1]} / x{symbol.pays[2]}</span>
               </div>
             ))}
             <div className={styles.payRow}>
