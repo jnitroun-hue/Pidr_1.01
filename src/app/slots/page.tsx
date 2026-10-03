@@ -8,17 +8,17 @@ import styles from './Slots.module.css';
 export default function SlotsLobbyPage() {
   const router = useRouter();
   return (
-    <main className={styles.page}>
-      <div className={styles.top}>
-        <button type="button" className={styles.back} onClick={() => router.push('/profile')}>
-          ← Профиль
+    <main className={styles.lobby}>
+      <header className={styles.lobbyBar}>
+        <button type="button" className={styles.hudBack} onClick={() => router.push('/profile')}>
+          ←
         </button>
-      </div>
-      <div className={styles.head}>
-        <h1 className={styles.title}>Слоты</h1>
-        <p className={styles.lead}>Пять автоматов. Демо, монеты или GRAM — жребий один и тот же.</p>
-      </div>
-      <div className={styles.grid}>
+        <div className={styles.lobbyHead}>
+          <span>The Must</span>
+          <h1>Слоты</h1>
+        </div>
+      </header>
+      <div className={styles.floor}>
         {SLOT_GAMES.map((game) => (
           <button
             key={game.id}
@@ -27,9 +27,10 @@ export default function SlotsLobbyPage() {
             onClick={() => router.push(`/slots/play?game=${game.id}`)}
           >
             <img src={slotPoster(game.id)} alt="" />
+            <em>x{game.maxWinMultiplier}</em>
             <span className={styles.cardFoot}>
               <strong>{game.title}</strong>
-              <span>{game.bonus.title} · 10 спинов</span>
+              <span>{game.bonus.title}</span>
             </span>
           </button>
         ))}

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { slotArt } from '@/lib/slots/art';
+import { reelMotion, type ReelSpeed } from '@/lib/slots/speed';
 import styles from '@/app/slots/Slots.module.css';
 
 type Props = {
@@ -11,9 +12,10 @@ type Props = {
   symbolIds: string[];
   landed: string[];
   rolling: boolean;
+  speed: ReelSpeed;
 };
 
-export default function SlotReel({ gameId, reelIndex, rows, symbolIds, landed, rolling }: Props) {
+export default function SlotReel({ gameId, reelIndex, rows, symbolIds, landed, rolling, speed }: Props) {
   const [roll, setRoll] = useState(false);
   const filler = useMemo(() => {
     const count = 14;
@@ -39,7 +41,7 @@ export default function SlotReel({ gameId, reelIndex, rows, symbolIds, landed, r
         className={styles.reelStrip}
         style={{
           transform: roll ? `translateY(calc(${filler.length} * -1 * var(--cell)))` : 'translateY(0)',
-          transition: roll ? `transform ${900 + reelIndex * 180}ms cubic-bezier(0.12, 0.7, 0.16, 1)` : 'none',
+          transition: roll ? `transform ${reelMotion(speed, reelIndex)}ms cubic-bezier(0.15, 0.75, 0.12, 1)` : 'none',
         }}
       >
         {strip.map((id, index) => (

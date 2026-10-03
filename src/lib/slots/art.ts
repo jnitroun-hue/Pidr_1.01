@@ -64,7 +64,7 @@ const ART: Record<string, Record<string, string>> = {
     target: `${BASE}/sym-target.jpg`,
     bag: `${BASE}/sym-bag.jpg`,
     bow: `${BASE}/sym-bow.jpg`,
-    wild: `${BASE}/sym-wild-oak.jpg`,
+    wild: `${BASE}/sym-wild-arrow.jpg`,
     scatter: `${BASE}/scatter-arrow.jpg`,
   },
   'fairy-glade': {
@@ -75,7 +75,7 @@ const ART: Record<string, Record<string, string>> = {
     dew: `${BASE}/sym-dew.jpg`,
     moth: `${BASE}/sym-moth.jpg`,
     wand: `${BASE}/sym-wand.jpg`,
-    wild: `${BASE}/sym-wild-river.jpg`,
+    wild: `${BASE}/sym-wild-fairy.jpg`,
     scatter: `${BASE}/scatter-fairy.jpg`,
   },
   'ash-dragon': {
@@ -86,7 +86,7 @@ const ART: Record<string, Record<string, string>> = {
     scale: `${BASE}/sym-scale.jpg`,
     egg: `${BASE}/sym-egg.jpg`,
     horn: `${BASE}/sym-horn.jpg`,
-    wild: `${BASE}/sym-wild-hex.jpg`,
+    wild: `${BASE}/sym-wild-dragon.jpg`,
     scatter: `${BASE}/scatter-dragon.jpg`,
   },
   'frost-queen': {
@@ -97,7 +97,7 @@ const ART: Record<string, Record<string, string>> = {
     crystal: `${BASE}/sym-crystal.jpg`,
     wolf: `${BASE}/sym-wolf.jpg`,
     'ice-crown': `${BASE}/sym-diadem.jpg`,
-    wild: `${BASE}/sym-wild-river.jpg`,
+    wild: `${BASE}/sym-wild-frost.jpg`,
     scatter: `${BASE}/scatter-frost.jpg`,
   },
   'blade-ronin': {
@@ -108,7 +108,7 @@ const ART: Record<string, Record<string, string>> = {
     fan: `${BASE}/sym-fan.jpg`,
     katana: `${BASE}/sym-katana.jpg`,
     crest: `${BASE}/sym-crest.jpg`,
-    wild: `${BASE}/sym-wild-city.jpg`,
+    wild: `${BASE}/sym-wild-ronin.jpg`,
     scatter: `${BASE}/scatter-ronin.jpg`,
   },
 };

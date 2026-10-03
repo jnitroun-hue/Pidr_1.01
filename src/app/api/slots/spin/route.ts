@@ -3,7 +3,8 @@ import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
 import { supabaseAdmin } from '@/lib/supabase';
 import { getRedis } from '@/lib/redis/init';
 import { COIN_BETS, GRAM_UNIT_BETS, getSlotGame } from '@/lib/slots/games';
-import { spinSlot } from '@/lib/slots/engine';
+import { anteCharge } from '@/lib/slots/speed';
+import { buyBonus, spinSlot } from '@/lib/slots/engine';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -47,8 +48,10 @@ export async function POST(req: NextRequest) {
     if (cached) return noStore(typeof cached === 'string' ? JSON.parse(cached) : cached);
   }
 
-  const result = spinSlot(game, bet);
-  const stake = bet;
+  const buy = body?.buy === 'top' ? 'top' : body?.buy === 'regular' ? 'regular' : null;
+  const ante = body?.ante === true && !buy;
+  const result = buy ? buyBonus(game, bet, buy) : spinSlot(game, bet, ante);
+  const stake = buy === 'top' ? bet * 500 : buy === 'regular' ? bet * 100 : ante ? anteCharge(bet) : bet;
   const payout = result.totalWin;
 
   if (mode === 'coins') {

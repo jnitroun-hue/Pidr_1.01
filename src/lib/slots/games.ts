@@ -24,6 +24,8 @@ export type SlotGame = {
   maxWinMultiplier: number;
   accent: string;
   felt: string;
+  /** Анте +50%: boost чуть поднимает вес скаттера, seed гарантирует один скаттер на поле. */
+  ante: 'boost' | 'seed';
   bonus: {
     title: string;
     rule: string;
@@ -68,6 +70,7 @@ export const SLOT_GAMES: SlotGame[] = [
     lines: LINES_20,
     accent: '#f5c518',
     felt: '#3a2410',
+    ante: 'boost',
     maxWinMultiplier: 2500,
     bonus: {
       kind: 'wild-reel',
@@ -97,6 +100,7 @@ export const SLOT_GAMES: SlotGame[] = [
     lines: LINES_20.slice(0, 10),
     accent: '#f97316',
     felt: '#1a120c',
+    ante: 'seed',
     maxWinMultiplier: 5000,
     bonus: {
       kind: 'rising',
@@ -125,6 +129,7 @@ export const SLOT_GAMES: SlotGame[] = [
     lines: LINES_20.slice(0, 15),
     accent: '#84cc16',
     felt: '#14240f',
+    ante: 'boost',
     maxWinMultiplier: 3000,
     bonus: {
       kind: 'premium-only',
@@ -153,6 +158,7 @@ export const SLOT_GAMES: SlotGame[] = [
     lines: [],
     accent: '#22d3ee',
     felt: '#071824',
+    ante: 'boost',
     maxWinMultiplier: 4000,
     bonus: {
       kind: 'tide',
@@ -181,6 +187,7 @@ export const SLOT_GAMES: SlotGame[] = [
     lines: LINES_20.slice(0, 10),
     accent: '#e11d48',
     felt: '#1a0610',
+    ante: 'boost',
     maxWinMultiplier: 8000,
     bonus: {
       kind: 'siren',
@@ -216,6 +223,7 @@ export const SLOT_GAMES: SlotGame[] = [
     lines: LINES_20.slice(0, 15),
     accent: '#65a30d',
     felt: '#14210c',
+    ante: 'seed',
     maxWinMultiplier: 5000,
     bonus: {
       kind: 'arrow',
@@ -243,6 +251,7 @@ export const SLOT_GAMES: SlotGame[] = [
     lines: LINES_20,
     accent: '#e879f9',
     felt: '#2a1030',
+    ante: 'boost',
     maxWinMultiplier: 4000,
     bonus: {
       kind: 'pollen',
@@ -270,6 +279,7 @@ export const SLOT_GAMES: SlotGame[] = [
     lines: LINES_20.slice(0, 10),
     accent: '#f97316',
     felt: '#2a0c08',
+    ante: 'seed',
     maxWinMultiplier: 8000,
     bonus: {
       kind: 'breath',
@@ -297,6 +307,7 @@ export const SLOT_GAMES: SlotGame[] = [
     lines: LINES_20.slice(0, 15),
     accent: '#7dd3fc',
     felt: '#0c1a28',
+    ante: 'seed',
     maxWinMultiplier: 5000,
     bonus: {
       kind: 'throne',
@@ -324,6 +335,7 @@ export const SLOT_GAMES: SlotGame[] = [
     lines: LINES_20.slice(0, 12),
     accent: '#ef4444',
     felt: '#1a0a0c',
+    ante: 'seed',
     maxWinMultiplier: 7000,
     bonus: {
       kind: 'slash',

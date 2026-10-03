@@ -49,10 +49,41 @@ function payForCount(symbol: SlotSymbol, count: number): number {
   return symbol.pays[Math.min(count, 5) - 3] ?? 0;
 }
 
+function isScatter(game: SlotGame, id: string): boolean {
+  return Boolean(symbolById(game, id).scatter);
+}
+
+function mostExpensive(game: SlotGame): SlotSymbol {
+  return game.symbols
+    .filter((symbol) => !symbol.scatter)
+    .reduce((best, symbol) => (
+      symbol.pays[2] > best.pays[2]
+      || (symbol.pays[2] === best.pays[2] && symbol.pays[1] > best.pays[1])
+        ? symbol
+        : best
+    ));
+}
+
 const FREE_SPINS = 10;
 
 function wildId(game: SlotGame): string {
   return game.symbols.find((symbol) => symbol.wild)?.id ?? 'wild';
+}
+
+function boostScatter(game: SlotGame): SlotSymbol[] {
+  return game.symbols.map((symbol) => (
+    symbol.scatter
+      ? { ...symbol, weight: Math.max(symbol.weight + 1, Math.round(symbol.weight * 1.5)) }
+      : symbol
+  ));
+}
+
+function seedScatter(game: SlotGame, grid: string[][]): string[][] {
+  const scatter = game.symbols.find((symbol) => symbol.scatter);
+  if (!scatter || grid.some((reel) => reel.includes(scatter.id))) return grid;
+  const next = grid.map((reel) => [...reel]);
+  next[randomInt(game.reels)][randomInt(game.rows)] = scatter.id;
+  return next;
 }
 
 function drawGrid(game: SlotGame, bag: SlotSymbol[]): string[][] {
@@ -67,27 +98,32 @@ function drawGrid(game: SlotGame, bag: SlotSymbol[]): string[][] {
   return grid;
 }
 
-function applyBonusGrid(game: SlotGame, grid: string[][], index: number): string[][] {
+function applyBonusGrid(game: SlotGame, grid: string[][], index: number, tier: 'natural' | 'regular' | 'top' = 'natural'): string[][] {
   const next = grid.map((reel) => [...reel]);
   const wild = wildId(game);
+  const top = tier === 'top';
   if (game.bonus.kind === 'wild-reel') {
     const reel = randomInt(game.reels);
     for (let row = 0; row < game.rows; row += 1) next[reel][row] = wild;
+    if (top) {
+      const extra = (reel + 2) % game.reels;
+      for (let row = 0; row < game.rows; row += 1) next[extra][row] = wild;
+    }
   }
   if (game.bonus.kind === 'tide') {
     for (let reel = 0; reel < game.reels; reel += 1) {
       next[reel][randomInt(game.rows)] = wild;
+      if (top) next[reel][(randomInt(game.rows) + 1) % game.rows] = wild;
     }
   }
   if (game.bonus.kind === 'arrow') {
-    const spotReel = randomInt(game.reels);
-    const spotRow = randomInt(game.rows);
-    next[spotReel][spotRow] = wild;
+    next[randomInt(game.reels)][randomInt(game.rows)] = wild;
+    if (top) next[randomInt(game.reels)][randomInt(game.rows)] = wild;
   }
   if (game.bonus.kind === 'pollen') {
     for (let reel = 0; reel < game.reels; reel += 1) {
       for (let row = 0; row < game.rows; row += 1) {
-        if (next[reel][row] === 'bloom') next[reel][row] = wild;
+        if (next[reel][row] === 'bloom' || (top && next[reel][row] === 'dew')) next[reel][row] = wild;
       }
     }
   }
@@ -97,10 +133,17 @@ function applyBonusGrid(game: SlotGame, grid: string[][], index: number): string
   if (game.bonus.kind === 'throne') {
     const middle = Math.floor(game.reels / 2);
     for (let row = 0; row < game.rows; row += 1) next[middle][row] = wild;
+    if (top) {
+      for (let row = 0; row < game.rows; row += 1) next[0][row] = wild;
+    }
   }
   if (game.bonus.kind === 'slash') {
     const row = index % game.rows;
     for (let reel = 0; reel < game.reels; reel += 1) next[reel][row] = wild;
+    if (top) {
+      const extra = (row + 1) % game.rows;
+      for (let reel = 0; reel < game.reels; reel += 1) next[reel][extra] = wild;
+    }
   }
   return next;
 }
@@ -126,9 +169,11 @@ function expandOakWilds(game: SlotGame, grid: string[][]): string[][] {
   return grid.map((reel) => (reel.includes(wild) ? reel.map(() => wild) : reel));
 }
 
-export function spinSlot(game: SlotGame, totalBet: number): SpinResult & { bonus: BonusPlay | null } {
-  const acted = applyCharacter(game, drawGrid(game, game.symbols));
-  const grid = expandOakWilds(game, acted.grid);
+export function spinSlot(game: SlotGame, totalBet: number, ante = false): SpinResult & { bonus: BonusPlay | null } {
+  const bag = ante && game.ante === 'boost' ? boostScatter(game) : game.symbols;
+  const acted = applyCharacter(game, drawGrid(game, bag));
+  const drawn = expandOakWilds(game, acted.grid);
+  const grid = ante && game.ante === 'seed' ? seedScatter(game, drawn) : drawn;
   const played = evaluateGrid(game, grid, totalBet, true, 0);
   const gift = dragonGift(game, played.totalWin);
   if (gift?.multiplier) {
@@ -150,19 +195,53 @@ export function spinSlot(game: SlotGame, totalBet: number): SpinResult & { bonus
   return { ...played, totalWin, capped, bonus };
 }
 
-function playBonus(game: SlotGame, totalBet: number, scatterCount: number): BonusPlay {
+function playBonus(game: SlotGame, totalBet: number, scatterCount: number, tier: 'natural' | 'regular' | 'top' = 'natural'): BonusPlay {
   const bag = bonusBag(game);
   const spins: SpinResult[] = [];
   for (let index = 0; index < FREE_SPINS; index += 1) {
-    const grid = expandOakWilds(game, applyBonusGrid(game, drawGrid(game, bag), index));
-    spins.push(evaluateGrid(game, grid, totalBet, false, index));
+    const grid = expandOakWilds(game, applyBonusGrid(game, drawGrid(game, bag), index, tier));
+    const spin = evaluateGrid(game, grid, totalBet, false, index);
+    if (tier === 'top' && spin.totalWin > 0) {
+      spin.multiplier = Math.max(spin.multiplier, 2);
+      spin.totalWin = roundMoney(spin.totalWin * 2);
+    }
+    spins.push(spin);
+  }
+  let totalWin = spins.reduce((sum, spin) => sum + spin.totalWin, 0);
+  const floor = tier === 'top' ? totalBet * 50 : tier === 'regular' ? totalBet * 10 : 0;
+  if (floor > totalWin && spins.length) {
+    const extra = floor - totalWin;
+    spins[spins.length - 1].totalWin += extra;
+    totalWin = floor;
   }
   return {
-    title: game.bonus.title,
+    title: tier === 'top' ? `${game.bonus.title} · топ` : game.bonus.title,
     rule: game.bonus.rule,
     scatterCount,
     spins,
-    totalWin: spins.reduce((sum, spin) => sum + spin.totalWin, 0),
+    totalWin,
+  };
+}
+
+export function buyBonus(game: SlotGame, totalBet: number, tier: 'regular' | 'top'): SpinResult & { bonus: BonusPlay } {
+  const bonus = playBonus(game, totalBet, tier === 'top' ? 5 : 3, tier);
+  const cap = totalBet * game.maxWinMultiplier;
+  let totalWin = bonus.totalWin;
+  let capped = false;
+  if (totalWin > cap) {
+    capped = true;
+    bonus.totalWin = cap;
+    totalWin = cap;
+  }
+  return {
+    grid: bonus.spins[0]?.grid ?? drawGrid(game, game.symbols),
+    wins: [],
+    multiplier: 1,
+    totalWin,
+    capped,
+    scatterCount: bonus.scatterCount,
+    events: [],
+    bonus,
   };
 }
 
@@ -172,20 +251,29 @@ function evaluateGrid(game: SlotGame, grid: string[][], totalBet: number, paySca
     const lineBet = totalBet / game.lines.length;
     game.lines.forEach((line, lineIndex) => {
       const cells = line.map((row, reel) => grid[reel][row]);
-      const first = cells.find((id) => !isWild(game, id) && !symbolById(game, id).scatter);
-      const target = first ?? cells[0];
-      if (symbolById(game, target).scatter) return;
       let count = 0;
+      let concrete: string | null = null;
       for (const id of cells) {
-        if (id === target || isWild(game, id)) count += 1;
-        else break;
+        if (isScatter(game, id)) break;
+        if (isWild(game, id)) {
+          count += 1;
+          continue;
+        }
+        if (concrete === null || concrete === id) {
+          concrete = id;
+          count += 1;
+          continue;
+        }
+        break;
       }
-      const multiplier = payForCount(symbolById(game, target), count);
+      if (count < 3) return;
+      const target = concrete ? symbolById(game, concrete) : mostExpensive(game);
+      const multiplier = payForCount(target, count);
       if (multiplier <= 0) return;
       wins.push({
         kind: 'line',
-        symbolId: target,
-        symbolName: symbolById(game, target).name,
+        symbolId: target.id,
+        symbolName: target.name,
         count,
         lineIndex,
         amount: roundMoney(lineBet * multiplier),
@@ -193,13 +281,23 @@ function evaluateGrid(game: SlotGame, grid: string[][], totalBet: number, paySca
     });
   } else {
     const wayBet = totalBet / 165;
+    const premium = mostExpensive(game);
     for (const symbol of payingSymbols(game)) {
+      if (symbol.wild) continue;
       const counts: number[] = [];
+      let pureWild = true;
       for (let reel = 0; reel < game.reels; reel += 1) {
-        const hits = grid[reel].filter((id) => id === symbol.id || isWild(game, id)).length;
-        if (hits === 0) break;
-        counts.push(hits);
+        let native = 0;
+        let wilds = 0;
+        for (const id of grid[reel]) {
+          if (id === symbol.id) native += 1;
+          else if (isWild(game, id)) wilds += 1;
+        }
+        if (native + wilds === 0) break;
+        if (native > 0) pureWild = false;
+        counts.push(native + wilds);
       }
+      if (pureWild) continue;
       const count = counts.length;
       const multiplier = payForCount(symbol, count);
       if (multiplier <= 0) continue;
@@ -211,6 +309,25 @@ function evaluateGrid(game: SlotGame, grid: string[][], totalBet: number, paySca
         count,
         ways,
         amount: roundMoney(wayBet * multiplier * ways),
+      });
+    }
+    const wildCounts: number[] = [];
+    for (let reel = 0; reel < game.reels; reel += 1) {
+      const wilds = grid[reel].filter((id) => isWild(game, id)).length;
+      const other = grid[reel].filter((id) => !isWild(game, id) && !isScatter(game, id)).length;
+      if (wilds === 0 || other > 0) break;
+      wildCounts.push(wilds);
+    }
+    const wildPay = payForCount(premium, wildCounts.length);
+    if (wildPay > 0) {
+      const ways = wildCounts.reduce((product, value) => product * value, 1);
+      wins.push({
+        kind: 'ways',
+        symbolId: premium.id,
+        symbolName: premium.name,
+        count: wildCounts.length,
+        ways,
+        amount: roundMoney(wayBet * wildPay * ways),
       });
     }
   }
