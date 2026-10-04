@@ -30,22 +30,30 @@ type Props = {
   highlight: boolean[];
 };
 
+function multiplierOf(id: string): number | null {
+  const match = /^m(\d+)$/.exec(id);
+  return match ? Number(match[1]) : null;
+}
+
 export default function SlotReel({ gameId, reelIndex, rows, symbolIds, landed, rolling, speed, bonus, highlight }: Props) {
-  const [phase, setPhase] = useState<'idle' | 'ready' | 'go'>('idle');
+  const [phase, setPhase] = useState<'idle' | 'clear' | 'ready' | 'go'>('idle');
   const plan = reelPlan(speed, reelIndex, bonus);
   const filler = useMemo(() => {
-    const count = 16;
-    return Array.from({ length: count }, (_, index) => symbolIds[(index * 3 + reelIndex * 2) % symbolIds.length]);
+    const count = 18;
+    return Array.from({ length: count }, (_, index) => symbolIds[(index * 5 + reelIndex * 3 + 1) % symbolIds.length]);
   }, [symbolIds, reelIndex, rolling]);
-  const spinning = phase !== 'idle';
-  const strip = spinning ? [...filler, ...landed] : landed;
+  const spinning = phase === 'ready' || phase === 'go';
+  // Landed sits at the top. The spin starts further down the strip and moves
+  // the strip downward, so symbols fall into the window instead of leaving it.
+  const strip = spinning ? [...landed, ...filler] : landed;
+  const startShift = filler.length;
 
   useEffect(() => {
     if (!rolling) {
       setPhase('idle');
       return;
     }
-    setPhase('idle');
+    setPhase('clear');
     let frame = 0;
     const timer = window.setTimeout(() => {
       setPhase('ready');
@@ -61,23 +69,28 @@ export default function SlotReel({ gameId, reelIndex, rows, symbolIds, landed, r
 
   return (
     <div className={styles.reelWindow} style={{ ['--rows' as string]: rows }}>
-      <div
-        className={styles.reelStrip}
-        style={{
-          transform: phase === 'go' ? `translateY(calc(${filler.length} * var(--cell)))` : 'translateY(0)',
-          transition: phase === 'go' ? `transform ${plan.duration}ms cubic-bezier(0.12, 0.72, 0.14, 1)` : 'none',
-        }}
-      >
-        {strip.map((id, index) => {
-          const row = index - (spinning ? filler.length : 0);
-          const hot = !rolling && row >= 0 && highlight[row];
-          return (
-            <div key={`${reelIndex}-${index}-${id}`} className={`${styles.cell} ${hot ? styles.hot : ''} ${id === 'scatter' ? SCATTER_FX[gameId] ?? '' : ''}`}>
-              <img src={slotArt(gameId, id)} alt="" draggable={false} />
-            </div>
-          );
-        })}
-      </div>
+      {phase === 'clear' ? (
+        Array.from({ length: rows }, (_, index) => <div key={index} className={`${styles.cell} ${styles.cellClear}`} />)
+      ) : (
+        <div
+          className={styles.reelStrip}
+          style={{
+            transform: phase === 'ready' ? `translateY(calc(${startShift} * var(--cell) * -1))` : 'translateY(0)',
+            transition: phase === 'go' ? `transform ${plan.duration}ms cubic-bezier(0.08, 0.65, 0.18, 1)` : 'none',
+          }}
+        >
+          {strip.map((id, index) => {
+            const hot = phase === 'idle' && index < rows && highlight[index];
+            const multiplier = multiplierOf(id);
+            return (
+              <div key={`${reelIndex}-${index}-${id}`} className={`${styles.cell} ${hot ? styles.hot : ''} ${id === 'scatter' ? SCATTER_FX[gameId] ?? '' : ''}`}>
+                <img src={slotArt(gameId, id)} alt="" draggable={false} />
+                {multiplier ? <b className={styles.multBadge}>x{multiplier}</b> : null}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

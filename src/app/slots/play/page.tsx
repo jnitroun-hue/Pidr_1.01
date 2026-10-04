@@ -387,8 +387,8 @@ function PlayInner() {
       </div>
 
       <footer className={styles.dock}>
-        <div className={styles.dockTop}>
-          <div className={styles.dockCol}>
+        <div className={styles.dockSide}>
+          <div className={styles.buyRow}>
             <button type="button" className={styles.buy} disabled={locked} onClick={() => setBuyAsk('regular')}>
               Бонус
               <small>×100</small>
@@ -397,45 +397,16 @@ function PlayInner() {
               Топ
               <small>×500</small>
             </button>
-            <button type="button" className={styles.tumbler} onClick={() => setShowLines((value) => !value)} aria-pressed={showLines}>
-              <span><b>ЛИНИИ</b></span>
-              <span className={`${styles.track} ${showLines ? styles.trackOn : styles.trackOff}`}>
-                <i className={styles.knob} />
-                <em>{showLines ? 'ON' : 'OFF'}</em>
-              </span>
-            </button>
           </div>
-          <div className={styles.dockCol}>
-            <button type="button" className={styles.infoBtn} onClick={() => setShowInfo(true)} aria-label="Информация">i</button>
-            <button
-              type="button"
-              className={`${styles.bolt} ${speed === 'slow' ? styles.boltSlow : speed === 'mid' ? styles.boltMid : styles.boltFast}`}
-              onClick={cycleSpeed}
-              aria-label={speed === 'slow' ? 'Медленно' : speed === 'mid' ? 'Средне' : 'Быстро'}
-            >
-              <Bolt />
-            </button>
-          </div>
-        </div>
-        <div className={styles.dockBottom}>
-          <button type="button" className={styles.tumbler} disabled={locked} onClick={() => setAnte((value) => !value)} aria-pressed={ante}>
-            <span>
-              <b>ANTE</b>
-              <small>+16.77%</small>
-            </span>
-            <span className={`${styles.track} ${ante ? styles.trackOn : styles.trackOff}`}>
+          <button type="button" className={styles.tumbler} onClick={() => setShowLines((value) => !value)} aria-pressed={showLines}>
+            <span><b>ЛИНИИ</b></span>
+            <span className={`${styles.track} ${showLines ? styles.trackOn : styles.trackOff}`}>
               <i className={styles.knob} />
-              <em>{ante ? 'ON' : 'OFF'}</em>
+              <em>{showLines ? 'ON' : 'OFF'}</em>
             </span>
           </button>
-          <div className={styles.stakeGroup}>
-            <button type="button" className={styles.nudge} aria-label="Меньше" disabled={locked} onClick={() => setBetIndex((value) => Math.max(0, value - 1))}>−</button>
-            <div className={styles.coin} aria-label={`Ставка ${stakeLabel}`}>
-              <span>{stakeLabel}</span>
-              <small>{ante ? 'анте' : 'ставка'}</small>
-            </div>
-            <button type="button" className={styles.nudge} aria-label="Больше" disabled={locked} onClick={() => setBetIndex((value) => Math.min(bets.length - 1, value + 1))}>+</button>
-          </div>
+        </div>
+        <div className={styles.dockCenter}>
           <button type="button" className={styles.spin} disabled={spinning} onClick={() => void spin()}>
             <span>{spinning ? '…' : 'SPIN'}</span>
             <small>{stakeLabel}</small>
@@ -459,6 +430,39 @@ function PlayInner() {
             </svg>
             <b>{autoLeft ? autoLeft : 'auto'}</b>
           </button>
+        </div>
+        <div className={styles.dockSideRight}>
+          <div className={styles.toolRow}>
+            <button type="button" className={styles.infoBtn} onClick={() => setShowInfo(true)} aria-label="Информация">i</button>
+            <button
+              type="button"
+              className={`${styles.bolt} ${speed === 'slow' ? styles.boltSlow : speed === 'mid' ? styles.boltMid : styles.boltFast}`}
+              onClick={cycleSpeed}
+              aria-label={speed === 'slow' ? 'Медленно' : speed === 'mid' ? 'Средне' : 'Быстро'}
+            >
+              <Bolt />
+            </button>
+          </div>
+          <div className={styles.rightControls}>
+            <button type="button" className={styles.tumbler} disabled={locked} onClick={() => setAnte((value) => !value)} aria-pressed={ante}>
+              <span>
+                <b>ANTE</b>
+                <small>+16.77%</small>
+              </span>
+              <span className={`${styles.track} ${ante ? styles.trackOn : styles.trackOff}`}>
+                <i className={styles.knob} />
+                <em>{ante ? 'ON' : 'OFF'}</em>
+              </span>
+            </button>
+            <div className={styles.stakeGroup}>
+              <button type="button" className={styles.nudge} aria-label="Меньше" disabled={locked} onClick={() => setBetIndex((value) => Math.max(0, value - 1))}>−</button>
+              <div className={styles.coin} aria-label={`Ставка ${stakeLabel}`}>
+                <span>{stakeLabel}</span>
+                <small>{ante ? 'анте' : 'ставка'}</small>
+              </div>
+              <button type="button" className={styles.nudge} aria-label="Больше" disabled={locked} onClick={() => setBetIndex((value) => Math.min(bets.length - 1, value + 1))}>+</button>
+            </div>
+          </div>
         </div>
       </footer>
 

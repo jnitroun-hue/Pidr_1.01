@@ -42,6 +42,8 @@
 .card {
   position: relative;
   display: block;
+  width: 100%;
+  font: inherit;
   padding: 0;
   border: none;
   border-radius: 22px;
@@ -124,9 +126,79 @@
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 42px 10px 10px;
+  padding: 36px 12px 14px;
   background: linear-gradient(transparent, rgba(0, 0, 0, 0.92));
 }
+
+.modePick {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(0, 0, 0, 0.62);
+}
+
+.modeCard {
+  width: min(380px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 18px 16px 16px;
+  text-align: center;
+  border-radius: 28px;
+  border: 2px solid #f5c518;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 220, 120, 0.45), transparent 48%),
+    linear-gradient(180deg, #4a3412, #140e08);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), 0 0 36px rgba(245, 197, 24, 0.28);
+}
+
+.modeCard img {
+  width: 148px;
+  height: 180px;
+  object-fit: contain;
+  filter: drop-shadow(0 12px 16px rgba(0, 0, 0, 0.45));
+}
+
+.modeCard p {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.modeCard strong {
+  color: #fde68a;
+  font-size: 15px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.modeList {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  margin-top: 6px;
+}
+
+.modeList button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-height: 58px;
+  border: 0;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #fff6c2, #f5c518 46%, #d97706);
+  color: #3f2208;
+  cursor: pointer;
+  box-shadow: 0 4px 0 #92400e;
+}
+
+.modeList b { font-size: 18px; }
+.modeList small { font-size: 12px; font-weight: 800; color: #7c2d12; }
 
 .cardFoot strong {
   display: block;
@@ -280,9 +352,9 @@
 .frame {
   position: relative;
   --cell: min(
-    calc((100cqw - 8px) / var(--reels) - 6px),
-    calc((100cqh - 4px) / var(--rows) - 6px),
-    148px
+    calc((100cqw - 8px) / var(--reels) - 8px),
+    calc((100cqh - 8px) / var(--rows) - 8px),
+    196px
   );
   padding: 10px;
   border-radius: 26px;
@@ -377,17 +449,32 @@
   100% { transform: rotate(360deg) scale(1); }
 }
 
+.cellClear {
+  background:
+    radial-gradient(circle at 50% 40%, rgba(255, 220, 140, 0.08), transparent 62%),
+    rgba(0, 0, 0, 0.35);
+}
+
 .multBadge {
   position: absolute;
-  left: 8px;
-  right: 8px;
-  bottom: 8px;
+  left: 50%;
+  top: 50%;
+  z-index: 2;
+  transform: translate(-50%, -50%);
+  min-width: 62%;
+  padding: 0.08em 0.2em 0.12em;
+  border-radius: 12px;
+  border: 2px solid #fff4c2;
+  background: linear-gradient(180deg, rgba(28, 18, 6, 0.94), rgba(8, 6, 4, 0.96));
+  color: #ffe27a;
+  font-size: calc(var(--cell) * 0.34);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.04em;
   text-align: center;
-  font-size: calc(var(--cell) * 0.28);
-  line-height: 1.1;
-  color: #fff8dc;
-  text-shadow: 0 2px 0 #7c2d12, 0 0 8px #000;
+  text-shadow: 0 2px 0 #000, 0 0 10px rgba(245, 197, 24, 0.85);
   pointer-events: none;
+  box-shadow: 0 0 16px rgba(245, 197, 24, 0.45);
 }
 
 .cell img {
@@ -460,22 +547,34 @@
 .dock {
   z-index: 2;
   flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 4px 12px calc(8px + env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: end;
+  gap: 18px;
+  width: min(1240px, 100%);
+  margin: 0 auto;
+  padding: 6px 18px calc(12px + env(safe-area-inset-bottom));
   background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.88) 24%);
 }
 
-.dockTop, .dockBottom, .dockCol {
+.dockSide, .dockSideRight, .dockCenter, .buyRow, .toolRow, .rightControls {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
-.dockTop { justify-content: space-between; }
-.dockBottom { justify-content: center; align-items: flex-start; }
-.spin { margin-top: 16px; }
+.dockSide, .dockSideRight {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.dockSideRight { align-items: flex-end; margin-left: auto; }
+.dockSide .tumbler { width: 100%; }
+.dockCenter { align-items: flex-end; gap: 14px; padding-bottom: 2px; }
+.buyRow { align-items: stretch; }
+.toolRow { gap: 8px; }
+.rightControls { align-items: center; }
 
 .infoBtn, .ante, .buy, .nudge, .bolt, .spin {
   cursor: pointer;
@@ -500,12 +599,19 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 46px;
-  border-radius: 16px;
-  border: 1px solid rgba(245, 197, 24, 0.55);
-  background: linear-gradient(180deg, #3f2e12, #1c1408 55%, #0c0a09);
-  color: #fde68a;
-  box-shadow: 0 4px 0 #1c1408, inset 0 1px 0 rgba(255, 244, 194, 0.28);
+  min-width: 132px;
+  min-height: 74px;
+  padding: 8px 18px;
+  border-radius: 18px;
+  border: 2px solid #fff4c2;
+  background: linear-gradient(180deg, #fff6c2 0%, #f5c518 38%, #f59e0b 68%, #d97706);
+  color: #3f2208;
+  font-size: 20px;
+  letter-spacing: 0.02em;
+  box-shadow:
+    0 6px 0 #92400e,
+    0 0 22px rgba(245, 197, 24, 0.55),
+    inset 0 1px 0 #fff;
 }
 
 .tumbler {
@@ -570,17 +676,24 @@
 .trackOn em { left: 7px; }
 
 .buy small, .autoBtn small, .spin small, .coin small {
-  font-weight: 800;
-  font-size: 11px;
+  font-weight: 900;
+  font-size: 14px;
   letter-spacing: 0.04em;
 }
 
+.buy small { color: #7c2d12; }
+
 .buyTop {
-  border-color: rgba(251, 113, 133, 0.8);
-  background: linear-gradient(180deg, #9f1239, #4c0519 55%, #1a0a08);
-  color: #ffe4e6;
-  box-shadow: 0 5px 0 #4c0519, inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  border-color: #ffe4e6;
+  background: linear-gradient(180deg, #fecdd3 0%, #fb7185 36%, #e11d48 68%, #be123c);
+  color: #fff;
+  box-shadow:
+    0 6px 0 #881337,
+    0 0 24px rgba(244, 63, 94, 0.7),
+    inset 0 1px 0 #fff;
 }
+
+.buyTop small { color: #fff1f2; }
 
 .stakeGroup {
   display: flex;
@@ -651,6 +764,7 @@
 .spin {
   width: 104px;
   height: 104px;
+  margin-top: 18px;
   justify-self: center;
   border-radius: 50%;
   border: 5px solid #fff4c2;
@@ -847,6 +961,7 @@
 @media (max-width: 860px) {
   .hud {
     grid-template-columns: auto minmax(0, 1fr) auto;
+    padding: calc(8px + env(safe-area-inset-top)) 8px 4px;
   }
   .modes {
     grid-column: 1 / -1;
@@ -854,15 +969,53 @@
   }
   .lobbyHead h1 { font-size: 32px; }
   .floor { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .dockTop, .dockBottom { flex-wrap: wrap; }
-  .dock { gap: 6px; padding: 6px 6px calc(8px + env(safe-area-inset-bottom)); }
-  .autoRound { width: 64px; height: 64px; margin-top: 4px; }
-  .spin { margin-top: 10px; }
-  .coin { width: 50px; height: 50px; }
-  .coin span { font-size: 15px; }
-  .spin { width: 84px; height: 84px; }
-  .nudge { width: 34px; height: 34px; font-size: 20px; }
-  .stakeGroup { gap: 4px; }
-  .bolt, .infoBtn { width: 42px; height: 42px; }
-  .bolt svg { width: 24px; height: 24px; }
+  .board { align-items: flex-end; padding: 0 6px 2px; }
+  .winStrip { min-height: 28px; gap: 4px; }
+  .dock {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) auto minmax(0, 1fr);
+    align-items: end;
+    width: 100%;
+    gap: 6px;
+    padding: 2px 6px calc(8px + env(safe-area-inset-bottom));
+  }
+  .dockSide, .dockSideRight { gap: 4px; width: 100%; }
+  .dockSideRight { margin-left: 0; align-items: flex-end; }
+  .dockCenter { gap: 6px; }
+  .buyRow { width: 100%; gap: 4px; }
+  .buy {
+    min-width: 0;
+    flex: 1;
+    min-height: 54px;
+    padding: 4px 6px;
+    font-size: 14px;
+    border-radius: 14px;
+    border-width: 2px;
+  }
+  .buy small { font-size: 11px; }
+  .tumbler { min-height: 34px; gap: 4px; padding: 2px 4px 2px 8px; }
+  .tumbler b { font-size: 10px; letter-spacing: 0.04em; }
+  .tumbler small { font-size: 9px; }
+  .track { width: 52px; height: 22px; }
+  .knob { width: 16px; height: 16px; }
+  .track em { font-size: 8px; }
+  .dockSide .tumbler { width: 100%; align-self: stretch; }
+  .rightControls {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+  }
+  .toolRow { gap: 4px; }
+  .autoRound { width: 48px; height: 48px; margin-top: 8px; }
+  .autoRound svg { width: 16px; height: 16px; }
+  .autoRound b { font-size: 10px; }
+  .spin { width: 72px; height: 72px; margin-top: 10px; border-width: 4px; }
+  .spin span { font-size: 15px; }
+  .coin { width: 44px; height: 44px; box-shadow: inset 0 0 0 4px rgba(255, 244, 194, 0.85), inset 0 0 0 7px #a16207, 0 5px 0 #451a03; }
+  .coin span { font-size: 13px; }
+  .coin small { font-size: 8px; }
+  .nudge { width: 30px; height: 30px; font-size: 18px; border-width: 2px; }
+  .stakeGroup { gap: 3px; }
+  .bolt, .infoBtn { width: 36px; height: 36px; font-size: 18px; }
+  .bolt svg { width: 20px; height: 20px; }
 }
