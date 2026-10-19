@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { slotArt } from '@/lib/slots/art';
 import { reelPlan, type ReelSpeed } from '@/lib/slots/speed';
+import type { MarkKind } from '@/lib/slots/engine';
 import styles from '@/app/slots/Slots.module.css';
 
 const SCATTER_FX: Record<string, string> = {
@@ -18,15 +19,40 @@ const SCATTER_FX: Record<string, string> = {
   'blade-ronin': styles.fxTwist,
 };
 
+const MARK_CLASS: Record<MarkKind, string> = {
+  wild: styles.mkWild,
+  mult: styles.mkMult,
+  mystery: styles.mkMystery,
+  colossal: styles.mkColossal,
+  burn: styles.mkBurn,
+  slash: styles.mkSlash,
+  sticky: styles.mkSticky,
+  coin: styles.mkCoin,
+  orb: styles.mkOrb,
+  frozen: styles.mkFrozen,
+};
+
 type Props = {
   gameId: string;
   reelIndex: number;
   rows: number;
   symbolIds: string[];
+  /** Какие id считаются дикими / множителями — для анимации приземления. */
+  wildIds: string[];
   landed: string[];
+  values?: (number | null)[];
+  marks?: (MarkKind | null)[];
+  /** Клетки, которые не крутятся (Hold & Win, заморозка). */
+  locked?: boolean[];
+  /** Клетки, упавшие сверху после каскада. */
+  fresh?: boolean[];
+  /** Клетки, которые лопаются перед каскадом. */
+  popping?: boolean[];
   rolling: boolean;
   speed: ReelSpeed;
   bonus: boolean;
+  /** Барабан крутится дольше: ждём третий скаттер. */
+  extraMs?: number;
   highlight: boolean[];
 };
 
@@ -35,22 +61,34 @@ function multiplierOf(id: string): number | null {
   return match ? Number(match[1]) : null;
 }
 
-export default function SlotReel({ gameId, reelIndex, rows, symbolIds, landed, rolling, speed, bonus, highlight }: Props) {
+function formatValue(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1).replace(/\.0$/, '');
+}
+
+export default function SlotReel({
+  gameId, reelIndex, rows, symbolIds, wildIds, landed, values, marks, locked, fresh, popping,
+  rolling, speed, bonus, extraMs = 0, highlight,
+}: Props) {
   const [phase, setPhase] = useState<'idle' | 'clear' | 'ready' | 'go'>('idle');
   const plan = reelPlan(speed, reelIndex, bonus);
+  const duration = plan.duration + extraMs;
+  const anyLocked = Boolean(locked?.some(Boolean));
   const filler = useMemo(() => {
-    const count = 18;
-    return Array.from({ length: count }, (_, index) => symbolIds[(index * 5 + reelIndex * 3 + 1) % symbolIds.length]);
-  }, [symbolIds, reelIndex, rolling]);
-  const spinning = phase === 'ready' || phase === 'go';
-  // Landed sits at the top. The spin starts further down the strip and moves
-  // the strip downward, so symbols fall into the window instead of leaving it.
+    const count = speed === 'fast' ? 22 : speed === 'mid' ? 28 : 34;
+    const extra = Math.round(extraMs / 60);
+    return Array.from({ length: count + extra }, (_, index) => symbolIds[(index * 5 + reelIndex * 3 + 1) % symbolIds.length]);
+  }, [symbolIds, reelIndex, rolling, speed, extraMs]);
+  const spinning = !anyLocked && (phase === 'ready' || phase === 'go');
   const strip = spinning ? [...landed, ...filler] : landed;
   const startShift = filler.length;
 
   useEffect(() => {
     if (!rolling) {
       setPhase('idle');
+      return;
+    }
+    if (anyLocked) {
+      setPhase('go');
       return;
     }
     setPhase('clear');
@@ -65,32 +103,69 @@ export default function SlotReel({ gameId, reelIndex, rows, symbolIds, landed, r
       window.clearTimeout(timer);
       cancelAnimationFrame(frame);
     };
-  }, [rolling, landed.join('|'), plan.delay]);
+  }, [rolling, landed.join('|'), plan.delay, anyLocked]);
+
+  const cells = (
+    <div className={styles.reelCells}>
+      {landed.map((id, row) => {
+        const isLocked = Boolean(locked?.[row]);
+        const respinning = rolling && anyLocked && !isLocked;
+        const hot = !rolling && highlight[row];
+        const multiplier = multiplierOf(id);
+        const mark = marks?.[row] ?? null;
+        const value = values?.[row] ?? null;
+        const landWild = !rolling && (wildIds.includes(id) || multiplier != null);
+        const classes = [
+          styles.cell,
+          hot ? styles.hot : '',
+          id === 'scatter' ? SCATTER_FX[gameId] ?? '' : '',
+          mark ? MARK_CLASS[mark] : '',
+          isLocked ? styles.cellLocked : '',
+          respinning ? styles.cellRespin : '',
+          fresh?.[row] ? styles.cellFresh : '',
+          popping?.[row] ? styles.cellPop : '',
+          landWild && !fresh?.[row] ? styles.cellLand : '',
+        ].filter(Boolean).join(' ');
+        return (
+          <div key={`${reelIndex}-${row}-${id}-${mark ?? ''}-${value ?? ''}`} className={classes} style={{ ['--row' as string]: row }}>
+            <img src={slotArt(gameId, id)} alt="" draggable={false} />
+            {multiplier ? <b className={styles.multBadge}>x{multiplier}</b> : null}
+            {value != null ? <b className={`${styles.valueBadge} ${mark === 'orb' ? styles.valueOrb : ''}`}>x{formatValue(value)}</b> : null}
+            {mark === 'slash' ? <i className={styles.slashLine} /> : null}
+            {mark === 'burn' ? <i className={styles.burnFlame} /> : null}
+          </div>
+        );
+      })}
+    </div>
+  );
 
   return (
-    <div className={styles.reelWindow} style={{ ['--rows' as string]: rows }}>
+    <div
+      className={`${styles.reelWindow} ${spinning ? styles.reelBusy : ''} ${phase === 'idle' ? styles.reelIdle : ''} ${extraMs > 0 && rolling ? styles.reelAnticipate : ''}`}
+      style={{ ['--rows' as string]: rows }}
+    >
       {phase === 'clear' ? (
         Array.from({ length: rows }, (_, index) => <div key={index} className={`${styles.cell} ${styles.cellClear}`} />)
-      ) : (
+      ) : spinning ? (
         <div
-          className={styles.reelStrip}
+          className={`${styles.reelStrip} ${phase === 'go' ? styles.reelGo : ''}`}
           style={{
-            transform: phase === 'ready' ? `translateY(calc(${startShift} * var(--cell) * -1))` : 'translateY(0)',
-            transition: phase === 'go' ? `transform ${plan.duration}ms cubic-bezier(0.08, 0.65, 0.18, 1)` : 'none',
+            ['--shift' as string]: String(startShift),
+            ['--spin-ms' as string]: `${duration}ms`,
+            transform: phase === 'ready' ? `translateY(calc(${startShift} * var(--cell) * -1))` : undefined,
           }}
         >
           {strip.map((id, index) => {
-            const hot = phase === 'idle' && index < rows && highlight[index];
             const multiplier = multiplierOf(id);
             return (
-              <div key={`${reelIndex}-${index}-${id}`} className={`${styles.cell} ${hot ? styles.hot : ''} ${id === 'scatter' ? SCATTER_FX[gameId] ?? '' : ''}`}>
+              <div key={`${reelIndex}-${index}-${id}`} className={`${styles.cell} ${id === 'scatter' ? SCATTER_FX[gameId] ?? '' : ''}`}>
                 <img src={slotArt(gameId, id)} alt="" draggable={false} />
                 {multiplier ? <b className={styles.multBadge}>x{multiplier}</b> : null}
               </div>
             );
           })}
         </div>
-      )}
+      ) : cells}
     </div>
   );
 }

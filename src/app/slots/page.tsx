@@ -32,9 +32,10 @@ export default function SlotsLobbyPage() {
             <img className={styles.cardBg} src={slotPoster(game.id)} alt="" />
             <img className={styles.cardHero} src={slotHero(game.id)} alt="" />
             <em>x{game.maxWinMultiplier}</em>
+            <span className={styles.cardKind}>{game.bonus.title}</span>
             <span className={styles.cardFoot}>
               <strong>{game.title}</strong>
-              <small>{game.bonus.title}</small>
+              <small>{game.mood}</small>
             </span>
           </button>
         ))}

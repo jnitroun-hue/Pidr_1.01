@@ -59,6 +59,9 @@ generated-assets/*
 *.tsbuildinfo
 next-env.d.ts
 
+# книги Stake Engine (генератор scripts/slots-books.mjs)
+/library/
+
 # локальные инструкции, скриншоты кабинета VK и иконки для модерации
 # остаются только на этом компьютере, в git и на Vercel не попадают
 /docs/
