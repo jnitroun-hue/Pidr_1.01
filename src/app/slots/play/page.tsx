@@ -28,7 +28,7 @@ import type { SlotEvent } from '@/lib/slots/characters';
 import { anteCharge, reelSpinMs, type ReelSpeed } from '@/lib/slots/speed';
 import SlotReel from '@/components/slots/SlotReel';
 import BigWin from '@/components/slots/BigWin';
-import CharacterCast from '@/components/slots/CharacterCast';
+import HeroStage, { resolveHeroCue, sideHeroClass } from '@/components/slots/HeroStage';
 import SlotInfo from '@/components/slots/SlotInfo';
 import WheelBonus from '@/components/slots/WheelBonus';
 import PickBonus from '@/components/slots/PickBonus';
@@ -270,7 +270,7 @@ function PlayInner() {
   async function showCast(event: SlotEvent | undefined) {
     if (!event) return;
     setCast(event);
-    await wait(1000);
+    await wait(1500);
     setCast(null);
   }
 
@@ -500,10 +500,21 @@ function PlayInner() {
 
   const intro = feature ? introText(game, feature) : null;
   const heroSrc = slotHero(game.id);
+  const cue = resolveHeroCue({
+    gameId: game.id,
+    phase,
+    bonusKind: feature?.kind ?? null,
+    label: board.label,
+    marks: board.marks,
+    cast,
+  });
+  const actToken = cue && cue.pose !== 'present'
+    ? `${cue.pose}:${board.label ?? ''}:${cast?.title ?? ''}:${counter?.step ?? 0}:${board.marks?.length ?? 0}`
+    : 'idle';
 
   return (
     <main
-      className={`${styles.stage} ${inBonus ? styles.stageBonus : ''}`}
+      className={`${styles.stage} ${inBonus ? styles.stageBonus : ''} ${pots ? styles.stagePots : ''}`}
       style={{ backgroundImage: `url(${slotBackdrop(game.id)})`, ['--accent' as string]: game.accent }}
     >
       <div className={styles.vignette} />
@@ -526,7 +537,9 @@ function PlayInner() {
       )}
 
       <section className={styles.board} style={{ ['--reels' as string]: String(game.reels), ['--rows' as string]: String(game.rows) }}>
-        {heroSrc ? <img className={styles.hero} src={heroSrc} alt="" draggable={false} /> : null}
+        {heroSrc ? (
+          <img key={actToken} className={`${styles.hero} ${sideHeroClass(game.id, cue)}`} src={heroSrc} alt="" draggable={false} />
+        ) : null}
         <div className={styles.frameWrap}>
           {pots ? (
             <div className={styles.pots}>
@@ -566,7 +579,7 @@ function PlayInner() {
                 />
               ))}
             </div>
-            {cast ? <CharacterCast event={cast} /> : null}
+            <HeroStage gameId={game.id} cue={cue} replayKey={actToken} />
           </div>
           <div className={styles.winStrip}>
             {!rolling && board.wins.filter((win) => win.kind !== 'coin').slice(0, 3).map((win, index) => (
@@ -691,7 +704,7 @@ function PlayInner() {
       {feature && intro && bonusIntro && (
         <div className={styles.overlay}>
           <div className={`${styles.sheet} ${styles.congrats}`}>
-            <img src={feature.tier === 'top' ? '/img/slots/bonus-top.jpg' : '/img/slots/bonus-gold.jpg'} alt="" />
+            {heroSrc ? <img className={`${styles.sheetHero} ${sideHeroClass(game.id, { pose: 'present', cells: [] })}`} src={heroSrc} alt="" /> : null}
             <p>{feature.tier === 'natural' ? 'Поздравляем!' : feature.tier === 'top' ? 'Топ-бонус куплен' : 'Бонус куплен'}</p>
             <strong>{intro.title}</strong>
             <span>{intro.text}</span>
@@ -701,6 +714,7 @@ function PlayInner() {
       )}
       {feature?.wheel && phase === 'wheel' && (
         <WheelBonus
+          heroSrc={heroSrc}
           stops={feature.wheel.stops}
           boost={feature.tier === 'top' ? 2.25 : 1}
           cash={feature.wheel.cash}
@@ -711,6 +725,7 @@ function PlayInner() {
       )}
       {feature?.pick && phase === 'pick' && (
         <PickBonus
+          heroSrc={heroSrc}
           gameId={game.id}
           reveals={feature.pick.reveals}
           total={feature.totalWin}
@@ -734,7 +749,7 @@ function PlayInner() {
       {buyAsk && (
         <div className={styles.overlay}>
           <div className={styles.sheet}>
-            <img src={buyAsk === 'top' ? '/img/slots/bonus-top.jpg' : '/img/slots/bonus-gold.jpg'} alt="" />
+            {heroSrc ? <img className={`${styles.sheetHero} ${sideHeroClass(game.id, { pose: 'present', cells: [] })}`} src={heroSrc} alt="" /> : null}
             <p>{buyAsk === 'top' ? 'Топ-бонус' : 'Бонус'}</p>
             <strong>{money(bet * (buyAsk === 'top' ? 500 : 100))}</strong>
             <span>

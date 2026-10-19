@@ -8,6 +8,7 @@ import styles from './PickBonus.module.css';
 type Reveal = { kind: 'mult' | 'miss'; value: number; amount: number };
 
 type Props = {
+  heroSrc: string;
   gameId: string;
   reveals: Reveal[];
   total: number;
@@ -17,7 +18,7 @@ type Props = {
   onDone: () => void;
 };
 
-export default function PickBonus({ gameId, reveals, total, floorAdded, moneyLabel, auto, onDone }: Props) {
+export default function PickBonus({ heroSrc, gameId, reveals, total, floorAdded, moneyLabel, auto, onDone }: Props) {
   const [opened, setOpened] = useState<number[]>([]);
   const finished = opened.length >= reveals.length;
   const misses = opened.reduce((sum, _, index) => sum + (reveals[index].kind === 'miss' ? 1 : 0), 0);
@@ -48,7 +49,11 @@ export default function PickBonus({ gameId, reveals, total, floorAdded, moneyLab
     <div className={styles.back}>
       <div className={styles.panel}>
         <p className={styles.head}>Тир · промахов {misses}/{PICK_MISSES}</p>
-        <div className={styles.grid}>
+        <div className={styles.layout}>
+          {heroSrc ? (
+            <img key={opened.length} className={`${styles.archer} ${opened.length ? styles.shoot : styles.ready}`} src={heroSrc} alt="" draggable={false} />
+          ) : null}
+          <div className={styles.grid}>
           {Array.from({ length: PICK_TARGETS }, (_, index) => {
             const order = opened.indexOf(index);
             const reveal = order >= 0 ? reveals[order] : null;
@@ -68,6 +73,7 @@ export default function PickBonus({ gameId, reveals, total, floorAdded, moneyLab
               </button>
             );
           })}
+          </div>
         </div>
         <div className={styles.sum}>
           <span>Собрано</span>

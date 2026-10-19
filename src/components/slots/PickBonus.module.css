@@ -27,11 +27,49 @@
   color: #bbf7d0;
 }
 
+.layout {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  width: 100%;
+}
+
+.archer {
+  width: 96px;
+  height: 148px;
+  object-fit: contain;
+  object-position: center bottom;
+  flex-shrink: 0;
+  filter: drop-shadow(0 12px 12px rgba(0, 0, 0, 0.5));
+  transform-origin: 30% 80%;
+  pointer-events: none;
+}
+
+.ready { animation: nock 1.4s ease-in-out infinite; }
+
+.shoot { animation: loose 0.45s cubic-bezier(0.15, 0.8, 0.2, 1) both; }
+
+@keyframes nock {
+  0%, 100% { transform: rotate(0deg); }
+  40% { transform: rotate(-8deg) translateX(-4px); }
+}
+
+@keyframes loose {
+  0% { transform: translateX(-10px) rotate(-14deg); }
+  55% { transform: translateX(8px) rotate(6deg); }
+  100% { transform: translateX(0) rotate(0deg); }
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 520px) {
+  .archer { width: 64px; height: 104px; }
 }
 
 .target {

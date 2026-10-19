@@ -6,6 +6,7 @@ import type { WheelStop } from '@/lib/slots/engine';
 import styles from './WheelBonus.module.css';
 
 type Props = {
+  heroSrc: string;
   stops: WheelStop[];
   /** Сколько платит кэш-сектор с учётом усиления топ-покупки. */
   boost: number;
@@ -17,7 +18,7 @@ type Props = {
 
 const SEGMENT = 360 / 12;
 
-export default function WheelBonus({ stops, boost, cash, moneyLabel, auto, onDone }: Props) {
+export default function WheelBonus({ heroSrc, stops, boost, cash, moneyLabel, auto, onDone }: Props) {
   const [stage, setStage] = useState(0);
   const [turn, setTurn] = useState(0);
   const [angle, setAngle] = useState(0);
@@ -74,6 +75,7 @@ export default function WheelBonus({ stops, boost, cash, moneyLabel, auto, onDon
 
   return (
     <div className={styles.back}>
+      {heroSrc ? <img className={styles.hero} src={heroSrc} alt="" draggable={false} /> : null}
       <div className={styles.panel}>
         <p className={styles.level}>Колесо · уровень {stop.level}{boost > 1 ? ` · сектора ×${boost}` : ''}</p>
         <div className={styles.wheelBox}>

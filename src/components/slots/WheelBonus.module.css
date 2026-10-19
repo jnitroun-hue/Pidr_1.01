@@ -5,7 +5,36 @@
   display: grid;
   place-items: center;
   padding: 12px;
-  background: radial-gradient(circle at 50% 40%, rgba(225, 29, 72, 0.28), rgba(0, 0, 0, 0.86) 70%);
+  background:
+    radial-gradient(circle at 50% 40%, rgba(244, 114, 182, 0.28), rgba(8, 4, 16, 0.82) 70%);
+}
+
+.hero {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  z-index: 3;
+  height: min(48vh, 340px);
+  max-width: min(34vw, 220px);
+  width: auto;
+  object-fit: contain;
+  object-position: left bottom;
+  pointer-events: none;
+  filter: drop-shadow(0 16px 18px rgba(0, 0, 0, 0.55));
+  transform-origin: 20% 100%;
+  animation: sirenLean 0.95s cubic-bezier(0.16, 0.84, 0.3, 1) both;
+}
+
+@keyframes sirenLean {
+  0% { transform: translateX(-18%) rotate(-6deg); opacity: 0; }
+  100% { transform: translateX(0) rotate(8deg); opacity: 1; }
+}
+
+@media (max-width: 700px) {
+  .hero {
+    height: min(30vh, 170px);
+    max-width: 26vw;
+  }
 }
 
 .panel {
