@@ -41,6 +41,7 @@ const ART: Record<string, Record<string, string>> = {
     mushroom: `${BASE}/sym-mushroom.jpg`,
     owl: `${BASE}/sym-owl.jpg`,
     hoard: `${BASE}/sym-wild-oak.jpg`,
+    wild: `${BASE}/sym-wild-oak-word.jpg`,
     oak: `${BASE}/sym-oak.jpg`,
     orb: `${BASE}/sym-orb-oak.jpg`,
     scatter: `${BASE}/scatter-oak.jpg`,

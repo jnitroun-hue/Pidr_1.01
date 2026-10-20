@@ -3,9 +3,6 @@ import {
   HOLD_WIN_GRAND,
   HOLD_WIN_VALUES,
   ORB_VALUES,
-  PICK_BAG,
-  PICK_MISSES,
-  PICK_TARGETS,
   WAYS_DIVISOR,
   WHEEL_LEVEL_1,
   WHEEL_LEVEL_2,
@@ -14,7 +11,7 @@ import {
   type SlotGame,
   type SlotSymbol,
 } from './games';
-import { applyCharacter, dragonGift, type SlotEvent } from './characters';
+import { applyCharacter, type SlotEvent } from './characters';
 
 export type Cell = { reel: number; row: number };
 
@@ -79,7 +76,14 @@ export type BonusPlay = {
   tier: Tier;
   spins: SpinStep[];
   wheel?: { stops: WheelStop[]; cash: number; freeSpins: number; freeMultiplier: number };
-  pick?: { reveals: { kind: 'mult' | 'miss'; value: number; amount: number }[] };
+  pick?: {
+    reveals: { kind: 'mult' | 'miss'; value: number; amount: number }[];
+    cells?: { kind: 'mult' | 'miss'; value: number; amount: number }[];
+    columns?: number;
+    rows?: number;
+    path?: number[];
+    missLimit?: number;
+  };
   pots?: { name: string; value: number; amount: number }[];
   /** Сколько добавил пол покупки. */
   floorAdded: number;
@@ -149,11 +153,25 @@ function newTile(game: SlotGame, id: string): Tile {
   return { id, value: null };
 }
 
+function scatterSpotOk(game: SlotGame, reel: number, column: Tile[]): boolean {
+  if (game.id !== 'green-arrow') return true;
+  if (reel === 0) return false;
+  return !column.some((tile) => tile.id === 'scatter');
+}
+
 function drawTiles(game: SlotGame, bag: SlotSymbol[]): Tiles {
   const tiles: Tiles = [];
+  const trigger = triggerSymbol(game);
   for (let reel = 0; reel < game.reels; reel += 1) {
     const column: Tile[] = [];
-    for (let row = 0; row < game.rows; row += 1) column.push(newTile(game, pickWeighted(bag).id));
+    for (let row = 0; row < game.rows; row += 1) {
+      let tile = newTile(game, pickWeighted(bag).id);
+      if (trigger && tile.id === trigger.id && !scatterSpotOk(game, reel, column)) {
+        const plain = bag.filter((symbol) => symbol.id !== trigger.id);
+        tile = newTile(game, pickWeighted(plain.length ? plain : bag).id);
+      }
+      column.push(tile);
+    }
     tiles.push(column);
   }
   return tiles;
@@ -208,7 +226,11 @@ function anteTrigger(game: SlotGame, tiles: Tiles): Tiles {
   if (randomInt(10000) >= 1677) return tiles;
   const trigger = triggerSymbol(game);
   if (!trigger) return tiles;
-  const spots = freeCells(tiles, (id) => id === trigger.id);
+  let spots = freeCells(tiles, (id) => id === trigger.id);
+  if (game.id === 'green-arrow') {
+    const taken = new Set(countId(tiles, trigger.id).map((cell) => cell.reel));
+    spots = spots.filter((cell) => cell.reel > 0 && !taken.has(cell.reel));
+  }
   if (!spots.length) return tiles;
   const next = cloneTiles(tiles);
   stamp(game, next, spots[randomInt(spots.length)], trigger.id);
@@ -239,22 +261,27 @@ function walkLine(game: SlotGame, ids: string[]): { count: number; concrete: str
 }
 
 function lineFactor(game: SlotGame, tiles: Tiles, cells: Cell[]): number {
-  let product = 1;
-  let curtain = 0;
-  const seen = new Set<number>();
-  for (const cell of cells) {
-    const tile = tiles[cell.reel][cell.row];
-    const symbol = symbolById(game, tile.id);
-    if (symbol.wild && tile.value != null && tile.value > 1) {
-      if (!seen.has(cell.reel)) {
+  if (game.bonus.kind === 'sticky-reels') {
+    let curtain = 0;
+    const seen = new Set<number>();
+    for (const cell of cells) {
+      const tile = tiles[cell.reel][cell.row];
+      const symbol = symbolById(game, tile.id);
+      if (symbol.wild && tile.value != null && tile.value > 1 && !seen.has(cell.reel)) {
         seen.add(cell.reel);
         curtain += tile.value;
       }
-      continue;
     }
-    product *= symbol.multiplier ?? 1;
+    return curtain > 0 ? Math.min(10, curtain) : 1;
   }
-  return product * (curtain > 0 ? Math.min(10, curtain) : 1);
+  let product = 1;
+  for (const cell of cells) {
+    const tile = tiles[cell.reel][cell.row];
+    const symbol = symbolById(game, tile.id);
+    product *= symbol.multiplier ?? 1;
+    if (symbol.wild && tile.value != null && tile.value > 1) product *= tile.value;
+  }
+  return product;
 }
 
 function evalLines(game: SlotGame, tiles: Tiles, bet: number, bothWays: boolean): SpinWin[] {
@@ -361,9 +388,12 @@ function evalWays(game: SlotGame, grid: string[][], bet: number): SpinWin[] {
 }
 
 function evalScatterPays(game: SlotGame, tiles: Tiles, bet: number): SpinWin[] {
+  const orbs = countId(tiles, 'orb');
+  const orbFactor = orbs.reduce((sum, cell) => sum + (tiles[cell.reel][cell.row].value ?? 1), 0);
   const wins: SpinWin[] = [];
   for (const symbol of regularSymbols(game)) {
-    const cells = countId(tiles, symbol.id);
+    const own = countId(tiles, symbol.id);
+    const cells = orbs.length ? [...own, ...orbs] : own;
     if (cells.length < 8) continue;
     const tier = cells.length >= 12 ? 2 : cells.length >= 10 ? 1 : 0;
     wins.push({
@@ -372,7 +402,7 @@ function evalScatterPays(game: SlotGame, tiles: Tiles, bet: number): SpinWin[] {
       symbolName: symbol.name,
       count: cells.length,
       cells,
-      amount: roundMoney(bet * symbol.pays[tier]),
+      amount: roundMoney(bet * symbol.pays[tier] * (orbs.length ? Math.max(1, orbFactor) : 1)),
     });
   }
   return wins;
@@ -487,10 +517,6 @@ function uniqueCells(cells: Cell[]): Cell[] {
   });
 }
 
-function orbSum(tiles: Tiles): number {
-  return tiles.flat().reduce((sum, tile) => sum + (tile.value ?? 0), 0);
-}
-
 type CascadeOptions = {
   bag: SlotSymbol[];
   /** Общий множитель бонуса: передаётся по ссылке и растёт на step за каскад. */
@@ -547,7 +573,15 @@ function cascade(game: SlotGame, start: Tiles, bet: number, options: CascadeOpti
       break;
     }
     const multiplier = game.mechanic === 'cluster' && options.carry ? options.carry.multiplier : 1;
-    const current = board(tiles, wins, multiplier, { removed });
+    const orbs = countId(tiles, 'orb');
+    const orbFactor = orbs.reduce((sum, cell) => sum + (tiles[cell.reel][cell.row].value ?? 1), 0);
+    const usedOrb = orbs.length > 0 && wins.some((win) => win.cells.some((cell) => tiles[cell.reel][cell.row].id === 'orb'));
+    const orbMarks: Mark[] = usedOrb ? orbs.map((cell) => ({ ...cell, kind: 'orb' as const })) : [];
+    const current = board(tiles, wins, multiplier, {
+      removed,
+      marks: orbMarks.length ? orbMarks : undefined,
+      label: usedOrb ? `Шар x${orbFactor} заменил символы` : undefined,
+    });
     boards.push(current);
     rawTotal += sumWins(wins);
     if (game.mechanic === 'cluster' && options.carry) options.carry.multiplier += options.carry.step ?? 1;
@@ -556,29 +590,6 @@ function cascade(game: SlotGame, start: Tiles, bet: number, options: CascadeOpti
     removed = cells;
   }
 
-  if (game.mechanic === 'scatter-pays' && rawTotal > 0) {
-    const last = boards[boards.length - 1];
-    const orbs = orbSum(tiles);
-    let multiplier = 1;
-    if (options.carry) {
-      if (orbs > 0) options.carry.multiplier += orbs;
-      multiplier = Math.max(1, options.carry.multiplier);
-    } else if (orbs > 0) {
-      multiplier = orbs;
-    }
-    if (multiplier > 1) {
-      const marks: Mark[] = countId(tiles, 'orb').map((cell) => ({ ...cell, kind: 'orb' as const }));
-      boards.push({
-        ...last,
-        wins: [],
-        marks,
-        multiplier,
-        win: roundMoney(rawTotal * multiplier) - rawTotal,
-        label: options.carry ? `Общий множитель x${multiplier}` : `Шары x${multiplier}`,
-        removed: undefined,
-      });
-    }
-  }
   return boards;
 }
 
@@ -683,10 +694,13 @@ export function spinSlot(game: SlotGame, totalBet: number, ante = false): RoundR
   let multiplier = 1;
   if (baseWin > 0) {
     multiplier = pickWeighted(game.multipliers).value;
-    const gift = dragonGift(game, baseWin);
-    if (gift?.multiplier) {
-      multiplier = Math.max(multiplier, gift.multiplier);
-      events.push(gift);
+    if (game.id === 'ash-dragon' && randomInt(100) < 30) {
+      const breathed = breatheWild(game, boards[boards.length - 1], totalBet);
+      if (breathed) {
+        boards[boards.length - 1] = breathed.board;
+        events.push(breathed.event);
+        baseWin = boards.reduce((sum, item) => sum + item.win, 0);
+      }
     }
     if (multiplier > 1) {
       const last = boards[boards.length - 1];
@@ -993,20 +1007,110 @@ function bonusWheel(game: SlotGame, bet: number, tier: Tier): { spins: SpinStep[
   return { spins, wheel: { stops, cash, freeSpins, freeMultiplier } };
 }
 
-function bonusPick(bet: number, tier: Tier): NonNullable<BonusPlay['pick']> {
-  const bag = PICK_BAG.map((token) => (
-    token.kind === 'miss'
-      ? { ...token, weight: tier === 'top' ? token.weight / 3 : token.weight }
-      : { ...token, value: tier === 'top' ? token.value * 3.4 : token.value }
-  ));
-  const reveals: NonNullable<BonusPlay['pick']>['reveals'] = [];
-  let misses = 0;
-  while (reveals.length < PICK_TARGETS && misses < PICK_MISSES) {
-    const token = pickWeighted(bag);
-    if (token.kind === 'miss') misses += 1;
-    reveals.push({ kind: token.kind, value: token.value, amount: roundMoney(token.value * bet) });
+function breatheWild(game: SlotGame, item: Board, bet: number): { board: Board; event: SlotEvent } | null {
+  const tiles = tilesFromBoard(game, item);
+  const involved = item.wins.flatMap((win) => win.cells).filter((cell) => isWild(game, tiles[cell.reel]?.[cell.row]?.id));
+  const spots = involved.length ? involved : [];
+  if (!spots.length) return null;
+  const cell = spots[randomInt(spots.length)];
+  const table = [2, 2, 2, 3, 3, 5];
+  const value = table[randomInt(table.length)];
+  tiles[cell.reel][cell.row] = { ...tiles[cell.reel][cell.row], value };
+  const kept = item.wins.filter((win) => win.kind === 'scatter' || win.kind === 'coin' || win.kind === 'grand');
+  const wins = [...evalBoard(game, tiles, bet), ...kept];
+  const marks: Mark[] = [...(item.marks ?? []), { ...cell, kind: 'mult' }];
+  return {
+    board: board(tiles, wins, item.multiplier, { marks, label: `Дыхание x${value}`, curtains: item.curtains, locked: item.locked, removed: item.removed }),
+    event: { actor: 'dragon', title: `Дыхание x${value}`, cells: [cell], multiplier: value },
+  };
+}
+
+const VOLLEY_COUNT = [
+  { value: 1, weight: 34 },
+  { value: 2, weight: 28 },
+  { value: 3, weight: 18 },
+  { value: 4, weight: 10 },
+  { value: 5, weight: 6 },
+  { value: 6, weight: 4 },
+];
+const VOLLEY_MULT = [
+  { value: 2, weight: 46 },
+  { value: 3, weight: 28 },
+  { value: 5, weight: 16 },
+  { value: 8, weight: 7 },
+  { value: 10, weight: 3 },
+];
+const ARCHER_MULT = [
+  { value: 10, weight: 28 },
+  { value: 15, weight: 22 },
+  { value: 20, weight: 16 },
+  { value: 25, weight: 12 },
+  { value: 40, weight: 8 },
+  { value: 50, weight: 6 },
+  { value: 75, weight: 4 },
+  { value: 100, weight: 2.5 },
+  { value: 150, weight: 1.2 },
+  { value: 250, weight: 0.6 },
+  { value: 500, weight: 0.25 },
+  { value: 1000, weight: 0.08 },
+  { value: 2500, weight: 0.02 },
+];
+
+function bonusVolley(game: SlotGame, bet: number): SpinStep[] {
+  const steps: SpinStep[] = [];
+  const bag = game.symbols.filter((symbol) => !symbol.scatter && !symbol.bonusOnly);
+  const wild = wildId(game);
+  const stuck: { reel: number; row: number; value: number }[] = [];
+  for (let index = 0; index < 15; index += 1) {
+    const tiles = drawTiles(game, bag);
+    stuck.forEach((pin) => { tiles[pin.reel][pin.row] = { id: wild, value: pin.value }; });
+    const blocked = new Set(stuck.map((pin) => `${pin.reel}:${pin.row}`));
+    const spots = freeCells(tiles, () => false).filter((cell) => !blocked.has(`${cell.reel}:${cell.row}`));
+    const marks: Mark[] = stuck.map((pin) => ({ reel: pin.reel, row: pin.row, kind: 'mult' as const }));
+    const shots = Math.min(pickWeighted(VOLLEY_COUNT).value, spots.length);
+    for (let shot = 0; shot < shots; shot += 1) {
+      const cell = spots.splice(randomInt(spots.length), 1)[0];
+      tiles[cell.reel][cell.row] = { id: wild, value: null };
+      marks.push({ ...cell, kind: 'wild' });
+    }
+    let fresh = 0;
+    if (stuck.length < 4 && spots.length && randomInt(100) < 18) {
+      const cell = spots.splice(randomInt(spots.length), 1)[0];
+      fresh = pickWeighted(VOLLEY_MULT).value;
+      tiles[cell.reel][cell.row] = { id: wild, value: fresh };
+      stuck.push({ ...cell, value: fresh });
+      marks.push({ ...cell, kind: 'mult' });
+    }
+    const wins = evalBoard(game, tiles, bet);
+    const label = fresh ? `Стрела x${fresh} остаётся` : `Лучник: ${shots} диких`;
+    steps.push(freeSpinStep([board(tiles, wins, 1, { marks, label })]));
   }
-  return { reveals };
+  return steps;
+}
+
+function bonusArcherPick(bet: number): NonNullable<BonusPlay['pick']> {
+  const cells: { kind: 'mult' | 'miss'; value: number; amount: number }[] = Array.from({ length: 6 }, () => ({ kind: 'miss' as const, value: 0, amount: 0 }));
+  while (cells.length < 36) {
+    const value = pickWeighted(ARCHER_MULT).value;
+    cells.push({ kind: 'mult', value, amount: roundMoney(value * bet) });
+  }
+  for (let index = cells.length - 1; index > 0; index -= 1) {
+    const swap = randomInt(index + 1);
+    [cells[index], cells[swap]] = [cells[swap], cells[index]];
+  }
+  const order = cells.map((_, index) => index);
+  for (let index = order.length - 1; index > 0; index -= 1) {
+    const swap = randomInt(index + 1);
+    [order[index], order[swap]] = [order[swap], order[index]];
+  }
+  const path: number[] = [];
+  let misses = 0;
+  for (const index of order) {
+    path.push(index);
+    if (cells[index].kind === 'miss') misses += 1;
+    if (misses >= 3) break;
+  }
+  return { reveals: path.map((index) => cells[index]), cells, columns: 6, rows: 6, path, missLimit: 3 };
 }
 
 function bonusClusterFs(game: SlotGame, bet: number, tier: Tier): SpinStep[] {
@@ -1033,8 +1137,22 @@ function bonusBurn(game: SlotGame, bet: number, tier: Tier): SpinStep[] {
     const tiles = drawTiles(game, bag);
     const marks: Mark[] = [];
     if (tier === 'top' && multWilds.length && index % 5 === 4) stampRandom(game, tiles, multWilds[randomInt(multWilds.length)], marks, 'mult');
-    const wins = evalBoard(game, tiles, bet);
-    const current = board(tiles, wins, multiplier, { marks, label: `Множитель x${multiplier}` });
+    const winsBefore = evalBoard(game, tiles, bet);
+    let wins = winsBefore;
+    let currentLabel: string | undefined;
+    if (sumWins(winsBefore) > 0 && randomInt(100) < 55) {
+      const involved = winsBefore.flatMap((win) => win.cells).filter((cell) => isWild(game, tiles[cell.reel][cell.row].id));
+      if (involved.length) {
+        const cell = involved[randomInt(involved.length)];
+        const table = [2, 2, 3, 3, 5];
+        const value = table[randomInt(table.length)];
+        tiles[cell.reel][cell.row] = { ...tiles[cell.reel][cell.row], value };
+        marks.push({ ...cell, kind: 'mult' });
+        wins = evalBoard(game, tiles, bet);
+        currentLabel = `Дыхание x${value}`;
+      }
+    }
+    const current = board(tiles, wins, multiplier, { marks, label: currentLabel ?? `Множитель x${multiplier}` });
     if (sumWins(wins) > 0) {
       if (burned.size < maxBurn) {
         const next = order.find((id) => !burned.has(id));
@@ -1112,7 +1230,8 @@ function playBonus(game: SlotGame, bet: number, tier: Tier, scatterCount: number
 
   if (kind === 'sticky-reels') play.spins = bonusStickyReels(game, bet, tier);
   if (kind === 'hold-win') {
-    const start = tier === 'natural' ? lastTiles : holdWinStart(game, tier === 'top' ? 9 : 6, tier === 'top' ? 5 : 1);
+    const seeded = countId(lastTiles, 'coin').length >= game.trigger;
+    const start = seeded || tier === 'natural' ? lastTiles : holdWinStart(game, tier === 'top' ? 9 : 6, tier === 'top' ? 5 : 1);
     const result = bonusHoldWin(game, bet, tier, start);
     play.spins = result.spins;
     play.pots = result.pots;
@@ -1124,7 +1243,18 @@ function playBonus(game: SlotGame, bet: number, tier: Tier, scatterCount: number
     play.spins = result.spins;
     play.wheel = result.wheel;
   }
-  if (kind === 'pick') play.pick = bonusPick(bet, tier);
+  if (game.id === 'green-arrow') {
+    const topShot = tier === 'top' || scatterCount >= 4;
+    if (topShot) {
+      play.title = 'Тир';
+      play.rule = 'Поле 6×6, шесть клеток мимо. Третий промах заканчивает тир. Множители от x10 до x2500.';
+      play.pick = bonusArcherPick(bet);
+    } else {
+      play.title = 'Залп';
+      play.rule = '15 спинов. Лучник бросает от 1 до 6 диких. Стрела с множителем остаётся до конца бонуса.';
+      play.spins = bonusVolley(game, bet);
+    }
+  }
   if (kind === 'cluster-fs') play.spins = bonusClusterFs(game, bet, tier);
   if (kind === 'burn') play.spins = bonusBurn(game, bet, tier);
   if (kind === 'colossal') play.spins = bonusColossal(game, bet, tier);
@@ -1154,23 +1284,63 @@ function playBonus(game: SlotGame, bet: number, tier: Tier, scatterCount: number
   return play;
 }
 
-export function buyBonus(game: SlotGame, totalBet: number, tier: 'regular' | 'top'): RoundResult & { bonus: BonusPlay } {
+function placeExactTrigger(game: SlotGame, count: number): Tiles {
+  const trigger = triggerSymbol(game);
   const tiles = drawTiles(game, game.symbols);
-  const bonus = playBonus(game, totalBet, tier, game.trigger, tiles);
+  if (!trigger || count <= 0) return tiles;
+  const fallback = regularSymbols(game)[0];
+  if (!fallback) return tiles;
+  tiles.forEach((reel) => {
+    reel.forEach((tile, row) => {
+      if (tile.id === trigger.id) reel[row] = newTile(game, fallback.id);
+    });
+  });
+  let order = Array.from({ length: game.reels }, (_, index) => index);
+  if (game.id === 'green-arrow') order = order.filter((reel) => reel > 0);
+  for (let index = order.length - 1; index > 0; index -= 1) {
+    const swap = randomInt(index + 1);
+    [order[index], order[swap]] = [order[swap], order[index]];
+  }
+  let placed = 0;
+  for (const reel of order) {
+    if (placed >= count) break;
+    stamp(game, tiles, { reel, row: randomInt(game.rows) }, trigger.id);
+    placed += 1;
+  }
+  while (placed < count) {
+    let spots = freeCells(tiles, (id) => id === trigger.id);
+    if (game.id === 'green-arrow') {
+      const taken = new Set(countId(tiles, trigger.id).map((cell) => cell.reel));
+      spots = spots.filter((cell) => cell.reel > 0 && !taken.has(cell.reel));
+    }
+    if (!spots.length) break;
+    stamp(game, tiles, spots[randomInt(spots.length)], trigger.id);
+    placed += 1;
+  }
+  return tiles;
+}
+
+export function buyBonus(game: SlotGame, totalBet: number, tier: 'regular' | 'top'): RoundResult & { bonus: BonusPlay } {
+  const need = game.id === 'green-arrow' && tier === 'top' ? 4 : game.trigger;
+  const tiles = placeExactTrigger(game, need);
+  const wins = [...evalBoard(game, tiles, totalBet)];
+  const scatterWin = evalScatterWin(game, tiles, totalBet);
+  if (scatterWin) wins.push(scatterWin);
+  const triggerName = triggerSymbol(game)?.name ?? 'скаттер';
+  const triggerBoard = board(tiles, wins, 1, { label: `${game.trigger}× ${triggerName}` });
+  const bonus = playBonus(game, totalBet, tier, need, tiles);
   const cap = totalBet * game.maxWinMultiplier;
-  let totalWin = bonus.totalWin;
+  let totalWin = roundMoney(triggerBoard.win + bonus.totalWin);
   let capped = false;
   if (totalWin > cap) {
     capped = true;
     bonus.totalWin = cap;
     totalWin = cap;
   }
-  const grid = bonus.spins[0]?.boards[0]?.grid ?? gridOf(tiles);
-  const first: Board = { grid, wins: [], multiplier: 1, win: 0 };
   return {
-    grid,
-    boards: [first],
-    wins: [],
+    grid: triggerBoard.grid,
+    boards: [triggerBoard],
+    wins: triggerBoard.wins,
     multiplier: 1,
     totalWin,
     capped,

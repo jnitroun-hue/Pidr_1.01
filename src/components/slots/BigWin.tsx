@@ -12,15 +12,15 @@ type Props = {
 };
 
 function tierOf(multiple: number): Tier {
-  if (multiple >= 40) return 'sensational';
-  if (multiple >= 18) return 'mega';
+  if (multiple >= 100) return 'sensational';
+  if (multiple >= 50) return 'mega';
   return 'nice';
 }
 
 const TITLE: Record<Tier, string> = {
-  nice: 'ОТЛИЧНО',
+  nice: 'БОЛЬШОЙ ВЫИГРЫШ',
   mega: 'МЕГА ВЫИГРЫШ',
-  sensational: 'НЕВЕРОЯТНО',
+  sensational: 'ЭПИЧЕСКИЙ',
 };
 
 const ART: Record<Tier, string> = {
@@ -63,7 +63,6 @@ export default function BigWin({ multiple, amountLabel, onClose }: Props) {
         ))}
       </div>
       <div className={styles.card}>
-        <p>{TITLE[tier]}</p>
         <strong>x{shown}</strong>
         <b>{amountLabel}</b>
         <button type="button" onClick={onClose}>Забрать</button>

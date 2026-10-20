@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { SLOT_GAMES, type SlotGame } from '@/lib/slots/games';
-import { slotArt, slotHero, slotPoster } from '@/lib/slots/art';
+import { slotHero, slotPoster } from '@/lib/slots/art';
 import styles from './Slots.module.css';
 
 const MODES = [
@@ -16,13 +16,6 @@ function catchSymbol(game: SlotGame): string {
   const symbol = game.symbols.find((item) => item.scatter) ?? game.symbols.find((item) => item.bonusCoin);
   if (!symbol) return game.bonus.title;
   return `${game.trigger}× ${symbol.name}`;
-}
-
-function showcase(game: SlotGame) {
-  const trigger = game.symbols.find((item) => item.scatter) ?? game.symbols.find((item) => item.bonusCoin);
-  const wild = game.symbols.find((item) => item.wild && !item.multiplier) ?? game.symbols.find((item) => item.wild);
-  const face = [...game.symbols].filter((item) => item.pays[2] > 0 && !item.scatter && !item.wild && !item.bonusCoin).sort((a, b) => b.pays[2] - a.pays[2])[0];
-  return [trigger, wild, face].filter((item): item is NonNullable<typeof item> => Boolean(item)).filter((item, index, list) => list.findIndex((other) => other.id === item.id) === index).slice(0, 3);
 }
 
 export default function SlotsLobbyPage() {
@@ -40,29 +33,21 @@ export default function SlotsLobbyPage() {
         </div>
       </header>
       <div className={styles.floor}>
-        {SLOT_GAMES.map((game, index) => (
+        {SLOT_GAMES.map((game) => (
           <button
             key={game.id}
             type="button"
-            className={index === 0 ? `${styles.poster} ${styles.posterLead}` : styles.poster}
-            style={{ ['--accent' as string]: game.accent, ['--felt' as string]: game.felt }}
+            className={styles.poster}
             onClick={() => setPicked(game)}
           >
-            <span className={styles.posterCopy}>
-              <em>до x{game.maxWinMultiplier}</em>
-              <strong>{game.title}</strong>
-              <b>{game.bonus.title}</b>
-              <small>{catchSymbol(game)}</small>
-              <span className={styles.posterSyms}>
-                {showcase(game).map((symbol) => (
-                  <img key={symbol.id} src={slotArt(game.id, symbol.id)} alt={symbol.name} />
-                ))}
-              </span>
-              <i>Играть</i>
-            </span>
             <span className={styles.posterArt}>
               <img src={slotPoster(game.id)} alt="" />
               <img className={styles.posterHero} src={slotHero(game.id)} alt="" />
+            </span>
+            <em>x{game.maxWinMultiplier}</em>
+            <span className={styles.posterCopy}>
+              <strong>{game.title}</strong>
+              <small>{game.bonus.title}</small>
             </span>
           </button>
         ))}

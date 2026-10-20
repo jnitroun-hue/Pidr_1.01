@@ -5,9 +5,6 @@ import {
   CURTAIN_MULTIPLIERS,
   HOLD_WIN_GRAND,
   HOLD_WIN_VALUES,
-  PICK_BAG,
-  PICK_MISSES,
-  PICK_TARGETS,
   triggerSymbol,
   WAYS_DIVISOR,
   WHEEL_LEVEL_1,
@@ -38,7 +35,7 @@ function payHint(game: SlotGame, symbol: SlotSymbol): string {
   if (symbol.wild && symbol.multiplier) return `вайлд и множитель x${symbol.multiplier}`;
   if (symbol.wild && game.bonus.kind === 'sticky-reels') return 'вайлд. Штора закрывает весь барабан';
   if (symbol.wild) return 'вайлд: заменяет символы, кроме скаттера';
-  if (symbol.orb) return 'множитель каскада';
+  if (symbol.orb) return 'вайлд и множитель символов, с которыми сыграл';
   if (symbol.mystery) return 'раскрывается в один общий символ';
   if (game.mechanic === 'scatter-pays') return '8–9 / 10–11 / 12+';
   if (game.mechanic === 'cluster') return '5–7 / 8–11 / 12+';
@@ -57,7 +54,7 @@ const MECHANIC: Record<SlotGame['mechanic'], { title: string; text: string }> = 
   lines: { title: 'Линии', text: 'Одинаковые символы слева направо по фиксированным линиям. Скаттер платит от всей ставки, остальные — от ставки на линию.' },
   'both-ways': { title: 'Линии в обе стороны', text: 'Одинаковые символы считаются и слева направо, и справа налево. Одна линия может заплатить дважды.' },
   ways: { title: 'Пути · 1024 ways', text: 'Одинаковые символы на соседних барабанах слева направо, в любом ряду. Чем больше способов собрать символ, тем выше выплата.' },
-  'scatter-pays': { title: 'Scatter pays 6×5', text: 'Платит 8 и больше одинаковых символов где угодно на поле. Выигрыш лопается, сверху падают новые. Шары умножают каскад.' },
+  'scatter-pays': { title: 'Поле 6×5', text: 'Платит 8 и больше одинаковых символов где угодно. Выигрыш подсвечивается и лопается, сверху падают новые. Шар заменяет любой символ и умножает те, с которыми сыграл.' },
   cluster: { title: 'Кластеры 6×6', text: 'Платит 5 и больше одинаковых символов, соединённых по сторонам. Выигрышный кластер исчезает, сверху падают новые.' },
 };
 
@@ -82,7 +79,7 @@ export default function SlotInfo({ game, bet, gram, onClose }: Props) {
                 <div>
                   <img src={slotArt(game.id, trigger.id)} alt="" />
                   <b>Скаттер</b>
-                  <span>{game.trigger}× {trigger.name} в любом месте открывают «{game.bonus.title}»</span>
+                  <span>{game.id === 'green-arrow' ? 'Яблочко падает только на барабаны 2, 3, 4 и 5, не больше одного на барабан и никогда на первый. 3 яблочка — залп на 15 спинов. 4 яблочка — тир 6×6.' : `${game.trigger}× ${trigger.name} в любом месте открывают «${game.bonus.title}»`}</span>
                 </div>
                 {wilds.map((symbol) => (
                   <div key={symbol.id}>
@@ -102,7 +99,7 @@ export default function SlotInfo({ game, bet, gram, onClose }: Props) {
                   <div key={symbol.id}>
                     <img src={slotArt(game.id, symbol.id)} alt="" />
                     <b>{symbol.orb ? 'ШАР' : 'МИСТИКА'}</b>
-                    <span>{symbol.orb ? `${symbol.name} умножает каскад` : `${symbol.name} раскрывается в один общий символ`}</span>
+                    <span>{symbol.orb ? `${symbol.name} заменяет любой символ и умножает те, с которыми сыграл` : `${symbol.name} раскрывается в один общий символ`}</span>
                   </div>
                 ))}
               </div>
@@ -170,7 +167,7 @@ export default function SlotInfo({ game, bet, gram, onClose }: Props) {
               </>
             )}
             {game.bonus.kind === 'pick' && (
-              <p>На поле {PICK_TARGETS} мишеней. Третий промах заканчивает тир. Множители: {PICK_BAG.filter((token) => token.kind === 'mult').map((token) => `x${token.value}`).join(', ')}. Промахов максимум {PICK_MISSES}.</p>
+              <p>Обычный бонус, 3 яблочка: 15 спинов, лучник бросает от 1 до 6 диких. Иногда стрела с множителем x2–x10 остаётся на клетке до конца. Топовый бонус, 4 яблочка: поле 6×6, ровно 6 промахов, третий промах заканчивает тир, множители от x10 до x2500.</p>
             )}
           </>
         )}

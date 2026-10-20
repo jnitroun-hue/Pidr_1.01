@@ -117,18 +117,16 @@ export default function SlotReel({
   function face(id: string, value: number | null = null, mark: MarkKind | null = null) {
     const symbol = findSymbol(symbols, id);
     const mult = symbol?.multiplier ?? multiplierOf(id);
-    const bonusMark = Boolean(symbol?.scatter || symbol?.bonusCoin);
-    const showName = Boolean(symbol && !/^x\d/i.test(symbol.name));
+    const baked = Boolean(symbol?.scatter || symbol?.wild || symbol?.bonusCoin);
+    const showName = Boolean(symbol && !baked && !/^x\d/i.test(symbol.name));
     return (
       <>
         <img src={slotArt(gameId, id)} alt={symbol?.name ?? ''} draggable={false} />
-        {bonusMark ? <small className={styles.roleBonus}>БОНУС</small> : null}
-        {symbol?.wild ? <small className={styles.roleWild}>WILD</small> : null}
         {symbol?.orb ? <small className={styles.roleOrb}>ШАР</small> : null}
         {symbol?.mystery ? <small className={styles.roleMystery}>?</small> : null}
         {showName ? <small className={styles.symName}>{symbol?.name}</small> : null}
         {mult ? <b className={styles.multBadge}>x{mult}</b> : null}
-        {value != null && curtain == null && !mult ? <b className={`${styles.valueBadge} ${mark === 'orb' ? styles.valueOrb : ''}`}>x{formatValue(value)}</b> : null}
+        {value != null && curtain == null && !mult ? <b className={`${styles.valueBadge} ${mark === 'orb' ? styles.valueOrb : ''} ${mark === 'mult' ? styles.valueEdge : ''}`}>x{formatValue(value)}</b> : null}
       </>
     );
   }

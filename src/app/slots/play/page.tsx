@@ -82,9 +82,12 @@ function introText(game: SlotGame, bonus: BonusPlay): { title: string; text: str
     case 'wheel':
       return { title: bonus.title, text: 'Колесо с 12 секторами: кэш, бесплатные спины с множителем или новый уровень.', button: 'К колесу' };
     case 'pick':
-      return { title: bonus.title, text: '12 мишеней. Каждое попадание — множитель ставки, третий промах заканчивает тир.', button: 'В тир' };
+      if (bonus.spins.length && !bonus.pick) {
+        return { title: bonus.title, text: '15 спинов. Лучник сверху бросает от 1 до 6 диких. Стрела с множителем остаётся на клетке до конца бонуса.', button: 'Крутить' };
+      }
+      return { title: bonus.title, text: 'Поле 6×6. Шесть клеток — мимо. Третий промах заканчивает тир. Множители от x10 до x2500.', button: 'В тир' };
     case 'tumble-mult':
-      return { title: bonus.title, text: `${spins} бесплатных спинов. Шары-множители копятся весь бонус.`, button: 'Крутить' };
+      return { title: bonus.title, text: `${spins} бесплатных спинов. Шар заменяет любой символ и умножает те, с которыми сыграл.`, button: 'Крутить' };
     case 'mystery':
       return { title: bonus.title, text: `${spins} бесплатных спинов. Мистика раскрывается только в старшие символы, множитель спина равен числу мистик.`, button: 'Крутить' };
     case 'cluster-fs':
@@ -274,7 +277,8 @@ function PlayInner() {
   async function cascadeTo(prev: Board, next: Board, events: SlotEvent[] = []) {
     if (next.removed?.length) {
       setShown({ board: prev, popping: cellGrid(game, next.removed) });
-      await wait(pace().pop);
+      setRibbon('Символы лопаются');
+      await wait(Math.max(pace().pop, 720));
     }
     const mysteryCells = next.marks?.filter((mark) => mark.kind === 'mystery').map((mark) => ({ reel: mark.reel, row: mark.row }));
     setShown({ board: next, fresh: freshGrid(game, next.removed) ?? (next.removed ? undefined : cellGrid(game, mysteryCells)) });
@@ -320,7 +324,7 @@ function PlayInner() {
     if (next.bonus) await playBonus(next, next.bonus);
     setWinSoFar(next.totalWin);
     const ratio = live.current.bet > 0 ? next.totalWin / live.current.bet : 0;
-    if (ratio >= 8) {
+    if (ratio >= 15) {
       setBigMultiple(ratio);
       await awaitUser(2600);
       setBigMultiple(null);
@@ -503,7 +507,7 @@ function PlayInner() {
 
   function reelHighlight(reelIndex: number): boolean[] {
     const hot = Array.from({ length: game.rows }, () => false);
-    if (!showLines || rolling) return hot;
+    if (!rolling) return hot;
     for (const win of board.wins) {
       for (const cell of win.cells) if (cell.reel === reelIndex) hot[cell.row] = true;
     }
@@ -540,7 +544,7 @@ function PlayInner() {
         </button>
         <div className={styles.hudTitle}>
           <strong>{game.title}</strong>
-          <span>{trigger ? `${game.trigger}× ${trigger.name} — ${game.bonus.title}` : game.bonus.title}</span>
+          <span>{game.id === 'green-arrow' ? `3× ${trigger?.name ?? ''} — залп, 4× — тир` : trigger ? `${game.trigger}× ${trigger.name} — ${game.bonus.title}` : game.bonus.title}</span>
         </div>
         <div className={styles.hudMark}>{unit}</div>
       </header>
@@ -577,6 +581,12 @@ function PlayInner() {
             {ribbon ? <em className={styles.ribbon}>{ribbon}</em> : null}
           </div>
           <div className={styles.frame}>
+            {!rolling && board.win > 0 ? (
+              <div className={styles.winBurst} key={`${board.win}-${ribbon}`}>
+                <span>Выигрыш</span>
+                <strong>{money(board.win)}</strong>
+              </div>
+            ) : null}
             <div className={styles.reels}>
               {board.grid.map((reel, reelIndex) => (
                 <SlotReel
@@ -603,12 +613,6 @@ function PlayInner() {
             </div>
             <HeroStage gameId={game.id} cue={cue} replayKey={actToken} />
           </div>
-          {!rolling && board.win > 0 ? (
-            <div className={styles.winBurst} key={`${board.win}-${ribbon}`}>
-              <span>Выигрыш</span>
-              <strong>{money(board.win)}</strong>
-            </div>
-          ) : null}
           <div className={styles.winStrip}>
             {!rolling && board.wins.filter((win) => win.kind !== 'coin').slice(0, 3).map((win, index) => (
               <div key={`${win.symbolId}-${win.lineIndex ?? index}-${win.kind}`} className={styles.winChip}>
@@ -689,6 +693,11 @@ function PlayInner() {
           heroSrc={heroSrc}
           gameId={game.id}
           reveals={feature.pick.reveals}
+          cells={feature.pick.cells}
+          columns={feature.pick.columns}
+          rows={feature.pick.rows}
+          path={feature.pick.path}
+          missLimit={feature.pick.missLimit}
           total={feature.totalWin}
           floorAdded={feature.floorAdded}
           moneyLabel={money}

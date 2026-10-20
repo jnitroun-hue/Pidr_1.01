@@ -69,8 +69,9 @@ export function resolveHeroCue(input: {
   const phase = input.phase;
   const cast = input.cast;
 
-  if (id === 'green-arrow' && (cast?.actor === 'archer' || phase === 'pick' || (phase === 'intro' && input.bonusKind === 'pick'))) {
-    return { pose: 'draw', cells: cast?.actor === 'archer' ? cast.cells : [] };
+  if (id === 'green-arrow' && (cast?.actor === 'archer' || ofKind(marks, 'wild').length || ofKind(marks, 'mult').length || phase === 'pick' || (phase === 'intro' && input.bonusKind === 'pick'))) {
+    const cells = [...ofKind(marks, 'wild'), ...ofKind(marks, 'mult')];
+    return { pose: 'draw', cells: cells.length ? cells : (cast?.actor === 'archer' ? cast.cells : []) };
   }
   if (id === 'fairy-glade' && (ofKind(marks, 'wild').length > 0 || input.label?.startsWith('Фея') || cast?.actor === 'fairy')) {
     const cells = ofKind(marks, 'wild');
@@ -139,17 +140,26 @@ export default function HeroStage({
     <>
       <img
         key={replayKey}
-        className={`${styles.phoneHero} ${onRight ? styles.phoneRight : ''} ${motion}`}
+        className={`${styles.phoneHero} ${onRight ? styles.phoneRight : ''} ${motion} ${cells.length ? styles.away : ''}`}
         src={src}
         alt=""
         draggable={false}
       />
       {pose !== 'present' ? (
         <div key={`fx-${replayKey}`} className={styles.layer} aria-hidden>
-          {pose === 'draw' && cells.map((cell, index) => <i key={index} className={styles.bolt} style={spot(cell, index)} />)}
+          {pose === 'draw' && cells.map((cell, index) => (
+            <span key={index} className={styles.flyWrap} style={spot(cell, index)}>
+              <i className={styles.arrowArt} />
+            </span>
+          ))}
           {pose === 'sweep' && cells.map((cell, index) => <i key={index} className={styles.spark} style={spot(cell, index)} />)}
-          {pose === 'lunge' && <i className={styles.breath} />}
-          {pose === 'lunge' && cells.map((cell, index) => <i key={index} className={styles.fire} style={spot(cell, index)} />)}
+          {pose === 'lunge' && cells.slice(0, 3).map((cell, index) => (
+            <span key={index} className={styles.flyWrap} style={spot(cell, index)}>
+              <img className={styles.flyer} src={src} alt="" />
+              <i className={styles.fireArt} />
+            </span>
+          ))}
+          {pose === 'lunge' && !cells.length ? <i className={styles.breath} /> : null}
           {pose === 'frost' && <i className={styles.frostWash} />}
           {pose === 'frost' && cells.slice(0, 8).map((cell, index) => <i key={index} className={styles.crystal} style={spot(cell, index)} />)}
           {pose === 'slash' && <i className={styles.slashArc} style={{ ['--row' as string]: String(cue.row ?? cells[0]?.row ?? 1) }} />}
@@ -157,7 +167,11 @@ export default function HeroStage({
             <i key={reel} className={styles.slamCol} style={{ ['--reel' as string]: String(reel) }} />
           ))}
           {pose === 'flip' && cells.slice(0, 8).map((cell, index) => <i key={index} className={styles.coinFly} style={spot(cell, index)} />)}
-          {pose === 'pulse' && cells.map((cell, index) => <i key={index} className={styles.orbRing} style={spot(cell, index)} />)}
+          {pose === 'pulse' && cells.map((cell, index) => (
+            <span key={index} className={styles.flyWrap} style={spot(cell, index)}>
+              <i className={styles.rootArt} />
+            </span>
+          ))}
           {pose === 'snap' && cells.map((cell, index) => <i key={index} className={styles.snapFlash} style={spot(cell, index)} />)}
           {pose === 'lean' && <i className={styles.neonWink} />}
         </div>

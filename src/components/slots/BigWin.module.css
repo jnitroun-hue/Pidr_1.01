@@ -8,6 +8,8 @@
   overflow: hidden;
 }
 
+.rays, .shock, .coins { display: none; }
+
 .rays {
   position: absolute;
   width: 140vmax;
@@ -28,26 +30,23 @@
 .card {
   position: relative;
   z-index: 2;
+  margin-top: 28vh;
   min-width: min(86vw, 420px);
-  padding: 28px 22px 22px;
+  padding: 8px 22px 18px;
   text-align: center;
-  border-radius: 28px;
-  background:
-    radial-gradient(circle at 50% 0%, rgba(255, 244, 190, 0.35), transparent 46%),
-    linear-gradient(180deg, #3a2a10, #120c08);
-  border: 2px solid #f5c518;
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55), 0 0 60px rgba(245, 197, 24, 0.35);
+  background: transparent;
+  border: 0;
+  box-shadow: none;
   animation: pop 0.45s cubic-bezier(0.16, 0.84, 0.3, 1.2);
 }
 
 .card p {
   margin: 0;
-  font-family: Georgia, "Times New Roman", serif;
-  letter-spacing: 0.14em;
-  font-size: clamp(22px, 6vw, 40px);
+  letter-spacing: 0.08em;
+  font-size: clamp(18px, 4.6vw, 28px);
   font-weight: 900;
-  color: #fff6c8;
-  text-shadow: 0 3px 0 #7c4a12, 0 0 18px rgba(250, 204, 21, 0.8);
+  color: #fff;
+  text-shadow: 0 2px 0 #3f2208, 0 0 16px rgba(250, 204, 21, 0.8);
 }
 
 .card strong {
@@ -102,13 +101,7 @@
   animation-duration: 2.2s;
   background: repeating-conic-gradient(from 0deg, rgba(244, 63, 94, 0) 0 8deg, rgba(255, 244, 214, 0.55) 8deg 14deg);
 }
-.sensational .card {
-  border-color: #fecaca;
-  background:
-    radial-gradient(circle at 50% 0%, rgba(254, 202, 202, 0.45), transparent 42%),
-    linear-gradient(180deg, #7f1d1d, #1a0a08 70%);
-  box-shadow: 0 0 100px rgba(244, 63, 94, 0.65), 0 0 40px rgba(250, 204, 21, 0.45);
-}
+.sensational .card { background: transparent; box-shadow: none; }
 .sensational .card p,
 .sensational .card strong {
   color: #fff;
