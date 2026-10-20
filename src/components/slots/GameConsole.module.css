@@ -1,0 +1,674 @@
+.shell {
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+  color: #fff;
+}
+
+.fit {
+  width: min(420px, 100%);
+  margin: 0 auto;
+}
+
+.shell button {
+  appearance: none;
+  font-family: inherit;
+  font-weight: 900;
+  cursor: pointer;
+  color: inherit;
+}
+
+.shell button:disabled { opacity: 0.45; cursor: wait; }
+
+.hot b, .hot { color: #fde68a; }
+
+/* ---------- Козырной ус: латунная стойка, монета справа ---------- */
+.golden {
+  background:
+    linear-gradient(180deg, transparent, #3a220c 18%, #1a0e06 100%);
+  border-top: 3px solid #f5c518;
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.goldenTop {
+  display: grid;
+  grid-template-columns: 1fr 96px;
+  gap: 8px;
+  align-items: center;
+}
+
+.golden .buy {
+  min-height: 72px;
+  border-radius: 8px 18px 8px 18px;
+  border: 2px solid #7f1d1d;
+  background: linear-gradient(180deg, #7f1d1d, #450a0a);
+  color: #fecaca;
+  box-shadow: inset 0 0 0 4px #3f0a0a, 0 4px 0 #1c0a06;
+}
+
+.golden .buy b { display: block; font-size: 22px; }
+.golden .buy small { font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; }
+
+.golden .spin {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  border: 5px solid #fff1b8;
+  background: radial-gradient(circle at 32% 28%, #fff8dc, #f5c518 42%, #b45309 74%);
+  color: #3f2208;
+  box-shadow: 0 6px 0 #7c2d12, 0 0 18px rgba(245, 197, 24, 0.7);
+}
+
+.golden .spin b { display: block; font-size: 13px; }
+.golden .spin small { font-size: 16px; }
+
+.goldenTools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+  align-items: center;
+}
+
+.golden .lines, .golden .ante, .golden .info, .golden .speed, .golden .auto {
+  min-height: 28px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1px solid #f5c518;
+  background: #2a1608;
+  color: #fde68a;
+  font-size: 11px;
+}
+
+.golden .on { background: #f5c518; color: #3f2208; }
+
+.golden .stake {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.golden .stake button {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid #f5c518;
+  background: #f5c518;
+  color: #3f2208;
+}
+
+.golden .stake b { min-width: 28px; text-align: center; color: #fff6c8; }
+
+.golden .meter {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(245, 197, 24, 0.45);
+  font-size: 11px;
+  color: #fde68a;
+}
+
+.golden .meter b { display: block; color: #fff; font-size: 14px; }
+.golden .meter .hot b { color: #fde68a; }
+
+/* ---------- Сейф: шестиугольная клавиатура ---------- */
+.vault {
+  background: #0e1218;
+  border-top: 8px solid #64748b;
+  font-family: ui-monospace, "Cascadia Mono", monospace;
+}
+
+.vaultLcd {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  padding: 4px 8px;
+  background: #052e16;
+  color: #86efac;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.6);
+}
+
+.vaultLcd .hot { color: #fde68a; }
+
+.vaultPad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.vault .buy, .vault .info, .vault .speed, .vault .minus, .vault .plus, .vault .lines, .vault .ante, .vault .auto, .vault .spin {
+  height: 46px;
+  border: none;
+  clip-path: polygon(18% 0, 82% 0, 100% 50%, 82% 100%, 18% 100%, 0 50%);
+  background: linear-gradient(180deg, #94a3b8, #334155 55%, #0f172a);
+  color: #e2e8f0;
+  font-size: 12px;
+  text-shadow: 0 1px 0 #000;
+}
+
+.vault .spin {
+  height: 52px;
+  background: linear-gradient(180deg, #fde68a, #b45309 50%, #451a03);
+  color: #1c1408;
+  font-size: 14px;
+}
+
+.vault .on { background: linear-gradient(180deg, #86efac, #166534); color: #052e16; }
+
+/* ---------- Дуб: пенёк слева, зарубки справа ---------- */
+.oak {
+  background:
+    repeating-linear-gradient(90deg, #4a2c14 0 14px, #3b230f 14px 16px),
+    #3f2914;
+  border-top: 6px solid #65a30d;
+  font-family: Georgia, serif;
+}
+
+.oakSplit { display: grid; grid-template-columns: 104px 1fr; gap: 8px; }
+
+.oakLeft { display: flex; flex-direction: column; gap: 6px; }
+
+.oak .spin {
+  width: 104px;
+  height: 78px;
+  border-radius: 48px 48px 16px 16px;
+  border: 4px solid #14532d;
+  background: radial-gradient(circle at 50% 30%, #a16207, #5c3a12 60%, #3f2a14);
+  color: #fef3c7;
+}
+
+.oak .spin b { display: block; font-size: 16px; }
+.oak .spin small { font-size: 12px; }
+
+.oak .buy {
+  min-height: 32px;
+  border-radius: 16px;
+  border: 2px solid #84cc16;
+  background: #14532d;
+  color: #ecfccb;
+  font-size: 12px;
+}
+
+.oakRight p {
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  padding: 1px 0;
+  border-bottom: 1px dashed rgba(253, 230, 138, 0.35);
+  font-size: 12px;
+  color: #fde68a;
+}
+
+.oakRight p b { color: #fff; }
+.oakRight .hot b { color: #bef264; }
+
+.oakRow { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+
+.oak .minus, .oak .plus, .oak .ante, .oak .lines, .oak .auto, .oak .info, .oak .speed {
+  min-width: 32px;
+  height: 28px;
+  padding: 0 6px;
+  border-radius: 6px;
+  border: 1px solid #a16207;
+  background: #2a1a0c;
+  color: #fde68a;
+  font-size: 11px;
+}
+
+.oak .on { background: #65a30d; color: #052e16; border-color: #ecfccb; }
+
+/* ---------- Река: вертикальный пуск и терминал ---------- */
+.neon {
+  background: #020617;
+  border-top: 2px solid #22d3ee;
+  box-shadow: inset 0 8px 24px rgba(34, 211, 238, 0.15);
+  font-family: ui-monospace, "Cascadia Mono", monospace;
+}
+
+.neonSplit { display: grid; grid-template-columns: 58px 1fr; gap: 8px; }
+
+.neon .spin {
+  width: 58px;
+  height: 148px;
+  border-radius: 29px;
+  border: 2px solid #22d3ee;
+  background: #04121c;
+  color: #67e8f9;
+  writing-mode: vertical-rl;
+  letter-spacing: 0.18em;
+  box-shadow: 0 0 16px rgba(34, 211, 238, 0.65);
+}
+
+.neon .spin b { font-size: 14px; }
+.neon .spin small { font-size: 12px; letter-spacing: 0; }
+
+.neonTerm p { margin: 0; color: #67e8f9; font-size: 12px; line-height: 1.35; }
+.neonTerm .hot { color: #f0abfc; }
+
+.neonCmds { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+
+.neon .minus, .neon .plus, .neon .buy, .neon .ante, .neon .lines, .neon .auto, .neon .info, .neon .speed {
+  height: 26px;
+  padding: 0 7px;
+  border-radius: 2px;
+  border: 1px solid #164e63;
+  background: transparent;
+  color: #a5f3fc;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+.neon .buy { border-color: #e879f9; color: #f0abfc; }
+.neon .on { background: #22d3ee; color: #042f2e; border-color: #22d3ee; }
+
+/* ---------- Город: аркадный купол и флипперы ---------- */
+.city {
+  background: #09090b;
+  border-top: 10px solid #facc15;
+  font-family: "Arial Black", Impact, sans-serif;
+}
+
+.city .buy {
+  width: 100%;
+  height: 28px;
+  margin-bottom: 6px;
+  border: none;
+  background: repeating-linear-gradient(90deg, #facc15 0 10px, #111 10px 14px);
+  color: #111;
+  letter-spacing: 0.08em;
+  font-size: 12px;
+}
+
+.cityPlay {
+  display: grid;
+  grid-template-columns: 1fr 108px 1fr;
+  align-items: center;
+  gap: 8px;
+}
+
+.city .spin {
+  width: 108px;
+  height: 108px;
+  border-radius: 50%;
+  border: 7px solid #18181b;
+  background: radial-gradient(circle at 35% 30%, #fecaca, #ef4444 36%, #7f1d1d 72%);
+  color: #fff;
+  box-shadow: 0 8px 0 #000, inset 0 -12px 0 rgba(0, 0, 0, 0.35);
+}
+
+.city .spin b { display: block; font-size: 22px; letter-spacing: 0.08em; }
+.city .spin small { font-size: 14px; }
+
+.city .minus, .city .plus {
+  height: 54px;
+  border-radius: 8px 8px 18px 18px;
+  border: 3px solid #27272a;
+  background: linear-gradient(180deg, #facc15, #a16207);
+  color: #111;
+  font-size: 28px;
+  box-shadow: 0 6px 0 #000;
+}
+
+.cityLed {
+  margin-top: 6px;
+  text-align: center;
+  color: #ef4444;
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-shadow: 0 0 8px #ef4444;
+}
+
+.cityTools { display: flex; justify-content: space-between; gap: 4px; margin-top: 4px; }
+
+.city .ante, .city .lines, .city .auto, .city .info, .city .speed {
+  flex: 1;
+  height: 26px;
+  border: 1px solid #3f3f46;
+  background: #18181b;
+  color: #facc15;
+  font-size: 10px;
+  font-family: ui-monospace, monospace;
+}
+
+.city .on { background: #facc15; color: #111; }
+
+/* ---------- Лучник: свиток слева, древко справа ---------- */
+.arrow {
+  background: linear-gradient(90deg, #f3e6c8 0 72%, #14532d 72% 100%);
+  border-top: none;
+  color: #3f2a14;
+  font-family: Georgia, serif;
+}
+
+.arrowSplit { display: grid; grid-template-columns: 1fr 78px; gap: 8px; align-items: stretch; }
+
+.arrowLog p { margin: 0 0 2px; font-size: 13px; }
+.arrowLog b { float: right; }
+.arrowLog .hot b { color: #9f1239; }
+
+.arrow .buy {
+  width: 100%;
+  margin: 4px 0;
+  height: 32px;
+  border: none;
+  border-bottom: 2px solid #7c2d12;
+  background: transparent;
+  color: #7c2d12;
+  text-align: left;
+  font-size: 15px;
+  text-decoration: underline;
+}
+
+.arrowRow { display: flex; flex-wrap: wrap; gap: 3px; }
+
+.arrow .minus, .arrow .plus, .arrow .ante, .arrow .lines, .arrow .auto, .arrow .info, .arrow .speed {
+  height: 24px;
+  padding: 0 6px;
+  border: 1px solid #a8a29e;
+  background: transparent;
+  color: #44403c;
+  font-size: 11px;
+}
+
+.arrow .on { background: #14532d; color: #ecfccb; border-color: #14532d; }
+
+.arrow .spin {
+  width: 78px;
+  height: 100%;
+  min-height: 148px;
+  border: none;
+  border-radius: 40px 40px 8px 8px;
+  background: linear-gradient(180deg, #bbf7d0, #166534 30%, #052e16);
+  color: #ecfccb;
+  box-shadow: inset 0 0 0 3px #052e16;
+}
+
+.arrow .spin b { font-size: 16px; letter-spacing: 0.2em; }
+
+/* ---------- Фея: россыпь шаров, без панели ---------- */
+.fairy {
+  background: transparent;
+  font-family: Georgia, serif;
+}
+
+.fairyWords {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 8px 4px;
+  color: #fbcfe8;
+  font-size: 12px;
+  font-style: italic;
+  text-shadow: 0 2px 8px #000;
+}
+
+.fairyWords .hot { color: #fde68a; }
+
+.fairyOrbs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+}
+
+.fairy .buy, .fairy .info, .fairy .ante, .fairy .minus, .fairy .plus, .fairy .lines, .fairy .auto, .fairy .speed, .fairy .spin {
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.85), rgba(192, 132, 252, 0.55) 42%, rgba(88, 28, 135, 0.85));
+  color: #3b0764;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.28);
+}
+
+.fairy .buy { width: 62px; height: 62px; font-size: 12px; }
+.fairy .info, .fairy .ante, .fairy .lines, .fairy .auto, .fairy .speed { width: 46px; height: 46px; font-size: 9px; }
+.fairy .minus, .fairy .plus { width: 40px; height: 40px; font-size: 18px; }
+
+.fairy .spin {
+  width: 86px;
+  height: 86px;
+  background: radial-gradient(circle at 35% 30%, #fff, #f9a8d4 40%, #a21caf);
+  color: #4a044e;
+}
+
+.fairy .spin b { display: block; font-size: 13px; }
+.fairy .spin small { font-size: 12px; }
+.fairy .on { background: radial-gradient(circle at 35% 30%, #fef9c3, #facc15 50%, #a16207); color: #422006; }
+
+.fairyStake {
+  text-align: center;
+  color: #fbcfe8;
+  font-size: 12px;
+  font-style: italic;
+  text-shadow: 0 2px 8px #000;
+}
+
+/* ---------- Дракон: широкая плашка огня, квадратные плитки ---------- */
+.dragon {
+  background: #1c0a08;
+  border-top: 2px solid #f97316;
+  box-shadow: inset 0 10px 30px rgba(249, 115, 22, 0.18);
+  font-family: Impact, "Arial Narrow", sans-serif;
+}
+
+.dragon .spin {
+  width: 100%;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #7c2d12, #f97316 40%, #fde68a 50%, #f97316 60%, #7c2d12);
+  color: #1c0a08;
+  letter-spacing: 0.22em;
+}
+
+.dragon .spin b { font-size: 22px; }
+.dragon .spin small { margin-left: 8px; font-size: 16px; font-family: ui-monospace, monospace; letter-spacing: 0; }
+
+.dragonTiles {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.dragon .buy, .dragon .ante, .dragon .lines, .dragon .auto, .dragon .info, .dragon .speed {
+  height: 40px;
+  border: 1px solid #9a3412;
+  border-radius: 2px;
+  background: #292524;
+  color: #fdba74;
+  font-size: 10px;
+}
+
+.dragon .on { background: #ea580c; color: #1c0a08; border-color: #ffedd5; }
+
+.dragonBet {
+  display: grid;
+  grid-template-columns: 48px 1fr 48px;
+  gap: 6px;
+  margin-top: 6px;
+  align-items: center;
+}
+
+.dragon .minus, .dragon .plus {
+  height: 36px;
+  border: none;
+  background: #44403c;
+  color: #ffedd5;
+  font-size: 22px;
+}
+
+.dragonBet b { text-align: center; color: #fdba74; font-size: 20px; letter-spacing: 0.12em; }
+
+.dragonMeter {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  padding: 4px 8px;
+  background: linear-gradient(90deg, #7c2d12, #44403c 40%, #44403c 60%, #7c2d12);
+  color: #ffedd5;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+}
+
+.dragonMeter .hot { color: #fde68a; }
+
+/* ---------- Лёд: алмаз по центру, углы со счётом ---------- */
+.frost {
+  background: linear-gradient(180deg, rgba(224, 242, 254, 0.16), rgba(12, 74, 110, 0.92));
+  border-top: 1px solid #e0f2fe;
+  font-family: "Palatino Linotype", Palatino, serif;
+}
+
+.frostCorners {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #e0f2fe;
+}
+
+.frostCorners b { display: block; font-size: 16px; letter-spacing: 0; text-transform: none; color: #fff; }
+.frostCorners .hot b { color: #bae6fd; }
+
+.frostMid {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  height: 92px;
+}
+
+.frost .minus, .frost .plus {
+  width: 36px;
+  height: 36px;
+  border: 1px solid #e0f2fe;
+  background: transparent;
+  color: #e0f2fe;
+  font-size: 22px;
+}
+
+.frost .spin {
+  width: 72px;
+  height: 72px;
+  border: 2px solid #fff;
+  background: linear-gradient(135deg, #e0f2fe, #38bdf8 45%, #0369a1);
+  color: #082f49;
+  transform: rotate(45deg);
+}
+
+.frost .spin b, .frost .spin small { display: block; transform: rotate(-45deg); }
+.frost .spin b { font-size: 14px; }
+.frost .spin small { font-size: 11px; }
+
+.frostStake { text-align: center; color: #bae6fd; font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; }
+
+.frost .buy {
+  width: 100%;
+  height: 32px;
+  margin-top: 4px;
+  border: 1px solid #e0f2fe;
+  background: transparent;
+  color: #f0f9ff;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+.frostShelf { display: flex; justify-content: space-between; gap: 4px; margin-top: 4px; }
+
+.frost .ante, .frost .lines, .frost .auto, .frost .info, .frost .speed {
+  flex: 1;
+  height: 26px;
+  border: none;
+  border-bottom: 1px solid rgba(224, 242, 254, 0.5);
+  background: transparent;
+  color: #e0f2fe;
+  font-size: 10px;
+}
+
+.frost .on { border-bottom-color: #fff; color: #fff; background: rgba(255, 255, 255, 0.16); }
+
+/* ---------- Ронин: бумага, чёрные стяги, красная печать ---------- */
+.ronin {
+  background: #f4efe4;
+  color: #1c1917;
+  border-top: 14px solid #111;
+  font-family: "Yu Mincho", "Times New Roman", serif;
+}
+
+.roninTop { display: grid; grid-template-columns: 1fr 88px; gap: 8px; align-items: center; }
+
+.roninBanners { display: flex; flex-direction: column; gap: 3px; }
+
+.ronin .buy, .ronin .ante, .ronin .lines, .ronin .auto {
+  height: 24px;
+  border: none;
+  border-left: 8px solid #111;
+  background: transparent;
+  color: #111;
+  text-align: left;
+  padding-left: 8px;
+  font-size: 14px;
+}
+
+.ronin .on { border-left-color: #b91c1c; color: #b91c1c; }
+
+.roninBet { display: flex; align-items: center; gap: 8px; padding-left: 8px; }
+
+.ronin .minus, .ronin .plus {
+  width: 24px;
+  height: 24px;
+  border: 1px solid #111;
+  background: #111;
+  color: #f4efe4;
+}
+
+.roninBet b { font-size: 18px; }
+
+.ronin .spin {
+  width: 84px;
+  height: 84px;
+  border: 4px solid #7f1d1d;
+  border-radius: 2px;
+  background: #b91c1c;
+  color: #fff;
+  box-shadow: 4px 4px 0 #111;
+}
+
+.ronin .spin b { font-size: 16px; letter-spacing: 0.18em; }
+
+.roninBrush {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+  padding-top: 4px;
+  border-top: 2px solid #111;
+  font-size: 12px;
+}
+
+.roninBrush .hot { color: #b91c1c; }
+
+.ronin .info, .ronin .speed {
+  margin-left: auto;
+  height: 22px;
+  padding: 0 6px;
+  border: 1px solid #111;
+  background: transparent;
+  font-size: 11px;
+}
+
+.ronin .speed { margin-left: 0; }

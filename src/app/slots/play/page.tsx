@@ -26,6 +26,7 @@ import {
 } from '@/lib/slots/engine';
 import type { SlotEvent } from '@/lib/slots/characters';
 import { anteCharge, reelSpinMs, type ReelSpeed } from '@/lib/slots/speed';
+import GameConsole from '@/components/slots/GameConsole';
 import SlotReel from '@/components/slots/SlotReel';
 import BigWin from '@/components/slots/BigWin';
 import HeroStage, { resolveHeroCue, sideHeroClass } from '@/components/slots/HeroStage';
@@ -627,95 +628,34 @@ function PlayInner() {
         </div>
       </section>
 
-      <footer className={styles.controls}>
-        <div className={styles.dock}>
-          <div className={styles.dockSide}>
-            <button type="button" className={styles.buy} disabled={locked} onClick={() => setBuyMenu(true)}>
-              Купить
-              <small>бонус</small>
-            </button>
-            <button type="button" className={styles.tumbler} onClick={() => setShowLines((value) => !value)} aria-pressed={showLines}>
-              <span><b>ПОДСВЕТКА</b></span>
-              <span className={`${styles.track} ${showLines ? styles.trackOn : styles.trackOff}`}>
-                <i className={styles.knob} />
-                <em>{showLines ? 'ON' : 'OFF'}</em>
-              </span>
-            </button>
-          </div>
-          <div className={styles.dockCenter}>
-            <button type="button" className={styles.spin} disabled={spinning} onClick={() => void spin()}>
-              <span>{spinning ? '…' : 'SPIN'}</span>
-              <small>{stakeLabel}</small>
-            </button>
-            <button
-              type="button"
-              className={`${styles.autoRound} ${autoLeft ? styles.autoOn : ''}`}
-              onClick={() => {
-                if (autoLeft) {
-                  stopAuto.current = true;
-                  setAutoLeft(0);
-                  return;
-                }
-                if (!spinning) setAutoOpen(true);
-              }}
-              aria-label="Автоспины"
-            >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M12 4a8 8 0 1 1-7.5 5.2" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
-                <path d="M4 4.5v5h5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              <b>{autoLeft ? autoLeft : 'auto'}</b>
-            </button>
-          </div>
-          <div className={styles.dockSideRight}>
-            <div className={styles.toolRow}>
-              <button type="button" className={styles.infoBtn} onClick={() => setShowInfo(true)} aria-label="Информация">i</button>
-              <button
-                type="button"
-                className={`${styles.bolt} ${speed === 'slow' ? styles.boltSlow : speed === 'mid' ? styles.boltMid : styles.boltFast}`}
-                onClick={cycleSpeed}
-                aria-label={speed === 'slow' ? 'Медленно' : speed === 'mid' ? 'Средне' : 'Быстро'}
-              >
-                <Bolt />
-              </button>
-            </div>
-            <div className={styles.rightControls}>
-              <button type="button" className={styles.tumbler} disabled={locked} onClick={() => setAnte((value) => !value)} aria-pressed={ante}>
-                <span>
-                  <b>ANTE</b>
-                  <small>+16.77%</small>
-                </span>
-                <span className={`${styles.track} ${ante ? styles.trackOn : styles.trackOff}`}>
-                  <i className={styles.knob} />
-                  <em>{ante ? 'ON' : 'OFF'}</em>
-                </span>
-              </button>
-              <div className={styles.stakeGroup}>
-                <button type="button" className={styles.nudge} aria-label="Меньше" disabled={locked} onClick={() => setBetIndex((value) => Math.max(0, value - 1))}>−</button>
-                <div className={styles.coin} aria-label={`Ставка ${stakeLabel}`}>
-                  <span>{stakeLabel}</span>
-                  <small>{ante ? 'анте' : 'ставка'}</small>
-                </div>
-                <button type="button" className={styles.nudge} aria-label="Больше" disabled={locked} onClick={() => setBetIndex((value) => Math.min(bets.length - 1, value + 1))}>+</button>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className={styles.meter}>
-          <div>
-            <span>Баланс</span>
-            <strong>{balanceLabel}</strong>
-          </div>
-          <div>
-            <span>Ставка</span>
-            <strong>{stakeLabel}</strong>
-          </div>
-          <div className={winSoFar > 0 ? styles.meterWin : undefined}>
-            <span>Выигрыш</span>
-            <strong>{winSoFar > 0 ? money(winSoFar) : '—'}</strong>
-          </div>
-        </div>
-      </footer>
+      <GameConsole
+        gameId={game.id}
+        locked={locked}
+        spinning={spinning}
+        showLines={showLines}
+        ante={ante}
+        autoLeft={autoLeft}
+        speed={speed}
+        stakeLabel={stakeLabel}
+        balanceLabel={balanceLabel}
+        winLabel={winSoFar > 0 ? money(winSoFar) : '—'}
+        winHot={winSoFar > 0}
+        onBuy={() => setBuyMenu(true)}
+        onToggleLines={() => setShowLines((value) => !value)}
+        onSpin={() => void spin()}
+        onAuto={() => {
+          if (autoLeft) {
+            stopAuto.current = true;
+            setAutoLeft(0);
+            return;
+          }
+          if (!spinning) setAutoOpen(true);
+        }}
+        onInfo={() => setShowInfo(true)}
+        onSpeed={cycleSpeed}
+        onAnte={() => setAnte((value) => !value)}
+        onBet={(dir) => setBetIndex((value) => Math.min(bets.length - 1, Math.max(0, value + dir)))}
+      />
 
       {error && <p className={styles.toast}>{error}</p>}
       {mode === 'gram' && !gramReady && (
@@ -815,14 +755,6 @@ function PlayInner() {
         />
       )}
     </main>
-  );
-}
-
-function Bolt() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M13.2 1.5 3.4 13.2h6.2l-1.1 9.3 10.1-12.4h-6.4l1-8.6z" />
-    </svg>
   );
 }
 
