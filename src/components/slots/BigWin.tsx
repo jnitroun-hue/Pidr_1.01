@@ -12,15 +12,15 @@ type Props = {
 };
 
 function tierOf(multiple: number): Tier {
-  if (multiple >= 60) return 'sensational';
-  if (multiple >= 30) return 'mega';
+  if (multiple >= 40) return 'sensational';
+  if (multiple >= 18) return 'mega';
   return 'nice';
 }
 
 const TITLE: Record<Tier, string> = {
-  nice: 'NICE',
-  mega: 'MEGA WIN',
-  sensational: 'SENSATIONAL BRO!',
+  nice: 'ОТЛИЧНО',
+  mega: 'МЕГА ВЫИГРЫШ',
+  sensational: 'НЕВЕРОЯТНО',
 };
 
 const ART: Record<Tier, string> = {
@@ -58,7 +58,7 @@ export default function BigWin({ multiple, amountLabel, onClose }: Props) {
       <div className={styles.rays} />
       <div className={styles.shock} />
       <div className={styles.coins} aria-hidden>
-        {Array.from({ length: tier === 'sensational' ? 22 : tier === 'mega' ? 14 : 8 }, (_, index) => (
+        {Array.from({ length: tier === 'sensational' ? 36 : tier === 'mega' ? 24 : 16 }, (_, index) => (
           <i key={index} style={{ ['--i' as string]: index }} />
         ))}
       </div>

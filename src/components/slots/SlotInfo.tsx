@@ -2,18 +2,20 @@
 
 import { useState } from 'react';
 import {
+  CURTAIN_MULTIPLIERS,
   HOLD_WIN_GRAND,
   HOLD_WIN_VALUES,
   PICK_BAG,
   PICK_MISSES,
   PICK_TARGETS,
+  triggerSymbol,
   WAYS_DIVISOR,
   WHEEL_LEVEL_1,
   WHEEL_LEVEL_2,
   type SlotGame,
   type SlotSymbol,
 } from '@/lib/slots/games';
-import { slotArt } from '@/lib/slots/art';
+import { slotArt, slotHero } from '@/lib/slots/art';
 import styles from './SlotInfo.module.css';
 
 type Props = { game: SlotGame; bet: number; gram: boolean; onClose: () => void };
@@ -31,15 +33,24 @@ function payout(game: SlotGame, bet: number, pays: number, symbol: SlotSymbol): 
 }
 
 function payHint(game: SlotGame, symbol: SlotSymbol): string {
-  if (symbol.scatter) return `${game.trigger}+ запускают бонус`;
-  if (symbol.wild && symbol.multiplier) return `дикий x${symbol.multiplier}`;
-  if (symbol.wild) return 'заменяет';
-  if (symbol.bonusCoin) return 'монета Hold & Win';
-  if (symbol.orb) return 'шар-множитель';
-  if (symbol.mystery) return 'раскрывается в общий символ';
+  if (symbol.scatter) return `скаттер бонуса: ${game.trigger} штуки`;
+  if (symbol.bonusCoin) return `скаттер бонуса: ${game.trigger} штук`;
+  if (symbol.wild && symbol.multiplier) return `вайлд и множитель x${symbol.multiplier}`;
+  if (symbol.wild && game.bonus.kind === 'sticky-reels') return 'вайлд. Штора закрывает весь барабан';
+  if (symbol.wild) return 'вайлд: заменяет символы, кроме скаттера';
+  if (symbol.orb) return 'множитель каскада';
+  if (symbol.mystery) return 'раскрывается в один общий символ';
   if (game.mechanic === 'scatter-pays') return '8–9 / 10–11 / 12+';
   if (game.mechanic === 'cluster') return '5–7 / 8–11 / 12+';
   return '3 / 4 / 5';
+}
+
+function symbolRank(symbol: SlotSymbol): number {
+  if (symbol.scatter || symbol.bonusCoin) return 0;
+  if (symbol.wild && symbol.multiplier) return 1;
+  if (symbol.wild) return 2;
+  if (symbol.orb || symbol.mystery) return 3;
+  return 4;
 }
 
 const MECHANIC: Record<SlotGame['mechanic'], { title: string; text: string }> = {
@@ -54,20 +65,58 @@ export default function SlotInfo({ game, bet, gram, onClose }: Props) {
   const [page, setPage] = useState(0);
   const pages = 4;
   const mechanic = MECHANIC[game.mechanic];
+  const trigger = triggerSymbol(game);
+  const wilds = game.symbols.filter((symbol) => symbol.wild && !symbol.multiplier);
+  const multipliers = game.symbols.filter((symbol) => symbol.multiplier);
+  const extras = game.symbols.filter((symbol) => symbol.orb || symbol.mystery);
+  const ordered = [...game.symbols].sort((a, b) => symbolRank(a) - symbolRank(b) || a.pays[2] - b.pays[2]);
   return (
     <div className={styles.back} onClick={onClose}>
       <div className={styles.modal} onClick={(event) => event.stopPropagation()} role="dialog" aria-label="Правила">
         <button type="button" className={styles.close} onClick={onClose} aria-label="Закрыть">×</button>
         {page === 0 && (
           <>
+            <h2>Как открыть бонус</h2>
+            {trigger ? (
+              <div className={styles.roster}>
+                <div>
+                  <img src={slotArt(game.id, trigger.id)} alt="" />
+                  <b>Скаттер</b>
+                  <span>{game.trigger}× {trigger.name} в любом месте открывают «{game.bonus.title}»</span>
+                </div>
+                {wilds.map((symbol) => (
+                  <div key={symbol.id}>
+                    <img src={slotArt(game.id, symbol.id)} alt="" />
+                    <b>WILD</b>
+                    <span>{game.bonus.kind === 'sticky-reels' ? `${symbol.name} — вайлд. Штора закрывает весь барабан и показывает множитель` : `${symbol.name} заменяет символы, кроме скаттера`}</span>
+                  </div>
+                ))}
+                {multipliers.map((symbol) => (
+                  <div key={symbol.id}>
+                    <img src={slotArt(game.id, symbol.id)} alt="" />
+                    <b>x{symbol.multiplier}</b>
+                    <span>{symbol.bonusOnly ? 'вайлд только в бонусе' : 'вайлд с множителем линии'}</span>
+                  </div>
+                ))}
+                {extras.map((symbol) => (
+                  <div key={symbol.id}>
+                    <img src={slotArt(game.id, symbol.id)} alt="" />
+                    <b>{symbol.orb ? 'ШАР' : 'МИСТИКА'}</b>
+                    <span>{symbol.orb ? `${symbol.name} умножает каскад` : `${symbol.name} раскрывается в один общий символ`}</span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            <p>Потолок раунда — x{game.maxWinMultiplier} ставки.</p>
+            <p>{game.bonus.rule}</p>
             <h2>Выплаты</h2>
-            <p className={styles.note}>{mechanic.text} WILD заменяет любой символ, кроме скаттера, монеты, шара и мистики. Суммы считаются от текущей ставки.</p>
+            <p className={styles.note}>{mechanic.text} Дикий заменяет любой символ, кроме того, что открывает бонус. Суммы — от текущей ставки.</p>
             <div className={styles.symbols}>
-              {game.symbols.filter((symbol) => !symbol.bonusOnly).map((symbol) => (
+              {ordered.map((symbol) => (
                 <div key={symbol.id} className={styles.symbol}>
                   <img src={slotArt(game.id, symbol.id)} alt="" />
                   <strong>{symbol.name}</strong>
-                  <span>{payHint(game, symbol)}</span>
+                  <span>{symbol.bonusOnly ? `только в бонусе. ${payHint(game, symbol)}` : payHint(game, symbol)}</span>
                   <b>
                     {symbol.pays.every((value) => value === 0)
                       ? 'не платит сам'
@@ -82,7 +131,19 @@ export default function SlotInfo({ game, bet, gram, onClose }: Props) {
           <>
             <h2>{game.bonus.title}</h2>
             <img className={styles.hero} src={slotArt(game.id, game.symbols.find((symbol) => symbol.scatter)?.id ?? game.symbols.find((symbol) => symbol.bonusCoin)?.id ?? 'scatter')} alt="" />
+            <p>Собери {game.trigger}× {game.symbols.find((symbol) => symbol.scatter)?.name ?? game.symbols.find((symbol) => symbol.bonusCoin)?.name} — и начнётся этот бонус.</p>
             <p>{game.bonus.rule}</p>
+            {game.bonus.kind === 'sticky-reels' && (
+              <div className={styles.curtainCard}>
+                <img src={slotHero(game.id)} alt="" />
+                <div>
+                  <strong>Штора</strong>
+                  <span>Закрывает барабан целиком. Ус выходит из золота и показывает множитель. На одной линии множители складываются.</span>
+                  <b>{CURTAIN_MULTIPLIERS.map((value) => `x${value}`).join(' · ')}</b>
+                </div>
+              </div>
+            )}
+            <p><b>Большой выигрыш.</b> {game.bonus.top}</p>
             <p>{game.mood}</p>
             <p>Потолок одного раунда — <b>x{game.maxWinMultiplier}</b> ставки. Волатильность: {game.volatility}.</p>
             <p>Анте прибавляет 50% к ставке и даёт дополнительные 16.77% шанса, что на поле появится ещё один символ-триггер.</p>
@@ -122,13 +183,13 @@ export default function SlotInfo({ game, bet, gram, onClose }: Props) {
             <div className={styles.buys}>
               <div>
                 <strong>Бонус</strong>
-                <span>цена x100 ставки</span>
-                <b>не меньше x10</b>
+                <span>стоит сто текущих ставок</span>
+                <b>гарантия десять ставок</b>
               </div>
               <div>
-                <strong>Топ-бонус</strong>
-                <span>цена x500 ставки</span>
-                <b>не меньше x50</b>
+                <strong>Супер-бонус</strong>
+                <span>стоит пятьсот текущих ставок</span>
+                <b>гарантия пятьдесят ставок</b>
               </div>
             </div>
             <p>{game.bonus.top}</p>

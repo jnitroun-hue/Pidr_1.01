@@ -12,6 +12,12 @@ const MODES = [
   { id: 'gram', label: 'GRAM', hint: 'Списание GRAM' },
 ] as const;
 
+function catchSymbol(game: SlotGame): string {
+  const symbol = game.symbols.find((item) => item.scatter) ?? game.symbols.find((item) => item.bonusCoin);
+  if (!symbol) return game.bonus.title;
+  return `${game.trigger}× ${symbol.name}`;
+}
+
 export default function SlotsLobbyPage() {
   const router = useRouter();
   const [picked, setPicked] = useState<SlotGame | null>(null);
@@ -31,11 +37,10 @@ export default function SlotsLobbyPage() {
           <button key={game.id} type="button" className={styles.card} onClick={() => setPicked(game)}>
             <img className={styles.cardBg} src={slotPoster(game.id)} alt="" />
             <img className={styles.cardHero} src={slotHero(game.id)} alt="" />
-            <em>x{game.maxWinMultiplier}</em>
-            <span className={styles.cardKind}>{game.bonus.title}</span>
+            <em>до x{game.maxWinMultiplier}</em>
             <span className={styles.cardFoot}>
               <strong>{game.title}</strong>
-              <small>{game.mood}</small>
+              <small>{catchSymbol(game)} — {game.bonus.title}</small>
             </span>
           </button>
         ))}
@@ -45,7 +50,8 @@ export default function SlotsLobbyPage() {
           <div className={styles.modeCard} onClick={(event) => event.stopPropagation()} role="dialog" aria-label="Выбор валюты">
             <img src={slotHero(picked.id)} alt="" />
             <p>{picked.title}</p>
-            <strong>Во что играем?</strong>
+            <strong>{catchSymbol(picked)} открывают «{picked.bonus.title}»</strong>
+            <span className={styles.modeMood}>{picked.mood}</span>
             <div className={styles.modeList}>
               {MODES.map((mode) => (
                 <button

@@ -81,10 +81,10 @@
 
 .coins i {
   position: absolute;
-  top: -10%;
-  left: calc(6% + (var(--i) * 5.2%));
-  width: 18px;
-  height: 18px;
+  top: -12%;
+  left: calc(2% + (var(--i) * 2.7%));
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, #fff6c8, #f5c518 45%, #b45309);
   animation: fall 1.6s linear infinite;

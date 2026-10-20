@@ -86,9 +86,7 @@ export function resolveHeroCue(input: {
     const cells = ofKind(marks, 'slash').length ? ofKind(marks, 'slash') : cast?.cells ?? [];
     return { pose: 'slash', cells, row: cells[0]?.row };
   }
-  if (id === 'golden-must' && ofKind(marks, 'sticky').length) {
-    return { pose: 'slam', cells: ofKind(marks, 'sticky') };
-  }
+  if (id === 'golden-must') return null;
   if (id === 'hex-vault' && ofKind(marks, 'coin').length) {
     return { pose: 'flip', cells: ofKind(marks, 'coin') };
   }

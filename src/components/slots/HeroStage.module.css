@@ -24,22 +24,36 @@
 .phoneHero {
   position: absolute;
   z-index: 7;
-  left: -2%;
-  bottom: -2%;
-  height: 46%;
-  max-height: 158px;
-  max-width: 38%;
+  left: 4px;
+  top: -62px;
+  height: 78px;
+  max-height: 78px;
+  max-width: 30%;
   width: auto;
   object-fit: contain;
   object-position: left bottom;
   pointer-events: none;
-  filter: drop-shadow(0 12px 14px rgba(0, 0, 0, 0.6));
+  filter: drop-shadow(0 10px 12px rgba(0, 0, 0, 0.6));
 }
 
 .phoneRight {
   left: auto;
-  right: -2%;
+  right: 4px;
   object-position: right bottom;
+}
+
+.phoneHero.rest,
+.phoneHero.idleGolden,
+.phoneHero.idleHex,
+.phoneHero.idleOak,
+.phoneHero.idleRiver,
+.phoneHero.idleCity,
+.phoneHero.idleArrow,
+.phoneHero.idleFairy,
+.phoneHero.idleDragon,
+.phoneHero.idleQueen,
+.phoneHero.idleRonin {
+  display: none;
 }
 
 .layer {

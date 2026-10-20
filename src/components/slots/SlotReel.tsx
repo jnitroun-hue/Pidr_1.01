@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { slotArt } from '@/lib/slots/art';
+import { slotArt, slotHero } from '@/lib/slots/art';
+import { getSlotGame, type SlotSymbol } from '@/lib/slots/games';
 import { reelPlan, type ReelSpeed } from '@/lib/slots/speed';
 import type { MarkKind } from '@/lib/slots/engine';
 import styles from '@/app/slots/Slots.module.css';
@@ -54,6 +55,8 @@ type Props = {
   /** Барабан крутится дольше: ждём третий скаттер. */
   extraMs?: number;
   highlight: boolean[];
+  /** Множитель шторы. null — барабан открыт. */
+  curtain?: number | null;
 };
 
 function multiplierOf(id: string): number | null {
@@ -65,9 +68,13 @@ function formatValue(value: number): string {
   return Number.isInteger(value) ? String(value) : value.toFixed(1).replace(/\.0$/, '');
 }
 
+function findSymbol(symbols: SlotSymbol[] | undefined, id: string): SlotSymbol | undefined {
+  return symbols?.find((symbol) => symbol.id === id);
+}
+
 export default function SlotReel({
   gameId, reelIndex, rows, symbolIds, wildIds, landed, values, marks, locked, fresh, popping,
-  rolling, speed, bonus, extraMs = 0, highlight,
+  rolling, speed, bonus, extraMs = 0, highlight, curtain = null,
 }: Props) {
   const [phase, setPhase] = useState<'idle' | 'clear' | 'ready' | 'go'>('idle');
   const plan = reelPlan(speed, reelIndex, bonus);
@@ -91,7 +98,7 @@ export default function SlotReel({
       setPhase('go');
       return;
     }
-    setPhase('clear');
+    setPhase('idle');
     let frame = 0;
     const timer = window.setTimeout(() => {
       setPhase('ready');
@@ -104,6 +111,27 @@ export default function SlotReel({
       cancelAnimationFrame(frame);
     };
   }, [rolling, landed.join('|'), plan.delay, anyLocked]);
+
+  const symbols = getSlotGame(gameId)?.symbols;
+
+  function face(id: string, value: number | null = null, mark: MarkKind | null = null) {
+    const symbol = findSymbol(symbols, id);
+    const mult = symbol?.multiplier ?? multiplierOf(id);
+    const bonusMark = Boolean(symbol?.scatter || symbol?.bonusCoin);
+    const showName = Boolean(symbol && !/^x\d/i.test(symbol.name));
+    return (
+      <>
+        <img src={slotArt(gameId, id)} alt={symbol?.name ?? ''} draggable={false} />
+        {bonusMark ? <small className={styles.roleBonus}>БОНУС</small> : null}
+        {symbol?.wild ? <small className={styles.roleWild}>WILD</small> : null}
+        {symbol?.orb ? <small className={styles.roleOrb}>ШАР</small> : null}
+        {symbol?.mystery ? <small className={styles.roleMystery}>?</small> : null}
+        {showName ? <small className={styles.symName}>{symbol?.name}</small> : null}
+        {mult ? <b className={styles.multBadge}>x{mult}</b> : null}
+        {value != null && curtain == null && !mult ? <b className={`${styles.valueBadge} ${mark === 'orb' ? styles.valueOrb : ''}`}>x{formatValue(value)}</b> : null}
+      </>
+    );
+  }
 
   const cells = (
     <div className={styles.reelCells}>
@@ -118,7 +146,8 @@ export default function SlotReel({
         const classes = [
           styles.cell,
           hot ? styles.hot : '',
-          id === 'scatter' ? SCATTER_FX[gameId] ?? '' : '',
+          findSymbol(symbols, id)?.scatter || findSymbol(symbols, id)?.bonusCoin ? `${styles.cellBonus} ${SCATTER_FX[gameId] ?? ''}` : '',
+          findSymbol(symbols, id)?.wild ? styles.cellWild : '',
           mark ? MARK_CLASS[mark] : '',
           isLocked ? styles.cellLocked : '',
           respinning ? styles.cellRespin : '',
@@ -128,9 +157,7 @@ export default function SlotReel({
         ].filter(Boolean).join(' ');
         return (
           <div key={`${reelIndex}-${row}-${id}-${mark ?? ''}-${value ?? ''}`} className={classes} style={{ ['--row' as string]: row }}>
-            <img src={slotArt(gameId, id)} alt="" draggable={false} />
-            {multiplier ? <b className={styles.multBadge}>x{multiplier}</b> : null}
-            {value != null ? <b className={`${styles.valueBadge} ${mark === 'orb' ? styles.valueOrb : ''}`}>x{formatValue(value)}</b> : null}
+            {face(id, value, mark)}
             {mark === 'slash' ? <i className={styles.slashLine} /> : null}
             {mark === 'burn' ? <i className={styles.burnFlame} /> : null}
           </div>
@@ -144,9 +171,7 @@ export default function SlotReel({
       className={`${styles.reelWindow} ${spinning ? styles.reelBusy : ''} ${phase === 'idle' ? styles.reelIdle : ''} ${extraMs > 0 && rolling ? styles.reelAnticipate : ''}`}
       style={{ ['--rows' as string]: rows }}
     >
-      {phase === 'clear' ? (
-        Array.from({ length: rows }, (_, index) => <div key={index} className={`${styles.cell} ${styles.cellClear}`} />)
-      ) : spinning ? (
+      {spinning ? (
         <div
           className={`${styles.reelStrip} ${phase === 'go' ? styles.reelGo : ''}`}
           style={{
@@ -155,17 +180,19 @@ export default function SlotReel({
             transform: phase === 'ready' ? `translateY(calc(${startShift} * var(--cell) * -1))` : undefined,
           }}
         >
-          {strip.map((id, index) => {
-            const multiplier = multiplierOf(id);
-            return (
-              <div key={`${reelIndex}-${index}-${id}`} className={`${styles.cell} ${id === 'scatter' ? SCATTER_FX[gameId] ?? '' : ''}`}>
-                <img src={slotArt(gameId, id)} alt="" draggable={false} />
-                {multiplier ? <b className={styles.multBadge}>x{multiplier}</b> : null}
+          {strip.map((id, index) => (
+              <div key={`${reelIndex}-${index}-${id}`} className={`${styles.cell} ${findSymbol(symbols, id)?.scatter || findSymbol(symbols, id)?.bonusCoin ? styles.cellBonus : ''} ${findSymbol(symbols, id)?.wild ? styles.cellWild : ''}`}>
+                {face(id)}
               </div>
-            );
-          })}
+          ))}
         </div>
       ) : cells}
+      {curtain != null && !spinning ? (
+        <div className={styles.curtain} key={`curtain-${reelIndex}-${curtain}`}>
+          <img src={slotHero(gameId)} alt="" draggable={false} />
+          <b>x{curtain}</b>
+        </div>
+      ) : null}
     </div>
   );
 }

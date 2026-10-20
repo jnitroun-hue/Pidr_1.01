@@ -48,6 +48,8 @@ export type Board = {
   label?: string;
   /** Клетки, которые исчезли перед этой доской (каскад). */
   removed?: Cell[];
+  /** Множитель шторы на каждом барабане. null — барабан открыт. */
+  curtains?: (number | null)[];
 };
 
 export type SpinStep = { boards: Board[]; totalWin: number; label?: string };
@@ -236,9 +238,29 @@ function walkLine(game: SlotGame, ids: string[]): { count: number; concrete: str
   return { count, concrete };
 }
 
-function evalLines(game: SlotGame, grid: string[][], bet: number, bothWays: boolean): SpinWin[] {
+function lineFactor(game: SlotGame, tiles: Tiles, cells: Cell[]): number {
+  let product = 1;
+  let curtain = 0;
+  const seen = new Set<number>();
+  for (const cell of cells) {
+    const tile = tiles[cell.reel][cell.row];
+    const symbol = symbolById(game, tile.id);
+    if (symbol.wild && tile.value != null && tile.value > 1) {
+      if (!seen.has(cell.reel)) {
+        seen.add(cell.reel);
+        curtain += tile.value;
+      }
+      continue;
+    }
+    product *= symbol.multiplier ?? 1;
+  }
+  return product * (curtain > 0 ? Math.min(10, curtain) : 1);
+}
+
+function evalLines(game: SlotGame, tiles: Tiles, bet: number, bothWays: boolean): SpinWin[] {
   const wins: SpinWin[] = [];
   const lineBet = bet / game.lines.length;
+  const grid = gridOf(tiles);
   game.lines.forEach((line, lineIndex) => {
     const cells: Cell[] = line.map((row, reel) => ({ reel, row }));
     const ids = cells.map((cell) => grid[cell.reel][cell.row]);
@@ -254,7 +276,7 @@ function evalLines(game: SlotGame, grid: string[][], bet: number, bothWays: bool
       const pay = payForCount(target, count);
       if (pay <= 0) continue;
       const used = pass.cells.slice(0, count);
-      const factor = used.reduce((product, cell) => product * (symbolById(game, grid[cell.reel][cell.row]).multiplier ?? 1), 1);
+      const factor = lineFactor(game, tiles, used);
       wins.push({
         kind: 'line',
         symbolId: target.id,
@@ -416,7 +438,7 @@ function evalBoard(game: SlotGame, tiles: Tiles, bet: number): SpinWin[] {
   if (game.mechanic === 'ways') return evalWays(game, grid, bet);
   if (game.mechanic === 'scatter-pays') return evalScatterPays(game, tiles, bet);
   if (game.mechanic === 'cluster') return evalCluster(game, tiles, bet);
-  return evalLines(game, grid, bet, game.mechanic === 'both-ways');
+  return evalLines(game, tiles, bet, game.mechanic === 'both-ways');
 }
 
 function sumWins(wins: SpinWin[]): number {
@@ -584,6 +606,8 @@ function baseBoards(game: SlotGame, tiles: Tiles, bet: number, events: SlotEvent
     }
   }
 
+  if (game.bonus.kind === 'sticky-reels') return [curtainSpin(game, tiles, bet, 'base')];
+
   return [board(tiles, evalBoard(game, tiles, bet), 1)];
 }
 
@@ -712,29 +736,118 @@ function stampRandom(game: SlotGame, tiles: Tiles, id: string, marks: Mark[], ki
   marks.push({ ...cell, kind });
 }
 
+const CURTAIN_MULT_BASE = [
+  { value: 2, weight: 82 },
+  { value: 3, weight: 16 },
+  { value: 5, weight: 2 },
+];
+
+const CURTAIN_MULT_BONUS = [
+  { value: 2, weight: 58 },
+  { value: 3, weight: 24 },
+  { value: 5, weight: 11 },
+  { value: 8, weight: 4.5 },
+  { value: 10, weight: 1.8 },
+  { value: 15, weight: 0.5 },
+  { value: 25, weight: 0.15 },
+  { value: 50, weight: 0.04 },
+  { value: 100, weight: 0.01 },
+];
+
+const CURTAIN_COUNT = [
+  { value: 0, weight: 97.2 },
+  { value: 1, weight: 2.4 },
+  { value: 2, weight: 0.32 },
+  { value: 3, weight: 0.06 },
+  { value: 4, weight: 0.015 },
+  { value: 5, weight: 0.005 },
+];
+
+function pickCurtainMult(tier: 'base' | 'bonus' | 'top'): number {
+  if (tier === 'base') return pickWeighted(CURTAIN_MULT_BASE).value;
+  if (tier === 'bonus') return pickWeighted(CURTAIN_MULT_BONUS).value;
+  return pickWeighted(CURTAIN_MULT_BONUS.map((item) => (
+    { ...item, weight: item.value >= 10 ? item.weight * 1.8 : item.weight }
+  ))).value;
+}
+
+function curtainLabel(curtains: { reel: number; mult: number }[]): string | undefined {
+  if (!curtains.length) return undefined;
+  const list = [...curtains].sort((a, b) => a.reel - b.reel).map((item) => `x${item.mult}`).join(' · ');
+  return curtains.length === 1 ? `Штора ${list}` : `Шторы ${list}`;
+}
+
+function scatterReels(game: SlotGame, tiles: Tiles): Set<number> {
+  const scatter = triggerSymbol(game)?.id;
+  const taken = new Set<number>();
+  if (!scatter) return taken;
+  tiles.forEach((reel, index) => {
+    if (reel.some((tile) => tile.id === scatter)) taken.add(index);
+  });
+  return taken;
+}
+
+function placeCurtain(game: SlotGame, tiles: Tiles, reel: number, mult: number): void {
+  const wild = wildId(game);
+  for (let row = 0; row < game.rows; row += 1) tiles[reel][row] = { id: wild, value: mult };
+}
+
+function paintCurtains(game: SlotGame, tiles: Tiles, bet: number, curtains: { reel: number; mult: number }[], fresh: Set<number>, stick: boolean): Board {
+  const row: (number | null)[] = Array.from({ length: game.reels }, () => null);
+  const marks: Mark[] = [];
+  const locked = stick
+    ? tiles.map(() => Array.from({ length: game.rows }, () => false))
+    : undefined;
+  curtains.forEach((curtain) => {
+    placeCurtain(game, tiles, curtain.reel, curtain.mult);
+    row[curtain.reel] = curtain.mult;
+    if (locked) locked[curtain.reel] = locked[curtain.reel].map(() => true);
+    if (fresh.has(curtain.reel)) {
+      for (let line = 0; line < game.rows; line += 1) marks.push({ reel: curtain.reel, row: line, kind: 'sticky' });
+    }
+  });
+  return board(tiles, evalBoard(game, tiles, bet), 1, {
+    marks,
+    locked,
+    curtains: row,
+    label: curtainLabel(curtains),
+  });
+}
+
+function curtainSpin(game: SlotGame, tiles: Tiles, bet: number, tier: 'base' | 'top'): Board {
+  const count = pickWeighted(CURTAIN_COUNT).value;
+  const blocked = scatterReels(game, tiles);
+  const open = Array.from({ length: game.reels }, (_, reel) => reel).filter((reel) => !blocked.has(reel));
+  const curtains: { reel: number; mult: number }[] = [];
+  for (let step = 0; step < count && open.length; step += 1) {
+    const reel = open.splice(randomInt(open.length), 1)[0];
+    curtains.push({ reel, mult: pickCurtainMult(tier) });
+  }
+  return paintCurtains(game, tiles, bet, curtains, new Set(curtains.map((item) => item.reel)), false);
+}
+
 function bonusStickyReels(game: SlotGame, bet: number, tier: Tier): SpinStep[] {
   const steps: SpinStep[] = [];
-  const locked = new Set<number>();
-  const limit = tier === 'top' ? 3 : 2;
-  const chance = tier === 'top' ? 30 : 30;
-  if (tier === 'top') locked.add(randomInt(game.reels));
-  const wild = wildId(game);
-  for (let index = 0; index < game.freeSpins; index += 1) {
-    if (locked.size < limit && randomInt(100) < chance) {
-      const open = Array.from({ length: game.reels }, (_, reel) => reel).filter((reel) => !locked.has(reel));
-      locked.add(open[randomInt(open.length)]);
-    }
+  const stuck: { reel: number; mult: number }[] = [];
+  const chance = tier === 'top' ? 18 : 16;
+  const spins = game.freeSpins;
+  const multTier = tier === 'top' ? 'top' : 'bonus';
+  if (tier === 'top') stuck.push({ reel: randomInt(game.reels), mult: 2 });
+  for (let index = 0; index < spins; index += 1) {
+    const fresh = new Set<number>();
     const tiles = drawTiles(game, baseBag(game));
-    const marks: Mark[] = [];
-    locked.forEach((reel) => {
-      for (let row = 0; row < game.rows; row += 1) {
-        tiles[reel][row] = { id: wild, value: null };
-        marks.push({ reel, row, kind: 'sticky' });
+    const taken = new Set(stuck.map((item) => item.reel));
+    if (stuck.length < game.reels && randomInt(100) < chance) {
+      const blocked = scatterReels(game, tiles);
+      const open = Array.from({ length: game.reels }, (_, reel) => reel).filter((reel) => !taken.has(reel) && !blocked.has(reel));
+      if (open.length) {
+        const reel = open[randomInt(open.length)];
+        stuck.push({ reel, mult: pickCurtainMult(multTier) });
+        fresh.add(reel);
       }
-    });
-    const lockedGrid = tiles.map((_, reel) => Array.from({ length: game.rows }, () => locked.has(reel)));
-    const multiplier = Math.max(1, locked.size);
-    steps.push(freeSpinStep([board(tiles, evalBoard(game, tiles, bet), multiplier, { marks, locked: lockedGrid, label: locked.size ? `Липких барабанов: ${locked.size} · x${multiplier}` : 'Барабаны свободны' })]));
+    }
+    if (index === 0) stuck.forEach((item) => fresh.add(item.reel));
+    steps.push(freeSpinStep([paintCurtains(game, tiles, bet, stuck, fresh, true)]));
   }
   return steps;
 }

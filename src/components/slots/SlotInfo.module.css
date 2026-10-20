@@ -91,9 +91,61 @@
   border-radius: 10px;
 }
 
+.roster {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+.roster > div {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  align-items: center;
+  padding: 8px;
+  border-radius: 14px;
+  background: rgba(245, 197, 24, 0.08);
+  border: 1px solid rgba(245, 197, 24, 0.35);
+}
+
+.roster img {
+  width: 64px;
+  height: 64px;
+  grid-row: 1 / span 2;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+.roster b { color: #fde68a; font-size: 14px; }
+.roster span { color: #fef3c7; font-size: 13px; line-height: 1.3; }
+
 .symbol strong { font-size: 14px; }
 .symbol span { color: #94a3b8; font-size: 12px; }
 .symbol b { color: #fde68a; font-size: 13px; }
+
+.curtainCard {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  gap: 10px;
+  align-items: center;
+  margin: 0 0 12px;
+  padding: 10px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(245, 197, 24, 0.18), rgba(120, 40, 8, 0.35));
+  border: 1px solid #f5c518;
+}
+
+.curtainCard img {
+  width: 92px;
+  height: 110px;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 8px rgba(0, 0, 0, 0.45));
+}
+
+.curtainCard strong { display: block; color: #fde68a; font-size: 16px; }
+.curtainCard span { display: block; margin: 4px 0; color: #fef3c7; font-size: 13px; line-height: 1.35; }
+.curtainCard b { color: #fff; font-size: 13px; }
 
 .buys {
   display: grid;

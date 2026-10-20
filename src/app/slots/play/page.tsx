@@ -95,7 +95,7 @@ function introText(game: SlotGame, bonus: BonusPlay): { title: string; text: str
     case 'slash':
       return { title: bonus.title, text: `${spins} бесплатных спинов. Ронин рубит ряд в дикие, множитель растёт с каждым ударом.`, button: 'Крутить' };
     default:
-      return { title: bonus.title, text: `${spins} бесплатных спинов. Дикие барабаны липнут до конца бонуса, множитель равен их числу.`, button: 'Крутить' };
+      return { title: bonus.title, text: `${spins} бесплатных спинов. Штора закрывает барабан, Ус показывает множитель и остаётся до конца бонуса. Новая штора падает так же, как в обычном спине.`, button: 'Крутить' };
   }
 }
 
@@ -128,7 +128,7 @@ function PlayInner() {
   const [speed, setSpeed] = useState<ReelSpeed>('slow');
   const [ante, setAnte] = useState(false);
   const [showLines, setShowLines] = useState(true);
-  const [buyAsk, setBuyAsk] = useState<null | 'regular' | 'top'>(null);
+  const [buyMenu, setBuyMenu] = useState(false);
   const [autoLeft, setAutoLeft] = useState(0);
   const [autoOpen, setAutoOpen] = useState(false);
   const stopAuto = useRef(false);
@@ -231,10 +231,25 @@ function PlayInner() {
   /* Показ досок                                                         */
   /* ------------------------------------------------------------------ */
 
+  function hideFreshCurtains(board: Board): Board {
+    const fresh = new Set((board.marks ?? []).filter((mark) => mark.kind === 'sticky').map((mark) => mark.reel));
+    return {
+      ...board,
+      wins: EMPTY_WINS,
+      marks: undefined,
+      locked: board.locked?.map((reel, index) => (fresh.has(index) ? reel.map(() => false) : reel)),
+      curtains: board.curtains?.map((value, index) => (fresh.has(index) ? null : value)),
+    };
+  }
+
   async function rollTo(board: Board, bonus: boolean, keepLocked = false) {
     const extraMs = anticipation(board.grid);
     setExtra(extraMs);
-    setShown({ board: { ...board, wins: EMPTY_WINS, locked: keepLocked ? board.locked : undefined, marks: keepLocked ? board.marks : undefined } });
+    setShown({
+      board: keepLocked
+        ? hideFreshCurtains(board)
+        : { ...board, wins: EMPTY_WINS, locked: undefined, marks: undefined, curtains: undefined },
+    });
     setRibbon('');
     setRolling(true);
     await wait(reelSpinMs(live.current.speed, game.reels, bonus) + Math.max(0, ...extraMs));
@@ -278,7 +293,7 @@ function PlayInner() {
   async function playBoards(boards: Board[], bonus: boolean, first: 'roll' | 'respin' | 'show', events: SlotEvent[] = []) {
     const timing = pace();
     const head = boards[0];
-    if (first === 'roll') await rollTo(head, bonus, false);
+    if (first === 'roll') await rollTo(head, bonus, Boolean(head.locked?.some((reel) => reel.some(Boolean))));
     else if (first === 'respin') await respinTo(head);
     else {
       setShown({ board: head });
@@ -304,7 +319,7 @@ function PlayInner() {
     if (next.bonus) await playBonus(next, next.bonus);
     setWinSoFar(next.totalWin);
     const ratio = live.current.bet > 0 ? next.totalWin / live.current.bet : 0;
-    if (ratio >= 15) {
+    if (ratio >= 8) {
       setBigMultiple(ratio);
       await awaitUser(2600);
       setBigMultiple(null);
@@ -524,7 +539,7 @@ function PlayInner() {
         </button>
         <div className={styles.hudTitle}>
           <strong>{game.title}</strong>
-          <span>{game.bonus.title} · до x{game.maxWinMultiplier}</span>
+          <span>{trigger ? `${game.trigger}× ${trigger.name} — ${game.bonus.title}` : game.bonus.title}</span>
         </div>
         <div className={styles.hudMark}>{unit}</div>
       </header>
@@ -552,7 +567,12 @@ function PlayInner() {
             </div>
           ) : null}
           <div className={styles.ribbonRow}>
-            {counter ? <em className={styles.counter}>{feature?.title} · {counter.step}/{counter.total}</em> : null}
+            {counter ? <em className={styles.counter}>{feature?.title} · {counter.step}/{counter.total}</em> : trigger ? (
+              <button type="button" className={styles.triggerChip} onClick={() => setShowInfo(true)}>
+                <img src={slotArt(game.id, trigger.id)} alt="" />
+                <span>{game.trigger}× {trigger.name}</span>
+              </button>
+            ) : null}
             {ribbon ? <em className={styles.ribbon}>{ribbon}</em> : null}
           </div>
           <div className={styles.frame}>
@@ -576,11 +596,18 @@ function PlayInner() {
                   bonus={inBonus}
                   extraMs={extra[reelIndex] ?? 0}
                   highlight={reelHighlight(reelIndex)}
+                  curtain={board.curtains?.[reelIndex] ?? null}
                 />
               ))}
             </div>
             <HeroStage gameId={game.id} cue={cue} replayKey={actToken} />
           </div>
+          {!rolling && board.win > 0 ? (
+            <div className={styles.winBurst} key={`${board.win}-${ribbon}`}>
+              <span>Выигрыш</span>
+              <strong>{money(board.win)}</strong>
+            </div>
+          ) : null}
           <div className={styles.winStrip}>
             {!rolling && board.wins.filter((win) => win.kind !== 'coin').slice(0, 3).map((win, index) => (
               <div key={`${win.symbolId}-${win.lineIndex ?? index}-${win.kind}`} className={styles.winChip}>
@@ -603,16 +630,10 @@ function PlayInner() {
       <footer className={styles.controls}>
         <div className={styles.dock}>
           <div className={styles.dockSide}>
-            <div className={styles.buyRow}>
-              <button type="button" className={styles.buy} disabled={locked} onClick={() => setBuyAsk('regular')}>
-                Бонус
-                <small>×100</small>
-              </button>
-              <button type="button" className={`${styles.buy} ${styles.buyTop}`} disabled={locked} onClick={() => setBuyAsk('top')}>
-                Топ
-                <small>×500</small>
-              </button>
-            </div>
+            <button type="button" className={styles.buy} disabled={locked} onClick={() => setBuyMenu(true)}>
+              Купить
+              <small>бонус</small>
+            </button>
             <button type="button" className={styles.tumbler} onClick={() => setShowLines((value) => !value)} aria-pressed={showLines}>
               <span><b>ПОДСВЕТКА</b></span>
               <span className={`${styles.track} ${showLines ? styles.trackOn : styles.trackOff}`}>
@@ -705,7 +726,7 @@ function PlayInner() {
         <div className={styles.overlay}>
           <div className={`${styles.sheet} ${styles.congrats}`}>
             {heroSrc ? <img className={`${styles.sheetHero} ${sideHeroClass(game.id, { pose: 'present', cells: [] })}`} src={heroSrc} alt="" /> : null}
-            <p>{feature.tier === 'natural' ? 'Поздравляем!' : feature.tier === 'top' ? 'Топ-бонус куплен' : 'Бонус куплен'}</p>
+            <p>{feature.tier === 'natural' ? 'Поздравляем!' : feature.tier === 'top' ? 'Супер-бонус куплен' : 'Бонус куплен'}</p>
             <strong>{intro.title}</strong>
             <span>{intro.text}</span>
             <button type="button" className={styles.sheetGo} onClick={release}>{intro.button}</button>
@@ -746,21 +767,27 @@ function PlayInner() {
           </div>
         </div>
       )}
-      {buyAsk && (
+      {buyMenu && (
         <div className={styles.overlay}>
           <div className={styles.sheet}>
-            {heroSrc ? <img className={`${styles.sheetHero} ${sideHeroClass(game.id, { pose: 'present', cells: [] })}`} src={heroSrc} alt="" /> : null}
-            <p>{buyAsk === 'top' ? 'Топ-бонус' : 'Бонус'}</p>
-            <strong>{money(bet * (buyAsk === 'top' ? 500 : 100))}</strong>
-            <span>
-              Списать эту сумму и сразу открыть «{game.bonus.title}»?
-              {buyAsk === 'top' ? ` ${game.bonus.top}` : ''}
-              {' '}Гарантия: не меньше {buyAsk === 'top' ? 'x50' : 'x10'} ставки.
-            </span>
-            <div className={styles.sheetActions}>
-              <button type="button" onClick={() => setBuyAsk(null)}>Отмена</button>
-              <button type="button" className={styles.sheetGo} onClick={() => { const tier = buyAsk; setBuyAsk(null); void buy(tier); }}>Играть</button>
+            {heroSrc ? <img className={styles.sheetHero} src={heroSrc} alt="" /> : null}
+            <p>Какой бонус покупаем?</p>
+            <span>«{game.bonus.title}» открывается сразу. Цена — от текущей ставки.</span>
+            <div className={styles.buyChoices}>
+              <button type="button" onClick={() => { setBuyMenu(false); void buy('regular'); }}>
+                <b>Бонус</b>
+                <small>{game.bonus.rule}</small>
+                <strong>{money(bet * 100)}</strong>
+                <em>гарантия {money(bet * 10)}</em>
+              </button>
+              <button type="button" className={styles.buyChoiceTop} onClick={() => { setBuyMenu(false); void buy('top'); }}>
+                <b>Супер-бонус</b>
+                <small>{game.bonus.top}</small>
+                <strong>{money(bet * 500)}</strong>
+                <em>гарантия {money(bet * 50)}</em>
+              </button>
             </div>
+            <button type="button" onClick={() => setBuyMenu(false)}>Отмена</button>
           </div>
         </div>
       )}
