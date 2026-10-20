@@ -140,26 +140,17 @@ export default function HeroStage({
     <>
       <img
         key={replayKey}
-        className={`${styles.phoneHero} ${onRight ? styles.phoneRight : ''} ${motion} ${cells.length ? styles.away : ''}`}
+        className={`${styles.phoneHero} ${onRight ? styles.phoneRight : ''} ${motion}`}
         src={src}
         alt=""
         draggable={false}
       />
-      {pose !== 'present' ? (
+      {pose !== 'present' && cells.length ? (
         <div key={`fx-${replayKey}`} className={styles.layer} aria-hidden>
-          {pose === 'draw' && cells.map((cell, index) => (
-            <span key={index} className={styles.flyWrap} style={spot(cell, index)}>
-              <i className={styles.arrowArt} />
-            </span>
-          ))}
+          {pose === 'draw' && cells.map((cell, index) => <i key={index} className={styles.bolt} style={spot(cell, index)} />)}
           {pose === 'sweep' && cells.map((cell, index) => <i key={index} className={styles.spark} style={spot(cell, index)} />)}
-          {pose === 'lunge' && cells.slice(0, 3).map((cell, index) => (
-            <span key={index} className={styles.flyWrap} style={spot(cell, index)}>
-              <img className={styles.flyer} src={src} alt="" />
-              <i className={styles.fireArt} />
-            </span>
-          ))}
-          {pose === 'lunge' && !cells.length ? <i className={styles.breath} /> : null}
+          {pose === 'lunge' && <i className={styles.breath} />}
+          {pose === 'lunge' && cells.map((cell, index) => <i key={index} className={styles.fire} style={spot(cell, index)} />)}
           {pose === 'frost' && <i className={styles.frostWash} />}
           {pose === 'frost' && cells.slice(0, 8).map((cell, index) => <i key={index} className={styles.crystal} style={spot(cell, index)} />)}
           {pose === 'slash' && <i className={styles.slashArc} style={{ ['--row' as string]: String(cue.row ?? cells[0]?.row ?? 1) }} />}
@@ -167,11 +158,7 @@ export default function HeroStage({
             <i key={reel} className={styles.slamCol} style={{ ['--reel' as string]: String(reel) }} />
           ))}
           {pose === 'flip' && cells.slice(0, 8).map((cell, index) => <i key={index} className={styles.coinFly} style={spot(cell, index)} />)}
-          {pose === 'pulse' && cells.map((cell, index) => (
-            <span key={index} className={styles.flyWrap} style={spot(cell, index)}>
-              <i className={styles.rootArt} />
-            </span>
-          ))}
+          {pose === 'pulse' && cells.map((cell, index) => <i key={index} className={styles.orbRing} style={spot(cell, index)} />)}
           {pose === 'snap' && cells.map((cell, index) => <i key={index} className={styles.snapFlash} style={spot(cell, index)} />)}
           {pose === 'lean' && <i className={styles.neonWink} />}
         </div>

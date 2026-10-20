@@ -338,7 +338,7 @@ export const SLOT_GAMES: SlotGame[] = [
       rule: '10 бесплатных спинов. Мистические символы раскрываются только в жемчуг, волну или дикий символ.',
       top: 'В каждом спине на поле добавляются четыре мистических символа, раскрытие только в волну или дикий.',
     },
-    features: ['1024 пути слева направо', 'Мистика «?» превращается в один общий символ', 'Дикие x4 и x10 умножают путь'],
+    features: ['До 1024 путей слева направо', 'Выплата пути = коэффициент × ставка / 1000 × число путей', 'Мистика «?» превращается в один общий символ', 'Дикие x4 и x10 умножают путь'],
     multipliers: NO_MULTIPLIER,
     symbols: [
       { id: 'drop', name: 'Капля', weight: 42, pays: [1.15, 3.45, 9] },
@@ -542,7 +542,7 @@ export const SLOT_GAMES: SlotGame[] = [
       rule: '10 бесплатных спинов с множителем от x2. Каждый спин ронин рубит три соседних барабана одного ряда в дикие символы, и каждый удар поднимает множитель на 2.',
       top: 'Два удара за спин, множитель начинается с x6 и растёт на 4.',
     },
-    features: ['12 линий в обе стороны', 'Ронин рубит ряд в дикие в базовой игре', 'Растущий множитель за каждый удар'],
+    features: ['12 линий в обе стороны', 'Пятёрка на всю линию платит один раз, короче — может заплатить с двух сторон', 'Ронин рубит ряд в дикие в базовой игре', 'Растущий множитель за каждый удар'],
     multipliers: NO_MULTIPLIER,
     symbols: [
       { id: 'mask', name: 'Маска', weight: 46, pays: [0.3, 0.8, 2] },
@@ -564,10 +564,30 @@ export function triggerSymbol(game: SlotGame): SlotSymbol | undefined {
   return game.symbols.find((symbol) => symbol.scatter) ?? game.symbols.find((symbol) => symbol.bonusCoin);
 }
 
-export const COIN_BETS = [10, 25, 50, 100, 250, 500, 1000];
-/** 1 единица = 0.01 GRAM. 10 единиц = 0.10 GRAM. */
-export const GRAM_UNIT_BETS = [10, 25, 50, 100, 250, 500];
+/** Лестница ставки: минимум 10, максимум 25 000. Одинаковая для монет и единиц GRAM. */
+export const BET_LEVELS = [
+  10, 20, 30, 40, 50, 60, 80, 100,
+  120, 160, 200, 250, 300, 400, 500,
+  600, 800, 1000, 1200, 1600, 2000,
+  2500, 3000, 4000, 5000, 6000, 8000,
+  10000, 12000, 16000, 20000, 25000,
+];
+export const COIN_BETS = BET_LEVELS;
+/** 1 единица = 0.01 GRAM. 10 единиц = 0.10 GRAM. 25 000 единиц = 250 GRAM. */
+export const GRAM_UNIT_BETS = BET_LEVELS;
 export const GRAM_UNITS_PER_COIN = 10;
-export const DEMO_START_CHIPS = 2000;
-/** Делитель ставки на один путь для ways. */
+export const DEMO_START_CHIPS = 100000;
+/** Делитель ставки на один путь для ways. Не равен числу путей: максимум путей считается отдельно. */
 export const WAYS_DIVISOR = 1000;
+
+/** Выигрыш одной линии: коэффициент × ставка / число линий, до целой монеты. */
+export function lineCoinWin(bet: number, lines: number, pay: number, factor = 1): number {
+  if (lines <= 0 || pay <= 0 || factor <= 0) return 0;
+  return Math.max(0, Math.round((bet * pay * factor) / lines));
+}
+
+/** Выигрыш ways: коэффициент × ставка / WAYS_DIVISOR × число путей, до целой монеты. */
+export function wayCoinWin(bet: number, pay: number, ways = 1, factor = 1): number {
+  if (pay <= 0 || ways <= 0 || factor <= 0) return 0;
+  return Math.max(0, Math.round((bet * pay * ways * factor) / WAYS_DIVISOR));
+}

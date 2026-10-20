@@ -173,10 +173,19 @@
 
 .line {
   display: flex;
-  gap: 2px;
+  align-items: center;
+  gap: 3px;
   padding: 4px;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.04);
+}
+
+.line em {
+  min-width: 16px;
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 800;
+  color: #fde68a;
 }
 
 .line span {

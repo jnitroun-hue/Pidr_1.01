@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { slotArt } from '@/lib/slots/art';
 import styles from './PickBonus.module.css';
 
 type Cell = { kind: 'mult' | 'miss'; value: number; amount: number };
@@ -8,76 +9,69 @@ type Cell = { kind: 'mult' | 'miss'; value: number; amount: number };
 type Props = {
   heroSrc: string;
   gameId: string;
-  reveals: Cell[];
-  cells?: Cell[];
-  columns?: number;
-  rows?: number;
-  path?: number[];
-  missLimit?: number;
-  total: number;
-  floorAdded: number;
+  cells: Cell[];
+  columns: number;
+  rows: number;
+  missLimit: number;
   moneyLabel: (value: number) => string;
   auto: boolean;
-  onDone: () => void;
+  onDone: (opened: number[]) => void;
 };
 
-export default function PickBonus({ heroSrc, gameId, reveals, cells, columns, rows, path, missLimit, total, floorAdded, moneyLabel, auto, onDone }: Props) {
-  const board = cells && path && columns && rows ? cells : null;
-  const shots = board ? path! : reveals.map((_, index) => index);
-  const limit = missLimit ?? 3;
-  const [step, setStep] = useState(0);
-  const opened = shots.slice(0, step);
-  const finished = step >= shots.length;
-  const misses = opened.reduce((sum, index) => sum + ((board ? board[index] : reveals[index]).kind === 'miss' ? 1 : 0), 0);
-  const nextIndex = shots[step];
+export default function PickBonus({ heroSrc, gameId, cells, columns, rows, missLimit, moneyLabel, auto, onDone }: Props) {
+  const [opened, setOpened] = useState<number[]>([]);
+  const [shot, setShot] = useState<number | null>(null);
+  const misses = opened.reduce((sum, index) => sum + (cells[index]?.kind === 'miss' ? 1 : 0), 0);
+  const finished = misses >= missLimit;
+  const collected = opened.reduce((sum, index) => sum + (cells[index]?.amount ?? 0), 0);
 
-  function shoot() {
-    if (finished) return;
-    setStep((value) => value + 1);
+  function open(index: number) {
+    if (finished || opened.includes(index) || shot != null) return;
+    setShot(index);
+    window.setTimeout(() => {
+      setOpened((list) => (list.includes(index) ? list : [...list, index]));
+      setShot(null);
+    }, 280);
   }
 
   useEffect(() => {
-    if (!auto || finished) return;
-    const timer = window.setTimeout(shoot, 700);
+    if (!auto || finished || shot != null) return;
+    const free = cells.map((_, index) => index).filter((index) => !opened.includes(index));
+    if (!free.length) return;
+    const timer = window.setTimeout(() => open(free[Math.floor(Math.random() * free.length)]), 700);
     return () => window.clearTimeout(timer);
-  }, [auto, step, finished]);
+  }, [auto, opened, finished, shot, cells]);
 
   useEffect(() => {
     if (finished && auto) {
-      const timer = window.setTimeout(onDone, 1400);
+      const timer = window.setTimeout(() => onDone(opened), 1200);
       return () => window.clearTimeout(timer);
     }
-  }, [finished, auto, onDone]);
-
-  const width = columns ?? 4;
-  const height = rows ?? Math.ceil((board ? board.length : 12) / width);
-  const count = board ? board.length : 12;
+  }, [finished, auto, opened, onDone]);
 
   return (
     <div className={styles.back}>
-      <div className={styles.panel} data-game={gameId}>
-        <p className={styles.head}>Тир · промахов {misses}/{limit}</p>
+      <div className={styles.panel}>
+        <p className={styles.head}>Тир · промах {misses} из {missLimit}</p>
         <div className={styles.layout}>
           {heroSrc ? (
-            <img key={step} className={`${styles.archer} ${step ? styles.shoot : styles.ready}`} src={heroSrc} alt="" draggable={false} />
+            <img key={opened.length} className={`${styles.archer} ${shot != null ? styles.shoot : styles.ready}`} src={heroSrc} alt="" draggable={false} />
           ) : null}
-          <div className={styles.grid} style={{ gridTemplateColumns: `repeat(${width}, minmax(0, 1fr))` }}>
-            {Array.from({ length: count }, (_, index) => {
-              const order = opened.indexOf(index);
-              const reveal = order >= 0 ? (board ? board[index] : reveals[order]) : null;
-              const aimed = index === nextIndex && !finished;
+          <div className={styles.grid} style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
+            {cells.map((cell, index) => {
+              const reveal = opened.includes(index) ? cell : null;
               return (
                 <button
                   key={index}
                   type="button"
-                  className={`${styles.target} ${reveal ? (reveal.kind === 'miss' ? styles.miss : styles.hit) : ''} ${aimed ? styles.aim : ''} ${finished && !reveal ? styles.dim : ''}`}
-                  disabled={finished || Boolean(reveal)}
-                  onClick={shoot}
+                  className={`${styles.target} ${reveal ? (reveal.kind === 'miss' ? styles.miss : styles.hit) : ''} ${shot === index ? styles.shot : ''} ${finished && !reveal ? styles.dim : ''}`}
+                  disabled={finished || Boolean(reveal) || shot != null}
+                  onClick={() => open(index)}
                 >
                   {reveal ? (
                     reveal.kind === 'miss' ? <span>мимо</span> : <strong>x{reveal.value}</strong>
                   ) : (
-                    <i className={aimed ? styles.bolt : ''} />
+                    <img src={slotArt(gameId, 'target')} alt="" draggable={false} />
                   )}
                 </button>
               );
@@ -86,13 +80,14 @@ export default function PickBonus({ heroSrc, gameId, reveals, cells, columns, ro
         </div>
         <div className={styles.sum}>
           <span>Собрано</span>
-          <strong>{moneyLabel(finished ? total : opened.reduce((sum, index) => sum + (board ? board[index] : reveals[opened.indexOf(index)]).amount, 0))}</strong>
-          {finished && floorAdded > 0 ? <small>Гарантия покупки добавила {moneyLabel(floorAdded)}</small> : null}
+          <strong>{moneyLabel(collected)}</strong>
         </div>
         {finished && !auto ? (
-          <button type="button" className={styles.go} onClick={onDone}>Забрать</button>
+          <button type="button" className={styles.go} onClick={() => onDone(opened)}>Забрать</button>
         ) : (
-          <span className={styles.hint}>{auto ? 'Лучник стреляет сам' : `Поле ${width}×${height}. Нажмите мишень: стрела летит в подсвеченную. Промахов на поле шесть, третий заканчивает тир.`}</span>
+          <span className={styles.hint}>
+            {auto ? 'Лучник сам выбирает яблоки' : `Поле ${columns}×${rows}. Нажмите любое яблоко. Шесть мимо спрятаны на поле, третье заканчивает тир.`}
+          </span>
         )}
       </div>
     </div>

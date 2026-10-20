@@ -3,7 +3,8 @@ import {
   HOLD_WIN_GRAND,
   HOLD_WIN_VALUES,
   ORB_VALUES,
-  WAYS_DIVISOR,
+  lineCoinWin,
+  wayCoinWin,
   WHEEL_LEVEL_1,
   WHEEL_LEVEL_2,
   triggerSymbol,
@@ -286,7 +287,6 @@ function lineFactor(game: SlotGame, tiles: Tiles, cells: Cell[]): number {
 
 function evalLines(game: SlotGame, tiles: Tiles, bet: number, bothWays: boolean): SpinWin[] {
   const wins: SpinWin[] = [];
-  const lineBet = bet / game.lines.length;
   const grid = gridOf(tiles);
   game.lines.forEach((line, lineIndex) => {
     const cells: Cell[] = line.map((row, reel) => ({ reel, row }));
@@ -312,7 +312,7 @@ function evalLines(game: SlotGame, tiles: Tiles, bet: number, bothWays: boolean)
         lineIndex,
         direction: pass.dir,
         cells: used,
-        amount: roundMoney(lineBet * pay * factor),
+        amount: lineCoinWin(bet, game.lines.length, pay, factor),
       });
     }
   });
@@ -321,7 +321,6 @@ function evalLines(game: SlotGame, tiles: Tiles, bet: number, bothWays: boolean)
 
 function evalWays(game: SlotGame, grid: string[][], bet: number): SpinWin[] {
   const wins: SpinWin[] = [];
-  const wayBet = bet / WAYS_DIVISOR;
   const premium = mostExpensive(game);
   const factorOnReels = (reels: number, cells: Cell[]) =>
     cells.filter((cell) => cell.reel < reels).reduce((product, cell) => product * (symbolById(game, grid[cell.reel][cell.row]).multiplier ?? 1), 1);
@@ -358,7 +357,7 @@ function evalWays(game: SlotGame, grid: string[][], bet: number): SpinWin[] {
       count,
       ways,
       cells: used,
-      amount: roundMoney(wayBet * pay * ways * factorOnReels(count, used)),
+      amount: wayCoinWin(bet, pay, ways, factorOnReels(count, used)),
     });
   }
 
@@ -381,7 +380,7 @@ function evalWays(game: SlotGame, grid: string[][], bet: number): SpinWin[] {
       count: wildCounts.length,
       ways,
       cells: wildCells,
-      amount: roundMoney(wayBet * wildPay * ways * factorOnReels(wildCounts.length, wildCells)),
+      amount: wayCoinWin(bet, wildPay, ways, factorOnReels(wildCounts.length, wildCells)),
     });
   }
   return wins;
@@ -1098,19 +1097,7 @@ function bonusArcherPick(bet: number): NonNullable<BonusPlay['pick']> {
     const swap = randomInt(index + 1);
     [cells[index], cells[swap]] = [cells[swap], cells[index]];
   }
-  const order = cells.map((_, index) => index);
-  for (let index = order.length - 1; index > 0; index -= 1) {
-    const swap = randomInt(index + 1);
-    [order[index], order[swap]] = [order[swap], order[index]];
-  }
-  const path: number[] = [];
-  let misses = 0;
-  for (const index of order) {
-    path.push(index);
-    if (cells[index].kind === 'miss') misses += 1;
-    if (misses >= 3) break;
-  }
-  return { reveals: path.map((index) => cells[index]), cells, columns: 6, rows: 6, path, missLimit: 3 };
+  return { reveals: [], cells, columns: 6, rows: 6, missLimit: 3 };
 }
 
 function bonusClusterFs(game: SlotGame, bet: number, tier: Tier): SpinStep[] {
@@ -1260,12 +1247,13 @@ function playBonus(game: SlotGame, bet: number, tier: Tier, scatterCount: number
   if (kind === 'colossal') play.spins = bonusColossal(game, bet, tier);
   if (kind === 'slash') play.spins = bonusSlash(game, bet, tier);
 
+  const interactive = Boolean(play.pick?.cells?.length);
   let total = play.spins.reduce((sum, step) => sum + step.totalWin, 0)
     + (play.wheel?.cash ?? 0)
-    + (play.pick?.reveals.reduce((sum, reveal) => sum + reveal.amount, 0) ?? 0);
+    + (interactive ? 0 : (play.pick?.reveals.reduce((sum, reveal) => sum + reveal.amount, 0) ?? 0));
 
   const floor = tier === 'top' ? bet * 50 : tier === 'regular' ? bet * 10 : 0;
-  if (floor > total) {
+  if (!interactive && floor > total) {
     play.floorAdded = floor - total;
     const lastStep = play.spins[play.spins.length - 1];
     if (lastStep) {
@@ -1348,6 +1336,42 @@ export function buyBonus(game: SlotGame, totalBet: number, tier: 'regular' | 'to
     events: [],
     bonus,
   };
+}
+
+export function scoreArcherPick(
+  cells: { kind: 'mult' | 'miss'; amount: number }[],
+  opened: number[],
+  missLimit: number,
+  already: number,
+  baseBet: number,
+  tier: Tier,
+  maxWinMultiplier: number,
+): { collected: number; extra: number; floorAdded: number; total: number; capped: boolean } {
+  const seen = new Set<number>();
+  let misses = 0;
+  let collected = 0;
+  for (const raw of opened) {
+    const index = Number(raw);
+    if (!Number.isInteger(index) || index < 0 || index >= cells.length || seen.has(index)) continue;
+    seen.add(index);
+    collected = roundMoney(collected + (cells[index].amount || 0));
+    if (cells[index].kind === 'miss') misses += 1;
+    if (misses >= missLimit) break;
+  }
+  const floor = tier === 'top' ? baseBet * 50 : tier === 'regular' ? baseBet * 10 : 0;
+  let extra = collected;
+  let floorAdded = 0;
+  if (floor > already + collected) {
+    floorAdded = roundMoney(floor - already - collected);
+    extra = roundMoney(collected + floorAdded);
+  }
+  const cap = baseBet * maxWinMultiplier;
+  let capped = false;
+  if (already + extra > cap) {
+    extra = roundMoney(Math.max(0, cap - already));
+    capped = true;
+  }
+  return { collected, extra, floorAdded, total: roundMoney(already + extra), capped };
 }
 
 export function formatGramUnits(units: number): string {

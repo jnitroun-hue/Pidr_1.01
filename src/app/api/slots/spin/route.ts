@@ -5,6 +5,7 @@ import { getRedis } from '@/lib/redis/init';
 import { COIN_BETS, GRAM_UNIT_BETS, getSlotGame } from '@/lib/slots/games';
 import { anteCharge } from '@/lib/slots/speed';
 import { buyBonus, spinSlot } from '@/lib/slots/engine';
+import { rememberPick } from '@/lib/slots/pendingPick';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -51,6 +52,17 @@ export async function POST(req: NextRequest) {
   const buy = body?.buy === 'top' ? 'top' : body?.buy === 'regular' ? 'regular' : null;
   const ante = body?.ante === true && !buy;
   const result = buy ? buyBonus(game, bet, buy) : spinSlot(game, bet, ante);
+  if (result.bonus?.pick?.cells?.length) {
+    await rememberPick(dbUserId, spinId, {
+      mode,
+      baseBet: bet,
+      already: result.totalWin,
+      tier: result.bonus.tier,
+      maxWin: game.maxWinMultiplier,
+      cells: result.bonus.pick.cells,
+      missLimit: result.bonus.pick.missLimit ?? 3,
+    });
+  }
   const stake = buy === 'top' ? bet * 500 : buy === 'regular' ? bet * 100 : ante ? anteCharge(bet) : bet;
   const payout = result.totalWin;
 

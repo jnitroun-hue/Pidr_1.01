@@ -16,6 +16,7 @@ import {
 import {
   buyBonus,
   formatGramUnits,
+  scoreArcherPick,
   spinSlot,
   type Board,
   type BonusPlay,
@@ -65,10 +66,10 @@ function markGrid(game: SlotGame, board: Board): (MarkKind | null)[][] | undefin
 }
 
 function winLabel(win: SpinWin): string {
-  if (win.kind === 'line') return `${win.count} в линии${win.direction === 'rtl' ? ' ←' : ''}`;
+  if (win.kind === 'line') return `Линия ${(win.lineIndex ?? 0) + 1} · ${win.count}${win.direction === 'rtl' ? ' ←' : ''}`;
   if (win.kind === 'ways') return `${win.ways} путей`;
-  if (win.kind === 'scatter-pays') return `${win.count} символов`;
-  if (win.kind === 'cluster') return `кластер ${win.count}`;
+  if (win.kind === 'scatter-pays') return `${win.count}× ${win.symbolName}`;
+  if (win.kind === 'cluster') return `${win.count}× ${win.symbolName}`;
   if (win.kind === 'coin') return 'монета';
   if (win.kind === 'grand') return 'гранд';
   return 'скаттер';
@@ -109,7 +110,8 @@ function PlayInner() {
   const game = getSlotGame(params.get('game') || '') ?? getSlotGame('golden-must')!;
   const modeParam = params.get('mode');
   const mode: Mode = modeParam === 'coins' || modeParam === 'gram' ? modeParam : 'demo';
-  const [betIndex, setBetIndex] = useState(2);
+  const [betIndex, setBetIndex] = useState(Math.max(0, COIN_BETS.indexOf(50)));
+  const [betOpen, setBetOpen] = useState(false);
   const [demoChips, setDemoChips] = useState(DEMO_START_CHIPS);
   const [coins, setCoins] = useState<number | null>(null);
   const [gramUnits, setGramUnits] = useState<number | null>(null);
@@ -137,6 +139,9 @@ function PlayInner() {
   const [autoOpen, setAutoOpen] = useState(false);
   const stopAuto = useRef(false);
   const waiter = useRef<(() => void) | null>(null);
+  const pickWaiter = useRef<((opened: number[]) => void) | null>(null);
+  const spinIdRef = useRef('');
+  const settledBalance = useRef<number | null>(null);
   const autoLeftRef = useRef(0);
   const spinningRef = useRef(false);
   const spinRef = useRef<() => Promise<boolean>>(async () => false);
@@ -316,7 +321,8 @@ function PlayInner() {
     }
   }
 
-  async function present(next: RoundResult) {
+  async function present(next: RoundResult): Promise<number | undefined> {
+    settledBalance.current = null;
     setRound(next);
     setWinSoFar(0);
     setCounter(null);
@@ -336,6 +342,7 @@ function PlayInner() {
       setFeature(null);
       setCounter(null);
     }
+    return settledBalance.current ?? undefined;
   }
 
   async function playBonus(next: RoundResult, bonus: BonusPlay) {
@@ -347,7 +354,42 @@ function PlayInner() {
       await awaitUser(0);
       setWinSoFar((value) => value + bonus.wheel!.cash);
     }
-    if (bonus.kind === 'pick' && bonus.pick) {
+    if (bonus.kind === 'pick' && bonus.pick?.cells?.length) {
+      setPhase('pick');
+      const opened = await new Promise<number[]>((resolve) => { pickWaiter.current = resolve; });
+      const scored = scoreArcherPick(
+        bonus.pick.cells,
+        opened,
+        bonus.pick.missLimit ?? 3,
+        next.totalWin,
+        live.current.bet,
+        bonus.tier,
+        live.current.game.maxWinMultiplier,
+      );
+      bonus.totalWin = scored.extra;
+      bonus.floorAdded = scored.floorAdded;
+      next.totalWin = scored.total;
+      next.capped = next.capped || scored.capped;
+      setRound({ ...next });
+      setFeature({ ...bonus });
+      setWinSoFar(scored.total);
+      if (live.current.mode !== 'demo' && spinIdRef.current) {
+        try {
+          const response = await fetch('/api/slots/pick', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...getApiHeaders() },
+            body: JSON.stringify({ spinId: spinIdRef.current, gameId: live.current.game.id, opened }),
+          });
+          const data = await response.json();
+          if (!data.success) throw new Error(data.error || 'Тир не записался');
+          settledBalance.current = Number(data.balance);
+          const setter = live.current.mode === 'coins' ? setCoins : setGramUnits;
+          setter(settledBalance.current);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'Тир не записался');
+        }
+      }
+    } else if (bonus.kind === 'pick' && bonus.pick) {
       setPhase('pick');
       await awaitUser(0);
       setWinSoFar((value) => value + bonus.totalWin);
@@ -392,10 +434,12 @@ function PlayInner() {
         return true;
       }
       await ensureBalance();
+      const spinId = crypto.randomUUID();
+      spinIdRef.current = spinId;
       const response = await fetch('/api/slots/spin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...getApiHeaders() },
-        body: JSON.stringify({ gameId: snap.game.id, mode: snap.mode, bet: snap.bet, ante: snap.ante, spinId: crypto.randomUUID() }),
+        body: JSON.stringify({ gameId: snap.game.id, mode: snap.mode, bet: snap.bet, ante: snap.ante, spinId }),
       });
       const data = await response.json();
       if (!data.success) throw new Error(data.error || 'Спин не прошёл');
@@ -403,8 +447,8 @@ function PlayInner() {
       const after = Number(data.balance);
       const setter = snap.mode === 'coins' ? setCoins : setGramUnits;
       setter(Math.max(0, after - next.totalWin));
-      await present(next);
-      setter(after);
+      const paid = await present(next);
+      setter(paid ?? after);
       return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка спина');
@@ -434,10 +478,12 @@ function PlayInner() {
         return;
       }
       await ensureBalance();
+      const spinId = crypto.randomUUID();
+      spinIdRef.current = spinId;
       const response = await fetch('/api/slots/spin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...getApiHeaders() },
-        body: JSON.stringify({ gameId: snap.game.id, mode: snap.mode, bet: snap.bet, buy: tier, spinId: crypto.randomUUID() }),
+        body: JSON.stringify({ gameId: snap.game.id, mode: snap.mode, bet: snap.bet, buy: tier, spinId }),
       });
       const data = await response.json();
       if (!data.success) throw new Error(data.error || 'Покупка не прошла');
@@ -445,8 +491,8 @@ function PlayInner() {
       const after = Number(data.balance);
       const setter = snap.mode === 'coins' ? setCoins : setGramUnits;
       setter(Math.max(0, after - next.totalWin));
-      await present(next);
-      setter(after);
+      const paid = await present(next);
+      setter(paid ?? after);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка покупки');
     } finally {
@@ -507,7 +553,7 @@ function PlayInner() {
 
   function reelHighlight(reelIndex: number): boolean[] {
     const hot = Array.from({ length: game.rows }, () => false);
-    if (!rolling) return hot;
+    if (rolling || !showLines) return hot;
     for (const win of board.wins) {
       for (const cell of win.cells) if (cell.reel === reelIndex) hot[cell.row] = true;
     }
@@ -572,6 +618,9 @@ function PlayInner() {
             </div>
           ) : null}
           <div className={styles.ribbonRow}>
+            {cue && heroSrc ? (
+              <img key={actToken} className={`${styles.bonusHero} ${sideHeroClass(game.id, cue)}`} src={heroSrc} alt="" draggable={false} />
+            ) : null}
             {counter ? <em className={styles.counter}>{feature?.title} · {counter.step}/{counter.total}</em> : trigger ? (
               <button type="button" className={styles.triggerChip} onClick={() => setShowInfo(true)}>
                 <img src={slotArt(game.id, trigger.id)} alt="" />
@@ -587,6 +636,7 @@ function PlayInner() {
                 <strong>{money(board.win)}</strong>
               </div>
             ) : null}
+            <div className={styles.reelStage}>
             <div className={styles.reels}>
               {board.grid.map((reel, reelIndex) => (
                 <SlotReel
@@ -612,10 +662,11 @@ function PlayInner() {
               ))}
             </div>
             <HeroStage gameId={game.id} cue={cue} replayKey={actToken} />
+            </div>
           </div>
           <div className={styles.winStrip}>
-            {!rolling && board.wins.filter((win) => win.kind !== 'coin').slice(0, 3).map((win, index) => (
-              <div key={`${win.symbolId}-${win.lineIndex ?? index}-${win.kind}`} className={styles.winChip}>
+            {!rolling && board.wins.filter((win) => win.kind !== 'coin').slice(0, 6).map((win, index) => (
+              <div key={`${win.symbolId}-${win.lineIndex ?? index}-${win.kind}-${win.count}`} className={styles.winChip}>
                 <img src={slotArt(game.id, win.symbolId)} alt="" />
                 <span>{winLabel(win)}</span>
                 <b>{money(win.amount)}</b>
@@ -659,6 +710,8 @@ function PlayInner() {
         onSpeed={cycleSpeed}
         onAnte={() => setAnte((value) => !value)}
         onBet={(dir) => setBetIndex((value) => Math.min(bets.length - 1, Math.max(0, value + dir)))}
+        onOpenBets={() => { if (!locked) setBetOpen(true); }}
+        winKey={game.mechanic === 'ways' ? 'Пути' : game.mechanic === 'lines' || game.mechanic === 'both-ways' ? 'Линии' : 'Поле'}
       />
 
       {error && <p className={styles.toast}>{error}</p>}
@@ -688,21 +741,21 @@ function PlayInner() {
           onDone={release}
         />
       )}
-      {feature?.pick && phase === 'pick' && (
+      {feature?.pick?.cells?.length && phase === 'pick' && (
         <PickBonus
           heroSrc={heroSrc}
           gameId={game.id}
-          reveals={feature.pick.reveals}
           cells={feature.pick.cells}
-          columns={feature.pick.columns}
-          rows={feature.pick.rows}
-          path={feature.pick.path}
-          missLimit={feature.pick.missLimit}
-          total={feature.totalWin}
-          floorAdded={feature.floorAdded}
+          columns={feature.pick.columns ?? 6}
+          rows={feature.pick.rows ?? 6}
+          missLimit={feature.pick.missLimit ?? 3}
           moneyLabel={money}
           auto={autoLeft > 0}
-          onDone={release}
+          onDone={(opened) => {
+            const resolve = pickWaiter.current;
+            pickWaiter.current = null;
+            resolve?.(opened);
+          }}
         />
       )}
       {feature && phase === 'done' && bigMultiple == null && (
@@ -737,6 +790,27 @@ function PlayInner() {
               </button>
             </div>
             <button type="button" onClick={() => setBuyMenu(false)}>Отмена</button>
+          </div>
+        </div>
+      )}
+      {betOpen && (
+        <div className={styles.overlay}>
+          <div className={styles.sheet}>
+            <p>Ставка</p>
+            <span>от 10 до 25 000. Плюс и минус листают лестницу, нажатие на сумму открывает весь список.</span>
+            <div className={styles.betGrid}>
+              {bets.map((value, index) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={index === betIndex ? styles.betOn : ''}
+                  onClick={() => { setBetIndex(index); setBetOpen(false); }}
+                >
+                  {mode === 'gram' ? formatGramUnits(value) : value.toLocaleString('ru-RU')}
+                </button>
+              ))}
+            </div>
+            <button type="button" onClick={() => setBetOpen(false)}>Закрыть</button>
           </div>
         </div>
       )}

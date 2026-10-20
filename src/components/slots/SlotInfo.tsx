@@ -5,8 +5,10 @@ import {
   CURTAIN_MULTIPLIERS,
   HOLD_WIN_GRAND,
   HOLD_WIN_VALUES,
+  lineCoinWin,
   triggerSymbol,
   WAYS_DIVISOR,
+  wayCoinWin,
   WHEEL_LEVEL_1,
   WHEEL_LEVEL_2,
   type SlotGame,
@@ -24,22 +26,48 @@ function formatPay(value: number, gram: boolean): string {
 
 function payout(game: SlotGame, bet: number, pays: number, symbol: SlotSymbol): number {
   if (symbol.scatter || symbol.orb || symbol.bonusCoin || symbol.mystery) return Math.round(bet * pays);
-  if (game.mechanic === 'ways') return Math.round((bet / WAYS_DIVISOR) * pays);
+  if (game.mechanic === 'ways') return wayCoinWin(bet, pays);
   if (game.mechanic === 'scatter-pays' || game.mechanic === 'cluster') return Math.round(bet * pays);
-  return Math.round((bet / Math.max(1, game.lines.length)) * pays);
+  return lineCoinWin(bet, Math.max(1, game.lines.length), pays);
+}
+
+function moneyPlain(value: number, gram: boolean): string {
+  if (gram) return (value / 100).toFixed(2);
+  const rounded = Math.round(value * 100) / 100;
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2);
+}
+
+function mathRule(game: SlotGame, bet: number, gram: boolean): string {
+  if (game.mechanic === 'lines' || game.mechanic === 'both-ways') {
+    const lines = game.lines.length;
+    const lineBet = moneyPlain(bet / lines, gram);
+    const side = game.mechanic === 'both-ways'
+      ? ' Та же линия считается справа налево отдельно. Если комбинация закрыла все барабаны, линия платит один раз, без второй выплаты.'
+      : ' Считается только слева направо.';
+    return `${lines} фиксированных линий на поле ${game.reels}×${game.rows}. Ставка на линию = общая ставка / ${lines} = ${lineBet}. Выигрыш линии = коэффициент символа × ставка на линию, округление до целой монеты. Нужно минимум 3 одинаковых.${side} Вайлд заменяет любой символ, кроме скаттера. Линия из одних вайлдов платит как самый дорогой обычный символ. Множители вайлдов на выигрышных клетках перемножаются. Скаттер линию рвёт и платит отдельно от всей ставки: числа в его карточке — это 3, 4 и 5 скаттеров.`;
+  }
+  if (game.mechanic === 'ways') {
+    const ways = game.rows ** game.reels;
+    return `Поле ${game.reels}×${game.rows}, до ${ways} путей слева направо: символ на соседних барабанах в любом ряду. Выигрыш = коэффициент × (ставка / ${WAYS_DIVISOR}) × число путей, до целой монеты. Числа в таблице — за один путь. Вайлд увеличивает число путей. Скаттер платит от всей ставки и пути не занимает.`;
+  }
+  if (game.mechanic === 'scatter-pays') {
+    return `Поле ${game.reels}×${game.rows}. Платит 8–9, 10–11 и 12+ одинаковых символов где угодно, от всей ставки. Шар заменяет любой символ и прибавляет свои клетки к счётчику, а выигрыш умножается на сумму шаров, которые в нём участвовали.`;
+  }
+  return `Поле ${game.reels}×${game.rows}. Платит кластер из 5–7, 8–11 и 12+ одинаковых символов, соединённых сторонами, от всей ставки. Вайлд входит в кластер.`;
 }
 
 function payHint(game: SlotGame, symbol: SlotSymbol): string {
-  if (symbol.scatter) return `скаттер бонуса: ${game.trigger} штуки`;
-  if (symbol.bonusCoin) return `скаттер бонуса: ${game.trigger} штук`;
+  if (symbol.scatter) return game.id === 'green-arrow' ? '3 — залп, 4 — тир. Выплата за 3 / 4 / 5 от всей ставки' : `${game.trigger}+ открывают бонус. Выплата за 3 / 4 / 5 от всей ставки`;
+  if (symbol.bonusCoin) return `${game.trigger}+ открывают бонус. По линиям не платит`;
   if (symbol.wild && symbol.multiplier) return `вайлд и множитель x${symbol.multiplier}`;
   if (symbol.wild && game.bonus.kind === 'sticky-reels') return 'вайлд. Штора закрывает весь барабан';
   if (symbol.wild) return 'вайлд: заменяет символы, кроме скаттера';
   if (symbol.orb) return 'вайлд и множитель символов, с которыми сыграл';
   if (symbol.mystery) return 'раскрывается в один общий символ';
-  if (game.mechanic === 'scatter-pays') return '8–9 / 10–11 / 12+';
-  if (game.mechanic === 'cluster') return '5–7 / 8–11 / 12+';
-  return '3 / 4 / 5';
+  if (game.mechanic === 'scatter-pays') return '8–9 / 10–11 / 12+, от всей ставки';
+  if (game.mechanic === 'cluster') return '5–7 / 8–11 / 12+, от всей ставки';
+  if (game.mechanic === 'ways') return '3 / 4 / 5 барабана, за 1 путь';
+  return '3 / 4 / 5 в линии';
 }
 
 function symbolRank(symbol: SlotSymbol): number {
@@ -107,7 +135,7 @@ export default function SlotInfo({ game, bet, gram, onClose }: Props) {
             <p>Потолок раунда — x{game.maxWinMultiplier} ставки.</p>
             <p>{game.bonus.rule}</p>
             <h2>Выплаты</h2>
-            <p className={styles.note}>{mechanic.text} Дикий заменяет любой символ, кроме того, что открывает бонус. Суммы — от текущей ставки.</p>
+            <p className={styles.note}>{mathRule(game, bet, gram)} Суммы в карточках — уже в монетах при текущей ставке.</p>
             <div className={styles.symbols}>
               {ordered.map((symbol) => (
                 <div key={symbol.id} className={styles.symbol}>
@@ -196,11 +224,13 @@ export default function SlotInfo({ game, bet, gram, onClose }: Props) {
         {page === 3 && (
           <>
             <h2>{mechanic.title}{game.mechanic === 'lines' || game.mechanic === 'both-ways' ? ` · ${game.lines.length}` : ''}</h2>
-            <p>{mechanic.text}</p>
+            <p>{mathRule(game, bet, gram)}</p>
+            <p className={styles.note}>Верхний ряд схемы — верх поля. Жёлтая клетка входит в линию. Номер линии совпадает с номером в ленте выигрыша.</p>
             {(game.mechanic === 'lines' || game.mechanic === 'both-ways') && game.lines.length > 0 && (
               <div className={styles.lines}>
                 {game.lines.map((line, index) => (
                   <div key={index} className={styles.line} title={`Линия ${index + 1}`}>
+                    <em>{index + 1}</em>
                     {Array.from({ length: game.reels }, (_, reel) => (
                       <span key={reel}>
                         {Array.from({ length: game.rows }, (_, row) => (

@@ -23,6 +23,8 @@ type Props = {
   onSpeed: () => void;
   onAnte: () => void;
   onBet: (dir: -1 | 1) => void;
+  onOpenBets: () => void;
+  winKey: string;
 };
 
 type Theme = {
@@ -47,8 +49,7 @@ const THEME: Record<string, Theme> = {
   'blade-ronin': { spin: 'УДАР', bg: '#10080a', panel: '#2a1216', accent: '#f87171', ink: '#1a0a0c', text: '#fee2e2' },
 };
 
-const SPEED: Record<ReelSpeed, string> = { slow: 'медленно', mid: 'средне', fast: 'быстро' };
-const SPEED_MARK: Record<ReelSpeed, string> = { slow: 'x1', mid: 'x2', fast: 'x3' };
+const SPEED: Record<ReelSpeed, string> = { slow: 'выкл', mid: 'x2', fast: 'вкл' };
 
 export default function GameConsole(props: Props) {
   const theme = THEME[props.gameId] ?? THEME['golden-must'];
@@ -80,16 +81,39 @@ export default function GameConsole(props: Props) {
           </button>
           <div className={styles.stake}>
             <button type="button" disabled={props.locked} onClick={() => props.onBet(1)} aria-label="Больше">+</button>
-            <b>{props.stakeLabel}</b>
+            <button type="button" className={styles.stakeValue} disabled={props.locked} onClick={props.onOpenBets} aria-label="Выбрать ставку">
+              <b>{props.stakeLabel}</b>
+              <small>ставка</small>
+            </button>
             <button type="button" disabled={props.locked} onClick={() => props.onBet(-1)} aria-label="Меньше">−</button>
           </div>
         </div>
         <div className={styles.tools}>
-          <button type="button" className={props.ante ? styles.on : ''} disabled={props.locked} aria-pressed={props.ante} onClick={props.onAnte}>Анте</button>
-          <button type="button" className={props.showLines ? styles.on : ''} aria-pressed={props.showLines} onClick={props.onToggleLines}>Линии</button>
-          <button type="button" className={props.autoLeft ? styles.on : ''} onClick={props.onAuto} aria-label="Автоспины">{props.autoLeft || 'Авто'}</button>
-          <button type="button" onClick={props.onInfo} aria-label="Информация">Инфо</button>
-          <button type="button" onClick={props.onSpeed} aria-label={SPEED[props.speed]}>{SPEED_MARK[props.speed]}</button>
+          <button type="button" className={props.ante ? styles.on : ''} disabled={props.locked} aria-pressed={props.ante} onClick={props.onAnte}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.2 6.4H21l-5.4 4 2.1 6.6L12 16.8 6.3 20l2.1-6.6L3 9.4h6.8z" /></svg>
+            <b>Анте</b>
+            <small>{props.ante ? 'вкл ×1.5' : '+50%'}</small>
+          </button>
+          <button type="button" className={props.speed === 'fast' ? styles.on : props.speed === 'mid' ? styles.warm : ''} aria-pressed={props.speed !== 'slow'} onClick={props.onSpeed}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 10-14h-7l0-6z" /></svg>
+            <b>Турбо</b>
+            <small>{SPEED[props.speed]}</small>
+          </button>
+          <button type="button" className={props.autoLeft ? styles.on : ''} onClick={props.onAuto} aria-label="Автоспины">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5a7 7 0 0 1 6.3 4H16v2h6V5h-2v2.1A9 9 0 1 0 21 13h-2a7 7 0 1 1-7-8z" /></svg>
+            <b>Авто</b>
+            <small>{props.autoLeft || 'спины'}</small>
+          </button>
+          <button type="button" className={props.showLines ? styles.on : ''} aria-pressed={props.showLines} onClick={props.onToggleLines}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z" /></svg>
+            <b>{props.winKey}</b>
+            <small>{props.showLines ? 'вкл' : 'выкл'}</small>
+          </button>
+          <button type="button" onClick={props.onInfo} aria-label="Информация">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 15h-2v-6h2zm0-8h-2V7h2z" /></svg>
+            <b>Инфо</b>
+            <small>правила</small>
+          </button>
         </div>
       </div>
     </footer>

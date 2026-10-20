@@ -540,11 +540,22 @@
 .ribbonRow {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
   gap: 8px;
   min-height: 22px;
   margin: 0 0 6px;
+}
+
+.bonusHero {
+  height: 84px;
+  width: auto;
+  max-width: 96px;
+  object-fit: contain;
+  object-position: center bottom;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.55));
+  pointer-events: none;
 }
 
 .counter, .ribbon {
@@ -685,6 +696,12 @@
     0 16px 32px rgba(0, 0, 0, 0.4);
 }
 
+.reelStage {
+  position: relative;
+  width: max-content;
+  max-width: 100%;
+}
+
 .reels {
   display: grid;
   grid-template-columns: repeat(var(--reels), var(--cell));
@@ -795,10 +812,26 @@
   box-sizing: border-box;
 }
 
+.hot { z-index: 3; }
+
 .hot img {
   animation: winPop 0.7s cubic-bezier(0.16, 0.84, 0.3, 1.2) both;
-  box-shadow: 0 0 0 3px #fff4c2, 0 0 22px rgba(250, 204, 21, 0.95);
+  box-shadow: 0 0 0 3px #ffe566, 0 0 18px #f5c518;
 }
+
+.hot .symName {
+  background: #f5c518;
+  color: #1a1204;
+  font-size: max(10px, calc(var(--cell) * 0.22));
+}
+
+.dim img {
+  filter: grayscale(0.85) brightness(0.32);
+}
+
+.dim .symName,
+.dim .valueBadge,
+.dim .roleOrb { opacity: 0.25; }
 
 @keyframes winPop {
   0% { transform: scale(0.82); filter: brightness(2.2); }
@@ -1200,9 +1233,9 @@
 }
 
 .winChip img {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   object-fit: cover;
 }
 
@@ -1724,6 +1757,32 @@
   grid-template-columns: 1fr 1fr;
   gap: 8px;
   width: 100%;
+}
+
+.betGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  width: 100%;
+  max-height: min(46dvh, 360px);
+  overflow: auto;
+  padding: 2px;
+}
+
+.betGrid button {
+  min-height: 44px;
+  border-radius: 12px;
+  border: 1px solid rgba(245, 197, 24, 0.4);
+  background: linear-gradient(180deg, #3f2e12, #1c1408);
+  color: #fde68a;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.betOn {
+  background: linear-gradient(180deg, #fff4c2, #f5c518 50%, #d97706) !important;
+  color: #3f2208 !important;
+  border-color: #fff7d6 !important;
 }
 
 @media (max-width: 860px) {

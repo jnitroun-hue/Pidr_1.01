@@ -136,7 +136,8 @@ export default function SlotReel({
       {landed.map((id, row) => {
         const isLocked = Boolean(locked?.[row]);
         const respinning = rolling && anyLocked && !isLocked;
-        const hot = !rolling && highlight[row];
+        const boardHot = !rolling && highlight.some(Boolean);
+        const hot = boardHot && highlight[row];
         const multiplier = multiplierOf(id);
         const mark = marks?.[row] ?? null;
         const value = values?.[row] ?? null;
@@ -144,6 +145,7 @@ export default function SlotReel({
         const classes = [
           styles.cell,
           hot ? styles.hot : '',
+          boardHot && !hot ? styles.dim : '',
           findSymbol(symbols, id)?.scatter || findSymbol(symbols, id)?.bonusCoin ? `${styles.cellBonus} ${SCATTER_FX[gameId] ?? ''}` : '',
           findSymbol(symbols, id)?.wild ? styles.cellWild : '',
           mark ? MARK_CLASS[mark] : '',
