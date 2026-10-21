@@ -117,14 +117,10 @@ export default function SlotReel({
   function face(id: string, value: number | null = null, mark: MarkKind | null = null) {
     const symbol = findSymbol(symbols, id);
     const mult = symbol?.multiplier ?? multiplierOf(id);
-    const baked = Boolean(symbol?.scatter || symbol?.wild || symbol?.bonusCoin);
-    const showName = Boolean(symbol && !baked && !/^x\d/i.test(symbol.name));
     return (
       <>
-        <img src={slotArt(gameId, id)} alt={symbol?.name ?? ''} draggable={false} />
-        {symbol?.orb ? <small className={styles.roleOrb}>ШАР</small> : null}
+        <img src={slotArt(gameId, id)} alt="" draggable={false} />
         {symbol?.mystery ? <small className={styles.roleMystery}>?</small> : null}
-        {showName ? <small className={styles.symName}>{symbol?.name}</small> : null}
         {mult ? <b className={styles.multBadge}>x{mult}</b> : null}
         {value != null && curtain == null && !mult ? <b className={`${styles.valueBadge} ${mark === 'orb' ? styles.valueOrb : ''} ${mark === 'mult' ? styles.valueEdge : ''}`}>x{formatValue(value)}</b> : null}
       </>

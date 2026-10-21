@@ -150,3 +150,20 @@ export function slotBackdrop(gameId: string): string {
 export function slotPoster(gameId: string): string {
   return ART[gameId]?.poster ?? `${BASE}/bg-golden.jpg`;
 }
+
+const LOGO: Record<string, string> = {
+  'golden-must': `${BASE}/logo-golden.jpg`,
+  'hex-vault': `${BASE}/logo-hex.jpg`,
+  'oak-fortune': `${BASE}/logo-oak.jpg`,
+  'neon-river': `${BASE}/logo-neon.jpg`,
+  'limitless-city': `${BASE}/logo-city.jpg`,
+  'green-arrow': `${BASE}/logo-arrow.jpg`,
+  'fairy-glade': `${BASE}/logo-fairy.jpg`,
+  'ash-dragon': `${BASE}/logo-dragon.jpg`,
+  'frost-queen': `${BASE}/logo-frost.jpg`,
+  'blade-ronin': `${BASE}/logo-ronin.jpg`,
+};
+
+export function slotLogo(gameId: string): string {
+  return LOGO[gameId] ?? `${BASE}/logo-golden.jpg`;
+}

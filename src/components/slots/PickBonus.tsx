@@ -13,17 +13,24 @@ type Props = {
   columns: number;
   rows: number;
   missLimit: number;
+  bet: number;
   moneyLabel: (value: number) => string;
   auto: boolean;
+  onProgress?: (total: number) => void;
   onDone: (opened: number[]) => void;
 };
 
-export default function PickBonus({ heroSrc, gameId, cells, columns, rows, missLimit, moneyLabel, auto, onDone }: Props) {
+export default function PickBonus({ heroSrc, gameId, cells, columns, rows, missLimit, bet, moneyLabel, auto, onProgress, onDone }: Props) {
   const [opened, setOpened] = useState<number[]>([]);
   const [shot, setShot] = useState<number | null>(null);
   const misses = opened.reduce((sum, index) => sum + (cells[index]?.kind === 'miss' ? 1 : 0), 0);
   const finished = misses >= missLimit;
-  const collected = opened.reduce((sum, index) => sum + (cells[index]?.amount ?? 0), 0);
+  const prizeOf = (index: number) => {
+    const cell = cells[index];
+    if (!cell || cell.kind === 'miss') return 0;
+    return Math.round(cell.value * bet);
+  };
+  const collected = opened.reduce((sum, index) => sum + prizeOf(index), 0);
 
   function open(index: number) {
     if (finished || opened.includes(index) || shot != null) return;
@@ -42,6 +49,8 @@ export default function PickBonus({ heroSrc, gameId, cells, columns, rows, missL
     return () => window.clearTimeout(timer);
   }, [auto, opened, finished, shot, cells]);
 
+  useEffect(() => { onProgress?.(collected); }, [collected, onProgress]);
+
   useEffect(() => {
     if (finished && auto) {
       const timer = window.setTimeout(() => onDone(opened), 1200);
@@ -52,12 +61,12 @@ export default function PickBonus({ heroSrc, gameId, cells, columns, rows, missL
   return (
     <div className={styles.back}>
       <div className={styles.panel}>
-        <p className={styles.head}>Тир · промах {misses} из {missLimit}</p>
+        <p className={styles.head}>Тир · промах {misses} из {missLimit} · яблоко = множитель × {moneyLabel(bet)}</p>
         <div className={styles.layout}>
           {heroSrc ? (
             <img key={opened.length} className={`${styles.archer} ${shot != null ? styles.shoot : styles.ready}`} src={heroSrc} alt="" draggable={false} />
           ) : null}
-          <div className={styles.grid} style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
+          <div className={styles.grid} style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))` }}>
             {cells.map((cell, index) => {
               const reveal = opened.includes(index) ? cell : null;
               return (
@@ -69,7 +78,7 @@ export default function PickBonus({ heroSrc, gameId, cells, columns, rows, missL
                   onClick={() => open(index)}
                 >
                   {reveal ? (
-                    reveal.kind === 'miss' ? <span>мимо</span> : <strong>x{reveal.value}</strong>
+                    reveal.kind === 'miss' ? <span>мимо</span> : <strong>x{reveal.value}<small>{moneyLabel(reveal.value * bet)}</small></strong>
                   ) : (
                     <img src={slotArt(gameId, 'target')} alt="" draggable={false} />
                   )}
@@ -86,7 +95,7 @@ export default function PickBonus({ heroSrc, gameId, cells, columns, rows, missL
           <button type="button" className={styles.go} onClick={() => onDone(opened)}>Забрать</button>
         ) : (
           <span className={styles.hint}>
-            {auto ? 'Лучник сам выбирает яблоки' : `Поле ${columns}×${rows}. Нажмите любое яблоко. Шесть мимо спрятаны на поле, третье заканчивает тир.`}
+            {auto ? 'Лучник сам выбирает яблоки' : `Поле ${columns}×${rows}. Счёт с нуля: x2 при этой ставке — ${moneyLabel(bet * 2)}. Третий промах заканчивает тир.`}
           </span>
         )}
       </div>

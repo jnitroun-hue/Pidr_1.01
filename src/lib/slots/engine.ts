@@ -1,5 +1,6 @@
 import { pickWeighted, randomInt } from './rng';
 import {
+  CURTAIN_WHEEL,
   HOLD_WIN_GRAND,
   HOLD_WIN_VALUES,
   ORB_VALUES,
@@ -86,6 +87,8 @@ export type BonusPlay = {
     missLimit?: number;
   };
   pots?: { name: string; value: number; amount: number }[];
+  /** Колесо уса: спины и минимальный множитель шторы. Индекс — сектор на колесе. */
+  curtainWheel?: { index: number; spins: number; min: number; label: string };
   /** Сколько добавил пол покупки. */
   floorAdded: number;
   totalWin: number;
@@ -839,14 +842,22 @@ function curtainSpin(game: SlotGame, tiles: Tiles, bet: number, tier: 'base' | '
   return paintCurtains(game, tiles, bet, curtains, new Set(curtains.map((item) => item.reel)), false);
 }
 
-function bonusStickyReels(game: SlotGame, bet: number, tier: Tier): SpinStep[] {
+function curtainAtLeast(rolled: number, min: number): number {
+  return rolled < min ? min : rolled;
+}
+
+function bonusStickyReels(game: SlotGame, bet: number, heat: 'regular' | 'top' | 'hot', wheel: { spins: number; min: number }): SpinStep[] {
   const steps: SpinStep[] = [];
   const stuck: { reel: number; mult: number }[] = [];
-  const chance = tier === 'top' ? 18 : 16;
-  const spins = game.freeSpins;
-  const multTier = tier === 'top' ? 'top' : 'bonus';
-  if (tier === 'top') stuck.push({ reel: randomInt(game.reels), mult: 2 });
-  for (let index = 0; index < spins; index += 1) {
+  const chance = heat === 'hot' ? 22 : heat === 'top' ? 18 : 16;
+  const multTier = heat === 'regular' ? 'bonus' : 'top';
+  const open = Array.from({ length: game.reels }, (_, reel) => reel);
+  const starters = heat === 'hot' ? 2 : heat === 'top' ? 1 : 0;
+  for (let step = 0; step < starters && open.length; step += 1) {
+    const reel = open.splice(randomInt(open.length), 1)[0];
+    stuck.push({ reel, mult: curtainAtLeast(pickCurtainMult(multTier), wheel.min) });
+  }
+  for (let index = 0; index < wheel.spins; index += 1) {
     const fresh = new Set<number>();
     const tiles = drawTiles(game, baseBag(game));
     const taken = new Set(stuck.map((item) => item.reel));
@@ -855,7 +866,7 @@ function bonusStickyReels(game: SlotGame, bet: number, tier: Tier): SpinStep[] {
       const open = Array.from({ length: game.reels }, (_, reel) => reel).filter((reel) => !taken.has(reel) && !blocked.has(reel));
       if (open.length) {
         const reel = open[randomInt(open.length)];
-        stuck.push({ reel, mult: pickCurtainMult(multTier) });
+        stuck.push({ reel, mult: curtainAtLeast(pickCurtainMult(multTier), wheel.min) });
         fresh.add(reel);
       }
     }
@@ -1215,7 +1226,19 @@ function playBonus(game: SlotGame, bet: number, tier: Tier, scatterCount: number
     totalWin: 0,
   };
 
-  if (kind === 'sticky-reels') play.spins = bonusStickyReels(game, bet, tier);
+  if (kind === 'sticky-reels') {
+    const heat = scatterCount >= 5 ? 'hot' : scatterCount >= 4 || tier === 'top' ? 'top' : 'regular';
+    const face = pickWeighted(CURTAIN_WHEEL);
+    const index = Math.max(0, CURTAIN_WHEEL.indexOf(face));
+    play.curtainWheel = { index, spins: face.spins, min: face.min, label: face.label };
+    play.title = heat === 'hot' ? 'Hot Mod' : game.bonus.title;
+    play.rule = heat === 'hot'
+      ? 'Пять скаттеров. Колесо уже выбрало спины и минимум шторы. На поле сразу две шторы.'
+      : heat === 'top'
+        ? 'Четыре скаттера. Колесо выбирает спины и минимум шторы. На старте одна штора.'
+        : 'Три скаттера. Колесо выбирает спины и минимальный множитель. Штора может не выпасть на первом спине.';
+    play.spins = bonusStickyReels(game, bet, heat, play.curtainWheel);
+  }
   if (kind === 'hold-win') {
     const seeded = countId(lastTiles, 'coin').length >= game.trigger;
     const start = seeded || tier === 'natural' ? lastTiles : holdWinStart(game, tier === 'top' ? 9 : 6, tier === 'top' ? 5 : 1);
@@ -1309,13 +1332,13 @@ function placeExactTrigger(game: SlotGame, count: number): Tiles {
 }
 
 export function buyBonus(game: SlotGame, totalBet: number, tier: 'regular' | 'top'): RoundResult & { bonus: BonusPlay } {
-  const need = game.id === 'green-arrow' && tier === 'top' ? 4 : game.trigger;
+  const need = tier === 'top' && (game.id === 'green-arrow' || game.id === 'golden-must') ? 4 : game.trigger;
   const tiles = placeExactTrigger(game, need);
   const wins = [...evalBoard(game, tiles, totalBet)];
   const scatterWin = evalScatterWin(game, tiles, totalBet);
   if (scatterWin) wins.push(scatterWin);
   const triggerName = triggerSymbol(game)?.name ?? 'скаттер';
-  const triggerBoard = board(tiles, wins, 1, { label: `${game.trigger}× ${triggerName}` });
+  const triggerBoard = board(tiles, wins, 1, { label: `${need}× ${triggerName}` });
   const bonus = playBonus(game, totalBet, tier, need, tiles);
   const cap = totalBet * game.maxWinMultiplier;
   let totalWin = roundMoney(triggerBoard.win + bonus.totalWin);
@@ -1339,7 +1362,7 @@ export function buyBonus(game: SlotGame, totalBet: number, tier: 'regular' | 'to
 }
 
 export function scoreArcherPick(
-  cells: { kind: 'mult' | 'miss'; amount: number }[],
+  cells: { kind: 'mult' | 'miss'; value?: number; amount: number }[],
   opened: number[],
   missLimit: number,
   already: number,
@@ -1354,8 +1377,10 @@ export function scoreArcherPick(
     const index = Number(raw);
     if (!Number.isInteger(index) || index < 0 || index >= cells.length || seen.has(index)) continue;
     seen.add(index);
-    collected = roundMoney(collected + (cells[index].amount || 0));
-    if (cells[index].kind === 'miss') misses += 1;
+    const cell = cells[index];
+    const prize = cell.kind === 'miss' ? 0 : roundMoney((cell.value ?? 0) * baseBet);
+    collected = roundMoney(collected + prize);
+    if (cell.kind === 'miss') misses += 1;
     if (misses >= missLimit) break;
   }
   const floor = tier === 'top' ? baseBet * 50 : tier === 'regular' ? baseBet * 10 : 0;

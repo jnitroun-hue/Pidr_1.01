@@ -334,6 +334,7 @@
   height: 100dvh;
   max-height: 100dvh;
   overflow: hidden;
+  --cabinet: min(760px, 100vw);
   color: #fffaf0;
   background: #1a0c08 center / cover no-repeat;
 }
@@ -356,10 +357,19 @@
 
 .hud {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 10px;
   align-items: center;
   padding: calc(8px + env(safe-area-inset-top)) 14px 4px;
+}
+
+.wordmark {
+  height: 58px;
+  width: min(280px, 62vw);
+  object-fit: contain;
+  object-position: left center;
+  justify-self: start;
+  filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.55));
 }
 
 .hudBack {
@@ -476,8 +486,8 @@
   --cell: clamp(
     var(--cell-floor),
     min(
-      calc((100vw - 16px) / var(--reels) - 4px),
-      calc((100dvh - var(--chrome, 292px)) / var(--rows) - 4px)
+      calc((var(--cabinet) - 28px) / var(--reels) - 4px),
+      calc((100dvh - var(--chrome, 300px)) / var(--rows) - 6px)
     ),
     var(--cell-cap)
   );
@@ -570,6 +580,49 @@
 
 .counter { color: #fff6c8; }
 .ribbon { color: #a7f3d0; }
+
+.winPlaque {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  min-width: min(280px, 72vw);
+  min-height: 42px;
+  padding: 4px 16px 6px;
+  border-radius: 14px;
+  border: 2px solid #fff4c2;
+  background: linear-gradient(180deg, #f59e0b, #b45309 72%);
+  color: #3f2208;
+  box-shadow: 0 0 24px rgba(250, 204, 21, 0.45), inset 0 1px 0 #fff;
+}
+
+.winPlaque span {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.winPlaque strong {
+  font-size: clamp(22px, 4vw, 32px);
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 2px 0 #7c4a12;
+}
+
+.winPlaque[data-skin='hex-vault'] { background: linear-gradient(180deg, #fdba74, #c2410c); border-color: #ffedd5; }
+.winPlaque[data-skin='oak-fortune'] { background: linear-gradient(180deg, #bef264, #4d7c0f); border-color: #ecfccb; }
+.winPlaque[data-skin='oak-fortune'] strong { text-shadow: 0 2px 0 #365314; }
+.winPlaque[data-skin='neon-river'] { background: linear-gradient(180deg, #67e8f9, #0e7490); border-color: #cffafe; }
+.winPlaque[data-skin='neon-river'] strong { text-shadow: 0 2px 0 #164e63; }
+.winPlaque[data-skin='limitless-city'] { background: linear-gradient(180deg, #fda4af, #be123c); border-color: #ffe4e6; }
+.winPlaque[data-skin='green-arrow'] { background: linear-gradient(180deg, #86efac, #15803d); border-color: #dcfce7; }
+.winPlaque[data-skin='green-arrow'] strong { text-shadow: 0 2px 0 #14532d; }
+.winPlaque[data-skin='fairy-glade'] { background: linear-gradient(180deg, #f0abfc, #a21caf); border-color: #fae8ff; }
+.winPlaque[data-skin='ash-dragon'] { background: linear-gradient(180deg, #fdba74, #c2410c); border-color: #ffedd5; }
+.winPlaque[data-skin='frost-queen'] { background: linear-gradient(180deg, #bae6fd, #0369a1); border-color: #e0f2fe; }
+.winPlaque[data-skin='frost-queen'] strong { text-shadow: 0 2px 0 #0c4a6e; }
+.winPlaque[data-skin='blade-ronin'] { background: linear-gradient(180deg, #fca5a5, #b91c1c); border-color: #fee2e2; }
 
 .triggerChip {
   display: flex;
@@ -819,6 +872,16 @@
   box-shadow: 0 0 0 3px #ffe566, 0 0 18px #f5c518;
 }
 
+.frame[data-skin='neon-river'] .hot img { box-shadow: 0 0 0 3px #67e8f9, 0 0 18px #22d3ee; }
+.frame[data-skin='oak-fortune'] .hot img { box-shadow: 0 0 0 3px #bef264, 0 0 18px #84cc16; }
+.frame[data-skin='green-arrow'] .hot img { box-shadow: 0 0 0 3px #86efac, 0 0 18px #22c55e; }
+.frame[data-skin='fairy-glade'] .hot img { box-shadow: 0 0 0 3px #f0abfc, 0 0 18px #e879f9; }
+.frame[data-skin='ash-dragon'] .hot img { box-shadow: 0 0 0 3px #fdba74, 0 0 18px #f97316; }
+.frame[data-skin='frost-queen'] .hot img { box-shadow: 0 0 0 3px #bae6fd, 0 0 18px #38bdf8; }
+.frame[data-skin='blade-ronin'] .hot img { box-shadow: 0 0 0 3px #fca5a5, 0 0 18px #ef4444; }
+.frame[data-skin='hex-vault'] .hot img { box-shadow: 0 0 0 3px #fdba74, 0 0 18px #fb923c; }
+.frame[data-skin='limitless-city'] .hot img { box-shadow: 0 0 0 3px #fda4af, 0 0 18px #fb7185; }
+
 .hot .symName {
   background: #f5c518;
   color: #1a1204;
@@ -951,8 +1014,9 @@
   animation: respinBlur 0.18s linear infinite;
 }
 
-.cellFresh img {
-  animation: dropIn 420ms cubic-bezier(0.16, 0.84, 0.3, 1.15);
+.cellFresh {
+  animation: fromTop 680ms cubic-bezier(0.16, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--row) * 55ms);
 }
 
 .cellPop {
@@ -1003,9 +1067,10 @@
   pointer-events: none;
 }
 
-@keyframes dropIn {
-  from { transform: translateY(-110%) scale(0.92); opacity: 0.4; }
-  to { transform: none; opacity: 1; }
+@keyframes fromTop {
+  0% { transform: translateY(calc((var(--row) + 1) * -100%)); opacity: 0; }
+  28% { opacity: 1; }
+  100% { transform: none; opacity: 1; }
 }
 @keyframes popOut {
   0% { transform: scale(1.08); filter: brightness(2.4); opacity: 1; }

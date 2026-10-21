@@ -34,12 +34,14 @@ import HeroStage, { resolveHeroCue, sideHeroClass } from '@/components/slots/Her
 import SlotInfo from '@/components/slots/SlotInfo';
 import WheelBonus from '@/components/slots/WheelBonus';
 import PickBonus from '@/components/slots/PickBonus';
-import { slotArt, slotBackdrop, slotHero } from '@/lib/slots/art';
+import CurtainWheel from '@/components/slots/CurtainWheel';
+import WinTrace from '@/components/slots/WinTrace';
+import { slotArt, slotBackdrop, slotHero, slotLogo } from '@/lib/slots/art';
 import styles from '../Slots.module.css';
 
 type Mode = 'demo' | 'coins' | 'gram';
 type Shown = { board: Board; fresh?: boolean[][]; popping?: boolean[][] };
-type Phase = 'intro' | 'wheel' | 'pick' | 'spins' | 'done';
+type Phase = 'intro' | 'wheel' | 'curtain' | 'pick' | 'spins' | 'done';
 
 const EMPTY_WINS: SpinWin[] = [];
 
@@ -100,7 +102,7 @@ function introText(game: SlotGame, bonus: BonusPlay): { title: string; text: str
     case 'slash':
       return { title: bonus.title, text: `${spins} бесплатных спинов. Ронин рубит ряд в дикие, множитель растёт с каждым ударом.`, button: 'Крутить' };
     default:
-      return { title: bonus.title, text: `${spins} бесплатных спинов. Штора закрывает барабан, Ус показывает множитель и остаётся до конца бонуса. Новая штора падает так же, как в обычном спине.`, button: 'Крутить' };
+      return { title: bonus.title, text: bonus.curtainWheel ? `${bonus.rule} Колесо: ${bonus.curtainWheel.label}.` : `${spins} бесплатных спинов. Штора закрывает барабан и остаётся до конца бонуса.`, button: bonus.curtainWheel ? 'К колесу' : 'Крутить' };
   }
 }
 
@@ -112,6 +114,7 @@ function PlayInner() {
   const mode: Mode = modeParam === 'coins' || modeParam === 'gram' ? modeParam : 'demo';
   const [betIndex, setBetIndex] = useState(Math.max(0, COIN_BETS.indexOf(50)));
   const [betOpen, setBetOpen] = useState(false);
+  const [pickTotal, setPickTotal] = useState(0);
   const [demoChips, setDemoChips] = useState(DEMO_START_CHIPS);
   const [coins, setCoins] = useState<number | null>(null);
   const [gramUnits, setGramUnits] = useState<number | null>(null);
@@ -283,7 +286,7 @@ function PlayInner() {
     if (next.removed?.length) {
       setShown({ board: prev, popping: cellGrid(game, next.removed) });
       setRibbon('Символы лопаются');
-      await wait(Math.max(pace().pop, 720));
+      await wait(Math.max(pace().pop, 900));
     }
     const mysteryCells = next.marks?.filter((mark) => mark.kind === 'mystery').map((mark) => ({ reel: mark.reel, row: mark.row }));
     setShown({ board: next, fresh: freshGrid(game, next.removed) ?? (next.removed ? undefined : cellGrid(game, mysteryCells)) });
@@ -349,12 +352,17 @@ function PlayInner() {
     setFeature(bonus);
     setPhase('intro');
     await awaitUser(1700);
+    if (bonus.curtainWheel) {
+      setPhase('curtain');
+      await awaitUser(0);
+    }
     if (bonus.kind === 'wheel' && bonus.wheel) {
       setPhase('wheel');
       await awaitUser(0);
       setWinSoFar((value) => value + bonus.wheel!.cash);
     }
     if (bonus.kind === 'pick' && bonus.pick?.cells?.length) {
+      setPickTotal(0);
       setPhase('pick');
       const opened = await new Promise<number[]>((resolve) => { pickWaiter.current = resolve; });
       const scored = scoreArcherPick(
@@ -537,8 +545,6 @@ function PlayInner() {
   const money = (value: number) => mode === 'gram' ? `${formatGramUnits(value)} GRAM` : String(value);
   const stakeLabel = mode === 'gram' ? formatGramUnits(charge) : String(charge);
   const balanceLabel = mode === 'gram' ? `${formatGramUnits(balance || 0)} GRAM` : `${balance ?? '…'}`;
-  const unit = mode === 'gram' ? 'GRAM' : mode === 'coins' ? 'монет' : 'демо';
-
   function cycleSpeed() {
     setSpeed((value) => (value === 'slow' ? 'mid' : value === 'mid' ? 'fast' : 'slow'));
   }
@@ -588,11 +594,7 @@ function PlayInner() {
         <button type="button" className={styles.hudBack} onClick={() => router.push('/slots')}>
           ←
         </button>
-        <div className={styles.hudTitle}>
-          <strong>{game.title}</strong>
-          <span>{game.id === 'green-arrow' ? `3× ${trigger?.name ?? ''} — залп, 4× — тир` : trigger ? `${game.trigger}× ${trigger.name} — ${game.bonus.title}` : game.bonus.title}</span>
-        </div>
-        <div className={styles.hudMark}>{unit}</div>
+        <img className={styles.wordmark} src={slotLogo(game.id)} alt={game.title} draggable={false} />
       </header>
 
       {mode === 'gram' && (
@@ -618,24 +620,17 @@ function PlayInner() {
             </div>
           ) : null}
           <div className={styles.ribbonRow}>
-            {cue && heroSrc ? (
+            {cue && heroSrc && phase !== 'pick' ? (
               <img key={actToken} className={`${styles.bonusHero} ${sideHeroClass(game.id, cue)}`} src={heroSrc} alt="" draggable={false} />
             ) : null}
-            {counter ? <em className={styles.counter}>{feature?.title} · {counter.step}/{counter.total}</em> : trigger ? (
-              <button type="button" className={styles.triggerChip} onClick={() => setShowInfo(true)}>
-                <img src={slotArt(game.id, trigger.id)} alt="" />
-                <span>{game.trigger}× {trigger.name}</span>
-              </button>
-            ) : null}
+            <div className={styles.winPlaque} data-skin={game.id}>
+              <span>Выигрыш</span>
+              <strong>{money(phase === 'pick' ? pickTotal : winSoFar)}</strong>
+            </div>
+            {counter ? <em className={styles.counter}>{feature?.title} · {counter.step}/{counter.total}</em> : null}
             {ribbon ? <em className={styles.ribbon}>{ribbon}</em> : null}
           </div>
-          <div className={styles.frame}>
-            {!rolling && board.win > 0 ? (
-              <div className={styles.winBurst} key={`${board.win}-${ribbon}`}>
-                <span>Выигрыш</span>
-                <strong>{money(board.win)}</strong>
-              </div>
-            ) : null}
+          <div className={styles.frame} data-skin={game.id}>
             <div className={styles.reelStage}>
             <div className={styles.reels}>
               {board.grid.map((reel, reelIndex) => (
@@ -662,7 +657,32 @@ function PlayInner() {
               ))}
             </div>
             <HeroStage gameId={game.id} cue={cue} replayKey={actToken} />
+            {!rolling && showLines ? (
+              <WinTrace gameId={game.id} reels={game.reels} rows={game.rows} wins={board.wins} color={game.accent} />
+            ) : null}
             </div>
+            {feature?.curtainWheel && phase === 'curtain' ? (
+              <CurtainWheel heroSrc={heroSrc} index={feature.curtainWheel.index} auto={autoLeft > 0} onDone={release} />
+            ) : null}
+            {feature?.pick?.cells?.length && phase === 'pick' ? (
+              <PickBonus
+                heroSrc={heroSrc}
+                gameId={game.id}
+                cells={feature.pick.cells}
+                columns={feature.pick.columns ?? 6}
+                rows={feature.pick.rows ?? 6}
+                missLimit={feature.pick.missLimit ?? 3}
+                bet={bet}
+                moneyLabel={money}
+                auto={autoLeft > 0}
+                onProgress={setPickTotal}
+                onDone={(opened) => {
+                  const resolve = pickWaiter.current;
+                  pickWaiter.current = null;
+                  resolve?.(opened);
+                }}
+              />
+            ) : null}
           </div>
           <div className={styles.winStrip}>
             {!rolling && board.wins.filter((win) => win.kind !== 'coin').slice(0, 6).map((win, index) => (
@@ -739,23 +759,6 @@ function PlayInner() {
           moneyLabel={money}
           auto={autoLeft > 0}
           onDone={release}
-        />
-      )}
-      {feature?.pick?.cells?.length && phase === 'pick' && (
-        <PickBonus
-          heroSrc={heroSrc}
-          gameId={game.id}
-          cells={feature.pick.cells}
-          columns={feature.pick.columns ?? 6}
-          rows={feature.pick.rows ?? 6}
-          missLimit={feature.pick.missLimit ?? 3}
-          moneyLabel={money}
-          auto={autoLeft > 0}
-          onDone={(opened) => {
-            const resolve = pickWaiter.current;
-            pickWaiter.current = null;
-            resolve?.(opened);
-          }}
         />
       )}
       {feature && phase === 'done' && bigMultiple == null && (

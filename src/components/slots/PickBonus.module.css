@@ -2,18 +2,22 @@
   position: absolute;
   inset: 0;
   z-index: 7;
-  display: grid;
-  place-items: center;
-  padding: 12px;
-  background: radial-gradient(circle at 50% 42%, rgba(120, 53, 15, 0.55), rgba(0, 0, 0, 0.9) 68%);
+  display: flex;
+  padding: 8px;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at 50% 30%, rgba(120, 53, 15, 0.55), transparent 42%),
+    #07140c;
 }
 
 .panel {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  width: min(440px, 100%);
+  gap: 6px;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
   color: #fff;
   text-align: center;
 }
@@ -29,9 +33,11 @@
 
 .layout {
   display: flex;
-  align-items: flex-end;
+  align-items: stretch;
   gap: 8px;
   width: 100%;
+  flex: 1;
+  min-height: 0;
 }
 
 .archer {
@@ -63,9 +69,11 @@
 .grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+  gap: 6px;
   flex: 1;
+  height: 100%;
   min-width: 0;
+  min-height: 0;
 }
 
 @media (max-width: 520px) {
@@ -75,7 +83,8 @@
 .shot { transform: scale(0.92); filter: brightness(1.4); }
 .target {
   position: relative;
-  aspect-ratio: 1;
+  aspect-ratio: auto;
+  height: 100%;
   padding: 0;
   border-radius: 50%;
   border: 2px solid #fde68a;
@@ -97,9 +106,21 @@
 }
 
 .target strong {
-  font-size: clamp(20px, 6vw, 30px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  font-size: clamp(16px, 4.2vw, 26px);
+  line-height: 1;
   color: #fde68a;
   text-shadow: 0 3px 0 #7c4a12, 0 0 14px rgba(250, 204, 21, 0.7);
+}
+
+.target strong small {
+  font-size: 10px;
+  letter-spacing: 0;
+  color: #fff7d6;
+  text-shadow: none;
 }
 
 .target span {
