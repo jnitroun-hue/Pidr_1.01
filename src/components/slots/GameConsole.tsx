@@ -59,6 +59,7 @@ export default function GameConsole(props: Props) {
   return (
     <footer
       className={styles.shell}
+      data-skin={props.gameId}
       style={{
         ['--bg' as string]: theme.bg,
         ['--panel' as string]: theme.panel,

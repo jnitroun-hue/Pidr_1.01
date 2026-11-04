@@ -237,17 +237,88 @@
     0 0 0 2px var(--accent, #f5c518);
 }
 
-@media (max-height: 760px) {
-  .play { grid-template-columns: 68px 1fr 78px; }
-  .buy, .stake { min-height: 68px; }
-  .buy { width: 68px; height: 68px; }
-  .spin { width: 88px; height: 88px; }
-  .tools button { min-height: 48px; }
+@media (max-height: 820px) {
+  .shell { padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); }
+  .fit { gap: 6px; }
+  .play { grid-template-columns: 72px 1fr 84px; }
+  .buy, .stake { min-height: 72px; }
+  .buy { width: 72px; height: 72px; }
+  .buy b { font-size: 13px; }
+  .spin { width: 84px; height: 84px; }
+  .tools button { min-height: 46px; }
   .tools svg { width: 16px; height: 16px; }
-  .meter span { min-height: 40px; }
+  .meter span { min-height: 36px; }
+  .meter b { font-size: 16px; }
 }
 
-.buy[data-skin='golden-must'] { background: linear-gradient(180deg, #7f1d1d, #3f0d0d); color: #fde68a; box-shadow: inset 0 0 0 2px #f5c518; }
+@media (max-height: 640px) {
+  .shell { padding: 4px 8px calc(4px + env(safe-area-inset-bottom)); }
+  .fit { gap: 4px; }
+  .play { grid-template-columns: 64px 1fr 72px; }
+  .buy, .stake { min-height: 56px; }
+  .buy { width: 64px; height: 56px; }
+  .buy b { font-size: 11px; }
+  .buy small { font-size: 9px; }
+  .spin { width: 68px; height: 68px; }
+  .spin b { font-size: 10px; }
+  .spin small { font-size: 13px; }
+  .tools button { min-height: 36px; padding: 2px; }
+  .tools small { display: none; }
+  .tools svg { width: 14px; height: 14px; }
+  .meter span { min-height: 28px; }
+  .meter b { font-size: 14px; }
+}
+
+@keyframes mustPulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(245, 197, 24, 0.28), inset 0 0 0 1px rgba(255, 220, 140, 0.28); }
+  50% { box-shadow: 0 0 18px rgba(255, 214, 102, 0.72), inset 0 0 0 1px rgba(255, 236, 180, 0.7); }
+}
+
+.shell[data-skin='golden-must'] .meter span {
+  opacity: 1;
+  color: #ffe7a8;
+  border-radius: 8px;
+  box-shadow: none;
+  background: #140c08 url('/img/slots/key-rect.jpg') center / 100% 100% no-repeat;
+}
+
+.shell[data-skin='golden-must'] .tools button,
+.shell[data-skin='golden-must'] .buy,
+.shell[data-skin='golden-must'] .stake {
+  border: 0;
+  color: #ffe7a8;
+  background: #140c08 url('/img/slots/key-rect.jpg') center / 100% 100% no-repeat;
+  animation: mustPulse 2.8s ease-in-out infinite;
+}
+
+.shell[data-skin='golden-must'] .tools button.on {
+  color: #fff6d0 !important;
+  background: #140c08 url('/img/slots/key-rect.jpg') center / 100% 100% no-repeat !important;
+  filter: brightness(1.28) saturate(1.15);
+}
+
+.shell[data-skin='golden-must'] .spin {
+  color: #ffe7a8;
+  background: #120c08 url('/img/slots/spin-gold.jpg') center / cover no-repeat;
+  box-shadow: 0 0 22px rgba(245, 197, 24, 0.55);
+  animation: mustPulse 2.2s ease-in-out infinite;
+}
+
+.shell[data-skin='golden-must'] .spin b,
+.shell[data-skin='golden-must'] .spin small {
+  color: #ffe9a8;
+  text-shadow: 0 1px 2px #000, 0 0 8px rgba(0, 0, 0, 0.85);
+}
+
+.shell[data-skin='golden-must'] .stake > button,
+.shell[data-skin='golden-must'] .stakeValue,
+.shell[data-skin='golden-must'] .stakeValue b,
+.shell[data-skin='golden-must'] .stakeValue small {
+  color: #ffe7a8 !important;
+  background: transparent !important;
+}
+
+.buy[data-skin='golden-must'] { background: #140c08 url('/img/slots/key-rect.jpg') center / 100% 100% no-repeat; color: #ffe7a8; }
 .buy[data-skin='hex-vault'] { background: #431407; color: #ffedd5; border-radius: 8px; box-shadow: inset 0 0 0 3px #fb923c; }
 .buy[data-skin='oak-fortune'] { background: #14532d; color: #d9f99d; border-radius: 14px 26px; }
 .buy[data-skin='neon-river'] { background: #083344; color: #a5f3fc; box-shadow: 0 0 0 2px #22d3ee, 0 0 14px rgba(34, 211, 238, 0.7); }

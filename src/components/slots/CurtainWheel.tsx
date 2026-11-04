@@ -54,10 +54,9 @@ export default function CurtainWheel({ index, auto, onDone }: Props) {
               <span
                 key={item.label}
                 className={landed && itemIndex === index ? styles.landedLabel : ''}
-                style={{ transform: `rotate(${itemIndex * SEGMENT}deg) translateY(calc(var(--wheel) * -0.3))` }}
+                style={{ transform: `rotate(${itemIndex * SEGMENT}deg) translateY(calc(var(--wheel) * -0.29))` }}
               >
-                <b>{item.spins}</b>
-                <small>x{item.min}</small>
+                <img src={`/img/slots/sector-${item.spins}-${item.min}.jpg`} alt={`${item.spins} x${item.min}`} draggable={false} />
               </span>
             ))}
           </div>

@@ -79,16 +79,6 @@ function markGrid(game: SlotGame, board: Board): (MarkKind | null)[][] | undefin
   return grid;
 }
 
-function winLabel(win: SpinWin, lang: SlotLang): string {
-  const en = lang === 'en';
-  if (win.kind === 'line') return `${en ? 'Line' : 'Линия'} ${(win.lineIndex ?? 0) + 1} · ${win.count}${win.direction === 'rtl' ? ' ←' : ''}`;
-  if (win.kind === 'ways') return `${win.ways} ${en ? 'ways' : 'путей'}`;
-  if (win.kind === 'scatter-pays' || win.kind === 'cluster') return `${win.count}× ${win.symbolName}`;
-  if (win.kind === 'coin') return en ? 'coin' : 'монета';
-  if (win.kind === 'grand') return en ? 'grand' : 'гранд';
-  return en ? 'scatter' : 'скаттер';
-}
-
 function WinFigure({ value, format }: { value: number; format: (n: number) => string }) {
   const [shown, setShown] = useState(value);
   const from = useRef(value);
@@ -203,7 +193,7 @@ function introText(game: SlotGame, bonus: BonusPlay, lang: SlotLang): { title: s
       return {
         title,
         text: bonus.curtainWheel
-          ? (en ? `The wheel locked ${bonus.curtainWheel.label}. Curtains stay on their reels for the whole feature.` : `${bonus.rule} Колесо: ${bonus.curtainWheel.label}.`)
+          ? (en ? 'The wheel chooses the spins and the curtain floor. One curtain is already on the reels.' : bonus.rule)
           : (en ? `${spins} free spins. A curtain covers a reel and stays until the feature ends.` : `${spins} бесплатных спинов. Штора закрывает барабан и остаётся до конца бонуса.`),
         button: bonus.curtainWheel ? wheelBtn : spinBtn,
       };
@@ -820,9 +810,6 @@ function PlayInner() {
               <WinTrace gameId={game.id} reels={game.reels} rows={game.rows} wins={board.wins} color={game.accent} />
             ) : null}
             </div>
-            {feature?.curtainWheel && phase === 'curtain' ? (
-              <CurtainWheel index={feature.curtainWheel.index} auto={autoLeft > 0} onDone={release} />
-            ) : null}
             {feature?.pick?.cells?.length && phase === 'pick' ? (
               <PickBonus
                 heroSrc={heroSrc}
@@ -841,22 +828,6 @@ function PlayInner() {
                   resolve?.(opened);
                 }}
               />
-            ) : null}
-          </div>
-          <div className={styles.winStrip}>
-            {!rolling && board.wins.filter((win) => win.kind !== 'coin').slice(0, 6).map((win, index) => (
-              <div key={`${win.symbolId}-${win.lineIndex ?? index}-${win.kind}-${win.count}`} className={styles.winChip}>
-                <img src={slotArt(game.id, win.symbolId)} alt="" />
-                <span>{winLabel(win, lang)}</span>
-                <b>{money(win.amount)}</b>
-              </div>
-            ))}
-            {!rolling && board.wins.some((win) => win.kind === 'coin') ? (
-              <div className={styles.winChip}>
-                <img src={slotArt(game.id, 'coin')} alt="" />
-                <span>{lang === 'en' ? 'coins' : 'монет'} {board.wins.filter((win) => win.kind === 'coin').length}</span>
-                <b>{money(board.wins.filter((win) => win.kind === 'coin').reduce((sum, win) => sum + win.amount, 0))}</b>
-              </div>
             ) : null}
           </div>
         </div>
@@ -993,6 +964,9 @@ function PlayInner() {
         </div>
       )}
 
+      {feature?.curtainWheel && phase === 'curtain' ? (
+        <CurtainWheel index={feature.curtainWheel.index} auto={autoLeft > 0} onDone={release} />
+      ) : null}
       {showInfo && <SlotInfo game={game} bet={bet} gram={mode === 'gram'} onClose={() => setShowInfo(false)} />}
       {bigMultiple != null && round && (
         <BigWin
