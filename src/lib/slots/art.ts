@@ -167,3 +167,20 @@ const LOGO: Record<string, string> = {
 export function slotLogo(gameId: string): string {
   return LOGO[gameId] ?? `${BASE}/logo-golden.jpg`;
 }
+
+const BUY_ART: Record<string, string> = {
+  'golden-must': `${BASE}/buy-golden.jpg`,
+  'hex-vault': `${BASE}/buy-hex.jpg`,
+  'oak-fortune': `${BASE}/buy-oak.jpg`,
+  'neon-river': `${BASE}/buy-neon.jpg`,
+  'limitless-city': `${BASE}/buy-city.jpg`,
+  'green-arrow': `${BASE}/buy-arrow.jpg`,
+  'fairy-glade': `${BASE}/buy-fairy.jpg`,
+  'ash-dragon': `${BASE}/buy-dragon.jpg`,
+  'frost-queen': `${BASE}/buy-frost.jpg`,
+  'blade-ronin': `${BASE}/buy-ronin.jpg`,
+};
+
+export function slotBuyArt(gameId: string): string {
+  return BUY_ART[gameId] ?? `${BASE}/buy-golden.jpg`;
+}

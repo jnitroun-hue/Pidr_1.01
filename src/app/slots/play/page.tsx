@@ -48,7 +48,7 @@ import WheelBonus from '@/components/slots/WheelBonus';
 import PickBonus from '@/components/slots/PickBonus';
 import CurtainWheel from '@/components/slots/CurtainWheel';
 import WinTrace from '@/components/slots/WinTrace';
-import { slotArt, slotBackdrop, slotHero, slotLogo } from '@/lib/slots/art';
+import { slotArt, slotBackdrop, slotBuyArt, slotHero, slotLogo } from '@/lib/slots/art';
 import styles from '../Slots.module.css';
 
 type Mode = 'demo' | 'coins' | 'gram';
@@ -114,6 +114,49 @@ function WinFigure({ value, format }: { value: number; format: (n: number) => st
   }, [value]);
   return <strong>{format(shown)}</strong>;
 }
+
+const BUY_BLURB: Record<string, { ru: [string, string]; en: [string, string] }> = {
+  'golden-must': {
+    ru: ['Колесо задаёт спины и минимальную штору. Шторы остаются на барабанах.', 'Четыре скаттера. Бонус стартует с одной шторой.'],
+    en: ['The wheel sets the spins and the minimum curtain. Curtains stay.', 'Four scatters. The feature starts with one curtain.'],
+  },
+  'hex-vault': {
+    ru: ['Монеты остаются. Каждая новая возвращает три респина.', 'Старт с девяти монет и более крупные номиналы.'],
+    en: ['Coins stick. Each new coin restores three respins.', 'Starts with nine coins and bigger values.'],
+  },
+  'oak-fortune': {
+    ru: ['Шар заменяет символы и умножает выигрыш, в котором сыграл.', 'Шары удвоены, и каждый спин приходит с шаром.'],
+    en: ['The orb stands in and multiplies the win it joins.', 'Orb values are doubled, and every spin has one.'],
+  },
+  'neon-river': {
+    ru: ['Мистика раскрывается только в старшие символы.', 'В каждом спине четыре мистики.'],
+    en: ['Mystery symbols open only into the top symbols.', 'Four mystery symbols land on every spin.'],
+  },
+  'limitless-city': {
+    ru: ['Колесо: кэш, бесплатные спины или второй уровень.', 'Сразу второе колесо, сектора сильнее.'],
+    en: ['The wheel pays cash, free spins, or the next level.', 'Starts on the second wheel, with stronger sectors.'],
+  },
+  'green-arrow': {
+    ru: ['15 спинов. Лучник бросает от 1 до 6 диких.', 'Тир 6×6. Третий промах заканчивает бонус.'],
+    en: ['15 spins. The archer throws 1 to 6 wilds.', 'A 6×6 range. The third miss ends it.'],
+  },
+  'fairy-glade': {
+    ru: ['Каждый выигрышный каскад поднимает множитель.', 'Множитель начинается с x8 и растёт быстрее.'],
+    en: ['Every winning cascade raises the multiplier.', 'The multiplier starts at x8 and climbs faster.'],
+  },
+  'ash-dragon': {
+    ru: ['Первый выигрыш сжигает самый дешёвый символ.', 'Символ уже сожжён, множитель начинается с x3.'],
+    en: ['The first win burns the cheapest symbol.', 'That symbol is already gone. The multiplier starts at x3.'],
+  },
+  'frost-queen': {
+    ru: ['В каждом спине на поле встаёт символ 3×3.', 'Колосс всегда дикий, спинов больше.'],
+    en: ['Every spin plants a 3×3 symbol.', 'The giant is always wild, with extra spins.'],
+  },
+  'blade-ronin': {
+    ru: ['Удар превращает ряд в дикие и поднимает множитель.', 'Два удара за спин, множитель начинается с x6.'],
+    en: ['A slash turns a row wild and raises the multiplier.', 'Two slashes a spin. The multiplier starts at x6.'],
+  },
+};
 
 const EN_FEATURE: Record<string, string> = {
   'golden-must': 'Golden Rain',
@@ -689,8 +732,7 @@ function PlayInner() {
         </button>
         <img className={styles.wordmark} src={slotLogo(game.id)} alt={lang === 'en' ? (EN_FEATURE[game.id] ?? game.title) : game.title} draggable={false} />
         <div className={styles.hudTools}>
-          {voiced ? (
-            <button
+          <button
               type="button"
               className={`${styles.hudLang} ${soundOn ? styles.hudSoundOn : ''}`}
               aria-pressed={soundOn}
@@ -699,7 +741,7 @@ function PlayInner() {
                 const next = !soundOn;
                 setMustSoundOn(next);
                 setSoundOn(next);
-                if (next) {
+                if (next && voiced) {
                   unlockMustSound();
                   if (rolling) playMustSpin();
                 }
@@ -710,7 +752,6 @@ function PlayInner() {
                 {soundOn ? <path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11" fill="none" stroke="currentColor" strokeWidth="2" /> : <path d="M16 10l6 6M22 10l-6 6" fill="none" stroke="currentColor" strokeWidth="2" />}
               </svg>
             </button>
-          ) : null}
           <button type="button" className={styles.hudLang} onClick={toggle}>{lang === 'en' ? 'RU' : 'EN'}</button>
         </div>
       </header>
@@ -892,25 +933,27 @@ function PlayInner() {
       )}
       {buyMenu && (
         <div className={styles.overlay}>
-          <div className={styles.sheet}>
-            {heroSrc ? <img className={styles.sheetHero} src={heroSrc} alt="" /> : null}
-            <p>Какой бонус покупаем?</p>
-            <span>«{game.bonus.title}» открывается сразу. Цена — от текущей ставки.</span>
+          <div className={`${styles.sheet} ${styles.buyModal}`}>
+            <p className={styles.buyKicker}>{lang === 'en' ? 'Features' : 'Бонусы'}</p>
             <div className={styles.buyChoices}>
               <button type="button" onClick={() => { setBuyMenu(false); void buy('regular'); }}>
-                <b>Бонус</b>
-                <small>{game.bonus.rule}</small>
+                <img className={styles.buyArt} src={slotBuyArt(game.id)} alt="" />
+                <b>{lang === 'en' ? (EN_FEATURE[game.id] ?? game.bonus.title) : game.bonus.title}</b>
+                <small>{(BUY_BLURB[game.id] ?? BUY_BLURB['golden-must'])[lang][0]}</small>
                 <strong>{money(bet * 100)}</strong>
-                <em>гарантия {money(bet * 10)}</em>
+                <i>{lang === 'en' ? `floor ${money(bet * 10)}` : `пол ${money(bet * 10)}`}</i>
+                <em>{lang === 'en' ? 'Activate' : 'Активировать'}</em>
               </button>
               <button type="button" className={styles.buyChoiceTop} onClick={() => { setBuyMenu(false); void buy('top'); }}>
-                <b>Супер-бонус</b>
-                <small>{game.bonus.top}</small>
+                <img className={styles.buyArt} src={slotBuyArt(game.id)} alt="" />
+                <b>{lang === 'en' ? `Top · ${EN_FEATURE[game.id] ?? game.bonus.title}` : `Топ · ${game.bonus.title}`}</b>
+                <small>{(BUY_BLURB[game.id] ?? BUY_BLURB['golden-must'])[lang][1]}</small>
                 <strong>{money(bet * 500)}</strong>
-                <em>гарантия {money(bet * 50)}</em>
+                <i>{lang === 'en' ? `floor ${money(bet * 50)}` : `пол ${money(bet * 50)}`}</i>
+                <em>{lang === 'en' ? 'Activate' : 'Активировать'}</em>
               </button>
             </div>
-            <button type="button" onClick={() => setBuyMenu(false)}>Отмена</button>
+            <button type="button" className={styles.buyCancel} onClick={() => setBuyMenu(false)}>{lang === 'en' ? 'Close' : 'Закрыть'}</button>
           </div>
         </div>
       )}
