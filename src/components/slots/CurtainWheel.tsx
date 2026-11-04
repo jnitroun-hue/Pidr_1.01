@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { CURTAIN_WHEEL } from '@/lib/slots/games';
+import { cabinetCopy, useSlotLocale } from '@/lib/slots/locale';
 import styles from './CurtainWheel.module.css';
 
 type Props = {
@@ -16,6 +17,8 @@ const SEGMENT = 360 / CURTAIN_WHEEL.length;
 export default function CurtainWheel({ heroSrc, index, auto, onDone }: Props) {
   const [angle, setAngle] = useState(0);
   const [landed, setLanded] = useState(false);
+  const { lang, social } = useSlotLocale();
+  const copy = cabinetCopy(lang, social);
   const face = CURTAIN_WHEEL[index] ?? CURTAIN_WHEEL[0];
 
   function launch() {
@@ -41,22 +44,27 @@ export default function CurtainWheel({ heroSrc, index, auto, onDone }: Props) {
     <div className={styles.back}>
       {heroSrc ? <img className={styles.hero} src={heroSrc} alt="" draggable={false} /> : null}
       <div className={styles.panel}>
-        <p>Колесо бонуса</p>
-        <div className={styles.stage}>
+        <p>{copy.wheelTitle}</p>
+        <div className={styles.wheelBox}>
           <i className={styles.pointer} />
-          <div className={styles.disc} style={{ transform: `rotate(${angle}deg)` }}>
+          <div className={`${styles.wheel} ${angle ? styles.spinning : ''}`} style={{ transform: `rotate(${angle}deg)` }}>
             {CURTAIN_WHEEL.map((item, itemIndex) => (
-              <span key={item.label} style={{ transform: `rotate(${itemIndex * SEGMENT}deg) translateY(-118px)` }}>{item.label}</span>
+              <span
+                key={item.label}
+                className={landed && itemIndex === index ? styles.landedLabel : ''}
+                style={{ transform: `rotate(${itemIndex * SEGMENT + SEGMENT / 2}deg) translateY(calc(var(--wheel) * -0.34))` }}
+              >{item.label}</span>
             ))}
           </div>
+          <b className={styles.hub} />
         </div>
         {landed ? (
           <>
-            <strong>{face.spins} спинов · шторы от x{face.min}</strong>
-            {!auto ? <button type="button" onClick={onDone}>Крутить</button> : null}
+            <strong>{face.spins} · x{face.min}</strong>
+            {!auto ? <button type="button" onClick={onDone}>{copy.spin}</button> : null}
           </>
         ) : (
-          <button type="button" onClick={launch}>Запустить</button>
+          <button type="button" onClick={launch}>{copy.launch}</button>
         )}
       </div>
     </div>

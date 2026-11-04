@@ -1,5 +1,6 @@
 'use client';
 
+import { cabinetCopy, spinWord, useSlotLocale } from '@/lib/slots/locale';
 import type { ReelSpeed } from '@/lib/slots/speed';
 import styles from './GameConsole.module.css';
 
@@ -49,10 +50,12 @@ const THEME: Record<string, Theme> = {
   'blade-ronin': { spin: 'УДАР', bg: '#10080a', panel: '#2a1216', accent: '#f87171', ink: '#1a0a0c', text: '#fee2e2' },
 };
 
-const SPEED: Record<ReelSpeed, string> = { slow: 'выкл', mid: 'x2', fast: 'вкл' };
-
 export default function GameConsole(props: Props) {
   const theme = THEME[props.gameId] ?? THEME['golden-must'];
+  const { lang, social } = useSlotLocale();
+  const copy = cabinetCopy(lang, social);
+  const speedLabel = props.speed === 'fast' ? copy.on : props.speed === 'mid' ? 'x2' : copy.turboOff;
+  const keyLabel = lang === 'ru' ? props.winKey : props.winKey === 'Пути' ? copy.ways : props.winKey === 'Поле' ? copy.grid : copy.lines;
   return (
     <footer
       className={styles.shell}
@@ -66,24 +69,24 @@ export default function GameConsole(props: Props) {
     >
       <div className={styles.fit}>
         <div className={styles.meter}>
-          <span>Баланс<b>{props.balanceLabel}</b></span>
-          <span className={props.winHot ? styles.hot : ''}>Выигрыш<b>{props.winLabel}</b></span>
-          <span>Ставка<b>{props.stakeLabel}</b></span>
+          <span>{copy.balance}<b>{props.balanceLabel}</b></span>
+          <span className={props.winHot ? styles.hot : ''}>{copy.win}<b>{props.winLabel}</b></span>
+          <span>{copy.stake}<b>{props.stakeLabel}</b></span>
         </div>
         <div className={styles.play}>
           <button type="button" className={styles.buy} data-skin={props.gameId} disabled={props.locked} onClick={props.onBuy}>
-            <b>Купить</b>
-            <small>бонус</small>
+            <b>{copy.buy}</b>
+            <small>{copy.buyHint}</small>
           </button>
           <button type="button" className={styles.spin} disabled={props.spinning} onClick={props.onSpin}>
-            <b>{props.spinning ? '…' : theme.spin}</b>
+            <b>{props.spinning ? '…' : spinWord(lang, props.gameId, theme.spin)}</b>
             <small>{props.stakeLabel}</small>
           </button>
           <div className={styles.stake}>
             <button type="button" disabled={props.locked} onClick={() => props.onBet(1)} aria-label="Больше">+</button>
             <button type="button" className={styles.stakeValue} disabled={props.locked} onClick={props.onOpenBets} aria-label="Выбрать ставку">
               <b>{props.stakeLabel}</b>
-              <small>ставка</small>
+              <small>{copy.stakeHint}</small>
             </button>
             <button type="button" disabled={props.locked} onClick={() => props.onBet(-1)} aria-label="Меньше">−</button>
           </div>
@@ -91,28 +94,28 @@ export default function GameConsole(props: Props) {
         <div className={styles.tools}>
           <button type="button" className={props.ante ? styles.on : ''} disabled={props.locked} aria-pressed={props.ante} onClick={props.onAnte}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.2 6.4H21l-5.4 4 2.1 6.6L12 16.8 6.3 20l2.1-6.6L3 9.4h6.8z" /></svg>
-            <b>Анте</b>
-            <small>{props.ante ? 'вкл ×1.5' : '+50%'}</small>
+            <b>{copy.ante}</b>
+            <small>{props.ante ? copy.anteOn : copy.anteOff}</small>
           </button>
           <button type="button" className={props.speed === 'fast' ? styles.on : props.speed === 'mid' ? styles.warm : ''} aria-pressed={props.speed !== 'slow'} onClick={props.onSpeed}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 10-14h-7l0-6z" /></svg>
-            <b>Турбо</b>
-            <small>{SPEED[props.speed]}</small>
+            <b>{copy.turbo}</b>
+            <small>{speedLabel}</small>
           </button>
           <button type="button" className={props.autoLeft ? styles.on : ''} onClick={props.onAuto} aria-label="Автоспины">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5a7 7 0 0 1 6.3 4H16v2h6V5h-2v2.1A9 9 0 1 0 21 13h-2a7 7 0 1 1-7-8z" /></svg>
-            <b>Авто</b>
-            <small>{props.autoLeft || 'спины'}</small>
+            <b>{copy.auto}</b>
+            <small>{props.autoLeft || copy.autoHint}</small>
           </button>
           <button type="button" className={props.showLines ? styles.on : ''} aria-pressed={props.showLines} onClick={props.onToggleLines}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z" /></svg>
-            <b>{props.winKey}</b>
-            <small>{props.showLines ? 'вкл' : 'выкл'}</small>
+            <b>{keyLabel}</b>
+            <small>{props.showLines ? copy.on : copy.off}</small>
           </button>
           <button type="button" onClick={props.onInfo} aria-label="Информация">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 15h-2v-6h2zm0-8h-2V7h2z" /></svg>
-            <b>Инфо</b>
-            <small>правила</small>
+            <b>{copy.info}</b>
+            <small>{copy.infoHint}</small>
           </button>
         </div>
       </div>

@@ -15,6 +15,7 @@ import {
   type SlotSymbol,
 } from '@/lib/slots/games';
 import { slotArt, slotHero } from '@/lib/slots/art';
+import { useSlotLocale } from '@/lib/slots/locale';
 import styles from './SlotInfo.module.css';
 
 type Props = { game: SlotGame; bet: number; gram: boolean; onClose: () => void };
@@ -56,7 +57,39 @@ function mathRule(game: SlotGame, bet: number, gram: boolean): string {
   return `Поле ${game.reels}×${game.rows}. Платит кластер из 5–7, 8–11 и 12+ одинаковых символов, соединённых сторонами, от всей ставки. Вайлд входит в кластер.`;
 }
 
-function payHint(game: SlotGame, symbol: SlotSymbol): string {
+function mathRuleEn(game: SlotGame, bet: number, gram: boolean): string {
+  if (game.mechanic === 'lines' || game.mechanic === 'both-ways') {
+    const lines = game.lines.length;
+    const lineBet = moneyPlain(bet / lines, gram);
+    const side = game.mechanic === 'both-ways'
+      ? ' The same line also pays right to left. A line that fills every reel pays once.'
+      : ' Lines pay left to right only.';
+    return `${lines} fixed lines on a ${game.reels}×${game.rows} board. Line bet = total play / ${lines} = ${lineBet}. A line win is the symbol coefficient times the line bet, rounded to a whole coin. Minimum 3 of a kind.${side} Wild stands in for every symbol except scatter. A wild-only line pays the richest regular symbol. Wild multipliers multiply. Scatter breaks the line and pays from the total play: the card shows 3, 4 and 5 scatters.`;
+  }
+  if (game.mechanic === 'ways') {
+    const ways = game.rows ** game.reels;
+    return `${game.reels}×${game.rows}, up to ${ways} ways left to right. Win = coefficient × (play / ${WAYS_DIVISOR}) × ways, rounded to a whole coin. The table is for one way. Scatter pays from the total play and does not take a way.`;
+  }
+  if (game.mechanic === 'scatter-pays') {
+    return `${game.reels}×${game.rows}. Pays 8–9, 10–11 and 12+ matching symbols anywhere, from the total play. The orb stands in and adds its cells, and the win is multiplied by the orbs in it.`;
+  }
+  return `${game.reels}×${game.rows}. A cluster of 5–7, 8–11 and 12+ matching symbols connected by sides pays from the total play. Wild joins the cluster.`;
+}
+
+function payHint(game: SlotGame, symbol: SlotSymbol, en: boolean): string {
+  if (en) {
+    if (symbol.scatter) return game.id === 'green-arrow' ? '3 starts the volley, 4 starts the range. Pays for 3 / 4 / 5 from the total play' : `${game.trigger}+ starts the feature. Pays for 3 / 4 / 5 from the total play`;
+    if (symbol.bonusCoin) return `${game.trigger}+ starts the feature. Does not pay on lines`;
+    if (symbol.wild && symbol.multiplier) return `wild and multiplier x${symbol.multiplier}`;
+    if (symbol.wild && game.bonus.kind === 'sticky-reels') return 'wild. A curtain covers the whole reel';
+    if (symbol.wild) return 'wild: stands in for every symbol except scatter';
+    if (symbol.orb) return 'wild and a multiplier for the symbols it hits';
+    if (symbol.mystery) return 'opens into one shared symbol';
+    if (game.mechanic === 'scatter-pays') return '8–9 / 10–11 / 12+, from the total play';
+    if (game.mechanic === 'cluster') return '5–7 / 8–11 / 12+, from the total play';
+    if (game.mechanic === 'ways') return '3 / 4 / 5 reels, per way';
+    return '3 / 4 / 5 on a line';
+  }
   if (symbol.scatter) return game.id === 'green-arrow' ? '3 — залп, 4 — тир. Выплата за 3 / 4 / 5 от всей ставки' : `${game.trigger}+ открывают бонус. Выплата за 3 / 4 / 5 от всей ставки`;
   if (symbol.bonusCoin) return `${game.trigger}+ открывают бонус. По линиям не платит`;
   if (symbol.wild && symbol.multiplier) return `вайлд и множитель x${symbol.multiplier}`;
@@ -87,6 +120,8 @@ const MECHANIC: Record<SlotGame['mechanic'], { title: string; text: string }> = 
 };
 
 export default function SlotInfo({ game, bet, gram, onClose }: Props) {
+  const { lang } = useSlotLocale();
+  const en = lang === 'en';
   const [page, setPage] = useState(0);
   const pages = 4;
   const mechanic = MECHANIC[game.mechanic];
@@ -97,7 +132,7 @@ export default function SlotInfo({ game, bet, gram, onClose }: Props) {
   const ordered = [...game.symbols].sort((a, b) => symbolRank(a) - symbolRank(b) || a.pays[2] - b.pays[2]);
   return (
     <div className={styles.back} onClick={onClose}>
-      <div className={styles.modal} onClick={(event) => event.stopPropagation()} role="dialog" aria-label="Правила">
+      <div className={styles.modal} onClick={(event) => event.stopPropagation()} role="dialog" aria-label={en ? 'Rules' : 'Правила'}>
         <button type="button" className={styles.close} onClick={onClose} aria-label="Закрыть">×</button>
         {page === 0 && (
           <>
@@ -132,16 +167,16 @@ export default function SlotInfo({ game, bet, gram, onClose }: Props) {
                 ))}
               </div>
             ) : null}
-            <p>Потолок раунда — x{game.maxWinMultiplier} ставки.</p>
-            <p>{game.bonus.rule}</p>
-            <h2>Выплаты</h2>
-            <p className={styles.note}>{mathRule(game, bet, gram)} Суммы в карточках — уже в монетах при текущей ставке.</p>
+            <p>{en ? `Round cap is x${game.maxWinMultiplier} of the play.` : `Потолок раунда — x${game.maxWinMultiplier} ставки.`}</p>
+            <p>{en ? (game.bonus.kind === 'sticky-reels' ? 'The wheel, the free spins and every curtain are dealt before the reels play them.' : game.bonus.kind === 'pick' ? 'The field is dealt with the spin. The apple you tap is the one that opens.' : 'The feature is dealt with the spin. The reels play that result.') : game.bonus.rule}</p>
+            <h2>{en ? 'Pays' : 'Выплаты'}</h2>
+            <p className={styles.note}>{(en ? mathRuleEn : mathRule)(game, bet, gram)} {en ? 'Card amounts are already in coins at the current play size.' : 'Суммы в карточках — уже в монетах при текущей ставке.'}</p>
             <div className={styles.symbols}>
               {ordered.map((symbol) => (
                 <div key={symbol.id} className={styles.symbol}>
                   <img src={slotArt(game.id, symbol.id)} alt="" />
-                  <strong>{symbol.name}</strong>
-                  <span>{symbol.bonusOnly ? `только в бонусе. ${payHint(game, symbol)}` : payHint(game, symbol)}</span>
+                  <strong>{en ? symbol.id : symbol.name}</strong>
+                  <span>{symbol.bonusOnly ? `${en ? 'feature only. ' : 'только в бонусе. '}${payHint(game, symbol, en)}` : payHint(game, symbol, en)}</span>
                   <b>
                     {symbol.pays.every((value) => value === 0)
                       ? 'не платит сам'
@@ -156,8 +191,8 @@ export default function SlotInfo({ game, bet, gram, onClose }: Props) {
           <>
             <h2>{game.bonus.title}</h2>
             <img className={styles.hero} src={slotArt(game.id, game.symbols.find((symbol) => symbol.scatter)?.id ?? game.symbols.find((symbol) => symbol.bonusCoin)?.id ?? 'scatter')} alt="" />
-            <p>Собери {game.trigger}× {game.symbols.find((symbol) => symbol.scatter)?.name ?? game.symbols.find((symbol) => symbol.bonusCoin)?.name} — и начнётся этот бонус.</p>
-            <p>{game.bonus.rule}</p>
+            <p>{en ? `Land ${game.trigger}× ${game.symbols.find((symbol) => symbol.scatter)?.name ?? game.symbols.find((symbol) => symbol.bonusCoin)?.name} to start the feature.` : `Собери ${game.trigger}× ${game.symbols.find((symbol) => symbol.scatter)?.name ?? game.symbols.find((symbol) => symbol.bonusCoin)?.name} — и начнётся этот бонус.`}</p>
+            <p>{en ? (game.id === 'golden-must' ? '3 scatters start the regular feature, 4 start the top feature, 5 starts Hot Mod with two curtains. The wheel sets the spins and the minimum curtain before anything spins.' : game.bonus.kind === 'pick' ? 'The field is dealt with the spin. The apple you tap is the one that opens.' : 'The feature is dealt with the spin. The reels play that result.') : game.bonus.rule}</p>
             {game.bonus.kind === 'sticky-reels' && (
               <div className={styles.curtainCard}>
                 <img src={slotHero(game.id)} alt="" />
@@ -224,7 +259,7 @@ export default function SlotInfo({ game, bet, gram, onClose }: Props) {
         {page === 3 && (
           <>
             <h2>{mechanic.title}{game.mechanic === 'lines' || game.mechanic === 'both-ways' ? ` · ${game.lines.length}` : ''}</h2>
-            <p>{mathRule(game, bet, gram)}</p>
+            <p>{(en ? mathRuleEn : mathRule)(game, bet, gram)}</p>
             <p className={styles.note}>Верхний ряд схемы — верх поля. Жёлтая клетка входит в линию. Номер линии совпадает с номером в ленте выигрыша.</p>
             {(game.mechanic === 'lines' || game.mechanic === 'both-ways') && game.lines.length > 0 && (
               <div className={styles.lines}>

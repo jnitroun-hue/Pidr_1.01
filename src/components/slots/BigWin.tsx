@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { cabinetCopy, useSlotLocale } from '@/lib/slots/locale';
 import styles from './BigWin.module.css';
 
 type Tier = 'nice' | 'mega' | 'sensational';
@@ -17,10 +18,10 @@ function tierOf(multiple: number): Tier {
   return 'nice';
 }
 
-const TITLE: Record<Tier, string> = {
-  nice: 'БОЛЬШОЙ ВЫИГРЫШ',
-  mega: 'МЕГА ВЫИГРЫШ',
-  sensational: 'ЭПИЧЕСКИЙ',
+const TITLE: Record<Tier, 'big' | 'mega' | 'epic'> = {
+  nice: 'big',
+  mega: 'mega',
+  sensational: 'epic',
 };
 
 const ART: Record<Tier, string> = {
@@ -30,7 +31,10 @@ const ART: Record<Tier, string> = {
 };
 
 export default function BigWin({ multiple, amountLabel, onClose }: Props) {
+  const { lang, social } = useSlotLocale();
+  const copy = cabinetCopy(lang, social);
   const tier = tierOf(multiple);
+  const title = copy[TITLE[tier]];
   const [shown, setShown] = useState(0);
   const target = Math.max(1, Math.round(multiple));
 
@@ -53,7 +57,7 @@ export default function BigWin({ multiple, amountLabel, onClose }: Props) {
       className={`${styles.overlay} ${styles[tier]}`}
       style={{ backgroundImage: `url(${ART[tier]})` }}
       role="dialog"
-      aria-label={TITLE[tier]}
+      aria-label={title}
     >
       <div className={styles.rays} />
       <div className={styles.shock} />
@@ -65,7 +69,7 @@ export default function BigWin({ multiple, amountLabel, onClose }: Props) {
       <div className={styles.card}>
         <strong>x{shown}</strong>
         <b>{amountLabel}</b>
-        <button type="button" onClick={onClose}>Забрать</button>
+        <button type="button" onClick={onClose}>{copy.collect}</button>
       </div>
     </div>
   );

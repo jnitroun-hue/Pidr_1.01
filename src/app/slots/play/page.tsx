@@ -26,6 +26,18 @@ import {
   type SpinWin,
 } from '@/lib/slots/engine';
 import type { SlotEvent } from '@/lib/slots/characters';
+import { cabinetCopy, useSlotLocale, type SlotLang } from '@/lib/slots/locale';
+import {
+  isMustSoundOn,
+  playMustBig,
+  playMustHit,
+  playMustSpin,
+  playMustWin,
+  setMustSoundOn,
+  stopMustAudio,
+  stopMustSpin,
+  unlockMustSound,
+} from '@/lib/slots/mustSound';
 import { anteCharge, reelSpinMs, type ReelSpeed } from '@/lib/slots/speed';
 import GameConsole from '@/components/slots/GameConsole';
 import SlotReel from '@/components/slots/SlotReel';
@@ -67,49 +79,102 @@ function markGrid(game: SlotGame, board: Board): (MarkKind | null)[][] | undefin
   return grid;
 }
 
-function winLabel(win: SpinWin): string {
-  if (win.kind === 'line') return `Линия ${(win.lineIndex ?? 0) + 1} · ${win.count}${win.direction === 'rtl' ? ' ←' : ''}`;
-  if (win.kind === 'ways') return `${win.ways} путей`;
-  if (win.kind === 'scatter-pays') return `${win.count}× ${win.symbolName}`;
-  if (win.kind === 'cluster') return `${win.count}× ${win.symbolName}`;
-  if (win.kind === 'coin') return 'монета';
-  if (win.kind === 'grand') return 'гранд';
-  return 'скаттер';
+function winLabel(win: SpinWin, lang: SlotLang): string {
+  const en = lang === 'en';
+  if (win.kind === 'line') return `${en ? 'Line' : 'Линия'} ${(win.lineIndex ?? 0) + 1} · ${win.count}${win.direction === 'rtl' ? ' ←' : ''}`;
+  if (win.kind === 'ways') return `${win.ways} ${en ? 'ways' : 'путей'}`;
+  if (win.kind === 'scatter-pays' || win.kind === 'cluster') return `${win.count}× ${win.symbolName}`;
+  if (win.kind === 'coin') return en ? 'coin' : 'монета';
+  if (win.kind === 'grand') return en ? 'grand' : 'гранд';
+  return en ? 'scatter' : 'скаттер';
 }
 
-function introText(game: SlotGame, bonus: BonusPlay): { title: string; text: string; button: string } {
+function WinFigure({ value, format }: { value: number; format: (n: number) => string }) {
+  const [shown, setShown] = useState(value);
+  const from = useRef(value);
+  useEffect(() => {
+    const start = from.current;
+    const delta = value - start;
+    if (!delta) {
+      from.current = value;
+      setShown(value);
+      return;
+    }
+    const t0 = performance.now();
+    let frame = 0;
+    const tick = (now: number) => {
+      const progress = Math.min(1, (now - t0) / 700);
+      const eased = 1 - (1 - progress) ** 3;
+      setShown(Math.round(start + delta * eased));
+      if (progress < 1) frame = requestAnimationFrame(tick);
+      else from.current = value;
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [value]);
+  return <strong>{format(shown)}</strong>;
+}
+
+const EN_FEATURE: Record<string, string> = {
+  'golden-must': 'Golden Rain',
+  'hex-vault': 'Open Vault',
+  'oak-fortune': 'Moon Glade',
+  'neon-river': 'High Tide',
+  'limitless-city': 'Night Siren',
+  'green-arrow': 'Volley',
+  'fairy-glade': 'Ring Dance',
+  'ash-dragon': 'Breath',
+  'frost-queen': 'Ice Throne',
+  'blade-ronin': 'Slash',
+};
+
+function introText(game: SlotGame, bonus: BonusPlay, lang: SlotLang): { title: string; text: string; button: string } {
   const spins = bonus.spins.length;
+  const en = lang === 'en';
+  const title = en ? (EN_FEATURE[game.id] ?? bonus.title) : bonus.title;
+  const wheelBtn = en ? 'To the wheel' : 'К колесу';
+  const spinBtn = en ? 'Spin' : 'Крутить';
   switch (bonus.kind) {
     case 'hold-win':
-      return { title: bonus.title, text: `Монет на поле: ${bonus.scatterCount}. Три респина, каждая новая монета возвращает их. Полное поле — гранд x${HOLD_WIN_GRAND}.`, button: 'Крутить респины' };
+      return { title, text: en ? `${bonus.scatterCount} coins. Three respins. Each new coin resets them. A full board pays grand x${HOLD_WIN_GRAND}.` : `Монет на поле: ${bonus.scatterCount}. Три респина, каждая новая монета возвращает их. Полное поле — гранд x${HOLD_WIN_GRAND}.`, button: en ? 'Spin respins' : 'Крутить респины' };
     case 'wheel':
-      return { title: bonus.title, text: 'Колесо с 12 секторами: кэш, бесплатные спины с множителем или новый уровень.', button: 'К колесу' };
+      return { title, text: en ? '12 sectors: cash, free spins with a multiplier, or the next wheel.' : 'Колесо с 12 секторами: кэш, бесплатные спины с множителем или новый уровень.', button: wheelBtn };
     case 'pick':
       if (bonus.spins.length && !bonus.pick) {
-        return { title: bonus.title, text: '15 спинов. Лучник сверху бросает от 1 до 6 диких. Стрела с множителем остаётся на клетке до конца бонуса.', button: 'Крутить' };
+        return { title, text: en ? '15 spins. The archer throws 1 to 6 wilds. A multiplier arrow stays until the feature ends.' : '15 спинов. Лучник сверху бросает от 1 до 6 диких. Стрела с множителем остаётся на клетке до конца бонуса.', button: spinBtn };
       }
-      return { title: bonus.title, text: 'Поле 6×6. Шесть клеток — мимо. Третий промах заканчивает тир. Множители от x10 до x2500.', button: 'В тир' };
+      return { title, text: en ? '6×6. Six misses. The third miss ends it. Multipliers run from x10 to x2500.' : 'Поле 6×6. Шесть клеток — мимо. Третий промах заканчивает тир. Множители от x10 до x2500.', button: en ? 'Open' : 'В тир' };
     case 'tumble-mult':
-      return { title: bonus.title, text: `${spins} бесплатных спинов. Шар заменяет любой символ и умножает те, с которыми сыграл.`, button: 'Крутить' };
+      return { title, text: en ? `${spins} free spins. The orb stands in for any symbol and multiplies the ones it hits.` : `${spins} бесплатных спинов. Шар заменяет любой символ и умножает те, с которыми сыграл.`, button: spinBtn };
     case 'mystery':
-      return { title: bonus.title, text: `${spins} бесплатных спинов. Мистика раскрывается только в старшие символы, множитель спина равен числу мистик.`, button: 'Крутить' };
+      return { title, text: en ? `${spins} free spins. Mystery symbols open only into the top symbols. The spin multiplier equals how many opened.` : `${spins} бесплатных спинов. Мистика раскрывается только в старшие символы, множитель спина равен числу мистик.`, button: spinBtn };
     case 'cluster-fs':
-      return { title: bonus.title, text: `${spins} бесплатных спинов. Множитель растёт с каждым выигрышным каскадом и не сбрасывается.`, button: 'Крутить' };
+      return { title, text: en ? `${spins} free spins. Every winning cascade raises the multiplier, and it does not reset.` : `${spins} бесплатных спинов. Множитель растёт с каждым выигрышным каскадом и не сбрасывается.`, button: spinBtn };
     case 'burn':
-      return { title: bonus.title, text: `${spins} бесплатных спинов. Первый выигрыш сжигает самый дешёвый символ, каждый выигрыш поднимает множитель.`, button: 'Крутить' };
+      return { title, text: en ? `${spins} free spins. The first win burns the cheapest symbol. Every win raises the multiplier.` : `${spins} бесплатных спинов. Первый выигрыш сжигает самый дешёвый символ, каждый выигрыш поднимает множитель.`, button: spinBtn };
     case 'colossal':
-      return { title: bonus.title, text: `${spins} бесплатных спинов. В каждом на поле встаёт колоссальный символ 3×3.`, button: 'Крутить' };
+      return { title, text: en ? `${spins} free spins. Each one plants a 3×3 symbol.` : `${spins} бесплатных спинов. В каждом на поле встаёт колоссальный символ 3×3.`, button: spinBtn };
     case 'slash':
-      return { title: bonus.title, text: `${spins} бесплатных спинов. Ронин рубит ряд в дикие, множитель растёт с каждым ударом.`, button: 'Крутить' };
+      return { title, text: en ? `${spins} free spins. A slash turns a row wild. The multiplier grows with every slash.` : `${spins} бесплатных спинов. Ронин рубит ряд в дикие, множитель растёт с каждым ударом.`, button: spinBtn };
     default:
-      return { title: bonus.title, text: bonus.curtainWheel ? `${bonus.rule} Колесо: ${bonus.curtainWheel.label}.` : `${spins} бесплатных спинов. Штора закрывает барабан и остаётся до конца бонуса.`, button: bonus.curtainWheel ? 'К колесу' : 'Крутить' };
+      return {
+        title,
+        text: bonus.curtainWheel
+          ? (en ? `The wheel locked ${bonus.curtainWheel.label}. Curtains stay on their reels for the whole feature.` : `${bonus.rule} Колесо: ${bonus.curtainWheel.label}.`)
+          : (en ? `${spins} free spins. A curtain covers a reel and stays until the feature ends.` : `${spins} бесплатных спинов. Штора закрывает барабан и остаётся до конца бонуса.`),
+        button: bonus.curtainWheel ? wheelBtn : spinBtn,
+      };
   }
 }
 
 function PlayInner() {
   const router = useRouter();
   const params = useSearchParams();
+  const { lang, toggle } = useSlotLocale();
+  const copy = cabinetCopy(lang, false);
+  const [soundOn, setSoundOn] = useState(true);
   const game = getSlotGame(params.get('game') || '') ?? getSlotGame('golden-must')!;
+  const voiced = game.id === 'golden-must';
   const modeParam = params.get('mode');
   const mode: Mode = modeParam === 'coins' || modeParam === 'gram' ? modeParam : 'demo';
   const [betIndex, setBetIndex] = useState(Math.max(0, COIN_BETS.indexOf(50)));
@@ -208,10 +273,10 @@ function PlayInner() {
   function pace() {
     const current = live.current.speed;
     return current === 'fast'
-      ? { pop: 190, show: 360, showWin: 560, respin: 700, idle: 160 }
+      ? { pop: 220, show: 420, showWin: 780, respin: 760, idle: 180 }
       : current === 'mid'
-        ? { pop: 300, show: 560, showWin: 820, respin: 1000, idle: 300 }
-        : { pop: 420, show: 760, showWin: 1100, respin: 1300, idle: 460 };
+        ? { pop: 340, show: 640, showWin: 1200, respin: 1100, idle: 320 }
+        : { pop: 480, show: 860, showWin: 1500, respin: 1400, idle: 480 };
   }
 
   function anticipation(grid: string[][]): number[] {
@@ -254,6 +319,25 @@ function PlayInner() {
     };
   }
 
+  useEffect(() => {
+    setSoundOn(isMustSoundOn());
+    return () => stopMustAudio();
+  }, []);
+
+  function beginRoll() {
+    if (voiced) playMustSpin();
+  }
+
+  function endRoll(board: Board) {
+    if (!voiced) return;
+    stopMustSpin();
+    if (board.win <= 0) return;
+    const lines = board.wins.filter((win) => win.amount > 0).length || 1;
+    const ratio = live.current.bet > 0 ? board.win / live.current.bet : 0;
+    const delay = playMustHit(lines);
+    if (ratio < 15) playMustWin(delay);
+  }
+
   async function rollTo(board: Board, bonus: boolean, keepLocked = false) {
     const extraMs = anticipation(board.grid);
     setExtra(extraMs);
@@ -264,28 +348,32 @@ function PlayInner() {
     });
     setRibbon('');
     setRolling(true);
+    beginRoll();
     await wait(reelSpinMs(live.current.speed, game.reels, bonus) + Math.max(0, ...extraMs));
     setRolling(false);
     setExtra([]);
     setShown({ board });
     setRibbon(board.label ?? '');
+    endRoll(board);
     if (board.win > 0) setWinSoFar((value) => value + board.win);
   }
 
   async function respinTo(board: Board) {
     setShown({ board: { ...board, wins: EMPTY_WINS } });
     setRolling(true);
+    beginRoll();
     await wait(Math.max(pace().respin, reelSpinMs(live.current.speed, game.reels, false)));
     setRolling(false);
     setShown({ board });
     setRibbon(board.label ?? '');
+    endRoll(board);
     if (board.win > 0) setWinSoFar((value) => value + board.win);
   }
 
   async function cascadeTo(prev: Board, next: Board, events: SlotEvent[] = []) {
     if (next.removed?.length) {
       setShown({ board: prev, popping: cellGrid(game, next.removed) });
-      setRibbon('Символы лопаются');
+      setRibbon(copy.popping);
       await wait(Math.max(pace().pop, 900));
     }
     const mysteryCells = next.marks?.filter((mark) => mark.kind === 'mystery').map((mark) => ({ reel: mark.reel, row: mark.row }));
@@ -334,6 +422,7 @@ function PlayInner() {
     setWinSoFar(next.totalWin);
     const ratio = live.current.bet > 0 ? next.totalWin / live.current.bet : 0;
     if (ratio >= 15) {
+      if (voiced) playMustBig(ratio >= 100 ? 'epic' : ratio >= 50 ? 'mega' : 'nice');
       setBigMultiple(ratio);
       await awaitUser(2600);
       setBigMultiple(null);
@@ -414,7 +503,7 @@ function PlayInner() {
       }
     }
     if (bonus.floorAdded > 0) {
-      setRibbon(`Гарантия покупки +${money(bonus.floorAdded)}`);
+      setRibbon(`${copy.floor} +${money(bonus.floorAdded)}`);
       if (!bonus.spins.length && bonus.kind !== 'pick' && !bonus.wheel) setWinSoFar((value) => value + bonus.floorAdded);
       await wait(pace().show);
     }
@@ -426,6 +515,7 @@ function PlayInner() {
 
   async function spin(): Promise<boolean> {
     if (spinningRef.current) return false;
+    if (voiced) await unlockMustSound();
     const snap = live.current;
     spinningRef.current = true;
     setError('');
@@ -464,11 +554,13 @@ function PlayInner() {
     } finally {
       spinningRef.current = false;
       setSpinning(false);
+      if (voiced) stopMustSpin();
     }
   }
 
   async function buy(tier: 'regular' | 'top') {
     if (spinningRef.current) return;
+    if (voiced) await unlockMustSound();
     const snap = live.current;
     spinningRef.current = true;
     const cost = snap.bet * (tier === 'top' ? 500 : 100);
@@ -506,6 +598,7 @@ function PlayInner() {
     } finally {
       spinningRef.current = false;
       setSpinning(false);
+      if (voiced) stopMustSpin();
     }
   }
 
@@ -570,7 +663,7 @@ function PlayInner() {
     ? [...(feature?.pots ?? [{ name: 'Mini', value: 20, amount: bet * 20 }, { name: 'Minor', value: 50, amount: bet * 50 }, { name: 'Major', value: 200, amount: bet * 200 }]), { name: 'Grand', value: HOLD_WIN_GRAND, amount: bet * HOLD_WIN_GRAND }]
     : null;
 
-  const intro = feature ? introText(game, feature) : null;
+  const intro = feature ? introText(game, feature, lang) : null;
   const heroSrc = slotHero(game.id);
   const cue = resolveHeroCue({
     gameId: game.id,
@@ -594,7 +687,32 @@ function PlayInner() {
         <button type="button" className={styles.hudBack} onClick={() => router.push('/slots')}>
           ←
         </button>
-        <img className={styles.wordmark} src={slotLogo(game.id)} alt={game.title} draggable={false} />
+        <img className={styles.wordmark} src={slotLogo(game.id)} alt={lang === 'en' ? (EN_FEATURE[game.id] ?? game.title) : game.title} draggable={false} />
+        <div className={styles.hudTools}>
+          {voiced ? (
+            <button
+              type="button"
+              className={`${styles.hudLang} ${soundOn ? styles.hudSoundOn : ''}`}
+              aria-pressed={soundOn}
+              aria-label={soundOn ? (lang === 'en' ? 'Sound on' : 'Звук включён') : (lang === 'en' ? 'Sound off' : 'Звук выключен')}
+              onClick={() => {
+                const next = !soundOn;
+                setMustSoundOn(next);
+                setSoundOn(next);
+                if (next) {
+                  unlockMustSound();
+                  if (rolling) playMustSpin();
+                }
+              }}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 9h4l5-4v14l-5-4H4z" />
+                {soundOn ? <path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11" fill="none" stroke="currentColor" strokeWidth="2" /> : <path d="M16 10l6 6M22 10l-6 6" fill="none" stroke="currentColor" strokeWidth="2" />}
+              </svg>
+            </button>
+          ) : null}
+          <button type="button" className={styles.hudLang} onClick={toggle}>{lang === 'en' ? 'RU' : 'EN'}</button>
+        </div>
       </header>
 
       {mode === 'gram' && (
@@ -623,14 +741,14 @@ function PlayInner() {
             {cue && heroSrc && phase !== 'pick' ? (
               <img key={actToken} className={`${styles.bonusHero} ${sideHeroClass(game.id, cue)}`} src={heroSrc} alt="" draggable={false} />
             ) : null}
-            <div className={styles.winPlaque} data-skin={game.id}>
-              <span>Выигрыш</span>
-              <strong>{money(phase === 'pick' ? pickTotal : winSoFar)}</strong>
+            <div className={styles.winPlaque} data-skin={game.id} data-hot={!rolling && (phase === 'pick' ? pickTotal : winSoFar) > 0 ? '1' : undefined}>
+              <span>{copy.win}</span>
+              <WinFigure value={phase === 'pick' ? pickTotal : winSoFar} format={money} />
             </div>
             {counter ? <em className={styles.counter}>{feature?.title} · {counter.step}/{counter.total}</em> : null}
             {ribbon ? <em className={styles.ribbon}>{ribbon}</em> : null}
           </div>
-          <div className={styles.frame} data-skin={game.id}>
+          <div className={styles.frame} data-skin={game.id} data-win={!rolling && board.wins.some((win) => win.amount > 0) ? '1' : undefined}>
             <div className={styles.reelStage}>
             <div className={styles.reels}>
               {board.grid.map((reel, reelIndex) => (
@@ -688,14 +806,14 @@ function PlayInner() {
             {!rolling && board.wins.filter((win) => win.kind !== 'coin').slice(0, 6).map((win, index) => (
               <div key={`${win.symbolId}-${win.lineIndex ?? index}-${win.kind}-${win.count}`} className={styles.winChip}>
                 <img src={slotArt(game.id, win.symbolId)} alt="" />
-                <span>{winLabel(win)}</span>
+                <span>{winLabel(win, lang)}</span>
                 <b>{money(win.amount)}</b>
               </div>
             ))}
             {!rolling && board.wins.some((win) => win.kind === 'coin') ? (
               <div className={styles.winChip}>
                 <img src={slotArt(game.id, 'coin')} alt="" />
-                <span>монет {board.wins.filter((win) => win.kind === 'coin').length}</span>
+                <span>{lang === 'en' ? 'coins' : 'монет'} {board.wins.filter((win) => win.kind === 'coin').length}</span>
                 <b>{money(board.wins.filter((win) => win.kind === 'coin').reduce((sum, win) => sum + win.amount, 0))}</b>
               </div>
             ) : null}
@@ -767,8 +885,8 @@ function PlayInner() {
             <img src={slotArt(game.id, trigger?.id ?? 'scatter')} alt="" />
             <p>{feature.title}</p>
             <strong>{money(feature.totalWin)}</strong>
-            <span>{round?.capped ? 'Сработал потолок выигрыша' : feature.floorAdded > 0 ? `Гарантия покупки добавила ${money(feature.floorAdded)}` : 'Бонус завершён'}</span>
-            <button type="button" className={styles.sheetGo} onClick={release}>Забрать</button>
+            <span>{round?.capped ? copy.cap : feature.floorAdded > 0 ? `${copy.floor} ${money(feature.floorAdded)}` : copy.bonusDone}</span>
+            <button type="button" className={styles.sheetGo} onClick={release}>{copy.collect}</button>
           </div>
         </div>
       )}

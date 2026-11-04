@@ -790,7 +790,7 @@ function pickCurtainMult(tier: 'base' | 'bonus' | 'top'): number {
 function curtainLabel(curtains: { reel: number; mult: number }[]): string | undefined {
   if (!curtains.length) return undefined;
   const list = [...curtains].sort((a, b) => a.reel - b.reel).map((item) => `x${item.mult}`).join(' · ');
-  return curtains.length === 1 ? `Штора ${list}` : `Шторы ${list}`;
+  return list;
 }
 
 function scatterReels(game: SlotGame, tiles: Tiles): Set<number> {

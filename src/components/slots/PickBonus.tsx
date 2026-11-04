@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { slotArt } from '@/lib/slots/art';
+import { cabinetCopy, useSlotLocale } from '@/lib/slots/locale';
 import styles from './PickBonus.module.css';
 
 type Cell = { kind: 'mult' | 'miss'; value: number; amount: number };
@@ -30,6 +31,8 @@ export default function PickBonus({ heroSrc, gameId, cells, columns, rows, missL
     if (!cell || cell.kind === 'miss') return 0;
     return Math.round(cell.value * bet);
   };
+  const { lang, social } = useSlotLocale();
+  const copy = cabinetCopy(lang, social);
   const collected = opened.reduce((sum, index) => sum + prizeOf(index), 0);
 
   function open(index: number) {
@@ -61,7 +64,7 @@ export default function PickBonus({ heroSrc, gameId, cells, columns, rows, missL
   return (
     <div className={styles.back}>
       <div className={styles.panel}>
-        <p className={styles.head}>Тир · промах {misses} из {missLimit} · яблоко = множитель × {moneyLabel(bet)}</p>
+        <p className={styles.head}>Промах {misses}/{missLimit}</p>
         <div className={styles.layout}>
           {heroSrc ? (
             <img key={opened.length} className={`${styles.archer} ${shot != null ? styles.shoot : styles.ready}`} src={heroSrc} alt="" draggable={false} />
@@ -78,7 +81,7 @@ export default function PickBonus({ heroSrc, gameId, cells, columns, rows, missL
                   onClick={() => open(index)}
                 >
                   {reveal ? (
-                    reveal.kind === 'miss' ? <span>мимо</span> : <strong>x{reveal.value}<small>{moneyLabel(reveal.value * bet)}</small></strong>
+                    reveal.kind === 'miss' ? <span>{copy.miss}</span> : <strong>x{reveal.value}<small>{moneyLabel(reveal.value * bet)}</small></strong>
                   ) : (
                     <img src={slotArt(gameId, 'target')} alt="" draggable={false} />
                   )}
@@ -88,14 +91,14 @@ export default function PickBonus({ heroSrc, gameId, cells, columns, rows, missL
           </div>
         </div>
         <div className={styles.sum}>
-          <span>Собрано</span>
-          <strong>{moneyLabel(collected)}</strong>
+          <span>{copy.collected}</span>
+          <strong key={collected}>{moneyLabel(collected)}</strong>
         </div>
         {finished && !auto ? (
-          <button type="button" className={styles.go} onClick={() => onDone(opened)}>Забрать</button>
+          <button type="button" className={styles.go} onClick={() => onDone(opened)}>{copy.collect}</button>
         ) : (
           <span className={styles.hint}>
-            {auto ? 'Лучник сам выбирает яблоки' : `Поле ${columns}×${rows}. Счёт с нуля: x2 при этой ставке — ${moneyLabel(bet * 2)}. Третий промах заканчивает тир.`}
+            {auto ? copy.autoPick : `x1 = ${moneyLabel(bet)}`}
           </span>
         )}
       </div>

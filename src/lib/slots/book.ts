@@ -37,6 +37,7 @@ function pushBoard(events: BookEvent[], game: SlotGame, item: Board, bet: number
     gameType,
     label: item.label ?? null,
     marks: item.marks ?? [],
+    curtains: item.curtains ?? null,
   });
   if (item.wins.length) {
     events.push({
@@ -81,6 +82,16 @@ export function toBook(game: SlotGame, round: RoundResult, bet: number, id: numb
       tier: bonus.tier,
       positions: triggerCells,
     });
+    if (bonus.curtainWheel) {
+      events.push({
+        index: events.length,
+        type: 'curtainWheel',
+        segment: bonus.curtainWheel.index,
+        spins: bonus.curtainWheel.spins,
+        min: bonus.curtainWheel.min,
+        label: bonus.curtainWheel.label,
+      });
+    }
     if (bonus.wheel) {
       for (const stop of bonus.wheel.stops) {
         events.push({ index: events.length, type: 'wheelStop', level: stop.level, segment: stop.index });
@@ -90,6 +101,16 @@ export function toBook(game: SlotGame, round: RoundResult, bet: number, id: numb
         events.push({ index: events.length, type: 'setWin', amount: cents(bonus.wheel.cash, bet) });
         events.push({ index: events.length, type: 'setTotalWin', amount: cents(running.total, bet) });
       }
+    }
+    if (bonus.pick?.cells?.length) {
+      events.push({
+        index: events.length,
+        type: 'pickField',
+        columns: bonus.pick.columns ?? null,
+        rows: bonus.pick.rows ?? null,
+        missLimit: bonus.pick.missLimit ?? null,
+        cells: bonus.pick.cells.map((cell) => ({ kind: cell.kind, value: cell.value })),
+      });
     }
     if (bonus.pick) {
       bonus.pick.reveals.forEach((reveal, position) => {

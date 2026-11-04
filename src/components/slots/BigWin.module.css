@@ -30,7 +30,7 @@
 .card {
   position: relative;
   z-index: 2;
-  margin-top: 28vh;
+  margin-top: 0;
   min-width: min(86vw, 420px);
   padding: 8px 22px 18px;
   text-align: center;
