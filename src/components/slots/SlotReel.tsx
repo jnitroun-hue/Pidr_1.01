@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { slotArt, slotHero } from '@/lib/slots/art';
 import { getSlotGame, type SlotSymbol } from '@/lib/slots/games';
 import { reelPlan, type ReelSpeed } from '@/lib/slots/speed';
@@ -77,14 +77,15 @@ export default function SlotReel({
   rolling, speed, bonus, extraMs = 0, highlight, curtain = null,
 }: Props) {
   const [phase, setPhase] = useState<'idle' | 'clear' | 'ready' | 'go'>('idle');
+  const held = useRef(landed);
+  if (!rolling) held.current = landed;
   const plan = reelPlan(speed, reelIndex, bonus);
   const duration = plan.duration + extraMs;
   const anyLocked = Boolean(locked?.some(Boolean));
   const filler = useMemo(() => {
-    const count = speed === 'fast' ? 22 : speed === 'mid' ? 28 : 34;
-    const extra = Math.round(extraMs / 60);
-    return Array.from({ length: count + extra }, (_, index) => symbolIds[(index * 5 + reelIndex * 3 + 1) % symbolIds.length]);
-  }, [symbolIds, reelIndex, rolling, speed, extraMs]);
+    const count = speed === 'fast' ? 8 : speed === 'mid' ? 10 : 12;
+    return Array.from({ length: count }, (_, index) => symbolIds[(index * 5 + reelIndex * 3 + 1) % symbolIds.length]);
+  }, [symbolIds, reelIndex, rolling, speed]);
   const spinning = !anyLocked && (phase === 'ready' || phase === 'go');
   const strip = spinning ? [...landed, ...filler] : landed;
   const startShift = filler.length;
@@ -127,9 +128,10 @@ export default function SlotReel({
     );
   }
 
+  const faceLanded = rolling ? held.current : landed;
   const cells = (
     <div className={styles.reelCells}>
-      {landed.map((id, row) => {
+      {faceLanded.map((id, row) => {
         const isLocked = Boolean(locked?.[row]);
         const respinning = rolling && anyLocked && !isLocked;
         const boardHot = !rolling && highlight.some(Boolean);

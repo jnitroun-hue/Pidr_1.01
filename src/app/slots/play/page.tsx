@@ -30,6 +30,7 @@ import { cabinetCopy, useSlotLocale, type SlotLang } from '@/lib/slots/locale';
 import {
   isMustSoundOn,
   playMustBig,
+  stopMustEpic,
   playMustHit,
   playMustSpin,
   playMustWin,
@@ -455,7 +456,7 @@ function PlayInner() {
     setWinSoFar(next.totalWin);
     const ratio = live.current.bet > 0 ? next.totalWin / live.current.bet : 0;
     if (ratio >= 15) {
-      if (voiced) playMustBig(ratio >= 100 ? 'epic' : ratio >= 50 ? 'mega' : 'nice');
+      if (voiced) playMustBig(next.capped || ratio >= 100 ? 'epic' : ratio >= 50 ? 'mega' : 'nice');
       setBigMultiple(ratio);
       await awaitUser(2600);
       setBigMultiple(null);
@@ -972,7 +973,11 @@ function PlayInner() {
         <BigWin
           multiple={bigMultiple}
           amountLabel={money(round.totalWin)}
-          onClose={release}
+          capped={Boolean(round.capped)}
+          onClose={() => {
+            if (voiced) stopMustEpic();
+            release();
+          }}
         />
       )}
     </main>

@@ -101,6 +101,7 @@ export function cabinetCopy(lang: SlotLang, social: boolean) {
       big: 'BIG WIN',
       mega: 'MEGA WIN',
       epic: 'EPIC WIN',
+      maxWin: 'MAX WIN',
     };
   }
   return {
@@ -139,5 +140,6 @@ export function cabinetCopy(lang: SlotLang, social: boolean) {
     big: 'БОЛЬШОЙ ВЫИГРЫШ',
     mega: 'МЕГА ВЫИГРЫШ',
     epic: 'ЭПИЧЕСКИЙ',
+    maxWin: 'МАКСИМАЛЬНЫЙ ВЫИГРЫШ',
   };
 }

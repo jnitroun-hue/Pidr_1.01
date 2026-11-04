@@ -8,23 +8,14 @@
   overflow: hidden;
 }
 
-.rays, .shock, .coins { display: none; }
-
-.rays {
+.ring {
   position: absolute;
-  width: 140vmax;
-  height: 140vmax;
-  background: repeating-conic-gradient(from 0deg, rgba(250, 204, 21, 0.0) 0 12deg, rgba(250, 204, 21, 0.28) 12deg 18deg);
-  animation: spin 8s linear infinite;
-}
-
-.shock {
-  position: absolute;
-  width: 40vmin;
-  height: 40vmin;
+  width: min(86vmin, 640px);
+  height: min(86vmin, 640px);
   border-radius: 50%;
-  border: 8px solid rgba(255, 236, 170, 0.7);
-  animation: boom 0.8s ease-out infinite;
+  border: 2px solid rgba(255, 226, 140, 0.55);
+  box-shadow: 0 0 40px rgba(245, 197, 24, 0.35), inset 0 0 40px rgba(245, 197, 24, 0.2);
+  animation: ring 2.8s ease-in-out infinite;
 }
 
 .card {
@@ -90,28 +81,27 @@
   animation-delay: calc(var(--i) * -0.12s);
 }
 
-.mega .rays { animation-duration: 4s; filter: hue-rotate(18deg); }
-.mega .card { border-color: #fb923c; box-shadow: 0 0 80px rgba(251, 146, 60, 0.55); }
+.mega .ring { border-color: rgba(251, 146, 60, 0.8); box-shadow: 0 0 48px rgba(251, 146, 60, 0.45); }
 .mega .card p, .mega .card strong { color: #ffedd5; text-shadow: 0 0 28px #fb923c, 0 6px 0 #7c2d12; }
 
-.sensational {
-  animation: shake 0.4s linear infinite;
-}
-.sensational .rays {
-  animation-duration: 2.2s;
-  background: repeating-conic-gradient(from 0deg, rgba(244, 63, 94, 0) 0 8deg, rgba(255, 244, 214, 0.55) 8deg 14deg);
-}
-.sensational .card { background: transparent; box-shadow: none; }
+.sensational .ring { animation-duration: 1.6s; border-color: rgba(255, 244, 214, 0.9); }
 .sensational .card p,
 .sensational .card strong {
   color: #fff;
   text-shadow: 0 0 18px #fff, 0 0 36px #fb7185, 0 6px 0 #7f1d1d;
 }
 
-@keyframes spin { to { transform: rotate(360deg); } }
-@keyframes boom {
-  from { transform: scale(0.4); opacity: 0.8; }
-  to { transform: scale(3.2); opacity: 0; }
+.max .card {
+  margin: 0;
+  min-width: min(86vw, 560px);
+}
+.max .ring { display: none; }
+.max .card p { letter-spacing: 0.18em; font-size: clamp(16px, 4vw, 26px); }
+.max .card strong { font-size: clamp(64px, 16vw, 120px); }
+
+@keyframes ring {
+  0%, 100% { transform: scale(0.92); opacity: 0.7; }
+  50% { transform: scale(1.04); opacity: 1; }
 }
 @keyframes pop {
   from { transform: scale(0.6); opacity: 0; }

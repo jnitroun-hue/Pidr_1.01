@@ -2,7 +2,7 @@
 
 const KEY = 'must_sound_enabled';
 
-type Clip = 'bed' | 'spin' | 'stop' | 'hit' | 'win' | 'nice' | 'mega' | 'epic' | 'wheel';
+type Clip = 'bed' | 'spin' | 'stop' | 'hit' | 'win' | 'nice' | 'mega' | 'epic' | 'epicMusic' | 'wheel';
 
 const URLS: Record<Clip, string> = {
   bed: '/sfx/must/bed.wav',
@@ -13,6 +13,7 @@ const URLS: Record<Clip, string> = {
   nice: '/sfx/must/big.wav',
   mega: '/sfx/must/mega.wav',
   epic: '/sfx/must/epic.wav',
+  epicMusic: '/sfx/must/epic-music.wav',
   wheel: '/sfx/must/wheel.wav',
 };
 
@@ -22,6 +23,8 @@ let musicGain: GainNode | null = null;
 let bedSource: AudioBufferSourceNode | null = null;
 let spinSource: AudioBufferSourceNode | null = null;
 let spinGain: GainNode | null = null;
+let epicSource: AudioBufferSourceNode | null = null;
+let epicGain: GainNode | null = null;
 let enabled = true;
 const cache = new Map<Clip, Promise<AudioBuffer | null>>();
 const live = new Set<AudioBufferSourceNode>();
@@ -198,7 +201,11 @@ export function playMustWin(delay = 0): void {
 }
 
 export function playMustBig(tier: 'nice' | 'mega' | 'epic'): void {
-  const clip: Clip = tier === 'epic' ? 'epic' : tier === 'mega' ? 'mega' : 'nice';
+  if (tier === 'epic') {
+    playMustEpic();
+    return;
+  }
+  const clip: Clip = tier === 'mega' ? 'mega' : 'nice';
   if (musicGain && ctx) {
     const now = ctx.currentTime;
     musicGain.gain.cancelScheduledValues(now);
@@ -209,6 +216,58 @@ export function playMustBig(tier: 'nice' | 'mega' | 'epic'): void {
   void load(clip).then((buffer) => {
     if (buffer && ctx && enabled) start(buffer, ctx.currentTime + 0.02, tier === 'nice' ? 0.75 : 0.85);
   });
+}
+
+export function playMustEpic(): void {
+  if (!enabled) return;
+  const audio = context();
+  if (!audio || !master) return;
+  if (musicGain) {
+    const now = audio.currentTime;
+    musicGain.gain.cancelScheduledValues(now);
+    musicGain.gain.setValueAtTime(Math.max(0.0001, musicGain.gain.value), now);
+    musicGain.gain.linearRampToValueAtTime(0.0001, now + 0.25);
+  }
+  void load('epicMusic').then((buffer) => {
+    if (!buffer || !ctx || !master || !enabled || epicSource) return;
+    epicGain = ctx.createGain();
+    epicGain.gain.value = 0.0001;
+    epicGain.connect(master);
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(epicGain);
+    const now = ctx.currentTime;
+    epicGain.gain.linearRampToValueAtTime(0.8, now + 0.35);
+    source.start(now);
+    epicSource = source;
+    source.onended = () => {
+      if (epicSource === source) {
+        epicSource = null;
+        epicGain = null;
+      }
+    };
+  });
+}
+
+export function stopMustEpic(): void {
+  const audio = ctx;
+  const gain = epicGain;
+  const source = epicSource;
+  epicSource = null;
+  epicGain = null;
+  if (audio && gain) {
+    const now = audio.currentTime;
+    gain.gain.cancelScheduledValues(now);
+    gain.gain.setValueAtTime(Math.max(0.0001, gain.gain.value), now);
+    gain.gain.linearRampToValueAtTime(0.0001, now + 0.35);
+  }
+  window.setTimeout(() => stopNode(source), 400);
+  if (musicGain && audio && enabled) {
+    const now = audio.currentTime;
+    musicGain.gain.cancelScheduledValues(now);
+    musicGain.gain.setValueAtTime(Math.max(0.0001, musicGain.gain.value), now);
+    musicGain.gain.linearRampToValueAtTime(0.34, now + 0.6);
+  }
 }
 
 export function playMustWheel(): void {

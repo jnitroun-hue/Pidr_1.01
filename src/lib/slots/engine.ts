@@ -849,7 +849,9 @@ function curtainAtLeast(rolled: number, min: number): number {
 function bonusStickyReels(game: SlotGame, bet: number, heat: 'regular' | 'top' | 'hot', wheel: { spins: number; min: number }): SpinStep[] {
   const steps: SpinStep[] = [];
   const stuck: { reel: number; mult: number }[] = [];
-  const chance = heat === 'hot' ? 22 : heat === 'top' ? 18 : 16;
+  // Новая штора редкая, и поле не забивается: иначе топ почти всегда упирается в потолок.
+  const chance = heat === 'hot' ? 8 : heat === 'top' ? 5 : 4;
+  const limit = heat === 'hot' ? 3 : 2;
   const multTier = heat === 'regular' ? 'bonus' : 'top';
   const open = Array.from({ length: game.reels }, (_, reel) => reel);
   const starters = heat === 'hot' ? 2 : heat === 'top' ? 1 : 0;
@@ -861,7 +863,7 @@ function bonusStickyReels(game: SlotGame, bet: number, heat: 'regular' | 'top' |
     const fresh = new Set<number>();
     const tiles = drawTiles(game, baseBag(game));
     const taken = new Set(stuck.map((item) => item.reel));
-    if (stuck.length < game.reels && randomInt(100) < chance) {
+    if (stuck.length < limit && randomInt(100) < chance) {
       const blocked = scatterReels(game, tiles);
       const open = Array.from({ length: game.reels }, (_, reel) => reel).filter((reel) => !taken.has(reel) && !blocked.has(reel));
       if (open.length) {

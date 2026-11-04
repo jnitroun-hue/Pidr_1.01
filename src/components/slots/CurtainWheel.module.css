@@ -7,11 +7,11 @@
   justify-content: safe center;
   padding: 12px;
   overflow: auto;
-  background: rgba(6, 3, 2, 0.94);
+  background: #070403;
 }
 
 .panel {
-  --wheel: min(76vw, 46dvh, 460px);
+  --wheel: min(88vw, 54dvh, 520px);
   margin: auto;
   flex: 0 0 auto;
   display: flex;
@@ -74,10 +74,10 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  width: calc(var(--wheel) * 0.17);
-  height: calc(var(--wheel) * 0.17);
-  margin-left: calc(var(--wheel) * -0.085);
-  margin-top: calc(var(--wheel) * -0.085);
+  width: calc(var(--wheel) * 0.112);
+  height: calc(var(--wheel) * 0.112);
+  margin-left: calc(var(--wheel) * -0.056);
+  margin-top: calc(var(--wheel) * -0.056);
   border-radius: 8px;
   overflow: hidden;
   background: transparent;

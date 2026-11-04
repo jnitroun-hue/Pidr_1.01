@@ -4,36 +4,40 @@ import { useEffect, useState } from 'react';
 import { cabinetCopy, useSlotLocale } from '@/lib/slots/locale';
 import styles from './BigWin.module.css';
 
-type Tier = 'nice' | 'mega' | 'sensational';
+type Tier = 'nice' | 'mega' | 'sensational' | 'max';
 
 type Props = {
   multiple: number;
   amountLabel: string;
+  capped?: boolean;
   onClose: () => void;
 };
 
-function tierOf(multiple: number): Tier {
+function tierOf(multiple: number, capped: boolean): Tier {
+  if (capped) return 'max';
   if (multiple >= 100) return 'sensational';
   if (multiple >= 50) return 'mega';
   return 'nice';
 }
 
-const TITLE: Record<Tier, 'big' | 'mega' | 'epic'> = {
+const TITLE: Record<Tier, 'big' | 'mega' | 'epic' | 'maxWin'> = {
   nice: 'big',
   mega: 'mega',
   sensational: 'epic',
+  max: 'maxWin',
 };
 
 const ART: Record<Tier, string> = {
   nice: '/img/slots/win-big.jpg',
   mega: '/img/slots/win-mega.jpg',
   sensational: '/img/slots/win-epic.jpg',
+  max: '/img/slots/win-max.jpg',
 };
 
-export default function BigWin({ multiple, amountLabel, onClose }: Props) {
+export default function BigWin({ multiple, amountLabel, capped = false, onClose }: Props) {
   const { lang, social } = useSlotLocale();
   const copy = cabinetCopy(lang, social);
-  const tier = tierOf(multiple);
+  const tier = tierOf(multiple, capped);
   const title = copy[TITLE[tier]];
   const [shown, setShown] = useState(0);
   const target = Math.max(1, Math.round(multiple));
@@ -41,7 +45,7 @@ export default function BigWin({ multiple, amountLabel, onClose }: Props) {
   useEffect(() => {
     let frame = 0;
     const start = performance.now();
-    const duration = tier === 'sensational' ? 1700 : tier === 'mega' ? 1300 : 900;
+    const duration = tier === 'max' ? 2400 : tier === 'sensational' ? 1700 : tier === 'mega' ? 1300 : 900;
     const tick = (now: number) => {
       const progress = Math.min(1, (now - start) / duration);
       const eased = 1 - (1 - progress) ** 3;
@@ -59,13 +63,7 @@ export default function BigWin({ multiple, amountLabel, onClose }: Props) {
       role="dialog"
       aria-label={title}
     >
-      <div className={styles.rays} />
-      <div className={styles.shock} />
-      <div className={styles.coins} aria-hidden>
-        {Array.from({ length: tier === 'sensational' ? 36 : tier === 'mega' ? 24 : 16 }, (_, index) => (
-          <i key={index} style={{ ['--i' as string]: index }} />
-        ))}
-      </div>
+      <div className={styles.ring} />
       <div className={styles.card}>
         <p>{title}</p>
         <strong>x{shown}</strong>

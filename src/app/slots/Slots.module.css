@@ -958,14 +958,7 @@
   position: absolute;
   inset: 0;
   z-index: 4;
-  background: repeating-linear-gradient(
-    180deg,
-    transparent 0 10px,
-    rgba(255, 236, 179, 0.08) 11px,
-    transparent 16px
-  );
-  animation: reelScan 0.14s linear infinite;
-  mix-blend-mode: screen;
+  background: linear-gradient(180deg, rgba(255, 236, 180, 0.08), transparent 18%, transparent 82%, rgba(0, 0, 0, 0.2));
 }
 
 .reelAnticipate {
@@ -980,7 +973,7 @@
 .reelStrip {
   display: flex;
   flex-direction: column;
-  will-change: transform, filter;
+  will-change: transform;
 }
 
 .reelGo {
@@ -993,27 +986,9 @@
 }
 
 @keyframes reelFall {
-  0% {
-    transform: translateY(calc(var(--shift) * var(--cell) * -1));
-    filter: blur(2.5px) saturate(1.15) brightness(1.15);
-  }
-  55% {
-    filter: blur(1px) saturate(1.2) brightness(1.05);
-  }
-  78% {
-    transform: translateY(calc(var(--cell) * 0.22));
-    filter: blur(0);
-  }
-  88% {
-    transform: translateY(calc(var(--cell) * -0.08));
-  }
-  95% {
-    transform: translateY(calc(var(--cell) * 0.03));
-  }
-  100% {
-    transform: translateY(0);
-    filter: none;
-  }
+  0% { transform: translateY(calc(var(--shift) * var(--cell) * -1)); }
+  86% { transform: translateY(calc(var(--cell) * 0.08)); }
+  100% { transform: translateY(0); }
 }
 
 @keyframes reelScan {
@@ -1021,7 +996,7 @@
 }
 
 @keyframes reelSettle {
-  from { transform: scale(0.86) translateY(-6%); filter: brightness(1.4); }
+  from { transform: scale(0.94) translateY(-3%); }
   to { transform: scale(1) translateY(0); filter: none; }
 }
 
