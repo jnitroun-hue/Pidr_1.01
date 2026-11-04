@@ -2,34 +2,36 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { getApiHeaders } from '@/lib/api-headers';
 import styles from './Clips.module.css';
 
-type Model = 'kling-video-v4_0' | 'kling-video-v4_0_flash';
-type Aspect = '16:9' | '9:16' | '1:1';
-type Seconds = 5 | 10;
+type Aspect = '21:9' | '16:9' | '9:16' | '1:1';
+type Resolution = '720p' | '1080p';
 
 type Draft = {
   id: string;
   prompt: string;
-  model: Model;
   aspect: Aspect;
-  seconds: Seconds;
+  seconds: number;
+  resolution?: Resolution;
+  status?: string;
   createdAt: number;
 };
 
 const KEY = 'must-clips';
 
-const MODELS: { id: Model; label: string }[] = [
-  { id: 'kling-video-v4_0', label: 'Kling 4.0' },
-  { id: 'kling-video-v4_0_flash', label: '4.0 Flash' },
-];
+const ASPECTS: Aspect[] = ['9:16', '16:9', '1:1', '21:9'];
 
 export default function ClipsPage() {
   const router = useRouter();
   const [prompt, setPrompt] = useState('');
-  const [model, setModel] = useState<Model>('kling-video-v4_0');
   const [aspect, setAspect] = useState<Aspect>('9:16');
-  const [seconds, setSeconds] = useState<Seconds>(5);
+  const [seconds, setSeconds] = useState(10);
+  const [resolution, setResolution] = useState<Resolution>('1080p');
+  const [watermark, setWatermark] = useState(false);
+  const [imageUrl, setImageUrl] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState('');
   const [drafts, setDrafts] = useState<Draft[]>([]);
 
   useEffect(() => {
@@ -41,21 +43,69 @@ export default function ClipsPage() {
     }
   }, []);
 
-  function save() {
+  async function watch(taskId: string) {
+    for (let attempt = 0; attempt < 80; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+      const response = await fetch(`/api/clips/status?taskId=${encodeURIComponent(taskId)}`, { headers: getApiHeaders(), cache: 'no-store' });
+      const data = await response.json();
+      if (!data.success) {
+        setNotice(data.error || 'Не удалось узнать статус');
+        return;
+      }
+      if (data.status === 'succeeded') {
+        setNotice(data.delivered ? 'Ролик готов и отправлен в Telegram.' : (data.error || 'Ролик готов, но Telegram его не принял.'));
+        setDrafts((list) => list.map((item) => item.id === taskId ? { ...item, status: data.delivered ? 'в Telegram' : 'готов' } : item));
+        return;
+      }
+      if (data.status === 'failed') {
+        setNotice(data.error || 'Kling отклонил ролик');
+        setDrafts((list) => list.map((item) => item.id === taskId ? { ...item, status: 'ошибка' } : item));
+        return;
+      }
+      setNotice(data.status === 'processing' ? 'Kling считает ролик…' : 'Заявка в очереди Kling…');
+    }
+    setNotice('Kling ещё считает. Оставь страницу открытой и нажми статус позже.');
+  }
+
+  async function submit() {
     const text = prompt.trim();
-    if (!text) return;
-    const next: Draft = {
-      id: crypto.randomUUID(),
-      prompt: text,
-      model,
-      aspect,
-      seconds,
-      createdAt: Date.now(),
-    };
-    const list = [next, ...drafts].slice(0, 24);
-    setDrafts(list);
-    localStorage.setItem(KEY, JSON.stringify(list));
-    setPrompt('');
+    if (text.length < 8 || busy) return;
+    setBusy(true);
+    setNotice('Отправляю в Kling…');
+    try {
+      const response = await fetch('/api/clips/generate', {
+        method: 'POST',
+        headers: getApiHeaders(),
+        body: JSON.stringify({
+          prompt: text,
+          duration: seconds,
+          aspectRatio: aspect,
+          resolution,
+          watermark,
+          imageUrl: imageUrl.trim(),
+        }),
+      });
+      const data = await response.json();
+      if (!data.success) throw new Error(data.error || 'Заявка не ушла');
+      const next: Draft = {
+        id: data.taskId,
+        prompt: text,
+        aspect,
+        seconds,
+        resolution,
+        status: 'считается',
+        createdAt: Date.now(),
+      };
+      const list = [next, ...drafts].slice(0, 24);
+      setDrafts(list);
+      localStorage.setItem(KEY, JSON.stringify(list));
+      setPrompt('');
+      await watch(data.taskId);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Заявка не ушла');
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -71,7 +121,7 @@ export default function ClipsPage() {
         <section className={styles.card}>
           <h2>Новый ролик</h2>
           <p className={styles.note}>
-            Опиши кадр, выбери формат и длину. Заявка остаётся здесь. Считать ролик будет Kling с кредитов твоего аккаунта: вход откроется один раз, когда Cursor попросит подтвердить kling.ai.
+            Текст, кадр, длина 3–30 секунд, 720p или 1080p, водяной знак и ссылка на картинку. Это поля Kling 4.0. Готовый ролик бот пришлёт в личные сообщения, если аккаунт открыт из Telegram и боту уже написан /start.
           </p>
           <label htmlFor="clip-prompt">Что в кадре</label>
           <textarea
@@ -80,25 +130,28 @@ export default function ClipsPage() {
             placeholder="Золотой ус в бордовом зале. Камера медленно подъезжает, шторы расходятся, на барабане вспыхивает множитель."
             onChange={(event) => setPrompt(event.target.value)}
           />
-          <label>Модель</label>
-          <div className={styles.choices}>
-            {MODELS.map((item) => (
-              <button key={item.id} type="button" className={model === item.id ? styles.on : ''} onClick={() => setModel(item.id)}>{item.label}</button>
-            ))}
-          </div>
+          <label htmlFor="clip-image">Картинка-референс, https</label>
+          <input id="clip-image" type="url" value={imageUrl} placeholder="https://..." onChange={(event) => setImageUrl(event.target.value)} />
           <label>Кадр</label>
           <div className={styles.choices}>
-            {(['9:16', '16:9', '1:1'] as Aspect[]).map((item) => (
+            {ASPECTS.map((item) => (
               <button key={item} type="button" className={aspect === item ? styles.on : ''} onClick={() => setAspect(item)}>{item}</button>
             ))}
           </div>
-          <label>Длина</label>
+          <label htmlFor="clip-seconds">Длина, секунды</label>
+          <input id="clip-seconds" type="number" min={3} max={30} value={seconds} onChange={(event) => setSeconds(Number(event.target.value))} />
+          <label>Разрешение</label>
           <div className={styles.choices}>
-            {([5, 10] as Seconds[]).map((item) => (
-              <button key={item} type="button" className={seconds === item ? styles.on : ''} onClick={() => setSeconds(item)}>{item} сек</button>
+            {(['720p', '1080p'] as Resolution[]).map((item) => (
+              <button key={item} type="button" className={resolution === item ? styles.on : ''} onClick={() => setResolution(item)}>{item}</button>
             ))}
           </div>
-          <button type="button" className={styles.go} onClick={save}>Сохранить заявку</button>
+          <label className={styles.check}>
+            <input type="checkbox" checked={watermark} onChange={(event) => setWatermark(event.target.checked)} />
+            Водяной знак Kling
+          </label>
+          {notice ? <p className={styles.status}>{notice}</p> : null}
+          <button type="button" className={styles.go} disabled={busy} onClick={() => void submit()}>{busy ? 'Считается…' : 'Сгенерировать'}</button>
         </section>
         <section className={styles.card}>
           <h2>Заявки</h2>
@@ -106,7 +159,7 @@ export default function ClipsPage() {
             <div className={styles.list}>
               {drafts.map((draft) => (
                 <article key={draft.id} className={styles.item}>
-                  <b>{draft.model === 'kling-video-v4_0' ? 'Kling 4.0' : '4.0 Flash'} · {draft.aspect} · {draft.seconds} сек</b>
+                  <b>Kling 4.0 · {draft.aspect} · {draft.resolution || '1080p'} · {draft.seconds} сек · {draft.status || 'сохранено'}</b>
                   <p>{draft.prompt}</p>
                 </article>
               ))}

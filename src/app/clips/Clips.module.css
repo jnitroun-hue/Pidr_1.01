@@ -81,6 +81,38 @@ label {
   color: #f5c518;
 }
 
+input[type='url'],
+input[type='number'] {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 46px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(253, 230, 138, 0.3);
+  background: #09070c;
+  color: #fff8ea;
+  font: inherit;
+  font-size: 15px;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  color: #f8f4ea;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.status {
+  margin: 12px 0 0;
+  color: #fde68a;
+  font-weight: 800;
+}
+
 textarea {
   width: 100%;
   min-height: 120px;
