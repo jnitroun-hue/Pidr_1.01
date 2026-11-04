@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { SLOT_GAMES, type SlotGame } from '@/lib/slots/games';
-import { slotHero, slotPoster } from '@/lib/slots/art';
+import { slotPoster } from '@/lib/slots/art';
 import styles from './Slots.module.css';
 
 const MODES = [
@@ -42,7 +42,6 @@ export default function SlotsLobbyPage() {
           >
             <span className={styles.posterArt}>
               <img src={slotPoster(game.id)} alt="" />
-              <img className={styles.posterHero} src={slotHero(game.id)} alt="" />
             </span>
             <em>x{game.maxWinMultiplier}</em>
             <span className={styles.posterCopy}>
@@ -61,7 +60,7 @@ export default function SlotsLobbyPage() {
             role="dialog"
             aria-label="Выбор валюты"
           >
-            <img src={slotHero(picked.id)} alt="" />
+            <img src={slotPoster(picked.id)} alt="" />
             <p>{picked.title}</p>
             <strong>{catchSymbol(picked)} открывают «{picked.bonus.title}»</strong>
             <span className={styles.modeMood}>{picked.mood}</span>

@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Trophy, Medal, Users, User, Star, Award, Target, Wallet, Sparkles, Gift, Frame, LogOut, Shield, Dices } from 'lucide-react';
+import { ArrowLeft, Trophy, Medal, Users, User, Star, Award, Target, Wallet, Sparkles, Gift, Frame, LogOut, Shield, Dices, Clapperboard } from 'lucide-react';
 import GameWallet from '../../components/GameWallet';
 import DailyBonusWheelModal from '../../components/DailyBonusWheelModal';
 import PremiumPromoBanner from '../../components/PremiumPromoBanner';
@@ -1521,7 +1521,7 @@ export default function ProfilePage() {
         {/* КОШЕЛЕК, РЕЙТИНГ и СЛОТЫ */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '1fr 1fr 1fr',
+          gridTemplateColumns: '1fr 1fr',
           gap: '10px',
           marginBottom: '20px'
         }}>
@@ -1599,6 +1599,30 @@ export default function ProfilePage() {
           >
             <Dices size={32} style={{ color: '#fb7185' }} />
             <span style={{ color: '#f1f5f9', fontSize: '14px', fontWeight: '700' }}>СЛОТЫ</span>
+          </motion.button>
+
+          <motion.button
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.45 }}
+            whileHover={{ scale: 1.03, boxShadow: '0 8px 30px rgba(245, 197, 24, 0.35)' }}
+            whileTap={{ scale: 0.97 }}
+            onClick={() => router.push('/clips')}
+            style={{
+              background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
+              border: '2px solid rgba(245, 197, 24, 0.45)',
+              borderRadius: '16px',
+              padding: '16px 8px',
+              cursor: 'pointer',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '10px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+            }}
+          >
+            <Clapperboard size={32} style={{ color: '#f5c518' }} />
+            <span style={{ color: '#f1f5f9', fontSize: '14px', fontWeight: '700' }}>{language === 'en' ? 'CLIPS' : 'КЛИПЫ'}</span>
           </motion.button>
         </div>
 

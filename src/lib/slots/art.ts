@@ -3,7 +3,7 @@ const BASE = '/img/slots';
 const ART: Record<string, Record<string, string>> = {
   'golden-must': {
     bg: `${BASE}/bg-golden.jpg`,
-    poster: `${BASE}/bg-golden.jpg`,
+    poster: `${BASE}/poster-golden.jpg`,
     hero: `${BASE}/hero-golden.png`,
     cherry: `${BASE}/sym-cherry.jpg`,
     lemon: `${BASE}/sym-lemon.jpg`,
@@ -16,7 +16,7 @@ const ART: Record<string, Record<string, string>> = {
   },
   'hex-vault': {
     bg: `${BASE}/bg-hex.jpg`,
-    poster: `${BASE}/bg-hex.jpg`,
+    poster: `${BASE}/poster-hex.jpg`,
     hero: `${BASE}/hero-hex.png`,
     coin: `${BASE}/sym-coin.jpg`,
     lock: `${BASE}/sym-lock-hex.jpg`,
@@ -32,7 +32,7 @@ const ART: Record<string, Record<string, string>> = {
   },
   'oak-fortune': {
     bg: `${BASE}/bg-oak.jpg`,
-    poster: `${BASE}/bg-oak.jpg`,
+    poster: `${BASE}/poster-oak.jpg`,
     hero: `${BASE}/hero-oak.png`,
     leaf: `${BASE}/sym-leaf.jpg`,
     fern: `${BASE}/sym-fern.jpg`,
@@ -48,7 +48,7 @@ const ART: Record<string, Record<string, string>> = {
   },
   'neon-river': {
     bg: `${BASE}/bg-river.jpg`,
-    poster: `${BASE}/bg-river.jpg`,
+    poster: `${BASE}/poster-neon.jpg`,
     hero: `${BASE}/hero-river.png`,
     drop: `${BASE}/sym-drop.jpg`,
     fish: `${BASE}/sym-fish.jpg`,
@@ -63,7 +63,7 @@ const ART: Record<string, Record<string, string>> = {
   },
   'limitless-city': {
     bg: `${BASE}/bg-city.jpg`,
-    poster: `${BASE}/bg-city.jpg`,
+    poster: `${BASE}/poster-city.jpg`,
     hero: `${BASE}/hero-city.png`,
     ticket: `${BASE}/sym-ticket.jpg`,
     neon: `${BASE}/sym-sign.jpg`,
@@ -76,7 +76,7 @@ const ART: Record<string, Record<string, string>> = {
   },
   'green-arrow': {
     bg: `${BASE}/bg-arrow.jpg`,
-    poster: `${BASE}/bg-arrow.jpg`,
+    poster: `${BASE}/poster-arrow.jpg`,
     hero: `${BASE}/hero-arrow.png`,
     hood: `${BASE}/sym-hood.jpg`,
     target: `${BASE}/sym-target.jpg`,
@@ -87,7 +87,7 @@ const ART: Record<string, Record<string, string>> = {
   },
   'fairy-glade': {
     bg: `${BASE}/bg-fairy.jpg`,
-    poster: `${BASE}/bg-fairy.jpg`,
+    poster: `${BASE}/poster-fairy.jpg`,
     hero: `${BASE}/hero-fairy.png`,
     bloom: `${BASE}/sym-bloom.jpg`,
     berry: `${BASE}/sym-berry.jpg`,
@@ -100,7 +100,7 @@ const ART: Record<string, Record<string, string>> = {
   },
   'ash-dragon': {
     bg: `${BASE}/bg-dragon.jpg`,
-    poster: `${BASE}/bg-dragon.jpg`,
+    poster: `${BASE}/poster-dragon.jpg`,
     hero: `${BASE}/hero-dragon.png`,
     ember: `${BASE}/sym-ember.jpg`,
     scale: `${BASE}/sym-scale.jpg`,
@@ -113,7 +113,7 @@ const ART: Record<string, Record<string, string>> = {
   },
   'frost-queen': {
     bg: `${BASE}/bg-frost.jpg`,
-    poster: `${BASE}/bg-frost.jpg`,
+    poster: `${BASE}/poster-frost.jpg`,
     hero: `${BASE}/hero-frost.png`,
     snow: `${BASE}/sym-snow.jpg`,
     crystal: `${BASE}/sym-crystal.jpg`,
@@ -124,7 +124,7 @@ const ART: Record<string, Record<string, string>> = {
   },
   'blade-ronin': {
     bg: `${BASE}/bg-ronin.jpg`,
-    poster: `${BASE}/bg-ronin.jpg`,
+    poster: `${BASE}/poster-ronin.jpg`,
     hero: `${BASE}/hero-ronin.png`,
     mask: `${BASE}/sym-mask.jpg`,
     fan: `${BASE}/sym-fan.jpg`,
