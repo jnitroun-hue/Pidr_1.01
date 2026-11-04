@@ -1,129 +1,132 @@
 .back {
-  position: absolute;
+  position: fixed;
   inset: 0;
-  z-index: 8;
+  z-index: 80;
   display: grid;
   place-items: center;
-  background: radial-gradient(circle at 50% 40%, rgba(120, 53, 15, 0.72), rgba(8, 4, 2, 0.94) 70%);
-}
-
-.hero {
-  position: absolute;
-  left: 4px;
-  bottom: 4px;
-  height: 34%;
-  max-height: 160px;
-  width: auto;
-  object-fit: contain;
-  pointer-events: none;
-  filter: drop-shadow(0 12px 12px rgba(0, 0, 0, 0.55));
+  padding: 18px 12px 24px;
+  overflow: auto;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(120, 64, 12, 0.28), rgba(6, 3, 2, 0.9) 68%);
 }
 
 .panel {
-  --wheel: min(68vw, 46dvh, 340px);
+  --wheel: min(84vw, 62dvh, 540px);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  width: min(100%, 420px);
+  gap: 14px;
+  width: min(100%, 640px);
   color: #fff6d8;
   text-align: center;
 }
 
 .panel p {
   margin: 0;
-  font-size: 12px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(14px, 2.4vw, 18px);
   font-weight: 900;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.28em;
   text-transform: uppercase;
   color: #fde68a;
 }
 
-.wheelBox {
+.bezel {
   position: relative;
   width: var(--wheel);
   height: var(--wheel);
   border-radius: 50%;
-  padding: calc(var(--wheel) * 0.04);
-  background:
-    radial-gradient(circle, transparent 58%, rgba(0, 0, 0, 0.45) 60%),
-    repeating-conic-gradient(from 0deg, #fff4c2 0deg 4deg, #92400e 4deg 18deg);
-  box-shadow: 0 0 48px rgba(245, 197, 24, 0.35), 0 24px 40px rgba(0, 0, 0, 0.6);
+  box-shadow:
+    0 0 0 8px #2a1a0c,
+    0 0 0 12px #e7c56a,
+    0 0 0 16px #120c08,
+    0 0 48px rgba(245, 197, 24, 0.4),
+    0 28px 50px rgba(0, 0, 0, 0.6);
 }
 
 .pointer {
   position: absolute;
-  z-index: 4;
-  top: -4px;
+  z-index: 5;
+  top: -18px;
   left: 50%;
-  width: 0;
-  height: 0;
-  margin-left: -14px;
-  border-left: 14px solid transparent;
-  border-right: 14px solid transparent;
-  border-top: 28px solid #fff4c2;
-  filter: drop-shadow(0 4px 2px rgba(0, 0, 0, 0.6));
+  width: 34px;
+  height: 48px;
+  margin-left: -17px;
+  background: linear-gradient(180deg, #fff8dc, #f5c518 46%, #9a3412);
+  clip-path: polygon(50% 100%, 0 0, 100% 0);
+  filter: drop-shadow(0 8px 4px rgba(0, 0, 0, 0.65));
 }
 
 .wheel {
-  position: relative;
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  inset: 0;
   border-radius: 50%;
-  background: repeating-conic-gradient(from -18deg, #f6d36b 0 36deg, #3a220c 0 72deg);
-  box-shadow: inset 0 0 0 3px #fde68a, inset 0 0 30px rgba(0, 0, 0, 0.55);
-  transition: transform 4.1s cubic-bezier(0.12, 0.72, 0.08, 1);
+  background: #1a1008 url('/img/slots/wheel-face.jpg') center / 128% no-repeat;
+  box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.45);
+  transition: transform 4.3s cubic-bezier(0.12, 0.68, 0.05, 1);
 }
 
-.spinning { filter: saturate(1.15); }
+.spinning { filter: saturate(1.08) contrast(1.05); }
 
 .wheel span {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 72px;
-  margin-left: -36px;
-  margin-top: -8px;
-  font-size: clamp(9px, calc(var(--wheel) * 0.034), 13px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 74px;
+  height: 52px;
+  margin-left: -37px;
+  margin-top: -26px;
+  border-radius: 12px;
+  background: rgba(12, 6, 2, 0.62);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  line-height: 1;
+}
+
+.wheel b {
+  font-size: clamp(18px, calc(var(--wheel) * 0.052), 30px);
+  color: #fff6c8;
+  text-shadow: 0 2px 0 #000;
+}
+
+.wheel small {
+  margin-top: 2px;
+  font-size: clamp(12px, calc(var(--wheel) * 0.032), 16px);
   font-weight: 900;
-  color: #fff8e8;
-  text-align: center;
-  text-shadow: 0 1px 2px #000, 0 0 6px rgba(0, 0, 0, 0.8);
+  color: #fde68a;
 }
 
 .landedLabel {
-  color: #fff !important;
-  text-shadow: 0 0 10px #fde68a, 0 2px 0 #000 !important;
+  background: #f5c518 !important;
+  box-shadow: 0 0 18px rgba(245, 197, 24, 0.85);
 }
 
-.hub {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  z-index: 3;
-  width: calc(var(--wheel) * 0.18);
-  height: calc(var(--wheel) * 0.18);
-  margin: calc(var(--wheel) * -0.09) 0 0 calc(var(--wheel) * -0.09);
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #fff8dc, #f5c518 42%, #7c2d12);
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.55), inset 0 0 0 3px #fff4c2;
+.landedLabel b,
+.landedLabel small {
+  color: #2a1608 !important;
+  text-shadow: none !important;
 }
 
 .panel strong {
-  font-size: clamp(18px, 4vw, 28px);
+  font-size: clamp(22px, 4vw, 34px);
   color: #fff;
-  text-shadow: 0 3px 0 #7c4a12;
+  text-shadow: 0 3px 0 #7c4a12, 0 0 18px rgba(245, 197, 24, 0.7);
 }
 
 .panel button {
-  min-width: 180px;
-  min-height: 48px;
+  min-width: 200px;
+  min-height: 52px;
   border: none;
   border-radius: 14px;
   font-weight: 900;
   font-size: 16px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   cursor: pointer;
   background: linear-gradient(180deg, #fff4c2, #f5c518 45%, #d97706);
-  color: #3f2208;
+  color: #2a1608;
   box-shadow: 0 5px 0 #92400e;
 }

@@ -340,6 +340,7 @@
 }
 
 .stage.stagePots { --chrome: 336px; }
+.stageMust { --chrome: 348px; }
 
 .vignette {
   pointer-events: none;
@@ -644,6 +645,19 @@
   text-shadow: 0 0 14px color-mix(in srgb, var(--accent, #fde68a) 70%, transparent);
 }
 
+.winPlaque[data-skin='golden-must'] {
+  min-width: min(460px, 94%);
+  min-height: 84px;
+  border: 0;
+  background: url('/img/slots/win-plaque.jpg') center / 100% 100% no-repeat;
+}
+
+.winPlaque[data-skin='golden-must'] strong {
+  color: #fff6c2;
+  font-size: clamp(26px, 5vw, 40px);
+  text-shadow: 0 2px 0 #3a2208, 0 0 12px rgba(0, 0, 0, 0.8);
+}
+
 .winPlaque[data-skin='hex-vault'] strong { color: #fdba74; }
 .winPlaque[data-skin='oak-fortune'] strong { color: #bef264; }
 .winPlaque[data-skin='neon-river'] strong { color: #67e8f9; }
@@ -760,7 +774,7 @@
 
 .buyArt {
   width: 100% !important;
-  height: 132px !important;
+  height: 86px !important;
   object-fit: cover !important;
   border-radius: 0 !important;
   box-shadow: none !important;
@@ -1783,12 +1797,14 @@
 }
 
 .overlay {
-  position: absolute;
+  position: fixed;
   inset: 0;
-  z-index: 6;
+  z-index: 90;
   display: grid;
   place-items: center;
-  background: rgba(0, 0, 0, 0.45);
+  overflow: auto;
+  padding: 16px 12px;
+  background: rgba(0, 0, 0, 0.62);
 }
 
 .sheet {
@@ -1978,6 +1994,8 @@
 
 @media (max-height: 760px) {
   .stage { --chrome: 236px; }
+  .stageMust { --chrome: 276px; }
+  .winPlaque[data-skin='golden-must'] { min-height: 58px; }
   .wordmark { height: 36px; }
   .winPlaque { min-height: 30px; min-width: 0; padding: 2px 10px; }
   .winPlaque strong { font-size: 18px; }

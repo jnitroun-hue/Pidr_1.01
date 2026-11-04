@@ -103,8 +103,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(circle at 32% 28%, #fff 0 7%, var(--accent, #f5c518) 34%, color-mix(in srgb, var(--accent, #f5c518) 42%, #000) 72%);
-  color: var(--ink, #2a1608);
+  background: radial-gradient(circle at 50% 16%, #fff6c8 0 4%, var(--accent, #f5c518) 26%, #9a3412 78%);
+  color: #2a1608;
   box-shadow:
     0 0 0 6px #1a120c,
     0 0 0 8px color-mix(in srgb, var(--accent, #f5c518) 80%, white),
@@ -136,8 +136,8 @@
   to { transform: rotate(1turn); }
 }
 
-.spin b { font-size: 13px; letter-spacing: 0.04em; }
-.spin small { font-size: 18px; line-height: 1; }
+.spin b { font-size: 12px; letter-spacing: 0.06em; color: #2a1608; text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35); }
+.spin small { font-size: 18px; line-height: 1; color: #2a1608; }
 
 .stake {
   display: grid;

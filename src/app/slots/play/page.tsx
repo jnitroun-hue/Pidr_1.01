@@ -722,7 +722,7 @@ function PlayInner() {
 
   return (
     <main
-      className={`${styles.stage} ${inBonus ? styles.stageBonus : ''} ${pots ? styles.stagePots : ''}`}
+      className={`${styles.stage} ${game.id === 'golden-must' ? styles.stageMust : ''} ${inBonus ? styles.stageBonus : ''} ${pots ? styles.stagePots : ''}`}
       style={{ backgroundImage: `url(${slotBackdrop(game.id)})`, ['--accent' as string]: game.accent }}
     >
       <div className={styles.vignette} />
@@ -821,7 +821,7 @@ function PlayInner() {
             ) : null}
             </div>
             {feature?.curtainWheel && phase === 'curtain' ? (
-              <CurtainWheel heroSrc={heroSrc} index={feature.curtainWheel.index} auto={autoLeft > 0} onDone={release} />
+              <CurtainWheel index={feature.curtainWheel.index} auto={autoLeft > 0} onDone={release} />
             ) : null}
             {feature?.pick?.cells?.length && phase === 'pick' ? (
               <PickBonus

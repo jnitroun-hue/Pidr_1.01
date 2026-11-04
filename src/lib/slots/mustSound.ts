@@ -1,17 +1,30 @@
-/** Оригинальные звуки только для «Козырного уса». Синтез, без чужих семплов. */
+/** Звуки «Козырного уса»: свои записи, не писк осциллятора. */
 
 const KEY = 'must_sound_enabled';
 
-type Stoppable = { stop: () => void };
+type Clip = 'bed' | 'spin' | 'stop' | 'hit' | 'win' | 'nice' | 'mega' | 'epic' | 'wheel';
+
+const URLS: Record<Clip, string> = {
+  bed: '/sfx/must/bed.wav',
+  spin: '/sfx/must/spin.wav',
+  stop: '/sfx/must/stop.wav',
+  hit: '/sfx/must/hit.wav',
+  win: '/sfx/must/win.wav',
+  nice: '/sfx/must/big.wav',
+  mega: '/sfx/must/mega.wav',
+  epic: '/sfx/must/epic.wav',
+  wheel: '/sfx/must/wheel.wav',
+};
 
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
-let noise: AudioBuffer | null = null;
-let enabled = true;
-let spinTimer = 0;
-let spinGain: GainNode | null = null;
+let musicGain: GainNode | null = null;
+let bedSource: AudioBufferSourceNode | null = null;
 let spinSource: AudioBufferSourceNode | null = null;
-const live = new Set<Stoppable>();
+let spinGain: GainNode | null = null;
+let enabled = true;
+const cache = new Map<Clip, Promise<AudioBuffer | null>>();
+const live = new Set<AudioBufferSourceNode>();
 
 function readEnabled(): boolean {
   if (typeof window === 'undefined') return true;
@@ -37,78 +50,84 @@ function context(): AudioContext | null {
     if (!Ctx) return null;
     ctx = new Ctx();
     master = ctx.createGain();
-    master.gain.value = enabled ? 0.8 : 0;
+    master.gain.value = enabled ? 0.9 : 0;
     master.connect(ctx.destination);
-    const buffer = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < data.length; i += 1) data[i] = Math.random() * 2 - 1;
-    noise = buffer;
   }
   return ctx;
+}
+
+function load(clip: Clip): Promise<AudioBuffer | null> {
+  const audio = context();
+  if (!audio) return Promise.resolve(null);
+  const cached = cache.get(clip);
+  if (cached) return cached;
+  const pending = fetch(URLS[clip])
+    .then((response) => (response.ok ? response.arrayBuffer() : null))
+    .then((bytes) => (bytes ? audio.decodeAudioData(bytes.slice(0)) : null))
+    .catch(() => null);
+  cache.set(clip, pending);
+  return pending;
+}
+
+function start(buffer: AudioBuffer, when: number, volume: number, loop = false, rate = 1): AudioBufferSourceNode | null {
+  const audio = context();
+  if (!audio || !master || !enabled) return null;
+  const source = audio.createBufferSource();
+  const gain = audio.createGain();
+  source.buffer = buffer;
+  source.loop = loop;
+  source.playbackRate.value = rate;
+  gain.gain.value = volume;
+  source.connect(gain);
+  gain.connect(master);
+  source.start(when);
+  if (!loop) {
+    live.add(source);
+    source.onended = () => live.delete(source);
+  }
+  return source;
 }
 
 export function unlockMustSound(): Promise<void> {
   const audio = context();
   if (!audio) return Promise.resolve();
-  if (audio.state === 'suspended') return audio.resume().then(() => undefined);
-  return Promise.resolve();
+  const ready = audio.state === 'suspended' ? audio.resume().then(() => undefined) : Promise.resolve();
+  return ready.then(() => {
+    playMustMusic();
+  });
 }
 
-function drop(item: Stoppable) {
-  live.delete(item);
+export function playMustMusic(): void {
+  if (!enabled || bedSource) return;
+  void load('bed').then((buffer) => {
+    const audio = context();
+    if (!buffer || !enabled || bedSource || !audio || !master) return;
+    musicGain = audio.createGain();
+    musicGain.gain.value = 0.34;
+    musicGain.connect(master);
+    const source = audio.createBufferSource();
+    source.buffer = buffer;
+    source.loop = true;
+    source.connect(musicGain);
+    source.start();
+    bedSource = source;
+  });
 }
 
-function tone(freq: number, when: number, duration: number, type: OscillatorType, volume: number, slide = freq) {
-  const audio = context();
-  if (!audio || !master || !enabled) return;
-  const osc = audio.createOscillator();
-  const gain = audio.createGain();
-  osc.type = type;
-  osc.frequency.setValueAtTime(freq, when);
-  osc.frequency.exponentialRampToValueAtTime(Math.max(40, slide), when + duration);
-  gain.gain.setValueAtTime(0.0001, when);
-  gain.gain.exponentialRampToValueAtTime(volume, when + 0.02);
-  gain.gain.exponentialRampToValueAtTime(0.0001, when + duration);
-  osc.connect(gain);
-  gain.connect(master);
-  osc.start(when);
-  osc.stop(when + duration + 0.02);
-  const item = { stop: () => { try { osc.stop(); } catch { /* already stopped */ } } };
-  live.add(item);
-  osc.onended = () => drop(item);
-}
-
-function burst(when: number, duration: number, volume: number, freq: number) {
-  const audio = context();
-  if (!audio || !master || !noise || !enabled) return;
-  const source = audio.createBufferSource();
-  source.buffer = noise;
-  const filter = audio.createBiquadFilter();
-  filter.type = 'bandpass';
-  filter.frequency.value = freq;
-  filter.Q.value = 0.7;
-  const gain = audio.createGain();
-  gain.gain.setValueAtTime(volume, when);
-  gain.gain.exponentialRampToValueAtTime(0.0001, when + duration);
-  source.connect(filter);
-  filter.connect(gain);
-  gain.connect(master);
-  source.start(when);
-  source.stop(when + duration);
-  const item = { stop: () => { try { source.stop(); } catch { /* already stopped */ } } };
-  live.add(item);
-  source.onended = () => drop(item);
+function stopNode(source: AudioBufferSourceNode | null) {
+  if (!source) return;
+  try { source.stop(); } catch { /* already stopped */ }
+  live.delete(source);
 }
 
 export function stopMustAudio(): void {
-  if (spinTimer) {
-    window.clearInterval(spinTimer);
-    spinTimer = 0;
-  }
-  try { spinSource?.stop(); } catch { /* already stopped */ }
+  stopNode(spinSource);
   spinSource = null;
   spinGain = null;
-  for (const item of live) item.stop();
+  stopNode(bedSource);
+  bedSource = null;
+  musicGain = null;
+  for (const source of live) stopNode(source);
   live.clear();
 }
 
@@ -117,92 +136,83 @@ export function setMustSoundOn(next: boolean): void {
   if (typeof window !== 'undefined') {
     try { localStorage.setItem(KEY, next ? '1' : '0'); } catch { /* ignore */ }
   }
-  if (master && ctx) master.gain.setValueAtTime(next ? 0.8 : 0, ctx.currentTime);
+  if (master && ctx) master.gain.setValueAtTime(next ? 0.9 : 0, ctx.currentTime);
   if (!next) stopMustAudio();
 }
 
 export function playMustSpin(): void {
-  const audio = context();
-  if (!audio || !master || !noise || !enabled) return;
-  stopMustAudio();
-  unlockMustSound();
-  const source = audio.createBufferSource();
-  source.buffer = noise;
-  source.loop = true;
-  const filter = audio.createBiquadFilter();
-  filter.type = 'bandpass';
-  filter.frequency.value = 280;
-  filter.Q.value = 0.6;
-  const gain = audio.createGain();
-  gain.gain.value = 0.045;
-  source.connect(filter);
-  filter.connect(gain);
-  gain.connect(master);
-  source.start();
-  spinSource = source;
-  spinGain = gain;
-  spinTimer = window.setInterval(() => {
-    if (!enabled || !ctx) return;
-    burst(ctx.currentTime, 0.035, 0.05, 900 + Math.random() * 500);
-  }, 95);
+  if (!enabled) return;
+  stopMustSpin();
+  void load('spin').then((buffer) => {
+    const audio = context();
+    if (!buffer || !enabled || !audio || !master) return;
+    spinGain = audio.createGain();
+    spinGain.gain.value = 0.55;
+    spinGain.connect(master);
+    const source = audio.createBufferSource();
+    source.buffer = buffer;
+    source.loop = true;
+    source.connect(spinGain);
+    source.start();
+    spinSource = source;
+  });
 }
 
 export function stopMustSpin(): void {
-  if (!spinSource && !spinTimer) return;
-  if (spinTimer) {
-    window.clearInterval(spinTimer);
-    spinTimer = 0;
-  }
+  const running = Boolean(spinSource);
   const audio = ctx;
-  if (audio && spinGain) {
-    const now = audio.currentTime;
-    spinGain.gain.cancelScheduledValues(now);
-    spinGain.gain.setValueAtTime(spinGain.gain.value, now);
-    spinGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
-  }
+  const gain = spinGain;
   const source = spinSource;
   spinSource = null;
-  window.setTimeout(() => {
-    try { source?.stop(); } catch { /* already stopped */ }
-  }, 100);
-  if (enabled && audio) burst(audio.currentTime, 0.07, 0.12, 180);
+  spinGain = null;
+  if (audio && gain) {
+    const now = audio.currentTime;
+    gain.gain.cancelScheduledValues(now);
+    gain.gain.setValueAtTime(Math.max(0.0001, gain.gain.value), now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
+  }
+  window.setTimeout(() => stopNode(source), 100);
+  if (enabled && running) {
+    void load('stop').then((buffer) => {
+      if (buffer && ctx) start(buffer, ctx.currentTime, 0.7);
+    });
+  }
 }
 
-/** Короткая сыгровка линий: по ноте на линию, не больше четырёх. */
 export function playMustHit(lines: number): number {
-  const audio = context();
-  if (!audio || !enabled) return 0;
   const count = Math.max(1, Math.min(4, lines));
-  const scale = [523, 659, 784, 1046];
-  const now = audio.currentTime + 0.02;
-  for (let i = 0; i < count; i += 1) tone(scale[i], now + i * 0.09, 0.16, 'triangle', 0.16);
-  return count * 0.09;
+  void load('hit').then((buffer) => {
+    if (!buffer || !ctx || !enabled) return;
+    const now = ctx.currentTime + 0.02;
+    for (let index = 0; index < count; index += 1) {
+      start(buffer, now + index * 0.12, 0.62, false, 1 + index * 0.08);
+    }
+  });
+  return count * 0.12;
 }
 
-/** Колокол обычного выигрыша. `delay` — после сыгровки, чтобы не слиплись. */
 export function playMustWin(delay = 0): void {
-  const audio = context();
-  if (!audio || !enabled) return;
-  const now = audio.currentTime + delay;
-  tone(880, now, 0.34, 'sine', 0.2, 660);
-  tone(1320, now, 0.22, 'triangle', 0.08);
-  burst(now, 0.12, 0.06, 2400);
+  void load('win').then((buffer) => {
+    if (buffer && ctx && enabled) start(buffer, ctx.currentTime + delay, 0.72);
+  });
 }
 
 export function playMustBig(tier: 'nice' | 'mega' | 'epic'): void {
-  const audio = context();
-  if (!audio || !enabled) return;
-  const now = audio.currentTime + 0.02;
-  const nice = [523, 659, 784, 1046];
-  const mega = [392, 523, 659, 784, 1046, 1318];
-  const epic = [349, 440, 523, 698, 880, 1046, 1397, 1760];
-  const notes = tier === 'epic' ? epic : tier === 'mega' ? mega : nice;
-  const step = tier === 'epic' ? 0.11 : tier === 'mega' ? 0.1 : 0.09;
-  notes.forEach((freq, index) => {
-    tone(freq, now + index * step, 0.28, 'triangle', tier === 'nice' ? 0.16 : 0.18);
-    tone(freq * 2, now + index * step, 0.18, 'sine', 0.05);
+  const clip: Clip = tier === 'epic' ? 'epic' : tier === 'mega' ? 'mega' : 'nice';
+  if (musicGain && ctx) {
+    const now = ctx.currentTime;
+    musicGain.gain.cancelScheduledValues(now);
+    musicGain.gain.setValueAtTime(musicGain.gain.value, now);
+    musicGain.gain.linearRampToValueAtTime(0.08, now + 0.15);
+    musicGain.gain.linearRampToValueAtTime(0.34, now + 3.2);
+  }
+  void load(clip).then((buffer) => {
+    if (buffer && ctx && enabled) start(buffer, ctx.currentTime + 0.02, tier === 'nice' ? 0.75 : 0.85);
   });
-  const end = now + notes.length * step;
-  tone(tier === 'epic' ? 196 : 262, now, end - now, 'sawtooth', tier === 'epic' ? 0.05 : 0.03);
-  burst(end, 0.4, tier === 'epic' ? 0.1 : 0.06, 1400);
+}
+
+export function playMustWheel(): void {
+  void load('wheel').then((buffer) => {
+    if (buffer && ctx && enabled) start(buffer, ctx.currentTime, 0.55);
+  });
 }

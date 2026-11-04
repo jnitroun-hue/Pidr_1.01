@@ -25,9 +25,9 @@ const TITLE: Record<Tier, 'big' | 'mega' | 'epic'> = {
 };
 
 const ART: Record<Tier, string> = {
-  nice: '/img/slots/win-nice.jpg',
+  nice: '/img/slots/win-big.jpg',
   mega: '/img/slots/win-mega.jpg',
-  sensational: '/img/slots/win-sensational.jpg',
+  sensational: '/img/slots/win-epic.jpg',
 };
 
 export default function BigWin({ multiple, amountLabel, onClose }: Props) {
@@ -67,6 +67,7 @@ export default function BigWin({ multiple, amountLabel, onClose }: Props) {
         ))}
       </div>
       <div className={styles.card}>
+        <p>{title}</p>
         <strong>x{shown}</strong>
         <b>{amountLabel}</b>
         <button type="button" onClick={onClose}>{copy.collect}</button>
