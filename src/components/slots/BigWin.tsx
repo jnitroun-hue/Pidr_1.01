@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { cabinetCopy, useSlotLocale } from '@/lib/slots/locale';
 import styles from './BigWin.module.css';
 
-type Tier = 'nice' | 'mega' | 'sensational' | 'max';
+type Tier = 'nice' | 'mega' | 'epic' | 'sensational' | 'max';
 
 type Props = {
   multiple: number;
@@ -15,22 +15,25 @@ type Props = {
 
 function tierOf(multiple: number, capped: boolean): Tier {
   if (capped) return 'max';
-  if (multiple >= 100) return 'sensational';
+  if (multiple >= 500) return 'sensational';
+  if (multiple >= 100) return 'epic';
   if (multiple >= 50) return 'mega';
   return 'nice';
 }
 
-const TITLE: Record<Tier, 'big' | 'mega' | 'epic' | 'maxWin'> = {
+const TITLE: Record<Tier, 'big' | 'mega' | 'epic' | 'sensational' | 'maxWin'> = {
   nice: 'big',
   mega: 'mega',
-  sensational: 'epic',
+  epic: 'epic',
+  sensational: 'sensational',
   max: 'maxWin',
 };
 
 const ART: Record<Tier, string> = {
   nice: '/img/slots/win-big.jpg',
-  mega: '/img/slots/win-mega.jpg',
-  sensational: '/img/slots/win-epic.jpg',
+  mega: '/img/slots/win-mega-hall.jpg',
+  epic: '/img/slots/win-epic-hall.jpg',
+  sensational: '/img/slots/win-sensational.jpg',
   max: '/img/slots/win-max.jpg',
 };
 
@@ -45,7 +48,7 @@ export default function BigWin({ multiple, amountLabel, capped = false, onClose 
   useEffect(() => {
     let frame = 0;
     const start = performance.now();
-    const duration = tier === 'max' ? 2400 : tier === 'sensational' ? 1700 : tier === 'mega' ? 1300 : 900;
+    const duration = tier === 'max' || tier === 'sensational' ? 2200 : tier === 'epic' ? 1700 : tier === 'mega' ? 1400 : 900;
     const tick = (now: number) => {
       const progress = Math.min(1, (now - start) / duration);
       const eased = 1 - (1 - progress) ** 3;
@@ -63,12 +66,16 @@ export default function BigWin({ multiple, amountLabel, capped = false, onClose 
       role="dialog"
       aria-label={title}
     >
-      <div className={styles.ring} />
-      <div className={styles.card}>
-        <p>{title}</p>
-        <strong>x{shown}</strong>
-        <b>{amountLabel}</b>
-        <button type="button" onClick={onClose}>{copy.collect}</button>
+      <div className={styles.stage}>
+        <img src={ART[tier]} alt="" draggable={false} />
+        <div className={styles.card}>
+          <p>{title}</p>
+          <strong>x{shown}</strong>
+          <div className={styles.under}>
+            <b>{amountLabel}</b>
+            <button type="button" onClick={onClose}>{copy.collect}</button>
+          </div>
+        </div>
       </div>
     </div>
   );

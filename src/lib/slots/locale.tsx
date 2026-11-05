@@ -77,6 +77,9 @@ export function cabinetCopy(lang: SlotLang, social: boolean) {
       anteOff: '+50%',
       turbo: 'Turbo',
       turboOff: 'off',
+      speedSlow: 'Slow',
+      speedMid: 'Medium',
+      speedFast: 'Fast',
       auto: 'Auto',
       autoHint: 'spins',
       info: 'Info',
@@ -101,6 +104,7 @@ export function cabinetCopy(lang: SlotLang, social: boolean) {
       big: 'BIG WIN',
       mega: 'MEGA WIN',
       epic: 'EPIC WIN',
+      sensational: 'SENSATIONAL',
       maxWin: 'MAX WIN',
     };
   }
@@ -116,6 +120,9 @@ export function cabinetCopy(lang: SlotLang, social: boolean) {
     anteOff: '+50%',
     turbo: 'Турбо',
     turboOff: 'выкл',
+    speedSlow: 'Медленно',
+    speedMid: 'Средне',
+    speedFast: 'Быстро',
     auto: 'Авто',
     autoHint: 'спины',
     info: 'Инфо',
@@ -140,6 +147,7 @@ export function cabinetCopy(lang: SlotLang, social: boolean) {
     big: 'БОЛЬШОЙ ВЫИГРЫШ',
     mega: 'МЕГА ВЫИГРЫШ',
     epic: 'ЭПИЧЕСКИЙ',
+    sensational: 'СЕНСАЦИЯ',
     maxWin: 'МАКСИМАЛЬНЫЙ ВЫИГРЫШ',
   };
 }

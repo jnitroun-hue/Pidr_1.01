@@ -214,11 +214,12 @@
 }
 
 .tools small {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 800;
   letter-spacing: 0;
   text-transform: none;
   opacity: 0.8;
+  white-space: nowrap;
 }
 
 .on {

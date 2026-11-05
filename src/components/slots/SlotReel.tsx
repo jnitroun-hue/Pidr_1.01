@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRef } from 'react';
 import { slotArt, slotHero } from '@/lib/slots/art';
 import { getSlotGame, type SlotSymbol } from '@/lib/slots/games';
 import { reelPlan, type ReelSpeed } from '@/lib/slots/speed';
@@ -54,6 +54,8 @@ type Props = {
   bonus: boolean;
   /** Барабан крутится дольше: ждём третий скаттер. */
   extraMs?: number;
+  /** Сумма ожиданий предыдущих барабанов, чтобы очередь не наезжала. */
+  priorExtra?: number;
   highlight: boolean[];
   /** Множитель шторы. null — барабан открыт. */
   curtain?: number | null;
@@ -73,45 +75,14 @@ function findSymbol(symbols: SlotSymbol[] | undefined, id: string): SlotSymbol |
 }
 
 export default function SlotReel({
-  gameId, reelIndex, rows, symbolIds, wildIds, landed, values, marks, locked, fresh, popping,
-  rolling, speed, bonus, extraMs = 0, highlight, curtain = null,
+  gameId, reelIndex, rows, wildIds, landed, values, marks, locked, fresh, popping,
+  rolling, speed, bonus, extraMs = 0, priorExtra = 0, highlight, curtain = null,
 }: Props) {
-  const [phase, setPhase] = useState<'idle' | 'clear' | 'ready' | 'go'>('idle');
   const held = useRef(landed);
   if (!rolling) held.current = landed;
-  const plan = reelPlan(speed, reelIndex, bonus);
-  const duration = plan.duration + extraMs;
+  const plan = reelPlan(speed, reelIndex, rows, bonus, priorExtra, extraMs);
   const anyLocked = Boolean(locked?.some(Boolean));
-  const filler = useMemo(() => {
-    const count = speed === 'fast' ? 8 : speed === 'mid' ? 10 : 12;
-    return Array.from({ length: count }, (_, index) => symbolIds[(index * 5 + reelIndex * 3 + 1) % symbolIds.length]);
-  }, [symbolIds, reelIndex, rolling, speed]);
-  const spinning = !anyLocked && (phase === 'ready' || phase === 'go');
-  const strip = spinning ? [...landed, ...filler] : landed;
-  const startShift = filler.length;
-
-  useEffect(() => {
-    if (!rolling) {
-      setPhase('idle');
-      return;
-    }
-    if (anyLocked) {
-      setPhase('go');
-      return;
-    }
-    setPhase('idle');
-    let frame = 0;
-    const timer = window.setTimeout(() => {
-      setPhase('ready');
-      frame = requestAnimationFrame(() => {
-        frame = requestAnimationFrame(() => setPhase('go'));
-      });
-    }, plan.delay);
-    return () => {
-      window.clearTimeout(timer);
-      cancelAnimationFrame(frame);
-    };
-  }, [rolling, landed.join('|'), plan.delay, anyLocked]);
+  const dropping = rolling && !anyLocked;
 
   const symbols = getSlotGame(gameId)?.symbols;
 
@@ -129,63 +100,68 @@ export default function SlotReel({
   }
 
   const faceLanded = rolling ? held.current : landed;
-  const cells = (
-    <div className={styles.reelCells}>
-      {faceLanded.map((id, row) => {
-        const isLocked = Boolean(locked?.[row]);
-        const respinning = rolling && anyLocked && !isLocked;
-        const boardHot = !rolling && highlight.some(Boolean);
-        const hot = boardHot && highlight[row];
-        const multiplier = multiplierOf(id);
-        const mark = marks?.[row] ?? null;
-        const value = values?.[row] ?? null;
-        const landWild = !rolling && (wildIds.includes(id) || multiplier != null);
-        const classes = [
-          styles.cell,
-          hot ? styles.hot : '',
-          boardHot && !hot ? styles.dim : '',
-          findSymbol(symbols, id)?.scatter || findSymbol(symbols, id)?.bonusCoin ? `${styles.cellBonus} ${SCATTER_FX[gameId] ?? ''}` : '',
-          findSymbol(symbols, id)?.wild ? styles.cellWild : '',
-          mark ? MARK_CLASS[mark] : '',
-          isLocked ? styles.cellLocked : '',
-          respinning ? styles.cellRespin : '',
-          fresh?.[row] ? styles.cellFresh : '',
-          popping?.[row] ? styles.cellPop : '',
-          landWild && !fresh?.[row] ? styles.cellLand : '',
-        ].filter(Boolean).join(' ');
-        return (
-          <div key={`${reelIndex}-${row}-${id}-${mark ?? ''}-${value ?? ''}`} className={classes} style={{ ['--row' as string]: row }}>
-            {face(id, value, mark)}
-            {mark === 'slash' ? <i className={styles.slashLine} /> : null}
-            {mark === 'burn' ? <i className={styles.burnFlame} /> : null}
-          </div>
-        );
-      })}
-    </div>
-  );
+
+  function stack(ids: string[], kind: 'rest' | 'cell' | 'column') {
+    return (
+      <div
+        className={kind === 'column' ? `${styles.dropLayer} ${styles.columnDrop}` : kind === 'cell' ? styles.dropLayer : styles.reelCells}
+        style={kind === 'column' ? {
+          ['--spin-ms' as string]: `${plan.drop}ms`,
+          ['--drop-at' as string]: `${plan.delay}ms`,
+        } : undefined}
+      >
+        {ids.map((id, row) => {
+          const isLocked = Boolean(locked?.[row]);
+          const respinning = kind === 'rest' && rolling && anyLocked && !isLocked;
+          const boardHot = kind === 'rest' && !rolling && highlight.some(Boolean);
+          const hot = boardHot && highlight[row];
+          const multiplier = multiplierOf(id);
+          const showMeta = kind !== 'rest' || !dropping;
+          const mark = showMeta ? marks?.[row] ?? null : null;
+          const value = showMeta ? values?.[row] ?? null : null;
+          const landWild = kind === 'rest' && !rolling && (wildIds.includes(id) || multiplier != null);
+          const classes = [
+            styles.cell,
+            kind === 'cell' ? styles.cellDrop : '',
+            hot ? styles.hot : '',
+            boardHot && !hot ? styles.dim : '',
+            findSymbol(symbols, id)?.scatter || findSymbol(symbols, id)?.bonusCoin ? `${styles.cellBonus} ${SCATTER_FX[gameId] ?? ''}` : '',
+            findSymbol(symbols, id)?.wild ? styles.cellWild : '',
+            mark ? MARK_CLASS[mark] : '',
+            isLocked ? styles.cellLocked : '',
+            respinning ? styles.cellRespin : '',
+            kind === 'rest' && fresh?.[row] ? styles.cellFresh : '',
+            kind === 'rest' && popping?.[row] ? styles.cellPop : '',
+            landWild && !fresh?.[row] ? styles.cellLand : '',
+          ].filter(Boolean).join(' ');
+          return (
+            <div
+              key={`${kind}-${reelIndex}-${row}-${id}`}
+              className={classes}
+              style={{
+                ['--row' as string]: row,
+                ['--drop-ms' as string]: `${plan.drop}ms`,
+                ['--drop-at' as string]: `${plan.delay + row * plan.step}ms`,
+              }}
+            >
+              {face(id, value, mark)}
+              {mark === 'slash' ? <i className={styles.slashLine} /> : null}
+              {mark === 'burn' ? <i className={styles.burnFlame} /> : null}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
 
   return (
     <div
-      className={`${styles.reelWindow} ${spinning ? styles.reelBusy : ''} ${phase === 'idle' ? styles.reelIdle : ''} ${extraMs > 0 && rolling ? styles.reelAnticipate : ''}`}
+      className={`${styles.reelWindow} ${dropping ? styles.reelBusy : ''} ${!rolling ? styles.reelIdle : ''} ${extraMs > 0 && rolling ? styles.reelAnticipate : ''}`}
       style={{ ['--rows' as string]: rows }}
     >
-      {spinning ? (
-        <div
-          className={`${styles.reelStrip} ${phase === 'go' ? styles.reelGo : ''}`}
-          style={{
-            ['--shift' as string]: String(startShift),
-            ['--spin-ms' as string]: `${duration}ms`,
-            transform: phase === 'ready' ? `translateY(calc(${startShift} * var(--cell) * -1))` : undefined,
-          }}
-        >
-          {strip.map((id, index) => (
-              <div key={`${reelIndex}-${index}-${id}`} className={`${styles.cell} ${findSymbol(symbols, id)?.scatter || findSymbol(symbols, id)?.bonusCoin ? styles.cellBonus : ''} ${findSymbol(symbols, id)?.wild ? styles.cellWild : ''}`}>
-                {face(id)}
-              </div>
-          ))}
-        </div>
-      ) : cells}
-      {curtain != null && !spinning ? (
+      {stack(faceLanded, 'rest')}
+      {dropping ? stack(landed, plan.mode) : null}
+      {curtain != null && !dropping ? (
         <div className={styles.curtain} key={`curtain-${reelIndex}-${curtain}`}>
           <img src={slotHero(gameId)} alt="" draggable={false} />
           <b>x{curtain}</b>

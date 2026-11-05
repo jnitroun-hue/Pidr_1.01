@@ -49,25 +49,7 @@ export default function CurtainWheel({ index, auto, onDone }: Props) {
         <p>{copy.wheelTitle}</p>
         <div className={styles.bezel}>
           <i className={styles.pointer} />
-          <div className={`${styles.wheel} ${angle ? styles.spinning : ''}`} style={{ transform: `rotate(${angle}deg)` }}>
-            {CURTAIN_WHEEL.map((item, itemIndex) => (
-              <span
-                key={item.label}
-                className={landed && itemIndex === index ? styles.landedLabel : ''}
-                style={{ transform: `rotate(${itemIndex * SEGMENT}deg) translateY(calc(var(--wheel) * -0.27))` }}
-              >
-                <img
-                  src={`/img/slots/sector-${item.spins}-${item.min}.jpg`}
-                  alt={`${item.spins} x${item.min}`}
-                  draggable={false}
-                  style={{
-                    transform: `rotate(${-(itemIndex * SEGMENT + angle)}deg)`,
-                    transition: angle ? 'transform 4.3s cubic-bezier(0.12, 0.68, 0.05, 1)' : 'none',
-                  }}
-                />
-              </span>
-            ))}
-          </div>
+          <div className={`${styles.wheel} ${angle ? styles.spinning : ''}`} style={{ transform: `rotate(${angle}deg)` }} />
         </div>
         {landed ? <strong>{face.spins} · x{face.min}</strong> : null}
         <button type="button" onClick={landed ? onDone : launch}>{landed ? copy.spin : copy.launch}</button>

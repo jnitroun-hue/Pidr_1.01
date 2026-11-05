@@ -383,7 +383,7 @@ function PlayInner() {
     setRibbon('');
     setRolling(true);
     beginRoll();
-    await wait(reelSpinMs(live.current.speed, game.reels, bonus) + Math.max(0, ...extraMs));
+    await wait(keepLocked ? pace().respin : reelSpinMs(live.current.speed, game.reels, game.rows, bonus, extraMs));
     setRolling(false);
     setExtra([]);
     setShown({ board });
@@ -396,7 +396,8 @@ function PlayInner() {
     setShown({ board: { ...board, wins: EMPTY_WINS } });
     setRolling(true);
     beginRoll();
-    await wait(Math.max(pace().respin, reelSpinMs(live.current.speed, game.reels, false)));
+    const lockedSpin = board.locked?.some((reel) => reel.some(Boolean));
+    await wait(lockedSpin ? pace().respin : reelSpinMs(live.current.speed, game.reels, game.rows, false));
     setRolling(false);
     setShown({ board });
     setRibbon(board.label ?? '');
@@ -801,6 +802,7 @@ function PlayInner() {
                   speed={speed}
                   bonus={inBonus}
                   extraMs={extra[reelIndex] ?? 0}
+                  priorExtra={extra.slice(0, reelIndex).reduce((sum, value) => sum + value, 0)}
                   highlight={reelHighlight(reelIndex)}
                   curtain={board.curtains?.[reelIndex] ?? null}
                 />

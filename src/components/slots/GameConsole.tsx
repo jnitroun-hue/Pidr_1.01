@@ -54,7 +54,7 @@ export default function GameConsole(props: Props) {
   const theme = THEME[props.gameId] ?? THEME['golden-must'];
   const { lang, social } = useSlotLocale();
   const copy = cabinetCopy(lang, social);
-  const speedLabel = props.speed === 'fast' ? copy.on : props.speed === 'mid' ? 'x2' : copy.turboOff;
+  const speedLabel = props.speed === 'fast' ? copy.speedFast : props.speed === 'mid' ? copy.speedMid : copy.speedSlow;
   const keyLabel = lang === 'ru' ? props.winKey : props.winKey === 'Пути' ? copy.ways : props.winKey === 'Поле' ? copy.grid : copy.lines;
   return (
     <footer
