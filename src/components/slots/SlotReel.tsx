@@ -2,7 +2,7 @@
 
 import { useRef } from 'react';
 import { slotArt, slotHero } from '@/lib/slots/art';
-import { getSlotGame, type SlotSymbol } from '@/lib/slots/games';
+import { CURTAIN_MULTIPLIERS, getSlotGame, type SlotSymbol } from '@/lib/slots/games';
 import { reelPlan, type ReelSpeed } from '@/lib/slots/speed';
 import type { MarkKind } from '@/lib/slots/engine';
 import styles from '@/app/slots/Slots.module.css';
@@ -167,11 +167,31 @@ export default function SlotReel({
       {clearOld ? null : stack(faceLanded, 'rest')}
       {dropping ? stack(landed, plan.mode) : null}
       {curtain != null && !dropping ? (
-        <div className={styles.curtain} key={`curtain-${reelIndex}-${curtain}`}>
-          <img src={slotHero(gameId)} alt="" draggable={false} />
-          <b>x{curtain}</b>
-        </div>
+        <CurtainShow key={`curtain-${reelIndex}-${curtain}`} gameId={gameId} mult={curtain} />
       ) : null}
+    </div>
+  );
+}
+
+/** Пара из таблицы: выпавший множитель и сосед. Сторона победителя — 50/50 и не меняется, пока штора стоит. */
+function CurtainShow({ gameId, mult }: { gameId: string; mult: number }) {
+  const deal = useRef<{ top: number; bottom: number; pick: 'top' | 'bottom' } | null>(null);
+  if (!deal.current) {
+    const pool = CURTAIN_MULTIPLIERS.filter((value) => value !== mult);
+    const other = pool[Math.floor(Math.random() * pool.length)] ?? mult;
+    const pickTop = Math.random() < 0.5;
+    deal.current = {
+      top: pickTop ? mult : other,
+      bottom: pickTop ? other : mult,
+      pick: pickTop ? 'top' : 'bottom',
+    };
+  }
+  const { top, bottom, pick } = deal.current;
+  return (
+    <div className={styles.curtain} data-pick={pick}>
+      <b className={styles.curtainOffer} data-side="top">x{top}</b>
+      <img src={slotHero(gameId)} alt="" draggable={false} />
+      <b className={styles.curtainOffer} data-side="bottom">x{bottom}</b>
     </div>
   );
 }

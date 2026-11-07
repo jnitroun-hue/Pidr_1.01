@@ -5,7 +5,7 @@ const KEY = 'must_sound_enabled';
 type Clip = 'bed' | 'spin' | 'stop' | 'hit' | 'win' | 'nice' | 'mega' | 'epic' | 'epicMusic' | 'wheel';
 
 const URLS: Record<Clip, string> = {
-  bed: '/sfx/must/bed.wav',
+  bed: '/sfx/must/bed-fun.wav',
   spin: '/sfx/must/spin.wav',
   stop: '/sfx/must/stop.wav',
   hit: '/sfx/must/hit.wav',

@@ -1388,7 +1388,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
+  padding: 7% 8% 8%;
   overflow: hidden;
   pointer-events: none;
   background: #3a0a12 url('/img/slots/curtain-gold.jpg') center / cover no-repeat;
@@ -1422,23 +1423,36 @@
 .curtain img {
   position: relative;
   z-index: 1;
-  width: 86%;
-  height: 64%;
+  width: 100%;
+  height: 58%;
   object-fit: contain;
-  object-position: center bottom;
+  object-position: center center;
   filter: drop-shadow(0 10px 8px rgba(0, 0, 0, 0.5));
-  animation: curtainHero 0.42s 0.32s cubic-bezier(0.16, 0.84, 0.3, 1.2) both;
+  animation: mustPickBottom 1.45s 0.28s cubic-bezier(0.22, 0.7, 0.2, 1) both;
 }
 
-.curtain b {
+.curtain[data-pick='top'] img {
+  animation-name: mustPickTop;
+}
+
+.curtainOffer {
   position: relative;
-  z-index: 1;
-  margin: 0 0 10%;
-  font-size: calc(var(--cell) * 0.46);
+  z-index: 4;
+  margin: 0;
+  font-size: calc(var(--cell) * 0.42);
   line-height: 0.85;
   color: #fff;
   text-shadow: 0 3px 0 #7c2d12, 0 0 14px rgba(255, 244, 190, 0.95);
-  animation: curtainHero 0.38s 0.46s cubic-bezier(0.16, 0.84, 0.3, 1.3) both;
+  animation:
+    offerShow 0.28s 0.36s both,
+    offerLose 0.35s 1.5s forwards;
+}
+
+.curtain[data-pick='top'] .curtainOffer[data-side='top'],
+.curtain[data-pick='bottom'] .curtainOffer[data-side='bottom'] {
+  animation:
+    offerShow 0.28s 0.36s both,
+    offerWin 0.45s 1.42s both;
 }
 
 @keyframes curtainLeft {
@@ -1451,9 +1465,39 @@
   to { transform: translateX(64%); }
 }
 
-@keyframes curtainHero {
-  from { transform: translateY(36%) scale(0.35); opacity: 0; }
-  to { transform: none; opacity: 1; }
+@keyframes mustPickTop {
+  0% { transform: translateY(34%) scale(0.35); opacity: 0; }
+  14% { transform: translateY(8%) scale(1.2); opacity: 1; }
+  30% { transform: translateY(-28%) scale(1.25); }
+  46% { transform: translateY(24%) scale(1.2); }
+  62% { transform: translateY(-32%) scale(1.32); }
+  78% { transform: translateY(4%) scale(1.25); }
+  100% { transform: translateY(-26%) scale(1.4); }
+}
+
+@keyframes mustPickBottom {
+  0% { transform: translateY(34%) scale(0.35); opacity: 0; }
+  14% { transform: translateY(8%) scale(1.2); opacity: 1; }
+  30% { transform: translateY(-28%) scale(1.25); }
+  46% { transform: translateY(24%) scale(1.2); }
+  62% { transform: translateY(-8%) scale(1.25); }
+  78% { transform: translateY(30%) scale(1.35); }
+  100% { transform: translateY(24%) scale(1.4); }
+}
+
+@keyframes offerShow {
+  from { opacity: 0; transform: scale(0.5); filter: brightness(2.4); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+
+@keyframes offerLose {
+  to { opacity: 0.2; transform: scale(0.8); filter: saturate(0.35); }
+}
+
+@keyframes offerWin {
+  0% { transform: scale(1); filter: none; }
+  40% { transform: scale(1.2); filter: brightness(1.5); }
+  100% { transform: scale(1.08); filter: brightness(1.15); }
 }
 
 .ticker {
