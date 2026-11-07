@@ -50,18 +50,16 @@ export default function CurtainWheel({ index, auto, onDone }: Props) {
         <div className={styles.bezel}>
           <i className={styles.pointer} />
           <div className={`${styles.wheel} ${angle ? styles.spinning : ''}`} style={{ transform: `rotate(${angle}deg)` }}>
-            <div className={styles.pie} />
             {CURTAIN_WHEEL.map((sector, sectorIndex) => (
               <span
                 key={sector.label}
                 className={`${styles.mark} ${sectorIndex % 2 ? styles.onDark : styles.onGold} ${landed && sectorIndex === index ? styles.hit : ''}`}
-                style={{ transform: `rotate(${sectorIndex * SEGMENT}deg) translateY(calc(var(--wheel) * -0.28))` }}
+                style={{ transform: `rotate(${sectorIndex * SEGMENT}deg) translateY(calc(var(--wheel) * -0.31))` }}
               >
                 <b>{sector.spins}</b>
                 <small>x{sector.min}</small>
               </span>
             ))}
-            <div className={styles.hub} />
           </div>
         </div>
         {landed ? <strong>{face.spins} · x{face.min}</strong> : null}
