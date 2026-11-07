@@ -16,6 +16,8 @@ type Props = {
   balanceLabel: string;
   winLabel: string;
   winHot: boolean;
+  allowBuy?: boolean;
+  allowAuto?: boolean;
   onBuy: () => void;
   onToggleLines: () => void;
   onSpin: () => void;
@@ -75,10 +77,12 @@ export default function GameConsole(props: Props) {
           <span>{copy.stake}<b>{props.stakeLabel}</b></span>
         </div>
         <div className={styles.play}>
-          <button type="button" className={styles.buy} data-skin={props.gameId} disabled={props.locked} onClick={props.onBuy}>
-            <b>{copy.buy}</b>
-            <small>{copy.buyHint}</small>
-          </button>
+          {props.allowBuy !== false ? (
+            <button type="button" className={styles.buy} data-skin={props.gameId} disabled={props.locked} onClick={props.onBuy}>
+              <b>{copy.buy}</b>
+              <small>{copy.buyHint}</small>
+            </button>
+          ) : null}
           <button type="button" className={styles.spin} disabled={props.spinning} onClick={props.onSpin}>
             <b>{props.spinning ? '…' : spinWord(lang, props.gameId, theme.spin)}</b>
             <small>{props.stakeLabel}</small>
@@ -103,11 +107,13 @@ export default function GameConsole(props: Props) {
             <b>{copy.turbo}</b>
             <small>{speedLabel}</small>
           </button>
-          <button type="button" className={props.autoLeft ? styles.on : ''} onClick={props.onAuto} aria-label="Автоспины">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5a7 7 0 0 1 6.3 4H16v2h6V5h-2v2.1A9 9 0 1 0 21 13h-2a7 7 0 1 1-7-8z" /></svg>
-            <b>{copy.auto}</b>
-            <small>{props.autoLeft || copy.autoHint}</small>
-          </button>
+          {props.allowAuto !== false ? (
+            <button type="button" className={props.autoLeft ? styles.on : ''} onClick={props.onAuto} aria-label="Автоспины">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5a7 7 0 0 1 6.3 4H16v2h6V5h-2v2.1A9 9 0 1 0 21 13h-2a7 7 0 1 1-7-8z" /></svg>
+              <b>{copy.auto}</b>
+              <small>{props.autoLeft || copy.autoHint}</small>
+            </button>
+          ) : null}
           <button type="button" className={props.showLines ? styles.on : ''} aria-pressed={props.showLines} onClick={props.onToggleLines}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z" /></svg>
             <b>{keyLabel}</b>

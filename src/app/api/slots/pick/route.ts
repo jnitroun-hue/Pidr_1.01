@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase';
 import { getSlotGame } from '@/lib/slots/games';
 import { scoreArcherPick } from '@/lib/slots/engine';
 import { loadPick, savePick } from '@/lib/slots/pendingPick';
+import { setOpenPayout, withUserLock } from '@/lib/slots/roundLedger';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -34,10 +35,30 @@ export async function POST(req: NextRequest) {
   const pending = await loadPick(dbUserId, spinId);
   if (!pending) return noStore({ success: false, error: 'Тир уже закрыт' }, 404);
   if (pending.settled) {
-    return noStore({ success: true, balance: pending.settled.balance, totalWin: pending.settled.total, extra: pending.settled.extra, floorAdded: pending.settled.floorAdded, capped: pending.settled.capped });
+    return noStore({
+      success: true,
+      deferred: pending.settled.balance == null,
+      ...(pending.settled.balance == null ? {} : { balance: pending.settled.balance }),
+      totalWin: pending.settled.total,
+      extra: pending.settled.extra,
+      floorAdded: pending.settled.floorAdded,
+      capped: pending.settled.capped,
+    });
   }
 
   const scored = scoreArcherPick(pending.cells, opened, pending.missLimit, pending.already, pending.baseBet, pending.tier, pending.maxWin);
+
+  const locked = await withUserLock(String(dbUserId), () => setOpenPayout(String(dbUserId), spinId, scored.total, scored.capped));
+  if (locked && typeof locked === 'object' && 'locked' in locked) {
+    return noStore({ success: false, error: 'Раунд уже закрывается' }, 409);
+  }
+  if (locked === true) {
+    await savePick(dbUserId, spinId, {
+      ...pending,
+      settled: { balance: null, total: scored.total, extra: scored.extra, floorAdded: scored.floorAdded, capped: scored.capped },
+    });
+    return noStore({ success: true, deferred: true, totalWin: scored.total, extra: scored.extra, floorAdded: scored.floorAdded, capped: scored.capped });
+  }
 
   if (pending.mode === 'coins') {
     const current = Number(user.coins || 0);

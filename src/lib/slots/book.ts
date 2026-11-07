@@ -29,11 +29,24 @@ function boardSymbols(game: SlotGame, item: Board) {
   }));
 }
 
+function anticipation(game: SlotGame, item: Board): boolean[] {
+  const trigger = game.symbols.find((symbol) => symbol.scatter || symbol.bonusCoin)?.id;
+  if (!trigger) return item.grid.map(() => false);
+  let seen = 0;
+  return item.grid.map((reel) => {
+    const waiting = seen >= Math.max(1, game.trigger - 1);
+    if (reel.some((id) => id === trigger)) seen += 1;
+    return waiting;
+  });
+}
+
 function pushBoard(events: BookEvent[], game: SlotGame, item: Board, bet: number, gameType: 'basegame' | 'freegame', running: { total: number }) {
   events.push({
     index: events.length,
     type: 'reveal',
     board: boardSymbols(game, item),
+    paddingPositions: item.grid.map(() => null),
+    anticipation: anticipation(game, item),
     gameType,
     label: item.label ?? null,
     marks: item.marks ?? [],
@@ -130,7 +143,13 @@ export function toBook(game: SlotGame, round: RoundResult, bet: number, id: numb
     }
   }
 
-  events.push({ index: events.length, type: 'finalWin', amount: cents(round.totalWin, bet), capped: round.capped });
+  const payout = cents(round.totalWin, bet);
+  if (running.total <= 0) events.push({ index: events.length, type: 'setTotalWin', amount: 0 });
+  if (round.capped) {
+    events.push({ index: events.length, type: 'wincap', amount: payout });
+    events.push({ index: events.length, type: 'setTotalWin', amount: payout });
+  }
+  events.push({ index: events.length, type: 'finalWin', amount: payout, capped: round.capped });
 
-  return { id, events, payoutMultiplier: cents(round.totalWin, bet) };
+  return { id, events, payoutMultiplier: payout };
 }

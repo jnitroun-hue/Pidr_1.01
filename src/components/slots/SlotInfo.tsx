@@ -253,7 +253,11 @@ export default function SlotInfo({ game, bet, gram, onClose }: Props) {
               </div>
             </div>
             <p>{game.bonus.top}</p>
-            <p className={styles.note}>Покупка сразу открывает бонус этой игры. После одобрения на Stake Engine математика и механика больше не меняются.</p>
+            <p className={styles.note}>
+              {en
+                ? `A paid round is drawn on the server. The stake leaves the balance when the round starts, and the win is credited after the reels finish. Demo stays in the browser. Ante costs 1.5×, bonus buy 100×, super buy 500×. The cap is x${game.maxWinMultiplier}. Stake needs a separate book and lookup table for base, ante, buy and super buy, each inside the published RTP band.`
+                : `Платный раунд считается на сервере. Ставка списывается в момент пуска, выигрыш зачисляется после ролика. Демо остаётся в браузере. Анте стоит 1.5 ставки, покупка бонуса — 100, супер-покупка — 500. Потолок раунда — x${game.maxWinMultiplier}. Для Stake у базы, анте, покупки и супер-покупки отдельные книга и таблица весов, и каждый режим должен попасть в заявленную полосу RTP.`}
+            </p>
           </>
         )}
         {page === 3 && (

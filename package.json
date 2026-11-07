@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "check": "tsc --noEmit",
+    "slots:audit": "npx --yes tsx scripts/slots-audit.ts",
     "build:verify": "npm run check && npm run build",
     "start": "next start",
     "lint": "next lint"

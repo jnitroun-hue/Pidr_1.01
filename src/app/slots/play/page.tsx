@@ -221,6 +221,8 @@ function PlayInner() {
   const voiced = game.id === 'golden-must';
   const modeParam = params.get('mode');
   const mode: Mode = modeParam === 'coins' || modeParam === 'gram' ? modeParam : 'demo';
+  const allowAuto = params.get('autoplay') !== '0';
+  const allowBuy = params.get('buy') !== '0';
   const [betIndex, setBetIndex] = useState(Math.max(0, COIN_BETS.indexOf(50)));
   const [betOpen, setBetOpen] = useState(false);
   const [pickTotal, setPickTotal] = useState(0);
@@ -528,9 +530,11 @@ function PlayInner() {
           });
           const data = await response.json();
           if (!data.success) throw new Error(data.error || 'Тир не записался');
-          settledBalance.current = Number(data.balance);
-          const setter = live.current.mode === 'coins' ? setCoins : setGramUnits;
-          setter(settledBalance.current);
+          if (typeof data.balance === 'number') {
+            settledBalance.current = data.balance;
+            const setter = live.current.mode === 'coins' ? setCoins : setGramUnits;
+            setter(data.balance);
+          }
         } catch (err) {
           setError(err instanceof Error ? err.message : 'Тир не записался');
         }
@@ -562,6 +566,17 @@ function PlayInner() {
   /* Спин и покупка                                                      */
   /* ------------------------------------------------------------------ */
 
+  async function closeRound(spinId: string): Promise<number> {
+    const response = await fetch('/api/slots/end-round', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getApiHeaders() },
+      body: JSON.stringify({ spinId }),
+    });
+    const data = await response.json();
+    if (!data.success) throw new Error(data.error || 'Раунд не закрылся');
+    return Number(data.balance);
+  }
+
   async function spin(): Promise<boolean> {
     if (spinningRef.current) return false;
     if (voiced) await unlockMustSound();
@@ -591,11 +606,10 @@ function PlayInner() {
       const data = await response.json();
       if (!data.success) throw new Error(data.error || 'Спин не прошёл');
       const next = fromPayload(data);
-      const after = Number(data.balance);
       const setter = snap.mode === 'coins' ? setCoins : setGramUnits;
-      setter(Math.max(0, after - next.totalWin));
-      const paid = await present(next);
-      setter(paid ?? after);
+      setter(Number(data.balance));
+      await present(next);
+      setter(await closeRound(spinId));
       return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка спина');
@@ -637,11 +651,10 @@ function PlayInner() {
       const data = await response.json();
       if (!data.success) throw new Error(data.error || 'Покупка не прошла');
       const next = fromPayload(data);
-      const after = Number(data.balance);
       const setter = snap.mode === 'coins' ? setCoins : setGramUnits;
-      setter(Math.max(0, after - next.totalWin));
-      const paid = await present(next);
-      setter(paid ?? after);
+      setter(Number(data.balance));
+      await present(next);
+      setter(await closeRound(spinId));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка покупки');
     } finally {
@@ -863,10 +876,13 @@ function PlayInner() {
         balanceLabel={balanceLabel}
         winLabel={winSoFar > 0 ? money(winSoFar) : '—'}
         winHot={winSoFar > 0}
-        onBuy={() => setBuyMenu(true)}
+        allowBuy={allowBuy}
+        allowAuto={allowAuto}
+        onBuy={() => { if (allowBuy) setBuyMenu(true); }}
         onToggleLines={() => setShowLines((value) => !value)}
         onSpin={() => void spin()}
         onAuto={() => {
+          if (!allowAuto) return;
           if (autoLeft) {
             stopAuto.current = true;
             setAutoLeft(0);
@@ -921,7 +937,7 @@ function PlayInner() {
           </span>
         </button>
       )}
-      {buyMenu && (
+      {buyMenu && allowBuy && (
         <div className={styles.overlay}>
           <div className={`${styles.sheet} ${styles.buyModal}`}>
             <p className={styles.buyKicker}>{lang === 'en' ? 'Features' : 'Бонусы'}</p>

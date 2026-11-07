@@ -9,7 +9,7 @@ export type PendingPick = {
   maxWin: number;
   cells: { kind: 'mult' | 'miss'; value: number; amount: number }[];
   missLimit: number;
-  settled: { balance: number; total: number; extra: number; floorAdded: number; capped: boolean } | null;
+  settled: { balance: number | null; total: number; extra: number; floorAdded: number; capped: boolean } | null;
 };
 
 const memory = new Map<string, PendingPick>();
