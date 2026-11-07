@@ -54,8 +54,10 @@ type Props = {
   bonus: boolean;
   /** Барабан крутится дольше: ждём третий скаттер. */
   extraMs?: number;
-  /** Сумма ожиданий предыдущих барабанов, чтобы очередь не наезжала. */
+  /** Сумма ожиданий предыдущих играющих барабанов, чтобы очередь не наезжала. */
   priorExtra?: number;
+  /** Номер среди барабанов, которые в этом спине крутятся. */
+  playIndex?: number;
   highlight: boolean[];
   /** Множитель шторы. null — барабан открыт. */
   curtain?: number | null;
@@ -76,11 +78,11 @@ function findSymbol(symbols: SlotSymbol[] | undefined, id: string): SlotSymbol |
 
 export default function SlotReel({
   gameId, reelIndex, rows, wildIds, landed, values, marks, locked, fresh, popping,
-  rolling, speed, bonus, extraMs = 0, priorExtra = 0, highlight, curtain = null,
+  rolling, speed, bonus, extraMs = 0, priorExtra = 0, playIndex = reelIndex, highlight, curtain = null,
 }: Props) {
   const held = useRef(landed);
   if (!rolling) held.current = landed;
-  const plan = reelPlan(speed, reelIndex, rows, bonus, priorExtra, extraMs);
+  const plan = reelPlan(speed, playIndex, rows, bonus, priorExtra, extraMs);
   const anyLocked = Boolean(locked?.some(Boolean));
   const dropping = rolling && !anyLocked;
 
@@ -94,12 +96,13 @@ export default function SlotReel({
         <img src={slotArt(gameId, id)} alt="" draggable={false} />
         {symbol?.mystery ? <small className={styles.roleMystery}>?</small> : null}
         {mult ? <b className={styles.multBadge}>x{mult}</b> : null}
-        {value != null && curtain == null && !mult ? <b className={`${styles.valueBadge} ${mark === 'orb' ? styles.valueOrb : ''} ${mark === 'mult' ? styles.valueEdge : ''}`}>x{formatValue(value)}</b> : null}
+        {value != null && curtain == null && !mult && !symbol?.wild ? <b className={`${styles.valueBadge} ${mark === 'orb' ? styles.valueOrb : ''} ${mark === 'mult' ? styles.valueEdge : ''}`}>x{formatValue(value)}</b> : null}
       </>
     );
   }
 
   const faceLanded = rolling ? held.current : landed;
+  const clearOld = dropping && speed !== 'fast';
 
   function stack(ids: string[], kind: 'rest' | 'cell' | 'column') {
     return (
@@ -120,13 +123,15 @@ export default function SlotReel({
           const mark = showMeta ? marks?.[row] ?? null : null;
           const value = showMeta ? values?.[row] ?? null : null;
           const landWild = kind === 'rest' && !rolling && (wildIds.includes(id) || multiplier != null);
+          const settled = kind === 'rest';
+          const symbol = findSymbol(symbols, id);
           const classes = [
             styles.cell,
             kind === 'cell' ? styles.cellDrop : '',
             hot ? styles.hot : '',
             boardHot && !hot ? styles.dim : '',
-            findSymbol(symbols, id)?.scatter || findSymbol(symbols, id)?.bonusCoin ? `${styles.cellBonus} ${SCATTER_FX[gameId] ?? ''}` : '',
-            findSymbol(symbols, id)?.wild ? styles.cellWild : '',
+            settled && (symbol?.scatter || symbol?.bonusCoin) ? `${styles.cellBonus} ${SCATTER_FX[gameId] ?? ''}` : '',
+            settled && symbol?.wild ? styles.cellWild : '',
             mark ? MARK_CLASS[mark] : '',
             isLocked ? styles.cellLocked : '',
             respinning ? styles.cellRespin : '',
@@ -144,7 +149,7 @@ export default function SlotReel({
                 ['--drop-at' as string]: `${plan.delay + row * plan.step}ms`,
               }}
             >
-              {face(id, value, mark)}
+              {kind === 'cell' ? <span className={styles.cellDropFace}>{face(id, value, mark)}</span> : face(id, value, mark)}
               {mark === 'slash' ? <i className={styles.slashLine} /> : null}
               {mark === 'burn' ? <i className={styles.burnFlame} /> : null}
             </div>
@@ -156,10 +161,10 @@ export default function SlotReel({
 
   return (
     <div
-      className={`${styles.reelWindow} ${dropping ? styles.reelBusy : ''} ${!rolling ? styles.reelIdle : ''} ${extraMs > 0 && rolling ? styles.reelAnticipate : ''}`}
+      className={`${styles.reelWindow} ${clearOld ? styles.reelClear : ''} ${dropping ? styles.reelBusy : ''} ${!rolling ? styles.reelIdle : ''} ${extraMs > 0 && rolling ? styles.reelAnticipate : ''}`}
       style={{ ['--rows' as string]: rows }}
     >
-      {stack(faceLanded, 'rest')}
+      {clearOld ? null : stack(faceLanded, 'rest')}
       {dropping ? stack(landed, plan.mode) : null}
       {curtain != null && !dropping ? (
         <div className={styles.curtain} key={`curtain-${reelIndex}-${curtain}`}>

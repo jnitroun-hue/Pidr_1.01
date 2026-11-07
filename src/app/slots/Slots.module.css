@@ -943,6 +943,18 @@
   box-shadow: inset 0 0 0 1px rgba(255, 220, 160, 0.16), inset 0 12px 18px rgba(0, 0, 0, 0.45);
 }
 
+.reelClear {
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      rgba(255, 214, 120, 0.045) 0,
+      rgba(255, 214, 120, 0.045) calc(var(--cell) - 1px),
+      rgba(255, 214, 120, 0.16) calc(var(--cell) - 1px),
+      rgba(255, 214, 120, 0.16) var(--cell)
+    ),
+    #050403;
+}
+
 .reelWindow::before {
   content: "";
   pointer-events: none;
@@ -1006,9 +1018,17 @@
 }
 
 .cellDrop {
+  overflow: hidden;
+}
+
+.cellDropFace {
+  display: block;
+  width: 100%;
+  height: 100%;
+  position: relative;
   opacity: 0;
-  transform: translateY(-125%);
-  animation: symbolDrop var(--drop-ms) cubic-bezier(0.18, 0.7, 0.14, 1) both;
+  transform: translateY(-118%);
+  animation: symbolDrop var(--drop-ms) cubic-bezier(0.16, 0.84, 0.2, 1) both;
   animation-delay: var(--drop-at);
 }
 
@@ -1019,9 +1039,9 @@
 }
 
 @keyframes symbolDrop {
-  0% { transform: translateY(-125%); opacity: 0; }
-  18% { opacity: 1; }
-  74% { transform: translateY(7%); opacity: 1; }
+  0% { transform: translateY(-118%); opacity: 0; }
+  24% { opacity: 1; }
+  72% { transform: translateY(7%); opacity: 1; }
   100% { transform: translateY(0); opacity: 1; }
 }
 
@@ -1986,6 +2006,102 @@
 .congrats span {
   font-size: 16px;
   line-height: 1.35;
+}
+
+.featureEnd {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 16px;
+  border: 0;
+  font: inherit;
+  color: inherit;
+  background: rgba(0, 0, 0, 0.46);
+  cursor: pointer;
+}
+
+.featurePlaque {
+  width: min(92vw, 440px);
+  padding: 26px 18px 16px;
+  border-radius: 8px;
+  pointer-events: none;
+  text-align: center;
+  background:
+    linear-gradient(180deg, rgba(255, 236, 180, 0.16), transparent 28%),
+    linear-gradient(180deg, #2a1c0c 0%, #120c06 100%);
+  border: 2px solid #e8c56a;
+  box-shadow:
+    0 0 0 1px #5c4314,
+    0 0 0 7px rgba(0, 0, 0, 0.35),
+    0 0 36px rgba(245, 197, 24, 0.38),
+    inset 0 0 0 1px rgba(255, 244, 210, 0.28);
+}
+
+.featurePlaque p,
+.featurePlaque span,
+.featurePlaque strong,
+.featurePlaque em,
+.featurePlaque i,
+.featurePlaque small {
+  display: block;
+}
+
+.featurePlaque p {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(18px, 4.6vw, 26px);
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-indent: 0.18em;
+  color: #fff6d0;
+  text-shadow: 0 2px 0 #3a2208;
+}
+
+.featurePlaque span {
+  margin-top: 14px;
+  font-size: clamp(13px, 3.2vw, 16px);
+  font-weight: 900;
+  letter-spacing: 0.22em;
+  text-indent: 0.22em;
+  color: #fde68a;
+}
+
+.featurePlaque strong {
+  margin: 8px 0 10px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(40px, 11vw, 64px);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+  color: #ffe566;
+  text-shadow: 0 3px 0 #6b3a08, 0 0 16px rgba(250, 204, 21, 0.45);
+}
+
+.featurePlaque em {
+  font-style: normal;
+  font-size: clamp(13px, 3.4vw, 17px);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: #fffaf0;
+}
+
+.featurePlaque i {
+  margin-top: 8px;
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 800;
+  color: #fcd34d;
+}
+
+.featurePlaque small {
+  margin-top: 16px;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255, 246, 208, 0.72);
 }
 
 @keyframes popIn {

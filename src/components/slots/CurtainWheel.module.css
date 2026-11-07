@@ -63,10 +63,86 @@
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  background: #1a1008 url('/img/slots/wheel-set.jpg?v=3') center / 100% 100% no-repeat;
+  overflow: hidden;
+  background: #1a1008;
   box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.45);
   transition: transform 4.3s cubic-bezier(0.12, 0.68, 0.05, 1);
 }
+
+.pie {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 46%, rgba(255, 244, 210, 0.2), transparent 46%),
+    repeating-conic-gradient(from -18deg, transparent 0deg 35.2deg, rgba(28, 16, 6, 0.85) 35.2deg 36deg),
+    conic-gradient(
+      from -18deg,
+      #f3d78a 0deg 36deg,
+      #4a3518 36deg 72deg,
+      #e7c56e 72deg 108deg,
+      #3a2914 108deg 144deg,
+      #f0d48a 144deg 180deg,
+      #453216 180deg 216deg,
+      #e4c06a 216deg 252deg,
+      #3d2c16 252deg 288deg,
+      #f2d488 288deg 324deg,
+      #4a3518 324deg 360deg
+    );
+}
+
+.hub {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 4;
+  width: 16%;
+  height: 16%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle at 36% 32%, #fff6d0, #e7c56a 40%, #8a5a12 78%);
+  box-shadow: 0 0 0 3px #f8e7b0, 0 0 0 6px #5c3d12;
+}
+
+.mark {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--wheel) * 0.11);
+  height: calc(var(--wheel) * 0.09);
+  margin-left: calc(var(--wheel) * -0.055);
+  margin-top: calc(var(--wheel) * -0.045);
+  overflow: hidden;
+  transform-origin: center center;
+  pointer-events: none;
+  text-align: center;
+}
+
+.mark b,
+.mark small {
+  display: block;
+  max-width: 100%;
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 900;
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+}
+
+.mark b { font-size: calc(var(--wheel) * 0.068); }
+.mark small { margin-top: 1px; font-size: calc(var(--wheel) * 0.034); letter-spacing: 0; }
+
+.onGold b,
+.onGold small { color: #3a2208; text-shadow: 0 1px 0 rgba(255, 244, 210, 0.45); }
+.onDark b,
+.onDark small { color: #fff6d2; text-shadow: 0 1px 0 rgba(20, 12, 4, 0.85); }
+
+.hit b,
+.hit small { color: #fff; text-shadow: 0 1px 0 #3a2208, 0 0 8px rgba(255, 236, 170, 0.85); }
 
 .spinning { filter: saturate(1.08) contrast(1.05); }
 

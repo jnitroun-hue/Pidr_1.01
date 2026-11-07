@@ -39,7 +39,7 @@ import {
   stopMustSpin,
   unlockMustSound,
 } from '@/lib/slots/mustSound';
-import { anteCharge, reelSpinMs, type ReelSpeed } from '@/lib/slots/speed';
+import { anteCharge, isReelHeld, openOrder, openPriorExtra, reelSpinMs, type ReelSpeed } from '@/lib/slots/speed';
 import GameConsole from '@/components/slots/GameConsole';
 import SlotReel from '@/components/slots/SlotReel';
 import BigWin from '@/components/slots/BigWin';
@@ -161,6 +161,16 @@ const EN_FEATURE: Record<string, string> = {
   'frost-queen': 'Ice Throne',
   'blade-ronin': 'Slash',
 };
+
+function featureSpinLine(bonus: BonusPlay, en: boolean): string {
+  const counted = bonus.kind !== 'hold-win' && bonus.kind !== 'pick' ? bonus.spins.length : 0;
+  if (counted < 1) return en ? 'IN THE BONUS GAME' : 'В БОНУСНОЙ ИГРЕ';
+  if (en) return counted === 1 ? 'IN 1 FREE SPIN' : `IN ${counted} FREE SPINS`;
+  const mod10 = counted % 10;
+  const mod100 = counted % 100;
+  const single = mod10 === 1 && mod100 !== 11;
+  return single ? `В ${counted} БЕСПЛАТНОМ СПИНЕ` : `В ${counted} БЕСПЛАТНЫХ СПИНАХ`;
+}
 
 function introText(game: SlotGame, bonus: BonusPlay, lang: SlotLang): { title: string; text: string; button: string } {
   const spins = bonus.spins.length;
@@ -313,6 +323,12 @@ function PlayInner() {
         : { pop: 480, show: 860, showWin: 1500, respin: 1400, idle: 480 };
   }
 
+  function spinWait(locked: boolean[][] | undefined, bonus: boolean, extraMs: number[]) {
+    const held = Array.from({ length: game.reels }, (_, index) => isReelHeld(locked?.[index]));
+    if (held.every(Boolean)) return pace().respin;
+    return reelSpinMs(live.current.speed, game.reels, game.rows, bonus, extraMs, held);
+  }
+
   function anticipation(grid: string[][]): number[] {
     if (!trigger || game.trigger < 3) return grid.map(() => 0);
     let seen = 0;
@@ -374,16 +390,15 @@ function PlayInner() {
 
   async function rollTo(board: Board, bonus: boolean, keepLocked = false) {
     const extraMs = anticipation(board.grid);
+    const view = keepLocked
+      ? hideFreshCurtains(board)
+      : { ...board, wins: EMPTY_WINS, locked: undefined, marks: undefined, curtains: undefined };
     setExtra(extraMs);
-    setShown({
-      board: keepLocked
-        ? hideFreshCurtains(board)
-        : { ...board, wins: EMPTY_WINS, locked: undefined, marks: undefined, curtains: undefined },
-    });
+    setShown({ board: view });
     setRibbon('');
     setRolling(true);
     beginRoll();
-    await wait(keepLocked ? pace().respin : reelSpinMs(live.current.speed, game.reels, game.rows, bonus, extraMs));
+    await wait(spinWait(view.locked, bonus, extraMs));
     setRolling(false);
     setExtra([]);
     setShown({ board });
@@ -396,8 +411,7 @@ function PlayInner() {
     setShown({ board: { ...board, wins: EMPTY_WINS } });
     setRolling(true);
     beginRoll();
-    const lockedSpin = board.locked?.some((reel) => reel.some(Boolean));
-    await wait(lockedSpin ? pace().respin : reelSpinMs(live.current.speed, game.reels, game.rows, false));
+    await wait(spinWait(board.locked, false, []));
     setRolling(false);
     setShown({ board });
     setRibbon(board.label ?? '');
@@ -456,8 +470,8 @@ function PlayInner() {
     if (next.bonus) await playBonus(next, next.bonus);
     setWinSoFar(next.totalWin);
     const ratio = live.current.bet > 0 ? next.totalWin / live.current.bet : 0;
-    if (ratio >= 15) {
-      if (voiced) playMustBig(next.capped || ratio >= 100 ? 'epic' : ratio >= 50 ? 'mega' : 'nice');
+    if (ratio >= 15 && voiced) playMustBig(next.capped || ratio >= 100 ? 'epic' : ratio >= 50 ? 'mega' : 'nice');
+    if (!next.bonus && ratio >= 15) {
       setBigMultiple(ratio);
       await awaitUser(2600);
       setBigMultiple(null);
@@ -802,7 +816,8 @@ function PlayInner() {
                   speed={speed}
                   bonus={inBonus}
                   extraMs={extra[reelIndex] ?? 0}
-                  priorExtra={extra.slice(0, reelIndex).reduce((sum, value) => sum + value, 0)}
+                  priorExtra={openPriorExtra(board.locked, extra, reelIndex)}
+                  playIndex={openOrder(board.locked, reelIndex)}
                   highlight={reelHighlight(reelIndex)}
                   curtain={board.curtains?.[reelIndex] ?? null}
                 />
@@ -895,15 +910,16 @@ function PlayInner() {
         />
       )}
       {feature && phase === 'done' && bigMultiple == null && (
-        <div className={styles.overlay}>
-          <div className={styles.sheet}>
-            <img src={slotArt(game.id, trigger?.id ?? 'scatter')} alt="" />
-            <p>{feature.title}</p>
+        <button type="button" className={styles.featureEnd} onClick={release}>
+          <span className={styles.featurePlaque}>
+            <p>{lang === 'en' ? 'CONGRATULATIONS!' : 'ПОЗДРАВЛЯЕМ!'}</p>
+            <span>{lang === 'en' ? 'YOU WON' : 'ВЫ ВЫИГРАЛИ'}</span>
             <strong>{money(feature.totalWin)}</strong>
-            <span>{round?.capped ? copy.cap : feature.floorAdded > 0 ? `${copy.floor} ${money(feature.floorAdded)}` : copy.bonusDone}</span>
-            <button type="button" className={styles.sheetGo} onClick={release}>{copy.collect}</button>
-          </div>
-        </div>
+            <em>{featureSpinLine(feature, lang === 'en')}</em>
+            {round?.capped ? <i>{copy.cap}</i> : null}
+            <small>{lang === 'en' ? 'Click anywhere to continue' : 'Нажмите в любом месте, чтобы продолжить'}</small>
+          </span>
+        </button>
       )}
       {buyMenu && (
         <div className={styles.overlay}>

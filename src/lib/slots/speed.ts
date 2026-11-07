@@ -12,15 +12,39 @@ export type ReelPlan = {
   mode: 'cell' | 'column';
 };
 
-const SLOW = { drop: 180, step: 145, gap: 40 };
-const SLOW_BONUS = { drop: 200, step: 160, gap: 50 };
+const SLOW = { drop: 220, step: 200, gap: 70 };
+const SLOW_BONUS = { drop: 240, step: 220, gap: 80 };
 const MID = { drop: 460, gap: 80 };
 const MID_BONUS = { drop: 540, gap: 90 };
 const FAST_DROP = 240;
 
+/** Барабан не крутится: штора, заморозка или монета Hold & Win. */
+export function isReelHeld(locked: boolean[] | undefined): boolean {
+  return Boolean(locked?.some(Boolean));
+}
+
+/** Номер среди барабанов, которые в этом спине реально играют. */
+export function openOrder(locked: boolean[][] | undefined, reelIndex: number): number {
+  let order = 0;
+  for (let index = 0; index < reelIndex; index += 1) {
+    if (!isReelHeld(locked?.[index])) order += 1;
+  }
+  return order;
+}
+
+/** Ожидание только от предыдущих играющих барабанов. Закрытый не вставляет паузу. */
+export function openPriorExtra(locked: boolean[][] | undefined, extras: number[], reelIndex: number): number {
+  let prior = 0;
+  for (let index = 0; index < reelIndex; index += 1) {
+    if (!isReelHeld(locked?.[index])) prior += Math.max(0, extras[index] ?? 0);
+  }
+  return prior;
+}
+
 export function reelPlan(
   speed: ReelSpeed,
-  reelIndex: number,
+  /** Порядковый номер среди барабанов, которые крутятся, а не позиция на поле. */
+  order: number,
   rows = 3,
   bonus = false,
   priorExtra = 0,
@@ -28,11 +52,12 @@ export function reelPlan(
 ): ReelPlan {
   const safeRows = Math.max(1, rows);
   const wait = Math.max(0, priorExtra) + Math.max(0, ownExtra);
+  const slot = Math.max(0, order);
   if (speed === 'slow') {
     const tune = bonus ? SLOW_BONUS : SLOW;
     const span = (safeRows - 1) * tune.step + tune.drop;
     return {
-      delay: reelIndex * (span + tune.gap) + wait,
+      delay: 140 + slot * (span + tune.gap) + wait,
       duration: span,
       drop: tune.drop,
       step: tune.step,
@@ -44,7 +69,7 @@ export function reelPlan(
   }
   const tune = bonus ? MID_BONUS : MID;
   return {
-    delay: reelIndex * (tune.drop + tune.gap) + wait,
+    delay: slot * (tune.drop + tune.gap) + wait,
     duration: tune.drop,
     drop: tune.drop,
     step: 0,
@@ -58,16 +83,24 @@ export function reelSpinMs(
   rows = 3,
   bonus = false,
   extras: number[] = [],
+  /** true — барабан закрыт и не занимает место в очереди. */
+  held: boolean[] = [],
 ): number {
   let prior = 0;
   let end = 0;
+  let order = 0;
+  let played = 0;
   const count = Math.max(1, reels);
   for (let index = 0; index < count; index += 1) {
+    if (held[index]) continue;
     const own = Math.max(0, extras[index] ?? 0);
-    const plan = reelPlan(speed, index, rows, bonus, prior, own);
+    const plan = reelPlan(speed, order, rows, bonus, prior, own);
     end = Math.max(end, plan.delay + plan.duration);
     prior += own;
+    order += 1;
+    played += 1;
   }
+  if (played === 0) return 0;
   return end + 70;
 }
 
