@@ -3,7 +3,7 @@
 import { useRef } from 'react';
 import { slotArt, slotHero } from '@/lib/slots/art';
 import { CURTAIN_MULTIPLIERS, getSlotGame, type SlotSymbol } from '@/lib/slots/games';
-import { reelPlan, type ReelSpeed } from '@/lib/slots/speed';
+import { reelPlan, slowCellTiming, type ReelSpeed } from '@/lib/slots/speed';
 import type { MarkKind } from '@/lib/slots/engine';
 import styles from '@/app/slots/Slots.module.css';
 
@@ -66,6 +66,19 @@ type Props = {
 function multiplierOf(id: string): number | null {
   const match = /^m(\d+)$/.exec(id);
   return match ? Number(match[1]) : null;
+}
+
+function pieceFall(mode: 'cell' | 'column', row: number, rows: number, bonus: boolean): number {
+  return mode === 'cell' ? slowCellTiming(row, rows, bonus).fall : 1;
+}
+
+function pieceDrop(plan: { mode: 'cell' | 'column'; drop: number }, row: number, rows: number, bonus: boolean): number {
+  return plan.mode === 'cell' ? slowCellTiming(row, rows, bonus).drop : plan.drop;
+}
+
+function pieceAt(plan: { mode: 'cell' | 'column'; delay: number; step: number }, row: number, rows: number, bonus: boolean): number {
+  const inner = plan.mode === 'cell' ? slowCellTiming(row, rows, bonus).start : row * plan.step;
+  return plan.delay + inner;
 }
 
 function formatValue(value: number): string {
@@ -145,8 +158,9 @@ export default function SlotReel({
               className={classes}
               style={{
                 ['--row' as string]: row,
-                ['--drop-ms' as string]: `${plan.drop}ms`,
-                ['--drop-at' as string]: `${plan.delay + row * plan.step}ms`,
+                ['--fall' as string]: pieceFall(plan.mode, row, rows, bonus),
+                ['--drop-ms' as string]: `${pieceDrop(plan, row, rows, bonus)}ms`,
+                ['--drop-at' as string]: `${pieceAt(plan, row, rows, bonus)}ms`,
               }}
             >
               {kind === 'cell' ? <span className={styles.cellDropFace}>{face(id, value, mark)}</span> : face(id, value, mark)}
@@ -189,9 +203,10 @@ function CurtainShow({ gameId, mult }: { gameId: string; mult: number }) {
   const { top, bottom, pick } = deal.current;
   return (
     <div className={styles.curtain} data-pick={pick}>
-      <b className={styles.curtainOffer} data-side="top">x{top}</b>
-      <img src={slotHero(gameId)} alt="" draggable={false} />
-      <b className={styles.curtainOffer} data-side="bottom">x{bottom}</b>
+      <img className={styles.curtainOffer} data-side="top" src={`/img/slots/mult/x${top}.png`} alt={`x${top}`} draggable={false} />
+      <img className={styles.curtainHero} src={slotHero(gameId)} alt="" draggable={false} />
+      <img className={styles.curtainCard} src="/img/slots/mult/card-ace.png" alt="" draggable={false} />
+      <img className={styles.curtainOffer} data-side="bottom" src={`/img/slots/mult/x${bottom}.png`} alt={`x${bottom}`} draggable={false} />
     </div>
   );
 }

@@ -7,10 +7,35 @@ export type ReelPlan = {
   duration: number;
   /** Длительность падения одного символа или всей колонки. */
   drop: number;
-  /** Пауза между символами сверху вниз. 0 — колонка падает целиком. */
+  /** Пауза между символами. 0 — колонка падает целиком. */
   step: number;
   mode: 'cell' | 'column';
 };
+
+const SLOW_TICK = 68;
+const SLOW_GAP = 18;
+const SLOW_MIN = 150;
+
+/** Медленный режим: фишка падает сверху и ложится на стопку. Первой садится нижняя. */
+export function slowCellTiming(row: number, rows: number, bonus = false): { start: number; drop: number; fall: number } {
+  const tick = bonus ? SLOW_TICK + 8 : SLOW_TICK;
+  const gap = bonus ? SLOW_GAP + 8 : SLOW_GAP;
+  const min = bonus ? SLOW_MIN + 20 : SLOW_MIN;
+  const safe = Math.max(1, rows);
+  const clamped = Math.max(0, Math.min(safe - 1, row));
+  const fall = clamped + 1;
+  const fromBottom = safe - 1 - clamped;
+  let start = 0;
+  for (let index = 0; index < fromBottom; index += 1) {
+    start += Math.max(min, (safe - index) * tick) + gap;
+  }
+  return { start, drop: Math.max(min, fall * tick), fall };
+}
+
+function slowSpan(rows: number, bonus: boolean): number {
+  const top = slowCellTiming(0, rows, bonus);
+  return top.start + top.drop;
+}
 
 const SLOW = { drop: 220, step: 200, gap: 70 };
 const SLOW_BONUS = { drop: 240, step: 220, gap: 80 };
@@ -55,7 +80,7 @@ export function reelPlan(
   const slot = Math.max(0, order);
   if (speed === 'slow') {
     const tune = bonus ? SLOW_BONUS : SLOW;
-    const span = (safeRows - 1) * tune.step + tune.drop;
+    const span = slowSpan(safeRows, bonus);
     return {
       delay: 140 + slot * (span + tune.gap) + wait,
       duration: span,
