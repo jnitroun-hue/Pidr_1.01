@@ -406,6 +406,38 @@
   cursor: pointer;
 }
 
+.hudFlag {
+  position: relative;
+  display: block;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid #f6d56a;
+  background: #140c08;
+  cursor: pointer;
+  box-shadow:
+    0 5px 0 #1c1408,
+    inset 0 0 0 2px rgba(255, 244, 194, 0.55),
+    0 0 14px rgba(245, 197, 24, 0.35);
+}
+
+.hudFlag svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.hudFlag::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.34), transparent 42%, rgba(0, 0, 0, 0.22));
+}
+
 .hudBack {
   width: 46px;
   height: 46px;
@@ -2232,6 +2264,18 @@
   background: linear-gradient(180deg, #3f2e12, #1c1408);
   color: #fde68a;
   font-weight: 900;
+  cursor: pointer;
+}
+
+.betMax {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 14px;
+  border: 1px solid #fff7d6;
+  background: linear-gradient(180deg, #fff4c2, #f5c518 46%, #b45309);
+  color: #3f2208;
+  font-weight: 900;
+  letter-spacing: 0.18em;
   cursor: pointer;
 }
 

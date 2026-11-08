@@ -67,8 +67,9 @@ export function auditMode(game: SlotGame, mode: BetMode, spins: number, seed = 1
   let sumX = 0;
   let sumX2 = 0;
   for (let index = 0; index < spins; index += 1) {
-    const round = playSeeded(game, 1, mode, seed + index * 9973);
-    const multiple = round.totalWin;
+    const bet = 100;
+    const round = playSeeded(game, bet, mode, seed + index * 9973);
+    const multiple = round.totalWin / bet;
     returned += multiple;
     sumX += multiple;
     sumX2 += multiple * multiple;
@@ -76,8 +77,8 @@ export function auditMode(game: SlotGame, mode: BetMode, spins: number, seed = 1
     if (round.bonus) features += 1;
     if (multiple > maxWinX) maxWinX = multiple;
     if (round.capped) capHits += 1;
-    const book = bookOf(game, round, 1, index);
-    if (book.payoutMultiplier !== Math.round(round.totalWin * 100)) {
+    const book = bookOf(game, round, bet, index);
+    if (book.payoutMultiplier !== Math.round(multiple * 100)) {
       throw new Error(`Книга ${game.id}/${mode}#${index} не сходится с выплатой`);
     }
     const finalWin = book.events[book.events.length - 1];

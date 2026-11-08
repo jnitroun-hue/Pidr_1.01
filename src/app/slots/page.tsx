@@ -2,24 +2,28 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { SLOT_GAMES, type SlotGame } from '@/lib/slots/games';
+import { SLOT_GAMES, triggerSymbol, type SlotGame } from '@/lib/slots/games';
 import { slotPoster } from '@/lib/slots/art';
+import { bonusTitle, gameMood, gameTitle, symbolLabel } from '@/lib/slots/i18n';
+import { useSlotLocale } from '@/lib/slots/locale';
 import styles from './Slots.module.css';
 
 const MODES = [
-  { id: 'demo', label: 'Демо', hint: 'Игра без списания' },
-  { id: 'coins', label: 'Монеты', hint: 'Списание монет' },
-  { id: 'gram', label: 'GRAM', hint: 'Списание GRAM' },
+  { id: 'demo', label: 'Демо', en: 'Demo', hint: 'Игра без списания', hintEn: 'Play without a charge' },
+  { id: 'coins', label: 'Монеты', en: 'Coins', hint: 'Списание монет', hintEn: 'Coins are charged' },
+  { id: 'gram', label: 'GRAM', en: 'GRAM', hint: 'Списание GRAM', hintEn: 'GRAM is charged' },
 ] as const;
 
-function catchSymbol(game: SlotGame): string {
-  const symbol = game.symbols.find((item) => item.scatter) ?? game.symbols.find((item) => item.bonusCoin);
-  if (!symbol) return game.bonus.title;
-  return `${game.trigger}× ${symbol.name}`;
+function catchSymbol(game: SlotGame, lang: 'ru' | 'en'): string {
+  const symbol = triggerSymbol(game);
+  if (!symbol) return bonusTitle(game, lang);
+  return `${game.trigger}× ${symbolLabel(game, symbol, lang)}`;
 }
 
 export default function SlotsLobbyPage() {
   const router = useRouter();
+  const { lang } = useSlotLocale();
+  const en = lang === 'en';
   const [picked, setPicked] = useState<SlotGame | null>(null);
   return (
     <main className={styles.lobby}>
@@ -29,7 +33,7 @@ export default function SlotsLobbyPage() {
         </button>
         <div className={styles.lobbyHead}>
           <span>The Must</span>
-          <h1>Слоты</h1>
+          <h1>{en ? 'Slots' : 'Слоты'}</h1>
         </div>
       </header>
       <div className={styles.floor}>
@@ -45,8 +49,8 @@ export default function SlotsLobbyPage() {
             </span>
             <em>x{game.maxWinMultiplier}</em>
             <span className={styles.posterCopy}>
-              <strong>{game.title}</strong>
-              <small>{game.bonus.title}</small>
+              <strong>{gameTitle(game, lang)}</strong>
+              <small>{bonusTitle(game, lang)}</small>
             </span>
           </button>
         ))}
@@ -58,12 +62,12 @@ export default function SlotsLobbyPage() {
             style={{ ['--accent' as string]: picked.accent, ['--felt' as string]: picked.felt }}
             onClick={(event) => event.stopPropagation()}
             role="dialog"
-            aria-label="Выбор валюты"
+            aria-label={en ? 'Choose currency' : 'Выбор валюты'}
           >
             <img src={slotPoster(picked.id)} alt="" />
-            <p>{picked.title}</p>
-            <strong>{catchSymbol(picked)} открывают «{picked.bonus.title}»</strong>
-            <span className={styles.modeMood}>{picked.mood}</span>
+            <p>{gameTitle(picked, lang)}</p>
+            <strong>{en ? `${catchSymbol(picked, lang)} starts “${bonusTitle(picked, lang)}”` : `${catchSymbol(picked, lang)} открывают «${bonusTitle(picked, lang)}»`}</strong>
+            <span className={styles.modeMood}>{gameMood(picked, lang)}</span>
             <div className={styles.modeList}>
               {MODES.map((mode) => (
                 <button
@@ -71,8 +75,8 @@ export default function SlotsLobbyPage() {
                   type="button"
                   onClick={() => router.push(`/slots/play?game=${picked.id}&mode=${mode.id}`)}
                 >
-                  <b>{mode.label}</b>
-                  <small>{mode.hint}</small>
+                  <b>{en ? mode.en : mode.label}</b>
+                  <small>{en ? mode.hintEn : mode.hint}</small>
                 </button>
               ))}
             </div>

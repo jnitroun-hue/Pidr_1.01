@@ -64,7 +64,7 @@ export default function PickBonus({ heroSrc, gameId, cells, columns, rows, missL
   return (
     <div className={styles.back}>
       <div className={styles.panel}>
-        <p className={styles.head}>Промах {misses}/{missLimit}</p>
+        <p className={styles.head}>{lang === 'en' ? 'Miss' : 'Промах'} {misses}/{missLimit}</p>
         <div className={styles.layout}>
           {heroSrc ? (
             <img key={opened.length} className={`${styles.archer} ${shot != null ? styles.shoot : styles.ready}`} src={heroSrc} alt="" draggable={false} />

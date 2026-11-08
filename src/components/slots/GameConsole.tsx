@@ -26,6 +26,8 @@ type Props = {
   onSpeed: () => void;
   onAnte: () => void;
   onBet: (dir: -1 | 1) => void;
+  onMaxBet: () => void;
+  atMaxBet: boolean;
   onOpenBets: () => void;
   winKey: string;
 };
@@ -88,12 +90,22 @@ export default function GameConsole(props: Props) {
             <small>{props.stakeLabel}</small>
           </button>
           <div className={styles.stake}>
-            <button type="button" disabled={props.locked} onClick={() => props.onBet(1)} aria-label="Больше">+</button>
-            <button type="button" className={styles.stakeValue} disabled={props.locked} onClick={props.onOpenBets} aria-label="Выбрать ставку">
+            <button type="button" disabled={props.locked} onClick={() => props.onBet(1)} aria-label={lang === 'en' ? 'Increase bet' : 'Больше'}>+</button>
+            <button type="button" className={styles.stakeValue} disabled={props.locked} onClick={props.onOpenBets} aria-label={lang === 'en' ? 'Choose bet' : 'Выбрать ставку'}>
               <b>{props.stakeLabel}</b>
               <small>{copy.stakeHint}</small>
             </button>
-            <button type="button" disabled={props.locked} onClick={() => props.onBet(-1)} aria-label="Меньше">−</button>
+            <button type="button" disabled={props.locked} onClick={() => props.onBet(-1)} aria-label={lang === 'en' ? 'Decrease bet' : 'Меньше'}>−</button>
+            <button
+              type="button"
+              className={`${styles.maxBet} ${props.atMaxBet ? styles.on : ''}`}
+              disabled={props.locked}
+              aria-pressed={props.atMaxBet}
+              aria-label={lang === 'ru' ? 'Максимальная ставка' : 'Max bet'}
+              onClick={props.onMaxBet}
+            >
+              {copy.maxBet}
+            </button>
           </div>
         </div>
         <div className={styles.tools}>
@@ -108,7 +120,7 @@ export default function GameConsole(props: Props) {
             <small>{speedLabel}</small>
           </button>
           {props.allowAuto !== false ? (
-            <button type="button" className={props.autoLeft ? styles.on : ''} onClick={props.onAuto} aria-label="Автоспины">
+            <button type="button" className={props.autoLeft ? styles.on : ''} onClick={props.onAuto} aria-label={copy.auto}>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5a7 7 0 0 1 6.3 4H16v2h6V5h-2v2.1A9 9 0 1 0 21 13h-2a7 7 0 1 1-7-8z" /></svg>
               <b>{copy.auto}</b>
               <small>{props.autoLeft || copy.autoHint}</small>
@@ -119,7 +131,7 @@ export default function GameConsole(props: Props) {
             <b>{keyLabel}</b>
             <small>{props.showLines ? copy.on : copy.off}</small>
           </button>
-          <button type="button" onClick={props.onInfo} aria-label="Информация">
+          <button type="button" onClick={props.onInfo} aria-label={copy.info}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 15h-2v-6h2zm0-8h-2V7h2z" /></svg>
             <b>{copy.info}</b>
             <small>{copy.infoHint}</small>

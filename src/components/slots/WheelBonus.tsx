@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { WHEEL_LEVEL_1, WHEEL_LEVEL_2 } from '@/lib/slots/games';
 import type { WheelStop } from '@/lib/slots/engine';
+import { useSlotLocale } from '@/lib/slots/locale';
 import styles from './WheelBonus.module.css';
 
 type Props = {
@@ -26,6 +27,8 @@ export default function WheelBonus({ heroSrc, stops, boost, cash, moneyLabel, au
   const [settled, setSettled] = useState(false);
   const [finished, setFinished] = useState(false);
   const started = useRef(false);
+  const { lang } = useSlotLocale();
+  const en = lang === 'en';
 
   const stop = stops[Math.min(stage, stops.length - 1)];
   const segments = stop.level === 1 ? WHEEL_LEVEL_1 : WHEEL_LEVEL_2;
@@ -77,7 +80,7 @@ export default function WheelBonus({ heroSrc, stops, boost, cash, moneyLabel, au
     <div className={styles.back}>
       {heroSrc ? <img className={styles.hero} src={heroSrc} alt="" draggable={false} /> : null}
       <div className={styles.panel}>
-        <p className={styles.level}>Колесо · уровень {stop.level}{boost > 1 ? ` · сектора ×${boost}` : ''}</p>
+        <p className={styles.level}>{en ? `Wheel · level ${stop.level}` : `Колесо · уровень ${stop.level}`}{boost > 1 ? (en ? ` · sectors ×${boost}` : ` · сектора ×${boost}`) : ''}</p>
         <div className={styles.wheelBox}>
           <i className={styles.pointer} />
           <div
@@ -101,28 +104,28 @@ export default function WheelBonus({ heroSrc, stops, boost, cash, moneyLabel, au
             result.kind === 'cash' ? (
               <>
                 <strong>{moneyLabel(cash)}</strong>
-                <span>Сектор {result.label}{boost > 1 ? ` × ${boost}` : ''}</span>
+                <span>{en ? 'Sector' : 'Сектор'} {result.label}{boost > 1 ? ` × ${boost}` : ''}</span>
               </>
             ) : result.kind === 'spins' ? (
               <>
-                <strong>{result.spins} спинов · x{result.value * boost}</strong>
-                <span>Бесплатные спины с фиксированным множителем</span>
+                <strong>{result.spins} {en ? 'spins' : 'спинов'} · x{result.value * boost}</strong>
+                <span>{en ? 'Free spins with a fixed multiplier' : 'Бесплатные спины с фиксированным множителем'}</span>
               </>
             ) : (
               <>
                 <strong>LEVEL UP</strong>
-                <span>Колесо второго уровня</span>
+                <span>{en ? 'Second wheel' : 'Колесо второго уровня'}</span>
               </>
             )
           ) : (
-            <span>{spinning ? 'Колесо крутится…' : 'Нажмите, чтобы крутить колесо'}</span>
+            <span>{spinning ? (en ? 'The wheel is spinning…' : 'Колесо крутится…') : (en ? 'Press to spin the wheel' : 'Нажмите, чтобы крутить колесо')}</span>
           )}
         </div>
         {!settled && !auto ? (
-          <button type="button" className={styles.go} disabled={spinning} onClick={launch}>Крутить колесо</button>
+          <button type="button" className={styles.go} disabled={spinning} onClick={launch}>{en ? 'Spin the wheel' : 'Крутить колесо'}</button>
         ) : null}
         {finished && !auto ? (
-          <button type="button" className={styles.go} onClick={onDone}>{result.kind === 'spins' ? 'К спинам' : 'Забрать'}</button>
+          <button type="button" className={styles.go} onClick={onDone}>{result.kind === 'spins' ? (en ? 'To the spins' : 'К спинам') : (en ? 'Collect' : 'Забрать')}</button>
         ) : null}
       </div>
     </div>

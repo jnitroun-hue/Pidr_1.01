@@ -15,6 +15,7 @@ import {
   type SlotSymbol,
 } from '@/lib/slots/games';
 import { slotArt, slotHero } from '@/lib/slots/art';
+import { bonusRule, bonusTitle, bonusTop, featureLines, gameMood, symbolLabel, volatilityLabel } from '@/lib/slots/i18n';
 import { useSlotLocale } from '@/lib/slots/locale';
 import styles from './SlotInfo.module.css';
 
@@ -119,12 +120,21 @@ const MECHANIC: Record<SlotGame['mechanic'], { title: string; text: string }> = 
   cluster: { title: 'Кластеры 6×6', text: 'Платит 5 и больше одинаковых символов, соединённых по сторонам. Выигрышный кластер исчезает, сверху падают новые.' },
 };
 
+const MECHANIC_EN: Record<SlotGame['mechanic'], { title: string; text: string }> = {
+  lines: { title: 'Lines', text: 'Matching symbols left to right on fixed lines. Scatter pays from the total play. Everything else pays from the line bet.' },
+  'both-ways': { title: 'Lines both ways', text: 'Matching symbols count left to right and right to left. One line can pay twice.' },
+  ways: { title: 'Ways · 1024 ways', text: 'Matching symbols on neighbouring reels, left to right, on any row. More ways mean a bigger win.' },
+  'scatter-pays': { title: 'Board 6×5', text: 'Pays 8 or more matching symbols anywhere. The win lights up and breaks, and new symbols fall. The orb stands in and multiplies the symbols it hits.' },
+  cluster: { title: 'Clusters 6×6', text: 'Pays 5 or more matching symbols connected by sides. The winning cluster disappears and new symbols fall.' },
+};
+
 export default function SlotInfo({ game, bet, gram, onClose }: Props) {
   const { lang } = useSlotLocale();
   const en = lang === 'en';
   const [page, setPage] = useState(0);
   const pages = 4;
-  const mechanic = MECHANIC[game.mechanic];
+  const mechanic = (en ? MECHANIC_EN : MECHANIC)[game.mechanic];
+  const nameOf = (symbol: SlotSymbol) => symbolLabel(game, symbol, lang);
   const trigger = triggerSymbol(game);
   const wilds = game.symbols.filter((symbol) => symbol.wild && !symbol.multiplier);
   const multipliers = game.symbols.filter((symbol) => symbol.multiplier);
@@ -133,53 +143,59 @@ export default function SlotInfo({ game, bet, gram, onClose }: Props) {
   return (
     <div className={styles.back} onClick={onClose}>
       <div className={styles.modal} onClick={(event) => event.stopPropagation()} role="dialog" aria-label={en ? 'Rules' : 'Правила'}>
-        <button type="button" className={styles.close} onClick={onClose} aria-label="Закрыть">×</button>
+        <button type="button" className={styles.close} onClick={onClose} aria-label={en ? 'Close' : 'Закрыть'}>×</button>
         {page === 0 && (
           <>
-            <h2>Как открыть бонус</h2>
+            <h2>{en ? 'How the feature starts' : 'Как открыть бонус'}</h2>
             {trigger ? (
               <div className={styles.roster}>
                 <div>
                   <img src={slotArt(game.id, trigger.id)} alt="" />
-                  <b>Скаттер</b>
-                  <span>{game.id === 'green-arrow' ? 'Яблочко падает только на барабаны 2, 3, 4 и 5, не больше одного на барабан и никогда на первый. 3 яблочка — залп на 15 спинов. 4 яблочка — тир 6×6.' : `${game.trigger}× ${trigger.name} в любом месте открывают «${game.bonus.title}»`}</span>
+                  <b>{en ? 'SCATTER' : 'Скаттер'}</b>
+                  <span>{game.id === 'green-arrow'
+                    ? (en ? 'The apple lands only on reels 2, 3, 4 and 5, one per reel, never on the first. 3 apples start the volley for 15 spins. 4 apples start the 6×6 range.' : 'Яблочко падает только на барабаны 2, 3, 4 и 5, не больше одного на барабан и никогда на первый. 3 яблочка — залп на 15 спинов. 4 яблочка — тир 6×6.')
+                    : (en ? `${game.trigger}× ${nameOf(trigger)} anywhere starts “${bonusTitle(game, lang)}”` : `${game.trigger}× ${trigger.name} в любом месте открывают «${game.bonus.title}»`)}</span>
                 </div>
                 {wilds.map((symbol) => (
                   <div key={symbol.id}>
                     <img src={slotArt(game.id, symbol.id)} alt="" />
                     <b>WILD</b>
-                    <span>{game.bonus.kind === 'sticky-reels' ? `${symbol.name} — вайлд. Штора закрывает весь барабан и показывает множитель` : `${symbol.name} заменяет символы, кроме скаттера`}</span>
+                    <span>{game.bonus.kind === 'sticky-reels'
+                      ? (en ? `${nameOf(symbol)} is wild. A curtain covers the whole reel and shows a multiplier` : `${symbol.name} — вайлд. Штора закрывает весь барабан и показывает множитель`)
+                      : (en ? `${nameOf(symbol)} stands in for every symbol except scatter` : `${symbol.name} заменяет символы, кроме скаттера`)}</span>
                   </div>
                 ))}
                 {multipliers.map((symbol) => (
                   <div key={symbol.id}>
                     <img src={slotArt(game.id, symbol.id)} alt="" />
                     <b>x{symbol.multiplier}</b>
-                    <span>{symbol.bonusOnly ? 'вайлд только в бонусе' : 'вайлд с множителем линии'}</span>
+                    <span>{symbol.bonusOnly ? (en ? 'wild in the feature only' : 'вайлд только в бонусе') : (en ? 'wild with a line multiplier' : 'вайлд с множителем линии')}</span>
                   </div>
                 ))}
                 {extras.map((symbol) => (
                   <div key={symbol.id}>
                     <img src={slotArt(game.id, symbol.id)} alt="" />
-                    <b>{symbol.orb ? 'ШАР' : 'МИСТИКА'}</b>
-                    <span>{symbol.orb ? `${symbol.name} заменяет любой символ и умножает те, с которыми сыграл` : `${symbol.name} раскрывается в один общий символ`}</span>
+                    <b>{symbol.orb ? (en ? 'ORB' : 'ШАР') : (en ? 'MYSTERY' : 'МИСТИКА')}</b>
+                    <span>{symbol.orb
+                      ? (en ? `${nameOf(symbol)} stands in for any symbol and multiplies the ones it hits` : `${symbol.name} заменяет любой символ и умножает те, с которыми сыграл`)
+                      : (en ? `${nameOf(symbol)} opens into one shared symbol` : `${symbol.name} раскрывается в один общий символ`)}</span>
                   </div>
                 ))}
               </div>
             ) : null}
             <p>{en ? `Round cap is x${game.maxWinMultiplier} of the play.` : `Потолок раунда — x${game.maxWinMultiplier} ставки.`}</p>
-            <p>{en ? (game.bonus.kind === 'sticky-reels' ? 'The wheel, the free spins and every curtain are dealt before the reels play them.' : game.bonus.kind === 'pick' ? 'The field is dealt with the spin. The apple you tap is the one that opens.' : 'The feature is dealt with the spin. The reels play that result.') : game.bonus.rule}</p>
+            <p>{en ? bonusRule(game, 'en') : game.bonus.rule}</p>
             <h2>{en ? 'Pays' : 'Выплаты'}</h2>
             <p className={styles.note}>{(en ? mathRuleEn : mathRule)(game, bet, gram)} {en ? 'Card amounts are already in coins at the current play size.' : 'Суммы в карточках — уже в монетах при текущей ставке.'}</p>
             <div className={styles.symbols}>
               {ordered.map((symbol) => (
                 <div key={symbol.id} className={styles.symbol}>
                   <img src={slotArt(game.id, symbol.id)} alt="" />
-                  <strong>{en ? symbol.id : symbol.name}</strong>
+                  <strong>{nameOf(symbol)}</strong>
                   <span>{symbol.bonusOnly ? `${en ? 'feature only. ' : 'только в бонусе. '}${payHint(game, symbol, en)}` : payHint(game, symbol, en)}</span>
                   <b>
                     {symbol.pays.every((value) => value === 0)
-                      ? 'не платит сам'
+                      ? (en ? 'does not pay by itself' : 'не платит сам')
                       : `${formatPay(payout(game, bet, symbol.pays[0], symbol), gram)} · ${formatPay(payout(game, bet, symbol.pays[1], symbol), gram)} · ${formatPay(payout(game, bet, symbol.pays[2], symbol), gram)}`}
                   </b>
                 </div>
@@ -189,70 +205,72 @@ export default function SlotInfo({ game, bet, gram, onClose }: Props) {
         )}
         {page === 1 && (
           <>
-            <h2>{game.bonus.title}</h2>
+            <h2>{bonusTitle(game, lang)}</h2>
             <img className={styles.hero} src={slotArt(game.id, game.symbols.find((symbol) => symbol.scatter)?.id ?? game.symbols.find((symbol) => symbol.bonusCoin)?.id ?? 'scatter')} alt="" />
-            <p>{en ? `Land ${game.trigger}× ${game.symbols.find((symbol) => symbol.scatter)?.name ?? game.symbols.find((symbol) => symbol.bonusCoin)?.name} to start the feature.` : `Собери ${game.trigger}× ${game.symbols.find((symbol) => symbol.scatter)?.name ?? game.symbols.find((symbol) => symbol.bonusCoin)?.name} — и начнётся этот бонус.`}</p>
-            <p>{en ? (game.id === 'golden-must' ? '3 scatters start the regular feature, 4 start the top feature, 5 starts Hot Mod with two curtains. The wheel sets the spins and the minimum curtain before anything spins.' : game.bonus.kind === 'pick' ? 'The field is dealt with the spin. The apple you tap is the one that opens.' : 'The feature is dealt with the spin. The reels play that result.') : game.bonus.rule}</p>
+            <p>{en
+              ? `Land ${game.trigger}× ${trigger ? nameOf(trigger) : bonusTitle(game, lang)} and this feature starts.`
+              : `Собери ${game.trigger}× ${trigger?.name ?? ''} — и начнётся этот бонус.`}</p>
+            <p>{bonusRule(game, lang)}</p>
             {game.bonus.kind === 'sticky-reels' && (
               <div className={styles.curtainCard}>
                 <img src={slotHero(game.id)} alt="" />
                 <div>
-                  <strong>Штора</strong>
-                  <span>Закрывает барабан целиком. Ус выходит из золота и показывает множитель. На одной линии множители складываются.</span>
+                  <strong>{en ? 'Curtain' : 'Штора'}</strong>
+                  <span>{en ? 'Covers a whole reel. The Mustache steps out of the gold and shows a multiplier. On one line the multipliers add.' : 'Закрывает барабан целиком. Ус выходит из золота и показывает множитель. На одной линии множители складываются.'}</span>
                   <b>{CURTAIN_MULTIPLIERS.map((value) => `x${value}`).join(' · ')}</b>
                 </div>
               </div>
             )}
-            <p><b>Большой выигрыш.</b> {game.bonus.top}</p>
-            <p>{game.mood}</p>
-            <p>Потолок одного раунда — <b>x{game.maxWinMultiplier}</b> ставки. Волатильность: {game.volatility}.</p>
-            <p>Анте прибавляет 50% к ставке и даёт дополнительные 16.77% шанса, что на поле появится ещё один символ-триггер.</p>
+            <p><b>{en ? 'Super feature.' : 'Большой выигрыш.'}</b> {bonusTop(game, lang)}</p>
+            <p>{gameMood(game, lang)}</p>
+            <p>{en ? <>Round cap is <b>x{game.maxWinMultiplier}</b> of the stake. Volatility: {volatilityLabel(game, lang)}.</> : <>Потолок одного раунда — <b>x{game.maxWinMultiplier}</b> ставки. Волатильность: {game.volatility}.</>}</p>
+            <p>{en ? 'Ante adds 50% to the stake and gives an extra 16.77% chance that one more trigger symbol lands.' : 'Анте прибавляет 50% к ставке и даёт дополнительные 16.77% шанса, что на поле появится ещё один символ-триггер.'}</p>
             {game.bonus.kind === 'hold-win' && (
               <div className={styles.buys}>
                 {HOLD_WIN_VALUES.filter((entry) => entry.pot).map((entry) => (
                   <div key={entry.pot}>
                     <strong>{entry.pot === 'mini' ? 'Mini' : entry.pot === 'minor' ? 'Minor' : 'Major'}</strong>
-                    <span>фиксированный приз</span>
+                    <span>{en ? 'fixed prize' : 'фиксированный приз'}</span>
                     <b>x{entry.value}</b>
                   </div>
                 ))}
                 <div>
                   <strong>Grand</strong>
-                  <span>полное поле 15 монет</span>
+                  <span>{en ? 'full board of 15 coins' : 'полное поле 15 монет'}</span>
                   <b>x{HOLD_WIN_GRAND}</b>
                 </div>
               </div>
             )}
             {game.bonus.kind === 'wheel' && (
               <>
-                <p>Колесо 1: {WHEEL_LEVEL_1.map((segment) => segment.label).join(' · ')}</p>
-                <p>Колесо 2: {WHEEL_LEVEL_2.map((segment) => segment.label).join(' · ')}</p>
+                <p>{en ? 'Wheel 1' : 'Колесо 1'}: {WHEEL_LEVEL_1.map((segment) => segment.label).join(' · ')}</p>
+                <p>{en ? 'Wheel 2' : 'Колесо 2'}: {WHEEL_LEVEL_2.map((segment) => segment.label).join(' · ')}</p>
               </>
             )}
             {game.bonus.kind === 'pick' && (
-              <p>Обычный бонус, 3 яблочка: 15 спинов, лучник бросает от 1 до 6 диких. Иногда стрела с множителем x2–x10 остаётся на клетке до конца. Топовый бонус, 4 яблочка: поле 6×6, ровно 6 промахов, третий промах заканчивает тир, множители от x10 до x2500.</p>
+              <p>{en ? 'Regular feature, 3 apples: 15 spins, the archer throws 1 to 6 wilds. A multiplier arrow from x2 to x10 can stay until the end. Top feature, 4 apples: a 6×6 field, exactly 6 misses, the third miss ends the range, multipliers from x10 to x2500.' : 'Обычный бонус, 3 яблочка: 15 спинов, лучник бросает от 1 до 6 диких. Иногда стрела с множителем x2–x10 остаётся на клетке до конца. Топовый бонус, 4 яблочка: поле 6×6, ровно 6 промахов, третий промах заканчивает тир, множители от x10 до x2500.'}</p>
             )}
           </>
         )}
         {page === 2 && (
           <>
-            <h2>Функции</h2>
+            <h2>{en ? 'Features' : 'Функции'}</h2>
             <ul className={styles.list}>
-              {game.features.map((item) => <li key={item}>{item}</li>)}
+              {featureLines(game, lang).map((item) => <li key={item}>{item}</li>)}
             </ul>
             <div className={styles.buys}>
               <div>
-                <strong>Бонус</strong>
-                <span>стоит сто текущих ставок</span>
-                <b>гарантия десять ставок</b>
+                <strong>{en ? 'Feature' : 'Бонус'}</strong>
+                <span>{en ? 'costs one hundred stakes' : 'стоит сто текущих ставок'}</span>
+                <b>{en ? 'floor of ten stakes' : 'гарантия десять ставок'}</b>
               </div>
               <div>
-                <strong>Супер-бонус</strong>
-                <span>стоит пятьсот текущих ставок</span>
-                <b>гарантия пятьдесят ставок</b>
+                <strong>{en ? 'Super feature' : 'Супер-бонус'}</strong>
+                <span>{en ? 'costs five hundred stakes' : 'стоит пятьсот текущих ставок'}</span>
+                <b>{en ? 'floor of fifty stakes' : 'гарантия пятьдесят ставок'}</b>
               </div>
             </div>
-            <p>{game.bonus.top}</p>
+            <p>{bonusTop(game, lang)}</p>
             <p className={styles.note}>
               {en
                 ? `A paid round is drawn on the server. The stake leaves the balance when the round starts, and the win is credited after the reels finish. Demo stays in the browser. Ante costs 1.5×, bonus buy 100×, super buy 500×. The cap is x${game.maxWinMultiplier}. Stake needs a separate book and lookup table for base, ante, buy and super buy, each inside the published RTP band.`
@@ -264,11 +282,11 @@ export default function SlotInfo({ game, bet, gram, onClose }: Props) {
           <>
             <h2>{mechanic.title}{game.mechanic === 'lines' || game.mechanic === 'both-ways' ? ` · ${game.lines.length}` : ''}</h2>
             <p>{(en ? mathRuleEn : mathRule)(game, bet, gram)}</p>
-            <p className={styles.note}>Верхний ряд схемы — верх поля. Жёлтая клетка входит в линию. Номер линии совпадает с номером в ленте выигрыша.</p>
+            <p className={styles.note}>{en ? 'The top row of the diagram is the top of the board. A gold cell is on the line. The line number matches the win ribbon.' : 'Верхний ряд схемы — верх поля. Жёлтая клетка входит в линию. Номер линии совпадает с номером в ленте выигрыша.'}</p>
             {(game.mechanic === 'lines' || game.mechanic === 'both-ways') && game.lines.length > 0 && (
               <div className={styles.lines}>
                 {game.lines.map((line, index) => (
-                  <div key={index} className={styles.line} title={`Линия ${index + 1}`}>
+                  <div key={index} className={styles.line} title={en ? `Line ${index + 1}` : `Линия ${index + 1}`}>
                     <em>{index + 1}</em>
                     {Array.from({ length: game.reels }, (_, reel) => (
                       <span key={reel}>
@@ -284,9 +302,9 @@ export default function SlotInfo({ game, bet, gram, onClose }: Props) {
           </>
         )}
         <div className={styles.nav}>
-          <button type="button" onClick={() => setPage((value) => (value + pages - 1) % pages)} aria-label="Назад">‹</button>
+          <button type="button" onClick={() => setPage((value) => (value + pages - 1) % pages)} aria-label={en ? 'Back' : 'Назад'}>‹</button>
           <span>{page + 1} / {pages}</span>
-          <button type="button" onClick={() => setPage((value) => (value + 1) % pages)} aria-label="Дальше">›</button>
+          <button type="button" onClick={() => setPage((value) => (value + 1) % pages)} aria-label={en ? 'Next' : 'Дальше'}>›</button>
         </div>
       </div>
     </div>

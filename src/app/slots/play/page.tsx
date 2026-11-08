@@ -26,6 +26,7 @@ import {
   type SpinWin,
 } from '@/lib/slots/engine';
 import type { SlotEvent } from '@/lib/slots/characters';
+import { bonusTitle, playerNote, translateRibbon } from '@/lib/slots/i18n';
 import { cabinetCopy, useSlotLocale, type SlotLang } from '@/lib/slots/locale';
 import {
   isMustSoundOn,
@@ -209,6 +210,35 @@ function introText(game: SlotGame, bonus: BonusPlay, lang: SlotLang): { title: s
         button: bonus.curtainWheel ? wheelBtn : spinBtn,
       };
   }
+}
+
+function FlagRu() {
+  return (
+    <svg viewBox="0 0 60 40" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <rect width="60" height="40" fill="#fff" />
+      <rect y="13.34" width="60" height="13.33" fill="#1d4ed8" />
+      <rect y="26.67" width="60" height="13.33" fill="#d32011" />
+    </svg>
+  );
+}
+
+function FlagUk() {
+  return (
+    <svg viewBox="0 0 60 30" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <defs>
+        <clipPath id="slot-uk">
+          <rect width="60" height="30" />
+        </clipPath>
+      </defs>
+      <g clipPath="url(#slot-uk)">
+        <rect width="60" height="30" fill="#012169" />
+        <path d="M0 0 L60 30 M60 0 L0 30" stroke="#fff" strokeWidth="7" />
+        <path d="M0 0 L60 30 M60 0 L0 30" stroke="#C8102E" strokeWidth="3.2" />
+        <path d="M30 0 V30 M0 15 H60" stroke="#fff" strokeWidth="12" />
+        <path d="M30 0 V30 M0 15 H60" stroke="#C8102E" strokeWidth="7" />
+      </g>
+    </svg>
+  );
 }
 
 function PlayInner() {
@@ -771,14 +801,21 @@ function PlayInner() {
                 {soundOn ? <path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11" fill="none" stroke="currentColor" strokeWidth="2" /> : <path d="M16 10l6 6M22 10l-6 6" fill="none" stroke="currentColor" strokeWidth="2" />}
               </svg>
             </button>
-          <button type="button" className={styles.hudLang} onClick={toggle}>{lang === 'en' ? 'RU' : 'EN'}</button>
+          <button
+            type="button"
+            className={styles.hudFlag}
+            onClick={toggle}
+            aria-label={lang === 'en' ? 'English' : 'Русский'}
+          >
+            {lang === 'en' ? <FlagUk /> : <FlagRu />}
+          </button>
         </div>
       </header>
 
       {mode === 'gram' && (
         <div className={styles.exchange}>
-          <button type="button" onClick={() => void exchange('to-gram', 1000)}>1000 монет → 1 GRAM</button>
-          <button type="button" onClick={() => void exchange('to-coins', 1000)}>1 GRAM → 1000 монет</button>
+          <button type="button" onClick={() => void exchange('to-gram', 1000)}>{lang === 'en' ? '1000 coins → 1 GRAM' : '1000 монет → 1 GRAM'}</button>
+          <button type="button" onClick={() => void exchange('to-coins', 1000)}>{lang === 'en' ? '1 GRAM → 1000 coins' : '1 GRAM → 1000 монет'}</button>
         </div>
       )}
 
@@ -805,8 +842,8 @@ function PlayInner() {
               <span>{copy.win}</span>
               <WinFigure value={phase === 'pick' ? pickTotal : winSoFar} format={money} />
             </div>
-            {counter ? <em className={styles.counter}>{feature?.title} · {counter.step}/{counter.total}</em> : null}
-            {ribbon ? <em className={styles.ribbon}>{ribbon}</em> : null}
+            {counter ? <em className={styles.counter}>{feature ? bonusTitle(game, lang) : ''} · {counter.step}/{counter.total}</em> : null}
+            {ribbon ? <em className={styles.ribbon}>{translateRibbon(ribbon, game, lang)}</em> : null}
           </div>
           <div className={styles.frame} data-skin={game.id} data-win={!rolling && board.wins.some((win) => win.amount > 0) ? '1' : undefined}>
             <div className={styles.reelStage}>
@@ -894,20 +931,22 @@ function PlayInner() {
         onSpeed={cycleSpeed}
         onAnte={() => setAnte((value) => !value)}
         onBet={(dir) => setBetIndex((value) => Math.min(bets.length - 1, Math.max(0, value + dir)))}
+        onMaxBet={() => { if (!locked) setBetIndex(bets.length - 1); }}
+        atMaxBet={betIndex >= bets.length - 1}
         onOpenBets={() => { if (!locked) setBetOpen(true); }}
         winKey={game.mechanic === 'ways' ? 'Пути' : game.mechanic === 'lines' || game.mechanic === 'both-ways' ? 'Линии' : 'Поле'}
       />
 
-      {error && <p className={styles.toast}>{error}</p>}
+      {error && <p className={styles.toast}>{playerNote(error, lang)}</p>}
       {mode === 'gram' && !gramReady && (
-        <p className={styles.toast}>Для GRAM нужно один раз применить scripts/sql/slots-wallet.sql</p>
+        <p className={styles.toast}>{playerNote('Для GRAM нужно один раз применить scripts/sql/slots-wallet.sql', lang)}</p>
       )}
 
       {feature && intro && bonusIntro && (
         <div className={styles.overlay}>
           <div className={`${styles.sheet} ${styles.congrats}`}>
             {heroSrc ? <img className={`${styles.sheetHero} ${sideHeroClass(game.id, { pose: 'present', cells: [] })}`} src={heroSrc} alt="" /> : null}
-            <p>{feature.tier === 'natural' ? 'Поздравляем!' : feature.tier === 'top' ? 'Супер-бонус куплен' : 'Бонус куплен'}</p>
+            <p>{feature.tier === 'natural' ? (lang === 'en' ? 'Congratulations!' : 'Поздравляем!') : feature.tier === 'top' ? (lang === 'en' ? 'Super feature bought' : 'Супер-бонус куплен') : (lang === 'en' ? 'Feature bought' : 'Бонус куплен')}</p>
             <strong>{intro.title}</strong>
             <span>{intro.text}</span>
             <button type="button" className={styles.sheetGo} onClick={release}>{intro.button}</button>
@@ -966,8 +1005,9 @@ function PlayInner() {
       {betOpen && (
         <div className={styles.overlay}>
           <div className={styles.sheet}>
-            <p>Ставка</p>
-            <span>от 10 до 25 000. Плюс и минус листают лестницу, нажатие на сумму открывает весь список.</span>
+            <p>{lang === 'en' ? 'Bet' : 'Ставка'}</p>
+            <span>{lang === 'en' ? 'From 10 to 25,000. Plus and minus step through the ladder. MAX jumps to the top.' : 'от 10 до 25 000. Плюс и минус листают лестницу, MAX ставит потолок сразу.'}</span>
+            <button type="button" className={styles.betMax} onClick={() => { setBetIndex(bets.length - 1); setBetOpen(false); }}>{copy.maxBet}</button>
             <div className={styles.betGrid}>
               {bets.map((value, index) => (
                 <button
@@ -980,21 +1020,21 @@ function PlayInner() {
                 </button>
               ))}
             </div>
-            <button type="button" onClick={() => setBetOpen(false)}>Закрыть</button>
+            <button type="button" onClick={() => setBetOpen(false)}>{lang === 'en' ? 'Close' : 'Закрыть'}</button>
           </div>
         </div>
       )}
       {autoOpen && (
         <div className={styles.overlay}>
           <div className={styles.sheet}>
-            <p>Автоспины</p>
-            <span>Сколько вращений запустить подряд</span>
+            <p>{lang === 'en' ? 'Auto spins' : 'Автоспины'}</p>
+            <span>{lang === 'en' ? 'How many spins to run in a row' : 'Сколько вращений запустить подряд'}</span>
             <div className={styles.autoList}>
               {[10, 20, 50, 100].map((count) => (
                 <button key={count} type="button" onClick={() => void runAuto(count)}>{count}</button>
               ))}
             </div>
-            <button type="button" onClick={() => setAutoOpen(false)}>Отмена</button>
+            <button type="button" onClick={() => setAutoOpen(false)}>{lang === 'en' ? 'Cancel' : 'Отмена'}</button>
           </div>
         </div>
       )}
