@@ -1,7 +1,8 @@
 'use client';
 
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { slotArt, slotHero } from '@/lib/slots/art';
+import { playMustCurtain } from '@/lib/slots/mustSound';
 import { CURTAIN_MULTIPLIERS, getSlotGame, type SlotSymbol } from '@/lib/slots/games';
 import { reelPlan, slowCellTiming, type ReelSpeed } from '@/lib/slots/speed';
 import type { MarkKind } from '@/lib/slots/engine';
@@ -190,6 +191,9 @@ export default function SlotReel({
 /** Пара из таблицы: выпавший множитель и сосед. Сторона победителя — 50/50 и не меняется, пока штора стоит. */
 function CurtainShow({ gameId, mult }: { gameId: string; mult: number }) {
   const deal = useRef<{ top: number; bottom: number; pick: 'top' | 'bottom' } | null>(null);
+  useEffect(() => {
+    if (gameId === 'golden-must') playMustCurtain();
+  }, [gameId]);
   if (!deal.current) {
     const pool = CURTAIN_MULTIPLIERS.filter((value) => value !== mult);
     const other = pool[Math.floor(Math.random() * pool.length)] ?? mult;

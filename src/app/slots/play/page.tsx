@@ -36,6 +36,7 @@ import {
   playMustSpin,
   playMustWin,
   setMustSoundOn,
+  setSlotSoundKit,
   stopMustAudio,
   stopMustSpin,
   unlockMustSound,
@@ -248,7 +249,7 @@ function PlayInner() {
   const copy = cabinetCopy(lang, false);
   const [soundOn, setSoundOn] = useState(true);
   const game = getSlotGame(params.get('game') || '') ?? getSlotGame('golden-must')!;
-  const voiced = game.id === 'golden-must';
+  const voiced = game.id === 'golden-must' || game.id === 'green-arrow';
   const modeParam = params.get('mode');
   const mode: Mode = modeParam === 'coins' || modeParam === 'gram' ? modeParam : 'demo';
   const allowAuto = params.get('autoplay') !== '0';
@@ -402,9 +403,10 @@ function PlayInner() {
   }
 
   useEffect(() => {
+    setSlotSoundKit(game.id === 'green-arrow' ? 'arrow' : game.id === 'golden-must' ? 'must' : null);
     setSoundOn(isMustSoundOn());
     return () => stopMustAudio();
-  }, []);
+  }, [game.id]);
 
   function beginRoll() {
     if (voiced) playMustSpin();

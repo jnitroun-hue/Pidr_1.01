@@ -1,20 +1,26 @@
-/** Звуки «Козырного уса»: свои записи, не писк осциллятора. */
+/** Звуки слотов: ус — быстрый мажор, яблочко — светлый луп. Свои записи, не писк осциллятора. */
 
 const KEY = 'must_sound_enabled';
 
-type Clip = 'bed' | 'spin' | 'stop' | 'hit' | 'win' | 'nice' | 'mega' | 'epic' | 'epicMusic' | 'wheel';
+type Clip = 'bed' | 'spin' | 'stop' | 'hit' | 'win' | 'nice' | 'mega' | 'epic' | 'epicMusic' | 'wheel' | 'curtain';
+export type SoundKit = 'must' | 'arrow';
 
-const URLS: Record<Clip, string> = {
-  bed: '/sfx/must/bed-fun.wav',
-  spin: '/sfx/must/spin.wav',
-  stop: '/sfx/must/stop.wav',
-  hit: '/sfx/must/hit.wav',
-  win: '/sfx/must/win.wav',
-  nice: '/sfx/must/big.wav',
-  mega: '/sfx/must/mega.wav',
-  epic: '/sfx/must/epic.wav',
-  epicMusic: '/sfx/must/epic-music.wav',
-  wheel: '/sfx/must/wheel.wav',
+const BEDS: Record<SoundKit, string> = {
+  must: '/sfx/must/bed-zap.wav',
+  arrow: '/sfx/arrow/bed-sun.wav',
+};
+
+const URLS: Record<Exclude<Clip, 'bed'>, string> = {
+  spin: '/sfx/must/spin-gold.wav',
+  stop: '/sfx/must/stop-gold.wav',
+  hit: '/sfx/must/hit-coin.wav',
+  win: '/sfx/must/win-fan.wav',
+  nice: '/sfx/must/big-cheer.wav',
+  mega: '/sfx/must/mega-cheer.wav',
+  epic: '/sfx/must/epic-hit.wav',
+  epicMusic: '/sfx/must/epic-cheer.wav',
+  wheel: '/sfx/must/wheel-spin.wav',
+  curtain: '/sfx/must/curtain-gold.wav',
 };
 
 let ctx: AudioContext | null = null;
@@ -26,7 +32,8 @@ let spinGain: GainNode | null = null;
 let epicSource: AudioBufferSourceNode | null = null;
 let epicGain: GainNode | null = null;
 let enabled = true;
-const cache = new Map<Clip, Promise<AudioBuffer | null>>();
+let kit: SoundKit | null = null;
+const cache = new Map<string, Promise<AudioBuffer | null>>();
 const live = new Set<AudioBufferSourceNode>();
 
 function readEnabled(): boolean {
@@ -59,16 +66,31 @@ function context(): AudioContext | null {
   return ctx;
 }
 
+export function setSlotSoundKit(next: SoundKit | null): void {
+  if (next === kit) return;
+  kit = next;
+  stopNode(bedSource);
+  bedSource = null;
+  musicGain = null;
+}
+
+function clipUrl(clip: Clip): string | null {
+  if (clip === 'bed') return kit ? BEDS[kit] : null;
+  return URLS[clip];
+}
+
 function load(clip: Clip): Promise<AudioBuffer | null> {
   const audio = context();
-  if (!audio) return Promise.resolve(null);
-  const cached = cache.get(clip);
+  const url = clipUrl(clip);
+  if (!audio || !url) return Promise.resolve(null);
+  const key = clip === 'bed' ? url : clip;
+  const cached = cache.get(key);
   if (cached) return cached;
-  const pending = fetch(URLS[clip])
+  const pending = fetch(url)
     .then((response) => (response.ok ? response.arrayBuffer() : null))
     .then((bytes) => (bytes ? audio.decodeAudioData(bytes.slice(0)) : null))
     .catch(() => null);
-  cache.set(clip, pending);
+  cache.set(key, pending);
   return pending;
 }
 
@@ -101,10 +123,11 @@ export function unlockMustSound(): Promise<void> {
 }
 
 export function playMustMusic(): void {
-  if (!enabled || bedSource) return;
+  if (!enabled || !kit || bedSource) return;
+  const wanted = kit;
   void load('bed').then((buffer) => {
     const audio = context();
-    if (!buffer || !enabled || bedSource || !audio || !master) return;
+    if (!buffer || !enabled || kit !== wanted || bedSource || !audio || !master) return;
     musicGain = audio.createGain();
     musicGain.gain.value = 0.34;
     musicGain.connect(master);
@@ -222,6 +245,9 @@ export function playMustEpic(): void {
   if (!enabled) return;
   const audio = context();
   if (!audio || !master) return;
+  void load('epic').then((buffer) => {
+    if (buffer && ctx && enabled) start(buffer, ctx.currentTime, 0.85);
+  });
   if (musicGain) {
     const now = audio.currentTime;
     musicGain.gain.cancelScheduledValues(now);
@@ -273,5 +299,11 @@ export function stopMustEpic(): void {
 export function playMustWheel(): void {
   void load('wheel').then((buffer) => {
     if (buffer && ctx && enabled) start(buffer, ctx.currentTime, 0.55);
+  });
+}
+
+export function playMustCurtain(): void {
+  void load('curtain').then((buffer) => {
+    if (buffer && ctx && enabled) start(buffer, ctx.currentTime, 0.74);
   });
 }
