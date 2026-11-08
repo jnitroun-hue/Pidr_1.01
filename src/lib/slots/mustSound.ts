@@ -2,7 +2,7 @@
 
 const KEY = 'must_sound_enabled';
 
-type Clip = 'bed' | 'spin' | 'stop' | 'hit' | 'win' | 'nice' | 'mega' | 'epic' | 'epicMusic' | 'wheel' | 'curtain';
+type Clip = 'bed' | 'spin' | 'stop' | 'hit' | 'win' | 'land' | 'nice' | 'mega' | 'epic' | 'epicMusic' | 'wheel' | 'curtain';
 export type SoundKit = 'must' | 'arrow';
 
 const BEDS: Record<SoundKit, string> = {
@@ -11,10 +11,11 @@ const BEDS: Record<SoundKit, string> = {
 };
 
 const URLS: Record<Exclude<Clip, 'bed'>, string> = {
-  spin: '/sfx/must/spin-gold.wav',
-  stop: '/sfx/must/stop-gold.wav',
-  hit: '/sfx/must/hit-coin.wav',
-  win: '/sfx/must/win-fan.wav',
+  spin: '/sfx/must/spin-silk.wav',
+  stop: '/sfx/must/land-silk.wav',
+  hit: '/sfx/must/hit-silk.wav',
+  win: '/sfx/must/win-silk.wav',
+  land: '/sfx/must/land-silk.wav',
   nice: '/sfx/must/big-cheer.wav',
   mega: '/sfx/must/mega-cheer.wav',
   epic: '/sfx/must/epic-hit.wav',
@@ -173,7 +174,7 @@ export function playMustSpin(): void {
     const audio = context();
     if (!buffer || !enabled || !audio || !master) return;
     spinGain = audio.createGain();
-    spinGain.gain.value = 0.55;
+    spinGain.gain.value = 0.22;
     spinGain.connect(master);
     const source = audio.createBufferSource();
     source.buffer = buffer;
@@ -185,7 +186,6 @@ export function playMustSpin(): void {
 }
 
 export function stopMustSpin(): void {
-  const running = Boolean(spinSource);
   const audio = ctx;
   const gain = spinGain;
   const source = spinSource;
@@ -195,31 +195,33 @@ export function stopMustSpin(): void {
     const now = audio.currentTime;
     gain.gain.cancelScheduledValues(now);
     gain.gain.setValueAtTime(Math.max(0.0001, gain.gain.value), now);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
   }
-  window.setTimeout(() => stopNode(source), 100);
-  if (enabled && running) {
-    void load('stop').then((buffer) => {
-      if (buffer && ctx) start(buffer, ctx.currentTime, 0.7);
-    });
-  }
+  window.setTimeout(() => stopNode(source), 180);
+}
+
+export function playMustLand(tone = 2): void {
+  const rate = [0.9, 1, 1.12, 1.26, 1.4][Math.max(0, Math.min(4, tone))] ?? 1;
+  void load('land').then((buffer) => {
+    if (buffer && ctx && enabled) start(buffer, ctx.currentTime, 0.22, false, rate);
+  });
 }
 
 export function playMustHit(lines: number): number {
-  const count = Math.max(1, Math.min(4, lines));
+  const count = Math.max(1, Math.min(3, lines));
   void load('hit').then((buffer) => {
     if (!buffer || !ctx || !enabled) return;
     const now = ctx.currentTime + 0.02;
     for (let index = 0; index < count; index += 1) {
-      start(buffer, now + index * 0.12, 0.62, false, 1 + index * 0.08);
+      start(buffer, now + index * 0.18, 0.32 - index * 0.06, false, 1);
     }
   });
-  return count * 0.12;
+  return 0.22;
 }
 
 export function playMustWin(delay = 0): void {
   void load('win').then((buffer) => {
-    if (buffer && ctx && enabled) start(buffer, ctx.currentTime + delay, 0.72);
+    if (buffer && ctx && enabled) start(buffer, ctx.currentTime + delay, 0.38);
   });
 }
 

@@ -771,10 +771,10 @@ const CURTAIN_MULT_BONUS = [
 ];
 
 const CURTAIN_COUNT = [
-  { value: 0, weight: 97.2 },
-  { value: 1, weight: 2.4 },
-  { value: 2, weight: 0.32 },
-  { value: 3, weight: 0.06 },
+  { value: 0, weight: 94.2 },
+  { value: 1, weight: 5.2 },
+  { value: 2, weight: 0.5 },
+  { value: 3, weight: 0.08 },
   { value: 4, weight: 0.015 },
   { value: 5, weight: 0.005 },
 ];
@@ -1235,10 +1235,10 @@ function playBonus(game: SlotGame, bet: number, tier: Tier, scatterCount: number
     play.curtainWheel = { index, spins: face.spins, min: face.min, label: face.label };
     play.title = heat === 'hot' ? 'Hot Mod' : game.bonus.title;
     play.rule = heat === 'hot'
-      ? 'Пять скаттеров. Колесо уже выбрало спины и минимум шторы. На поле сразу две шторы.'
+      ? 'Пять скаттеров. Срыв шторы уже выбрал спины и минимум шторы. На поле сразу две шторы.'
       : heat === 'top'
-        ? 'Четыре скаттера. Колесо выбирает спины и минимум шторы. На старте одна штора.'
-        : 'Три скаттера. Колесо выбирает спины и минимальный множитель. Штора может не выпасть на первом спине.';
+        ? 'Четыре скаттера. Срыв шторы выбирает спины и минимум шторы. На старте одна штора.'
+        : 'Три скаттера. Срыв шторы выбирает спины и минимальный множитель. Штора может не выпасть на первом спине.';
     play.spins = bonusStickyReels(game, bet, heat, play.curtainWheel);
   }
   if (kind === 'hold-win') {

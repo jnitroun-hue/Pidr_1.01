@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { slotArt, slotHero } from '@/lib/slots/art';
-import { playMustCurtain } from '@/lib/slots/mustSound';
+import { playMustCurtain, playMustLand } from '@/lib/slots/mustSound';
 import { CURTAIN_MULTIPLIERS, getSlotGame, type SlotSymbol } from '@/lib/slots/games';
 import { reelPlan, slowCellTiming, type ReelSpeed } from '@/lib/slots/speed';
 import type { MarkKind } from '@/lib/slots/engine';
@@ -99,6 +99,49 @@ export default function SlotReel({
   const plan = reelPlan(speed, playIndex, rows, bonus, priorExtra, extraMs);
   const anyLocked = Boolean(locked?.some(Boolean));
   const dropping = rolling && !anyLocked;
+  const landAt = plan.mode === 'cell'
+    ? pieceAt(plan, 0, rows, bonus) + pieceDrop(plan, 0, rows, bonus)
+    : plan.delay + plan.drop;
+  const [reelLanded, setReelLanded] = useState(!rolling);
+  const voiced = gameId === 'golden-must' || gameId === 'green-arrow';
+  const freshKey = fresh?.map((cell) => (cell ? '1' : '0')).join('') ?? '';
+
+  useEffect(() => {
+    if (!dropping) {
+      setReelLanded(true);
+      return;
+    }
+    setReelLanded(false);
+    const timer = window.setTimeout(() => setReelLanded(true), Math.max(0, landAt));
+    return () => window.clearTimeout(timer);
+  }, [dropping, landAt]);
+
+  useEffect(() => {
+    if (!dropping || !voiced) return;
+    const timers: number[] = [];
+    if (plan.mode === 'cell') {
+      for (let row = 0; row < rows; row += 1) {
+        const landAt = pieceAt(plan, row, rows, bonus) + pieceDrop(plan, row, rows, bonus) * 0.82;
+        const tone = rows - 1 - row;
+        timers.push(window.setTimeout(() => playMustLand(tone), landAt));
+      }
+    } else if (speed === 'fast') {
+      if (playIndex === 0) timers.push(window.setTimeout(() => playMustLand(2), plan.delay + plan.drop * 0.78));
+    } else {
+      timers.push(window.setTimeout(() => playMustLand(reelIndex % 5), plan.delay + plan.drop * 0.78));
+    }
+    return () => timers.forEach((timer) => window.clearTimeout(timer));
+  }, [dropping, voiced, speed, bonus, rows, reelIndex, playIndex, plan.delay, plan.drop, plan.mode, plan.step]);
+
+  useEffect(() => {
+    if (rolling || !voiced || !freshKey.includes('1')) return;
+    const timers: number[] = [];
+    fresh?.forEach((cell, row) => {
+      if (!cell) return;
+      timers.push(window.setTimeout(() => playMustLand(rows - 1 - row), row * 55 + 520));
+    });
+    return () => timers.forEach((timer) => window.clearTimeout(timer));
+  }, [rolling, voiced, freshKey, fresh, rows]);
 
   const symbols = getSlotGame(gameId)?.symbols;
 
@@ -181,7 +224,7 @@ export default function SlotReel({
     >
       {clearOld ? null : stack(faceLanded, 'rest')}
       {dropping ? stack(landed, plan.mode) : null}
-      {curtain != null && !dropping ? (
+      {curtain != null && (!dropping || reelLanded) ? (
         <CurtainShow key={`curtain-${reelIndex}-${curtain}`} gameId={gameId} mult={curtain} />
       ) : null}
     </div>
@@ -205,11 +248,14 @@ function CurtainShow({ gameId, mult }: { gameId: string; mult: number }) {
     };
   }
   const { top, bottom, pick } = deal.current;
+  const climber = gameId === 'golden-must'
+    ? (pick === 'top' ? '/img/slots/hero-must-climb.png?v=1' : '/img/slots/hero-must-fall.png?v=1')
+    : slotHero(gameId);
   return (
     <div className={styles.curtain} data-pick={pick}>
+      <img className={styles.curtainRope} src="/img/slots/ui/rope-gold.png" alt="" draggable={false} />
       <img className={styles.curtainOffer} data-side="top" src={`/img/slots/mult/x${top}.png`} alt={`x${top}`} draggable={false} />
-      <img className={styles.curtainHero} src={slotHero(gameId)} alt="" draggable={false} />
-      <img className={styles.curtainCard} src="/img/slots/mult/card-ace.png" alt="" draggable={false} />
+      <img className={styles.curtainHero} src={climber} alt="" draggable={false} />
       <img className={styles.curtainOffer} data-side="bottom" src={`/img/slots/mult/x${bottom}.png`} alt={`x${bottom}`} draggable={false} />
     </div>
   );

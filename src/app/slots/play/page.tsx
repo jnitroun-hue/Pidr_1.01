@@ -51,7 +51,7 @@ import WheelBonus from '@/components/slots/WheelBonus';
 import PickBonus from '@/components/slots/PickBonus';
 import CurtainWheel from '@/components/slots/CurtainWheel';
 import WinTrace from '@/components/slots/WinTrace';
-import { slotArt, slotBackdrop, slotBuyArt, slotHero, slotLogo } from '@/lib/slots/art';
+import { slotArt, slotBackdrop, slotHero, slotLogo } from '@/lib/slots/art';
 import styles from '../Slots.module.css';
 
 type Mode = 'demo' | 'coins' | 'gram';
@@ -110,8 +110,8 @@ function WinFigure({ value, format }: { value: number; format: (n: number) => st
 
 const BUY_BLURB: Record<string, { ru: [string, string]; en: [string, string] }> = {
   'golden-must': {
-    ru: ['Колесо задаёт спины и минимальную штору. Шторы остаются на барабанах.', 'Четыре скаттера. Бонус стартует с одной шторой.'],
-    en: ['The wheel sets the spins and the minimum curtain. Curtains stay.', 'Four scatters. The feature starts with one curtain.'],
+    ru: ['Ус срывает бахрому: спины и пол шторы.', 'Четыре звезды. Старт с одной шторой.'],
+    en: ['The mustache drops the fringe: spins and a curtain floor.', 'Four stars. One curtain at the start.'],
   },
   'hex-vault': {
     ru: ['Монеты остаются. Каждая новая возвращает три респина.', 'Старт с девяти монет и более крупные номиналы.'],
@@ -179,6 +179,7 @@ function introText(game: SlotGame, bonus: BonusPlay, lang: SlotLang): { title: s
   const en = lang === 'en';
   const title = en ? (EN_FEATURE[game.id] ?? bonus.title) : bonus.title;
   const wheelBtn = en ? 'To the wheel' : 'К колесу';
+  const dealBtn = en ? 'To the curtain' : 'К шторе';
   const spinBtn = en ? 'Spin' : 'Крутить';
   switch (bonus.kind) {
     case 'hold-win':
@@ -206,9 +207,11 @@ function introText(game: SlotGame, bonus: BonusPlay, lang: SlotLang): { title: s
       return {
         title,
         text: bonus.curtainWheel
-          ? (en ? 'The wheel chooses the spins and the curtain floor. One curtain is already on the reels.' : bonus.rule)
+          ? (en
+            ? 'The mustache throws the ace, the fringe falls, and one rope stays on his hat. That rope sets the spins and the curtain floor.'
+            : 'Ус бросает туза, бахрома падает, и одна верёвка остаётся на шляпе. Она задаёт спины и пол шторы.')
           : (en ? `${spins} free spins. A curtain covers a reel and stays until the feature ends.` : `${spins} бесплатных спинов. Штора закрывает барабан и остаётся до конца бонуса.`),
-        button: bonus.curtainWheel ? wheelBtn : spinBtn,
+        button: bonus.curtainWheel ? dealBtn : spinBtn,
       };
   }
 }
@@ -426,7 +429,7 @@ function PlayInner() {
     const extraMs = anticipation(board.grid);
     const view = keepLocked
       ? hideFreshCurtains(board)
-      : { ...board, wins: EMPTY_WINS, locked: undefined, marks: undefined, curtains: undefined };
+      : { ...board, wins: EMPTY_WINS, locked: undefined, marks: undefined };
     setExtra(extraMs);
     setShown({ board: view });
     setRibbon('');
@@ -984,20 +987,22 @@ function PlayInner() {
             <p className={styles.buyKicker}>{lang === 'en' ? 'Features' : 'Бонусы'}</p>
             <div className={styles.buyChoices}>
               <button type="button" onClick={() => { setBuyMenu(false); void buy('regular'); }}>
-                <img className={styles.buyArt} src={slotBuyArt(game.id)} alt="" />
-                <b>{lang === 'en' ? (EN_FEATURE[game.id] ?? game.bonus.title) : game.bonus.title}</b>
-                <small>{(BUY_BLURB[game.id] ?? BUY_BLURB['golden-must'])[lang][0]}</small>
-                <strong>{money(bet * 100)}</strong>
-                <i>{lang === 'en' ? `floor ${money(bet * 10)}` : `пол ${money(bet * 10)}`}</i>
-                <em>{lang === 'en' ? 'Activate' : 'Активировать'}</em>
+                <span className={styles.buyCopy}>
+                  <b>{lang === 'en' ? (EN_FEATURE[game.id] ?? game.bonus.title) : game.bonus.title}</b>
+                  <small>{(BUY_BLURB[game.id] ?? BUY_BLURB['golden-must'])[lang][0]}</small>
+                  <strong>{money(bet * 100)}</strong>
+                  <i>{lang === 'en' ? `floor ${money(bet * 10)}` : `пол ${money(bet * 10)}`}</i>
+                  <em>{lang === 'en' ? 'Activate' : 'Активировать'}</em>
+                </span>
               </button>
               <button type="button" className={styles.buyChoiceTop} onClick={() => { setBuyMenu(false); void buy('top'); }}>
-                <img className={styles.buyArt} src={slotBuyArt(game.id)} alt="" />
-                <b>{lang === 'en' ? `Top · ${EN_FEATURE[game.id] ?? game.bonus.title}` : `Топ · ${game.bonus.title}`}</b>
-                <small>{(BUY_BLURB[game.id] ?? BUY_BLURB['golden-must'])[lang][1]}</small>
-                <strong>{money(bet * 500)}</strong>
-                <i>{lang === 'en' ? `floor ${money(bet * 50)}` : `пол ${money(bet * 50)}`}</i>
-                <em>{lang === 'en' ? 'Activate' : 'Активировать'}</em>
+                <span className={styles.buyCopy}>
+                  <b>{lang === 'en' ? `Top · ${EN_FEATURE[game.id] ?? game.bonus.title}` : `Топ · ${game.bonus.title}`}</b>
+                  <small>{(BUY_BLURB[game.id] ?? BUY_BLURB['golden-must'])[lang][1]}</small>
+                  <strong>{money(bet * 500)}</strong>
+                  <i>{lang === 'en' ? `floor ${money(bet * 50)}` : `пол ${money(bet * 50)}`}</i>
+                  <em>{lang === 'en' ? 'Activate' : 'Активировать'}</em>
+                </span>
               </button>
             </div>
             <button type="button" className={styles.buyCancel} onClick={() => setBuyMenu(false)}>{lang === 'en' ? 'Close' : 'Закрыть'}</button>
