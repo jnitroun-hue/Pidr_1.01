@@ -10,6 +10,31 @@ const nextConfig = {
   reactStrictMode: true,
   serverExternalPackages: ['sharp', '@napi-rs/canvas'],
 
+  // Картинки слотов и звуки отдаются как статика. В функцию их тянет
+  // path.join(cwd, 'public', ...), и бандл переваливает лимит Vercel в 250 МБ.
+  outputFileTracingExcludes: {
+    '*': [
+      './public/img/**',
+      './public/sfx/**',
+      './public/fx/**',
+      './public/sounds/**',
+      './public/videos/**',
+      './public/css/**',
+      './public/avatars/**',
+      './public/promo/**',
+      './public/images/**',
+      './node_modules/@napi-rs/canvas-win32-x64-msvc/**',
+      './node_modules/@napi-rs/canvas-darwin-*/**',
+      './node_modules/@napi-rs/canvas-linux-arm64*/**',
+      './node_modules/@napi-rs/canvas-android*/**',
+      './node_modules/@img/sharp-win32*/**',
+      './node_modules/@img/sharp-darwin*/**',
+      './node_modules/@img/sharp-linux-arm*/**',
+      './node_modules/@img/sharp-libvips-linux-arm*/**',
+      './node_modules/@img/sharp-libvips-linuxmusl*/**',
+    ],
+  },
+
   env: {
     NEXT_PUBLIC_APP_BUILD_ID: APP_BUILD_ID,
   },
