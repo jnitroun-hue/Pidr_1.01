@@ -56,7 +56,7 @@ const SPIN_EN: Record<string, string> = {
   'fairy-glade': 'SPIN',
   'ash-dragon': 'FIRE',
   'frost-queen': 'SPIN',
-  'blade-ronin': 'SLASH',
+  'mad-dj': 'DROP',
 };
 
 export function spinWord(lang: SlotLang, gameId: string, russian: string): string {

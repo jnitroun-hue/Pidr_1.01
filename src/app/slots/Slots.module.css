@@ -574,6 +574,142 @@
   display: none;
 }
 
+.deckHero {
+  display: none;
+}
+
+.stageDj .board {
+  justify-content: flex-end;
+  gap: 4px;
+  padding-right: 14px;
+  --hero-col: clamp(156px, 31vw, 280px);
+  --cell: clamp(
+    22px,
+    min(
+      calc((100cqw - var(--hero-col) - 40px) / var(--reels) - 4px),
+      calc((100cqh - var(--plaque)) / var(--rows) - 3px)
+    ),
+    128px
+  );
+}
+
+.stageDj .deckHero {
+  display: block;
+  position: relative;
+  flex: 0 0 var(--hero-col);
+  width: var(--hero-col);
+  height: min(98%, 680px);
+  align-self: flex-end;
+  margin-bottom: 1%;
+  pointer-events: none;
+}
+
+.deckIdle,
+.deckSlide,
+.deckThrow {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--cell) * 1.62);
+  width: 100%;
+  height: auto;
+}
+
+.deckIdle,
+.deckSlide,
+.deckThrow { aspect-ratio: 3 / 4; }
+
+.deckIdle img,
+.deckSlide img,
+.deckThrow img {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 18px 16px rgba(0, 0, 0, 0.6));
+}
+
+.deckEye {
+  position: absolute;
+  z-index: 2;
+  width: 8.6%;
+  height: 5.2%;
+  margin: -2.6% 0 0 -4.3%;
+  border-radius: 50%;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  filter: blur(0.6px);
+  animation: eyeBurn 0.9s ease-in-out infinite;
+}
+
+.deckIdle .deckEye:last-child,
+.deckSlide .deckEye:last-child,
+.deckThrow .deckEye:last-child {
+  animation-delay: -0.4s;
+}
+
+.deckIdle {
+  animation: deckLeft 1.15s ease-in-out infinite;
+}
+
+.deckSlide {
+  animation: deckRight 1.15s ease-in-out infinite;
+}
+
+.deckThrow {
+  opacity: 0;
+}
+
+.deckHero[data-act='throw'] .deckIdle,
+.deckHero[data-act='throw'] .deckSlide,
+.deckHero[data-act='bonus'] .deckIdle,
+.deckHero[data-act='bonus'] .deckSlide {
+  animation: none;
+  opacity: 0;
+}
+
+.deckHero[data-act='throw'] .deckThrow,
+.deckHero[data-act='bonus'] .deckThrow {
+  animation: deckToss 0.42s ease-in-out infinite;
+}
+
+@keyframes deckLeft {
+  0%, 40% { opacity: 1; transform: translateX(-3%); }
+  60%, 100% { opacity: 0; transform: translateX(3%); }
+}
+
+@keyframes deckRight {
+  0%, 40% { opacity: 0; transform: translateX(-3%); }
+  60%, 100% { opacity: 1; transform: translateX(3%); }
+}
+
+@keyframes deckToss {
+  0%, 100% { opacity: 1; transform: rotate(-4deg) translate(-2%, 0); }
+  50% { opacity: 1; transform: rotate(5deg) translate(4%, -3%); }
+}
+
+@keyframes deckLift {
+  0%, 54% { opacity: 1; transform: translateY(0); }
+  70%, 86% { opacity: 0; transform: translateY(2%); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes deckTap {
+  0%, 54% { opacity: 0; transform: translateY(-3%); }
+  70%, 86% { opacity: 1; transform: translateY(1.5%); }
+  100% { opacity: 0; transform: translateY(0); }
+}
+
+@keyframes eyeBurn {
+  0%, 100% {
+    background: radial-gradient(circle, #fff8d0 0%, #ffe14a 28%, #ff7a00 62%, transparent 74%);
+    box-shadow: 0 0 10px 3px #ffc400, 0 0 22px 6px rgba(255, 120, 0, 0.9);
+  }
+  50% {
+    background: radial-gradient(circle, #fff0f0 0%, #ff2424 30%, #b91c1c 64%, transparent 76%);
+    box-shadow: 0 0 10px 3px #ff1a1a, 0 0 22px 6px rgba(255, 16, 32, 0.95);
+  }
+}
+
 .frameWrap {
   display: flex;
   flex-direction: column;
@@ -732,7 +868,7 @@
 .winPlaque[data-skin='fairy-glade'] strong { color: #f0abfc; }
 .winPlaque[data-skin='ash-dragon'] strong { color: #fdba74; }
 .winPlaque[data-skin='frost-queen'] strong { color: #bae6fd; }
-.winPlaque[data-skin='blade-ronin'] strong { color: #fca5a5; }
+.winPlaque[data-skin='mad-dj'] strong { color: #f0abfc; }
 
 .triggerChip {
   display: flex;
@@ -1134,7 +1270,7 @@
 .frame[data-skin='fairy-glade'] .hot img { box-shadow: 0 0 0 3px #f0abfc, 0 0 18px #e879f9; }
 .frame[data-skin='ash-dragon'] .hot img { box-shadow: 0 0 0 3px #fdba74, 0 0 18px #f97316; }
 .frame[data-skin='frost-queen'] .hot img { box-shadow: 0 0 0 3px #bae6fd, 0 0 18px #38bdf8; }
-.frame[data-skin='blade-ronin'] .hot img { box-shadow: 0 0 0 3px #fca5a5, 0 0 18px #ef4444; }
+.frame[data-skin='mad-dj'] .hot img { box-shadow: 0 0 0 3px #f0abfc, 0 0 18px #22d3ee; }
 .frame[data-skin='hex-vault'] .hot img { box-shadow: 0 0 0 3px #fdba74, 0 0 18px #fb923c; }
 .frame[data-skin='limitless-city'] .hot img { box-shadow: 0 0 0 3px #fda4af, 0 0 18px #fb7185; }
 
@@ -1174,6 +1310,7 @@
 .fxFlame img { animation: fxFlame 0.8s linear infinite; }
 .fxIce img { animation: fxIce 1.3s ease-in-out infinite; }
 .fxTwist img { animation: fxTwist 1.6s ease-in-out infinite; }
+.fxBeat img { animation: fxPulse 0.48s ease-in-out infinite; filter: drop-shadow(0 0 6px #e879f9); }
 
 @keyframes fxShimmer {
   0%, 100% { filter: brightness(1) saturate(1); }
@@ -1289,6 +1426,14 @@
   animation: popOut 680ms ease forwards;
 }
 
+.cellBurst {
+  background: radial-gradient(circle, rgba(232, 121, 249, 0.95), rgba(34, 211, 238, 0.4) 42%, transparent 72%);
+}
+
+.cellBurst img {
+  animation: djBurst 680ms ease forwards;
+}
+
 .cellLand img {
   animation: landPop 520ms cubic-bezier(0.16, 0.84, 0.3, 1.3);
 }
@@ -1306,17 +1451,16 @@
 .mkOrb img { box-shadow: 0 0 0 3px #86efac, 0 0 18px rgba(74, 222, 128, 0.7); }
 .mkFrozen img { filter: saturate(0.7) brightness(1.15); box-shadow: 0 0 16px rgba(103, 232, 249, 0.8); }
 .mkBurn img { filter: brightness(0.55) sepia(0.8); }
-.mkSlash img { box-shadow: 0 0 0 2px #fecdd3, 0 0 16px rgba(244, 63, 94, 0.7); }
+.mkDrop img { box-shadow: 0 0 0 3px #f0abfc, 0 0 18px rgba(34, 211, 238, 0.85); animation: fxPulse 0.48s ease-in-out infinite; }
+.mkBomb img { box-shadow: 0 0 0 3px #fb7185, 0 0 22px rgba(244, 63, 94, 0.95); animation: fxPulse 0.28s ease-in-out infinite; }
 
-.slashLine {
+.dropBeat {
   position: absolute;
-  left: -12%;
-  right: -12%;
-  top: 48%;
-  height: 4px;
-  background: linear-gradient(90deg, transparent, #fff, #fb7185, #fff, transparent);
-  transform: rotate(-18deg);
-  animation: slashSweep 0.5s ease-out;
+  inset: 10%;
+  border-radius: 50%;
+  border: 2px solid #f0abfc;
+  box-shadow: 0 0 12px #22d3ee, inset 0 0 8px rgba(232, 121, 249, 0.45);
+  animation: fxPulse 0.45s ease-in-out 3;
   pointer-events: none;
 }
 
@@ -1338,6 +1482,11 @@
   0% { transform: scale(1.08); filter: brightness(2.4); opacity: 1; }
   35% { transform: scale(1.18); filter: brightness(1.8); opacity: 1; }
   100% { transform: scale(0.15) translateY(-16px); opacity: 0; filter: brightness(2); }
+}
+@keyframes djBurst {
+  0% { transform: scale(1); filter: brightness(1) saturate(1); opacity: 1; }
+  30% { transform: scale(1.28) rotate(8deg); filter: brightness(2.4) saturate(1.6); opacity: 1; }
+  100% { transform: scale(0.12) rotate(-16deg); filter: brightness(3); opacity: 0; }
 }
 @keyframes landPop {
   0% { transform: scale(0.6); filter: brightness(2); }
@@ -1390,6 +1539,34 @@
   display: block;
   background: #0a0808;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.scatterWord {
+  position: absolute;
+  z-index: 4;
+  left: 0;
+  right: 0;
+  top: 50%;
+  margin: 0;
+  transform: translateY(-50%);
+  text-align: center;
+  font-family: Impact, "Arial Black", sans-serif;
+  font-weight: 900;
+  font-size: calc(var(--cell) * 0.22);
+  letter-spacing: 0.01em;
+  line-height: 1;
+  color: #fff;
+  -webkit-text-fill-color: #fff;
+  text-shadow: 0 1px 0 #000, 0 0 8px #67e8f9;
+  animation: scatterHue 0.9s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes scatterHue {
+  0%, 100% { color: #fff; -webkit-text-fill-color: #fff; text-shadow: 0 1px 0 #000, 0 0 8px #fff; }
+  25% { color: #67e8f9; -webkit-text-fill-color: #67e8f9; text-shadow: 0 1px 0 #000, 0 0 8px #22d3ee; }
+  50% { color: #ff4d6d; -webkit-text-fill-color: #ff4d6d; text-shadow: 0 1px 0 #000, 0 0 8px #ff2d55; }
+  75% { color: #ffe14a; -webkit-text-fill-color: #ffe14a; text-shadow: 0 1px 0 #000, 0 0 8px #ffb000; }
 }
 
 .symName {
@@ -2146,6 +2323,32 @@
     linear-gradient(180deg, #7c4a12, #1a1008 70%);
   box-shadow: 0 0 80px rgba(245, 197, 24, 0.45), 0 24px 60px rgba(0, 0, 0, 0.55);
   animation: popIn 0.45s cubic-bezier(0.16, 0.84, 0.3, 1.2);
+}
+
+.djBonus {
+  background: #07010c;
+}
+
+.djBonusHero {
+  position: absolute;
+  inset: -6%;
+  width: 112%;
+  height: 112%;
+  object-fit: cover;
+  z-index: 0;
+  animation: djBonusShake 0.28s ease-in-out infinite;
+}
+
+.djBonus .sheet {
+  position: relative;
+  z-index: 1;
+  background: rgba(18, 6, 24, 0.72);
+  box-shadow: 0 0 40px rgba(232, 121, 249, 0.45);
+}
+
+@keyframes djBonusShake {
+  0%, 100% { transform: rotate(-2.2deg) translateX(-1.2%); }
+  50% { transform: rotate(2.2deg) translateX(1.2%); }
 }
 
 .congrats p {

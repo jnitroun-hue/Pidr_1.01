@@ -13,7 +13,7 @@ import {
   type SlotGame,
   type SlotSymbol,
 } from './games';
-import { applyCharacter, type SlotEvent } from './characters';
+import { applyCharacter, dropFigure, type SlotEvent } from './characters';
 
 export type Cell = { reel: number; row: number };
 
@@ -29,7 +29,7 @@ export type SpinWin = {
   amount: number;
 };
 
-export type MarkKind = 'wild' | 'mult' | 'mystery' | 'colossal' | 'burn' | 'slash' | 'sticky' | 'coin' | 'orb' | 'frozen';
+export type MarkKind = 'wild' | 'mult' | 'mystery' | 'colossal' | 'burn' | 'drop' | 'sticky' | 'coin' | 'orb' | 'frozen' | 'bomb';
 export type Mark = Cell & { kind: MarkKind };
 
 /** Одно состояние поля, которое игрок видит. */
@@ -115,7 +115,7 @@ function isWild(game: SlotGame, id: string): boolean {
 
 function isSpecial(game: SlotGame, id: string): boolean {
   const symbol = symbolById(game, id);
-  return Boolean(symbol.scatter || symbol.bonusCoin || symbol.orb || symbol.mystery);
+  return Boolean(symbol.scatter || symbol.bonusCoin || symbol.orb || symbol.mystery || symbol.bomb);
 }
 
 function regularSymbols(game: SlotGame): SlotSymbol[] {
@@ -522,7 +522,7 @@ function uniqueCells(cells: Cell[]): Cell[] {
 type CascadeOptions = {
   bag: SlotSymbol[];
   /** Общий множитель бонуса: передаётся по ссылке и растёт на step за каскад. */
-  carry?: { multiplier: number; step?: number };
+  carry?: { multiplier: number; step?: number; cap?: number };
   /** Фея добавляет дикие после первой доски без выигрыша. */
   fairy?: 'never' | 'chance' | 'always';
   /** Сколько шаров гарантировать на первой доске. */
@@ -531,6 +531,56 @@ type CascadeOptions = {
   orbScale?: number;
   events?: SlotEvent[];
 };
+
+/** Бомба: соседи в радиусе одной клетки становятся одним символом, сама бомба — дикой. */
+function blastBombs(game: SlotGame, tiles: Tiles): { tiles: Tiles; bombs: Cell[]; painted: Cell[] } | null {
+  if (game.id !== 'mad-dj') return null;
+  const bombs = countId(tiles, 'bomb');
+  if (!bombs.length) return null;
+  const groups: Cell[][] = [];
+  const used = new Set<number>();
+  bombs.forEach((bomb, index) => {
+    if (used.has(index)) return;
+    const group = [bomb];
+    used.add(index);
+    for (let cursor = 0; cursor < group.length; cursor += 1) {
+      const origin = group[cursor];
+      bombs.forEach((other, otherIndex) => {
+        if (used.has(otherIndex)) return;
+        if (Math.max(Math.abs(other.reel - origin.reel), Math.abs(other.row - origin.row)) <= 2) {
+          used.add(otherIndex);
+          group.push(other);
+        }
+      });
+    }
+    groups.push(group);
+  });
+  const next = cloneTiles(tiles);
+  const bag = regularSymbols(game);
+  const painted: Cell[] = [];
+  const seen = new Set<string>();
+  groups.forEach((group) => {
+    const symbolId = pickWeighted(bag).id;
+    group.forEach((bomb) => {
+      for (let reel = bomb.reel - 1; reel <= bomb.reel + 1; reel += 1) {
+        for (let row = bomb.row - 1; row <= bomb.row + 1; row += 1) {
+          if (reel === bomb.reel && row === bomb.row) continue;
+          if (reel < 0 || row < 0 || reel >= game.reels || row >= game.rows) continue;
+          const id = tiles[reel][row].id;
+          if (id === 'scatter' || id === 'bomb') continue;
+          next[reel][row] = { id: symbolId, value: null };
+          const key = `${reel}:${row}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            painted.push({ reel, row });
+          }
+        }
+      }
+      next[bomb.reel][bomb.row] = { id: wildId(game), value: null };
+    });
+  });
+  return { tiles: next, bombs, painted };
+}
 
 /** Последовательность досок до тех пор, пока выигрыши не закончатся. */
 function cascade(game: SlotGame, start: Tiles, bet: number, options: CascadeOptions): Board[] {
@@ -549,9 +599,20 @@ function cascade(game: SlotGame, start: Tiles, bet: number, options: CascadeOpti
   let rawTotal = 0;
 
   for (let guard = 0; guard < 40; guard += 1) {
+    const blast = blastBombs(game, tiles);
+    if (blast) {
+      const marks: Mark[] = [
+        ...blast.bombs.map((cell) => ({ ...cell, kind: 'bomb' as const })),
+        ...blast.painted.map((cell) => ({ ...cell, kind: 'bomb' as const })),
+      ];
+      boards.push(board(tiles, [], 1, { removed, marks, label: 'Бомба' }));
+      tiles = blast.tiles;
+      removed = uniqueCells([...blast.bombs, ...blast.painted]);
+      continue;
+    }
     const wins = evalBoard(game, tiles, bet);
     if (!wins.length) {
-      const wantFairy = game.mechanic === 'cluster' && !fairyUsed
+      const wantFairy = game.id === 'fairy-glade' && !fairyUsed
         && (options.fairy === 'always' || (options.fairy === 'chance' && randomInt(100) < 22));
       if (wantFairy) {
         fairyUsed = true;
@@ -586,7 +647,10 @@ function cascade(game: SlotGame, start: Tiles, bet: number, options: CascadeOpti
     });
     boards.push(current);
     rawTotal += sumWins(wins);
-    if (game.mechanic === 'cluster' && options.carry) options.carry.multiplier += options.carry.step ?? 1;
+    if (game.mechanic === 'cluster' && options.carry) {
+      const grown = options.carry.multiplier + (options.carry.step ?? 1);
+      options.carry.multiplier = options.carry.cap != null ? Math.min(options.carry.cap, grown) : grown;
+    }
     const cells = uniqueCells(wins.flatMap((win) => win.cells));
     tiles = tumble(game, tiles, cells, options.bag, orbScale);
     removed = cells;
@@ -601,7 +665,20 @@ function cascade(game: SlotGame, start: Tiles, bet: number, options: CascadeOpti
 
 function baseBoards(game: SlotGame, tiles: Tiles, bet: number, events: SlotEvent[]): Board[] {
   if (game.mechanic === 'scatter-pays') return cascade(game, tiles, bet, { bag: baseBag(game) });
-  if (game.mechanic === 'cluster') return cascade(game, tiles, bet, { bag: baseBag(game), fairy: 'chance', events });
+  if (game.mechanic === 'cluster') {
+    const boards = cascade(game, tiles, bet, {
+      bag: baseBag(game),
+      fairy: game.id === 'fairy-glade' ? 'chance' : 'never',
+      events,
+    });
+    const drop = events.find((event) => event.actor === 'dj');
+    if (drop && boards[0]) {
+      const marks: Mark[] = drop.cells.map((cell) => ({ ...cell, kind: 'drop' }));
+      boards[0].marks = [...(boards[0].marks ?? []), ...marks];
+      if (!boards[0].label) boards[0].label = 'Дроп';
+    }
+    return boards;
+  }
 
   if (game.bonus.kind === 'mystery') return revealMystery(game, tiles, bet, 'base', 0);
 
@@ -621,7 +698,13 @@ function baseBoards(game: SlotGame, tiles: Tiles, bet: number, events: SlotEvent
 
   if (game.bonus.kind === 'sticky-reels') return [curtainSpin(game, tiles, bet, 'base')];
 
-  return [board(tiles, evalBoard(game, tiles, bet), 1)];
+  const settled = board(tiles, evalBoard(game, tiles, bet), 1);
+  const drop = events.find((event) => event.actor === 'dj');
+  if (drop) {
+    settled.marks = drop.cells.map((cell) => ({ ...cell, kind: 'drop' as const }));
+    settled.label = 'Дроп';
+  }
+  return [settled];
 }
 
 /** Колонка целиком из одного старшего символа или ход королевы: держим барабан. */
@@ -1189,28 +1272,39 @@ function bonusColossal(game: SlotGame, bet: number, tier: Tier): SpinStep[] {
   return steps;
 }
 
-/** Удар ронина: дикие на трёх соседних барабанах одного ряда. */
-function bonusSlash(game: SlotGame, bet: number, tier: Tier): SpinStep[] {
+/** Ночной сет: дроп на пять клеток, выигрыш лопается, множитель растёт с каскадом. */
+function bonusDrop(game: SlotGame, bet: number, tier: Tier): SpinStep[] {
   const steps: SpinStep[] = [];
   const wild = wildId(game);
-  let multiplier = tier === 'top' ? 6 : 2;
-  const cuts = tier === 'top' ? 2 : 1;
-  const step = tier === 'top' ? 4 : 2;
-  const cap = tier === 'top' ? 20 : 10;
+  const carry = {
+    multiplier: tier === 'top' ? 3 : 2,
+    step: tier === 'top' ? 2 : 1,
+    cap: tier === 'top' ? 12 : 8,
+  };
+  const drops = tier === 'top' ? 2 : 1;
+  let held: Cell[] = [];
   for (let index = 0; index < game.freeSpins; index += 1) {
     const tiles = drawTiles(game, game.symbols);
     const marks: Mark[] = [];
-    for (let cut = 0; cut < cuts; cut += 1) {
-      const row = (index + cut) % game.rows;
-      const start = randomInt(game.reels - 2);
-      for (let reel = start; reel < start + 3; reel += 1) {
-        tiles[reel][row] = { id: wild, value: null };
-        marks.push({ reel, row, kind: 'slash' });
-      }
+    held.forEach((cell) => {
+      tiles[cell.reel][cell.row] = { id: wild, value: null };
+      marks.push({ ...cell, kind: 'sticky' });
+    });
+    const next: Cell[] = [];
+    for (let count = 0; count < drops; count += 1) {
+      dropFigure(game.reels, game.rows).forEach((cell) => {
+        tiles[cell.reel][cell.row] = { id: wild, value: null };
+        next.push(cell);
+        marks.push({ ...cell, kind: 'drop' });
+      });
     }
-    const wins = evalBoard(game, tiles, bet);
-    steps.push(freeSpinStep([board(tiles, wins, multiplier, { marks, label: `Удар · множитель x${multiplier}` })]));
-    multiplier = Math.min(cap, multiplier + step);
+    held = uniqueCells(next);
+    const boards = cascade(game, tiles, bet, { bag: game.symbols, carry, fairy: 'never' });
+    if (boards[0]) {
+      boards[0].marks = [...(boards[0].marks ?? []), ...marks];
+      boards[0].label = `Дроп · x${boards[0].multiplier}`;
+    }
+    steps.push(freeSpinStep(boards));
   }
   return steps;
 }
@@ -1270,7 +1364,7 @@ function playBonus(game: SlotGame, bet: number, tier: Tier, scatterCount: number
   if (kind === 'cluster-fs') play.spins = bonusClusterFs(game, bet, tier);
   if (kind === 'burn') play.spins = bonusBurn(game, bet, tier);
   if (kind === 'colossal') play.spins = bonusColossal(game, bet, tier);
-  if (kind === 'slash') play.spins = bonusSlash(game, bet, tier);
+  if (kind === 'drop') play.spins = bonusDrop(game, bet, tier);
 
   const interactive = Boolean(play.pick?.cells?.length);
   let total = play.spins.reduce((sum, step) => sum + step.totalWin, 0)

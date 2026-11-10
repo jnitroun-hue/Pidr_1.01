@@ -37,8 +37,8 @@ const SYMBOLS: Record<string, Record<string, string>> = {
   'frost-queen': {
     snow: 'Snow', crystal: 'Crystal', wolf: 'Wolf', 'ice-crown': 'Diadem', wild: 'Ice', scatter: 'Snowflake',
   },
-  'blade-ronin': {
-    mask: 'Mask', fan: 'Fan', katana: 'Katana', crest: 'Crest', wild: 'Slash', scatter: 'Seal',
+  'mad-dj': {
+    phones: 'Headphones', mic: 'Microphone', vinyl: 'Vinyl', mixer: 'Mixer', speaker: 'Speaker', bomb: 'Bomb', wild: 'DJ', scatter: 'Drop',
   },
 };
 
@@ -123,13 +123,13 @@ const GAMES: Record<string, GameEn> = {
     top: 'The colossus is always wild, wins come with x3, and there are 2 extra spins.',
     features: ['15 lines', 'The queen freezes a reel and awards a respin', 'A colossal 3×3 symbol in the feature'],
   },
-  'blade-ronin': {
-    title: 'Blade Ronin',
-    mood: 'Pays both ways. The ronin slashes rows, and every slash raises the multiplier.',
-    bonus: 'Slash',
-    rule: '10 free spins with a multiplier from x2. Each spin the ronin turns one row across three neighbouring reels wild, and every slash raises the multiplier by 2.',
-    top: 'Two slashes a spin. The multiplier starts at x6 and climbs by 4.',
-    features: ['12 lines, both ways', 'Five of a kind on a full line pays once. A shorter one can pay from both sides', 'The ronin slashes a row wild in the base game', 'The multiplier climbs with every slash'],
+  'mad-dj': {
+    title: 'Mad DJ',
+    mood: 'A 5×5 deck. Five touching symbols burst, new ones fall, and the DJ drops five cells wild.',
+    bonus: 'Night set',
+    rule: '8 free spins. Every spin the DJ drops five wild cells. Wins burst and new symbols fall in. The multiplier starts at x2 and climbs by 1 on every cascade.',
+    top: 'Two drops a spin. The multiplier starts at x3 and climbs by 2 on every cascade.',
+    features: ['5×5 board, clusters of five touching symbols', 'Wins burst and new symbols fall in', 'A bomb blows up every cell one step away and turns into a wild', 'In the night set the multiplier climbs with every cascade'],
   },
 };
 
@@ -194,7 +194,7 @@ export function translateRibbon(label: string, game: SlotGame, lang: SlotLang): 
     [/^Множитель x(\d+)$/, (value) => `Multiplier x${value}`],
     [/^Дыхание x(\d+)$/, (value) => `Breath x${value}`],
     [/^Колосс: (.+?)( · x3)?$/, (name, extra) => `Colossus: ${nameOf(name)}${extra ? ' · x3' : ''}`],
-    [/^Удар · множитель x(\d+)$/, (value) => `Slash · multiplier x${value}`],
+    [/^Дроп · x(\d+)$/, (value) => `Drop · x${value}`],
     [/^(\d+)× (.+)$/, (count, name) => `${count}× ${nameOf(name)}`],
   ];
   for (const [pattern, format] of patterns) {
@@ -205,6 +205,8 @@ export function translateRibbon(label: string, game: SlotGame, lang: SlotLang): 
   if (label === 'Фея добавляет дикие') return 'The fairy adds wilds';
   if (label === 'Каскад окончен') return 'Cascade finished';
   if (label === 'Заморозка и респин') return 'Freeze and respin';
+  if (label === 'Дроп') return 'Drop';
+  if (label === 'Бомба') return 'Bomb';
   return label;
 }
 

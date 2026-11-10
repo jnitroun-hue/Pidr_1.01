@@ -3,11 +3,12 @@
 const KEY = 'must_sound_enabled';
 
 type Clip = 'bed' | 'spin' | 'stop' | 'hit' | 'win' | 'land' | 'nice' | 'mega' | 'epic' | 'epicMusic' | 'wheel' | 'curtain';
-export type SoundKit = 'must' | 'arrow';
+export type SoundKit = 'must' | 'arrow' | 'dj';
 
 const BEDS: Record<SoundKit, string> = {
   must: '/sfx/must/bed-zap.wav',
   arrow: '/sfx/arrow/bed-sun.wav',
+  dj: '/sfx/dj/bed-house.wav?v=2',
 };
 
 const URLS: Record<Exclude<Clip, 'bed'>, string> = {

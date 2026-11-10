@@ -20,6 +20,8 @@ export type SlotSymbol = {
   orb?: boolean;
   /** Мистический символ: перед подсчётом превращается в один общий символ. */
   mystery?: boolean;
+  /** Бомба: взрывает соседние клетки и сама становится дикой. */
+  bomb?: boolean;
   /** Выпадает только в бонусной игре. */
   bonusOnly?: boolean;
 };
@@ -36,7 +38,7 @@ export type BonusKind =
   | 'cluster-fs'
   | 'burn'
   | 'colossal'
-  | 'slash';
+  | 'drop';
 
 export type SlotGame = {
   id: string;
@@ -542,34 +544,41 @@ export const SLOT_GAMES: SlotGame[] = [
     ],
   },
   {
-    id: 'blade-ronin',
-    title: 'Катана на кону',
-    mood: 'Платит в обе стороны. Ронин рубит ряды, каждый удар поднимает множитель.',
-    volatility: 'очень высокая',
+    id: 'mad-dj',
+    title: 'Безумный диджей',
+    mood: 'Поле 5×5. Пять соседних символов лопаются, сверху падают новые, диджей роняет дроп на пять клеток.',
+    volatility: 'высокая',
     reels: 5,
-    rows: 3,
-    mechanic: 'both-ways',
-    lines: LINES_20.slice(0, 12),
-    accent: '#ef4444',
-    felt: '#1a0a0c',
+    rows: 5,
+    mechanic: 'cluster',
+    lines: [],
+    accent: '#e879f9',
+    felt: '#160818',
     trigger: 3,
-    freeSpins: 10,
-    maxWinMultiplier: 7000,
+    freeSpins: 8,
+    maxWinMultiplier: 8000,
     bonus: {
-      kind: 'slash',
-      title: 'Рассечение',
-      rule: '10 бесплатных спинов с множителем от x2. Каждый спин ронин рубит три соседних барабана одного ряда в дикие символы, и каждый удар поднимает множитель на 2.',
-      top: 'Два удара за спин, множитель начинается с x6 и растёт на 4.',
+      kind: 'drop',
+      title: 'Ночной сет',
+      rule: '8 бесплатных спинов. Каждый спин диджей роняет дроп на пять клеток, они становятся дикими. Выигрыш лопается, сверху падают новые символы. Множитель начинается с x2 и растёт на 1 за каждый каскад.',
+      top: 'Два дропа за спин. Множитель начинается с x3 и растёт на 2 за каскад.',
     },
-    features: ['12 линий в обе стороны', 'Пятёрка на всю линию платит один раз, короче — может заплатить с двух сторон', 'Ронин рубит ряд в дикие в базовой игре', 'Растущий множитель за каждый удар'],
+    features: [
+      'Поле 5×5, кластеры от пяти соседних символов',
+      'Выигрыш лопается, сверху падают новые символы',
+      'Бомба взрывает клетки в радиусе одной и сама становится дикой',
+      'В ночном сете множитель растёт с каждым каскадом',
+    ],
     multipliers: NO_MULTIPLIER,
     symbols: [
-      { id: 'mask', name: 'Маска', weight: 46, pays: [0.3, 0.8, 2] },
-      { id: 'fan', name: 'Веер', weight: 28, pays: [0.5, 2, 6] },
-      { id: 'katana', name: 'Катана', weight: 12, pays: [2, 6, 21] },
-      { id: 'crest', name: 'Герб', weight: 6, pays: [4, 16, 47] },
-      { id: 'wild', name: 'Удар', weight: 2.2, pays: [8, 26, 78], wild: true },
-      { id: 'scatter', name: 'Печать', weight: 1.75, pays: [2, 6, 25], scatter: true },
+      { id: 'phones', name: 'Наушники', weight: 22, pays: [0.2, 0.6, 2] },
+      { id: 'mic', name: 'Микрофон', weight: 16, pays: [0.35, 1, 3.2] },
+      { id: 'vinyl', name: 'Винил', weight: 11, pays: [0.6, 1.8, 5.5] },
+      { id: 'mixer', name: 'Пульт', weight: 7, pays: [1.1, 3.2, 10] },
+      { id: 'speaker', name: 'Колонка', weight: 4, pays: [2, 6, 18] },
+      { id: 'bomb', name: 'Бомба', weight: 1.2, pays: [0, 0, 0], bomb: true },
+      { id: 'wild', name: 'Диджей', weight: 3.2, pays: [0, 0, 0], wild: true },
+      { id: 'scatter', name: 'Дроп', weight: 1.55, pays: [2, 6, 18], scatter: true },
     ],
   },
 ];

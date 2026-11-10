@@ -351,4 +351,28 @@
 .buy[data-skin='fairy-glade'] { background: #581c87; color: #fae8ff; border-radius: 28px; }
 .buy[data-skin='ash-dragon'] { background: linear-gradient(180deg, #9a3412, #431407); color: #ffedd5; }
 .buy[data-skin='frost-queen'] { background: #0c4a6e; color: #e0f2fe; border-radius: 22px; }
-.buy[data-skin='blade-ronin'] { background: #450a0a; color: #fecaca; border-radius: 2px; box-shadow: inset 0 0 0 2px #f87171; }
+.buy[data-skin='mad-dj'] { background: #1a0a24 url('/img/slots/ui/dj-btn-buy.png') center / 100% 100% no-repeat; color: #fae8ff; border-radius: 18px; box-shadow: 0 0 16px rgba(34, 211, 238, 0.35); }
+
+.shell[data-skin='mad-dj'] .spin {
+  color: #fae8ff;
+  background: #120818 url('/img/slots/ui/dj-btn-spin.png') center / 100% 100% no-repeat;
+  box-shadow: 0 8px 0 rgba(0, 0, 0, 0.45), 0 0 18px rgba(232, 121, 249, 0.45);
+}
+
+.shell[data-skin='mad-dj'] .spin b,
+.shell[data-skin='mad-dj'] .spin small {
+  color: #fae8ff;
+  text-shadow: 0 1px 2px #000, 0 0 8px rgba(0, 0, 0, 0.85);
+}
+
+.shell[data-skin='mad-dj'] .tools button,
+.shell[data-skin='mad-dj'] .stake > button,
+.shell[data-skin='mad-dj'] .stakeValue {
+  color: #fae8ff;
+  background: linear-gradient(180deg, #6d28d9, #1e1b4b 58%, #0f172a);
+  box-shadow: inset 0 0 0 1px rgba(232, 121, 249, 0.85), 0 0 12px rgba(34, 211, 238, 0.22);
+}
+
+.shell[data-skin='mad-dj'] .tools button.on {
+  box-shadow: inset 0 0 0 2px #22d3ee, 0 0 14px rgba(34, 211, 238, 0.55);
+}

@@ -8,13 +8,13 @@
 .idleFairy { animation: fairyFloat 1.6s ease-in-out infinite; transform-origin: 50% 60%; }
 .idleDragon { animation: dragonBreath 1.15s ease-in-out infinite; transform-origin: 40% 80%; }
 .idleQueen { animation: queenRise 2.4s ease-in-out infinite; transform-origin: 50% 100%; }
-.idleRonin { animation: roninShift 1.3s ease-in-out infinite; transform-origin: 50% 80%; }
+.idleDj { animation: djNod 0.984s linear infinite; transform-origin: 50% 82%; }
 
 .poseDraw { animation: arrowDraw 0.85s cubic-bezier(0.2, 0.75, 0.15, 1) both; transform-origin: 30% 70%; }
 .poseSweep { animation: fairySweep 1.05s cubic-bezier(0.16, 0.8, 0.2, 1) both; transform-origin: 50% 60%; }
 .poseLunge { animation: dragonLunge 0.78s cubic-bezier(0.15, 0.7, 0.2, 1) both; transform-origin: 20% 80%; }
 .poseFrost { animation: queenFrost 1.15s ease-out both; transform-origin: 50% 100%; }
-.poseSlash { animation: roninSlash 0.55s cubic-bezier(0.1, 0.7, 0.15, 1) both; transform-origin: 50% 40%; }
+.poseDrop { animation: djDrop 0.72s cubic-bezier(0.15, 0.8, 0.2, 1) both; transform-origin: 50% 80%; }
 .poseSlam { animation: hostSlam 0.72s cubic-bezier(0.2, 0.7, 0.2, 1.1) both; transform-origin: 50% 100%; }
 .poseFlip { animation: dealerFlip 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both; transform-origin: 50% 30%; }
 .posePulse { animation: spiritPulse 1.1s ease-in-out both; transform-origin: 50% 70%; }
@@ -46,7 +46,7 @@
   overflow: visible;
 }
 
-.bolt, .spark, .fire, .crystal, .coinFly, .orbRing, .snapFlash {
+.bolt, .spark, .fire, .crystal, .coinFly, .orbRing, .snapFlash, .dropRing {
   position: absolute;
   left: calc(var(--reel) * (var(--cell) + var(--reel-gap, 6px)) + var(--cell) / 2);
   top: calc(var(--row) * var(--cell) + var(--cell) / 2);
@@ -167,6 +167,16 @@
   animation: orbPulse 1s ease-out both;
 }
 
+.dropRing {
+  width: calc(var(--cell) * 0.86);
+  height: calc(var(--cell) * 0.86);
+  margin: calc(var(--cell) * -0.43) 0 0 calc(var(--cell) * -0.43);
+  border-radius: 50%;
+  border: 3px solid #f0abfc;
+  box-shadow: 0 0 16px rgba(232, 121, 249, 0.9), inset 0 0 12px rgba(34, 211, 238, 0.5);
+  animation: orbPulse 0.7s ease-out both;
+}
+
 .snapFlash {
   width: var(--cell);
   height: var(--cell);
@@ -229,9 +239,13 @@
   0%, 100% { transform: translateY(0); filter: saturate(1); }
   50% { transform: translateY(-10px) scale(1.03); filter: saturate(1.2) drop-shadow(0 0 12px #7dd3fc); }
 }
-@keyframes roninShift {
-  0%, 100% { transform: translateX(0) rotate(0deg); }
-  50% { transform: translateX(8px) rotate(-4deg); }
+@keyframes djNod {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  15% { transform: translateY(8px) rotate(4deg) scale(1.03); }
+  30% { transform: translateY(0) rotate(-1deg); }
+  50% { transform: translateY(0) rotate(2deg); }
+  65% { transform: translateY(7px) rotate(-4deg) scale(1.03); }
+  80% { transform: translateY(0) rotate(1deg); }
 }
 @keyframes arrowDraw {
   0% { transform: translateX(-8%) rotate(0deg); }
@@ -257,10 +271,10 @@
   40% { transform: translateY(-14%) scale(1.06) rotate(-3deg); filter: saturate(1.3) brightness(1.25) drop-shadow(0 0 18px #bae6fd); }
   100% { transform: translateY(-4%) scale(1); filter: saturate(1.1) drop-shadow(0 0 10px #7dd3fc); }
 }
-@keyframes roninSlash {
-  0% { transform: translateX(28%) rotate(16deg); }
-  45% { transform: translateX(-18%) rotate(-24deg) scale(1.06); }
-  100% { transform: translateX(-4%) rotate(-6deg); }
+@keyframes djDrop {
+  0% { transform: translateY(-10%) scale(0.94) rotate(-6deg); filter: brightness(1.45); }
+  42% { transform: translateY(7%) scale(1.08) rotate(4deg); filter: brightness(1.15) drop-shadow(0 0 16px #e879f9); }
+  100% { transform: translateY(0) scale(1) rotate(0deg); filter: drop-shadow(0 0 10px #22d3ee); }
 }
 @keyframes hostSlam {
   0% { transform: translateY(-34%) scale(1.08); }

@@ -31,7 +31,7 @@ export default function WinTrace({ gameId, reels, rows, wins, color }: Props) {
   }, [signature, lines.length]);
   const shown = lines.length ? lines[cursor % lines.length] : null;
   if (!shown) return null;
-  const dash = gameId === 'neon-river' || gameId === 'frost-queen' ? '0.28 0.16' : gameId === 'blade-ronin' ? '0.55 0.18' : undefined;
+  const dash = gameId === 'neon-river' || gameId === 'frost-queen' || gameId === 'mad-dj' ? '0.28 0.16' : undefined;
   return (
     <svg className={styles.layer} viewBox={`0 0 ${reels} ${rows}`} preserveAspectRatio="none" aria-hidden="true">
       <polyline points={points(shown)} strokeDasharray={dash} style={{ stroke: color }} />

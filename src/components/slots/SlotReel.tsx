@@ -18,7 +18,7 @@ const SCATTER_FX: Record<string, string> = {
   'fairy-glade': styles.fxSpark,
   'ash-dragon': styles.fxFlame,
   'frost-queen': styles.fxIce,
-  'blade-ronin': styles.fxTwist,
+  'mad-dj': styles.fxBeat,
 };
 
 const MARK_CLASS: Record<MarkKind, string> = {
@@ -27,11 +27,12 @@ const MARK_CLASS: Record<MarkKind, string> = {
   mystery: styles.mkMystery,
   colossal: styles.mkColossal,
   burn: styles.mkBurn,
-  slash: styles.mkSlash,
+  drop: styles.mkDrop,
   sticky: styles.mkSticky,
   coin: styles.mkCoin,
   orb: styles.mkOrb,
   frozen: styles.mkFrozen,
+  bomb: styles.mkBomb,
 };
 
 type Props = {
@@ -151,6 +152,7 @@ export default function SlotReel({
     return (
       <>
         <img src={slotArt(gameId, id)} alt="" draggable={false} />
+        {gameId === 'mad-dj' && symbol?.scatter ? <span className={styles.scatterWord}>SCATTER</span> : null}
         {symbol?.mystery ? <small className={styles.roleMystery}>?</small> : null}
         {mult ? <b className={styles.multBadge}>x{mult}</b> : null}
         {value != null && curtain == null && !mult && !symbol?.wild ? <b className={`${styles.valueBadge} ${mark === 'orb' ? styles.valueOrb : ''} ${mark === 'mult' ? styles.valueEdge : ''}`}>x{formatValue(value)}</b> : null}
@@ -193,7 +195,7 @@ export default function SlotReel({
             isLocked ? styles.cellLocked : '',
             respinning ? styles.cellRespin : '',
             kind === 'rest' && fresh?.[row] ? styles.cellFresh : '',
-            kind === 'rest' && popping?.[row] ? styles.cellPop : '',
+            kind === 'rest' && popping?.[row] ? (gameId === 'mad-dj' ? styles.cellBurst : styles.cellPop) : '',
             landWild && !fresh?.[row] ? styles.cellLand : '',
           ].filter(Boolean).join(' ');
           return (
@@ -208,7 +210,7 @@ export default function SlotReel({
               }}
             >
               {kind === 'cell' ? <span className={styles.cellDropFace}>{face(id, value, mark)}</span> : face(id, value, mark)}
-              {mark === 'slash' ? <i className={styles.slashLine} /> : null}
+              {mark === 'drop' ? <i className={styles.dropBeat} /> : null}
               {mark === 'burn' ? <i className={styles.burnFlame} /> : null}
             </div>
           );

@@ -10,6 +10,7 @@ type Props = {
   multiple: number;
   amountLabel: string;
   capped?: boolean;
+  gameId?: string;
   onClose: () => void;
 };
 
@@ -37,11 +38,20 @@ const ART: Record<Tier, string> = {
   max: '/img/slots/win-max.jpg',
 };
 
-export default function BigWin({ multiple, amountLabel, capped = false, onClose }: Props) {
+const DJ_ART: Record<Tier, string> = {
+  nice: '/img/slots/win-dj-nice.jpg',
+  mega: '/img/slots/win-dj-mega.jpg',
+  epic: '/img/slots/win-dj-epic.jpg',
+  sensational: '/img/slots/win-dj-sensational.jpg',
+  max: '/img/slots/win-dj-sensational.jpg',
+};
+
+export default function BigWin({ multiple, amountLabel, capped = false, gameId, onClose }: Props) {
   const { lang, social } = useSlotLocale();
   const copy = cabinetCopy(lang, social);
   const tier = tierOf(multiple, capped);
   const title = copy[TITLE[tier]];
+  const art = gameId === 'mad-dj' ? DJ_ART[tier] : ART[tier];
   const [shown, setShown] = useState(0);
   const target = Math.max(1, Math.round(multiple));
 
@@ -61,13 +71,13 @@ export default function BigWin({ multiple, amountLabel, capped = false, onClose 
 
   return (
     <div
-      className={`${styles.overlay} ${styles[tier]}`}
-      style={{ backgroundImage: `url(${ART[tier]})` }}
+      className={`${styles.overlay} ${styles[tier]} ${gameId === 'mad-dj' ? styles.dj : ''}`}
+      style={{ backgroundImage: `url(${art})` }}
       role="dialog"
       aria-label={title}
     >
       <div className={styles.stage}>
-        <img src={ART[tier]} alt="" draggable={false} />
+        <img src={art} alt="" draggable={false} />
         <div className={styles.card}>
           <p>{title}</p>
           <strong>x{shown}</strong>

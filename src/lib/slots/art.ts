@@ -127,16 +127,18 @@ const ART: Record<string, Record<string, string>> = {
     wild: `${BASE}/sym-wild-frost.jpg`,
     scatter: `${BASE}/scatter-frost.jpg`,
   },
-  'blade-ronin': {
-    bg: `${BASE}/bg-ronin.jpg`,
-    poster: `${BASE}/poster-ronin.jpg`,
-    hero: `${BASE}/hero-ronin.png`,
-    mask: `${BASE}/sym-mask.jpg`,
-    fan: `${BASE}/sym-fan.jpg`,
-    katana: `${BASE}/sym-katana.jpg`,
-    crest: `${BASE}/sym-crest.jpg`,
-    wild: `${BASE}/sym-wild-ronin.jpg`,
-    scatter: `${BASE}/scatter-ronin.jpg`,
+  'mad-dj': {
+    bg: `${BASE}/bg-dj.jpg`,
+    poster: `${BASE}/poster-dj.jpg?v=3`,
+    hero: `${BASE}/hero-dj.png?v=3`,
+    phones: `${BASE}/sym-phones.jpg?v=5`,
+    mic: `${BASE}/sym-mic.jpg?v=5`,
+    vinyl: `${BASE}/sym-vinyl.jpg?v=5`,
+    mixer: `${BASE}/sym-mixer.jpg?v=5`,
+    speaker: `${BASE}/sym-speaker.jpg?v=5`,
+    wild: `${BASE}/sym-wild-dj.jpg?v=5`,
+    bomb: `${BASE}/sym-bomb-dj.jpg?v=5`,
+    scatter: `${BASE}/scatter-dj.jpg?v=8`,
   },
 };
 
@@ -166,7 +168,7 @@ const LOGO: Record<string, string> = {
   'fairy-glade': `${BASE}/logo-fairy.jpg`,
   'ash-dragon': `${BASE}/logo-dragon.jpg`,
   'frost-queen': `${BASE}/logo-frost.jpg`,
-  'blade-ronin': `${BASE}/logo-ronin.jpg`,
+  'mad-dj': `${BASE}/logo-dj.jpg`,
 };
 
 export function slotLogo(gameId: string): string {
@@ -183,7 +185,7 @@ const BUY_ART: Record<string, string> = {
   'fairy-glade': `${BASE}/buy-fairy.jpg`,
   'ash-dragon': `${BASE}/buy-dragon.jpg`,
   'frost-queen': `${BASE}/buy-frost.jpg`,
-  'blade-ronin': `${BASE}/buy-ronin.jpg`,
+  'mad-dj': `${BASE}/buy-dj.jpg?v=3`,
 };
 
 export function slotBuyArt(gameId: string): string {

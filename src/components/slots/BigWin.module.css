@@ -162,6 +162,19 @@
   from { transform: scale(1.06); filter: brightness(1.35); }
   to { transform: none; filter: none; }
 }
+@keyframes djShake {
+  0%, 100% { transform: rotate(-2.4deg) translateX(-1.4%); }
+  50% { transform: rotate(2.4deg) translateX(1.4%); }
+}
+@keyframes djBang {
+  0%, 100% { transform: translateY(-2%) rotate(-1.2deg); }
+  50% { transform: translateY(3%) rotate(1.6deg); }
+}
+.dj.nice .stage img { animation: reveal 0.55s ease-out both, djShake 0.28s ease-in-out 0.55s infinite; }
+.dj.mega .stage img { animation: reveal 0.55s ease-out both, djBang 0.22s ease-in-out 0.55s infinite; }
+.dj.epic .stage img { animation: reveal 0.55s ease-out both, djBang 0.16s ease-in-out 0.55s infinite; }
+.dj.sensational .stage img,
+.dj.max .stage img { animation: reveal 0.55s ease-out both, djBang 0.12s linear 0.55s infinite; }
 @keyframes pop {
   from { transform: translate(-50%, -50%) scale(0.72); opacity: 0; }
   to { transform: translate(-50%, -50%) scale(1); opacity: 1; }

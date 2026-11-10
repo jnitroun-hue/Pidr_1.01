@@ -145,9 +145,9 @@ const BUY_BLURB: Record<string, { ru: [string, string]; en: [string, string] }> 
     ru: ['В каждом спине на поле встаёт символ 3×3.', 'Колосс всегда дикий, спинов больше.'],
     en: ['Every spin plants a 3×3 symbol.', 'The giant is always wild, with extra spins.'],
   },
-  'blade-ronin': {
-    ru: ['Удар превращает ряд в дикие и поднимает множитель.', 'Два удара за спин, множитель начинается с x6.'],
-    en: ['A slash turns a row wild and raises the multiplier.', 'Two slashes a spin. The multiplier starts at x6.'],
+  'mad-dj': {
+    ru: ['Выигрыш лопается, сверху падают новые. Дроп красит пять диких.', 'Два дропа за спин, множитель начинается с x3.'],
+    en: ['Wins burst and new symbols fall. The drop paints five wilds.', 'Two drops a spin. The multiplier starts at x3.'],
   },
 };
 
@@ -161,7 +161,7 @@ const EN_FEATURE: Record<string, string> = {
   'fairy-glade': 'Ring Dance',
   'ash-dragon': 'Breath',
   'frost-queen': 'Ice Throne',
-  'blade-ronin': 'Slash',
+  'mad-dj': 'Night set',
 };
 
 function featureSpinLine(bonus: BonusPlay, en: boolean): string {
@@ -201,8 +201,8 @@ function introText(game: SlotGame, bonus: BonusPlay, lang: SlotLang): { title: s
       return { title, text: en ? `${spins} free spins. The first win burns the cheapest symbol. Every win raises the multiplier.` : `${spins} бесплатных спинов. Первый выигрыш сжигает самый дешёвый символ, каждый выигрыш поднимает множитель.`, button: spinBtn };
     case 'colossal':
       return { title, text: en ? `${spins} free spins. Each one plants a 3×3 symbol.` : `${spins} бесплатных спинов. В каждом на поле встаёт колоссальный символ 3×3.`, button: spinBtn };
-    case 'slash':
-      return { title, text: en ? `${spins} free spins. A slash turns a row wild. The multiplier grows with every slash.` : `${spins} бесплатных спинов. Ронин рубит ряд в дикие, множитель растёт с каждым ударом.`, button: spinBtn };
+    case 'drop':
+      return { title, text: en ? `${spins} free spins. Every drop paints five wilds. Wins burst, new symbols fall, and the multiplier climbs.` : `${spins} бесплатных спинов. Каждый дроп красит пять диких. Выигрыш лопается, сверху падают новые, множитель растёт.`, button: spinBtn };
     default:
       return {
         title,
@@ -252,7 +252,7 @@ function PlayInner() {
   const copy = cabinetCopy(lang, false);
   const [soundOn, setSoundOn] = useState(true);
   const game = getSlotGame(params.get('game') || '') ?? getSlotGame('golden-must')!;
-  const voiced = game.id === 'golden-must' || game.id === 'green-arrow';
+  const voiced = game.id === 'golden-must' || game.id === 'green-arrow' || game.id === 'mad-dj';
   const modeParam = params.get('mode');
   const mode: Mode = modeParam === 'coins' || modeParam === 'gram' ? modeParam : 'demo';
   const allowAuto = params.get('autoplay') !== '0';
@@ -406,7 +406,7 @@ function PlayInner() {
   }
 
   useEffect(() => {
-    setSlotSoundKit(game.id === 'green-arrow' ? 'arrow' : game.id === 'golden-must' ? 'must' : null);
+    setSlotSoundKit(game.id === 'green-arrow' ? 'arrow' : game.id === 'golden-must' ? 'must' : game.id === 'mad-dj' ? 'dj' : null);
     setSoundOn(isMustSoundOn());
     return () => stopMustAudio();
   }, [game.id]);
@@ -776,7 +776,7 @@ function PlayInner() {
 
   return (
     <main
-      className={`${styles.stage} ${game.id === 'golden-must' ? styles.stageMust : ''} ${inBonus ? styles.stageBonus : ''} ${pots ? styles.stagePots : ''}`}
+      className={`${styles.stage} ${game.id === 'golden-must' || game.id === 'mad-dj' ? styles.stageMust : ''} ${game.id === 'mad-dj' ? styles.stageDj : ''} ${inBonus ? styles.stageBonus : ''} ${pots ? styles.stagePots : ''}`}
       style={{ backgroundImage: `url(${slotBackdrop(game.id)})`, ['--accent' as string]: game.accent }}
     >
       <div className={styles.vignette} />
@@ -825,7 +825,25 @@ function PlayInner() {
       )}
 
       <section className={styles.board} style={{ ['--reels' as string]: String(game.reels), ['--rows' as string]: String(game.rows) }}>
-        {heroSrc ? (
+        {game.id === 'mad-dj' ? (
+          <div className={styles.deckHero} data-act={cue?.pose === 'throw' ? 'throw' : phase === 'intro' ? 'bonus' : undefined} aria-hidden>
+            <div className={styles.deckIdle}>
+              <img src="/img/slots/hero-dj-fader-a.png?v=4" alt="" draggable={false} />
+              <i className={styles.deckEye} style={{ left: '42.7%', top: '21.1%' }} />
+              <i className={styles.deckEye} style={{ left: '51.4%', top: '18.6%' }} />
+            </div>
+            <div className={styles.deckSlide}>
+              <img src="/img/slots/hero-dj-fader-b.png?v=4" alt="" draggable={false} />
+              <i className={styles.deckEye} style={{ left: '38.8%', top: '22.5%' }} />
+              <i className={styles.deckEye} style={{ left: '47.7%', top: '19.5%' }} />
+            </div>
+            <div className={styles.deckThrow}>
+              <img src="/img/slots/hero-dj-throw.png?v=4" alt="" draggable={false} />
+              <i className={styles.deckEye} style={{ left: '36.1%', top: '22.7%' }} />
+              <i className={styles.deckEye} style={{ left: '45.1%', top: '19.5%' }} />
+            </div>
+          </div>
+        ) : heroSrc ? (
           <img key={actToken} className={`${styles.hero} ${sideHeroClass(game.id, cue)}`} src={heroSrc} alt="" draggable={false} />
         ) : null}
         <div className={styles.frameWrap}>
@@ -840,7 +858,7 @@ function PlayInner() {
             </div>
           ) : null}
           <div className={styles.ribbonRow}>
-            {cue && heroSrc && phase !== 'pick' ? (
+            {cue && heroSrc && phase !== 'pick' && game.id !== 'mad-dj' ? (
               <img key={actToken} className={`${styles.bonusHero} ${sideHeroClass(game.id, cue)}`} src={heroSrc} alt="" draggable={false} />
             ) : null}
             <div className={styles.winPlaque} data-skin={game.id} data-hot={!rolling && (phase === 'pick' ? pickTotal : winSoFar) > 0 ? '1' : undefined}>
@@ -879,7 +897,7 @@ function PlayInner() {
               ))}
             </div>
             <HeroStage gameId={game.id} cue={cue} replayKey={actToken} />
-            {!rolling && showLines ? (
+            {!rolling && showLines && game.mechanic !== 'cluster' ? (
               <WinTrace gameId={game.id} reels={game.reels} rows={game.rows} wins={board.wins} color={game.accent} />
             ) : null}
             </div>
@@ -948,9 +966,10 @@ function PlayInner() {
       )}
 
       {feature && intro && bonusIntro && (
-        <div className={styles.overlay}>
+        <div className={`${styles.overlay} ${game.id === 'mad-dj' ? styles.djBonus : ''}`}>
+          {game.id === 'mad-dj' ? <img className={styles.djBonusHero} src="/img/slots/win-dj-nice.jpg" alt="" /> : null}
           <div className={`${styles.sheet} ${styles.congrats}`}>
-            {heroSrc ? <img className={`${styles.sheetHero} ${sideHeroClass(game.id, { pose: 'present', cells: [] })}`} src={heroSrc} alt="" /> : null}
+            {heroSrc && game.id !== 'mad-dj' ? <img className={`${styles.sheetHero} ${sideHeroClass(game.id, { pose: 'present', cells: [] })}`} src={heroSrc} alt="" /> : null}
             <p>{feature.tier === 'natural' ? (lang === 'en' ? 'Congratulations!' : 'Поздравляем!') : feature.tier === 'top' ? (lang === 'en' ? 'Super feature bought' : 'Супер-бонус куплен') : (lang === 'en' ? 'Feature bought' : 'Бонус куплен')}</p>
             <strong>{intro.title}</strong>
             <span>{intro.text}</span>
@@ -1052,6 +1071,7 @@ function PlayInner() {
       {showInfo && <SlotInfo game={game} bet={bet} gram={mode === 'gram'} onClose={() => setShowInfo(false)} />}
       {bigMultiple != null && round && (
         <BigWin
+          gameId={game.id}
           multiple={bigMultiple}
           amountLabel={money(round.totalWin)}
           capped={Boolean(round.capped)}

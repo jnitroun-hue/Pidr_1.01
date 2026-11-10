@@ -8,7 +8,8 @@ export type HeroPose =
   | 'sweep'
   | 'lunge'
   | 'frost'
-  | 'slash'
+  | 'drop'
+  | 'throw'
   | 'slam'
   | 'flip'
   | 'pulse'
@@ -35,7 +36,7 @@ const IDLE_CLASS: Record<string, string> = {
   'fairy-glade': styles.idleFairy,
   'ash-dragon': styles.idleDragon,
   'frost-queen': styles.idleQueen,
-  'blade-ronin': styles.idleRonin,
+  'mad-dj': styles.idleDj,
 };
 
 const POSE_CLASS: Record<Exclude<HeroPose, 'present'>, string> = {
@@ -43,7 +44,8 @@ const POSE_CLASS: Record<Exclude<HeroPose, 'present'>, string> = {
   sweep: styles.poseSweep,
   lunge: styles.poseLunge,
   frost: styles.poseFrost,
-  slash: styles.poseSlash,
+  drop: styles.poseDrop,
+  throw: styles.poseDrop,
   slam: styles.poseSlam,
   flip: styles.poseFlip,
   pulse: styles.posePulse,
@@ -83,9 +85,12 @@ export function resolveHeroCue(input: {
   if (id === 'frost-queen' && (ofKind(marks, 'frozen').length || ofKind(marks, 'colossal').length || cast?.actor === 'queen')) {
     return { pose: 'frost', cells: [...ofKind(marks, 'frozen'), ...ofKind(marks, 'colossal')] };
   }
-  if (id === 'blade-ronin' && (ofKind(marks, 'slash').length || cast?.actor === 'ronin')) {
-    const cells = ofKind(marks, 'slash').length ? ofKind(marks, 'slash') : cast?.cells ?? [];
-    return { pose: 'slash', cells, row: cells[0]?.row };
+  if (id === 'mad-dj' && (ofKind(marks, 'bomb').length || input.label === 'Бомба')) {
+    return { pose: 'throw', cells: ofKind(marks, 'bomb') };
+  }
+  if (id === 'mad-dj' && (ofKind(marks, 'drop').length || cast?.actor === 'dj')) {
+    const cells = ofKind(marks, 'drop').length ? ofKind(marks, 'drop') : cast?.cells ?? [];
+    return { pose: 'drop', cells };
   }
   if (id === 'golden-must') return null;
   if (id === 'hex-vault' && ofKind(marks, 'coin').length) {
@@ -153,7 +158,7 @@ export default function HeroStage({
           {pose === 'lunge' && cells.map((cell, index) => <i key={index} className={styles.fire} style={spot(cell, index)} />)}
           {pose === 'frost' && <i className={styles.frostWash} />}
           {pose === 'frost' && cells.slice(0, 8).map((cell, index) => <i key={index} className={styles.crystal} style={spot(cell, index)} />)}
-          {pose === 'slash' && <i className={styles.slashArc} style={{ ['--row' as string]: String(cue.row ?? cells[0]?.row ?? 1) }} />}
+          {pose === 'drop' && cells.map((cell, index) => <i key={index} className={styles.dropRing} style={spot(cell, index)} />)}
           {pose === 'slam' && [...new Set(cells.map((cell) => cell.reel))].map((reel) => (
             <i key={reel} className={styles.slamCol} style={{ ['--reel' as string]: String(reel) }} />
           ))}

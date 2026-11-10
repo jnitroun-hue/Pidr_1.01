@@ -51,7 +51,7 @@ const THEME: Record<string, Theme> = {
   'fairy-glade': { spin: 'КРУТИТЬ', bg: '#140816', panel: '#3a1844', accent: '#e879f9', ink: '#2a1030', text: '#fae8ff' },
   'ash-dragon': { spin: 'ОГОНЬ', bg: '#140806', panel: '#3a140c', accent: '#fdba74', ink: '#2a0c08', text: '#ffedd5' },
   'frost-queen': { spin: 'КРУТИТЬ', bg: '#071018', panel: '#123044', accent: '#7dd3fc', ink: '#082f49', text: '#e0f2fe' },
-  'blade-ronin': { spin: 'УДАР', bg: '#10080a', panel: '#2a1216', accent: '#f87171', ink: '#1a0a0c', text: '#fee2e2' },
+  'mad-dj': { spin: 'БИТ', bg: '#120818', panel: '#2a1040', accent: '#e879f9', ink: '#1a0a24', text: '#fae8ff' },
 };
 
 export default function GameConsole(props: Props) {
