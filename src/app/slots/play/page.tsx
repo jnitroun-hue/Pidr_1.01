@@ -41,7 +41,7 @@ import {
   stopMustSpin,
   unlockMustSound,
 } from '@/lib/slots/mustSound';
-import { anteCharge, isReelHeld, openOrder, openPriorExtra, reelSpinMs, type ReelSpeed } from '@/lib/slots/speed';
+import { anteCharge, GRAVITY_STEP_MS, isReelHeld, openOrder, openPriorExtra, reelSpinMs, SLOW_DUMP_MS, slowCellTiming, type ReelSpeed } from '@/lib/slots/speed';
 import GameConsole from '@/components/slots/GameConsole';
 import SlotReel from '@/components/slots/SlotReel';
 import BigWin from '@/components/slots/BigWin';
@@ -55,7 +55,7 @@ import { slotArt, slotBackdrop, slotHero, slotLogo } from '@/lib/slots/art';
 import styles from '../Slots.module.css';
 
 type Mode = 'demo' | 'coins' | 'gram';
-type Shown = { board: Board; fresh?: boolean[][]; popping?: boolean[][] };
+type Shown = { board: Board; fresh?: boolean[][]; arrive?: boolean[][]; shift?: number[][]; popping?: boolean[][] };
 type Phase = 'intro' | 'wheel' | 'curtain' | 'pick' | 'spins' | 'done';
 
 const EMPTY_WINS: SpinWin[] = [];
@@ -65,6 +65,31 @@ function cellGrid(game: SlotGame, cells: Cell[] | undefined): boolean[][] | unde
   const grid = Array.from({ length: game.reels }, () => Array.from({ length: game.rows }, () => false));
   cells.forEach((cell) => { if (grid[cell.reel]) grid[cell.reel][cell.row] = true; });
   return grid;
+}
+
+/** Уцелевшие символы падают вниз, только если колонка реально осыпалась, а не заменилась на месте. */
+function tumbleShift(prev: string[][], next: string[][], removed: Cell[] | undefined): { shifts: number[][]; tumbled: boolean[] } | undefined {
+  if (!removed?.length) return undefined;
+  const gone = prev.map(() => new Set<number>());
+  removed.forEach((cell) => gone[cell.reel]?.add(cell.row));
+  const shifts = prev.map(() => [] as number[]);
+  const tumbled = prev.map((column, reel) => {
+    const missing = gone[reel];
+    const fromRows: number[] = [];
+    column.forEach((_, row) => { if (!missing.has(row)) fromRows.push(row); });
+    const freshCount = column.length - fromRows.length;
+    const same = (before: string, after: string) => before === after
+      || ((before === 'way-left' || before === 'way-right' || before === 'nudge') && after === 'wild');
+    const packed = fromRows.every((from, index) => same(column[from], next[reel]?.[freshCount + index] ?? ''));
+    shifts[reel] = column.map(() => 0);
+    if (!packed) return false;
+    fromRows.forEach((from, index) => {
+      const to = freshCount + index;
+      shifts[reel][to] = Math.max(0, to - from);
+    });
+    return freshCount > 0;
+  });
+  return { shifts, tumbled };
 }
 
 /** После каскада новые символы занимают верхние ряды: столько, сколько исчезло в барабане. */
@@ -435,7 +460,8 @@ function PlayInner() {
     setRibbon('');
     setRolling(true);
     beginRoll();
-    await wait(spinWait(view.locked, bonus, extraMs));
+    const dump = game.id === 'mad-dj' && live.current.speed === 'slow' ? SLOW_DUMP_MS : 0;
+    await wait(spinWait(view.locked, bonus, extraMs) + dump);
     setRolling(false);
     setExtra([]);
     setShown({ board });
@@ -448,7 +474,8 @@ function PlayInner() {
     setShown({ board: { ...board, wins: EMPTY_WINS } });
     setRolling(true);
     beginRoll();
-    await wait(spinWait(board.locked, false, []));
+    const dump = game.id === 'mad-dj' && live.current.speed === 'slow' ? SLOW_DUMP_MS : 0;
+    await wait(spinWait(board.locked, false, []) + dump);
     setRolling(false);
     setShown({ board });
     setRibbon(board.label ?? '');
@@ -457,16 +484,45 @@ function PlayInner() {
   }
 
   async function cascadeTo(prev: Board, next: Board, events: SlotEvent[] = []) {
+    const dj = game.id === 'mad-dj';
     if (next.removed?.length) {
       setShown({ board: prev, popping: cellGrid(game, next.removed) });
       setRibbon(copy.popping);
-      await wait(Math.max(pace().pop, 900));
+      const bombPop = dj && next.removed.some((cell) => prev.grid[cell.reel]?.[cell.row] === 'bomb');
+      await wait(dj ? (bombPop ? 1280 : 1040) : Math.max(pace().pop, 900));
     }
     const mysteryCells = next.marks?.filter((mark) => mark.kind === 'mystery').map((mark) => ({ reel: mark.reel, row: mark.row }));
-    setShown({ board: next, fresh: freshGrid(game, next.removed) ?? (next.removed ? undefined : cellGrid(game, mysteryCells)) });
+    const fresh = freshGrid(game, next.removed) ?? (next.removed ? undefined : cellGrid(game, mysteryCells));
+    const slowDj = dj && live.current.speed === 'slow';
+    const motion = slowDj ? tumbleShift(prev.grid, next.grid, next.removed) : undefined;
+    const arrive = motion && fresh
+      ? fresh.map((column, reel) => column.map((cell) => cell && motion.tumbled[reel]))
+      : undefined;
+    setShown({
+      board: next,
+      fresh: motion ? undefined : fresh,
+      arrive,
+      shift: motion?.shifts,
+    });
     setRibbon(next.label ?? '');
     if (next.win > 0) setWinSoFar((value) => value + next.win);
     if (next.label?.startsWith('Фея')) await showCast(events.find((event) => event.actor === 'fairy'));
+    if (dj && next.label === 'Бомба') await wait(980);
+    if (dj && next.label === 'Ways') await wait(920);
+    if (dj && next.label === 'Пластинка') await wait(1700);
+    if (motion?.tumbled.some(Boolean)) {
+      const removedPerReel = Array.from({ length: game.reels }, () => 0);
+      next.removed?.forEach((cell) => { removedPerReel[cell.reel] += 1; });
+      const maxShift = motion.shifts.reduce((max, column) => Math.max(max, ...column), 0);
+      let settle = 0;
+      motion.tumbled.forEach((flag, reel) => {
+        if (!flag) return;
+        const freshCount = Math.max(1, Math.min(game.rows, removedPerReel[reel]));
+        const last = slowCellTiming(game.rows - freshCount, game.rows, false);
+        settle = Math.max(settle, maxShift * GRAVITY_STEP_MS + 40 + last.start + last.drop + 90);
+      });
+      await wait(settle);
+    }
   }
 
   async function showCast(event: SlotEvent | undefined) {
@@ -489,7 +545,8 @@ function PlayInner() {
     }
     const lead = events.find((event) => event.actor !== 'fairy');
     if (lead) await showCast(lead);
-    await wait(head.win > 0 || boards.length > 1 ? timing.showWin : timing.idle);
+    const featureHold = head.label === 'Пластинка' ? 1700 : head.label === 'Ways' ? 920 : head.label === 'Бомба' ? 980 : 0;
+    await wait(Math.max(head.win > 0 || boards.length > 1 ? timing.showWin : timing.idle, featureHold));
     for (let index = 1; index < boards.length; index += 1) {
       const board = boards[index];
       if (board.locked) await respinTo(board);
@@ -776,7 +833,7 @@ function PlayInner() {
 
   return (
     <main
-      className={`${styles.stage} ${game.id === 'golden-must' || game.id === 'mad-dj' ? styles.stageMust : ''} ${game.id === 'mad-dj' ? styles.stageDj : ''} ${inBonus ? styles.stageBonus : ''} ${pots ? styles.stagePots : ''}`}
+      className={`${styles.stage} ${game.id === 'golden-must' ? styles.stageMust : ''} ${game.id === 'mad-dj' ? styles.stageDj : ''} ${inBonus ? styles.stageBonus : ''} ${pots ? styles.stagePots : ''}`}
       style={{ backgroundImage: `url(${slotBackdrop(game.id)})`, ['--accent' as string]: game.accent }}
     >
       <div className={styles.vignette} />
@@ -826,7 +883,7 @@ function PlayInner() {
 
       <section className={styles.board} style={{ ['--reels' as string]: String(game.reels), ['--rows' as string]: String(game.rows) }}>
         {game.id === 'mad-dj' ? (
-          <div className={styles.deckHero} data-act={cue?.pose === 'throw' ? 'throw' : phase === 'intro' ? 'bonus' : undefined} aria-hidden>
+          <div className={styles.deckHero} data-act={cue?.pose === 'throw' ? 'throw' : cue?.pose === 'slash' ? 'slash' : cue?.pose === 'scratch' ? 'scratch' : phase === 'intro' ? 'bonus' : undefined} aria-hidden>
             <div className={styles.deckIdle}>
               <img src="/img/slots/hero-dj-fader-a.png?v=4" alt="" draggable={false} />
               <i className={styles.deckEye} style={{ left: '42.7%', top: '21.1%' }} />
@@ -884,6 +941,8 @@ function PlayInner() {
                   marks={marks?.[reelIndex]}
                   locked={board.locked?.[reelIndex]}
                   fresh={shown?.fresh?.[reelIndex]}
+                  arrive={shown?.arrive?.[reelIndex]}
+                  shift={shown?.shift?.[reelIndex]}
                   popping={shown?.popping?.[reelIndex]}
                   rolling={rolling}
                   speed={speed}
@@ -1001,7 +1060,7 @@ function PlayInner() {
       )}
       {feature && phase === 'done' && bigMultiple == null && game.id === 'mad-dj' && (
         <button type="button" className={styles.djShow} onClick={release}>
-          <img className={`${styles.djShowArt} ${styles.djShowWin}`} src="/img/slots/dj-bonus-win.jpg?v=1" alt="" />
+          <img className={`${styles.djShowArt} ${styles.djShowWin}`} src="/img/slots/dj-bonus-win.jpg?v=2" alt="" />
           <span className={styles.djShowLights} aria-hidden />
           <span className={styles.djShowCard}>
             <p>{lang === 'en' ? 'BONUS WIN' : 'ВЫИГРЫШ БОНУСА'}</p>
@@ -1026,7 +1085,7 @@ function PlayInner() {
       )}
       {buyMenu && allowBuy && (
         <div className={styles.overlay}>
-          <div className={`${styles.sheet} ${styles.buyModal}`}>
+          <div className={`${styles.sheet} ${styles.buyModal} ${game.id === 'mad-dj' ? styles.buyDj : ''}`}>
             <p className={styles.buyKicker}>{lang === 'en' ? 'Features' : 'Бонусы'}</p>
             <div className={styles.buyChoices}>
               <button type="button" onClick={() => { setBuyMenu(false); void buy('regular'); }}>

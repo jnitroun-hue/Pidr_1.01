@@ -29,7 +29,7 @@ export type SpinWin = {
   amount: number;
 };
 
-export type MarkKind = 'wild' | 'mult' | 'mystery' | 'colossal' | 'burn' | 'drop' | 'sticky' | 'coin' | 'orb' | 'frozen' | 'bomb';
+export type MarkKind = 'wild' | 'mult' | 'mystery' | 'colossal' | 'burn' | 'drop' | 'sticky' | 'coin' | 'orb' | 'frozen' | 'bomb' | 'way' | 'nudge';
 export type Mark = Cell & { kind: MarkKind };
 
 /** Одно состояние поля, которое игрок видит. */
@@ -115,7 +115,7 @@ function isWild(game: SlotGame, id: string): boolean {
 
 function isSpecial(game: SlotGame, id: string): boolean {
   const symbol = symbolById(game, id);
-  return Boolean(symbol.scatter || symbol.bonusCoin || symbol.orb || symbol.mystery || symbol.bomb);
+  return Boolean(symbol.scatter || symbol.bonusCoin || symbol.orb || symbol.mystery || symbol.bomb || symbol.way || symbol.nudge);
 }
 
 function regularSymbols(game: SlotGame): SlotSymbol[] {
@@ -567,7 +567,7 @@ function blastBombs(game: SlotGame, tiles: Tiles): { tiles: Tiles; bombs: Cell[]
           if (reel === bomb.reel && row === bomb.row) continue;
           if (reel < 0 || row < 0 || reel >= game.reels || row >= game.rows) continue;
           const id = tiles[reel][row].id;
-          if (id === 'scatter' || id === 'bomb') continue;
+          if (isSpecial(game, id)) continue;
           next[reel][row] = { id: symbolId, value: null };
           const key = `${reel}:${row}`;
           if (!seen.has(key)) {
@@ -580,6 +580,54 @@ function blastBombs(game: SlotGame, tiles: Tiles): { tiles: Tiles; bombs: Cell[]
     });
   });
   return { tiles: next, bombs, painted };
+}
+
+const NUDGE_FACE = [
+  { value: 2, weight: 42 },
+  { value: 3, weight: 28 },
+  { value: 5, weight: 16 },
+  { value: 8, weight: 9 },
+  { value: 10, weight: 5 },
+];
+
+/** Стрелка режет обычные символы своей строки в сторону острия и сама становится дикой. */
+function slashWays(game: SlotGame, tiles: Tiles): { tiles: Tiles; arrows: Cell[]; cut: Cell[] } | null {
+  if (game.id !== 'mad-dj') return null;
+  const arrows = [...countId(tiles, 'way-left'), ...countId(tiles, 'way-right')];
+  if (!arrows.length) return null;
+  const next = cloneTiles(tiles);
+  const cut: Cell[] = [];
+  const seen = new Set<string>();
+  const wild = wildId(game);
+  arrows.forEach((arrow) => {
+    const dir = tiles[arrow.reel][arrow.row].id === 'way-left' ? -1 : 1;
+    for (let reel = arrow.reel + dir; reel >= 0 && reel < game.reels; reel += dir) {
+      const id = next[reel][arrow.row].id;
+      if (isSpecial(game, id) || isWild(game, id)) continue;
+      const key = `${reel}:${arrow.row}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      cut.push({ reel, row: arrow.row });
+    }
+    next[arrow.reel][arrow.row] = { id: wild, value: null };
+  });
+  const tumbled = cut.length ? tumble(game, next, cut, regularSymbols(game)) : next;
+  return { tiles: tumbled, arrows, cut };
+}
+
+/** Кластер, задевший барабан со шторой, умножается на множитель этой пластинки. */
+function scaleByCurtain(game: SlotGame, wins: SpinWin[], curtains?: (number | null)[]): SpinWin[] {
+  if (game.id !== 'mad-dj' || !curtains) return wins;
+  return wins.map((win) => {
+    const reels = new Set(win.cells.map((cell) => cell.reel));
+    let factor = 1;
+    reels.forEach((reel) => {
+      const value = curtains[reel];
+      if (value && value > 1) factor *= value;
+    });
+    if (factor === 1) return win;
+    return { ...win, amount: roundMoney(win.amount * factor) };
+  });
 }
 
 /** Последовательность досок до тех пор, пока выигрыши не закончатся. */
@@ -597,6 +645,8 @@ function cascade(game: SlotGame, start: Tiles, bet: number, options: CascadeOpti
   let fairyUsed = false;
   let removed: Cell[] | undefined;
   let rawTotal = 0;
+  let curtains: (number | null)[] | undefined;
+  const dress = (extra: Partial<Board> = {}): Partial<Board> => (curtains ? { ...extra, curtains } : extra);
 
   for (let guard = 0; guard < 40; guard += 1) {
     const blast = blastBombs(game, tiles);
@@ -605,12 +655,37 @@ function cascade(game: SlotGame, start: Tiles, bet: number, options: CascadeOpti
         ...blast.bombs.map((cell) => ({ ...cell, kind: 'bomb' as const })),
         ...blast.painted.map((cell) => ({ ...cell, kind: 'bomb' as const })),
       ];
-      boards.push(board(tiles, [], 1, { removed, marks, label: 'Бомба' }));
+      boards.push(board(tiles, [], 1, dress({ removed, marks, label: 'Бомба' })));
       tiles = blast.tiles;
       removed = uniqueCells([...blast.bombs, ...blast.painted]);
       continue;
     }
-    const wins = evalBoard(game, tiles, bet);
+    const slash = slashWays(game, tiles);
+    if (slash) {
+      const marks: Mark[] = [...slash.arrows, ...slash.cut].map((cell) => ({ ...cell, kind: 'way' as const }));
+      boards.push(board(tiles, [], 1, dress({ removed, marks, label: 'Ways' })));
+      tiles = slash.tiles;
+      removed = slash.cut.length ? slash.cut : undefined;
+      continue;
+    }
+    if (game.id === 'mad-dj') {
+      const nudges = countId(tiles, 'nudge');
+      if (nudges.length) {
+        if (!curtains) curtains = Array.from({ length: game.reels }, () => null);
+        nudges.forEach((cell) => {
+          if (curtains![cell.reel] == null) curtains![cell.reel] = pickWeighted(NUDGE_FACE).value;
+        });
+        const marks: Mark[] = nudges.map((cell) => ({ ...cell, kind: 'nudge' as const }));
+        boards.push(board(tiles, [], 1, dress({ removed, marks, label: 'Пластинка' })));
+        const wild = wildId(game);
+        nudges.forEach((cell) => {
+          tiles[cell.reel][cell.row] = { id: wild, value: null };
+        });
+        removed = undefined;
+        continue;
+      }
+    }
+    const wins = scaleByCurtain(game, evalBoard(game, tiles, bet), curtains);
     if (!wins.length) {
       const wantFairy = game.id === 'fairy-glade' && !fairyUsed
         && (options.fairy === 'always' || (options.fairy === 'chance' && randomInt(100) < 22));
@@ -626,13 +701,13 @@ function cascade(game: SlotGame, start: Tiles, bet: number, options: CascadeOpti
           stamp(game, tiles, cell, wild);
           marks.push({ ...cell, kind: 'wild' });
         }
-        boards.push(board(tiles, [], 1, { marks, label: 'Фея добавляет дикие', removed }));
+        boards.push(board(tiles, [], 1, dress({ marks, label: 'Фея добавляет дикие', removed })));
         options.events?.push({ actor: 'fairy', title: 'Хоровод', cells: marks });
         removed = undefined;
         continue;
       }
-      if (!boards.length) boards.push(board(tiles, [], 1));
-      else boards.push(board(tiles, [], 1, { removed, label: 'Каскад окончен' }));
+      if (!boards.length) boards.push(board(tiles, [], 1, dress()));
+      else boards.push(board(tiles, [], 1, dress({ removed, label: 'Каскад окончен' })));
       break;
     }
     const multiplier = game.mechanic === 'cluster' && options.carry ? options.carry.multiplier : 1;
@@ -640,11 +715,11 @@ function cascade(game: SlotGame, start: Tiles, bet: number, options: CascadeOpti
     const orbFactor = orbs.reduce((sum, cell) => sum + (tiles[cell.reel][cell.row].value ?? 1), 0);
     const usedOrb = orbs.length > 0 && wins.some((win) => win.cells.some((cell) => tiles[cell.reel][cell.row].id === 'orb'));
     const orbMarks: Mark[] = usedOrb ? orbs.map((cell) => ({ ...cell, kind: 'orb' as const })) : [];
-    const current = board(tiles, wins, multiplier, {
+    const current = board(tiles, wins, multiplier, dress({
       removed,
       marks: orbMarks.length ? orbMarks : undefined,
       label: usedOrb ? `Шар x${orbFactor} заменил символы` : undefined,
-    });
+    }));
     boards.push(current);
     rawTotal += sumWins(wins);
     if (game.mechanic === 'cluster' && options.carry) {

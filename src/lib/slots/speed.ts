@@ -12,6 +12,11 @@ export type ReelPlan = {
   mode: 'cell' | 'column';
 };
 
+/** Сколько старые символы падают вниз перед новым медленным спином диджея. */
+export const SLOW_DUMP_MS = 560;
+/** Падение одного уцелевшего символа в каскаде. */
+export const GRAVITY_STEP_MS = 170;
+
 const SLOW_TICK = 68;
 const SLOW_GAP = 18;
 const SLOW_MIN = 150;

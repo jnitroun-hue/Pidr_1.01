@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { slotArt, slotHero } from '@/lib/slots/art';
 import { playMustCurtain, playMustLand } from '@/lib/slots/mustSound';
 import { CURTAIN_MULTIPLIERS, getSlotGame, type SlotSymbol } from '@/lib/slots/games';
-import { reelPlan, slowCellTiming, type ReelSpeed } from '@/lib/slots/speed';
+import { GRAVITY_STEP_MS, reelPlan, SLOW_DUMP_MS, slowCellTiming, type ReelSpeed } from '@/lib/slots/speed';
 import type { MarkKind } from '@/lib/slots/engine';
 import styles from '@/app/slots/Slots.module.css';
 
@@ -33,6 +33,8 @@ const MARK_CLASS: Record<MarkKind, string> = {
   orb: styles.mkOrb,
   frozen: styles.mkFrozen,
   bomb: styles.mkBomb,
+  way: styles.mkWay,
+  nudge: styles.mkNudge,
 };
 
 type Props = {
@@ -49,6 +51,10 @@ type Props = {
   locked?: boolean[];
   /** Клетки, упавшие сверху после каскада. */
   fresh?: boolean[];
+  /** Новые символы медленного каскада: падают сверху после того, как свои осели. */
+  arrive?: boolean[];
+  /** На сколько рядов уцелевший символ падает вниз. */
+  shift?: number[];
   /** Клетки, которые лопаются перед каскадом. */
   popping?: boolean[];
   rolling: boolean;
@@ -92,7 +98,7 @@ function findSymbol(symbols: SlotSymbol[] | undefined, id: string): SlotSymbol |
 }
 
 export default function SlotReel({
-  gameId, reelIndex, rows, wildIds, landed, values, marks, locked, fresh, popping,
+  gameId, reelIndex, rows, wildIds, landed, values, marks, locked, fresh, arrive, shift, popping,
   rolling, speed, bonus, extraMs = 0, priorExtra = 0, playIndex = reelIndex, highlight, curtain = null,
 }: Props) {
   const held = useRef(landed);
@@ -100,6 +106,8 @@ export default function SlotReel({
   const plan = reelPlan(speed, playIndex, rows, bonus, priorExtra, extraMs);
   const anyLocked = Boolean(locked?.some(Boolean));
   const dropping = rolling && !anyLocked;
+  const dumpOld = gameId === 'mad-dj' && speed === 'slow' && dropping;
+  const gravityLead = (shift?.reduce((max, value) => Math.max(max, value), 0) ?? 0) * GRAVITY_STEP_MS + 40;
   const landAt = plan.mode === 'cell'
     ? pieceAt(plan, 0, rows, bonus) + pieceDrop(plan, 0, rows, bonus)
     : plan.delay + plan.drop;
@@ -153,6 +161,8 @@ export default function SlotReel({
       <>
         <img src={slotArt(gameId, id)} alt="" draggable={false} />
         {gameId === 'mad-dj' && symbol?.scatter ? <span className={styles.scatterWord}>SCATTER</span> : null}
+        {gameId === 'mad-dj' && symbol?.nudge ? <span className={styles.nudgeWord}>NUDGE</span> : null}
+        {gameId === 'mad-dj' && symbol?.way ? <span className={styles.waysWord}>WAYS</span> : null}
         {symbol?.mystery ? <small className={styles.roleMystery}>?</small> : null}
         {mult ? <b className={styles.multBadge}>x{mult}</b> : null}
         {value != null && curtain == null && !mult && !symbol?.wild ? <b className={`${styles.valueBadge} ${mark === 'orb' ? styles.valueOrb : ''} ${mark === 'mult' ? styles.valueEdge : ''}`}>x{formatValue(value)}</b> : null}
@@ -161,7 +171,7 @@ export default function SlotReel({
   }
 
   const faceLanded = rolling ? held.current : landed;
-  const clearOld = dropping && speed !== 'fast';
+  const clearOld = dropping && speed !== 'fast' && !dumpOld;
 
   function stack(ids: string[], kind: 'rest' | 'cell' | 'column') {
     return (
@@ -184,32 +194,55 @@ export default function SlotReel({
           const landWild = kind === 'rest' && !rolling && (wildIds.includes(id) || multiplier != null);
           const settled = kind === 'rest';
           const symbol = findSymbol(symbols, id);
+          const slowArrive = settled && Boolean(arrive?.[row]);
+          const fell = settled && (shift?.[row] ?? 0) > 0;
+          const bombIn = gameId === 'mad-dj' && id === 'bomb' && mark === 'bomb' && !popping?.[row] && !rolling;
+          const bombNear = gameId === 'mad-dj' && mark === 'bomb' && id !== 'bomb' && !popping?.[row] && !rolling;
+          const wayOn = gameId === 'mad-dj' && mark === 'way' && !popping?.[row] && !rolling;
+          const wayArrow = wayOn && (id === 'way-left' || id === 'way-right');
+          const freshCount = arrive?.reduce((count, cell) => count + (cell ? 1 : 0), 0) ?? 0;
+          const arriveOrder = freshCount - 1 - row;
+          const arriveTiming = slowCellTiming(Math.max(0, rows - 1 - Math.max(0, arriveOrder)), rows, bonus);
           const classes = [
             styles.cell,
             kind === 'cell' ? styles.cellDrop : '',
             hot ? styles.hot : '',
-            boardHot && !hot ? styles.dim : '',
+            boardHot && !hot && gameId !== 'mad-dj' ? styles.dim : '',
             settled && (symbol?.scatter || symbol?.bonusCoin) ? `${styles.cellBonus} ${SCATTER_FX[gameId] ?? ''}` : '',
             settled && symbol?.wild ? styles.cellWild : '',
             mark ? MARK_CLASS[mark] : '',
             isLocked ? styles.cellLocked : '',
             respinning ? styles.cellRespin : '',
-            kind === 'rest' && fresh?.[row] ? styles.cellFresh : '',
+            settled && fresh?.[row] && !slowArrive ? styles.cellFresh : '',
+            slowArrive ? styles.cellArrive : '',
+            fell ? styles.cellFall : '',
             kind === 'rest' && popping?.[row] ? (gameId === 'mad-dj' ? styles.cellBurst : styles.cellPop) : '',
-            landWild && !fresh?.[row] ? styles.cellLand : '',
+            kind === 'rest' && popping?.[row] && id === 'bomb' ? styles.cellBombBurst : '',
+            bombIn ? styles.cellBombIn : '',
+            bombNear ? styles.cellBombNear : '',
+            wayOn ? styles.wayCut : '',
+            wayArrow ? styles.wayArrow : '',
+            wayOn && id === 'way-left' ? styles.wayLeft : '',
+            landWild && !fresh?.[row] && !slowArrive ? styles.cellLand : '',
           ].filter(Boolean).join(' ');
+          const dropAt = pieceAt(plan, row, rows, bonus) + (kind !== 'rest' && dumpOld ? SLOW_DUMP_MS : 0);
           return (
             <div
               key={`${kind}-${reelIndex}-${row}-${id}`}
               className={classes}
               style={{
                 ['--row' as string]: row,
-                ['--fall' as string]: pieceFall(plan.mode, row, rows, bonus),
-                ['--drop-ms' as string]: `${pieceDrop(plan, row, rows, bonus)}ms`,
-                ['--drop-at' as string]: `${pieceAt(plan, row, rows, bonus)}ms`,
+                ['--reel' as string]: reelIndex,
+                ['--shift' as string]: shift?.[row] ?? 0,
+                ['--fall-ms' as string]: `${(shift?.[row] ?? 0) * GRAVITY_STEP_MS}ms`,
+                ['--fall' as string]: slowArrive ? row + 1 : pieceFall(plan.mode, row, rows, bonus),
+                ['--drop-ms' as string]: `${slowArrive ? arriveTiming.drop : pieceDrop(plan, row, rows, bonus)}ms`,
+                ['--drop-at' as string]: `${slowArrive ? gravityLead + arriveTiming.start : dropAt}ms`,
               }}
             >
               {kind === 'cell' ? <span className={styles.cellDropFace}>{face(id, value, mark)}</span> : face(id, value, mark)}
+              {bombIn ? <img className={styles.bombProjectile} src={slotArt(gameId, 'bomb')} alt="" draggable={false} /> : null}
+              {wayArrow ? <i className={`${styles.wayBlade} ${id === 'way-left' ? styles.wayBladeLeft : ''}`} /> : null}
               {mark === 'drop' ? <i className={styles.dropBeat} /> : null}
               {mark === 'burn' ? <i className={styles.burnFlame} /> : null}
             </div>
@@ -221,14 +254,51 @@ export default function SlotReel({
 
   return (
     <div
-      className={`${styles.reelWindow} ${clearOld ? styles.reelClear : ''} ${dropping ? styles.reelBusy : ''} ${!rolling ? styles.reelIdle : ''} ${extraMs > 0 && rolling ? styles.reelAnticipate : ''}`}
-      style={{ ['--rows' as string]: rows }}
+      className={`${styles.reelWindow} ${clearOld ? styles.reelClear : ''} ${dumpOld ? styles.reelDump : ''} ${dropping ? styles.reelBusy : ''} ${!rolling ? styles.reelIdle : ''} ${extraMs > 0 && rolling ? styles.reelAnticipate : ''}`}
+      style={{ ['--rows' as string]: rows, ['--dump-at' as string]: `${plan.delay}ms` }}
     >
       {clearOld ? null : stack(faceLanded, 'rest')}
       {dropping ? stack(landed, plan.mode) : null}
       {curtain != null && (!dropping || reelLanded) ? (
-        <CurtainShow key={`curtain-${reelIndex}-${curtain}`} gameId={gameId} mult={curtain} />
+        gameId === 'mad-dj'
+          ? <VinylPick key={`vinyl-${reelIndex}-${curtain}`} mult={curtain} />
+          : <CurtainShow key={`curtain-${reelIndex}-${curtain}`} gameId={gameId} mult={curtain} />
       ) : null}
+    </div>
+  );
+}
+
+const VINYL_FACE = [2, 3, 5, 8, 10];
+
+/** Пластинка диджея, затем штора с выбранным множителем падает на этот барабан. */
+function VinylPick({ mult }: { mult: number }) {
+  const [dropped, setDropped] = useState(false);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDropped(true), 1500);
+    return () => window.clearTimeout(timer);
+  }, [mult]);
+  if (dropped) return <DjCurtain mult={mult} />;
+  const index = Math.max(0, VINYL_FACE.indexOf(mult));
+  const land = 720 - (index * 72 + 36);
+  return (
+    <div className={styles.vinylCurtain} aria-hidden>
+      <div className={styles.vinylSpin} style={{ ['--land' as string]: `${land}deg` }}>
+        <img src="/img/slots/vinyl-nudge.jpg?v=2" alt="" draggable={false} />
+        {VINYL_FACE.map((value, slice) => (
+          <b key={value} data-win={value === mult ? '' : undefined} style={{ ['--slice' as string]: `${slice * 72 + 36}deg` }}>{`x${value}`}</b>
+        ))}
+      </div>
+      <i className={styles.vinylNeedle} />
+    </div>
+  );
+}
+
+/** Штора диджея на барабане, где выпал Nudge. x10 ярче остальных. */
+function DjCurtain({ mult }: { mult: number }) {
+  return (
+    <div className={`${styles.djCurtain} ${mult === 10 ? styles.djCurtainMax : ''}`} aria-hidden>
+      <img src={`/img/slots/curtain-dj-x${mult}.jpg?v=1`} alt="" draggable={false} />
+      <b>{`x${mult}`}</b>
     </div>
   );
 }

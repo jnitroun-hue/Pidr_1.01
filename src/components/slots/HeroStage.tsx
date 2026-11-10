@@ -10,6 +10,8 @@ export type HeroPose =
   | 'frost'
   | 'drop'
   | 'throw'
+  | 'slash'
+  | 'scratch'
   | 'slam'
   | 'flip'
   | 'pulse'
@@ -46,6 +48,8 @@ const POSE_CLASS: Record<Exclude<HeroPose, 'present'>, string> = {
   frost: styles.poseFrost,
   drop: styles.poseDrop,
   throw: styles.poseDrop,
+  slash: styles.poseSweep,
+  scratch: styles.poseSnap,
   slam: styles.poseSlam,
   flip: styles.poseFlip,
   pulse: styles.posePulse,
@@ -84,6 +88,12 @@ export function resolveHeroCue(input: {
   }
   if (id === 'frost-queen' && (ofKind(marks, 'frozen').length || ofKind(marks, 'colossal').length || cast?.actor === 'queen')) {
     return { pose: 'frost', cells: [...ofKind(marks, 'frozen'), ...ofKind(marks, 'colossal')] };
+  }
+  if (id === 'mad-dj' && (ofKind(marks, 'nudge').length || input.label === 'Пластинка')) {
+    return { pose: 'scratch', cells: ofKind(marks, 'nudge') };
+  }
+  if (id === 'mad-dj' && (ofKind(marks, 'way').length || input.label === 'Ways')) {
+    return { pose: 'slash', cells: ofKind(marks, 'way') };
   }
   if (id === 'mad-dj' && (ofKind(marks, 'bomb').length || input.label === 'Бомба')) {
     return { pose: 'throw', cells: ofKind(marks, 'bomb') };
@@ -159,6 +169,8 @@ export default function HeroStage({
           {pose === 'frost' && <i className={styles.frostWash} />}
           {pose === 'frost' && cells.slice(0, 8).map((cell, index) => <i key={index} className={styles.crystal} style={spot(cell, index)} />)}
           {pose === 'drop' && cells.map((cell, index) => <i key={index} className={styles.dropRing} style={spot(cell, index)} />)}
+          {pose === 'slash' && cells.map((cell, index) => <i key={index} className={styles.spark} style={spot(cell, index)} />)}
+          {pose === 'scratch' && cells.map((cell, index) => <i key={index} className={styles.dropRing} style={spot(cell, index)} />)}
           {pose === 'slam' && [...new Set(cells.map((cell) => cell.reel))].map((reel) => (
             <i key={reel} className={styles.slamCol} style={{ ['--reel' as string]: String(reel) }} />
           ))}

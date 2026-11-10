@@ -138,7 +138,10 @@ const ART: Record<string, Record<string, string>> = {
     speaker: `${BASE}/sym-speaker.jpg?v=5`,
     wild: `${BASE}/sym-wild-dj.jpg?v=5`,
     bomb: `${BASE}/sym-bomb-dj.jpg?v=5`,
-    scatter: `${BASE}/scatter-dj.jpg?v=8`,
+    'way-left': `${BASE}/sym-way-left-dj.jpg?v=2`,
+    'way-right': `${BASE}/sym-way-right-dj.jpg?v=2`,
+    nudge: `${BASE}/sym-nudge-dj.jpg?v=1`,
+    scatter: `${BASE}/scatter-dj.jpg?v=9`,
   },
 };
 

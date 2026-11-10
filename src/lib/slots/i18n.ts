@@ -38,7 +38,7 @@ const SYMBOLS: Record<string, Record<string, string>> = {
     snow: 'Snow', crystal: 'Crystal', wolf: 'Wolf', 'ice-crown': 'Diadem', wild: 'Ice', scatter: 'Snowflake',
   },
   'mad-dj': {
-    phones: 'Headphones', mic: 'Microphone', vinyl: 'Vinyl', mixer: 'Mixer', speaker: 'Speaker', bomb: 'Bomb', wild: 'DJ', scatter: 'Drop',
+    phones: 'Headphones', mic: 'Microphone', vinyl: 'Vinyl', mixer: 'Mixer', speaker: 'Speaker', bomb: 'Bomb', 'way-left': 'Ways left', 'way-right': 'Ways right', nudge: 'Nudge', wild: 'DJ', scatter: 'Drop',
   },
 };
 
@@ -125,11 +125,11 @@ const GAMES: Record<string, GameEn> = {
   },
   'mad-dj': {
     title: 'Mad DJ',
-    mood: 'A 5×5 deck. Five touching symbols burst, new ones fall, and the DJ drops five cells wild.',
+    mood: 'A 5×5 deck. Clusters burst, an arrow cuts its row, and Nudge opens a record of multipliers on its reel.',
     bonus: 'Night set',
     rule: '8 free spins. Every spin the DJ drops five wild cells. Wins burst and new symbols fall in. The multiplier starts at x2 and climbs by 1 on every cascade.',
     top: 'Two drops a spin. The multiplier starts at x3 and climbs by 2 on every cascade.',
-    features: ['5×5 board, clusters of five touching symbols', 'Wins burst and new symbols fall in', 'A bomb blows up every cell one step away and turns into a wild', 'In the night set the multiplier climbs with every cascade'],
+    features: ['5×5 board, clusters of five touching symbols', 'Wins burst and new symbols fall in', 'A bomb blows up every cell one step away and turns into a wild', 'A Ways arrow cuts the symbols on its row, toward the tip', 'Nudge opens a record on its reel: x2, x3, x5, x8 or x10', 'In the night set the multiplier climbs with every cascade'],
   },
 };
 
@@ -207,6 +207,8 @@ export function translateRibbon(label: string, game: SlotGame, lang: SlotLang): 
   if (label === 'Заморозка и респин') return 'Freeze and respin';
   if (label === 'Дроп') return 'Drop';
   if (label === 'Бомба') return 'Bomb';
+  if (label === 'Ways') return 'Ways';
+  if (label === 'Пластинка') return 'Record';
   return label;
 }
 

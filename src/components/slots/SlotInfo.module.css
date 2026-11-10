@@ -83,6 +83,27 @@
   background: rgba(255, 255, 255, 0.04);
 }
 
+.thumb {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  grid-row: 1 / span 3;
+}
+
+.thumb em {
+  position: absolute;
+  left: 50%;
+  bottom: 6%;
+  transform: translateX(-50%);
+  font-family: Impact, "Arial Black", sans-serif;
+  font-style: normal;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  color: #fff;
+  text-shadow: 0 1px 2px #000, 0 0 6px #e879f9;
+  pointer-events: none;
+}
+
 .symbol img {
   width: 52px;
   height: 52px;
@@ -223,6 +244,45 @@
 }
 
 .nav span { color: #fde68a; font-weight: 800; }
+
+.dj {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(232, 121, 249, 0.28), transparent 42%),
+    #120818;
+  border-color: #e879f9;
+  box-shadow: 0 0 0 1px #22d3ee, 0 24px 70px rgba(0, 0, 0, 0.55);
+}
+
+.dj h2 {
+  font-family: Impact, "Arial Black", sans-serif;
+  letter-spacing: 0.12em;
+  color: #f5d0fe;
+}
+
+.dj .roster > div,
+.dj .buys div {
+  background: rgba(232, 121, 249, 0.08);
+  border-color: rgba(232, 121, 249, 0.45);
+}
+
+.dj .roster b,
+.dj .symbol b,
+.dj .buys b,
+.dj .nav span {
+  color: #f0abfc;
+}
+
+.dj .roster span { color: #fae8ff; }
+
+.dj .nav button {
+  background: linear-gradient(180deg, #f0abfc, #e879f9 50%, #86198f);
+  color: #fff;
+}
+
+.dj .close {
+  background: rgba(232, 121, 249, 0.18);
+  color: #fae8ff;
+}
 
 .list {
   margin: 0 0 12px;

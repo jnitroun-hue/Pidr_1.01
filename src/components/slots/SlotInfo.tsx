@@ -40,6 +40,9 @@ function moneyPlain(value: number, gram: boolean): string {
 }
 
 function mathRule(game: SlotGame, bet: number, gram: boolean): string {
+  if (game.id === 'mad-dj') {
+    return 'Поле 5×5. Кластер из 5–7, 8–11 и 12+ одинаковых символов, соединённых сторонами, платит от всей ставки. Дикий входит в кластер. Бомба, стрелки Ways и Nudge сами не платят: бомба красит соседей и становится дикой, стрелка режет свою строку, Nudge умножает кластер на своём барабане.';
+  }
   if (game.mechanic === 'lines' || game.mechanic === 'both-ways') {
     const lines = game.lines.length;
     const lineBet = moneyPlain(bet / lines, gram);
@@ -59,6 +62,9 @@ function mathRule(game: SlotGame, bet: number, gram: boolean): string {
 }
 
 function mathRuleEn(game: SlotGame, bet: number, gram: boolean): string {
+  if (game.id === 'mad-dj') {
+    return 'A 5×5 board. A cluster of 5–7, 8–11 and 12+ matching symbols connected by sides pays from the whole stake. Wild joins the cluster. The bomb, Ways arrows and Nudge do not pay on their own: the bomb paints its neighbours and becomes wild, an arrow cuts its row, and Nudge multiplies a cluster on its reel.';
+  }
   if (game.mechanic === 'lines' || game.mechanic === 'both-ways') {
     const lines = game.lines.length;
     const lineBet = moneyPlain(bet / lines, gram);
@@ -83,6 +89,10 @@ function payHint(game: SlotGame, symbol: SlotSymbol, en: boolean): string {
     if (symbol.bonusCoin) return `${game.trigger}+ starts the feature. Does not pay on lines`;
     if (symbol.wild && symbol.multiplier) return `wild and multiplier x${symbol.multiplier}`;
     if (symbol.wild && game.bonus.kind === 'sticky-reels') return 'wild. A curtain covers the whole reel';
+    if (symbol.bomb) return 'Blows up every cell one step away. Those cells become one symbol, and the bomb becomes wild';
+    if (symbol.way === 'left') return 'Cuts ordinary symbols on its row, to the left, then becomes wild';
+    if (symbol.way === 'right') return 'Cuts ordinary symbols on its row, to the right, then becomes wild';
+    if (symbol.nudge) return 'Opens a record on its reel. The DJ stops it on x2, x3, x5, x8 or x10';
     if (symbol.wild) return 'wild: stands in for every symbol except scatter';
     if (symbol.orb) return 'wild and a multiplier for the symbols it hits';
     if (symbol.mystery) return 'opens into one shared symbol';
@@ -95,6 +105,10 @@ function payHint(game: SlotGame, symbol: SlotSymbol, en: boolean): string {
   if (symbol.bonusCoin) return `${game.trigger}+ открывают бонус. По линиям не платит`;
   if (symbol.wild && symbol.multiplier) return `вайлд и множитель x${symbol.multiplier}`;
   if (symbol.wild && game.bonus.kind === 'sticky-reels') return 'вайлд. Штора закрывает весь барабан';
+  if (symbol.bomb) return 'Взрывает клетки в радиусе одной. Они становятся одним символом, бомба — дикой';
+  if (symbol.way === 'left') return 'Режет обычные символы своей строки влево и сама становится дикой';
+  if (symbol.way === 'right') return 'Режет обычные символы своей строки вправо и сама становится дикой';
+  if (symbol.nudge) return 'Открывает пластинку на своём барабане. Диджей останавливает x2, x3, x5, x8 или x10';
   if (symbol.wild) return 'вайлд: заменяет символы, кроме скаттера';
   if (symbol.orb) return 'вайлд и множитель символов, с которыми сыграл';
   if (symbol.mystery) return 'раскрывается в один общий символ';
@@ -133,7 +147,11 @@ export default function SlotInfo({ game, bet, gram, onClose }: Props) {
   const en = lang === 'en';
   const [page, setPage] = useState(0);
   const pages = 4;
-  const mechanic = (en ? MECHANIC_EN : MECHANIC)[game.mechanic];
+  const mechanic = game.id === 'mad-dj'
+    ? (en
+      ? { title: 'Clusters 5×5', text: 'Five or more matching symbols connected by sides pay from the whole stake, then burst. New symbols fall in. A bomb, a Ways arrow and Nudge play before the count.' }
+      : { title: 'Кластеры 5×5', text: 'Пять и больше одинаковых символов, соединённых сторонами, платят от всей ставки и лопаются. Сверху падают новые. Бомба, стрелка Ways и Nudge срабатывают до подсчёта.' })
+    : (en ? MECHANIC_EN : MECHANIC)[game.mechanic];
   const nameOf = (symbol: SlotSymbol) => symbolLabel(game, symbol, lang);
   const trigger = triggerSymbol(game);
   const wilds = game.symbols.filter((symbol) => symbol.wild && !symbol.multiplier);
@@ -142,7 +160,7 @@ export default function SlotInfo({ game, bet, gram, onClose }: Props) {
   const ordered = [...game.symbols].sort((a, b) => symbolRank(a) - symbolRank(b) || a.pays[2] - b.pays[2]);
   return (
     <div className={styles.back} onClick={onClose}>
-      <div className={styles.modal} onClick={(event) => event.stopPropagation()} role="dialog" aria-label={en ? 'Rules' : 'Правила'}>
+      <div className={`${styles.modal} ${game.id === 'mad-dj' ? styles.dj : ''}`} onClick={(event) => event.stopPropagation()} role="dialog" aria-label={en ? 'Rules' : 'Правила'}>
         <button type="button" className={styles.close} onClick={onClose} aria-label={en ? 'Close' : 'Закрыть'}>×</button>
         {page === 0 && (
           <>
@@ -190,7 +208,10 @@ export default function SlotInfo({ game, bet, gram, onClose }: Props) {
             <div className={styles.symbols}>
               {ordered.map((symbol) => (
                 <div key={symbol.id} className={styles.symbol}>
-                  <img src={slotArt(game.id, symbol.id)} alt="" />
+                  <span className={styles.thumb}>
+                    <img src={slotArt(game.id, symbol.id)} alt="" />
+                    {symbol.way ? <em>WAYS</em> : null}
+                  </span>
                   <strong>{nameOf(symbol)}</strong>
                   <span>{symbol.bonusOnly ? `${en ? 'feature only. ' : 'только в бонусе. '}${payHint(game, symbol, en)}` : payHint(game, symbol, en)}</span>
                   <b>
@@ -272,9 +293,13 @@ export default function SlotInfo({ game, bet, gram, onClose }: Props) {
             </div>
             <p>{bonusTop(game, lang)}</p>
             <p className={styles.note}>
-              {en
-                ? `A paid round is drawn on the server. The stake leaves the balance when the round starts, and the win is credited after the reels finish. Demo stays in the browser. Ante costs 1.5×, bonus buy 100×, super buy 500×. The cap is x${game.maxWinMultiplier}. Stake needs a separate book and lookup table for base, ante, buy and super buy, each inside the published RTP band.`
-                : `Платный раунд считается на сервере. Ставка списывается в момент пуска, выигрыш зачисляется после ролика. Демо остаётся в браузере. Анте стоит 1.5 ставки, покупка бонуса — 100, супер-покупка — 500. Потолок раунда — x${game.maxWinMultiplier}. Для Stake у базы, анте, покупки и супер-покупки отдельные книга и таблица весов, и каждый режим должен попасть в заявленную полосу RTP.`}
+              {game.id === 'mad-dj'
+                ? (en
+                  ? `Ante is 1.5× the stake. The feature costs 100×, the super feature 500×. One round stops at x${game.maxWinMultiplier}.`
+                  : `Анте — 1.5 ставки. Бонус стоит 100 ставок, супер-бонус — 500. Раунд останавливается на x${game.maxWinMultiplier}.`)
+                : (en
+                  ? `A paid round is drawn on the server. The stake leaves the balance when the round starts, and the win is credited after the reels finish. Demo stays in the browser. Ante costs 1.5×, bonus buy 100×, super buy 500×. The cap is x${game.maxWinMultiplier}. Stake needs a separate book and lookup table for base, ante, buy and super buy, each inside the published RTP band.`
+                  : `Платный раунд считается на сервере. Ставка списывается в момент пуска, выигрыш зачисляется после ролика. Демо остаётся в браузере. Анте стоит 1.5 ставки, покупка бонуса — 100, супер-покупка — 500. Потолок раунда — x${game.maxWinMultiplier}. Для Stake у базы, анте, покупки и супер-покупки отдельные книга и таблица весов, и каждый режим должен попасть в заявленную полосу RTP.`)}
             </p>
           </>
         )}
@@ -282,7 +307,9 @@ export default function SlotInfo({ game, bet, gram, onClose }: Props) {
           <>
             <h2>{mechanic.title}{game.mechanic === 'lines' || game.mechanic === 'both-ways' ? ` · ${game.lines.length}` : ''}</h2>
             <p>{(en ? mathRuleEn : mathRule)(game, bet, gram)}</p>
-            <p className={styles.note}>{en ? 'The top row of the diagram is the top of the board. A gold cell is on the line. The line number matches the win ribbon.' : 'Верхний ряд схемы — верх поля. Жёлтая клетка входит в линию. Номер линии совпадает с номером в ленте выигрыша.'}</p>
+            {(game.mechanic === 'lines' || game.mechanic === 'both-ways') ? (
+              <p className={styles.note}>{en ? 'The top row of the diagram is the top of the board. A gold cell is on the line. The line number matches the win ribbon.' : 'Верхний ряд схемы — верх поля. Жёлтая клетка входит в линию. Номер линии совпадает с номером в ленте выигрыша.'}</p>
+            ) : null}
             {(game.mechanic === 'lines' || game.mechanic === 'both-ways') && game.lines.length > 0 && (
               <div className={styles.lines}>
                 {game.lines.map((line, index) => (

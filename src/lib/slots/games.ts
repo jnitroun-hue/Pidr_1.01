@@ -22,6 +22,10 @@ export type SlotSymbol = {
   mystery?: boolean;
   /** Бомба: взрывает соседние клетки и сама становится дикой. */
   bomb?: boolean;
+  /** Стрелка Ways: режет обычные символы в своей строке в указанную сторону. */
+  way?: 'left' | 'right';
+  /** Nudge: открывает штору-пластинку на своём барабане. */
+  nudge?: boolean;
   /** Выпадает только в бонусной игре. */
   bonusOnly?: boolean;
 };
@@ -546,7 +550,7 @@ export const SLOT_GAMES: SlotGame[] = [
   {
     id: 'mad-dj',
     title: 'Безумный диджей',
-    mood: 'Поле 5×5. Пять соседних символов лопаются, сверху падают новые, диджей роняет дроп на пять клеток.',
+    mood: 'Поле 5×5. Кластеры лопаются, стрелка режет свой ряд, а Nudge открывает пластинку с множителем на барабане.',
     volatility: 'высокая',
     reels: 5,
     rows: 5,
@@ -567,6 +571,8 @@ export const SLOT_GAMES: SlotGame[] = [
       'Поле 5×5, кластеры от пяти соседних символов',
       'Выигрыш лопается, сверху падают новые символы',
       'Бомба взрывает клетки в радиусе одной и сама становится дикой',
+      'Стрелка Ways режет символы в своей строке в сторону острия',
+      'Nudge открывает пластинку на барабане: x2, x3, x5, x8 или x10',
       'В ночном сете множитель растёт с каждым каскадом',
     ],
     multipliers: NO_MULTIPLIER,
@@ -577,6 +583,9 @@ export const SLOT_GAMES: SlotGame[] = [
       { id: 'mixer', name: 'Пульт', weight: 7, pays: [1.1, 3.2, 10] },
       { id: 'speaker', name: 'Колонка', weight: 4, pays: [2, 6, 18] },
       { id: 'bomb', name: 'Бомба', weight: 1.2, pays: [0, 0, 0], bomb: true },
+      { id: 'way-left', name: 'Ways влево', weight: 0.55, pays: [0, 0, 0], way: 'left' },
+      { id: 'way-right', name: 'Ways вправо', weight: 0.55, pays: [0, 0, 0], way: 'right' },
+      { id: 'nudge', name: 'Nudge', weight: 0.4, pays: [0, 0, 0], nudge: true },
       { id: 'wild', name: 'Диджей', weight: 3.2, pays: [0, 0, 0], wild: true },
       { id: 'scatter', name: 'Дроп', weight: 1.55, pays: [2, 6, 18], scatter: true },
     ],
