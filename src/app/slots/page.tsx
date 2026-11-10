@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { SLOT_GAMES, triggerSymbol, type SlotGame } from '@/lib/slots/games';
+import { liveSlotGames, triggerSymbol, type SlotGame } from '@/lib/slots/games';
 import { slotPoster } from '@/lib/slots/art';
 import { bonusTitle, gameMood, gameTitle, symbolLabel } from '@/lib/slots/i18n';
 import { useSlotLocale } from '@/lib/slots/locale';
@@ -37,7 +37,7 @@ export default function SlotsLobbyPage() {
         </div>
       </header>
       <div className={styles.floor}>
-        {SLOT_GAMES.map((game) => (
+        {liveSlotGames().map((game) => (
           <button
             key={game.id}
             type="button"
@@ -64,7 +64,11 @@ export default function SlotsLobbyPage() {
             role="dialog"
             aria-label={en ? 'Choose currency' : 'Выбор валюты'}
           >
-            <img src={slotPoster(picked.id)} alt="" />
+            <img
+              src={slotPoster(picked.id)}
+              alt=""
+              style={picked.id === 'mad-dj' ? { height: 250, objectPosition: 'center 18%' } : undefined}
+            />
             <p>{gameTitle(picked, lang)}</p>
             <strong>{en ? `${catchSymbol(picked, lang)} starts “${bonusTitle(picked, lang)}”` : `${catchSymbol(picked, lang)} открывают «${bonusTitle(picked, lang)}»`}</strong>
             <span className={styles.modeMood}>{gameMood(picked, lang)}</span>

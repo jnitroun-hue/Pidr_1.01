@@ -583,6 +583,13 @@ export const SLOT_GAMES: SlotGame[] = [
   },
 ];
 
+/** Четыре игры в лобби и в каталоге. Остальные остаются в коде и открываются по прямой ссылке. */
+export const LIVE_SLOT_IDS = ['golden-must', 'mad-dj', 'green-arrow', 'fairy-glade'] as const;
+
+export function liveSlotGames(): SlotGame[] {
+  return LIVE_SLOT_IDS.map((id) => SLOT_GAMES.find((game) => game.id === id)).filter((game): game is SlotGame => Boolean(game));
+}
+
 export function getSlotGame(id: string): SlotGame | undefined {
   return SLOT_GAMES.find((game) => game.id === id);
 }

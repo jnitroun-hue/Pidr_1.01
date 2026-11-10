@@ -129,7 +129,7 @@ const ART: Record<string, Record<string, string>> = {
   },
   'mad-dj': {
     bg: `${BASE}/bg-dj.jpg`,
-    poster: `${BASE}/poster-dj.jpg?v=3`,
+    poster: `${BASE}/poster-dj.jpg?v=4`,
     hero: `${BASE}/hero-dj.png?v=3`,
     phones: `${BASE}/sym-phones.jpg?v=5`,
     mic: `${BASE}/sym-mic.jpg?v=5`,
@@ -185,7 +185,7 @@ const BUY_ART: Record<string, string> = {
   'fairy-glade': `${BASE}/buy-fairy.jpg`,
   'ash-dragon': `${BASE}/buy-dragon.jpg`,
   'frost-queen': `${BASE}/buy-frost.jpg`,
-  'mad-dj': `${BASE}/buy-dj.jpg?v=3`,
+  'mad-dj': `${BASE}/dj-bonus-open.jpg?v=1`,
 };
 
 export function slotBuyArt(gameId: string): string {

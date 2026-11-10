@@ -965,11 +965,22 @@ function PlayInner() {
         <p className={styles.toast}>{playerNote('Для GRAM нужно один раз применить scripts/sql/slots-wallet.sql', lang)}</p>
       )}
 
-      {feature && intro && bonusIntro && (
-        <div className={`${styles.overlay} ${game.id === 'mad-dj' ? styles.djBonus : ''}`}>
-          {game.id === 'mad-dj' ? <img className={styles.djBonusHero} src="/img/slots/win-dj-nice.jpg" alt="" /> : null}
+      {feature && intro && bonusIntro && game.id === 'mad-dj' && (
+        <div className={styles.djShow}>
+          <img className={styles.djShowArt} src="/img/slots/dj-bonus-open.jpg?v=1" alt="" />
+          <div className={styles.djShowLights} aria-hidden />
+          <div className={styles.djShowCard}>
+            <p>{feature.tier === 'top' ? (lang === 'en' ? 'Super bonus' : 'Супер-бонус') : (lang === 'en' ? 'Bonus game' : 'Бонусная игра')}</p>
+            <strong>{intro.title}</strong>
+            <span>{intro.text}</span>
+            <button type="button" className={styles.djShowGo} onClick={release}>{intro.button}</button>
+          </div>
+        </div>
+      )}
+      {feature && intro && bonusIntro && game.id !== 'mad-dj' && (
+        <div className={styles.overlay}>
           <div className={`${styles.sheet} ${styles.congrats}`}>
-            {heroSrc && game.id !== 'mad-dj' ? <img className={`${styles.sheetHero} ${sideHeroClass(game.id, { pose: 'present', cells: [] })}`} src={heroSrc} alt="" /> : null}
+            {heroSrc ? <img className={`${styles.sheetHero} ${sideHeroClass(game.id, { pose: 'present', cells: [] })}`} src={heroSrc} alt="" /> : null}
             <p>{feature.tier === 'natural' ? (lang === 'en' ? 'Congratulations!' : 'Поздравляем!') : feature.tier === 'top' ? (lang === 'en' ? 'Super feature bought' : 'Супер-бонус куплен') : (lang === 'en' ? 'Feature bought' : 'Бонус куплен')}</p>
             <strong>{intro.title}</strong>
             <span>{intro.text}</span>
@@ -988,7 +999,20 @@ function PlayInner() {
           onDone={release}
         />
       )}
-      {feature && phase === 'done' && bigMultiple == null && (
+      {feature && phase === 'done' && bigMultiple == null && game.id === 'mad-dj' && (
+        <button type="button" className={styles.djShow} onClick={release}>
+          <img className={`${styles.djShowArt} ${styles.djShowWin}`} src="/img/slots/dj-bonus-win.jpg?v=1" alt="" />
+          <span className={styles.djShowLights} aria-hidden />
+          <span className={styles.djShowCard}>
+            <p>{lang === 'en' ? 'BONUS WIN' : 'ВЫИГРЫШ БОНУСА'}</p>
+            <strong>{money(feature.totalWin)}</strong>
+            <em>{featureSpinLine(feature, lang === 'en')}</em>
+            {round?.capped ? <i>{copy.cap}</i> : null}
+            <small>{lang === 'en' ? 'Click anywhere to continue' : 'Нажмите, чтобы продолжить'}</small>
+          </span>
+        </button>
+      )}
+      {feature && phase === 'done' && bigMultiple == null && game.id !== 'mad-dj' && (
         <button type="button" className={styles.featureEnd} onClick={release}>
           <span className={styles.featurePlaque}>
             <p>{lang === 'en' ? 'CONGRATULATIONS!' : 'ПОЗДРАВЛЯЕМ!'}</p>

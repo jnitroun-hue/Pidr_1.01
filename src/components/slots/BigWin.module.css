@@ -170,11 +170,53 @@
   0%, 100% { transform: translateY(-2%) rotate(-1.2deg); }
   50% { transform: translateY(3%) rotate(1.6deg); }
 }
+.dj .stage {
+  box-shadow: inset 0 0 0 3px rgba(232, 121, 249, 0.9), inset 0 0 48px rgba(34, 211, 238, 0.22);
+}
+
+.lights {
+  position: absolute;
+  inset: -28%;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    conic-gradient(from 0deg at 50% -8%, transparent 0 58deg, rgba(232, 121, 249, 0.5) 72deg, transparent 88deg 168deg, rgba(34, 211, 238, 0.42) 184deg, transparent 202deg 280deg, rgba(250, 204, 21, 0.28) 294deg, transparent 310deg);
+  mix-blend-mode: screen;
+  animation: djSweep 2.8s linear infinite;
+}
+
+.dj .card p {
+  font-family: Impact, "Arial Black", sans-serif;
+  color: #f5d0fe;
+  text-shadow: 0 0 14px #e879f9, 0 2px 0 #3b0764;
+}
+
+.dj .card strong {
+  background: linear-gradient(180deg, #fff 0%, #f0abfc 36%, #e879f9 64%, #67e8f9 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  filter: drop-shadow(0 4px 0 #4a044e) drop-shadow(0 0 16px rgba(34, 211, 238, 0.75));
+}
+
+.dj .card b {
+  color: #ecfeff;
+  text-shadow: 0 0 12px #22d3ee, 0 2px 0 #083344;
+}
+
+.dj .card button {
+  color: #fff;
+  background: linear-gradient(180deg, #f0abfc, #e879f9 42%, #86198f);
+  box-shadow: 0 0 18px rgba(232, 121, 249, 0.75);
+}
+
 .dj.nice .stage img { animation: reveal 0.55s ease-out both, djShake 0.28s ease-in-out 0.55s infinite; }
 .dj.mega .stage img { animation: reveal 0.55s ease-out both, djBang 0.22s ease-in-out 0.55s infinite; }
 .dj.epic .stage img { animation: reveal 0.55s ease-out both, djBang 0.16s ease-in-out 0.55s infinite; }
 .dj.sensational .stage img,
 .dj.max .stage img { animation: reveal 0.55s ease-out both, djBang 0.12s linear 0.55s infinite; }
+@keyframes djSweep {
+  to { transform: rotate(360deg); }
+}
 @keyframes pop {
   from { transform: translate(-50%, -50%) scale(0.72); opacity: 0; }
   to { transform: translate(-50%, -50%) scale(1); opacity: 1; }

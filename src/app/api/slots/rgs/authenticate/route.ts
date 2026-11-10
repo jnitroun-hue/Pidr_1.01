@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, getUserIdFromDatabase } from '@/lib/auth-utils';
-import { COIN_BETS, GRAM_UNIT_BETS, SLOT_GAMES, getSlotGame } from '@/lib/slots/games';
+import { COIN_BETS, GRAM_UNIT_BETS, getSlotGame, liveSlotGames } from '@/lib/slots/games';
 import { BET_MODES, modeCost, stakeIndex } from '@/lib/slots/release';
 import { changeBalance } from '@/lib/slots/wallet';
 
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     balance: { amount: balance.balance, decimals: 2 },
     betLevels: mode === 'gram' ? GRAM_UNIT_BETS : COIN_BETS,
     game: { id: game.id, title: game.title, maxWin: game.maxWinMultiplier, volatility: game.volatility },
-    games: SLOT_GAMES.map((item) => ({ id: item.id, title: item.title, maxWin: item.maxWinMultiplier })),
+    games: liveSlotGames().map((item) => ({ id: item.id, title: item.title, maxWin: item.maxWinMultiplier })),
     modes: BET_MODES.map((name) => ({ name, cost: modeCost(name) })),
     jurisdiction,
     index: stakeIndex(game),

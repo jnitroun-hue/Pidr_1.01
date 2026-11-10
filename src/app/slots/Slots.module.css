@@ -2351,6 +2351,158 @@
   50% { transform: rotate(2.2deg) translateX(1.2%); }
 }
 
+.djShow {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0 16px 7vh;
+  border: 0;
+  font: inherit;
+  color: #fff;
+  background: #07010c;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.djShowArt {
+  position: absolute;
+  inset: -8%;
+  width: 116%;
+  height: 116%;
+  object-fit: cover;
+  object-position: center 28%;
+  animation: djShowIn 0.55s ease-out both, djBonusShake 0.34s ease-in-out 0.55s infinite;
+}
+
+.djShowWin {
+  object-position: center 18%;
+  animation: djShowIn 0.55s ease-out both, djWinBang 0.18s ease-in-out 0.55s infinite;
+}
+
+.djShowLights {
+  position: absolute;
+  inset: -30%;
+  pointer-events: none;
+  background:
+    conic-gradient(from 20deg at 50% -10%, transparent 0 62deg, rgba(232, 121, 249, 0.42) 74deg, transparent 90deg 180deg, rgba(34, 211, 238, 0.36) 196deg, transparent 214deg 300deg, rgba(250, 204, 21, 0.22) 312deg, transparent 328deg);
+  mix-blend-mode: screen;
+  animation: djSweep 3.6s linear infinite;
+}
+
+.djShowCard {
+  position: relative;
+  z-index: 2;
+  width: min(92vw, 440px);
+  padding: 18px 16px 14px;
+  text-align: center;
+  border-radius: 18px;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(232, 121, 249, 0.22), transparent 32%),
+    rgba(10, 4, 20, 0.72);
+  border: 2px solid #e879f9;
+  box-shadow:
+    0 0 0 1px #22d3ee,
+    0 0 36px rgba(232, 121, 249, 0.55),
+    inset 0 0 28px rgba(34, 211, 238, 0.16);
+  animation: popIn 0.45s cubic-bezier(0.16, 0.84, 0.3, 1.2) both, djPlaque 1.4s ease-in-out 0.45s infinite;
+}
+
+.djShowCard p,
+.djShowCard strong,
+.djShowCard span,
+.djShowCard em,
+.djShowCard i,
+.djShowCard small {
+  display: block;
+}
+
+.djShowCard p {
+  margin: 0;
+  font-family: Impact, "Arial Black", sans-serif;
+  font-size: clamp(18px, 4.4vw, 28px);
+  letter-spacing: 0.16em;
+  text-indent: 0.16em;
+  color: #f5d0fe;
+  text-shadow: 0 0 14px #e879f9, 0 2px 0 #3b0764;
+}
+
+.djShowCard strong {
+  margin: 8px 0 6px;
+  font-family: Impact, "Arial Black", sans-serif;
+  font-size: clamp(36px, 9vw, 64px);
+  line-height: 0.92;
+  letter-spacing: 0.02em;
+  background: linear-gradient(180deg, #fff 0%, #f0abfc 38%, #e879f9 62%, #67e8f9 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  filter: drop-shadow(0 3px 0 #4a044e);
+}
+
+.djShowCard span,
+.djShowCard em {
+  font-style: normal;
+  font-size: clamp(14px, 3.4vw, 17px);
+  font-weight: 800;
+  line-height: 1.3;
+  color: #ecfeff;
+  text-shadow: 0 0 10px rgba(34, 211, 238, 0.45);
+}
+
+.djShowCard i {
+  margin-top: 6px;
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 800;
+  color: #fde68a;
+}
+
+.djShowCard small {
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(245, 208, 254, 0.78);
+}
+
+.djShowGo {
+  pointer-events: auto;
+  margin-top: 12px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.7em 1.5em;
+  font: inherit;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: #fff;
+  cursor: pointer;
+  background: linear-gradient(180deg, #f0abfc, #e879f9 42%, #86198f);
+  box-shadow: 0 0 22px rgba(232, 121, 249, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+@keyframes djShowIn {
+  from { transform: scale(1.12); filter: brightness(1.45) saturate(1.2); }
+  to { transform: none; filter: none; }
+}
+
+@keyframes djWinBang {
+  0%, 100% { transform: translateY(-1.5%) rotate(-1.4deg) scale(1.02); }
+  50% { transform: translateY(2.2%) rotate(1.6deg) scale(1.05); }
+}
+
+@keyframes djSweep {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes djPlaque {
+  0%, 100% { box-shadow: 0 0 0 1px #22d3ee, 0 0 24px rgba(232, 121, 249, 0.4), inset 0 0 20px rgba(34, 211, 238, 0.1); }
+  50% { box-shadow: 0 0 0 1px #fde68a, 0 0 42px rgba(34, 211, 238, 0.7), inset 0 0 28px rgba(232, 121, 249, 0.28); }
+}
+
 .congrats p {
   font-size: 18px;
   letter-spacing: 0.18em;

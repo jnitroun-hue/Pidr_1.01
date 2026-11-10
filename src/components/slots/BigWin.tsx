@@ -78,6 +78,7 @@ export default function BigWin({ multiple, amountLabel, capped = false, gameId, 
     >
       <div className={styles.stage}>
         <img src={art} alt="" draggable={false} />
+        {gameId === 'mad-dj' ? <div className={styles.lights} aria-hidden /> : null}
         <div className={styles.card}>
           <p>{title}</p>
           <strong>x{shown}</strong>
